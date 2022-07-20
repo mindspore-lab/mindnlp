@@ -1,10 +1,1 @@
-PyYAML==5.4.1
-scikit_learn==0.24.1
-six==1.16.0
-pandas==1.2.4
-spacy==3.1.2
-datasets==1.12.0
-tqdm==4.62.2
-requests==2.25.1
-numpy
-mindspore_gpu==1.5.0
+mindspore>=1.7.0
