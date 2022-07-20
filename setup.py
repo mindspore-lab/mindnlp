@@ -110,13 +110,13 @@ class BuildPy(build_py):
 
 
 setup(
-    name="mindtext",
+    name="text",
     version=version,
-    author="MindText Core Team",
-    url="https://gitee.com/mindspore/mindtext/tree/master/",
+    author="MindSpore Team",
+    url="https://gitee.com/mindspore/text/tree/master/",
     project_urls={
-        'Sources': 'https://gitee.com/mindspore/mindtext',
-        'Issue Tracker': 'https://gitee.com/mindspore/mindtext/issues',
+        'Sources': 'https://gitee.com/mindspore/text',
+        'Issue Tracker': 'https://gitee.com/mindspore/text/issues',
     },
     description=get_description(),
     license='Apache 2.0',
@@ -127,17 +127,7 @@ setup(
         'build_py': BuildPy,
     },
     install_requires=[
-        'PyYAML >= 5.4.1',
-        'scikit_learn >= 0.24.1',
-        'six >= 1.16.0',
-        'pandas >= 1.2.4',
-        'transformers >= 4.10.0',
-        'spacy >= 3.1.2',
-        'datasets >= 1.12.0',
-        'tqdm >= 4.62.2',
-        'requests >= 2.25.1',
-        'numpy >= 1.21.2',
-        'mindspore_gpu >= 1.3.0',
+        'mindspore >= 1.7.0',
     ],
     classifiers=[
         'License :: OSI Approved :: Apache Software License'

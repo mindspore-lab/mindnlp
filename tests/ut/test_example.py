@@ -1,4 +1,4 @@
-# Copyright 2020 Huawei Technologies Co., Ltd
+# Copyright 2022 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-""" test lr schedule """
+"""
+Test case example
+"""
+from packaging import version
 
-from mindtext.classification.utils import polynomial_decay_scheduler
-
-
-def test_lr_schedule():
-    lrs = polynomial_decay_scheduler(lr=1, min_lr=0.0, decay_steps=1, total_update_num=3, warmup_steps=0, power=1.0)
-    lrs = lrs.tolist()
-    assert lrs == [1.0, 0, 0]
+def test_import_mindspore():
+    """
+    Feature: What feature you test
+    Description: What input in what scene
+    Expectation: success or throw xxx exception or result == xxx, etc.
+    """
+    import mindspore
+    assert version.parse(mindspore.__version__) >= version.parse('1.7.0')
