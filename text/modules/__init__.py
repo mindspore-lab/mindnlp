@@ -15,3 +15,4 @@
 """modules init"""
 
 from .attentions import DotAttention
+from .attentions import BinaryAttention
