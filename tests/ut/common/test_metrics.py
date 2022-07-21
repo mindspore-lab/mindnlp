@@ -18,7 +18,8 @@ import unittest
 import numpy as np
 import mindspore
 from mindspore import Tensor
-from text.common.metrics import perplexity, bleu, rouge_n, rouge_l, distinct
+from text.common.metrics import (perplexity, bleu, rouge_n, rouge_l, distinct, accuracy, precision,
+                                 recall, f1_score, confusion_matrix, mcc, pearson, spearman, em_score)
 
 class TestPerplexity(unittest.TestCase):
     r"""
@@ -108,3 +109,165 @@ class TestDistinct(unittest.TestCase):
         distinct_score = distinct(cand_list)
 
         assert distinct_score == 0.8333333333333334
+
+class TestAccuracy(unittest.TestCase):
+    r"""
+    Test accuracy
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_accuracy(self):
+        """
+        Test accuracy
+        """
+        preds = [[0.1, 0.9], [0.5, 0.5], [0.6, 0.4], [0.7, 0.3]]
+        labels = [1, 0, 1, 1]
+        acc = accuracy(preds, labels)
+
+        assert acc == 0.5
+
+class TestPrecision(unittest.TestCase):
+    r"""
+    Test precision
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_precision(self):
+        """
+        Test precision
+        """
+        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
+        labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
+        prec = precision(preds, labels)
+
+        assert prec == 0.5
+
+class TestRecall(unittest.TestCase):
+    r"""
+    Test recall
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_recall(self):
+        """
+        Test recall
+        """
+        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
+        labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
+        rec = recall(preds, labels)
+
+        assert rec == 0.5
+
+class TestF1Score(unittest.TestCase):
+    r"""
+    Test F1 score
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_f1_score(self):
+        """
+        Test recall
+        """
+        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
+        labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
+        f1_s = f1_score(preds, labels)
+
+        assert f1_s == 0.6666666666666666
+
+class TestConfusionMatrix(unittest.TestCase):
+    r"""
+    Test confusion matrix
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_confusion_matrix(self):
+        """
+        Test confusion matrix
+        """
+        preds = Tensor(np.array([1, 0, 1, 0]))
+        labels = Tensor(np.array([1, 0, 0, 1]))
+        conf_mat = confusion_matrix(preds, labels)
+
+        assert np.array_equal(conf_mat, np.array([[1., 1.], [1., 1.]]))
+
+class TestMcc(unittest.TestCase):
+    r"""
+    Test MCC
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_mcc(self):
+        """
+        Test MCC
+        """
+        preds = [[0.1, 0.9], [-0.5, 0.5], [0.1, 0.4], [0.1, 0.3]]
+        labels = [[1], [0], [1], [1]]
+        m_c_c = mcc(preds, labels)
+
+        assert m_c_c == 0.0
+
+class TestPearson(unittest.TestCase):
+    r"""
+    Test PCC
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_pearson(self):
+        """
+        Test PCC
+        """
+        preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
+        labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
+        pcc = pearson(preds, labels)
+
+        assert pcc == 0.9985229081857804
+
+class TestSpearman(unittest.TestCase):
+    r"""
+    Test SCC
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_spearman(self):
+        """
+        Test SCC
+        """
+        preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
+        labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
+        scc = spearman(preds, labels)
+
+        assert scc == 1.0
+
+class TestEmScore(unittest.TestCase):
+    r"""
+    Test exact match score
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_em_score(self):
+        """
+        Test exact match score
+        """
+        preds = "this is the best span"
+        examples = ["this is a good span", "something irrelevant"]
+        exact_match = em_score(preds, examples)
+
+        assert exact_match == 0.0
