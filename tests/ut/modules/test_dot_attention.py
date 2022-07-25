@@ -12,6 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""modules init"""
+"""Test Dot Attention"""
 
-from .attentions import DotAttention
+import unittest
+import numpy as np
+
+import mindspore
+from mindspore import Tensor
+
+from text.modules.attentions import DotAttention
+
+
+class TestDotAttention(unittest.TestCase):
+    r"""
+    Test module DotAttention
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_dot_attention(self):
+        net = DotAttention(dropout=0.9)
+        q = Tensor(np.ones((2, 1024, 512)), mindspore.float32)
+        k = Tensor(np.ones((2, 1024, 512)), mindspore.float32)
+        v = Tensor(np.ones((2, 1024, 512)), mindspore.float32)
+        output = net(q, k, v)
+
+        assert output.shape == (2, 1024, 512)

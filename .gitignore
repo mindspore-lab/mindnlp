@@ -115,3 +115,5 @@ dmypy.json
 
 # MACOS
 .DS_Store
+
+rank_0/
