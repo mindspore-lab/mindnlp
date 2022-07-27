@@ -16,6 +16,9 @@
 """
 Trainer for training.
 """
+from mindspore import ms_function
+from tqdm import tqdm
+from ..common.grad import value_and_grad
 
 
 class Trainer:
@@ -81,16 +84,32 @@ class Trainer:
 
     """
 
-    def __init__(self, network, train_dataset, eval_dataset, epochs, optimizer,
-                 loss, metrics, save_path, device, callbacks, amp_level, boost_level,
-                 dataset_sink_mode, print_steps):
-        pass
+    def __init__(self, network, train_dataset, eval_dataset=None, epochs=10, batch_size=2, loss_fn=None,
+                 optimizer=None, metrics=None, save_path=None, device=None, callbacks=None, amp_level='O0',
+                 boost_level='O0', dataset_sink_mode=True, print_steps=-1):
+        self.network = network
+        self.train_dataset = train_dataset
+        self.eval_dataset = eval_dataset
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.loss_fn = loss_fn
+        self.optimizer = optimizer
+        self.metrics = metrics
+        self.save_path = save_path
+        self.device = device
+        self.callbacks = callbacks
+        self.amp_level = amp_level
+        self.boost_level = boost_level
+        self.dataset_sink_mode = dataset_sink_mode
+        self.print_steps = print_steps
+        self.cur_epoch_nums = 0
+        self.cur_step_nums = 0
 
     def check_amp_level_arg(self, optimizer, amp_level):
         """Check mixed-precision argument rules."""
         raise NotImplementedError
 
-    def check_for_graph_cell(self, *kwargs):
+    def check_for_graph_cell(self, kwargs):
         """Check network rules of GraphCell."""
         raise NotImplementedError
 
@@ -100,17 +119,57 @@ class Trainer:
 
     def check_reuse_dataset(self, dataset):
         """Check if dataset is being used by other models under the data sink mode."""
-        raise NotImplementedError
+        if not hasattr(dataset, '__model_hash__'):
+            dataset.__model_hash__ = hash(self)
+        if hasattr(dataset, '__model_hash__') and dataset.__model_hash__ != hash(self):
+            raise RuntimeError("The dataset object had been used in other model by model.train(...), "
+                               "please create a new dataset.")
 
-    def run(self, epochs, train_dataset, eval_dataset, callbacks,
-            dataset_sink_mode, print_steps, checkpoint):
+    def run(self, mode='pynative'):
         """Training function entry."""
-        raise NotImplementedError
+        self._run(mode)
 
-    def _run(self, epochs, train_dataset, eval_dataset, list_callback,
-             cb_params, print_steps):
-        """Training process for non-data sinking mode."""
-        raise NotImplementedError
+    def _run(self, mode):
+        """
+        Training process for non-data sinking mode. The data would be passed to network directly.
+
+        Args:
+            epoch (int): Total number of iterations on the data.
+            train_dataset (Dataset): A training dataset iterator. If there is no
+                                     loss_fn, a tuple with multiple data (data1, data2, data3, ...) should be
+                                     returned and passed to the network. Otherwise, a tuple (data, label) should
+                                     be returned. The data and label would be passed to the network and loss
+                                     function respectively.
+            list_callback (Callback): Executor of callback list. Default: None.
+            cb_params (_InternalCallbackParam): Callback parameters. Default: None.
+        """
+        loss_fn = self.loss_fn
+        network = self.network
+
+        def net_forward(data, label):
+            logits = network(data)
+            loss = loss_fn(logits, label)
+            return loss, logits
+
+        self.grad_fn = value_and_grad(
+            net_forward, self.optimizer.parameters, has_aux=True)
+        self.train_dataset = self.train_dataset.batch(self.batch_size)
+        total = self.train_dataset.get_dataset_size()
+        for epoch in range(0, self.epochs):
+            self.cur_epoch_nums += 1
+            self.cur_step_nums = 0
+            with tqdm(total=total) as t:
+                t.set_description('Epoch %i' % epoch)
+                loss_total = 0
+                for data in self.train_dataset.create_tuple_iterator():
+                    if mode == 'pynative':
+                        loss = self._run_step(data)
+                    elif mode == 'graph':
+                        loss = ms_function(self._run_step)(data)
+                    self.cur_step_nums += 1
+                    loss_total += loss
+                    t.set_postfix(loss=loss_total/self.cur_step_nums)
+                    t.update(1)
 
     def _run_ds_sink(self, train_dataset, eval_dataset, list_callback,
                      cb_params, print_steps, eval_steps):
@@ -119,7 +178,11 @@ class Trainer:
 
     def _run_step(self, batch_data):
         """Core process of each step, including the forward propagation process and back propagation of data."""
-        raise NotImplementedError
+        data = batch_data[0]
+        label = batch_data[1]
+        (loss, _), grads = self.grad_fn(data, label)
+        self.optimizer(grads)
+        return loss
 
     def load_checkpoint(self, path):
         """Load checkpoint."""
