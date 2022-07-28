@@ -37,6 +37,10 @@ class BaseModel(nn.Cell):
         """Copies parameters and buffers from parameter_dict into this module and its descendants."""
         raise NotImplementedError
 
+    def get_context(self, src_tokens, mask=None):
+        """Get Context from encoder."""
+        raise NotImplementedError
+
     @classmethod
     def load_pretrained(cls, model_name_or_path, ckpt_file_name="model.ckpt", data_name_or_path="."):
         """Load model from a pretrained model file"""
