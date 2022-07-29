@@ -18,6 +18,8 @@ Trainer for training.
 """
 from mindspore import ms_function
 from tqdm import tqdm
+
+from text.engine.callbacks.callback_manager import CallbackManager, RunContext
 from ..common.grad import value_and_grad
 
 
@@ -127,9 +129,14 @@ class Trainer:
 
     def run(self, mode='pynative'):
         """Training function entry."""
-        self._run(mode)
+        args_dict = vars(self)
+        run_context = RunContext(args_dict)
+        self.callback_manager = CallbackManager(callbacks=self.callbacks)
+        self.callback_manager.train_begin()
+        self._run(mode, run_context)
+        self.callback_manager.train_end()
 
-    def _run(self, mode):
+    def _run(self, mode, run_context):
         """
         Training process for non-data sinking mode. The data would be passed to network directly.
 
@@ -156,20 +163,29 @@ class Trainer:
         self.train_dataset = self.train_dataset.batch(self.batch_size)
         total = self.train_dataset.get_dataset_size()
         for epoch in range(0, self.epochs):
-            self.cur_epoch_nums += 1
+            self.cur_epoch_nums = epoch + 1
             self.cur_step_nums = 0
+            run_context.cur_epoch_nums = self.cur_epoch_nums
+            run_context.cur_step_nums = 0
+            self.callback_manager.train_epoch_begin()
             with tqdm(total=total) as t:
                 t.set_description('Epoch %i' % epoch)
                 loss_total = 0
+                # self.callback_manager.fetch_data_begin()
                 for data in self.train_dataset.create_tuple_iterator():
+                    # self.callback_manager.fetch_data_end()
+                    run_context.cur_step_nums += 1
+                    self.cur_step_nums += 1
+                    self.callback_manager.train_step_begin(run_context)
                     if mode == 'pynative':
                         loss = self._run_step(data)
                     elif mode == 'graph':
                         loss = ms_function(self._run_step)(data)
-                    self.cur_step_nums += 1
                     loss_total += loss
                     t.set_postfix(loss=loss_total/self.cur_step_nums)
                     t.update(1)
+                    self.callback_manager.train_step_end(run_context)
+            self.callback_manager.train_epoch_end(run_context)
 
     def _run_ds_sink(self, train_dataset, eval_dataset, list_callback,
                      cb_params, print_steps, eval_steps):

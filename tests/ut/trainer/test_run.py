@@ -19,24 +19,21 @@ import numpy as np
 import mindspore.nn as nn
 import mindspore.dataset as ds
 from text.engine.trainer import Trainer
-
+from text.engine.callbacks.timer_callback import TimerCallback
 np.random.seed(1)
 
 class MyDataset:
-    """自定义数据集类"""
+    """Dataset"""
     def __init__(self):
-        """自定义初始化操作"""
         self.data = np.random.randn(100, 3).astype(np.float32)  # 自定义数据
         self.label = np.random.randn(100, 1).astype(np.float32)  # 自定义标签
     def __getitem__(self, index):
-        """自定义随机访问函数"""
         return self.data[index], self.label[index]
     def __len__(self):
-        """自定义获取样本数据量函数"""
         return len(self.data)
 
 class MyModel(nn.Cell):
-    """自定义模型类"""
+    """Model"""
     def __init__(self):
         super().__init__()
         self.fc = nn.Dense(3, 1)
@@ -55,7 +52,11 @@ class TestTrainerRun(unittest.TestCase):
         optimizer = nn.Adam(net.trainable_params(), learning_rate=0.01)
         dataset_generator = MyDataset()
         train_dataset = ds.GeneratorDataset(dataset_generator, ["data", "label"], shuffle=False)
-        self.trainer = Trainer(network=net, train_dataset=train_dataset, epochs=1, loss_fn=loss_fn, optimizer=optimizer)
+        callbacks = []
+        timer_callback = TimerCallback(print_steps=10)
+        callbacks.append(timer_callback)
+        self.trainer = Trainer(network=net, train_dataset=train_dataset, epochs=2,
+                               loss_fn=loss_fn, optimizer=optimizer, callbacks=callbacks)
 
     def test_trainer_run_pynative(self):
         self.trainer.run(mode='pynative')
