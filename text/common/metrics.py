@@ -19,15 +19,205 @@ import math
 import string
 from collections.abc import Iterable
 from collections import Counter
+from abc import ABCMeta, abstractmethod
 import re
 import numpy as np
 
 from mindspore import Tensor
 
+class Metrics(metaclass=ABCMeta):
+    """
+    Base class of all metrics. Never use this class directly, but instantiate one of its subclasses instead.
+
+    Functions `update` will accumulate intermediate results in the evaluation process, `eval` will evaluate the final
+    result, and `clear` will reinitialize the intermediate results. Function `get_metric_name` will provide class name.
+
+    """
+    def __init__(self):
+        pass
+
+    def _convert_data_type(self, data):
+        """
+        Convert data type to numpy array.
+
+        Args:
+            data (Object): Input data.
+
+        Returns:
+            - **data** (np.ndarray) - Data with `np.ndarray` type.
+
+        Raises:
+            TypeError: If `data` is not a tensor, list or numpy.ndarray.
+
+        """
+        if isinstance(data, Tensor):
+            data = data.asnumpy()
+        elif isinstance(data, list):
+            data = np.array(data)
+        elif isinstance(data, np.ndarray):
+            pass
+        else:
+            raise TypeError(f'For class `Metrics` and its derived classes, the input data type must be tensor, list or'
+                            f' numpy.ndarray, but got {type(data)}.')
+        return data
+
+    @abstractmethod
+    def clear(self):
+        """
+        An interface describes the behavior of clearing the internal evaluation result. All subclasses of `Metrics`
+        must override this interface.
+
+        Raises:
+            NotImplementedError: If this interface is called.
+
+        """
+        raise NotImplementedError(f'Function `clear` not implemented in {self.__class__.__name__}')
+
+    @abstractmethod
+    def eval(self):
+        """
+        An interface describes the behavior of computing the evaluation result. All subclasses of `Metrics`
+        must override this interface.
+
+        Raises:
+            NotImplementedError: If this interface is called.
+
+        """
+        raise NotImplementedError(f'Function `eval` not implemented in {self.__class__.__name__}')
+
+    @abstractmethod
+    def updates(self, preds, labels):
+        """
+        An interface describes the behavior of updating the internal evaluation result. All subclasses of `Metrics`
+        must override this interface.
+
+        Raises:
+            NotImplementedError: If this interface is called.
+
+        """
+        raise NotImplementedError(f'Function `updates` not implemented in {self.__class__.__name__}')
+
+    @abstractmethod
+    def get_metric_name(self):
+        """
+        An interface returns the name of the metric. All subclasses of `Metrics` must override this interface.
+
+        Raises:
+            NotImplementedError: If this interface is called.
+
+        """
+        raise NotImplementedError(f'Function `get_metric_name` not implemented in {self.__class__.__name__}')
+
+class Accuracy(Metrics):
+    r"""
+    Calculate accuracy. The function is shown as follows:
+
+    .. math::
+
+        \text{ACC} =\frac{\text{TP} + \text{TN}}
+        {\text{TP} + \text{TN} + \text{FP} + \text{FN}}
+
+    where `ACC` is accuracy, `TP` is the number of true posistive cases, `TN` is the number
+    of true negative cases, `FP` is the number of false posistive cases, `FN` is the number
+    of false negative cases.
+
+    Args:
+        name (str): Name of the metric.
+
+    Example:
+        >>> import numpy as np
+        >>> import mindspore
+        >>> from mindspore import nn, Tensor
+        >>> from text.common.metrics import Accuracy
+        >>> preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
+        >>> labels = Tensor(np.array([1, 0, 1]), mindspore.float32)
+        >>> metric = Accuracy()
+        >>> metric.updates(preds, labels)
+        >>> acc = metric.eval()
+        >>> print(acc)
+        0.6666666666666666
+
+    """
+    def __init__(self, name='Accuracy'):
+        super().__init__()
+        self._name = name
+        self._correct_num = 0
+        self._total_num = 0
+        self._class_num = 0
+
+    def clear(self):
+        """Clear the internal evaluation result."""
+        self._correct_num = 0
+        self._total_num = 0
+        self._class_num = 0
+
+    def updates(self, preds, labels):
+        """
+        Update local variables. If the index of the maximum of the predicted value matches the label,
+        the predicted result is correct.
+
+        Args:
+            preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of floating numbers
+            in range :math:`[0, 1]` and the shape of `preds` is :math:`(N, C)` in most cases (not strictly),
+            where :math:`N` is the number of cases and :math:`C` is the number of categories.
+            labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be in one-hot format
+            that shape is :math:`(N, C)`, or can be transformed to one-hot format that shape is :math:`(N,)`.
+
+        Raises:
+            RuntimeError: If `predictions` is None or `labels` is None.
+            ValueError: class numbers of last input predicted data and current predicted data not match.
+
+        """
+        if preds is None or labels is None:
+            raise RuntimeError("To calculate accuracy, it needs at least 2 inputs (`preds` and `labels`)")
+        y_pred = _convert_data_type(preds)
+        y_true = _convert_data_type(labels)
+
+        if y_pred.ndim == y_true.ndim and _check_onehot_data(y_true):
+            y_true = y_true.argmax(axis=1)
+        _check_shape(y_pred, y_true)
+
+        if self._class_num == 0:
+            self._class_num = y_pred.shape[1]
+        elif y_pred.shape[1] != self._class_num:
+            raise ValueError(f'For `Accuracy.updates`, class number not match, last input predicted data'
+                             f'contain {self._class_num} classes, but current predicted data contain '
+                             f'{y_pred.shape[1]} classes, please check your predicted value(inputs[0]).')
+
+        indices = y_pred.argmax(axis=1)
+        res = (np.equal(indices, y_true) * 1).reshape(-1)
+
+        self._correct_num += res.sum()
+        self._total_num += res.shape[0]
+
+    def eval(self):
+        """
+        Compute and return the accuracy.
+
+        Returns:
+            - **acc** (float) - The computed result.
+
+        Raises:
+            RuntimeError: If the number of samples is 0.
+        """
+        if self._total_num == 0:
+            raise RuntimeError(f'`Accuracy` can not be calculated, because the number of samples is {0}, '
+                               f'please check whether your inputs(`preds`, `labels`) are empty, or has called'
+                               f'update method before calling eval method.')
+        acc = self._correct_num / self._total_num
+        return acc
+
+    def get_metric_name(self):
+        """
+        Return the name of the metric.
+        """
+        return self._name
+
 def perplexity(preds, labels, ignore_label=None):
     r"""
     Calculate perplexity. Perplexity is a measure of how well a probabilibity model predicts a
-    sample. A low perplexity indicates the model is good at predicting the sample. The function is shown as follows:
+    sample. A low perplexity indicates the model is good at predicting the sample.
+    The function is shown as follows:
 
     .. math::
 
@@ -36,8 +226,11 @@ def perplexity(preds, labels, ignore_label=None):
     Where :math:`w` represents words in corpus.
 
     Args:
-        preds (Union[Tensor, list, numpy.ndarray]): Predicted values. The shape of `preds` is :math:`(N, C)`.
-        labels (Union[Tensor, list, numpy.ndarray]): Labels of data. The shape of `labels` is :math:`(N, C)`.
+        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of floating numbers
+        in range :math:`[0, 1]` and the shape of `preds` is :math:`(N, C)` in most cases (not strictly),
+        where :math:`N` is the number of cases and :math:`C` is the number of categories.
+        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be in one-hot format
+        that shape is :math:`(N, C)`, or can be transformed to one-hot format that shape is :math:`(N,)`.
         ignore_label (Union[int, None]): Index of an invalid label to be ignored when counting.
         If set to `None`, it means there's no invalid label. Default: None.
 
@@ -145,6 +338,7 @@ def bleu(cand, ref_list, n_size=4, weights=None):
         >>> bleu_score = bleu(cand, ref_list)
         >>> print(bleu_score)
         0.46713797772820015
+
     """
 
     n_size = _check_value_type("n_size", n_size, [int])
@@ -402,8 +596,13 @@ def accuracy(predictions, labels):
     of false negative cases.
 
     Args:
-        predictions (Union[Tensor, list, numpy.ndarray]): Predicted value.
-        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value.
+        predictions (Union[Tensor, list, numpy.ndarray]): Predicted value. `predictions` is
+        a list of floating numbers in range :math:`[0, 1]` and the shape of `predictions` is
+        :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number of cases
+        and :math:`C` is the number of categories.
+        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be in
+        one-hot format that shape is :math:`(N, C)`, or can be transformed to one-hot format
+        that shape is :math:`(N,)`.
 
     Returns:
         - **acc** (float) - The computed result.
@@ -416,6 +615,7 @@ def accuracy(predictions, labels):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
+        >>> from text.common.metrics import accuracy
         >>> preds = [[0.1, 0.9], [0.5, 0.5], [0.6, 0.4], [0.7, 0.3]]
         >>> labels = [1, 0, 1, 1]
         >>> acc = accuracy(preds, labels)
@@ -460,8 +660,11 @@ def precision(preds, labels):
     where `TP` is the number of true posistive cases, `FP` is the number of false posistive cases.
 
     Args:
-        preds (Union[Tensor, list, numpy.ndarray]): Predicted value.
-        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value.
+        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of floating numbers
+        in range :math:`[0, 1]` and the shape of `preds` is :math:`(N, C)` in most cases (not strictly),
+        where :math:`N` is the number of cases and :math:`C` is the number of categories.
+        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be in one-hot format
+        that shape is :math:`(N, C)`, or can be transformed to one-hot format that shape is :math:`(N,)`.
 
     Returns:
         - **prec** (float) - The computed result.
@@ -474,6 +677,7 @@ def precision(preds, labels):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
+        >>> from text.common.metrics import precision
         >>> preds = [[0.1, 0.9], [0.5, 0.5], [0.6, 0.4], [0.7, 0.3]]
         >>> labels = [1, 0, 1, 1]
         >>> prec = precision(preds, labels)
@@ -518,8 +722,11 @@ def recall(preds, labels):
     where `TP` is the number of true posistive cases, `FN` is the number of false negative cases.
 
     Args:
-        preds (Union[Tensor, list, numpy.ndarray]): Predicted value.
-        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value.
+        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of floating numbers
+        in range :math:`[0, 1]` and the shape of `preds` is :math:`(N, C)` in most cases (not strictly),
+        where :math:`N` is the number of cases and :math:`C` is the number of categories.
+        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be in one-hot format
+        that shape is :math:`(N, C)`, or can be transformed to one-hot format that shape is :math:`(N,)`.
 
     Returns:
         - **rec** (float) - The computed result.
@@ -532,6 +739,7 @@ def recall(preds, labels):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
+        >>> from text.common.metrics import recall
         >>> preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
         >>> labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
         >>> rec = recall(preds, labels)
@@ -577,8 +785,11 @@ def f1_score(preds, labels):
     `FP` is the number of false positive cases.
 
     Args:
-        preds (Union[Tensor, list, numpy.ndarray]): Predicted value.
-        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value.
+        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of floating numbers
+        in range :math:`[0, 1]` and the shape of `preds` is :math:`(N, C)` in most cases (not strictly),
+        where :math:`N` is the number of cases and :math:`C` is the number of categories.
+        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be in one-hot format
+        that shape is :math:`(N, C)`, or can be transformed to one-hot format that shape is :math:`(N,)`.
 
     Returns:
         - **f1_s** (float) - The computed result.
@@ -591,6 +802,7 @@ def f1_score(preds, labels):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
+        >>> from text.common.metrics import f1_score
         >>> preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
         >>> labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
         >>> f1_s = f1_score(preds, labels)
@@ -630,8 +842,11 @@ def confusion_matrix(preds, labels, class_num=2):
     of classification models, including binary classification and multiple classification.
 
     Args:
-        preds (Union[Tensor, list, numpy.ndarray]): Predicted value.
-        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value.
+        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of floating numbers
+        in range :math:`[0, 1]` and the shape of `preds` is :math:`(N, C)` in most cases (not strictly),
+        where :math:`N` is the number of cases and :math:`C` is the number of categories.
+        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be in one-hot format
+        that shape is :math:`(N, C)`, or can be transformed to one-hot format that shape is :math:`(N,)`.
         class_num (int): Number of classes in the dataset. Default: 2.
 
     Returns:
@@ -645,6 +860,7 @@ def confusion_matrix(preds, labels, class_num=2):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
+        >>> from text.common.metrics import confusion_matrix
         >>> preds = Tensor(np.array([1, 0, 1, 0]))
         >>> labels = Tensor(np.array([1, 0, 0, 1]))
         >>> conf_mat = confusion_matrix(preds, labels)
@@ -692,8 +908,11 @@ def mcc(preds, labels):
     of false negative cases, `FP` is the number of false positive cases.
 
     Args:
-        preds (Union[Tensor, list, numpy.ndarray]): Predicted value.
-        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value.
+        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of floating numbers
+        in range :math:`[0, 1]` and the shape of `preds` is :math:`(N, C)` in most cases (not strictly),
+        where :math:`N` is the number of cases and :math:`C` is the number of categories.
+        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be in one-hot format
+        that shape is :math:`(N, C)`, or can be transformed to one-hot format that shape is :math:`(N,)`.
 
     Returns:
         - **m_c_c** (float) - The computed result.
@@ -706,6 +925,7 @@ def mcc(preds, labels):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
+        >>> from text.common.metrics import mcc
         >>> preds = [[0.1, 0.9], [-0.5, 0.5], [0.1, 0.4], [0.1, 0.3]]
         >>> labels = [[1], [0], [1], [1]]
         >>> m_c_c = mcc(x, y)
@@ -763,8 +983,13 @@ def pearson(preds, labels):
     of the covariance, such that the result always has a value between −1 and 1.
 
     Args:
-        preds (Union[Tensor, list, numpy.ndarray]): Predicted value.
-        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value.
+        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of
+        floating numbers in range :math:`[0, 1]` and the shape of `preds` is :math:`(N, C)`
+        in most cases (not strictly), where :math:`N` is the number of cases and :math:`C`
+        is the number of categories.
+        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be
+        in one-hot format that shape is :math:`(N, C)`, or can be transformed to one-hot format
+        that shape is :math:`(N,)`.
 
     Returns:
         - **pcc** (float) - The computed result.
@@ -777,6 +1002,7 @@ def pearson(preds, labels):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
+        >>> from text.common.metrics import pearson
         >>> preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
         >>> labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
         >>> pcc = pearson(preds, labels)
@@ -828,8 +1054,11 @@ def spearman(preds, labels):
     of the other.
 
     Args:
-        preds (Union[Tensor, list, numpy.ndarray]): Predicted value.
-        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value.
+        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of floating numbers
+        in range :math:`[0, 1]` and the shape of `preds` is :math:`(N, C)` in most cases (not strictly),
+        where :math:`N` is the number of cases and :math:`C` is the number of categories.
+        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be in one-hot format
+        that shape is :math:`(N, C)`, or can be transformed to one-hot format that shape is :math:`(N,)`.
 
     Returns:
         - **scc** (float) - The computed result.
@@ -842,6 +1071,7 @@ def spearman(preds, labels):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
+        >>> from text.common.metrics import spearman
         >>> preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
         >>> labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
         >>> scc = spearman(preds, labels)
@@ -905,6 +1135,7 @@ def em_score(preds, examples):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
+        >>> from text.common.metrics import em_score
         >>> preds = "this is the best span"
         >>> examples = ["this is a good span", "something irrelevant"]
         >>> exact_match = em_score(preds, examples)
@@ -1017,7 +1248,7 @@ def _convert_data_type(data):
         - **data** (numpy.ndarray) - Data with `np.ndarray` type.
 
     Raises:
-        TypeError: If the data type is not tensor, list or numpy.ndarray.
+        TypeError: If the data type is not a tensor, list or numpy.ndarray.
 
     """
     if isinstance(data, Tensor):

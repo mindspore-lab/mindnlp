@@ -18,6 +18,7 @@ import unittest
 import numpy as np
 import mindspore
 from mindspore import Tensor
+from text.common.metrics import Accuracy
 from text.common.metrics import (perplexity, bleu, rouge_n, rouge_l, distinct, accuracy, precision,
                                  recall, f1_score, confusion_matrix, mcc, pearson, spearman, em_score)
 
@@ -271,3 +272,23 @@ class TestEmScore(unittest.TestCase):
         exact_match = em_score(preds, examples)
 
         assert exact_match == 0.0
+
+class TestClassAccuracy(unittest.TestCase):
+    r"""
+    Test class Accuracy
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_class_accuracy(self):
+        """
+        Test class Accuracy
+        """
+        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
+        labels = Tensor(np.array([1, 0, 1]), mindspore.float32)
+        metric = Accuracy()
+        metric.updates(preds, labels)
+        acc = metric.eval()
+
+        assert acc == 0.6666666666666666
