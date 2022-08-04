@@ -16,10 +16,13 @@
 
 import unittest
 import numpy as np
+
 import mindspore.nn as nn
 import mindspore.dataset as ds
+
 from text.engine.trainer import Trainer
 from text.engine.callbacks.timer_callback import TimerCallback
+
 np.random.seed(1)
 
 class MyDataset:
@@ -52,9 +55,9 @@ class TestTrainerRun(unittest.TestCase):
         optimizer = nn.Adam(net.trainable_params(), learning_rate=0.01)
         dataset_generator = MyDataset()
         train_dataset = ds.GeneratorDataset(dataset_generator, ["data", "label"], shuffle=False)
-        callbacks = []
-        timer_callback = TimerCallback(print_steps=10)
-        callbacks.append(timer_callback)
+        timer_callback_steps = TimerCallback(print_steps=10)
+        timer_callback_epochs = TimerCallback(print_steps=-1)
+        callbacks = [timer_callback_steps, timer_callback_epochs]
         self.trainer = Trainer(network=net, train_dataset=train_dataset, epochs=2,
                                loss_fn=loss_fn, optimizer=optimizer, callbacks=callbacks)
 

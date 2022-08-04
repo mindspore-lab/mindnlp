@@ -94,7 +94,7 @@ class TimerCallback(Callback):
         self.time_ndigit = time_ndigit
 
     def train_begin(self):
-        """Called once before the network executing."""
+        """Called once before the network training."""
         self.timers('total').start()
         self.timers('train').start()
 
@@ -103,11 +103,14 @@ class TimerCallback(Callback):
         line = self.format_timer(train_end=True)
         print(f"Training finished{line}")
 
-    def fetch_data_begin(self):
-        self.timers('fetch-data').start()
+    def evaluate_begin(self):
+        """Called once before the network evaluating."""
+        self.timers('evaluate').start()
 
-    def fetch_data_end(self):
-        self.timers('fetch-data').stop()
+    def evaluate_end(self):
+        """Called once after the network evaluating."""
+        line = self.format_timer(eval_end=True)
+        print(f"Evaluating finished{line}")
 
     def train_step_begin(self, run_context):
         if self.print_steps > 0 and run_context.cur_step_nums % self.print_steps == 0:
@@ -127,16 +130,16 @@ class TimerCallback(Callback):
             line = self.format_timer()
             print(f"Running {run_context.cur_epoch_nums} epochs{line}")
 
-    def format_timer(self, reset=True, train_end=False):
+    def format_timer(self, reset=True, train_end=False, eval_end=False):
         """format the output."""
         line = ''
-        timers = ['fetch-data', 'forward', 'epoch', 'backward', 'optimize', 'evaluate', 'train', 'total']
+        timers = ['forward', 'epoch', 'backward', 'optimize', 'evaluate', 'train', 'total']
         for timer_name in timers:
-            if train_end is False:
+            if train_end is False or eval_end is False:
                 if not timer_name in self.timers or timer_name == 'train' or timer_name == 'total':
                     continue
             timer = self.timers(timer_name)
             elapsed = round(timer.elapsed(reset=reset), self.time_ndigit)
             if elapsed != 0:
-                line = line + f', {timer_name}: {elapsed}s'
+                line = line + f', {timer_name} time cost: {elapsed}s'
         return line
