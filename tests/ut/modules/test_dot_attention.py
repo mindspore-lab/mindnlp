@@ -18,8 +18,8 @@ import unittest
 import numpy as np
 
 import mindspore
-from mindspore import context
 from mindspore import Tensor
+from mindspore import context
 
 from text.modules.attentions import DotAttention
 
@@ -39,7 +39,7 @@ class TestDotAttention(unittest.TestCase):
         q = Tensor(np.ones((2, 1024, 512)), mindspore.float32)
         k = Tensor(np.ones((2, 1024, 512)), mindspore.float32)
         v = Tensor(np.ones((2, 1024, 512)), mindspore.float32)
-        output = net(q, k, v)
+        output, _ = net(q, k, v)
 
         assert output.shape == (2, 1024, 512)
 
@@ -49,6 +49,6 @@ class TestDotAttention(unittest.TestCase):
         q = Tensor(np.ones((2, 1024, 512)), mindspore.float32)
         k = Tensor(np.ones((2, 1024, 512)), mindspore.float32)
         v = Tensor(np.ones((2, 1024, 512)), mindspore.float32)
-        output = net(q, k, v)
+        output, _ = net(q, k, v)
 
         assert output.shape == (2, 1024, 512)
