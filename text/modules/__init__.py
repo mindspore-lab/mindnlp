@@ -15,4 +15,5 @@
 """modules init"""
 
 from .attentions import DotAttention
+from .attentions import MutiHeadAttention
 from .attentions import BinaryAttention
