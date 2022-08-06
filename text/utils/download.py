@@ -20,9 +20,11 @@ import os
 import shutil
 import hashlib
 import json
+import re
+from pathlib import Path
+from urllib.parse import urlparse
 import requests
 from tqdm import tqdm
-
 
 def get_cache_path():
     r"""
@@ -111,9 +113,9 @@ def http_get(url, path=None, md5sum=None):
                         f.write(chunk)
         shutil.move(tmp_filename, filename)
 
-    return path, filename
+    return Path(path), filename
 
-def check_md5(filename, md5sum=None):
+def check_md5(filename: str, md5sum=None):
     r"""
     Check md5 of download file.
 
@@ -147,7 +149,7 @@ def check_md5(filename, md5sum=None):
         return False
     return True
 
-def get_dataset_url(datasetname):
+def get_dataset_url(datasetname: str):
     r"""
     Get dataset url for download
 
@@ -163,7 +165,8 @@ def get_dataset_url(datasetname):
 
     Examples:
         >>> name = 'aclImdb_v1'
-        >>> print(get_dataset_url(name))
+        >>> url = get_dataset_url(name)
+        >>> print(url)
         'https://mindspore-website.obs.myhuaweicloud.com/notebook/datasets/aclImdb_v1.tar.gz'
 
     """
@@ -175,3 +178,193 @@ def get_dataset_url(datasetname):
     if url:
         return url
     raise KeyError(f"There is no {datasetname}.")
+
+def get_filepath(path: str):
+    r"""
+    Get the filepath of file.
+
+    Args:
+        path (str) : The path of the required file.
+
+    Returns:
+        - ** get_filepath_result ** (str) - If `path` is a folder containing a file, return `{path}\{filename}`;
+                                        if `path` is a folder containing multiple files or a single file, return `path`.
+
+    Raises:
+        TypeError: If `path` is not a string.
+        RuntimeError: If `path` is None.
+
+    Examples:
+        >>> path = '{home}\.text'
+        >>> get_filepath_result = get_filepath(path)
+        >>> print(get_filepath_result)
+        '{home}\.text'
+
+    """
+    if os.path.isdir(path):
+        files = os.listdir(path)
+        if len(files) == 1:
+            return os.path.join(path, files[0])
+        return path
+    if os.path.isfile(path):
+        return path
+    raise FileNotFoundError(f"{path} is not a valid file or directory.")
+
+def cache_file(filename: str, cache_dir: str = None, url: str = None):
+    r"""
+    If there is the file in cache_dir, return the path; if there is no such file, use the url to download.
+
+    Args:
+        filename (str) : The name of the required dataset file.
+        cache_dir (str) : The path of save the file.
+        url (str) : The url of the required dataset file.
+
+    Returns:
+        - ** dataset_dir ** (str) - If `path` is a folder containing a file, return `{path}\{filename}`;
+                                        if `path` is a folder containing multiple files or a single file, return `path`.
+
+    Raises:
+        TypeError: If `filename` is not a string.
+        TypeError: If `cache_dir` is not a string.
+        TypeError: If `url` is not a string.
+        RuntimeError: If `filename` is None.
+
+    Examples:
+        >>> filename = 'aclImdb_v1'
+        >>> path, filename = cache_file(filename)
+        >>> print(path, filename)
+        '{home}\.text' 'aclImdb_v1.tar.gz'
+
+    """
+    if cache_dir is None:
+        cache_dir = get_cache_path()
+    if url is None:
+        url = get_dataset_url(filename)
+    path, filename = cached_path(filename_or_url=url, cache_dir=cache_dir, foldername=None)
+
+    return path, filename
+
+def cached_path(filename_or_url: str, cache_dir: str = None, foldername=None):
+    r"""
+    If there is the file in cache_dir, return the path; if there is no such file, use the url to download.
+
+    Args:
+        filename_or_url (str) : The name or url of the required file .
+        cache_dir (str) : The path of save the file.
+        name (str) : The name of the required dataset file.
+
+    Returns:
+        - ** Path ** (str) - If `path` is a folder containing a file, return `{path}\{filename}`;
+                            if `path` is a folder containing multiple files or a single file, return `path`.
+
+    Raises:
+        TypeError: If `path` is not a string.
+        RuntimeError: If `path` is None.
+
+    Examples:
+        >>> path = "https://mindspore-website.obs.myhuaweicloud.com/notebook/datasets/aclImdb_v1.tar.gz"
+        >>> path, filename = cached_path(path)
+        >>> print(path, filename)
+        '{home}\.text\aclImdb_v1.tar.gz' 'aclImdb_v1.tar.gz'
+
+    """
+    if cache_dir is None:
+        dataset_cache = Path(get_cache_path())
+    else:
+        dataset_cache = cache_dir
+
+    if foldername:
+        dataset_cache = os.path.join(dataset_cache, foldername)
+
+    parsed = urlparse(filename_or_url)
+
+    if parsed.scheme in ("http", "https"):
+        return get_from_cache(filename_or_url, Path(dataset_cache))
+    if parsed.scheme == "" and Path(os.path.join(dataset_cache, filename_or_url)).exists():
+        return Path(os.path.join(dataset_cache, filename_or_url))
+    if parsed.scheme == "":
+        raise FileNotFoundError("file {} not found in {}.".format(filename_or_url, dataset_cache))
+    raise ValueError(
+        "unable to parse {} as a URL or as a local path".format(filename_or_url)
+    )
+
+def match_file(filename: str, cache_dir: str) -> str:
+    r"""
+    If there is the file in cache_dir, return the path; otherwise, return empty string or error.
+
+    Args:
+        filename (str) : The name of the required file.
+        cache_dir (str) : The path of save the file.
+
+    Returns:
+        - ** match_file_result ** (str) - If there is the file in cache_dir, return filename;
+                                        if there is no such file, return empty string '';
+                                        if there are two or more matching file, report an error.
+
+    Raises:
+        TypeError: If `filename` is not a string.
+        TypeError: If `cache_dir` is not a string.
+        RuntimeError: If `filename` is None.
+        RuntimeError: If `cache_dir` is None.
+
+    Examples:
+        >>> name = 'aclImdb_v1.tar.gz'
+        >>> path = get_cache_path()
+        >>> match_file_result = match_file(name, path)
+        ''
+
+    """
+    files = os.listdir(cache_dir)
+    matched_filenames = []
+    for file_name in files:
+        if re.match(filename + '$', file_name) or re.match(filename + '\\..*', file_name):
+            matched_filenames.append(file_name)
+    if not matched_filenames:
+        return ''
+    if len(matched_filenames) == 1:
+        return matched_filenames[-1]
+    raise RuntimeError(f"Duplicate matched files:{matched_filenames}, this should be caused by a bug.")
+
+def get_from_cache(url: str, cache_dir: str = None):
+    r"""
+    If there is the file in cache_dir, return the path; if there is no such file, use the url to download.
+
+    Args:
+        url (str) : The path to download the file.
+        cache_dir (str) : The path of save the file.
+
+    Returns:
+        - ** path ** (str) - The path of save the downloaded file.
+        - ** filename ** (str) - The name of downloaded file.
+
+    Raises:
+        TypeError: If `url` is not a string.
+        TypeError: If `cache_dir` is not a Path.
+        RuntimeError: If `url` is None.
+
+    Examples:
+        >>> path = "https://mindspore-website.obs.myhuaweicloud.com/notebook/datasets/aclImdb_v1.tar.gz"
+        >>> path, filename = cached_path(path)
+        >>> print(path, filename)
+        '{home}\.text' 'aclImdb_v1.tar.gz'
+
+    """
+    if cache_dir is None:
+        cache_dir = Path(get_cache_path())
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    filename = re.sub(r".+/", "", url)
+    filetmp = os.path.basename(filename)
+    dir_name = os.path.splitext(filetmp)[0]
+
+    match_dir_name = match_file(dir_name, cache_dir)
+    if match_dir_name:
+        dir_name = match_dir_name
+    cache_path = cache_dir / dir_name
+
+    if cache_path.exists():
+        return get_filepath(cache_path), filename
+
+    if not cache_path.exists():
+        path = http_get(url, cache_dir)[0]
+    return Path(path), filename

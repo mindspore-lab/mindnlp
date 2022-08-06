@@ -18,7 +18,7 @@ Test Download
 
 import unittest
 import os
-from text.utils.download import get_cache_path, check_md5, get_dataset_url
+from text.utils.download import get_cache_path, check_md5, get_dataset_url, get_filepath, match_file
 
 class TestGetCachePath(unittest.TestCase):
     r"""
@@ -57,3 +57,30 @@ class TestGetDatasetUrl(unittest.TestCase):
         name = 'aclImdb_v1'
         url = get_dataset_url(name)
         assert url == 'https://mindspore-website.obs.myhuaweicloud.com/notebook/datasets/aclImdb_v1.tar.gz'
+
+class TestGetFilePath(unittest.TestCase):
+    r"""
+    Test get_file_path
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_get_file_path(self):
+        path = os.path.expanduser('~')
+        get_filepath_result = get_filepath(path)
+        assert get_filepath_result == (os.path.expanduser('~'))
+
+class TestMatchFile(unittest.TestCase):
+    r"""
+    Test match_file
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_match_file(self):
+        name = 'aclImdb_v1.tar.gz'
+        path = os.path.expanduser('~')
+        match_file_result = match_file(name, path)
+        assert match_file_result == ''
