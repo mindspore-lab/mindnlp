@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-
 """
 Trainer for training.
 """
-from mindspore import ms_function
 from tqdm import tqdm
+
+from mindspore import ms_function
 
 from text.engine.callbacks.callback_manager import CallbackManager, RunContext
 from ..common.grad import value_and_grad
@@ -47,8 +47,8 @@ class Trainer:
             do backpropagation and update weights. Default value: None.
         loss (Cell): Objective function. If `loss_fn` is None, the `network` should contain the calculation of loss
             and parallel if needed. Default: None.
-        metrics (Union[dict, set]): A Dictionary or a set of metrics for model evaluation.
-            eg: {'accuracy', 'recall'}. Default: None.
+        metrcis (Optional[list[Metrics], Metrics]): List of metrics objects which should be used
+            while evaluating. Default:None.
         save_path (str): File path to save the model.
         device (str): List of devices used for training.
         callbacks (Optional[list[Callback], Callback]): List of callback objects which should be executed
@@ -142,13 +142,12 @@ class Trainer:
 
         Args:
             epoch (int): Total number of iterations on the data.
-            train_dataset (Dataset): A training dataset iterator. If there is no
-                                     loss_fn, a tuple with multiple data (data1, data2, data3, ...) should be
-                                     returned and passed to the network. Otherwise, a tuple (data, label) should
-                                     be returned. The data and label would be passed to the network and loss
-                                     function respectively.
-            list_callback (Callback): Executor of callback list. Default: None.
-            cb_params (_InternalCallbackParam): Callback parameters. Default: None.
+            mode (str): Training mode. Supports ["pynative", "graph"]. Default: "pynative".
+
+                - "pynative": Training under pynative mode.
+                - "graph": Training under graph mode.
+
+            run_context (RunContext): Args of Trainer used for callbacks.
         """
         loss_fn = self.loss_fn
         network = self.network
@@ -160,8 +159,10 @@ class Trainer:
 
         self.grad_fn = value_and_grad(
             net_forward, self.optimizer.parameters, has_aux=True)
-        self.train_dataset = self.train_dataset.batch(self.batch_size)
+        # batchify train_dataset
         total = self.train_dataset.get_dataset_size()
+        self.train_dataset = self.train_dataset.batch(self.batch_size)
+        # epoch begin
         for epoch in range(0, self.epochs):
             self.cur_epoch_nums = epoch + 1
             self.cur_step_nums = 0
@@ -172,6 +173,7 @@ class Trainer:
                 t.set_description('Epoch %i' % epoch)
                 loss_total = 0
                 # self.callback_manager.fetch_data_begin()
+                # step begin
                 for data in self.train_dataset.create_tuple_iterator():
                     # self.callback_manager.fetch_data_end()
                     run_context.cur_step_nums += 1
@@ -184,7 +186,10 @@ class Trainer:
                     loss_total += loss
                     t.set_postfix(loss=loss_total/self.cur_step_nums)
                     t.update(1)
+                    # step end
                     self.callback_manager.train_step_end(run_context)
+            # epoch end
+            t.close()
             self.callback_manager.train_epoch_end(run_context)
 
     def _run_ds_sink(self, train_dataset, eval_dataset, list_callback,
