@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2021 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+
 """
-Callbacks.
+Abstract classes for Backbones.
 """
-from .callback_manager import CallbackManager
-from .timer_callback import TimerCallback
+
+from .base import BaseModel
+from .seq2seq import Seq2seqModel
+from .seq2vec import Seq2vecModel

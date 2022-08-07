@@ -21,9 +21,6 @@ import mindspore.nn as nn
 class BaseModel(nn.Cell):
     r"""Basic class for models"""
 
-    def construct(self):
-        raise NotImplementedError("Model must implement the construct method")
-
     @classmethod
     def add_attrs(cls, parser):
         """Add model-specific arguments to the parser."""

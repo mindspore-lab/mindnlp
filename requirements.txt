@@ -1,1 +1,3 @@
-mindspore>=1.7.0
+mindspore>=1.8.0
+requests
+tqdm

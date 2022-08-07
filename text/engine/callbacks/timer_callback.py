@@ -17,7 +17,7 @@ Callback for timing
 """
 
 import time
-from .callback import Callback
+from ...abc import Callback
 
 class _Timer:
     """Timer."""

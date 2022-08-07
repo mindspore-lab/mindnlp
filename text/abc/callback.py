@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-Callback
+Abstract class for Callbacks
 """
 class Callback():
     """

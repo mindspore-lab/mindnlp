@@ -15,7 +15,7 @@
 """
 Callback Manager
 """
-from .callback import Callback
+from ...abc import Callback
 
 def _transfer(func):
     """
