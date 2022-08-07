@@ -13,10 +13,11 @@
 # limitations under the License.
 # ============================================================================
 """Sequence-to-sequence basic model"""
-
+# pylint: disable=abstract-method
+# pylint: disable=arguments-differ
 import mindspore.ops as ops
 
-from basemodel import BaseModel
+from .base import BaseModel
 
 
 class Seq2seqModel(BaseModel):

@@ -13,11 +13,12 @@
 # limitations under the License.
 # ============================================================================
 """Sequence-to-vector basic model"""
-
+# pylint: disable=abstract-method
+# pylint: disable=arguments-differ
 import mindspore.nn as nn
 import mindspore.ops as ops
 
-from basemodel import BaseModel
+from .base import BaseModel
 
 
 class Seq2vecModel(BaseModel):

@@ -20,7 +20,7 @@ from tqdm import tqdm
 from mindspore import ms_function
 
 from text.engine.callbacks.callback_manager import CallbackManager
-from ..common.metrics import Metrics
+from ..abc import Metric
 
 class Evaluator:
     r"""
@@ -30,7 +30,7 @@ class Evaluator:
     Args:
         network (Cell): A network for evaluating.
         eval_dataset (Dataset): A evaluating dataset iterator.
-        metrcis (Optional[list[Metrics], Metrics]): List of metrics objects which should be used
+        metrcis (Optional[list[Metric], Metric]): List of metric objects which should be used
             while evaluating. Default:None.
         device (str): List of devices used for evaluating.
         callbacks (Optional[list[Callback], Callback]): List of callback objects which should be executed
@@ -85,13 +85,13 @@ class Evaluator:
         if not metrics:
             raise ValueError("For Evaluator, the model argument 'metrics' can not be None or empty, "
                              "you should set the argument 'metrics' for model.")
-        if isinstance(metrics, Metrics):
+        if isinstance(metrics, Metric):
             self.metrics.append(metrics)
         elif isinstance(metrics, list):
-            if all([isinstance(mc, Metrics) for mc in metrics]) is True:
+            if all([isinstance(mc, Metric) for mc in metrics]) is True:
                 self.metrics = metrics
             else:
-                obj = [not isinstance(mc, Metrics) for mc in metrics][0]
+                obj = [not isinstance(mc, Metric) for mc in metrics][0]
                 raise TypeError(f"Expect sub-classes of Metrics. Got {type(obj)}")
         else:
             raise TypeError(f"Expect metrics to be list or Metrics. Got {type(metrics)}.")

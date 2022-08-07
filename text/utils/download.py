@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-Download Functional
+Download functions
 """
 
 import os
@@ -170,7 +170,7 @@ def get_dataset_url(datasetname: str):
         'https://mindspore-website.obs.myhuaweicloud.com/notebook/datasets/aclImdb_v1.tar.gz'
 
     """
-    default_dataset_json = './text/config/dataset_url.json'
+    default_dataset_json = './text/configs/dataset_url.json'
     with open(default_dataset_json, "r") as json_file:
         json_dict = json.load(json_file)
 
