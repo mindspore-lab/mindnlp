@@ -83,7 +83,7 @@ class Accuracy(Metric):
             that shape is :math:`(N, C)`, or can be transformed to one-hot format that shape is :math:`(N,)`.
 
         Raises:
-            RuntimeError: If `predictions` is None or `labels` is None.
+            RuntimeError: If `preds` is None or `labels` is None.
             ValueError: class numbers of last input predicted data and current predicted data not match.
 
         """
@@ -101,7 +101,7 @@ class Accuracy(Metric):
         elif y_pred.shape[1] != self._class_num:
             raise ValueError(f'For `Accuracy.updates`, class number not match, last input predicted data'
                              f'contain {self._class_num} classes, but current predicted data contain '
-                             f'{y_pred.shape[1]} classes, please check your predicted value(inputs[0]).')
+                             f'{y_pred.shape[1]} classes, please check your predicted value(`preds`).')
 
         indices = y_pred.argmax(axis=1)
         res = (np.equal(indices, y_true) * 1).reshape(-1)
@@ -125,6 +125,119 @@ class Accuracy(Metric):
                                f'update method before calling eval method.')
         acc = self._correct_num / self._total_num
         return acc
+
+    def get_metric_name(self):
+        """
+        Return the name of the metric.
+        """
+        return self._name
+
+class F1Score(Metric):
+    r"""
+    Calculate F1 score. Fbeta score is a weighted mean of precision and recall, and F1 score is
+    a special case of Fbeta when beta is 1. The function is shown as follows:
+
+    .. math::
+
+        F_1=\frac{2\cdot TP}{2\cdot TP + FN + FP}
+
+    where `TP` is the number of true posistive cases, `FN` is the number of false negative cases,
+    `FP` is the number of false positive cases.
+
+    Args:
+        name (str): Name of the metric.
+
+    Example:
+        >>> import numpy as np
+        >>> import mindspore
+        >>> from mindspore import Tensor
+        >>> from text.common.metrics import F1Score
+        >>> preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
+        >>> labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
+        >>> metric = F1Score()
+        >>> metric.updates(preds, labels)
+        >>> f1_s = metric.eval()
+        >>> print(f1_s)
+        0.6666666666666666
+    """
+    def __init__(self, name='F1Score'):
+        super().__init__()
+        self._name = name
+        self.epsilon = sys.float_info.min
+        self._true_positives = 0
+        self._actual_positives = 0
+        self._positives = 0
+        self._class_num = 0
+
+    def clear(self):
+        """Clear the internal evaluation result."""
+        self._true_positives = 0
+        self._actual_positives = 0
+        self._positives = 0
+        self._class_num = 0
+
+    def updates(self, preds, labels):
+        """
+        Update local variables. If the index of the maximum of the predicted value matches the label,
+        the predicted result is correct.
+
+        Args:
+            preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of floating numbers
+            in range :math:`[0, 1]` and the shape of `preds` is :math:`(N, C)` in most cases (not strictly),
+            where :math:`N` is the number of cases and :math:`C` is the number of categories.
+            labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be in one-hot format
+            that shape is :math:`(N, C)`, or can be transformed to one-hot format that shape is :math:`(N,)`.
+
+        Raises:
+            RuntimeError: If `preds` is None or `labels` is None.
+            ValueError: class numbers of last input predicted data and current predicted data not match.
+            ValueError: If `preds` doesn't have the same classes number as `labels`.
+
+        """
+        if preds is None or labels is None:
+            raise RuntimeError("To calculate F1 score, it needs at least 2 inputs (`preds` and `labels`)")
+
+        y_pred = _convert_data_type(preds)
+        y_true = _convert_data_type(labels)
+        if y_pred.ndim == y_true.ndim and _check_onehot_data(y_true):
+            y_true = y_true.argmax(axis=1)
+        _check_shape(y_pred, y_true)
+
+        if self._class_num == 0:
+            self._class_num = y_pred.shape[1]
+        elif y_pred.shape[1] != self._class_num:
+            raise ValueError(f'For `F1Score.update`, class number not match, last input predicted data contain '
+                             f'{self._class_num} classes, but current predicted data contain {y_pred.shape[1]} '
+                             f'classes, please check your predicted value(`preds`).')
+        class_num = self._class_num
+
+        if y_true.max() + 1 > class_num:
+            raise ValueError(f'"For `F1Score.update`, `preds` and `labels` should contain same classes, but got '
+                             f'`preds` contains {class_num} classes and true value contains {y_true.max() + 1}')
+        y_true = np.eye(class_num)[y_true.reshape(-1)]
+        indices = y_pred.argmax(axis=1).reshape(-1)
+        y_pred = np.eye(class_num)[indices]
+
+        positives = y_pred.sum(axis=0)
+        actual_positives = y_true.sum(axis=0)
+        true_positives = (y_true * y_pred).sum(axis=0)
+
+        self._true_positives += true_positives
+        self._positives += positives
+        self._actual_positives += actual_positives
+
+    def eval(self):
+        """
+        Compute and return the F1 score.
+
+        Returns:
+            - **f1_s** (float) - The computed result.
+
+        Raises:
+            RuntimeError: If the number of samples is 0.
+        """
+        f1_s = (2 * self._true_positives / (self._actual_positives + self._positives + self.epsilon)).item(0)
+        return f1_s
 
     def get_metric_name(self):
         """
@@ -732,7 +845,7 @@ def f1_score(preds, labels):
 
     """
     if preds is None or labels is None:
-        raise RuntimeError("To calculate recall, it needs at least 2 inputs (`preds` and `labels`)")
+        raise RuntimeError("To calculate F1 score, it needs at least 2 inputs (`preds` and `labels`)")
 
     y_pred = _convert_data_type(preds)
     y_true = _convert_data_type(labels)
@@ -791,7 +904,7 @@ def confusion_matrix(preds, labels, class_num=2):
 
     """
     if preds is None or labels is None:
-        raise RuntimeError("To calculate recall, it needs at least 2 inputs (`preds` and `labels`)")
+        raise RuntimeError("To calculate confusion matrix, it needs at least 2 inputs (`preds` and `labels`)")
 
     class_num = _check_value_type("class_num", class_num, [int])
 
@@ -855,7 +968,8 @@ def mcc(preds, labels):
 
     """
     if preds is None or labels is None:
-        raise RuntimeError("To calculate recall, it needs at least 2 inputs (`preds` and `labels`)")
+        raise RuntimeError(f'To calculate Matthews correlation coefficient (MCC), it needs at least 2 inputs '
+                           f'(`preds` and `labels`)')
 
     preds = _convert_data_type(preds)
     labels = _convert_data_type(labels)
@@ -950,7 +1064,8 @@ def pearson(preds, labels):
         return numerator / denominator
 
     if preds is None or labels is None:
-        raise RuntimeError("To calculate recall, it needs at least 2 inputs (`preds` and `labels`)")
+        raise RuntimeError(f'To calculate Pearson correlation coefficient (PCC), it needs at least 2 inputs '
+                           f'(`preds` and `labels`)')
 
     preds = _convert_data_type(preds)
     labels = _convert_data_type(labels)
@@ -1020,7 +1135,8 @@ def spearman(preds, labels):
         return res
 
     if preds is None or labels is None:
-        raise RuntimeError("To calculate recall, it needs at least 2 inputs (`preds` and `labels`)")
+        raise RuntimeError(f'To calculate Spearman\'s rank correlation coefficient, it needs at least '
+                           f'2 inputs (`preds` and `labels`)')
 
     preds = _convert_data_type(preds)
     labels = _convert_data_type(labels)
