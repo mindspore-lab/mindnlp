@@ -12,3 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+"""
+Models init
+"""
+
+from .seq2sq import RNN, LSTM, GRU

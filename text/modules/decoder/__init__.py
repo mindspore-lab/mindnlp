@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""modules init"""
+"""
+Decoder class
+"""
 
-from .attentions import DotAttention, MutiHeadAttention, BinaryAttention
-from .encoder import *
-from .decoder import *
+from .rnn_decoder import RNNDecoder
+from .lstm_decoder import LSTMDecoder
+from .gru_decoder import GRUDecoder

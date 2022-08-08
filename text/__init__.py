@@ -12,3 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+"""
+text
+"""
+
+from mindspore import context
+context.set_context(mode=context.PYNATIVE_MODE)
