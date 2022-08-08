@@ -20,6 +20,7 @@ from tqdm import tqdm
 from mindspore import ms_function
 
 from text.engine.callbacks.callback_manager import CallbackManager, RunContext
+from text.engine.evaluator import Evaluator
 from ..common.grad import value_and_grad
 
 
@@ -43,6 +44,7 @@ class Trainer:
             then a tuple (data1, data2, data3, ...) with all data returned from dataset will be
             passed to the `network`.
         epochs (int): Total number of iterations on the data. Default: 10.
+        batc_size (int): numbers of samples in each batch.
         optimizer (Cell): Optimizer for updating the weights. If `optimizer` is None, the `network` needs to
             do backpropagation and update weights. Default value: None.
         loss (Cell): Objective function. If `loss_fn` is None, the `network` should contain the calculation of loss
@@ -106,6 +108,10 @@ class Trainer:
         self.print_steps = print_steps
         self.cur_epoch_nums = 0
         self.cur_step_nums = 0
+        self.earlystop = False
+
+        self.evaluator = Evaluator(network=network, eval_dataset=self.eval_dataset, metrics=metrics,
+                                   callbacks=callbacks, batch_size=batch_size)
 
     def check_amp_level_arg(self, optimizer, amp_level):
         """Check mixed-precision argument rules."""
@@ -168,6 +174,8 @@ class Trainer:
             self.cur_step_nums = 0
             run_context.cur_epoch_nums = self.cur_epoch_nums
             run_context.cur_step_nums = 0
+            if self.evaluator.earlystop is True:
+                break
             self.callback_manager.train_epoch_begin()
             with tqdm(total=total) as t:
                 t.set_description('Epoch %i' % epoch)
@@ -185,12 +193,14 @@ class Trainer:
                         loss = ms_function(self._run_step)(data)
                     loss_total += loss
                     t.set_postfix(loss=loss_total/self.cur_step_nums)
-                    t.update(1)
+                    t.update(self.batch_size)
                     # step end
                     self.callback_manager.train_step_end(run_context)
-            # epoch end
+            # train epoch end
             t.close()
             self.callback_manager.train_epoch_end(run_context)
+            # do epoch evaluation
+            self.evaluator.run()
 
     def _run_ds_sink(self, train_dataset, eval_dataset, list_callback,
                      cb_params, print_steps, eval_steps):

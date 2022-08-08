@@ -19,7 +19,7 @@ from tqdm import tqdm
 
 from mindspore import ms_function
 
-from text.engine.callbacks.callback_manager import CallbackManager
+from text.engine.callbacks.callback_manager import CallbackManager, RunContext
 from ..abc import Metric
 
 class Evaluator:
@@ -30,6 +30,7 @@ class Evaluator:
     Args:
         network (Cell): A network for evaluating.
         eval_dataset (Dataset): A evaluating dataset iterator.
+        batc_size (int): numbers of samples in each batch.
         metrcis (Optional[list[Metric], Metric]): List of metric objects which should be used
             while evaluating. Default:None.
         device (str): List of devices used for evaluating.
@@ -69,15 +70,17 @@ class Evaluator:
     def __init__(self, network, eval_dataset=None, batch_size=2, metrics=None, device=None, callbacks=None,
                  amp_level='O0', boost_level='O0', dataset_sink_mode=True):
         self.network = network
-        self.eval_dataset = eval_dataset
         self.batch_size = batch_size
         self.device = device
         self.callbacks = callbacks
         self.amp_level = amp_level
         self.boost_level = boost_level
         self.dataset_sink_mode = dataset_sink_mode
+        self.earlystop = False
 
         self.check_metric_type(metrics)
+        self.total = eval_dataset.get_dataset_size()
+        self.eval_dataset = eval_dataset.batch(batch_size)
 
     def check_metric_type(self, metrics):
         """Check metrics type."""
@@ -118,57 +121,61 @@ class Evaluator:
 
     def run(self, mode='pynative'):
         """Evaluating function entry."""
-        # args_dict = vars(self)
-        # run_context = RunContext(args_dict)
+        args_dict = vars(self)
+        run_context = RunContext(args_dict)
         self.callback_manager = CallbackManager(callbacks=self.callbacks)
         self.callback_manager.evaluate_begin()
         self.clear_metrics()
         self._run(mode)
-        self.callback_manager.evaluate_end()
+        self.callback_manager.evaluate_end(run_context)
+        self.earlystop = run_context.earlystop
 
     def _run(self, mode):
         """Evaluating process for non-data sinking mode. The data would be passed to network directly."""
         # batchify train_dataset
-        total = self.eval_dataset.get_dataset_size()
-        self.eval_dataset = self.eval_dataset.batch(self.batch_size)
-        with tqdm(total=total) as t:
+        with tqdm(total=self.total) as t:
+            t.set_description('Evaluate')
             for data in self.eval_dataset.create_tuple_iterator():
+                inputs = data[0]
                 labels = data[1]
                 if mode == 'pynative':
-                    outputs = self._run_step(data)
+                    outputs = self._run_step(inputs)
                     self.update_metrics(outputs, labels)
                 elif mode == 'graph':
-                    outputs = ms_function(self._run_step)(data)
+                    outputs = ms_function(self._run_step)(inputs)
                     self.update_metrics(outputs, labels)
                 t.update(self.batch_size)
-        metrics = self.get_metrics()
-        print(f'Evaluate Score: {metrics}')
-        return metrics
+        t.close()
+        self.metrics_result, self.metrics_names, self.metrics_values = self.get_metrics()
+        print(f'Evaluate Score: {self.metrics_result}')
 
     def _run_ds_sink(self):
         """Evaluating process for data sinking mode."""
         raise NotImplementedError
 
-    def _run_step(self, batch_data):
+    def _run_step(self, inputs):
         """Core process of each step."""
-        inputs = batch_data[0]
         outputs = self.network(inputs)
         return outputs
 
     def get_metrics(self):
         """Get all metrics values."""
         metrics = {}
+        metrics_names = []
+        metrics_values = []
         for metric in self.metrics:
             key = metric.get_metric_name()
+            metrics_names.append(key)
             metrics[key] = metric.eval()
-        return metrics
+            metrics_values.append(metrics[key])
+        return metrics, metrics_names, metrics_values
 
     def clear_metrics(self):
         """Clear metrics values."""
         for metric in self.metrics:
             metric.clear()
 
-    def update_metrics(self, outputs, label):
+    def update_metrics(self, outputs, labels):
         """Update metrics values."""
         for metric in self.metrics:
-            metric.updates(outputs, label)
+            metric.updates(outputs, labels)

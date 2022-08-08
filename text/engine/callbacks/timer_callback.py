@@ -13,10 +13,13 @@
 # limitations under the License.
 # ============================================================================
 """
-Callback for timing
+Callback for timing.
 """
 
 import time
+
+from mindspore import log
+
 from ...abc import Callback
 
 class _Timer:
@@ -81,11 +84,11 @@ class TimerCallback(Callback):
     training duration, evaluation duration, total duration.
 
     Args:
-        print_steps(int): When to print time information.Default:-1.
+        print_steps (int): When to print time information.Default:-1.
 
             - -1: print once at the end of each epoch.
             - positive number n: print once n steps.
-        time_ndigit(int): Number of decimal places to keep. Default:3
+        time_ndigit (int): Number of decimal places to keep. Default:3
     """
     def __init__(self, print_steps=0, time_ndigit=3):
         assert isinstance(print_steps, int), "print_every must be an int number."
@@ -101,16 +104,16 @@ class TimerCallback(Callback):
     def train_end(self):
         """Called once after network training."""
         line = self.format_timer(train_end=True)
-        print(f"Training finished{line}")
+        log.info(f"Training finished{line}")
 
     def evaluate_begin(self):
         """Called once before the network evaluating."""
         self.timers('evaluate').start()
 
-    def evaluate_end(self):
+    def evaluate_end(self, run_context):
         """Called once after the network evaluating."""
-        line = self.format_timer(eval_end=True)
-        print(f"Evaluating finished{line}")
+        line = self.format_timer()
+        log.info(f"Evaluating finished{line}")
 
     def train_step_begin(self, run_context):
         if self.print_steps > 0 and run_context.cur_step_nums % self.print_steps == 0:
@@ -119,7 +122,7 @@ class TimerCallback(Callback):
     def train_step_end(self, run_context):
         if self.print_steps > 0 and run_context.cur_step_nums % self.print_steps == 0:
             line = self.format_timer()
-            print(f"Running {run_context.cur_step_nums} batches{line}")
+            log.info(f"Running {run_context.cur_step_nums} batches{line}")
 
     def train_epoch_begin(self):
         if self.print_steps < 0:
@@ -128,14 +131,14 @@ class TimerCallback(Callback):
     def train_epoch_end(self, run_context):
         if self.print_steps < 0 and run_context.cur_epoch_nums % abs(self.print_steps) == 0:
             line = self.format_timer()
-            print(f"Running {run_context.cur_epoch_nums} epochs{line}")
+            log.info(f"Running {run_context.cur_epoch_nums} epochs{line}")
 
-    def format_timer(self, reset=True, train_end=False, eval_end=False):
+    def format_timer(self, reset=True, train_end=False):
         """format the output."""
         line = ''
         timers = ['forward', 'epoch', 'backward', 'optimize', 'evaluate', 'train', 'total']
         for timer_name in timers:
-            if train_end is False or eval_end is False:
+            if train_end is False:
                 if not timer_name in self.timers or timer_name == 'train' or timer_name == 'total':
                     continue
             timer = self.timers(timer_name)
