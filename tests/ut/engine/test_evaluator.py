@@ -29,8 +29,8 @@ class MyDataset:
     """Dataset"""
     def __init__(self):
         np.random.seed(1)
-        self.data = np.random.randn(100, 3).astype(np.float32)  # 自定义数据
-        self.label = list(np.random.choice([0, 1]).astype(np.float32) for i in range(100)) # 自定义标签
+        self.data = np.random.randn(100, 3).astype(np.float32)
+        self.label = list(np.random.choice([0, 1]).astype(np.float32) for i in range(100))
     def __getitem__(self, index):
         return self.data[index], self.label[index]
     def __len__(self):

@@ -71,7 +71,7 @@ class Callback():
     def evaluate_begin(self):
         """Called before evaluating epoch/steps/ds_size."""
 
-    def evaluate_end(self):
+    def evaluate_end(self, run_context):
         """Called after evaluating epoch/steps/ds_size."""
 
     def before_optimizer_step(self):

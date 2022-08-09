@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-Callback Manager
+Callback Manager.
 """
 from ...abc import Callback
 
@@ -116,7 +116,7 @@ class CallbackManager(Callback):
         """Called before evaluating epoch/steps/ds_size."""
 
     @_transfer
-    def evaluate_end(self):
+    def evaluate_end(self, run_context):
         """Called after evaluating epoch/steps/ds_size."""
 
     @_transfer
