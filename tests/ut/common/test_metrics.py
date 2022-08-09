@@ -20,7 +20,8 @@ import mindspore
 from mindspore import Tensor
 from text.common.metrics import Accuracy
 from text.common.metrics import (perplexity, bleu, rouge_n, rouge_l, distinct, accuracy, precision,
-                                 recall, f1_score, confusion_matrix, mcc, pearson, spearman, em_score)
+                                 recall, f1_score, confusion_matrix, mcc, pearson, spearman, em_score,
+                                 F1Score)
 
 class TestPerplexity(unittest.TestCase):
     r"""
@@ -292,3 +293,23 @@ class TestClassAccuracy(unittest.TestCase):
         acc = metric.eval()
 
         assert acc == 0.6666666666666666
+
+class TestClassF1Score(unittest.TestCase):
+    r"""
+    Test class F1Score
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_class_f1_score(self):
+        """
+        Test class F1Score
+        """
+        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
+        labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
+        metric = F1Score()
+        metric.updates(preds, labels)
+        f1_s = metric.eval()
+
+        assert f1_s == 0.6666666666666666
