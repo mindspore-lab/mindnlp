@@ -124,7 +124,7 @@ class Evaluator:
         args_dict = vars(self)
         run_context = RunContext(args_dict)
         self.callback_manager = CallbackManager(callbacks=self.callbacks)
-        self.callback_manager.evaluate_begin()
+        self.callback_manager.evaluate_begin(run_context)
         self.clear_metrics()
         self._run(mode)
         self.callback_manager.evaluate_end(run_context)
@@ -132,7 +132,6 @@ class Evaluator:
 
     def _run(self, mode):
         """Evaluating process for non-data sinking mode. The data would be passed to network directly."""
-        # batchify train_dataset
         with tqdm(total=self.total) as t:
             t.set_description('Evaluate')
             for data in self.eval_dataset.create_tuple_iterator():

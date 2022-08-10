@@ -20,7 +20,6 @@ from tqdm import tqdm
 from mindspore import ms_function
 
 from text.engine.callbacks.callback_manager import CallbackManager, RunContext
-from text.engine.evaluator import Evaluator
 from ..common.grad import value_and_grad
 
 
@@ -88,17 +87,15 @@ class Trainer:
 
     """
 
-    def __init__(self, network, train_dataset, eval_dataset=None, epochs=10, batch_size=2, loss_fn=None,
-                 optimizer=None, metrics=None, save_path=None, device=None, callbacks=None, amp_level='O0',
+    def __init__(self, train_dataset, evaluator=None, epochs=10, batch_size=2, foward_fn=None,
+                 optimizer=None, save_path=None, device=None, callbacks=None, amp_level='O0',
                  boost_level='O0', dataset_sink_mode=True, print_steps=-1):
-        self.network = network
         self.train_dataset = train_dataset
-        self.eval_dataset = eval_dataset
+        self.evaluator = evaluator
         self.epochs = epochs
         self.batch_size = batch_size
-        self.loss_fn = loss_fn
+        self.foward_fn = foward_fn
         self.optimizer = optimizer
-        self.metrics = metrics
         self.save_path = save_path
         self.device = device
         self.callbacks = callbacks
@@ -109,9 +106,6 @@ class Trainer:
         self.cur_epoch_nums = 0
         self.cur_step_nums = 0
         self.earlystop = False
-
-        self.evaluator = Evaluator(network=network, eval_dataset=self.eval_dataset, metrics=metrics,
-                                   callbacks=callbacks, batch_size=batch_size)
 
     def check_amp_level_arg(self, optimizer, amp_level):
         """Check mixed-precision argument rules."""
@@ -138,9 +132,9 @@ class Trainer:
         args_dict = vars(self)
         run_context = RunContext(args_dict)
         self.callback_manager = CallbackManager(callbacks=self.callbacks)
-        self.callback_manager.train_begin()
+        self.callback_manager.train_begin(run_context)
         self._run(mode, run_context)
-        self.callback_manager.train_end()
+        self.callback_manager.train_end(run_context)
 
     def _run(self, mode, run_context):
         """
@@ -155,16 +149,9 @@ class Trainer:
 
             run_context (RunContext): Args of Trainer used for callbacks.
         """
-        loss_fn = self.loss_fn
-        network = self.network
-
-        def net_forward(data, label):
-            logits = network(data)
-            loss = loss_fn(logits, label)
-            return loss, logits
 
         self.grad_fn = value_and_grad(
-            net_forward, self.optimizer.parameters, has_aux=True)
+            self.foward_fn, self.optimizer.parameters, has_aux=True)
         # batchify train_dataset
         total = self.train_dataset.get_dataset_size()
         self.train_dataset = self.train_dataset.batch(self.batch_size)
@@ -176,7 +163,7 @@ class Trainer:
             run_context.cur_step_nums = 0
             if self.evaluator.earlystop is True:
                 break
-            self.callback_manager.train_epoch_begin()
+            self.callback_manager.train_epoch_begin(run_context)
             with tqdm(total=total) as t:
                 t.set_description('Epoch %i' % epoch)
                 loss_total = 0
@@ -200,7 +187,8 @@ class Trainer:
             t.close()
             self.callback_manager.train_epoch_end(run_context)
             # do epoch evaluation
-            self.evaluator.run()
+            if self.evaluator is not None:
+                self.evaluator.run()
 
     def _run_ds_sink(self, train_dataset, eval_dataset, list_callback,
                      cb_params, print_steps, eval_steps):
@@ -209,9 +197,7 @@ class Trainer:
 
     def _run_step(self, batch_data):
         """Core process of each step, including the forward propagation process and back propagation of data."""
-        data = batch_data[0]
-        label = batch_data[1]
-        (loss, _), grads = self.grad_fn(data, label)
+        (loss, _), grads = self.grad_fn(*batch_data)
         self.optimizer(grads)
         return loss
 
