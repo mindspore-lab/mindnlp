@@ -13,9 +13,9 @@
 # limitations under the License.
 # ============================================================================
 """
-Callbacks.
+Callback for load and save checkpoint.
 """
-from .callback_manager import CallbackManager
-from .timer_callback import TimerCallback
-from .earlystop_callback import EarlyStopCallback
-from .checkpoint_callback import CheckpointCallback
+from ...abc import Callback
+
+class CheckpointCallback(Callback):
+    pass

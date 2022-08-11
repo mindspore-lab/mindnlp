@@ -15,10 +15,7 @@
 """
 Callback for timing.
 """
-
 import time
-
-from mindspore import log
 
 from ...abc import Callback
 
@@ -96,24 +93,24 @@ class TimerCallback(Callback):
         self.print_steps = print_steps
         self.time_ndigit = time_ndigit
 
-    def train_begin(self):
+    def train_begin(self, run_context):
         """Called once before the network training."""
         self.timers('total').start()
         self.timers('train').start()
 
-    def train_end(self):
+    def train_end(self, run_context):
         """Called once after network training."""
         line = self.format_timer(train_end=True)
-        log.info(f"Training finished{line}")
+        print(f"Training finished{line}")
 
-    def evaluate_begin(self):
+    def evaluate_begin(self, run_context):
         """Called once before the network evaluating."""
         self.timers('evaluate').start()
 
     def evaluate_end(self, run_context):
         """Called once after the network evaluating."""
         line = self.format_timer()
-        log.info(f"Evaluating finished{line}")
+        print(f"Evaluating finished{line}")
 
     def train_step_begin(self, run_context):
         if self.print_steps > 0 and run_context.cur_step_nums % self.print_steps == 0:
@@ -122,16 +119,16 @@ class TimerCallback(Callback):
     def train_step_end(self, run_context):
         if self.print_steps > 0 and run_context.cur_step_nums % self.print_steps == 0:
             line = self.format_timer()
-            log.info(f"Running {run_context.cur_step_nums} batches{line}")
+            print(f"Running {run_context.cur_step_nums} batches{line}")
 
-    def train_epoch_begin(self):
+    def train_epoch_begin(self, run_context):
         if self.print_steps < 0:
             self.timers('epoch').start()
 
     def train_epoch_end(self, run_context):
         if self.print_steps < 0 and run_context.cur_epoch_nums % abs(self.print_steps) == 0:
             line = self.format_timer()
-            log.info(f"Running {run_context.cur_epoch_nums} epochs{line}")
+            print(f"Running {run_context.cur_epoch_nums} epochs{line}")
 
     def format_timer(self, reset=True, train_end=False):
         """format the output."""

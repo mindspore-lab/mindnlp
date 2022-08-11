@@ -26,22 +26,22 @@ class Callback():
     with the stage of interest.
     """
 
-    def train_begin(self):
+    def train_begin(self, run_context):
         """Called once before the network executing."""
 
-    def train_end(self):
+    def train_end(self, run_context):
         """Called once after network training."""
 
-    def train_epoch_begin(self):
+    def train_epoch_begin(self, run_context):
         """Called before each epoch beginning."""
 
     def train_epoch_end(self, run_context):
         """Called after each epoch finished."""
 
-    def fetch_data_begin(self):
+    def fetch_data_begin(self, run_context):
         """Called before fetch each batch/ds_sink_size data."""
 
-    def fetch_data_end(self):
+    def fetch_data_end(self, run_context):
         """Called after fetch each batch/ds_sink_size data."""
 
     def train_step_begin(self, run_context):
@@ -50,35 +50,35 @@ class Callback():
     def train_step_end(self, run_context):
         """Called after each step finished."""
 
-    def ds_sink_begin(self):
+    def ds_sink_begin(self, run_context):
         """Called before each data_sink beginning."""
 
-    def ds_sink_end(self):
+    def ds_sink_end(self, run_context):
         """Called after each data_sink finished."""
 
-    def load_model(self):
+    def load_model(self, run_context):
         """Called before loading model."""
 
-    def save_model(self):
+    def save_model(self, run_context):
         """Called before saving model."""
 
-    def load_checkpoint(self):
+    def load_checkpoint(self, run_context):
         """Called before loading checkpoint."""
 
-    def save_checkpoint(self):
+    def save_checkpoint(self, run_context):
         """Called before saving checkpoint."""
 
-    def evaluate_begin(self):
+    def evaluate_begin(self, run_context):
         """Called before evaluating epoch/steps/ds_size."""
 
     def evaluate_end(self, run_context):
         """Called after evaluating epoch/steps/ds_size."""
 
-    def before_optimizer_step(self):
+    def before_optimizer_step(self, run_context):
         """Called before optimizing."""
 
-    def after_optimizer_step(self):
+    def after_optimizer_step(self, run_context):
         """Called after optimizing."""
 
-    def exception(self):
+    def exception(self, run_context):
         """Called if having exceptions."""
