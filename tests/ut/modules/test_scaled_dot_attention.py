@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Dot Attention"""
+"""Test Scaled Dot Attention"""
 
 import unittest
 import numpy as np
@@ -21,31 +21,31 @@ import mindspore
 from mindspore import Tensor
 from mindspore import context
 
-from text.modules.attentions import DotAttention
+from text.modules.attentions import ScaledDotAttention
 
 
 
-class TestDotAttention(unittest.TestCase):
+class TestScaledDotAttention(unittest.TestCase):
     r"""
-    Test module DotAttention
+    Test module ScaledDotAttention
     """
 
     def setUp(self):
         self.input = None
 
-    def test_dot_attention_pynative(self):
+    def test_scaled_dot_attention_pynative(self):
         context.set_context(mode=context.PYNATIVE_MODE)
-        net = DotAttention(dropout=0.9)
+        net = ScaledDotAttention(dropout=0.9)
         q = Tensor(np.ones((2, 1024, 512)), mindspore.float32)
         k = Tensor(np.ones((2, 1024, 512)), mindspore.float32)
-        v = Tensor(np.ones((2, 1024, 512)), mindspore.float32)
+        v = Tensor(np.ones((2, 1024, 500)), mindspore.float32)
         output, _ = net(q, k, v)
 
-        assert output.shape == (2, 1024, 512)
+        assert output.shape == (2, 1024, 500)
 
-    def test_dot_attention_graph(self):
+    def test_scaled_dot_attention_graph(self):
         context.set_context(mode=context.GRAPH_MODE)
-        net = DotAttention(dropout=0.9)
+        net = ScaledDotAttention(dropout=0.9)
         q = Tensor(np.ones((2, 1024, 512)), mindspore.float32)
         k = Tensor(np.ones((2, 1024, 512)), mindspore.float32)
         v = Tensor(np.ones((2, 1024, 512)), mindspore.float32)

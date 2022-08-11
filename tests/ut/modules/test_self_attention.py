@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Muti-head Attention"""
+"""Test Self Attention"""
 
 import unittest
 import numpy as np
@@ -24,11 +24,11 @@ from mindspore import ops
 from mindspore import context
 from mindspore import Tensor
 
-from text.modules.attentions import MutiHeadAttention
+from text.modules.attentions import SelfAttention
 
-class TestMutiHeadAttention(unittest.TestCase):
+class TestSelfAttention(unittest.TestCase):
     r"""
-    Test module Binary Attention
+    Test module Self Attention
     """
 
     def setUp(self):
@@ -37,11 +37,10 @@ class TestMutiHeadAttention(unittest.TestCase):
         """
         self.input = None
 
-    def test_muti_head_attention_pynative(self):
+    def test_self_attention_pynative(self):
         """
-        unit test for muti-head attention with pynative mode.
+        unit test for self attention with pynative mode.
         """
-
         context.set_context(mode=context.PYNATIVE_MODE)
         standard_normal = ops.StandardNormal(seed=114514)
         query = standard_normal((2, 32, 512))
@@ -51,29 +50,27 @@ class TestMutiHeadAttention(unittest.TestCase):
         mask = Tensor(np.ones(mask_shape), mindspore.bool_)
 
         # use dot-product attention default dot-product
-        net = MutiHeadAttention(heads=8)
+        net = SelfAttention()
         output, attn = net(query, key, value, mask)
         assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 8, 32, 20)
+        assert attn.shape == (2, 32, 20)
 
         # use cosine attention
-        net = MutiHeadAttention(heads=8, attention_mode="cosine")
+        net = SelfAttention(attention_mode="cosine")
         output, attn = net(query, key, value, mask)
         assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 8, 32, 20)
+        assert attn.shape == (2, 32, 20)
 
         # use additive attention
-        net = MutiHeadAttention(heads=8, attention_mode="add")
+        net = SelfAttention(attention_mode="add")
         output, attn = net(query, key, value, mask)
         assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 8, 32, 20)
+        assert attn.shape == (2, 32, 20)
 
-    def test_muti_head_attention_graph(self):
+    def test_self_attention_graph(self):
         """
-        unit test for muti-head attention whit graph mode.
+        unit test for self attention whit graph mode.
         """
-
-        context.set_context(mode=context.GRAPH_MODE)
         standard_normal = ops.StandardNormal(seed=114514)
         query = standard_normal((2, 32, 512))
         key = standard_normal((2, 20, 512))
@@ -82,19 +79,19 @@ class TestMutiHeadAttention(unittest.TestCase):
         mask = Tensor(np.ones(mask_shape), mindspore.bool_)
 
         # use dot-product attention default dot-product
-        net = MutiHeadAttention(heads=8)
+        net = SelfAttention()
         output, attn = net(query, key, value, mask)
         assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 8, 32, 20)
+        assert attn.shape == (2, 32, 20)
 
         # use cosine attention
-        net = MutiHeadAttention(heads=8, attention_mode="cosine")
+        net = SelfAttention(attention_mode="cosine")
         output, attn = net(query, key, value, mask)
         assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 8, 32, 20)
+        assert attn.shape == (2, 32, 20)
 
         # use additive attention
-        net = MutiHeadAttention(heads=8, attention_mode="add")
+        net = SelfAttention(attention_mode="add")
         output, attn = net(query, key, value, mask)
         assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 8, 32, 20)
+        assert attn.shape == (2, 32, 20)
