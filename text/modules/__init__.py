@@ -14,6 +14,8 @@
 # ============================================================================
 """modules init"""
 
-from .attentions import DotAttention, MutiHeadAttention, BinaryAttention
+from .attentions import ScaledDotAttention, SelfAttention, MutiHeadAttention, \
+BinaryAttention, AdditiveAttention, CosineAttention, LocationAwareAttention, \
+LinearAttention
 from .encoder import *
 from .decoder import *

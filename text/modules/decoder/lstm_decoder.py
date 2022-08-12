@@ -22,7 +22,7 @@ import mindspore.ops as ops
 import mindspore.numpy as mnp
 
 from text.abc import DecoderBase
-from text.modules import DotAttention
+from text.modules import ScaledDotAttention
 
 
 class LSTMDecoder(DecoderBase):
@@ -119,7 +119,7 @@ class LSTMDecoder(DecoderBase):
         self.lstm = nn.LSTM(embedding_size, hidden_size, num_layers=num_layers,
                             has_bias=has_bias, batch_first=True, dropout=dropout)
         if attention:
-            self.attention = DotAttention()
+            self.attention = ScaledDotAttention()
             self.input_proj = nn.Dense(hidden_size, encoder_output_units)
             self.output_proj = nn.Dense(hidden_size + encoder_output_units, hidden_size)
         else:

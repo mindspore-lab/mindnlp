@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Muti-head Attention"""
+"""Test Additive Attention"""
 
 import unittest
 import numpy as np
@@ -21,14 +21,15 @@ import numpy as np
 import mindspore
 
 from mindspore import ops
-from mindspore import context
 from mindspore import Tensor
+from mindspore import context
 
-from text.modules.attentions import MutiHeadAttention
+from text.modules.attentions import AdditiveAttention
 
-class TestMutiHeadAttention(unittest.TestCase):
+
+class TestAdditiveAttention(unittest.TestCase):
     r"""
-    Test module Binary Attention
+    Test module Additive Attention
     """
 
     def setUp(self):
@@ -37,11 +38,10 @@ class TestMutiHeadAttention(unittest.TestCase):
         """
         self.input = None
 
-    def test_muti_head_attention_pynative(self):
+    def test_additive_attention_pynative(self):
         """
-        unit test for muti-head attention with pynative mode.
+        unit test for additive attention with pynative mode.
         """
-
         context.set_context(mode=context.PYNATIVE_MODE)
         standard_normal = ops.StandardNormal(seed=114514)
         query = standard_normal((2, 32, 512))
@@ -49,28 +49,15 @@ class TestMutiHeadAttention(unittest.TestCase):
         value = standard_normal((2, 20, 512))
         mask_shape = (2, 32, 20)
         mask = Tensor(np.ones(mask_shape), mindspore.bool_)
+        net = AdditiveAttention(hidden_dims=512)
+        output, attn = net(query, key, value, mask=mask)
 
-        # use dot-product attention default dot-product
-        net = MutiHeadAttention(heads=8)
-        output, attn = net(query, key, value, mask)
         assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 8, 32, 20)
+        assert attn.shape == (2, 32, 20)
 
-        # use cosine attention
-        net = MutiHeadAttention(heads=8, attention_mode="cosine")
-        output, attn = net(query, key, value, mask)
-        assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 8, 32, 20)
-
-        # use additive attention
-        net = MutiHeadAttention(heads=8, attention_mode="add")
-        output, attn = net(query, key, value, mask)
-        assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 8, 32, 20)
-
-    def test_muti_head_attention_graph(self):
+    def test_additive_attention_graph(self):
         """
-        unit test for muti-head attention whit graph mode.
+        unit test for additive attention whit graph mode.
         """
 
         context.set_context(mode=context.GRAPH_MODE)
@@ -80,21 +67,8 @@ class TestMutiHeadAttention(unittest.TestCase):
         value = standard_normal((2, 20, 512))
         mask_shape = (2, 32, 20)
         mask = Tensor(np.ones(mask_shape), mindspore.bool_)
+        net = AdditiveAttention(hidden_dims=512)
+        output, attn = net(query, key, value, mask=mask)
 
-        # use dot-product attention default dot-product
-        net = MutiHeadAttention(heads=8)
-        output, attn = net(query, key, value, mask)
         assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 8, 32, 20)
-
-        # use cosine attention
-        net = MutiHeadAttention(heads=8, attention_mode="cosine")
-        output, attn = net(query, key, value, mask)
-        assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 8, 32, 20)
-
-        # use additive attention
-        net = MutiHeadAttention(heads=8, attention_mode="add")
-        output, attn = net(query, key, value, mask)
-        assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 8, 32, 20)
+        assert attn.shape == (2, 32, 20)
