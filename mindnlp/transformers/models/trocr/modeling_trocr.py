@@ -18,9 +18,11 @@ import copy
 import math
 from typing import Optional, Tuple, Union
 
+import numpy as np
 import mindspore
 from mindspore import nn, ops
-from mindspore.nn import CrossEntropyLoss
+from mindspore.ops import cross_entropy
+from mindspore.common.initializer import initializer, Normal
 
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
@@ -51,7 +53,7 @@ class TrOCRLearnedPositionalEmbedding(nn.Embedding):
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
         ).expand(bsz, -1)
 
-        return super().forward(positions + self.offset)
+        return super().construct(positions + self.offset)
 
 
 class TrOCRScaledWordEmbedding(nn.Embedding):
@@ -60,11 +62,11 @@ class TrOCRScaledWordEmbedding(nn.Embedding):
     """
 
     def __init__(self, num_embeddings: int, embedding_dim: int, padding_idx: int, embed_scale: Optional[float] = 1.0):
-        super().__init__(num_embeddings, embedding_dim, padding_idx)
+        super().__init__(num_embeddings, embedding_dim, padding_idx=padding_idx)
         self.embed_scale = embed_scale
 
     def construct(self, input_ids: mindspore.Tensor):
-        return super().forward(input_ids) * self.embed_scale
+        return super().construct(input_ids) * self.embed_scale
 
 
 class TrOCRSinusoidalPositionalEmbedding(nn.Cell):
@@ -156,14 +158,14 @@ class TrOCRAttention(nn.Cell):
         self.scaling = self.head_dim ** -0.5
         self.is_decoder = is_decoder
 
-        self.k_proj = nn.Dense(self.kdim, embed_dim, bias=bias)
-        self.v_proj = nn.Dense(self.vdim, embed_dim, bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, bias=bias)
+        self.k_proj = nn.Dense(self.kdim, embed_dim, has_bias=bias)
+        self.v_proj = nn.Dense(self.vdim, embed_dim, has_bias=bias)
+        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
-        self.out_proj = nn.Dense(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
     def construct(
             self,
@@ -219,7 +221,7 @@ class TrOCRAttention(nn.Cell):
         value_states = value_states.view(*proj_shape)
 
         src_len = key_states.shape[1]
-        attn_weights = ops.bmm(query_states, key_states.transpose(1, 2))
+        attn_weights = ops.bmm(query_states, key_states.swapaxes(1, 2))
 
         if attn_weights.shape != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
@@ -267,7 +269,7 @@ class TrOCRAttention(nn.Cell):
             )
 
         attn_output = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim)
-        attn_output = attn_output.transpose(1, 2)
+        attn_output = attn_output.swapaxes(1, 2)
         attn_output = attn_output.reshape(bsz, tgt_len, embed_dim)
 
         attn_output = self.out_proj(attn_output)
@@ -291,7 +293,7 @@ class TrOCRDecoderLayer(nn.Cell):
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
 
-        self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
+        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim])
 
         if config.is_decoder:
             self.encoder_attn = TrOCRAttention(
@@ -304,11 +306,11 @@ class TrOCRDecoderLayer(nn.Cell):
                 is_decoder=True,
                 is_cross_attention=True,
             )
-            self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
+            self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim])
 
         self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
         self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
-        self.final_layer_norm = nn.LayerNorm(self.embed_dim)
+        self.final_layer_norm = nn.LayerNorm([self.embed_dim])
 
     def construct(
             self,
@@ -413,13 +415,14 @@ class TrOCRPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module):
         std = self.config.init_std
         if isinstance(module, (nn.Dense, nn.Conv1d)):
-            module.weight.data.normal_(mean=0.0, std=std)
-            if module.bias is not None:
-                module.bias.data.zero_()
+            module.weight.set_data(initializer(Normal(sigma=std, mean=0.0), module.weight.shape, module.weight.dtype))
+            if module.has_bias:
+                module.bias.set_data(initializer('zeros', module.bias.shape, module.bias.dtype))
         elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=std)
+            emb_weight = np.random.normal(0, std, module.weight.shape)
             if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
+                emb_weight[module.padding_idx] = 0
+            module.weight.set_data(mindspore.Tensor(emb_weight, module.weight.dtype))
 
 
 class TrOCRDecoder(TrOCRPreTrainedModel):
@@ -451,7 +454,7 @@ class TrOCRDecoder(TrOCRPreTrainedModel):
             )
 
         if config.layernorm_embedding:
-            self.layernorm_embedding = nn.LayerNorm(config.hidden_size)
+            self.layernorm_embedding = nn.LayerNorm([config.hidden_size])
         else:
             self.layernorm_embedding = None
 
@@ -739,7 +742,7 @@ class TrOCRForCausalLM(TrOCRPreTrainedModel):
         super().__init__(config)
         self.model = TrOCRDecoderWrapper(config)
 
-        self.output_projection = nn.Dense(config.hidden_size, config.vocab_size, bias=False)
+        self.output_projection = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -875,8 +878,7 @@ class TrOCRForCausalLM(TrOCRPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = CrossEntropyLoss()
-            loss = loss_fct(logits.view(-1, self.config.vocab_size), labels.view(-1))
+            loss = cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -928,6 +930,7 @@ class TrOCRForCausalLM(TrOCRPreTrainedModel):
 
 
 __all__ = [
+    'TrOCRDecoder',
     'TrOCRPreTrainedModel',
     'TrOCRForCausalLM',
 ]
