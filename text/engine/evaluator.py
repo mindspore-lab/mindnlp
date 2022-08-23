@@ -15,9 +15,10 @@
 """
 Evaluator for testing.
 """
+import inspect
 from tqdm import tqdm
 
-from mindspore import ms_function
+from mindspore import ms_function, log
 
 from text.engine.callbacks.callback_manager import CallbackManager, RunContext
 from ..abc import Metric
@@ -119,34 +120,33 @@ class Evaluator:
             raise RuntimeError("The dataset object had been used in other model by model.train(...), "
                                "please create a new dataset.")
 
-    def run(self, mode='pynative'):
+    def run(self, mode='pynative', tgt_columns=None):
         """Evaluating function entry."""
         args_dict = vars(self)
         run_context = RunContext(args_dict)
         self.callback_manager = CallbackManager(callbacks=self.callbacks)
         self.callback_manager.evaluate_begin(run_context)
         self.clear_metrics()
-        self._run(mode)
+        self.metrics_result, self.metrics_names, self.metrics_values = self.run_progress(mode, tgt_columns)
         self.callback_manager.evaluate_end(run_context)
         self.earlystop = run_context.earlystop
 
-    def _run(self, mode):
+    def run_progress(self, mode, tgt_columns=None):
         """Evaluating process for non-data sinking mode. The data would be passed to network directly."""
         with tqdm(total=self.total) as t:
             t.set_description('Evaluate')
-            for data in self.eval_dataset.create_tuple_iterator():
-                inputs = data[0]
-                labels = data[1]
+            for data in self.eval_dataset.create_dict_iterator():
+                inputs, tgts = self.data_process(data, tgt_columns)
                 if mode == 'pynative':
                     outputs = self._run_step(inputs)
-                    self.update_metrics(outputs, labels)
                 elif mode == 'graph':
                     outputs = ms_function(self._run_step)(inputs)
-                    self.update_metrics(outputs, labels)
+                self.update_metrics(outputs, *tgts)
                 t.update(self.batch_size)
         t.close()
-        self.metrics_result, self.metrics_names, self.metrics_values = self.get_metrics()
-        print(f'Evaluate Score: {self.metrics_result}')
+        metrics_result, metrics_names, metrics_values = self.get_metrics()
+        print(f'Evaluate Score: {metrics_result}')
+        return metrics_result, metrics_names, metrics_values
 
     def _run_ds_sink(self):
         """Evaluating process for data sinking mode."""
@@ -154,7 +154,7 @@ class Evaluator:
 
     def _run_step(self, inputs):
         """Core process of each step."""
-        outputs = self.network(inputs)
+        outputs = self.network(*inputs)
         return outputs
 
     def get_metrics(self):
@@ -174,7 +174,43 @@ class Evaluator:
         for metric in self.metrics:
             metric.clear()
 
-    def update_metrics(self, outputs, labels):
+    def update_metrics(self, outputs, *tgts):
         """Update metrics values."""
         for metric in self.metrics:
-            metric.updates(outputs, labels)
+            metric.updates(outputs, *tgts)
+        return True
+
+    def data_process(self, data, tgt_columns):
+        """Process data match the network construct"""
+        # prepare input dataset.
+        net_args = inspect.getfullargspec(self.network.construct).args
+        # sig = signature(self.network.construct)
+        # net_args = sig.parameters
+        inputs = ()
+        for arg in net_args:
+            if arg == 'self':
+                continue
+            inputs = inputs + (data[arg],)
+        # process target dataset.
+        self.prepare_tgt_columns(tgt_columns)
+        tgts = ()
+        for tgt_column in self.tgt_columns:
+            tgts = tgts + (data[tgt_column],)
+        return inputs, tgts
+
+    def prepare_tgt_columns(self, tgt_columns):
+        """Check and prepare target columns for training."""
+        self.tgt_columns = []
+        if tgt_columns is None:
+            log.warning("In the process of training model, tgt_column can not be None.")
+            return
+        if isinstance(tgt_columns, str):
+            self.tgt_columns.append(tgt_columns)
+        elif isinstance(tgt_columns, list):
+            if all([isinstance(tgt_column, str) for tgt_column in tgt_columns]) is True:
+                self.tgt_columns = tgt_columns
+            else:
+                obj = [not isinstance(tgt_column, str) for tgt_column in tgt_columns][0]
+                raise TypeError(f"Expect str of tgt_column. Got {type(obj)}")
+        else:
+            raise TypeError(f"Expect tgt_columns to be list or str. Got {type(tgt_columns)}.")
