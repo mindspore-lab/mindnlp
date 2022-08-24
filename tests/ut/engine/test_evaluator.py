@@ -41,8 +41,8 @@ class MyModel(nn.Cell):
     def __init__(self):
         super().__init__()
         self.fc = nn.Dense(3, 2)
-    def construct(self, inputs):
-        output = self.fc(inputs)
+    def construct(self, data):
+        output = self.fc(data)
         return output
 
 class TestEvaluatorRun(unittest.TestCase):
@@ -60,7 +60,7 @@ class TestEvaluatorRun(unittest.TestCase):
                                    callbacks=callbacks, batch_size=10)
 
     def test_evaluator_run_pynative(self):
-        self.evaluator.run(mode='pynative')
+        self.evaluator.run(mode='pynative', tgt_columns='label')
 
     def test_evaluator_run_graph(self):
-        self.evaluator.run(mode='graph')
+        self.evaluator.run(mode='graph', tgt_columns='label')

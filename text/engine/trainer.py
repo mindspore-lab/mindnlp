@@ -15,13 +15,14 @@
 """
 Trainer for training.
 """
+import inspect
 from tqdm import tqdm
 
-from mindspore import ms_function
+from mindspore import ms_function, log
 
 from text.engine.callbacks.callback_manager import CallbackManager, RunContext
+from text.engine.evaluator import Evaluator
 from ..common.grad import value_and_grad
-
 
 class Trainer:
     r"""
@@ -87,14 +88,16 @@ class Trainer:
 
     """
 
-    def __init__(self, train_dataset, evaluator=None, epochs=10, batch_size=2, foward_fn=None,
-                 optimizer=None, save_path=None, device=None, callbacks=None, amp_level='O0',
+    def __init__(self, network=None, train_dataset=None, eval_dataset=None, metrics=None, epochs=10, batch_size=2,
+                 loss_fn=None, optimizer=None, save_path=None, device=None, callbacks=None, amp_level='O0',
                  boost_level='O0', dataset_sink_mode=True, print_steps=-1):
+        self.network = network
         self.train_dataset = train_dataset
-        self.evaluator = evaluator
+        self.eval_dataset = eval_dataset
+        self.metrics = metrics
         self.epochs = epochs
         self.batch_size = batch_size
-        self.foward_fn = foward_fn
+        self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.save_path = save_path
         self.device = device
@@ -106,6 +109,9 @@ class Trainer:
         self.cur_epoch_nums = 0
         self.cur_step_nums = 0
         self.earlystop = False
+
+        self.evaluator = Evaluator(network=self.network, eval_dataset=eval_dataset, metrics=self.metrics,
+                                   batch_size=4, callbacks=callbacks)
 
     def check_amp_level_arg(self, optimizer, amp_level):
         """Check mixed-precision argument rules."""
@@ -127,16 +133,16 @@ class Trainer:
             raise RuntimeError("The dataset object had been used in other model by model.train(...), "
                                "please create a new dataset.")
 
-    def run(self, mode='pynative'):
+    def run(self, mode='pynative', tgt_columns=None):
         """Training function entry."""
         args_dict = vars(self)
         run_context = RunContext(args_dict)
         self.callback_manager = CallbackManager(callbacks=self.callbacks)
         self.callback_manager.train_begin(run_context)
-        self._run(mode, run_context)
+        self.run_progress(mode, run_context, tgt_columns)
         self.callback_manager.train_end(run_context)
 
-    def _run(self, mode, run_context):
+    def run_progress(self, mode, run_context, tgt_columns):
         """
         Training process for non-data sinking mode. The data would be passed to network directly.
 
@@ -149,9 +155,14 @@ class Trainer:
 
             run_context (RunContext): Args of Trainer used for callbacks.
         """
-
-        self.grad_fn = value_and_grad(
-            self.foward_fn, self.optimizer.parameters, has_aux=True)
+        # forward function
+        net = self.network
+        loss_fn = self.loss_fn
+        def foward_fn(inputs, labels):
+            logits = net(*inputs)
+            loss = loss_fn(logits, *labels)
+            return loss, logits
+        self.grad_fn = value_and_grad(foward_fn, self.optimizer.parameters, has_aux=True)
         # batchify train_dataset
         total = self.train_dataset.get_dataset_size()
         self.train_dataset = self.train_dataset.batch(self.batch_size)
@@ -161,23 +172,22 @@ class Trainer:
             self.cur_step_nums = 0
             run_context.cur_epoch_nums = self.cur_epoch_nums
             run_context.cur_step_nums = 0
-            if self.evaluator.earlystop is True:
+            if self.earlystop is True:
                 break
             self.callback_manager.train_epoch_begin(run_context)
             with tqdm(total=total) as t:
                 t.set_description('Epoch %i' % epoch)
                 loss_total = 0
-                # self.callback_manager.fetch_data_begin()
                 # step begin
-                for data in self.train_dataset.create_tuple_iterator():
-                    # self.callback_manager.fetch_data_end()
+                for data in self.train_dataset.create_dict_iterator():
+                    inputs, tgts = self.data_process(data, tgt_columns)
                     run_context.cur_step_nums += 1
                     self.cur_step_nums += 1
                     self.callback_manager.train_step_begin(run_context)
                     if mode == 'pynative':
-                        loss = self._run_step(data)
+                        loss = self._run_step(inputs, tgts)
                     elif mode == 'graph':
-                        loss = ms_function(self._run_step)(data)
+                        loss = ms_function(self._run_step)(inputs, tgts)
                     loss_total += loss
                     t.set_postfix(loss=loss_total/self.cur_step_nums)
                     t.update(self.batch_size)
@@ -187,17 +197,17 @@ class Trainer:
             t.close()
             self.callback_manager.train_epoch_end(run_context)
             # do epoch evaluation
-            if self.evaluator is not None:
-                self.evaluator.run()
+            self.do_eval_epoch(run_context, mode, tgt_columns=tgt_columns)
+
 
     def _run_ds_sink(self, train_dataset, eval_dataset, list_callback,
                      cb_params, print_steps, eval_steps):
         """Training process for data sinking mode."""
         raise NotImplementedError
 
-    def _run_step(self, batch_data):
+    def _run_step(self, inputs, labels):
         """Core process of each step, including the forward propagation process and back propagation of data."""
-        (loss, _), grads = self.grad_fn(*batch_data)
+        (loss, _), grads = self.grad_fn(inputs, labels)
         self.optimizer(grads)
         return loss
 
@@ -209,10 +219,47 @@ class Trainer:
         """Save checkpoint."""
         raise NotImplementedError
 
-    def eval_steps(self, steps, eval_dataset):
+    def do_eval_steps(self, steps, eval_dataset):
         """Evaluate the model after n steps."""
         raise NotImplementedError
 
-    def eval_epoch(self, eval_dataset):
+    def do_eval_epoch(self, run_context, mode='pynative', tgt_columns=None):
         """Evaluate the model after an epoch."""
-        raise NotImplementedError
+        self.callback_manager.evaluate_begin(run_context)
+        self.evaluator.clear_metrics()
+        self.metrics_result, self.metrics_names, self.metrics_values = self.evaluator.run_progress(mode, tgt_columns)
+        self.callback_manager.evaluate_end(run_context)
+        self.earlystop = run_context.earlystop
+
+    def data_process(self, data, tgt_columns):
+        """Process data match the network construct"""
+        # prepare input dataset.
+        net_args = inspect.getfullargspec(self.network.construct).args
+        inputs = ()
+        for arg in net_args:
+            if arg == 'self':
+                continue
+            inputs = inputs + (data[arg],)
+        # process target dataset.
+        self.prepare_tgt_columns(tgt_columns)
+        tgts = ()
+        for tgt_column in self.tgt_columns:
+            tgts = tgts + (data[tgt_column],)
+        return inputs, tgts
+
+    def prepare_tgt_columns(self, tgt_columns):
+        """Check and prepare target columns for training."""
+        self.tgt_columns = []
+        if tgt_columns is None:
+            log.warning("In the process of training model, tgt_column can not be None.")
+            return
+        if isinstance(tgt_columns, str):
+            self.tgt_columns.append(tgt_columns)
+        elif isinstance(tgt_columns, list):
+            if all([isinstance(tgt_column, str) for tgt_column in tgt_columns]) is True:
+                self.tgt_columns = tgt_columns
+            else:
+                obj = [not isinstance(tgt_column, str) for tgt_column in tgt_columns][0]
+                raise TypeError(f"Expect str of tgt_column. Got {type(obj)}")
+        else:
+            raise TypeError(f"Expect tgt_columns to be list or str. Got {type(tgt_columns)}.")

@@ -140,14 +140,14 @@ class RunContext:
         This class needs to be used with :class:`mindspore.train.callback.Callback`.
 
         Args:
-            trainer_args (dict): Holding the related information of model.
+            engine_args (dict): Holding the related information of model.
     """
-    def __init__(self, trainer_args):
-        if not isinstance(trainer_args, dict):
+    def __init__(self, engine_args):
+        if not isinstance(engine_args, dict):
             raise TypeError("The argument 'original_args' of RunContext should be dict type, "
-                            "but got {}.".format(type(trainer_args)))
-        self.trainer_args = trainer_args
+                            "but got {}.".format(type(engine_args)))
+        self.engine_args = engine_args
         # self._stop_requested = False
 
     def __getattr__(self, att):
-        return self.trainer_args[att]
+        return self.engine_args[att]
