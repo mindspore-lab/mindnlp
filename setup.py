@@ -40,19 +40,7 @@ def clean():
         shutil.rmtree(os.path.join(cur_dir, 'mindtext.egg-info'), onerror=readonly_handler)
 
 
-def write_version(file):
-    file.write("__version__ = '{}'\n".format(version))
-
-
-def build_depends():
-    """generate python file"""
-    version_file = os.path.join(cur_dir, 'mindtext/', 'version.py')
-    with open(version_file, 'w') as f:
-        write_version(f)
-
-
 clean()
-build_depends()
 
 
 def update_permissions(path):
@@ -110,7 +98,7 @@ class BuildPy(build_py):
 
 
 setup(
-    name="text",
+    name="mindtext",
     version=version,
     author="MindSpore Team",
     url="https://gitee.com/mindspore/text/tree/master/",
