@@ -20,3 +20,4 @@ from .backbones import *
 from .modules import *
 from .callback import Callback
 from .metric import Metric
+from .pretrained_model import PretrainedConfig, PretrainedModel
