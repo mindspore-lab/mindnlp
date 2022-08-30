@@ -34,6 +34,7 @@ run_test() {
     echo "Start to run test."
     cd "$PROJECT_DIR" || exit
 
+    pip uninstall mindspore-dev -y
     pip install mindspore-dev --user -i https://pypi.doubanio.com/simple --trusted-host pypi.doubanio.com --upgrade
     pytest "$UT_PATH"
 
