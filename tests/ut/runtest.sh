@@ -34,7 +34,7 @@ run_test() {
     echo "Start to run test."
     cd "$PROJECT_DIR" || exit
 
-    pip install mindspore-dev --user -i https://repo.huaweicloud.com/repository/pypi/simple --trusted-host repo.huaweicloud.com
+    pip install mindspore-dev --user -i https://pypi.doubanio.com/simple --trusted-host pypi.doubanio.com --upgrade
     pytest "$UT_PATH"
 
     echo "Test all use cases success."

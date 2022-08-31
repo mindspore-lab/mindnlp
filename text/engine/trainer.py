@@ -19,10 +19,9 @@ import inspect
 from tqdm import tqdm
 
 from mindspore import ms_function, log
-
+from mindspore.ops import value_and_grad
 from text.engine.callbacks.callback_manager import CallbackManager, RunContext
 from text.engine.evaluator import Evaluator
-from ..common.grad import value_and_grad
 
 class Trainer:
     r"""
@@ -162,7 +161,7 @@ class Trainer:
             logits = net(*inputs)
             loss = loss_fn(logits, *labels)
             return loss, logits
-        self.grad_fn = value_and_grad(foward_fn, self.optimizer.parameters, has_aux=True)
+        self.grad_fn = value_and_grad(foward_fn, None, self.optimizer.parameters, has_aux=True)
         # batchify train_dataset
         total = self.train_dataset.get_dataset_size()
         self.train_dataset = self.train_dataset.batch(self.batch_size)
