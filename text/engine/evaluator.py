@@ -15,7 +15,7 @@
 """
 Evaluator for testing.
 """
-import inspect
+from inspect import signature
 from tqdm import tqdm
 
 from mindspore import ms_function, log
@@ -183,13 +183,15 @@ class Evaluator:
     def data_process(self, data, tgt_columns):
         """Process data match the network construct"""
         # prepare input dataset.
-        net_args = inspect.getfullargspec(self.network.construct).args
-        # sig = signature(self.network.construct)
-        # net_args = sig.parameters
+        sig = signature(self.network.construct)
+        net_args = sig.parameters
         inputs = ()
         for arg in net_args:
             if arg == 'self':
                 continue
+            if arg not in data.keys():
+                if str(net_args[arg])[-4:] == 'None':
+                    continue
             inputs = inputs + (data[arg],)
         # process target dataset.
         self.prepare_tgt_columns(tgt_columns)

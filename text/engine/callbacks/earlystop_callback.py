@@ -48,6 +48,7 @@ class EarlyStopCallback(Callback):
                         f"metric `{run_context.metrics_names}`(best value: {self.best_metrics_values})")
 
     def is_better_metric_value(self, metrics_values):
+        """Compare each metrics values with the best metrics values."""
         if self.best_metrics_values == {}:
             return True
         values_larger = (metrics_values > self.best_metrics_values)

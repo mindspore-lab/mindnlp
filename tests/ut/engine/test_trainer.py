@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Trainer _run function"""
+"""Test Trainer run function"""
 import unittest
 import numpy as np
 
@@ -24,6 +24,7 @@ from text.common.metrics import Accuracy
 from text.engine.callbacks.timer_callback import TimerCallback
 from text.engine.callbacks.earlystop_callback import EarlyStopCallback
 from text.engine.callbacks.best_model_callback import BestModelCallback
+from text.engine.callbacks.checkpoint_callback import CheckpointCallback
 
 np.random.seed(1)
 
@@ -48,7 +49,7 @@ class MyModel(nn.Cell):
         return output
 
 class MyModel2(nn.Cell):
-    """Model"""
+    """Model2"""
     def __init__(self):
         super().__init__()
         self.fc = nn.Dense(3, 1)
@@ -78,7 +79,8 @@ class TestTrainerRun(unittest.TestCase):
         # 3. define callbacks
         self.timer_callback_epochs = TimerCallback(print_steps=-1)
         self.earlystop_callback = EarlyStopCallback(patience=2)
-        self.bestmodel_callback = BestModelCallback()
+        self.bestmodel_callback = BestModelCallback(save_path='save/callback/best_model', auto_load=True)
+        self.checkpoint_callback = CheckpointCallback(save_path='save/callback/ckpt_files', epochs=1)
         self.callbacks = [self.timer_callback_epochs, self.earlystop_callback, self.bestmodel_callback]
         # 4. define metrics
         self.metric = Accuracy()
@@ -130,7 +132,7 @@ class TestTrainerRun(unittest.TestCase):
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
-                          epochs=6, batch_size=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
+                          epochs=4, batch_size=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
                           callbacks=self.bestmodel_callback)
         trainer.run(mode='pynative', tgt_columns='label')
 
@@ -138,8 +140,24 @@ class TestTrainerRun(unittest.TestCase):
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
-                          epochs=6, batch_size=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
+                          epochs=4, batch_size=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
                           callbacks=self.bestmodel_callback)
+        trainer.run(mode='graph', tgt_columns='label')
+
+    def test_trainer_checkpoint_pynative(self):
+        train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
+        eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
+        trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
+                          epochs=6, batch_size=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
+                          callbacks=self.checkpoint_callback)
+        trainer.run(mode='pynative', tgt_columns='label')
+
+    def test_trainer_checkpoint_graph(self):
+        train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
+        eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
+        trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
+                          epochs=6, batch_size=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
+                          callbacks=self.checkpoint_callback)
         trainer.run(mode='graph', tgt_columns='label')
 
     def test_different_model(self):

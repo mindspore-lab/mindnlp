@@ -15,7 +15,7 @@
 """
 Trainer for training.
 """
-import inspect
+from inspect import signature
 from tqdm import tqdm
 
 from mindspore import ms_function, log
@@ -157,15 +157,15 @@ class Trainer:
         # forward function
         net = self.network
         loss_fn = self.loss_fn
-        def foward_fn(inputs, labels):
+        def forward_fn(inputs, labels):
             logits = net(*inputs)
             loss = loss_fn(logits, *labels)
             return loss, logits
-        self.grad_fn = value_and_grad(foward_fn, None, self.optimizer.parameters, has_aux=True)
+        self.grad_fn = value_and_grad(forward_fn, None, self.optimizer.parameters, has_aux=True)
         # batchify train_dataset
         total = self.train_dataset.get_dataset_size()
         self.train_dataset = self.train_dataset.batch(self.batch_size)
-        # epoch begin
+        # train epoch begin
         for epoch in range(0, self.epochs):
             self.cur_epoch_nums = epoch + 1
             self.cur_step_nums = 0
@@ -210,14 +210,6 @@ class Trainer:
         self.optimizer(grads)
         return loss
 
-    def load_checkpoint(self, path):
-        """Load checkpoint."""
-        raise NotImplementedError
-
-    def save_checkpoint(self, path):
-        """Save checkpoint."""
-        raise NotImplementedError
-
     def do_eval_steps(self, steps, eval_dataset):
         """Evaluate the model after n steps."""
         raise NotImplementedError
@@ -233,11 +225,16 @@ class Trainer:
     def data_process(self, data, tgt_columns):
         """Process data match the network construct"""
         # prepare input dataset.
-        net_args = inspect.getfullargspec(self.network.construct).args
+        # net_args = inspect.getfullargspec(self.network.construct).args
+        sig = signature(self.network.construct)
+        net_args = sig.parameters
         inputs = ()
         for arg in net_args:
             if arg == 'self':
                 continue
+            if arg not in data.keys():
+                if str(net_args[arg])[-4:] == 'None':
+                    continue
             inputs = inputs + (data[arg],)
         # process target dataset.
         self.prepare_tgt_columns(tgt_columns)
