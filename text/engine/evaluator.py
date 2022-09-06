@@ -18,7 +18,7 @@ Evaluator for testing.
 from inspect import signature
 from tqdm import tqdm
 
-from mindspore import ms_function, log
+from mindspore import ms_function, log, mutable
 
 from text.engine.callbacks.callback_manager import CallbackManager, RunContext
 from ..abc import Metric
@@ -140,7 +140,7 @@ class Evaluator:
                 if mode == 'pynative':
                     outputs = self._run_step(inputs)
                 elif mode == 'graph':
-                    outputs = ms_function(self._run_step)(inputs)
+                    outputs = self._run_step_graph(inputs)
                 self.update_metrics(outputs, *tgts)
                 t.update(self.batch_size)
         t.close()
@@ -153,6 +153,12 @@ class Evaluator:
         raise NotImplementedError
 
     def _run_step(self, inputs):
+        """Core process of each step."""
+        outputs = self.network(*inputs)
+        return outputs
+
+    @ms_function
+    def _run_step_graph(self, inputs):
         """Core process of each step."""
         outputs = self.network(*inputs)
         return outputs
@@ -198,7 +204,7 @@ class Evaluator:
         tgts = ()
         for tgt_column in self.tgt_columns:
             tgts = tgts + (data[tgt_column],)
-        return inputs, tgts
+        return mutable(inputs), mutable(tgts)
 
     def prepare_tgt_columns(self, tgt_columns):
         """Check and prepare target columns for training."""

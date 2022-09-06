@@ -92,7 +92,7 @@ class Accuracy(Metric):
         y_pred = _convert_data_type(preds)
         y_true = _convert_data_type(labels)
 
-        if y_pred.ndim == y_true.ndim and _check_onehot_data(y_true):
+        if y_pred.ndim == y_true.ndim and (_check_onehot_data(y_true) or y_true[0].shape == (1,)):
             y_true = y_true.argmax(axis=1)
         _check_shape(y_pred, y_true)
 
