@@ -18,7 +18,7 @@ Trainer for training.
 from inspect import signature
 from tqdm import tqdm
 
-from mindspore import ms_function, log
+from mindspore import ms_function, log, mutable
 from mindspore.ops import value_and_grad
 from text.engine.callbacks.callback_manager import CallbackManager, RunContext
 from text.engine.evaluator import Evaluator
@@ -186,7 +186,7 @@ class Trainer:
                     if mode == 'pynative':
                         loss = self._run_step(inputs, tgts)
                     elif mode == 'graph':
-                        loss = ms_function(self._run_step)(inputs, tgts)
+                        loss = self._run_step_graph(inputs, tgts)
                     loss_total += loss
                     t.set_postfix(loss=loss_total/self.cur_step_nums)
                     t.update(self.batch_size)
@@ -210,6 +210,21 @@ class Trainer:
         self.optimizer(grads)
         return loss
 
+    @ms_function
+    def _run_step_graph(self, inputs, labels):
+        """Core process of each step, including the forward propagation process and back propagation of data."""
+        (loss, _), grads = self.grad_fn(inputs, labels)
+        self.optimizer(grads)
+        return loss
+
+    def load_checkpoint(self, path):
+        """Load checkpoint."""
+        raise NotImplementedError
+
+    def save_checkpoint(self, path):
+        """Save checkpoint."""
+        raise NotImplementedError
+
     def do_eval_steps(self, steps, eval_dataset):
         """Evaluate the model after n steps."""
         raise NotImplementedError
@@ -225,7 +240,6 @@ class Trainer:
     def data_process(self, data, tgt_columns):
         """Process data match the network construct"""
         # prepare input dataset.
-        # net_args = inspect.getfullargspec(self.network.construct).args
         sig = signature(self.network.construct)
         net_args = sig.parameters
         inputs = ()
@@ -241,7 +255,7 @@ class Trainer:
         tgts = ()
         for tgt_column in self.tgt_columns:
             tgts = tgts + (data[tgt_column],)
-        return inputs, tgts
+        return mutable(inputs), mutable(tgts)
 
     def prepare_tgt_columns(self, tgt_columns):
         """Check and prepare target columns for training."""

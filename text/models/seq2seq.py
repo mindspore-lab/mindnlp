@@ -37,8 +37,8 @@ class RNN(Seq2seqModel):
     If :attr:`nonlinearity` is ``'relu'``, then :math:`\text{ReLU}` is used instead of :math:`\tanh`.
 
     Args:
-        encoder (RNNEncoder): The RNN encoder.
-        decoder (RNNDecoder):  The RNN decoder.
+      encoder (RNNEncoder): The RNN encoder.
+      decoder (RNNDecoder):  The RNN decoder.
 
     Inputs:
         - **src_tokens** (Tensor) - Tokens of source sentences with shape [batch, src_len].
@@ -132,8 +132,8 @@ class LSTM(Seq2seqModel):
         h_{0:n},(h_{n}, c_{n}) = LSTM(x_{0:n},(h_{0},c_{0}))
 
     Args:
-        encoder (LSTMEncoder): The LSTM encoder.
-        decoder (LSTMDecoder):  The LSTM decoder.
+      encoder (LSTMEncoder): The LSTM encoder.
+      decoder (LSTMDecoder):  The LSTM decoder.
 
     Inputs:
         - **src_tokens** (Tensor) - Tokens of source sentences with shape [batch, src_len].
@@ -212,8 +212,8 @@ class GRU(Seq2seqModel):
     <https://aclanthology.org/D14-1179.pdf>`_.
 
     Args:
-        encoder (GRUEncoder): The GRU encoder.
-        decoder (GRUDecoder):  The GRU decoder.
+      encoder (GRUEncoder): The GRU encoder.
+      decoder (GRUDecoder):  The GRU decoder.
 
     Inputs:
         - **src_tokens** (Tensor) - Tokens of source sentences with shape [batch, src_len].
