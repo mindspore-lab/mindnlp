@@ -20,8 +20,8 @@ from tqdm import tqdm
 
 from mindspore import ms_function, log, mutable
 from mindspore.ops import value_and_grad
-from text.engine.callbacks.callback_manager import CallbackManager, RunContext
-from text.engine.evaluator import Evaluator
+from mindtext.engine.callbacks.callback_manager import CallbackManager, RunContext
+from mindtext.engine.evaluator import Evaluator
 
 class Trainer:
     r"""

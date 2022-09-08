@@ -21,7 +21,7 @@ import mindspore
 from mindspore import Tensor
 from mindspore import context
 
-from text.modules.attentions import ScaledDotAttention
+from mindtext.modules.attentions import ScaledDotAttention
 
 
 

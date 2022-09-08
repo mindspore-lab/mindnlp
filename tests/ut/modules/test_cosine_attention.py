@@ -24,7 +24,7 @@ from mindspore import ops
 from mindspore import Tensor
 from mindspore import context
 
-from text.modules.attentions import CosineAttention
+from mindtext.modules.attentions import CosineAttention
 
 
 class TestCosineAttention(unittest.TestCase):

@@ -12,43 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""GRU encoder modules"""
+"""RNN encoder modules"""
 # pylint: disable=abstract-method
 
 import mindspore.nn as nn
 
-from text.abc import EncoderBase
+from mindtext.abc import EncoderBase
 
-class GRUEncoder(EncoderBase):
+class RNNEncoder(EncoderBase):
     r"""
-    GRU Encoder.
+    RNN Encoder.
 
-    Apply GRU layer to the input.
+     Apply RNN layer with :math:`\tanh` or :math:`\text{ReLU}` non-linearity to the input.
 
-    There are two gates in a GRU model; one is update gate and the other is reset gate.
-    Denote two consecutive time nodes as :math:`t-1` and :math:`t`.
-    Given an input :math:`x_t` at time :math:`t`, a hidden state :math:`h_{t-1}`, the update and reset gate at
-    time :math:`t` is computed using a gating mechanism. Update gate :math:`z_t` is designed to protect the cell
-    from perturbation by irrelevant inputs and past hidden state. Reset gate :math:`r_t` determines how much
-    information should be reset from old hidden state. New memory state :math:`{n}_t` is
-    calculated with the current input, on which the reset gate will be applied. Finally, current hidden state
-    :math:`h_{t}` is computed with the calculated update grate and new memory state. The complete
-    formulation is as follows.
+    For each element in the input sequence, each layer computes the following function:
 
     .. math::
-        \begin{array}{ll}
-            r_t = \sigma(W_{ir} x_t + b_{ir} + W_{hr} h_{(t-1)} + b_{hr}) \\
-            z_t = \sigma(W_{iz} x_t + b_{iz} + W_{hz} h_{(t-1)} + b_{hz}) \\
-            n_t = \tanh(W_{in} x_t + b_{in} + r_t * (W_{hn} h_{(t-1)}+ b_{hn})) \\
-            h_t = (1 - z_t) * n_t + z_t * h_{(t-1)}
-        \end{array}
+        h_t = activation(W_{ih} x_t + b_{ih} + W_{hh} h_{(t-1)} + b_{hh})
 
-    Here :math:`\sigma` is the sigmoid function, and :math:`*` is the Hadamard product. :math:`W, b`
-    are learnable weights between the output and the input in the formula. For instance,
-    :math:`W_{ir}, b_{ir}` are the weight and bias used to transform from input :math:`x` to :math:`r`.
-    Details can be found in paper
-    `Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation
-    <https://aclanthology.org/D14-1179.pdf>`_.
+    Here :math:`h_t` is the hidden state at time `t`, :math:`x_t` is
+    the input at time `t`, and :math:`h_{(t-1)}` is the hidden state of the
+    previous layer at time `t-1` or the initial hidden state at time `0`.
+    If :attr:`nonlinearity` is ``'relu'``, then :math:`\text{ReLU}` is used instead of :math:`\tanh`.
 
     Args:
         vocab_size (int): Size of the dictionary of embeddings.
@@ -57,15 +42,15 @@ class GRUEncoder(EncoderBase):
         num_layers (int): Number of layers of stacked LSTM . Default: 1.
         has_bias (bool): Whether the cell has bias `b_ih` and `b_hh`. Default: True.
         dropout (float, int): If not 0, append `Dropout` layer on the outputs of each
-            LSTM layer except the last layer. Default 0. The range of dropout is [0.0, 1.0).
+          LSTM layer except the last layer. Default 0. The range of dropout is [0.0, 1.0).
         bidirectional (bool): Specifies whether it is a bidirectional LSTM,
-            num_directions=2 if bidirectional=True otherwise 1. Default: False.
+          num_directions=2 if bidirectional=True otherwise 1. Default: False.
 
     Inputs:
         - **src_token** (Tensor) - Tokens in the source language with shape [batch, max_len].
         - **src_length** (Tensor) - Lengths of each sentence with shape [batch].
         - **mask** (Tensor) - Its elements identify whether the corresponding input token is padding or not.
-            If the value is 1, not padding token. If the value is 0, padding token. Defaults to None.
+          If the value is 1, not padding token. If the value is 0, padding token. Defaults to None.
 
     Outputs:
         Tuple, a tuple contains (`output`, `hiddens_n`, `mask`).
@@ -78,13 +63,13 @@ class GRUEncoder(EncoderBase):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from text.modules import GRUEncoder
-        >>> gru_encoder = GRUEncoder(1000, 32, 16, num_layers=2, has_bias=True,
+        >>> from text.modules import RNNEncoder
+        >>> rnn_encoder = RNNEncoder(1000, 32, 16, num_layers=2, has_bias=True,
         ...                          dropout=0.1, bidirectional=False)
         >>> src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         >>> src_length = Tensor(np.ones([8]), mindspore.int32)
         >>> mask = Tensor(np.ones([8, 16]), mindspore.int32)
-        >>> output, hiddens_n, mask = gru_encoder(src_tokens, src_length, mask=mask)
+        >>> output, hiddens_n, mask = rnn_encoder(src_tokens, src_length, mask=mask)
         >>> print(output.shape)
         >>> print(hiddens_n.shape)
         >>> print(mask.shape)
@@ -97,7 +82,7 @@ class GRUEncoder(EncoderBase):
                  has_bias=True, dropout=0, bidirectional=False):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, embedding_size)
-        self.gru = nn.GRU(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+        self.rnn = nn.RNN(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
                           batch_first=True, dropout=dropout, bidirectional=bidirectional)
 
     def construct(self, src_token, src_length=None, mask=None):
@@ -105,7 +90,7 @@ class GRUEncoder(EncoderBase):
             src_token = src_token * mask
         x = self.embedding(src_token)
 
-        output, hiddens_n = self.gru(x, seq_length=src_length)
+        output, hiddens_n = self.rnn(x, seq_length=src_length)
         return output, hiddens_n, mask
 
     def reorder_encoder_out(self, encoder_out, new_order):

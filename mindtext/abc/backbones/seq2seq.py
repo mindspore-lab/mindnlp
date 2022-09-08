@@ -33,7 +33,7 @@ class Seq2seqModel(BaseModel):
         - **tgt_tokens** (Tensor) - Tokens of targets with shape [batch, src_len].
         - **src_length** (Tensor) - Lengths of each source sentence with shape [batch].
         - **mask** (Tensor) - Its elements identify whether the corresponding input token is padding or not.
-            If True, not padding token. If False, padding token. Defaults to None.
+          If True, not padding token. If False, padding token. Defaults to None.
 
     Returns:
         - **decoder_out** (Tensor) - The result vector of seq2seq model with shape [batch, max_len, vocab_size].

@@ -22,12 +22,12 @@ import mindspore.nn as nn
 import mindspore.numpy as mnp
 import mindspore.dataset as ds
 
-from text.modules import RNNEncoder, RNNDecoder
-from text.models import RNN
-from text.engine.trainer import Trainer
-from text.common.metrics import Accuracy
-from text.engine.callbacks.timer_callback import TimerCallback
-from text.engine.callbacks.earlystop_callback import EarlyStopCallback
+from mindtext.modules import RNNEncoder, RNNDecoder
+from mindtext.models import RNN
+from mindtext.engine.trainer import Trainer
+from mindtext.common.metrics import Accuracy
+from mindtext.engine.callbacks.timer_callback import TimerCallback
+from mindtext.engine.callbacks.earlystop_callback import EarlyStopCallback
 
 np.random.seed(1)
 
@@ -102,7 +102,7 @@ callbacks = [timer_callback_epochs, earlystop_callback]
 metric = Accuracy()
 
 # define trainer
-trainer = Trainer(train_dataset=train_dataset, foward_fn=forward_fn,
+trainer = Trainer(net, train_dataset=train_dataset, loss_fn=loss_fn,
                   epochs=2, batch_size=4, optimizer=optimizer)
 trainer.run(mode="pynative")
 print("end train")

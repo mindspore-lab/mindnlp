@@ -17,7 +17,7 @@
 
 import mindspore.nn as nn
 
-from text.abc import EncoderBase
+from mindtext.abc import EncoderBase
 
 class LSTMEncoder(EncoderBase):
     r"""
@@ -77,14 +77,14 @@ class LSTMEncoder(EncoderBase):
         - **src_token** (Tensor) - Tokens in the source language with shape [batch, max_len].
         - **src_length** (Tensor) - Lengths of each sentence with shape [batch].
         - **mask** (Tensor) - Its elements identify whether the corresponding input token is padding or not.
-            If the value is 1, not padding token. If the value is 0, padding token. Defaults to None.
+          If the value is 1, not padding token. If the value is 0, padding token. Defaults to None.
 
     Outputs:
         Tuple, a tuple contains (`output`, (`hiddens_n`, `cells_n`), `mask`).
 
         - **output** (Tensor) - Tensor of shape (seq_len, batch_size, num_directions * `hidden_size`).
         - **hx_n** (Tensor) -  A tuple of two Tensor (hiddens_n, cells_n)
-            both of shape (num_directions * `num_layers`, batch_size, `hidden_size`).
+          both of shape (num_directions * `num_layers`, batch_size, `hidden_size`).
         - **mask** (Tensor) - Mask Tensor used in decoder.
 
     Examples:

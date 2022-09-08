@@ -39,10 +39,10 @@ import mindspore.ops as ops
 import mindspore.dataset as ds
 from mindspore.common.initializer import Uniform, HeUniform
 
-from text.common.metrics import Accuracy
-from text.engine.trainer import Trainer
-from text.abc import Seq2vecModel
-from text.modules import LSTMEncoder
+from mindtext.common.metrics import Accuracy
+from mindtext.engine.trainer import Trainer
+from mindtext.abc import Seq2vecModel
+from mindtext.modules import LSTMEncoder
 
 
 cache_dir = Path.home() / '.mindspore_examples'
