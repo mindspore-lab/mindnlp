@@ -34,7 +34,7 @@ class Seq2vecModel(BaseModel):
     Inputs:
         - **src_tokens** (Tensor) - Tokens of source sentences with shape [batch, src_len].
         - **mask** (Tensor) - Its elements identify whether the corresponding input token is padding or not.
-            If True, not padding token. If False, padding token. Defaults to None.
+          If True, not padding token. If False, padding token. Defaults to None.
 
     Returns:
         - **result** (Tensor) - The result vector of seq2vec model with shape [batch, label_num].

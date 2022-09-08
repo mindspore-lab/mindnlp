@@ -24,7 +24,7 @@ from mindspore import ops
 from mindspore import context
 from mindspore import Tensor
 
-from text.modules.attentions import MutiHeadAttention
+from mindtext.modules.attentions import MutiHeadAttention
 
 class TestMutiHeadAttention(unittest.TestCase):
     r"""

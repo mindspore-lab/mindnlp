@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-GRU Decoder modules
+RNN Decoder modules
 """
 # pylint: disable=abstract-method
 
@@ -21,40 +21,25 @@ import mindspore.nn as nn
 import mindspore.ops as ops
 import mindspore.numpy as mnp
 
-from text.abc import DecoderBase
-from text.modules import ScaledDotAttention
 
+from mindtext.abc import DecoderBase
+from mindtext.modules import ScaledDotAttention
 
-class GRUDecoder(DecoderBase):
+class RNNDecoder(DecoderBase):
     r"""
-    GRU Decoder.
+    RNN Decoder.
 
-    Apply GRU layer to the input.
+    Apply RNN layer with :math:`\tanh` or :math:`\text{ReLU}` non-linearity to the input.
 
-    There are two gates in a GRU model; one is update gate and the other is reset gate.
-    Denote two consecutive time nodes as :math:`t-1` and :math:`t`.
-    Given an input :math:`x_t` at time :math:`t`, a hidden state :math:`h_{t-1}`, the update and reset gate at
-    time :math:`t` is computed using a gating mechanism. Update gate :math:`z_t` is designed to protect the cell
-    from perturbation by irrelevant inputs and past hidden state. Reset gate :math:`r_t` determines how much
-    information should be reset from old hidden state. New memory state :math:`{n}_t` is
-    calculated with the current input, on which the reset gate will be applied. Finally, current hidden state
-    :math:`h_{t}` is computed with the calculated update grate and new memory state. The complete
-    formulation is as follows.
+    For each element in the input sequence, each layer computes the following function:
 
     .. math::
-        \begin{array}{ll}
-            r_t = \sigma(W_{ir} x_t + b_{ir} + W_{hr} h_{(t-1)} + b_{hr}) \\
-            z_t = \sigma(W_{iz} x_t + b_{iz} + W_{hz} h_{(t-1)} + b_{hz}) \\
-            n_t = \tanh(W_{in} x_t + b_{in} + r_t * (W_{hn} h_{(t-1)}+ b_{hn})) \\
-            h_t = (1 - z_t) * n_t + z_t * h_{(t-1)}
-        \end{array}
+        h_t = activation(W_{ih} x_t + b_{ih} + W_{hh} h_{(t-1)} + b_{hh})
 
-    Here :math:`\sigma` is the sigmoid function, and :math:`*` is the Hadamard product. :math:`W, b`
-    are learnable weights between the output and the input in the formula. For instance,
-    :math:`W_{ir}, b_{ir}` are the weight and bias used to transform from input :math:`x` to :math:`r`.
-    Details can be found in paper
-    `Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation
-    <https://aclanthology.org/D14-1179.pdf>`_
+    Here :math:`h_t` is the hidden state at time `t`, :math:`x_t` is
+    the input at time `t`, and :math:`h_{(t-1)}` is the hidden state of the
+    previous layer at time `t-1` or the initial hidden state at time `0`.
+    If :attr:`nonlinearity` is ``'relu'``, then :math:`\text{ReLU}` is used instead of :math:`\tanh`.
 
     Args:
         vocab_size (int): Size of the dictionary of embeddings.
@@ -63,7 +48,7 @@ class GRUDecoder(DecoderBase):
         num_layers (int): Number of layers of stacked LSTM . Default: 1.
         has_bias (bool): Whether the cell has bias `b_ih` and `b_hh`. Default: True.
         dropout (float, int): If not 0, append `Dropout` layer on the outputs of each
-            LSTM layer except the last layer. Default 0. The range of dropout is [0.0, 1.0).
+          LSTM layer except the last layer. Default 0. The range of dropout is [0.0, 1.0).
         attention (bool): Whether to use attention. Default: True.
         encoder_output_units (int): Number of features of encoder output.
 
@@ -76,20 +61,20 @@ class GRUDecoder(DecoderBase):
 
         - **output** (Tensor) - Tensor of shape (batch, `tgt_len`, `vocab_size`).
         - **attn_scores** (Tensor) - Tensor of shape (`tgt_len`, batch, `embedding_size`)
-            if attention=True otherwise None.
+          if attention=True otherwise None.
 
     Examples:
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from text.modules import GRUDecoder
-        >>> gru_decoder = GRUDecoder(1000, 32, 16, num_layers=2, has_bias=True,
+        >>> from text.modules import RNNDecoder
+        >>> rnn_decoder = RNNDecoder(1000, 32, 16, num_layers=2, has_bias=True,
         ...                          dropout=0.1, attention=True, encoder_output_units=16)
         >>> tgt_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         >>> encoder_output = Tensor(np.ones([8, 16, 16]), mindspore.int32)
         >>> hiddens_n = Tensor(np.ones([2, 8, 16]), mindspore.float32)
         >>> mask = Tensor(np.ones([8, 16]), mindspore.int32)
-        >>> output, attn_scores = gru_decoder(tgt_tokens, (encoder_output, hiddens_n, mask))
+        >>> output, attn_scores = rnn_decoder(tgt_tokens, (encoder_output, hiddens_n, mask))
         >>> print(output.shape)
         >>> print(attn_scores.shape)
         (8, 16, 1000)
@@ -102,7 +87,7 @@ class GRUDecoder(DecoderBase):
 
         self.embedding = nn.Embedding(vocab_size, embedding_size)
         self.dropout = nn.Dropout(1 - dropout)
-        self.gru = nn.GRU(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+        self.rnn = nn.RNN(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
                           batch_first=True, dropout=dropout)
         if attention:
             self.attention = ScaledDotAttention()
@@ -158,7 +143,7 @@ class GRUDecoder(DecoderBase):
         embed_token = self.embedding(prev_output_tokens)  # [batch, tgt_len, embedding_size]
         embed_token = self.dropout(embed_token)
 
-        output, _ = self.gru(embed_token, encoder_hiddens)  # [batch, tgt_len, hidden_size]
+        output, _ = self.rnn(embed_token, encoder_hiddens)  # [batch, tgt_len, hidden_size]
 
         if self.attention is not None:
             outs = []
@@ -178,6 +163,8 @@ class GRUDecoder(DecoderBase):
         return output, attn_scores
 
     def output_layer(self, features):
-        """Project features to the vocabulary size"""
+        """
+        Project features to the vocabulary size
+        """
         output = self.fc_out(features)  # [batch, tgt_len, vocab_size]
         return output

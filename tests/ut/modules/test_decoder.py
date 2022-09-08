@@ -23,7 +23,7 @@ import mindspore
 from mindspore import context
 from mindspore import Tensor
 
-from text.modules import RNNDecoder, LSTMDecoder, GRUDecoder
+from mindtext.modules import RNNDecoder, LSTMDecoder, GRUDecoder
 
 
 class TestRNNDecoder(unittest.TestCase):

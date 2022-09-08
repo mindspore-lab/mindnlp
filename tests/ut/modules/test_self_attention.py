@@ -24,7 +24,7 @@ from mindspore import ops
 from mindspore import context
 from mindspore import Tensor
 
-from text.modules.attentions import SelfAttention
+from mindtext.modules.attentions import SelfAttention
 
 class TestSelfAttention(unittest.TestCase):
     r"""

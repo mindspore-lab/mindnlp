@@ -19,12 +19,12 @@ import numpy as np
 import mindspore.nn as nn
 import mindspore.dataset as ds
 
-from text.engine.trainer import Trainer
-from text.common.metrics import Accuracy
-from text.engine.callbacks.timer_callback import TimerCallback
-from text.engine.callbacks.earlystop_callback import EarlyStopCallback
-from text.engine.callbacks.best_model_callback import BestModelCallback
-from text.engine.callbacks.checkpoint_callback import CheckpointCallback
+from mindtext.engine.trainer import Trainer
+from mindtext.common.metrics import Accuracy
+from mindtext.engine.callbacks.timer_callback import TimerCallback
+from mindtext.engine.callbacks.earlystop_callback import EarlyStopCallback
+from mindtext.engine.callbacks.best_model_callback import BestModelCallback
+from mindtext.engine.callbacks.checkpoint_callback import CheckpointCallback
 
 np.random.seed(1)
 

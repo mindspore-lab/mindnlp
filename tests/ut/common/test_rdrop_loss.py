@@ -19,7 +19,7 @@ import pytest
 import numpy as np
 import mindspore
 from mindspore import Tensor
-from text.common.loss import RDropLoss
+from mindtext.common.loss import RDropLoss
 
 
 class TestRDropLoss(unittest.TestCase):
