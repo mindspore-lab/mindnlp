@@ -26,6 +26,7 @@ from urllib.parse import urlparse
 import requests
 from tqdm import tqdm
 
+
 def get_cache_path():
     r"""
     Get the storage path of the default cache. If the environment 'cache_path' is set, use the environment variable.
@@ -43,13 +44,14 @@ def get_cache_path():
 
     """
     if "CACHE_DIR" in os.environ:
-        cache_dir = os.environ.get('CACHE_DIR')
+        cache_dir = os.environ.get("CACHE_DIR")
         if os.path.isdir(cache_dir):
             return cache_dir
         raise NotADirectoryError(f"{os.environ['CACHE_DIR']} is not a directory.")
     cache_dir = os.path.expanduser(os.path.join("~", ".text"))
 
     return cache_dir
+
 
 def http_get(url, path=None, md5sum=None):
     r"""
@@ -88,22 +90,22 @@ def http_get(url, path=None, md5sum=None):
         if retry_cnt < retry_limit:
             retry_cnt += 1
         else:
-            raise RuntimeError("Download from {} failed. "
-                               "Retry limit reached".format(url))
+            raise RuntimeError(
+                "Download from {} failed. " "Retry limit reached".format(url)
+            )
 
         req = requests.get(url, stream=True)
         if req.status_code != 200:
-            raise RuntimeError("Downloading from {} failed with code "
-                               "{}!".format(url, req.status_code))
+            raise RuntimeError(
+                "Downloading from {} failed with code "
+                "{}!".format(url, req.status_code)
+            )
 
         tmp_filename = filename + "_tmp"
-        total_size = req.headers.get('content-length')
-        with open(tmp_filename, 'wb') as f:
+        total_size = req.headers.get("content-length")
+        with open(tmp_filename, "wb") as f:
             if total_size:
-                with tqdm(total=int(total_size),
-                          unit='B',
-                          unit_scale=True,
-                          unit_divisor=1024) as pbar:
+                with tqdm(total=int(total_size), unit="B", unit_scale=True, unit_divisor=1024) as pbar:
                     for chunk in req.iter_content(chunk_size=1024):
                         f.write(chunk)
                         pbar.update(len(chunk))
@@ -114,6 +116,7 @@ def http_get(url, path=None, md5sum=None):
         shutil.move(tmp_filename, filename)
 
     return Path(path), filename
+
 
 def check_md5(filename: str, md5sum=None):
     r"""
@@ -140,7 +143,7 @@ def check_md5(filename: str, md5sum=None):
         return True
 
     md5 = hashlib.md5()
-    with open(filename, 'rb') as f:
+    with open(filename, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
             md5.update(chunk)
     md5hex = md5.hexdigest()
@@ -148,6 +151,7 @@ def check_md5(filename: str, md5sum=None):
     if md5hex != md5sum:
         return False
     return True
+
 
 def get_dataset_url(datasetname: str):
     r"""
@@ -170,7 +174,7 @@ def get_dataset_url(datasetname: str):
         'https://mindspore-website.obs.myhuaweicloud.com/notebook/datasets/aclImdb_v1.tar.gz'
 
     """
-    default_dataset_json = './mindtext/configs/dataset_url.json'
+    default_dataset_json = "./mindtext/configs/dataset_url.json"
     with open(default_dataset_json, "r") as json_file:
         json_dict = json.load(json_file)
 
@@ -178,6 +182,7 @@ def get_dataset_url(datasetname: str):
     if url:
         return url
     raise KeyError(f"There is no {datasetname}.")
+
 
 def get_filepath(path: str):
     r"""
@@ -210,7 +215,8 @@ def get_filepath(path: str):
         return path
     raise FileNotFoundError(f"{path} is not a valid file or directory.")
 
-def cache_file(filename: str, cache_dir: str = None, url: str = None):
+
+def cache_file(filename: str, cache_dir: str = None, url: str = None, md5sum=None):
     r"""
     If there is the file in cache_dir, return the path; if there is no such file, use the url to download.
 
@@ -240,11 +246,14 @@ def cache_file(filename: str, cache_dir: str = None, url: str = None):
         cache_dir = get_cache_path()
     if url is None:
         url = get_dataset_url(filename)
-    path, filename = cached_path(filename_or_url=url, cache_dir=cache_dir, foldername=None)
+    path, filename = cached_path(
+        filename_or_url=url, cache_dir=cache_dir, foldername=None, md5sum=md5sum
+    )
 
     return path, filename
 
-def cached_path(filename_or_url: str, cache_dir: str = None, foldername=None):
+
+def cached_path(filename_or_url: str, cache_dir: str = None, foldername=None, md5sum=None):
     r"""
     If there is the file in cache_dir, return the path; if there is no such file, use the url to download.
 
@@ -279,14 +288,13 @@ def cached_path(filename_or_url: str, cache_dir: str = None, foldername=None):
     parsed = urlparse(filename_or_url)
 
     if parsed.scheme in ("http", "https"):
-        return get_from_cache(filename_or_url, Path(dataset_cache))
-    if parsed.scheme == "" and Path(os.path.join(dataset_cache, filename_or_url)).exists():
+        return get_from_cache(filename_or_url, Path(dataset_cache), md5sum=md5sum)
+    if (parsed.scheme == "" and Path(os.path.join(dataset_cache, filename_or_url)).exists()):
         return Path(os.path.join(dataset_cache, filename_or_url))
     if parsed.scheme == "":
         raise FileNotFoundError("file {} not found in {}.".format(filename_or_url, dataset_cache))
-    raise ValueError(
-        "unable to parse {} as a URL or as a local path".format(filename_or_url)
-    )
+    raise ValueError("unable to parse {} as a URL or as a local path".format(filename_or_url))
+
 
 def match_file(filename: str, cache_dir: str) -> str:
     r"""
@@ -317,15 +325,16 @@ def match_file(filename: str, cache_dir: str) -> str:
     files = os.listdir(cache_dir)
     matched_filenames = []
     for file_name in files:
-        if re.match(filename + '$', file_name) or re.match(filename + '\\..*', file_name):
+        if re.match(filename + "$", file_name) or re.match(filename + "\\..*", file_name):
             matched_filenames.append(file_name)
     if not matched_filenames:
-        return ''
+        return ""
     if len(matched_filenames) == 1:
         return matched_filenames[-1]
     raise RuntimeError(f"Duplicate matched files:{matched_filenames}, this should be caused by a bug.")
 
-def get_from_cache(url: str, cache_dir: str = None):
+
+def get_from_cache(url: str, cache_dir: str = None, md5sum=None):
     r"""
     If there is the file in cache_dir, return the path; if there is no such file, use the url to download.
 
@@ -361,10 +370,7 @@ def get_from_cache(url: str, cache_dir: str = None):
     if match_dir_name:
         dir_name = match_dir_name
     cache_path = cache_dir / dir_name
-
-    if cache_path.exists():
+    if cache_path.exists() and check_md5(cache_path, md5sum):
         return get_filepath(cache_path), filename
-
-    if not cache_path.exists():
-        path = http_get(url, cache_dir)[0]
+    path = http_get(url, cache_dir, md5sum)[0]
     return Path(path), filename
