@@ -21,7 +21,9 @@ from mindspore import nn
 from mindspore import dataset as ds
 import mindspore as ms
 import numpy as np
+import mindtext
 
+print(mindtext)
 
 def get_data(num, w=2.0, b=3.0):
     for _ in range(num):

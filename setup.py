@@ -115,7 +115,8 @@ setup(
         'build_py': BuildPy,
     },
     install_requires=[
-        'mindspore >= 1.7.0',
+        'tqdm',
+        'requests'
     ],
     classifiers=[
         'License :: OSI Approved :: Apache Software License'
