@@ -372,5 +372,5 @@ def get_from_cache(url: str, cache_dir: str = None, md5sum=None):
     cache_path = cache_dir / dir_name
     if cache_path.exists() and check_md5(cache_path, md5sum):
         return get_filepath(cache_path), filename
-    path = http_get(url, cache_dir, md5sum)[0]
+    path = http_get(url, cache_dir, md5sum)[1]
     return Path(path), filename
