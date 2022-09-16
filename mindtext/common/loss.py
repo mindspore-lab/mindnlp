@@ -14,11 +14,21 @@
 # ============================================================================
 # pylint: disable=arguments-differ
 """Losses"""
-import mindspore.ops.functional as F
-from mindspore import nn
-from mindspore import ops
 
-__all__ = ['RDropLoss']
+import numpy as np
+import mindspore
+import mindspore.ops.functional as F
+from mindspore import nn, ops
+
+__all__ = ['RDropLoss',
+           'CMRC2018Loss']
+
+
+def sequence_mask(lengths, maxlen):
+    """generate mask matrix by seq_length"""
+    range_vector = ops.arange(0, maxlen, 1, lengths.dtype)
+    result = range_vector < lengths.view(lengths.shape + (1,))
+    return result
 
 
 class RDropLoss(nn.Cell):
@@ -96,3 +106,85 @@ class RDropLoss(nn.Cell):
         q_loss = q_loss.sum()
         loss = (p_loss + q_loss) / 2
         return loss
+
+
+class CMRC2018Loss(nn.Cell):
+    r"""
+    CMRC2018Loss
+    used to compute CMRC2018 chinese Q&A task
+
+    Args:
+
+        reduction(str):
+            Indicate how to average the loss, the candicates are ``'mean'`` and ``'sum'``.
+            Defaults to ``'mean'``.
+
+    Inputs:
+
+        - **target_start** (Tensor) -size: batch_size, dtype: int
+
+        - **target_end** (Tensor) -size: batch_size, dtype: int
+
+        - **context_len** (Tensor) -size: batch_size, dtype: float
+
+        - **pred_start** (Tensor) -size: batch_size*max_len, dtype: float
+
+        - **pred_end** (Tensor) -size: batch_size*max_len, dtype: float
+
+    Returns:
+
+        - **Loss** (Tensor) -Returns tensor `loss`, the CMRC2018 loss.
+
+    Raises:
+
+        ValueError: if 'reduction' is not 'sum' or 'mean'.
+
+    Example:
+
+        >>> cmrc_loss = CMRC2018Loss()
+        >>> tensor_a = mindspore.Tensor(np.array([1, 2, 1]), mindspore.int32)
+        >>> tensor_b = mindspore.Tensor(np.array([2, 1, 2]), mindspore.int32)
+        >>> my_context_len = mindspore.Tensor(np.array([2., 1., 2.]), mindspore.float32)
+        >>> tensor_c = mindspore.Tensor(np.array([
+        >>>     [0.1, 0.2, 0.1],
+        >>>     [0.1, 0.2, 0.1],
+        >>>     [0.1, 0.2, 0.1]
+        >>> ]), mindspore.float32)
+        >>> tensor_d = mindspore.Tensor(np.array([
+        >>>     [0.2, 0.1, 0.2],
+        >>>     [0.2, 0.1, 0.2],
+        >>>     [0.2, 0.1, 0.2]
+        >>> ]), mindspore.float32)
+        >>> my_loss = cmrc_loss(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)
+        >>> print(my_loss)
+    """
+
+    def __init__(self, reduction='mean'):
+        super(CMRC2018Loss, self).__init__()
+
+        assert reduction in ('mean', 'sum')
+
+        self.reduction = reduction
+
+    def construct(self, target_start, target_end, context_len, pred_start, pred_end):
+        """compute CMRC2018Loss"""
+
+        batch_size, max_len = pred_end.shape
+
+        zero_tensor = mindspore.Tensor(
+            np.zeros((batch_size, max_len)), mindspore.float32)
+        mask = sequence_mask(
+            context_len, max_len).approximate_equal(zero_tensor)
+
+        pred_start = pred_start.masked_fill(mask, -1e10)
+        pred_end = pred_end.masked_fill(mask, -1e10)
+
+        start_loss = F.cross_entropy(pred_start, target_start, reduction='sum')
+        end_loss = F.cross_entropy(pred_end, target_end, reduction='sum')
+
+        loss = start_loss + end_loss
+
+        if self.reduction == 'mean':
+            loss = loss / batch_size
+
+        return loss / 2
