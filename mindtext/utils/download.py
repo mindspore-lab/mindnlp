@@ -94,7 +94,7 @@ def http_get(url, path=None, md5sum=None):
                 "Download from {} failed. " "Retry limit reached".format(url)
             )
 
-        req = requests.get(url, stream=True)
+        req = requests.get(url, stream=True, verify=False)
         if req.status_code != 200:
             raise RuntimeError(
                 "Downloading from {} failed with code "
@@ -363,10 +363,9 @@ def get_from_cache(url: str, cache_dir: str = None, md5sum=None):
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     filename = re.sub(r".+/", "", url)
-    filetmp = os.path.basename(filename)
-    dir_name = os.path.splitext(filetmp)[0]
 
-    match_dir_name = match_file(dir_name, cache_dir)
+    match_dir_name = match_file(filename, cache_dir)
+    dir_name = filename
     if match_dir_name:
         dir_name = match_dir_name
     cache_path = cache_dir / dir_name

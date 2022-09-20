@@ -35,7 +35,7 @@ run_test() {
     cd "$PROJECT_DIR" || exit
 
     pip uninstall mindspore-dev -y
-    pip install mindspore-dev --user -i https://pypi.doubanio.com/simple --trusted-host pypi.doubanio.com --upgrade
+    pip install mindspore-dev --user -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn --upgrade
     pytest "$UT_PATH"
 
     echo "Test all use cases success."

@@ -118,3 +118,6 @@ dmypy.json
 
 rank_0/
 save/
+
+.idea
+.vs
