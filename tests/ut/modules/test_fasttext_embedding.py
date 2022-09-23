@@ -17,7 +17,7 @@
 import unittest
 from mindspore import Tensor
 from mindspore.dataset.text import Vocab
-from mindtext.modules.embeddings.fasttext_embedding import Fasttext
+from mindnlp.modules.embeddings.fasttext_embedding import Fasttext
 
 
 class TestFasttext(unittest.TestCase):

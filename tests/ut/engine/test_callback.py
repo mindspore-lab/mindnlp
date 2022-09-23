@@ -15,10 +15,10 @@
 """Test Callback function."""
 import unittest
 
-from mindtext.engine.callbacks.timer_callback import TimerCallback
-from mindtext.engine.callbacks.earlystop_callback import EarlyStopCallback
-from mindtext.engine.callbacks.best_model_callback import BestModelCallback
-from mindtext.engine.callbacks.checkpoint_callback import CheckpointCallback
+from mindnlp.engine.callbacks.timer_callback import TimerCallback
+from mindnlp.engine.callbacks.earlystop_callback import EarlyStopCallback
+from mindnlp.engine.callbacks.best_model_callback import BestModelCallback
+from mindnlp.engine.callbacks.checkpoint_callback import CheckpointCallback
 
 class TestCallbackRun(unittest.TestCase):
     r"""

@@ -24,7 +24,7 @@ from mindspore import ops
 from mindspore import Tensor
 from mindspore import context
 
-from mindtext.modules.attentions import LinearAttention
+from mindnlp.modules.attentions import LinearAttention
 
 
 class TestLinearAttention(unittest.TestCase):

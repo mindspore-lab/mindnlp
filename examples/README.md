@@ -15,7 +15,7 @@ In the exmaples catalogue maily provodes rich application examples covering main
 
 ## Feedbacks and Contact
 
-The dynamic version is still under development, if you find any issue or have an idea on new features, please don't hesitate to contact us via [Gitee Issues](https://gitee.com/mindspore/mindtext/issues).
+The dynamic version is still under development, if you find any issue or have an idea on new features, please don't hesitate to contact us via [Gitee Issues](https://github.com/mindlab-ai/mindnlp/issues).
 
 ## Acknowledgement
 
@@ -29,10 +29,10 @@ and develop their own new semantic segmentation methods.
 If you find this project useful in your research, please consider citing:
 
 ```latex
-@misc{mindvsion2021,
+@misc{mindnlp2022,
     title={MindSpore Text Toolbox and Benchmark},
     author={MindSpore Text Contributors},
-    howpublished = {\url{https://gitee.com/mindspore/mindtext}},
+    howpublished = {\url{https://github.com/mindlab-ai/mindnlp}},
     year={2021}
 }
 ```

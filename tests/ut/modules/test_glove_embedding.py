@@ -17,7 +17,7 @@
 import unittest
 from mindspore import Tensor
 from mindspore.dataset.text import Vocab
-from mindtext.modules.embeddings.glove_embedding import Glove
+from mindnlp.modules.embeddings.glove_embedding import Glove
 
 
 class TestGlove(unittest.TestCase):

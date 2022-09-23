@@ -1,10 +1,10 @@
-# MindSpore Text
+# MindNLP
 
 ## Introduction
 
-MindSpore Text is an open source NLP library based on MindSpore.
+MindNLP is an open source NLP library based on MindSpore.
 
-The master branch works with **MindSpore 1.8**.
+The master branch works with **MindSpore master**.
 
 ## License
 
@@ -28,10 +28,10 @@ and develop their own new semantic segmentation methods.
 If you find this project useful in your research, please consider citing:
 
 ```latex
-@misc{mindtext2022,
-    title={{MindSpore Text}:MindSpore text library},
-    author={MindSpore Text Contributors},
-    howpublished = {\url{https://gitee.com/mindspore/text}},
+@misc{mindnlp2022,
+    title={{MindNLP}: a MindSpore NLP library},
+    author={MindNLP Contributors},
+    howpublished = {\url{https://github.com/mindlab-ai/mindnlp}},
     year={2022}
 }
 ```

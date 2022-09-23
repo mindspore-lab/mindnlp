@@ -17,7 +17,7 @@
 
 import mindspore.nn as nn
 
-from mindtext.abc import EncoderBase
+from mindnlp.abc import EncoderBase
 
 class GRUEncoder(EncoderBase):
     r"""

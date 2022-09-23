@@ -12,24 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Fasttext_embedding"""
+"""glove_embedding"""
 
 import os
 import re
 import zipfile
 import tarfile
-from itertools import islice
 import mindspore as ms
 import mindspore.nn as nn
 import mindspore.numpy as np
 import mindspore.ops as ops
 from mindspore import Tensor
 from mindspore.dataset.text.utils import Vocab
-import mindtext.utils.download as download
-from mindtext.abc.modules.embedding import TokenEmbedding
+import mindnlp.utils.download as download
+from mindnlp.abc.modules.embedding import TokenEmbedding
 
 
-class Fasttext(TokenEmbedding):
+class Glove(TokenEmbedding):
     r"""
     Create vocab and Embedding from a given pre-trained vector file.
     """
@@ -59,6 +58,8 @@ class Fasttext(TokenEmbedding):
         r"""
         Creates Embedding instance from given 2-dimensional FloatTensor.
 
+        Args:
+            url (str) : url to download file.
         Returns:
             - ** vocab ** - Vocabulary extracted from the file.
             - ** embeddings ** - Word vector extracted from the file.
@@ -67,6 +68,7 @@ class Fasttext(TokenEmbedding):
         file_name = re.sub(r".+/", "", url)
         download.cache_file(filename=file_name, cache_dir=None, url=url)
         cache_dir = download.get_cache_path()
+
         suffix = ''
         if file_name.endswith('.tar.gz'):
             suffix = '.tar.gz'
@@ -75,40 +77,44 @@ class Fasttext(TokenEmbedding):
 
         name_rar = file_name
         name_dir = name_rar.replace(suffix, '')
-        fasttext_dir_path = os.path.join(cache_dir, name_dir)
-        fasttext_compress_path = os.path.join(cache_dir, file_name)
+        glove_dir_path = os.path.join(cache_dir, name_dir)
+        glove_compress_path = os.path.join(cache_dir, file_name)
 
-        if not os.path.isdir(fasttext_dir_path):
+        if not os.path.isdir(glove_dir_path):
             if suffix == '.tar.gz':
-                fasttext_tar = tarfile.open(fasttext_compress_path, 'r')
-                fasttext_tar.extractall(cache_dir)
-                fasttext_tar.close()
+                glove_tar = tarfile.open(glove_compress_path, 'r')
+                glove_tar.extractall(cache_dir)
+                glove_tar.close()
             elif file_name == '.zip':
-                fasttext_zip = zipfile.ZipFile(fasttext_compress_path)
-                fasttext_zip.extractall(cache_dir)
-                fasttext_zip.close()
+                glove_zip = zipfile.ZipFile(glove_compress_path)
+                glove_zip.extractall(cache_dir)
+                glove_zip.close()
 
         file_suffix = ''
-        while os.path.isdir(fasttext_dir_path):
-            next_dir_path = os.path.join(fasttext_dir_path, name_dir)
-            if not os.path.isdir(next_dir_path):
-                for file in os.listdir(fasttext_dir_path):
-                    if file.startswith(name_dir):
-                        file_suffix = os.path.splitext(file)[-1]
-                    if fasttext_dir_path.endswith('.vec') or fasttext_dir_path.endswith('.txt'):
-                        file_suffix = ''
-                break
-            fasttext_dir_path = next_dir_path
-
-        name_txt = name_dir + file_suffix
-        fasttext_file_path = os.path.join(fasttext_dir_path, name_txt)
+        if os.path.isdir(glove_dir_path):
+            while os.path.isdir(glove_dir_path):
+                next_dir_path = os.path.join(glove_dir_path, name_dir)
+                if not os.path.isdir(next_dir_path):
+                    for file in os.listdir(glove_dir_path):
+                        if file.startswith(name_dir):
+                            file_suffix = os.path.splitext(file)[-1]
+                    break
+                glove_dir_path = next_dir_path
+            name_txt = name_dir + '.50d' + file_suffix
+            glove_file_path = os.path.join(glove_dir_path, name_txt)
+        else:
+            for file in os.listdir(cache_dir):
+                if file.startswith(name_dir):
+                    file_suffix = os.path.splitext(file)[-1]
+                    break
+            name_txt = name_dir + '.50d' + file_suffix
+            glove_file_path = os.path.join(cache_dir, name_txt)
 
         embeddings = []
         tokens = []
-
-        with open(fasttext_file_path, encoding='utf-8') as gf:
-            for fast in islice(gf, 1, None):
-                word, embedding = fast.split(maxsplit=1)
+        with open(glove_file_path, encoding='utf-8') as gf:
+            for glove in gf:
+                word, embedding = glove.split(maxsplit=1)
                 tokens.append(word)
                 arr = embedding.split(' ')
                 float_arr = list(map(float, arr))
@@ -117,12 +123,11 @@ class Fasttext(TokenEmbedding):
 
                 embeddings.append(float32_arr)
 
-        embeddings.append(np.rand(300))
-        embeddings.append(np.zeros((300,), ms.float32))
+        embeddings.append(np.rand(50))
+        embeddings.append(np.zeros((50,), ms.float32))
 
         vocab = Vocab.from_list(tokens, special_tokens=["<unk>", "<pad>"], special_first=False)
         embeddings = np.array(embeddings).astype(ms.float32)
-
         return cls(vocab, ms.Tensor(embeddings), True, 0.5, 0)
 
     def construct(self, ids):

@@ -23,7 +23,7 @@ import tarfile
 from operator import itemgetter
 from typing import Union, Tuple
 from mindspore.dataset import TextFileDataset
-from mindtext.utils.download import cache_file
+from mindnlp.utils.download import cache_file
 
 URL = {
     "train": r"http://www.quest.dcs.shef.ac.uk/wmt16_files_mmt/training.tar.gz",
@@ -54,8 +54,8 @@ def untar(file_path: str, untar_path: str):
         TypeError: If `untar_path` is not a string.
 
     Examples:
-        >>> file_path = r".\dataset\datasets\Multi30k\training.tar.gz"
-        >>> untar_path = r"mindtext\dataset\datasets\Multi30k"
+        >>> file_path = "./dataset/datasets/Multi30k/training.tar.gz"
+        >>> untar_path = "mindnlp/dataset/datasets/Multi30k"
         >>> output = untar(file_path,untar_path)
         >>> print(output)
         ['train.de', 'train.en']

@@ -24,7 +24,7 @@ from mindspore import ops
 from mindspore import Tensor
 from mindspore import context
 
-from mindtext.modules.attentions import AdditiveAttention
+from mindnlp.modules.attentions import AdditiveAttention
 
 
 class TestAdditiveAttention(unittest.TestCase):

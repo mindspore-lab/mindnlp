@@ -17,7 +17,7 @@ RNN modules
 """
 # pylint: disable=abstract-method
 
-from mindtext.abc import Seq2seqModel
+from mindnlp.abc import Seq2seqModel
 
 
 class RNN(Seq2seqModel):

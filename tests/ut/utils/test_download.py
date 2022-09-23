@@ -18,7 +18,7 @@ Test Download
 
 import unittest
 import os
-from mindtext.utils.download import get_cache_path, check_md5, get_dataset_url, get_filepath, match_file
+from mindnlp.utils.download import get_cache_path, check_md5, get_dataset_url, get_filepath, match_file
 
 class TestGetCachePath(unittest.TestCase):
     r"""
