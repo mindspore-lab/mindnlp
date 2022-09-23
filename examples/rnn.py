@@ -22,12 +22,12 @@ import mindspore.nn as nn
 import mindspore.numpy as mnp
 import mindspore.dataset as ds
 
-from mindtext.modules import RNNEncoder, RNNDecoder
-from mindtext.models import RNN
-from mindtext.engine.trainer import Trainer
-from mindtext.common.metrics import Accuracy
-from mindtext.engine.callbacks.timer_callback import TimerCallback
-from mindtext.engine.callbacks.earlystop_callback import EarlyStopCallback
+from mindnlp.modules import RNNEncoder, RNNDecoder
+from mindnlp.models import RNN
+from mindnlp.engine.trainer import Trainer
+from mindnlp.common.metrics import Accuracy
+from mindnlp.engine.callbacks.timer_callback import TimerCallback
+from mindnlp.engine.callbacks.earlystop_callback import EarlyStopCallback
 
 np.random.seed(1)
 

@@ -17,7 +17,7 @@
 import unittest
 from mindspore import Tensor
 from mindspore.dataset.text import Vocab
-from mindtext.modules.embeddings.word2vec_embedding import Word2vec
+from mindnlp.modules.embeddings.word2vec_embedding import Word2vec
 
 
 class TestWord2vec(unittest.TestCase):

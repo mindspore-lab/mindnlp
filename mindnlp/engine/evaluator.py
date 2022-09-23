@@ -20,7 +20,7 @@ from tqdm import tqdm
 
 from mindspore import ms_function, log, mutable
 
-from mindtext.engine.callbacks.callback_manager import CallbackManager, RunContext
+from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContext
 from ..abc import Metric
 
 class Evaluator:

@@ -18,7 +18,7 @@ import unittest
 import numpy as np
 import mindspore
 from mindspore import Tensor
-from mindtext.common.loss import CMRC2018Loss
+from mindnlp.common.loss import CMRC2018Loss
 
 
 class TestCMRC2018Loss(unittest.TestCase):

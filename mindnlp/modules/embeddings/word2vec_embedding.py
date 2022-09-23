@@ -25,8 +25,8 @@ import mindspore.numpy as np
 import mindspore.ops as ops
 from mindspore import Tensor
 from mindspore.dataset.text.utils import Vocab
-import mindtext.utils.download as download
-from mindtext.abc.modules.embedding import TokenEmbedding
+import mindnlp.utils.download as download
+from mindnlp.abc.modules.embedding import TokenEmbedding
 
 
 class Word2vec(TokenEmbedding):

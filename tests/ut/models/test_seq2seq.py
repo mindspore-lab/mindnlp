@@ -21,8 +21,8 @@ import mindspore
 from mindspore import context
 from mindspore import Tensor
 
-from mindtext.modules import RNNEncoder, RNNDecoder, LSTMEncoder, LSTMDecoder, GRUEncoder, GRUDecoder
-from mindtext.models import RNN, LSTM, GRU
+from mindnlp.modules import RNNEncoder, RNNDecoder, LSTMEncoder, LSTMDecoder, GRUEncoder, GRUDecoder
+from mindnlp.models import RNN, LSTM, GRU
 
 
 class TestRNN(unittest.TestCase):

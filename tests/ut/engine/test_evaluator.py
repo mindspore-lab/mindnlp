@@ -20,9 +20,9 @@ import numpy as np
 import mindspore.nn as nn
 import mindspore.dataset as ds
 
-from mindtext.engine.evaluator import Evaluator
-from mindtext.common.metrics import Accuracy
-from mindtext.engine.callbacks.timer_callback import TimerCallback
+from mindnlp.engine.evaluator import Evaluator
+from mindnlp.common.metrics import Accuracy
+from mindnlp.engine.callbacks.timer_callback import TimerCallback
 
 
 class MyDataset:

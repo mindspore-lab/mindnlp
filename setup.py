@@ -36,8 +36,8 @@ def clean():
         func(path)
     if os.path.exists(os.path.join(cur_dir, 'build')):
         shutil.rmtree(os.path.join(cur_dir, 'build'), onerror=readonly_handler)
-    if os.path.exists(os.path.join(cur_dir, 'mindtext.egg-info')):
-        shutil.rmtree(os.path.join(cur_dir, 'mindtext.egg-info'), onerror=readonly_handler)
+    if os.path.exists(os.path.join(cur_dir, 'mindnlp.egg-info')):
+        shutil.rmtree(os.path.join(cur_dir, 'mindnlp.egg-info'), onerror=readonly_handler)
 
 
 clean()
@@ -85,7 +85,7 @@ class EggInfo(egg_info):
     """Egg info."""
     def run(self):
         super().run()
-        egg_info_dir = os.path.join(cur_dir, 'mindtext.egg-info')
+        egg_info_dir = os.path.join(cur_dir, 'mindnlp.egg-info')
         update_permissions(egg_info_dir)
 
 
@@ -93,18 +93,18 @@ class BuildPy(build_py):
     """BuildPy."""
     def run(self):
         super().run()
-        mindarmour_dir = os.path.join(pkg_dir, 'lib', 'mindtext')
+        mindarmour_dir = os.path.join(pkg_dir, 'lib', 'mindnlp')
         update_permissions(mindarmour_dir)
 
 
 setup(
-    name="mindtext",
+    name="mindnlp",
     version=version,
     author="MindSpore Team",
-    url="https://gitee.com/mindspore/text/tree/master/",
+    url="https://github.com/mindlab-ai/mindnlp/tree/master/",
     project_urls={
-        'Sources': 'https://gitee.com/mindspore/text',
-        'Issue Tracker': 'https://gitee.com/mindspore/text/issues',
+        'Sources': 'https://github.com/mindlab-ai/mindnlp',
+        'Issue Tracker': 'https://github.com/mindlab-ai/mindnlp/issues',
     },
     description=get_description(),
     license='Apache 2.0',

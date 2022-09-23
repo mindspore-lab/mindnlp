@@ -23,7 +23,7 @@ import mindspore
 from mindspore import ops, Tensor
 from mindspore import context
 
-from mindtext.modules.attentions import LocationAwareAttention
+from mindnlp.modules.attentions import LocationAwareAttention
 
 
 class TestLocationAwareAttention(unittest.TestCase):

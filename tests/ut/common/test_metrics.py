@@ -18,8 +18,8 @@ import unittest
 import numpy as np
 import mindspore
 from mindspore import Tensor
-from mindtext.common.metrics import Accuracy
-from mindtext.common.metrics import (perplexity, bleu, rouge_n, rouge_l, distinct, accuracy, precision,
+from mindnlp.common.metrics import Accuracy
+from mindnlp.common.metrics import (perplexity, bleu, rouge_n, rouge_l, distinct, accuracy, precision,
                                      recall, f1_score, confusion_matrix, mcc, pearson, spearman, em_score,
                                      F1Score)
 

@@ -20,7 +20,7 @@ from functools import reduce
 from scipy import stats
 
 from mindspore.common.initializer import initializer
-from mindtext.common.initializer import XavierNormal
+from mindnlp.common.initializer import XavierNormal
 
 class TestXavierNormal(unittest.TestCase):
     r"""
