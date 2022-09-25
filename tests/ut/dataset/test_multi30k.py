@@ -15,7 +15,7 @@
 """
 Test Multi30k
 """
-
+import os
 import unittest
 from mindnlp.dataset.multi30k import Multi30k
 
@@ -35,7 +35,8 @@ class TestMulti30k(unittest.TestCase):
             "valid": 1014,
             "test": 1000,
         }
-        train_dataset, valid_dataset, test_dataset = Multi30k(root=r"./dataset",
+        root = os.path.join(os.path.expanduser('~'), ".text")
+        train_dataset, valid_dataset, test_dataset = Multi30k(root=root,
                                                               split=(
                                                                   'train', 'valid', 'test'),
                                                               language_pair=(
@@ -46,11 +47,11 @@ class TestMulti30k(unittest.TestCase):
         assert test_dataset.get_dataset_size() == num_lines["test"]
 
         train_dataset = Multi30k(
-            root=r"./dataset", split='train', language_pair=('de', 'en'))
+            root=root, split='train', language_pair=('de', 'en'))
         valid_dataset = Multi30k(
-            root=r"./dataset", split='valid', language_pair=('en', 'de'))
+            root=root, split='valid', language_pair=('en', 'de'))
         test_dataset = Multi30k(
-            root=r"./dataset", split='test', language_pair=('de', 'en'))
+            root=root, split='test', language_pair=('de', 'en'))
         assert train_dataset.get_dataset_size() == num_lines["train"]
         assert valid_dataset.get_dataset_size() == num_lines["valid"]
         assert test_dataset.get_dataset_size() == num_lines["test"]

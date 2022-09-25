@@ -128,10 +128,10 @@ class AdditiveAttention(nn.Cell):
         """
         query = self.w_q(query)
         key = self.w_k(key)
-        features = ops.expand_dims(query, -2) + ops.expand_dims(key, -3) + self.bias
-        scores = ops.squeeze(self.w_output(self.tanh(features)), -1)
+        features = query.expand_dims(-2) + key.expand_dims(-3) + self.bias
+        scores = self.w_output(self.tanh(features)).squeeze(-1)
         if mask is not None:
-            scores = ops.masked_fill(scores, mask == 0, -1e9)
+            scores = scores.masked_fill(mask == 0, -1e9)
         attn = self.softmax(scores)
         attn = self.dropout(attn)
         output = ops.matmul(attn, value)
