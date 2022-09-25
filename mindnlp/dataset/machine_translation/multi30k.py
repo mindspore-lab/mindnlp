@@ -26,9 +26,9 @@ from mindspore.dataset import TextFileDataset
 from mindnlp.utils.download import cache_file
 
 URL = {
-    "train": r"http://www.quest.dcs.shef.ac.uk/wmt16_files_mmt/training.tar.gz",
-    "valid": r"http://www.quest.dcs.shef.ac.uk/wmt16_files_mmt/validation.tar.gz",
-    "test": r"http://www.quest.dcs.shef.ac.uk/wmt16_files_mmt/mmt16_task1_test.tar.gz",
+    "train": "http://www.quest.dcs.shef.ac.uk/wmt16_files_mmt/training.tar.gz",
+    "valid": "http://www.quest.dcs.shef.ac.uk/wmt16_files_mmt/validation.tar.gz",
+    "test": "http://www.quest.dcs.shef.ac.uk/wmt16_files_mmt/mmt16_task1_test.tar.gz",
 }
 
 MD5 = {
@@ -54,8 +54,8 @@ def untar(file_path: str, untar_path: str):
         TypeError: If `untar_path` is not a string.
 
     Examples:
-        >>> file_path = "./dataset/datasets/Multi30k/training.tar.gz"
-        >>> untar_path = "mindnlp/dataset/datasets/Multi30k"
+        >>> file_path = "./mindnlp/datasets/Multi30k/training.tar.gz"
+        >>> untar_path = "./mindnlp/datasets/Multi30k"
         >>> output = untar(file_path,untar_path)
         >>> print(output)
         ['train.de', 'train.en']
@@ -68,8 +68,9 @@ def untar(file_path: str, untar_path: str):
     tar.close()
     return names
 
+DEFAULT_ROOT = os.path.join(os.path.expanduser('~'), ".mindnlp")
 
-def Multi30k(root: str = "./data", split: Union[Tuple[str], str] = ('train', 'valid', 'test'),
+def Multi30k(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train', 'valid', 'test'),
              language_pair: Tuple[str] = ('de', 'en')):
     r"""
     Load the Multi30k dataset
@@ -93,14 +94,15 @@ def Multi30k(root: str = "./data", split: Union[Tuple[str], str] = ('train', 'va
         RuntimeError: If `language_pair` is neither ('de', 'en') nor ('en', 'de').
 
     Examples:
-        >>> root = "./data"
+        >>> root = ~/.mindnlp
         >>> split = ('train', 'valid', 'test')
         >>> language_pair = ('de', 'en')
-        >>> datasets = Multi30k(root, split, language_pair)
-        >>> print(datasets)
-        [<mindspore.dataset.engine.datasets.ZipDataset at 0x2675e544f48>,
-        <mindspore.dataset.engine.datasets.ZipDataset at 0x2675e469c48>,
-        <mindspore.dataset.engine.datasets.ZipDataset at 0x2675e5500c8>]
+        >>> dataset_train, dataset_valid, dataset_test = Multi30k(root, split, language_pair)
+        >>> train_iter = dataset_train.create_tuple_iterator()
+        >>> print(next(train_iter))
+        [Tensor(shape=[], dtype=String, value=\
+            'Ein Mann mit einem orangefarbenen Hut, der etwas anstarrt.'),
+        Tensor(shape=[], dtype=String, value= 'A man in an orange hat starring at something.')]
 
     """
 

@@ -13,10 +13,9 @@
 # limitations under the License.
 # ============================================================================
 """
-Dataset init
+TextGeneration dataset init
 """
 
-from .text_classification import *
-from .machine_translation import *
-from .question_answer import *
-from .text_generation import *
+from .wikitext2 import WikiText2
+from .wikitext103 import WikiText103
+from .penntreebank import PennTreebank
