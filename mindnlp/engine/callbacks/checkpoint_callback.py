@@ -16,10 +16,9 @@
 Callback for load and save checkpoint.
 """
 import os
-
 import mindspore
+from mindnlp.abc import Callback
 
-from ...abc import Callback
 
 class CheckpointCallback(Callback):
     r"""
@@ -55,7 +54,7 @@ class CheckpointCallback(Callback):
         #                         you must assign one of them.")
 
     def train_begin(self, run_context):
-        print("\nThe train will start from the checkpoint saved in {}.\n".format(self.save_path))
+        print(f"\nThe train will start from the checkpoint saved in {self.save_path}.\n")
 
     def train_epoch_end(self, run_context):
         r"""
@@ -68,4 +67,4 @@ class CheckpointCallback(Callback):
         model = run_context.network
         ckpt_name = type(model).__name__ + '_epoch_' + str(run_context.cur_epoch_nums-1) + '.ckpt'
         mindspore.save_checkpoint(model, self.save_path + '/' + ckpt_name)
-        print("Checkpoint: {} has been saved in epoch:{}.".format(ckpt_name, run_context.cur_epoch_nums-1))
+        print(f"Checkpoint: {ckpt_name} has been saved in epoch:{run_context.cur_epoch_nums - 1}.")

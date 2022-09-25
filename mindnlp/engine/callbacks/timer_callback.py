@@ -16,8 +16,7 @@
 Callback for timing.
 """
 import time
-
-from ...abc import Callback
+from mindnlp.abc import Callback
 
 class _Timer:
     """Timer."""
@@ -72,6 +71,7 @@ class Timers:
         return item in self.timers
 
     def reset(self):
+        """reset"""
         for timer in self.timers.values():
             timer.reset()
 

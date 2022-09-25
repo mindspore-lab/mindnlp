@@ -33,9 +33,9 @@ import numpy as np
 from tqdm import tqdm
 
 import mindspore as ms
-import mindspore.nn as nn
+from mindspore import nn
 import mindspore.numpy as mnp
-import mindspore.ops as ops
+from mindspore import ops
 import mindspore.dataset as ds
 from mindspore.common.initializer import Uniform, HeUniform
 

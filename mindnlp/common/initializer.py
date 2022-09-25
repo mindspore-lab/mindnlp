@@ -16,7 +16,7 @@
 
 import math
 import numpy as np
-from mindspore.common.initializer import (Initializer, _calculate_fan_in_and_fan_out, _assignment)
+from mindspore.common.initializer import Initializer, _calculate_fan_in_and_fan_out, _assignment
 
 class XavierNormal(Initializer):
     r"""
@@ -40,7 +40,7 @@ class XavierNormal(Initializer):
         >>> tensor2 = initializer('XavierNormal', [1, 2, 3], mindspore.float32)
     """
     def __init__(self, gain=1):
-        super(XavierNormal, self).__init__(gain=gain)
+        super().__init__(gain=gain)
         self.gain = gain
 
     def _initialize(self, arr):

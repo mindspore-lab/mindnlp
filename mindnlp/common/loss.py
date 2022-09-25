@@ -17,7 +17,6 @@
 
 import numpy as np
 import mindspore
-import mindspore.ops.functional as F
 from mindspore import nn, ops
 
 __all__ = ['RDropLoss',
@@ -78,22 +77,22 @@ class RDropLoss(nn.Cell):
     """
 
     def __init__(self, reduction='none'):
-        super(RDropLoss, self).__init__()
+        super().__init__()
         if reduction not in ['sum', 'mean', 'none', 'batchmean']:
             raise ValueError(
-                "'reduction' in 'RDropLoss' should be 'sum', 'mean' 'batchmean', or 'none', "
-                "but received {}.".format(reduction))
+                f"'reduction' in 'RDropLoss' should be 'sum', 'mean' 'batchmean', or 'none', "
+                f"but received {reduction}.")
         self.reduction = reduction
 
     def construct(self, p, q, pad_mask=None):
         """
         Returns tensor `loss`, the rdrop loss of p and q.
         """
-        p_loss = F.kl_div(F.log_softmax(p, axis=-1),
-                          F.softmax(q, axis=-1),
+        p_loss = ops.kl_div(ops.log_softmax(p, axis=-1),
+                          ops.softmax(q, axis=-1),
                           reduction=self.reduction)
-        q_loss = F.kl_div(F.log_softmax(q, axis=-1),
-                          F.softmax(p, axis=-1),
+        q_loss = ops.kl_div(ops.log_softmax(q, axis=-1),
+                          ops.softmax(p, axis=-1),
                           reduction=self.reduction)
 
         # pad_mask is for seq-level tasks
@@ -160,7 +159,7 @@ class CMRC2018Loss(nn.Cell):
     """
 
     def __init__(self, reduction='mean'):
-        super(CMRC2018Loss, self).__init__()
+        super().__init__()
 
         assert reduction in ('mean', 'sum')
 
@@ -179,8 +178,8 @@ class CMRC2018Loss(nn.Cell):
         pred_start = pred_start.masked_fill(mask, -1e10)
         pred_end = pred_end.masked_fill(mask, -1e10)
 
-        start_loss = F.cross_entropy(pred_start, target_start, reduction='sum')
-        end_loss = F.cross_entropy(pred_end, target_end, reduction='sum')
+        start_loss = ops.cross_entropy(pred_start, target_start, reduction='sum')
+        end_loss = ops.cross_entropy(pred_end, target_end, reduction='sum')
 
         loss = start_loss + end_loss
 

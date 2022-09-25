@@ -17,11 +17,9 @@ Evaluator for testing.
 """
 from inspect import signature
 from tqdm import tqdm
-
 from mindspore import ms_function, log, mutable
-
 from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContext
-from ..abc import Metric
+from mindnlp.abc import Metric
 
 class Evaluator:
     r"""
@@ -83,6 +81,8 @@ class Evaluator:
         self.total = eval_dataset.get_dataset_size()
         self.eval_dataset = eval_dataset.batch(batch_size)
 
+        self.callback_manager = CallbackManager(callbacks=self.callbacks)
+
     def check_metric_type(self, metrics):
         """Check metrics type."""
         self.metrics = []
@@ -92,7 +92,7 @@ class Evaluator:
         if isinstance(metrics, Metric):
             self.metrics.append(metrics)
         elif isinstance(metrics, list):
-            if all([isinstance(mc, Metric) for mc in metrics]) is True:
+            if all(isinstance(mc, Metric) for mc in metrics) is True:
                 self.metrics = metrics
             else:
                 obj = [not isinstance(mc, Metric) for mc in metrics][0]
@@ -124,17 +124,16 @@ class Evaluator:
         """Evaluating function entry."""
         args_dict = vars(self)
         run_context = RunContext(args_dict)
-        self.callback_manager = CallbackManager(callbacks=self.callbacks)
         self.callback_manager.evaluate_begin(run_context)
         self.clear_metrics()
-        self.metrics_result, self.metrics_names, self.metrics_values = self.run_progress(mode, tgt_columns)
+        _ = self.run_progress(mode, tgt_columns)
         self.callback_manager.evaluate_end(run_context)
-        self.earlystop = run_context.earlystop
+        self.earlystop = getattr(run_context, 'earlystop', False)
 
     def run_progress(self, mode, tgt_columns=None):
         """Evaluating process for non-data sinking mode. The data would be passed to network directly."""
-        with tqdm(total=self.total) as t:
-            t.set_description('Evaluate')
+        with tqdm(total=self.total) as progress:
+            progress.set_description('Evaluate')
             for data in self.eval_dataset.create_dict_iterator():
                 inputs, tgts = self.data_process(data, tgt_columns)
                 if mode == 'pynative':
@@ -142,8 +141,8 @@ class Evaluator:
                 elif mode == 'graph':
                     outputs = self._run_step_graph(inputs)
                 self.update_metrics(outputs, *tgts)
-                t.update(self.batch_size)
-        t.close()
+                progress.update(self.batch_size)
+        progress.close()
         metrics_result, metrics_names, metrics_values = self.get_metrics()
         print(f'Evaluate Score: {metrics_result}')
         return metrics_result, metrics_names, metrics_values
@@ -200,25 +199,26 @@ class Evaluator:
                     continue
             inputs = inputs + (data[arg],)
         # process target dataset.
-        self.prepare_tgt_columns(tgt_columns)
+        tgt_columns = self.prepare_tgt_columns(tgt_columns)
         tgts = ()
-        for tgt_column in self.tgt_columns:
+        for tgt_column in tgt_columns:
             tgts = tgts + (data[tgt_column],)
         return mutable(inputs), mutable(tgts)
 
     def prepare_tgt_columns(self, tgt_columns):
         """Check and prepare target columns for training."""
-        self.tgt_columns = []
+        out_columns = []
         if tgt_columns is None:
             log.warning("In the process of training model, tgt_column can not be None.")
-            return
+            return []
         if isinstance(tgt_columns, str):
-            self.tgt_columns.append(tgt_columns)
+            out_columns.append(tgt_columns)
         elif isinstance(tgt_columns, list):
-            if all([isinstance(tgt_column, str) for tgt_column in tgt_columns]) is True:
-                self.tgt_columns = tgt_columns
+            if all(isinstance(tgt_column, str) for tgt_column in tgt_columns) is True:
+                out_columns = tgt_columns
             else:
                 obj = [not isinstance(tgt_column, str) for tgt_column in tgt_columns][0]
                 raise TypeError(f"Expect str of tgt_column. Got {type(obj)}")
         else:
             raise TypeError(f"Expect tgt_columns to be list or str. Got {type(tgt_columns)}.")
+        return out_columns

@@ -15,7 +15,7 @@
 """
 Callback Manager.
 """
-from ...abc import Callback
+from mindnlp.abc import Callback
 
 def _transfer(func):
     """
@@ -47,7 +47,7 @@ class CallbackManager(Callback):
         if isinstance(callbacks, Callback):
             self.callbacks.append(callbacks)
         elif isinstance(callbacks, list):
-            if all([isinstance(cb, Callback) for cb in callbacks]) is True:
+            if all(isinstance(cb, Callback) for cb in callbacks) is True:
                 self.callbacks = callbacks
             else:
                 obj = [not isinstance(cb, Callback) for cb in callbacks][0]
@@ -144,10 +144,7 @@ class RunContext:
     """
     def __init__(self, engine_args):
         if not isinstance(engine_args, dict):
-            raise TypeError("The argument 'original_args' of RunContext should be dict type, "
-                            "but got {}.".format(type(engine_args)))
-        self.engine_args = engine_args
-        # self._stop_requested = False
-
-    def __getattr__(self, att):
-        return self.engine_args[att]
+            raise TypeError(f"The argument 'original_args' of RunContext should be dict type, "
+                            f"but got {type(engine_args)}.")
+        for arg, value in engine_args.items():
+            setattr(self, arg, value)

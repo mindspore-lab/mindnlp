@@ -20,7 +20,7 @@ AG_NEWS dataset
 import csv
 from typing import Union, Tuple
 from mindspore.dataset import GeneratorDataset
-from utils.download import cache_file
+from mindnlp.utils.download import cache_file
 
 URL = {
     "train": "https://raw.githubusercontent.com/mhjabreel/CharCnn_Keras/master/data/ag_news_csv/train.csv",
@@ -43,8 +43,7 @@ class Agnews:
         self._load()
 
     def _load(self):
-        print(self.path)
-        csvfile = open(self.path, "r")
+        csvfile = open(self.path, "r", encoding='utf-8')
         dict_reader = csv.reader(csvfile)
         for row in dict_reader:
             self._label.append(row[0])

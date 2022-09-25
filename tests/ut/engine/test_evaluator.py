@@ -17,7 +17,7 @@
 import unittest
 import numpy as np
 
-import mindspore.nn as nn
+from mindspore import nn
 import mindspore.dataset as ds
 
 from mindnlp.engine.evaluator import Evaluator

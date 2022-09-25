@@ -15,8 +15,7 @@
 """GRU encoder modules"""
 # pylint: disable=abstract-method
 
-import mindspore.nn as nn
-
+from mindspore import nn
 from mindnlp.abc import EncoderBase
 
 class GRUEncoder(EncoderBase):
@@ -103,9 +102,9 @@ class GRUEncoder(EncoderBase):
     def construct(self, src_token, src_length=None, mask=None):
         if mask is None:
             src_token = src_token * mask
-        x = self.embedding(src_token)
+        embed = self.embedding(src_token)
 
-        output, hiddens_n = self.gru(x, seq_length=src_length)
+        output, hiddens_n = self.gru(embed, seq_length=src_length)
         return output, hiddens_n, mask
 
     def reorder_encoder_out(self, encoder_out, new_order):

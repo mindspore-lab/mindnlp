@@ -18,7 +18,7 @@ import unittest
 import numpy as np
 
 import mindspore
-import mindspore.ops as ops
+from mindspore import ops
 
 from mindspore import context
 from mindspore import Tensor

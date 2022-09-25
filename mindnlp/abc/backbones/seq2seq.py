@@ -15,9 +15,8 @@
 """Sequence-to-sequence basic model"""
 # pylint: disable=abstract-method
 # pylint: disable=arguments-differ
-import mindspore.ops as ops
-
-from .base import BaseModel
+from mindspore import ops
+from mindnlp.abc.backbones.base import BaseModel
 
 
 class Seq2seqModel(BaseModel):

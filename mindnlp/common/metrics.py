@@ -22,7 +22,7 @@ from collections import Counter
 import re
 import numpy as np
 from mindspore import Tensor
-from ..abc import Metric
+from mindnlp.abc import Metric
 
 
 
@@ -968,8 +968,8 @@ def mcc(preds, labels):
 
     """
     if preds is None or labels is None:
-        raise RuntimeError(f'To calculate Matthews correlation coefficient (MCC), it needs at least 2 inputs '
-                           f'(`preds` and `labels`)')
+        raise RuntimeError('To calculate Matthews correlation coefficient (MCC), it needs at least 2 inputs '
+                           '(`preds` and `labels`)')
 
     preds = _convert_data_type(preds)
     labels = _convert_data_type(labels)
@@ -1064,8 +1064,8 @@ def pearson(preds, labels):
         return numerator / denominator
 
     if preds is None or labels is None:
-        raise RuntimeError(f'To calculate Pearson correlation coefficient (PCC), it needs at least 2 inputs '
-                           f'(`preds` and `labels`)')
+        raise RuntimeError('To calculate Pearson correlation coefficient (PCC), it needs at least 2 inputs '
+                           '(`preds` and `labels`)')
 
     preds = _convert_data_type(preds)
     labels = _convert_data_type(labels)
@@ -1135,8 +1135,8 @@ def spearman(preds, labels):
         return res
 
     if preds is None or labels is None:
-        raise RuntimeError(f'To calculate Spearman\'s rank correlation coefficient, it needs at least '
-                           f'2 inputs (`preds` and `labels`)')
+        raise RuntimeError('To calculate Spearman\'s rank correlation coefficient, it needs at least '
+                           '2 inputs (`preds` and `labels`)')
 
     preds = _convert_data_type(preds)
     labels = _convert_data_type(labels)

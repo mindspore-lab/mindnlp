@@ -18,13 +18,13 @@ import os
 import re
 import zipfile
 import tarfile
-import mindspore as ms
-import mindspore.nn as nn
-import mindspore.numpy as np
-import mindspore.ops as ops
+import mindspore
+from mindspore import nn
+import mindspore.numpy as mnp
+from mindspore import ops
 from mindspore import Tensor
 from mindspore.dataset.text.utils import Vocab
-import mindnlp.utils.download as download
+from mindnlp.utils import download
 from mindnlp.abc.modules.embedding import TokenEmbedding
 
 
@@ -112,23 +112,23 @@ class Glove(TokenEmbedding):
 
         embeddings = []
         tokens = []
-        with open(glove_file_path, encoding='utf-8') as gf:
-            for glove in gf:
+        with open(glove_file_path, encoding='utf-8') as file:
+            for glove in file:
                 word, embedding = glove.split(maxsplit=1)
                 tokens.append(word)
                 arr = embedding.split(' ')
                 float_arr = list(map(float, arr))
                 float_tensor = Tensor(float_arr)
-                float32_arr = np.asfarray(float_tensor)
+                float32_arr = mnp.asfarray(float_tensor)
 
                 embeddings.append(float32_arr)
 
-        embeddings.append(np.rand(50))
-        embeddings.append(np.zeros((50,), ms.float32))
+        embeddings.append(mnp.rand(50))
+        embeddings.append(mnp.zeros((50,), mindspore.float32))
 
         vocab = Vocab.from_list(tokens, special_tokens=["<unk>", "<pad>"], special_first=False)
-        embeddings = np.array(embeddings).astype(ms.float32)
-        return cls(vocab, ms.Tensor(embeddings), True, 0.5, 0)
+        embeddings = mnp.array(embeddings).astype(mindspore.float32)
+        return cls(vocab, Tensor(embeddings), True, 0.5, 0)
 
     def construct(self, ids):
         r"""

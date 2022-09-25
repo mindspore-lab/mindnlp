@@ -14,7 +14,7 @@
 # ============================================================================
 """Encoder basic model"""
 
-import mindspore.nn as nn
+from mindspore import nn
 
 
 class EncoderBase(nn.Cell):

@@ -15,10 +15,9 @@
 """Sequence-to-vector basic model"""
 # pylint: disable=abstract-method
 # pylint: disable=arguments-differ
-import mindspore.nn as nn
-import mindspore.ops as ops
-
-from .base import BaseModel
+from mindspore import nn
+from mindspore import ops
+from mindnlp.abc.backbones.base import BaseModel
 
 
 class Seq2vecModel(BaseModel):

@@ -17,13 +17,11 @@ RNN Decoder modules
 """
 # pylint: disable=abstract-method
 
-import mindspore.nn as nn
-import mindspore.ops as ops
+from mindspore import nn
+from mindspore import ops
 import mindspore.numpy as mnp
-
-
 from mindnlp.abc import DecoderBase
-from mindnlp.modules import ScaledDotAttention
+from mindnlp.modules.attentions import ScaledDotAttention
 
 class RNNDecoder(DecoderBase):
     r"""

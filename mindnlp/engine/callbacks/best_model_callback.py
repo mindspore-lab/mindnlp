@@ -17,7 +17,7 @@ Callback for loading best model
 """
 import os
 import mindspore
-from ...abc import Callback
+from mindnlp.abc import Callback
 
 class BestModelCallback(Callback):
     """
@@ -101,8 +101,8 @@ class BestModelCallback(Callback):
         model = run_context.network
         ckpt_name = "best_so_far.ckpt"
         mindspore.save_checkpoint(model, self.save_path + '/' + ckpt_name)
-        print("---------------Best Model: {} has been saved in epoch:{}.---------------"\
-              .format(ckpt_name, run_context.cur_epoch_nums-1))
+        print(f"---------------Best Model: {ckpt_name} "
+              f"has been saved in epoch: {run_context.cur_epoch_nums - 1}.---------------")
 
     def _load_model(self, run_context):
         """

@@ -15,7 +15,7 @@
 """Basic class for models"""
 
 import mindspore
-import mindspore.nn as nn
+from mindspore import nn
 
 
 class BaseModel(nn.Cell):

@@ -1,0 +1,5 @@
+mindspore-dev
+requests
+tqdm
+pylint
+pytest

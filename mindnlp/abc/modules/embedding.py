@@ -19,12 +19,10 @@ __all__ = [
 ]
 
 from abc import abstractmethod
-import mindspore.nn as nn
-import mindspore.numpy as numpy
-import mindspore.ops as ops
-from mindspore import Parameter
-from mindspore import Tensor
-
+from mindspore import nn
+from mindspore import ops
+from mindspore import Parameter, Tensor
+import mindspore.numpy as mnp
 
 class TokenEmbedding(nn.Cell):
     r"""
@@ -33,7 +31,7 @@ class TokenEmbedding(nn.Cell):
 
     def __init__(self, vocab, init_embed,
                  word_dropout=0, dropout=0.5, unk_index=None, requires_grad=False):
-        super(TokenEmbedding, self).__init__()
+        super().__init__()
 
         self._word_vocab = vocab
         self.embed = Parameter(init_embed, name='embed', requires_grad=requires_grad)
@@ -50,7 +48,7 @@ class TokenEmbedding(nn.Cell):
         Randomly set Words to UNKNOWN_INDEX
         """
         if self.word_dropout > 0 and self.training:
-            mask = numpy.full_like(words, fill_value=self.word_dropout, dtype=float, shape=None)
+            mask = mnp.full_like(words, fill_value=self.word_dropout, dtype=float, shape=None)
             mask = ops.bernoulli(mask).eq(1)  # dropout_word越大，越多位置为1
             pad_mask = words.ne(self._word_pad_index)
             mask = mask & pad_mask
@@ -61,15 +59,19 @@ class TokenEmbedding(nn.Cell):
         return len(self.embed)
 
     def embed_size(self) -> int:
+        """embed size"""
         return self._embed_size
 
     def num_embeddings(self) -> int:
+        """num embeddings"""
         return len(self._word_vocab)
 
     def get_word_vocab(self):
+        """get word vocab"""
         return self._word_vocab
 
     def size(self):
+        """size"""
         return self.embed.size
 
     def construct(self, ids):

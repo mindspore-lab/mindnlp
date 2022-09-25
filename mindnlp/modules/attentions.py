@@ -17,7 +17,6 @@ from typing import Optional
 
 import mindspore
 import mindspore.numpy as mnp
-
 from mindspore import Parameter, ops, nn
 
 class ScaledDotAttention(nn.Cell):
@@ -57,7 +56,7 @@ class ScaledDotAttention(nn.Cell):
     """
 
     def __init__(self, dropout=0.9):
-        super(ScaledDotAttention, self).__init__()
+        super().__init__()
         self.softmax = nn.Softmax(axis=-1)
         self.dropout = nn.Dropout(keep_prob=1-dropout)
 
@@ -110,7 +109,7 @@ class AdditiveAttention(nn.Cell):
         (2, 32, 512) (2, 32, 20)
     """
     def __init__(self, hidden_dims, dropout=0.9):
-        super(AdditiveAttention, self).__init__()
+        super().__init__()
         self.hidden_dims = hidden_dims
         self.w_q = nn.Dense(hidden_dims, hidden_dims, has_bias=False)
         self.w_k = nn.Dense(hidden_dims, hidden_dims, has_bias=False)
@@ -178,7 +177,7 @@ class CosineAttention(nn.Cell):
         (2, 32, 512) (2, 32, 20)
     """
     def __init__(self, dropout=0.9):
-        super(CosineAttention, self).__init__()
+        super().__init__()
         self.softmax = nn.Softmax(axis=-1)
         self.dropout = nn.Dropout(keep_prob=1-dropout)
 
@@ -256,7 +255,7 @@ class BinaryAttention(nn.Cell):
     Examples:
         >>> import mindspore
         >>> import mindspore.numpy as np
-        >>> import mindspore.ops as ops
+        >>> from mindspore import ops
         >>> from mindspore import Tensor
         >>> from mindspore.text.modules.attentions import BinaryAttention
         >>> model = BinaryAttention()
@@ -271,7 +270,7 @@ class BinaryAttention(nn.Cell):
     """
 
     def __init__(self):
-        super(BinaryAttention, self).__init__()
+        super().__init__()
         self.bmm = ops.BatchMatMul()
 
     def construct(self, x_batch, x_mask, y_batch, y_mask):
@@ -307,7 +306,7 @@ class MutiHeadAttention(nn.Cell):
     Examples:
         >>> import mindspore
         >>> import mindspore.numpy as np
-        >>> import mindspore.ops as ops
+        >>> from mindspore import ops
         >>> from mindspore import Tensor
         >>> from mindspore.text.modules.attentions import MutiHeadAttention
         >>> standard_normal = ops.StandardNormal(seed=114514)
@@ -331,10 +330,10 @@ class MutiHeadAttention(nn.Cell):
     """
 
     def __init__(self, heads=8, d_model=512, dropout_rate=0.1, bias=True, attention_mode="dot"):
-        super(MutiHeadAttention, self).__init__()
+        super().__init__()
         if d_model % heads != 0:
-            raise ValueError("d_model must be divisible when divided by heads.\
-Your d_model dimension is {d_model} and heads is {heads}.".format(d_model=d_model, heads=heads))
+            raise ValueError(f"'d_model' must be divisible when divided by 'heads'. "
+                             f"Your d_model dimension is {d_model} and heads is {heads}.")
         self.d_k = d_model // heads
         self.d_model = d_model
         self.heads = heads
@@ -392,7 +391,7 @@ class SelfAttention(nn.Cell):
     Examples:
         >>> import mindspore
         >>> import mindspore.numpy as np
-        >>> import mindspore.ops as ops
+        >>> from mindspore import ops
         >>> from mindspore import Tensor
         >>> from mindspore.text.modules.attentions import SelfAttention
         >>> standard_normal = ops.StandardNormal(seed=114514)
@@ -407,7 +406,7 @@ class SelfAttention(nn.Cell):
         (2, 32, 512) (2, 32, 20)
     """
     def __init__(self, d_model=512, dropout_rate=0.1, bias=True, attention_mode="dot"):
-        super(SelfAttention, self).__init__()
+        super().__init__()
         self.d_model = d_model
         self.linear_query = nn.Dense(d_model, d_model, has_bias=bias)
         self.linear_key = nn.Dense(d_model, d_model, has_bias=bias)
@@ -472,7 +471,7 @@ class LocationAwareAttention(nn.Cell):
     """
 
     def __init__(self, decoder_dim, encoder_dim, attn_dim, smoothing=False):
-        super(LocationAwareAttention, self).__init__()
+        super().__init__()
         self.decoder_dim = decoder_dim
         self.encoder_dim = encoder_dim
         self.attn_dim = attn_dim
@@ -547,7 +546,7 @@ class LinearAttention(nn.Cell):
     Examples:
         >>> import mindspore
         >>> import mindspore.numpy as np
-        >>> import mindspore.ops as ops
+        >>> from mindspore import ops
         >>> from mindspore import Tensor
         >>> from mindspore.text.modules.attentions import SelfAttention
         >>> standard_normal = ops.StandardNormal(seed=114514)
@@ -562,7 +561,7 @@ class LinearAttention(nn.Cell):
         (2, 32, 512) (2, 32, 20)
     """
     def __init__(self, batch_size, query_dim, key_dim, hidden_dim, dropout=0.9):
-        super(LinearAttention, self).__init__()
+        super().__init__()
         self.w_linear = nn.Dense(query_dim + key_dim, query_dim, has_bias=False)
         self.softmax = nn.Softmax(axis=-1)
         self.tanh = nn.Tanh()

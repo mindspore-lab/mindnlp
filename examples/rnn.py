@@ -18,7 +18,7 @@ RNN model
 
 import numpy as np
 
-import mindspore.nn as nn
+from mindspore import nn
 import mindspore.numpy as mnp
 import mindspore.dataset as ds
 

@@ -91,28 +91,27 @@ def http_get(url, path=None, md5sum=None):
             retry_cnt += 1
         else:
             raise RuntimeError(
-                "Download from {} failed. " "Retry limit reached".format(url)
+                f"Download from {url} failed. " "Retry limit reached"
             )
 
-        req = requests.get(url, stream=True, verify=False)
+        req = requests.get(url, stream=True, verify=False, timeout=10)
         if req.status_code != 200:
             raise RuntimeError(
-                "Downloading from {} failed with code "
-                "{}!".format(url, req.status_code)
+                f"Downloading from {url} failed with code {req.status_code}!"
             )
 
         tmp_filename = filename + "_tmp"
         total_size = req.headers.get("content-length")
-        with open(tmp_filename, "wb") as f:
+        with open(tmp_filename, "wb") as file:
             if total_size:
                 with tqdm(total=int(total_size), unit="B", unit_scale=True, unit_divisor=1024) as pbar:
                     for chunk in req.iter_content(chunk_size=1024):
-                        f.write(chunk)
+                        file.write(chunk)
                         pbar.update(len(chunk))
             else:
                 for chunk in req.iter_content(chunk_size=1024):
                     if chunk:
-                        f.write(chunk)
+                        file.write(chunk)
         shutil.move(tmp_filename, filename)
 
     return Path(path), filename
@@ -143,8 +142,8 @@ def check_md5(filename: str, md5sum=None):
         return True
 
     md5 = hashlib.md5()
-    with open(filename, "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
+    with open(filename, "rb") as file:
+        for chunk in iter(lambda: file.read(4096), b""):
             md5.update(chunk)
     md5hex = md5.hexdigest()
 
@@ -175,7 +174,7 @@ def get_dataset_url(datasetname: str):
 
     """
     default_dataset_json = "./mindnlp/configs/dataset_url.json"
-    with open(default_dataset_json, "r") as json_file:
+    with open(default_dataset_json, "r", encoding='utf-8') as json_file:
         json_dict = json.load(json_file)
 
     url = json_dict.get(datasetname, None)
@@ -292,8 +291,8 @@ def cached_path(filename_or_url: str, cache_dir: str = None, foldername=None, md
     if (parsed.scheme == "" and Path(os.path.join(dataset_cache, filename_or_url)).exists()):
         return Path(os.path.join(dataset_cache, filename_or_url))
     if parsed.scheme == "":
-        raise FileNotFoundError("file {} not found in {}.".format(filename_or_url, dataset_cache))
-    raise ValueError("unable to parse {} as a URL or as a local path".format(filename_or_url))
+        raise FileNotFoundError(f"file {filename_or_url} not found in {dataset_cache}.")
+    raise ValueError(f"unable to parse {filename_or_url} as a URL or as a local path")
 
 
 def match_file(filename: str, cache_dir: str) -> str:
