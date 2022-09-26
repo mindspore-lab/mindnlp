@@ -78,9 +78,11 @@ def Multi30k(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train',
 
     Args:
         root (str): Directory where the datasets are saved.
+            Default:~/.mindnlp
         split (str|Tuple[str]): Split or splits to be returned.
             Default:('train', 'valid', 'test').
-        language_pair (Tuple[str]): Tuple containing src and tgt language. Default: ('de', 'en').
+        language_pair (Tuple[str]): Tuple containing src and tgt language.
+            Default: ('de', 'en').
 
     Returns:
         - **datasets_list** (list) -A list of loaded datasets.
@@ -95,7 +97,7 @@ def Multi30k(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train',
         RuntimeError: If `language_pair` is neither ('de', 'en') nor ('en', 'de').
 
     Examples:
-        >>> root = ~/.mindnlp
+        >>> root = os.path.join(os.path.expanduser('~'), ".mindnlp")
         >>> split = ('train', 'valid', 'test')
         >>> language_pair = ('de', 'en')
         >>> dataset_train, dataset_valid, dataset_test = Multi30k(root, split, language_pair)
