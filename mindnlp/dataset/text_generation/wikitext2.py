@@ -23,6 +23,8 @@ import zipfile
 from typing import Union, Tuple
 from mindspore.dataset import TextFileDataset
 from mindnlp.utils.download import cache_file
+from mindnlp.dataset.register import load
+from mindnlp.configs import DEFAULT_ROOT
 
 URL = "https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-2-v1.zip"
 
@@ -59,8 +61,8 @@ def unzip(file_path: str, untar_path: str):
     zip_obj.close()
     return names
 
-DEFAULT_ROOT = os.path.join(os.path.expanduser('~'), ".mindnlp")
 
+@load.register
 def WikiText2(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train', 'valid', 'test')):
     r"""
     Load the WikiText2 dataset

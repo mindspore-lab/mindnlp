@@ -18,10 +18,10 @@ Test SQuAD2
 
 import os
 import unittest
-from mindnlp.dataset import SQuAD2
+from mindnlp.dataset import SQuAD2, load
 
 
-class TestMulti30k(unittest.TestCase):
+class TestSQuAD2(unittest.TestCase):
     r"""
     Test SQuAD2
     """
@@ -29,7 +29,7 @@ class TestMulti30k(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    def test_multi30k(self):
+    def test_squad2(self):
         """Test SQuAD2"""
         num_lines = {
             "train": 130319,
@@ -44,3 +44,10 @@ class TestMulti30k(unittest.TestCase):
         dataset_dev = SQuAD2(root=root, split='dev')
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
+
+    def test_squad2_by_register(self):
+        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
+        dataset_train, dataset_dev = load('squad2',
+                                             root=root,
+                                             split=('train', 'dev')
+                                            )

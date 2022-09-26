@@ -18,7 +18,7 @@ Test Multi30k
 import os
 import unittest
 from mindnlp.dataset import Multi30k
-
+from mindnlp.dataset import load
 
 class TestMulti30k(unittest.TestCase):
     r"""
@@ -55,3 +55,12 @@ class TestMulti30k(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_valid.get_dataset_size() == num_lines["valid"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
+
+    def test_multi30k_by_register(self):
+        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
+        dataset_train, dataset_valid, dataset_test = \
+            load('multi30k',
+                    root=root,
+                    split=('train', 'valid', 'test'),
+                    language_pair=('de', 'en')
+                    )

@@ -13,11 +13,8 @@
 # limitations under the License.
 # ============================================================================
 """
-Dataset init
+Dataset register
 """
 
-from .text_classification import *
-from .machine_translation import *
-from .question_answer import *
-from .text_generation import *
-from .register import load
+from mindnlp.abc.register import Register
+load = Register('load')
