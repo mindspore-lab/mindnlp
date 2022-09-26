@@ -13,45 +13,39 @@
 # limitations under the License.
 # ============================================================================
 """
-Test Multi30k
+Test WikiText103
 """
+
 import os
 import unittest
-from mindnlp.dataset import Multi30k
+from mindnlp.dataset import WikiText103
 
 
 class TestMulti30k(unittest.TestCase):
     r"""
-    Test Multi30k
+    Test WikiText103
     """
 
     def setUp(self):
         self.input = None
 
     def test_multi30k(self):
-        """Test Multi30k"""
+        """Test WikiText103"""
         num_lines = {
-            "train": 29000,
-            "valid": 1014,
-            "test": 1000,
+            "train": 1801350,
+            "valid": 3760,
+            "test": 4358,
         }
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        dataset_train, dataset_valid, dataset_test = Multi30k(root=root,
-                                                              split=(
-                                                                  'train', 'valid', 'test'),
-                                                              language_pair=(
-                                                                  'de', 'en')
-                                                              )
+        dataset_train, dataset_valid, dataset_test = WikiText103(root=root,
+                                                                 split=('train', 'valid', 'test'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_valid.get_dataset_size() == num_lines["valid"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = Multi30k(
-            root=root, split='train', language_pair=('de', 'en'))
-        dataset_valid = Multi30k(
-            root=root, split='valid', language_pair=('en', 'de'))
-        dataset_test = Multi30k(
-            root=root, split='test', language_pair=('de', 'en'))
+        dataset_train = WikiText103(root=root, split='train')
+        dataset_valid = WikiText103(root=root, split='valid')
+        dataset_test = WikiText103(root=root, split='test')
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_valid.get_dataset_size() == num_lines["valid"]
         assert dataset_test.get_dataset_size() == num_lines["test"]

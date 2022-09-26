@@ -121,3 +121,7 @@ save/
 
 .idea
 .vs
+
+
+# dataset
+data/

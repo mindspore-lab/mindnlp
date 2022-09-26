@@ -13,10 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-Dataset init
+MachineTranslation dataset init
 """
 
-from .text_classification import *
-from .machine_translation import *
-from .question_answer import *
-from .text_generation import *
+from .multi30k import Multi30k
