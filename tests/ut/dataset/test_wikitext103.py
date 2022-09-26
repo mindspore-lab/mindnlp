@@ -18,10 +18,10 @@ Test WikiText103
 
 import os
 import unittest
-from mindnlp.dataset import WikiText103
+from mindnlp.dataset import WikiText103, load
 
 
-class TestMulti30k(unittest.TestCase):
+class TestWikiText103(unittest.TestCase):
     r"""
     Test WikiText103
     """
@@ -29,7 +29,7 @@ class TestMulti30k(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    def test_multi30k(self):
+    def test_wikitext103(self):
         """Test WikiText103"""
         num_lines = {
             "train": 1801350,
@@ -49,3 +49,11 @@ class TestMulti30k(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_valid.get_dataset_size() == num_lines["valid"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
+
+    def test_wikitext103_by_register(self):
+        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
+        dataset_train, dataset_valid, dataset_test = \
+            load('WikiText103',
+                    root=root,
+                    split=('train', 'valid', 'test')
+                    )

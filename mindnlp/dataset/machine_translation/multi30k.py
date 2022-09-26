@@ -24,6 +24,8 @@ from operator import itemgetter
 from typing import Union, Tuple
 from mindspore.dataset import TextFileDataset
 from mindnlp.utils.download import cache_file
+from mindnlp.dataset.register import load
+from mindnlp.configs import DEFAULT_ROOT
 
 URL = {
     "train": "http://www.quest.dcs.shef.ac.uk/wmt16_files_mmt/training.tar.gz",
@@ -68,8 +70,7 @@ def untar(file_path: str, untar_path: str):
     tar.close()
     return names
 
-DEFAULT_ROOT = os.path.join(os.path.expanduser('~'), ".mindnlp")
-
+@load.register
 def Multi30k(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train', 'valid', 'test'),
              language_pair: Tuple[str] = ('de', 'en')):
     r"""

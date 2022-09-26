@@ -13,11 +13,8 @@
 # limitations under the License.
 # ============================================================================
 """
-Dataset init
+Global configs
 """
+import os
 
-from .text_classification import *
-from .machine_translation import *
-from .question_answer import *
-from .text_generation import *
-from .register import load
+DEFAULT_ROOT = os.path.join(os.path.expanduser('~'), ".mindnlp")

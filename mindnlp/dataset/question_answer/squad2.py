@@ -22,7 +22,8 @@ import json
 from typing import Tuple, Union
 from mindspore.dataset import GeneratorDataset
 from mindnlp.utils.download import cache_file
-
+from mindnlp.dataset.register import load
+from mindnlp.configs import DEFAULT_ROOT
 
 URL = {
     "train": "https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v2.0.json",
@@ -78,8 +79,8 @@ class Squad2:
     def __len__(self):
         return len(self._question)
 
-DEFAULT_ROOT = os.path.join(os.path.expanduser('~'), ".mindnlp")
 
+@load.register
 def SQuAD2(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train', 'dev')):
     r"""
     Load the SQuAD2 dataset

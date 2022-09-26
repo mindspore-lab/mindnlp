@@ -21,6 +21,8 @@ import csv
 from typing import Union, Tuple
 from mindspore.dataset import GeneratorDataset
 from mindnlp.utils.download import cache_file
+from mindnlp.dataset.register import load
+from mindnlp.configs import DEFAULT_ROOT
 
 URL = {
     "train": "https://raw.githubusercontent.com/mhjabreel/CharCnn_Keras/master/data/ag_news_csv/train.csv",
@@ -55,8 +57,8 @@ class Agnews:
     def __len__(self):
         return len(self._text)
 
-
-def AG_News(root: str = "./data", split: Union[Tuple[str], str] = ("train", "test")):
+@load.register
+def AG_News(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", "test")):
     r"""
     If the dataset exists and passes the md5 test, return the dataset, otherwise re-download the dataset and return.
 
