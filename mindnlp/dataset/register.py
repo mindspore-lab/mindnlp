@@ -17,4 +17,5 @@ Dataset register
 """
 
 from mindnlp.abc.register import Register
-load = Register('load')
+load = Register('load', lambda x: x.__name__.lower())
+process = Register('process', lambda x: x.__name__.split('_')[-1].lower())

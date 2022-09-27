@@ -18,16 +18,17 @@ Abstract class for Register
 
 class Register():
     """Register abstract class"""
-    def __init__(self, name):
+    def __init__(self, name, map_rule):
         self.name = name
         self.mem_dict = {}
+        self.map_rule = map_rule
 
     def register(self, func):
         """register function."""
         def wrapper(*args, **kwargs):
             dataset = func(*args, **kwargs)
             return dataset
-        name = func.__name__.lower()
+        name = self.map_rule(func)
         self.mem_dict[name] = wrapper
         return wrapper
 
