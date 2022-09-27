@@ -18,10 +18,9 @@ import unittest
 import numpy as np
 import mindspore
 from mindspore import Tensor
-from mindnlp.common.metrics import Accuracy
+from mindnlp.common.metrics import Accuracy, F1Score, BleuScore
 from mindnlp.common.metrics import (perplexity, bleu, rouge_n, rouge_l, distinct, accuracy, precision,
-                                     recall, f1_score, confusion_matrix, mcc, pearson, spearman, em_score,
-                                     F1Score)
+                                     recall, f1_score, confusion_matrix, mcc, pearson, spearman, em_score)
 
 class TestPerplexity(unittest.TestCase):
     r"""
@@ -313,3 +312,23 @@ class TestClassF1Score(unittest.TestCase):
         f1_s = metric.eval()
 
         assert f1_s == 0.6666666666666666
+
+class TestClassBleuScore(unittest.TestCase):
+    r"""
+    Test class BleuScore
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_class_bleu_score(self):
+        """
+        Test class BleuScore
+        """
+        cand = [["The", "cat", "The", "cat", "on", "the", "mat"]]
+        ref_list = [[["The", "cat", "is", "on", "the", "mat"], ["There", "is", "a", "cat", "on", "the", "mat"]]]
+        metric = BleuScore()
+        metric.updates(cand, ref_list)
+        bleu_score = metric.eval()
+
+        assert bleu_score == 0.46713797772820015

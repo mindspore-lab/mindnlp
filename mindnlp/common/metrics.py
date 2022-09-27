@@ -47,7 +47,7 @@ class Accuracy(Metric):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import nn, Tensor
-        >>> from text.common.metrics import Accuracy
+        >>> from mindnlp.common.metrics import Accuracy
         >>> preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
         >>> labels = Tensor(np.array([1, 0, 1]), mindspore.float32)
         >>> metric = Accuracy()
@@ -151,7 +151,7 @@ class F1Score(Metric):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from text.common.metrics import F1Score
+        >>> from mindnlp.common.metrics import F1Score
         >>> preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
         >>> labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
         >>> metric = F1Score()
@@ -212,7 +212,7 @@ class F1Score(Metric):
         class_num = self._class_num
 
         if y_true.max() + 1 > class_num:
-            raise ValueError(f'"For `F1Score.update`, `preds` and `labels` should contain same classes, but got '
+            raise ValueError(f'For `F1Score.update`, `preds` and `labels` should contain same classes, but got '
                              f'`preds` contains {class_num} classes and true value contains {y_true.max() + 1}')
         y_true = np.eye(class_num)[y_true.reshape(-1)]
         indices = y_pred.argmax(axis=1).reshape(-1)
@@ -238,6 +238,144 @@ class F1Score(Metric):
         """
         f1_s = (2 * self._true_positives / (self._actual_positives + self._positives + self.epsilon)).item(0)
         return f1_s
+
+    def get_metric_name(self):
+        """
+        Return the name of the metric.
+        """
+        return self._name
+
+class BleuScore(Metric):
+    r"""
+    Calculate BLEU. BLEU (bilingual evaluation understudy) is a metric for evaluating the quality
+    of text translated by machine. It uses a modified form of precision to compare a candidate translation
+    against multiple reference translations. The function is shown as follows:
+
+    .. math::
+
+        BP & =
+        \begin{cases}
+        1,  & \text{if }c>r \\
+        e_{1-r/c}, & \text{if }c\leq r
+        \end{cases}
+
+        BLEU & = BP\exp(\sum_{n=1}^N w_{n} \log{p_{n}})
+
+    where `c` is the length of candidate sentence, and `r` is the length of reference sentence.
+
+    Args:
+        name (str): Name of the metric.
+        n_size (int): N_gram value ranges from 1 to 4. Default: 4.
+        weights (list): Weights of precision of each gram. Defaults to None.
+
+    Raises:
+        ValueError: If the value range of `n_size` is not from 1 to 4.
+        ValueError: If the lengths of `weights` is not equal to `n_size`.
+
+    Example:
+        >>> from mindnlp.common.metrics import BleuScore
+        >>> cand = [["The", "cat", "The", "cat", "on", "the", "mat"]]
+        >>> ref_list = [[["The", "cat", "is", "on", "the", "mat"], ["There", "is", "a", "cat", "on", "the", "mat"]]]
+        >>> metric = BleuScore()
+        >>> metric.updates(cand, ref_list)
+        >>> bleu_score = metric.eval()
+        >>> print(bleu_score)
+        0.46713797772820015
+
+    """
+    def __init__(self, name='BleuScore', n_size=4, weights=None):
+        super().__init__()
+        self._name = name
+        self.n_size = _check_value_type("n_size", n_size, [int])
+        if self.n_size > 4 or self.n_size < 1:
+            raise ValueError(f'For `BleuScore`, `n_size` should range from 1 to 4, but got {n_size}')
+
+        if weights is None:
+            self.weights = [0.25] * self.n_size
+        else:
+            self.weights = weights
+
+        if self.n_size != len(self.weights):
+            raise ValueError("For `BleuScore`, the length of `weights` should be equal to `n_size`")
+
+        self.numerator = np.zeros(self.n_size)
+        self.denominator = np.zeros(self.n_size)
+        self.precision_scores = np.zeros(self.n_size)
+        self.bp_c = 0.0
+        self.bp_r = 0.0
+        self.cand_len = 0
+        self.ref_len = 0
+
+    def clear(self):
+        """Clear the internal evaluation result."""
+        self.numerator = np.zeros(self.n_size)
+        self.denominator = np.zeros(self.n_size)
+        self.precision_scores = np.zeros(self.n_size)
+        self.bp_c = 0.0
+        self.bp_r = 0.0
+        self.cand_len = 0
+        self.ref_len = 0
+
+    def updates(self, preds, labels):
+        """
+        Update local variables.
+
+        Args:
+            preds (list): A list of tokenized candidate sentences.
+            labels (list): A list of lists of tokenized ground truth sentences.
+
+        Raises:
+            RuntimeError: If `preds` is None or `labels` is None.
+            ValueError: If the lengths of `preds` and `labels` are not equal.
+
+        """
+        if preds is None or labels is None:
+            raise RuntimeError("For `BleuScore.update`, it needs at least 2 inputs (`preds` and `labels`)")
+        if len(preds) != len(labels):
+            raise ValueError(f'For `BleuScore.update`, `preds` and `labels` should be equal in length, but'
+                             f'got {len(preds)}, {len(labels)}')
+
+        for (candidate, references) in zip(preds, labels):
+            self.bp_c += len(candidate)
+            ref_len_list = [len(ref) for ref in references]
+            ref_len_diff = [abs(len(candidate) - x) for x in ref_len_list]
+            self.bp_r += ref_len_list[ref_len_diff.index(min(ref_len_diff))]
+            candidate_counter = _count_ngram(candidate, self.n_size)
+            reference_counter = Counter()
+
+            for ref in references:
+                reference_counter |= _count_ngram(ref, self.n_size)
+
+            ngram_counter_clip = candidate_counter & reference_counter
+
+            for counter_clip in ngram_counter_clip:
+                self.numerator[len(counter_clip) - 1] += ngram_counter_clip[counter_clip]
+
+            for counter in candidate_counter:
+                self.denominator[len(counter) - 1] += candidate_counter[counter]
+
+        self.cand_len = np.array(self.bp_c)
+        self.ref_len = np.array(self.bp_r)
+
+    def eval(self):
+        """
+        Compute and return the BLEU score.
+
+        Returns:
+            - **bleu_score** (float) - The computed result.
+
+        """
+        if min(self.numerator) == 0.0:
+            return np.array(0.0)
+
+        precision_scores = self.numerator / self.denominator
+
+        log_precision_scores = self.weights * np.log(precision_scores)
+        geometric_mean = np.exp(np.sum(log_precision_scores))
+        brevity_penalty = np.array(1.0) if self.bp_c > self.bp_r else np.exp(1 - (self.ref_len / self.cand_len))
+        bleu_score = brevity_penalty * geometric_mean
+
+        return bleu_score
 
     def get_metric_name(self):
         """
@@ -281,7 +419,7 @@ def perplexity(preds, labels, ignore_label=None):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from text.common.metrics import perplexity
+        >>> from mindnlp.common.metrics import perplexity
         >>> preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
         >>> labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
         >>> ppl = perplexity(preds, labels, ignore_label=None)
@@ -361,12 +499,12 @@ def bleu(cand, ref_list, n_size=4, weights=None):
 
     Raises:
         ValueError: If the value range of `n_size` is not from 1 to 4.
-        RuntimeError: If `preds` is None or `labels` is None.
+        RuntimeError: If `cand` is None or `ref_list` is None.
         ValueError: If the lengths of `cand` and `ref_list` are not equal.
         ValueError: If the lengths of `weights` is not equal to `n_size`.
 
     Example:
-        >>> from text.common.metrics import bleu
+        >>> from mindnlp.common.metrics import bleu
         >>> cand = [["The", "cat", "The", "cat", "on", "the", "mat"]]
         >>> ref_list = [[["The", "cat", "is", "on", "the", "mat"], ["There", "is", "a", "cat", "on", "the", "mat"]]]
         >>> bleu_score = bleu(cand, ref_list)
@@ -458,7 +596,7 @@ def rouge_n(cand_list, ref_list, n_size=1):
         RuntimeError: If the reference size is 0.
 
     Example:
-        >>> from text.common.metrics import rouge_n
+        >>> from mindnlp.common.metrics import rouge_n
         >>> cand_list = [["a", "cat", "is", "on", "the", "table"]]
         >>> ref_list = [["there", "is", "a", "cat", "on", "the", "table"]]
         >>> rougen_score = rouge_n(cand_list, ref_list)
@@ -526,7 +664,7 @@ def rouge_l(cand_list, ref_list, beta=1.2):
         RuntimeError: If `cand_list` is None or `ref_list` is None.
 
     Example:
-        >>> from text.common.metrics import rouge_l
+        >>> from mindnlp.common.metrics import rouge_l
         >>> cand_list = ["The", "cat", "The", "cat", "on", "the", "mat"]
         >>> ref_list = [["The", "cat", "is", "on", "the", "mat"], ["There", "is", "a", "cat", "on", "the", "mat"]]
         >>> rougel_score = rouge_l(cand_list, ref_list)
@@ -598,7 +736,7 @@ def distinct(cand_list, n_size=2):
         - **distinct_score** (float) - The computed result.
 
     Example:
-        >>> from text.common.metrics import distinct
+        >>> from mindnlp.common.metrics import distinct
         >>> cand_list = ["The", "cat", "The", "cat", "on", "the", "mat"]
         >>> distinct_score = distinct(cand_list)
         >>> print(distinct_score)
@@ -649,7 +787,7 @@ def accuracy(predictions, labels):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from text.common.metrics import accuracy
+        >>> from mindnlp.common.metrics import accuracy
         >>> preds = [[0.1, 0.9], [0.5, 0.5], [0.6, 0.4], [0.7, 0.3]]
         >>> labels = [1, 0, 1, 1]
         >>> acc = accuracy(preds, labels)
@@ -711,7 +849,7 @@ def precision(preds, labels):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from text.common.metrics import precision
+        >>> from mindnlp.common.metrics import precision
         >>> preds = [[0.1, 0.9], [0.5, 0.5], [0.6, 0.4], [0.7, 0.3]]
         >>> labels = [1, 0, 1, 1]
         >>> prec = precision(preds, labels)
@@ -773,7 +911,7 @@ def recall(preds, labels):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from text.common.metrics import recall
+        >>> from mindnlp.common.metrics import recall
         >>> preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
         >>> labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
         >>> rec = recall(preds, labels)
@@ -836,7 +974,7 @@ def f1_score(preds, labels):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from text.common.metrics import f1_score
+        >>> from mindnlp.common.metrics import f1_score
         >>> preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
         >>> labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
         >>> f1_s = f1_score(preds, labels)
@@ -894,7 +1032,7 @@ def confusion_matrix(preds, labels, class_num=2):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from text.common.metrics import confusion_matrix
+        >>> from mindnlp.common.metrics import confusion_matrix
         >>> preds = Tensor(np.array([1, 0, 1, 0]))
         >>> labels = Tensor(np.array([1, 0, 0, 1]))
         >>> conf_mat = confusion_matrix(preds, labels)
@@ -959,7 +1097,7 @@ def mcc(preds, labels):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from text.common.metrics import mcc
+        >>> from mindnlp.common.metrics import mcc
         >>> preds = [[0.1, 0.9], [-0.5, 0.5], [0.1, 0.4], [0.1, 0.3]]
         >>> labels = [[1], [0], [1], [1]]
         >>> m_c_c = mcc(x, y)
@@ -1037,7 +1175,7 @@ def pearson(preds, labels):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from text.common.metrics import pearson
+        >>> from mindnlp.common.metrics import pearson
         >>> preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
         >>> labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
         >>> pcc = pearson(preds, labels)
@@ -1107,7 +1245,7 @@ def spearman(preds, labels):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from text.common.metrics import spearman
+        >>> from mindnlp.common.metrics import spearman
         >>> preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
         >>> labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
         >>> scc = spearman(preds, labels)
@@ -1172,7 +1310,7 @@ def em_score(preds, examples):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from text.common.metrics import em_score
+        >>> from mindnlp.common.metrics import em_score
         >>> preds = "this is the best span"
         >>> examples = ["this is a good span", "something irrelevant"]
         >>> exact_match = em_score(preds, examples)
