@@ -215,7 +215,7 @@ def get_filepath(path: str):
     raise FileNotFoundError(f"{path} is not a valid file or directory.")
 
 
-def cache_file(filename: str, cache_dir: str = None, url: str = None, md5sum=None):
+def cache_file(filename: str, cache_dir: str = None, url: str = None, md5sum=None, download_file_name=None):
     r"""
     If there is the file in cache_dir, return the path; if there is no such file, use the url to download.
 
@@ -246,13 +246,14 @@ def cache_file(filename: str, cache_dir: str = None, url: str = None, md5sum=Non
     if url is None:
         url = get_dataset_url(filename)
     path, filename = cached_path(
-        filename_or_url=url, cache_dir=cache_dir, foldername=None, md5sum=md5sum
+        filename_or_url=url, cache_dir=cache_dir, foldername=None,
+        md5sum=md5sum, download_file_name=download_file_name
     )
 
     return path, filename
 
 
-def cached_path(filename_or_url: str, cache_dir: str = None, foldername=None, md5sum=None):
+def cached_path(filename_or_url: str, cache_dir: str = None, foldername=None, md5sum=None, download_file_name=None):
     r"""
     If there is the file in cache_dir, return the path; if there is no such file, use the url to download.
 
@@ -287,7 +288,8 @@ def cached_path(filename_or_url: str, cache_dir: str = None, foldername=None, md
     parsed = urlparse(filename_or_url)
 
     if parsed.scheme in ("http", "https"):
-        return get_from_cache(filename_or_url, Path(dataset_cache), md5sum=md5sum)
+        return get_from_cache(filename_or_url, Path(dataset_cache), md5sum=md5sum,
+                              download_file_name=download_file_name)
     if (parsed.scheme == "" and Path(os.path.join(dataset_cache, filename_or_url)).exists()):
         return Path(os.path.join(dataset_cache, filename_or_url))
     if parsed.scheme == "":
@@ -333,7 +335,7 @@ def match_file(filename: str, cache_dir: str) -> str:
     raise RuntimeError(f"Duplicate matched files:{matched_filenames}, this should be caused by a bug.")
 
 
-def get_from_cache(url: str, cache_dir: str = None, md5sum=None):
+def get_from_cache(url: str, cache_dir: str = None, md5sum=None, download_file_name=None):
     r"""
     If there is the file in cache_dir, return the path; if there is no such file, use the url to download.
 
@@ -361,7 +363,11 @@ def get_from_cache(url: str, cache_dir: str = None, md5sum=None):
         cache_dir = Path(get_cache_path())
     cache_dir.mkdir(parents=True, exist_ok=True)
 
-    filename = re.sub(r".+/", "", url)
+    filename = ""
+    if download_file_name is None:
+        filename = re.sub(r".+/", "", url)
+    else:
+        filename = download_file_name
 
     match_dir_name = match_file(filename, cache_dir)
     dir_name = filename

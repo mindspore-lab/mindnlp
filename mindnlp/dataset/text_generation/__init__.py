@@ -19,3 +19,4 @@ TextGeneration dataset init
 from .wikitext2 import WikiText2
 from .wikitext103 import WikiText103
 from .penntreebank import PennTreebank
+from .lcsts import LCSTS
