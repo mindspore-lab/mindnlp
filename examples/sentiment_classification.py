@@ -44,7 +44,6 @@ from mindnlp.engine.trainer import Trainer
 from mindnlp.abc import Seq2vecModel
 from mindnlp.modules import LSTMEncoder
 
-
 cache_dir = Path.home() / '.mindspore_examples'
 
 
