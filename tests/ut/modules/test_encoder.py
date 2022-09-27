@@ -23,7 +23,7 @@ import mindspore
 from mindspore import context
 from mindspore import Tensor
 
-from mindnlp.modules import RNNEncoder, LSTMEncoder, GRUEncoder
+from mindnlp.modules import RNNEncoder, LSTMEncoder, GRUEncoder, CNNEncoder
 
 
 class TestRNNEncoder(unittest.TestCase):
@@ -158,3 +158,36 @@ class TestGRUEncoder(unittest.TestCase):
         assert output.shape == (8, 16, 16)
         assert hiddens_n.shape == (2, 8, 16)
         assert mask.shape == (8, 16)
+
+class TestCNNEncoder(unittest.TestCase):
+    r"""
+    Test module CNN Encoder
+    """
+
+    def test_cnn_encoder_graph(self):
+        """
+        Test cnn encoder module in graph mode
+        """
+        context.set_context(mode=context.GRAPH_MODE)
+
+        cnn_encoder = CNNEncoder(emb_dim=128, num_filter=128, ngram_filter_sizes=(3,))
+
+        input_dim = cnn_encoder.get_input_dim()
+        output_dim = cnn_encoder.get_input_dim()
+
+        assert input_dim == 128
+        assert output_dim == 128
+
+    def test_cnn_encoder_pynative(self):
+        """
+        Test cnn encoder module in pynative mode
+        """
+        context.set_context(mode=context.PYNATIVE_MODE)
+
+        cnn_encoder = CNNEncoder(emb_dim=128, num_filter=128, ngram_filter_sizes=(3,))
+
+        input_dim = cnn_encoder.get_input_dim()
+        output_dim = cnn_encoder.get_input_dim()
+
+        assert input_dim == 128
+        assert output_dim == 128
