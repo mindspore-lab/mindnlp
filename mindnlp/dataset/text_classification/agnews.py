@@ -20,10 +20,13 @@ AG_NEWS load function
 import os
 import csv
 from typing import Union, Tuple
-from mindspore.dataset import GeneratorDataset
+from mindspore.dataset import GeneratorDataset, text
+from mindspore.dataset.text import BasicTokenizer
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.register import load, process
 from mindnlp.configs import DEFAULT_ROOT
+
+
 
 URL = {
     "train": "https://raw.githubusercontent.com/mhjabreel/CharCnn_Keras/master/data/ag_news_csv/train.csv",
@@ -100,3 +103,43 @@ def AG_NEWS(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", 
     if len(path_list) == 1:
         return datasets_list[0]
     return datasets_list
+
+
+@process.register
+def AG_NEWS_Process(dataset, column="text", tokenizer=BasicTokenizer(), vocab=None):
+    """
+    the process of the AG_News dataset
+
+    Args:
+        dataset (GeneratorDataset): AG_News dataset.
+        column (str): the column needed to be transpormed of the agnews dataset.
+        tokenizer (TextTensorOperation): tokenizer you choose to tokenize the text dataset.
+        vocab (Vocab): vocabulary object, used to store the mapping of token and index.
+
+    Returns:
+        - **dataset** (MapDataset) - dataset after transforms.
+
+    Raises:
+        TypeError: If `input_column` is not a string.
+
+    Examples:
+        >>>from mindnlp.dataset.ag_news import AG_NEWS, Agnews
+        >>>train_dataset, test_dataset = AG_NEWS()
+        >>>column = "text"
+        >>>tokenizer = BasicTokenizer()
+        >>>agnews_dataset = AG_NEWS_Process(train_dataset, column, tokenizer)
+        >>>agnews_dataset = agnews_dataset.create_tuple_iterator()
+        >>>print(next(agnews_dataset))
+        [Tensor(shape=[], dtype=String, value= '3'), Tensor(shape=[37], dtype=Int32, value=\
+        [20885,   124,  7077, 34402,  2230,  4963,    11,    53,   540,   342, 45788,  \
+        161,  2854,   123,   644, 41765,     4,     3,  1320,     8,  7281,  4277, \
+        31,    86,  9,    27,   345,  8776,  6539,    82,     3,   244,  1107,   562,    55,   187,     2])]
+
+    """
+
+    if vocab is None:
+        dataset = dataset.map(tokenizer,  input_columns=column)
+        vocab = text.Vocab.from_dataset(dataset, columns=column, special_tokens=["<pad>", "<unk>"])
+        return dataset.map(text.Lookup(vocab), input_columns=column)
+    dataset = dataset.map(tokenizer,  input_columns=column)
+    return dataset.map(text.Lookup(vocab), input_columns=column)

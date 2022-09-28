@@ -20,4 +20,4 @@ from .text_classification import *
 from .machine_translation import *
 from .question_answer import *
 from .text_generation import *
-from .register import load
+from .register import load, process
