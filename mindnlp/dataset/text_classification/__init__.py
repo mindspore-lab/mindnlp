@@ -16,4 +16,5 @@
 TextClassification dataset init
 """
 
-from .agnews import AG_NEWS
+from .agnews import AG_NEWS, AG_NEWS_Process
+from .cola import CoLA
