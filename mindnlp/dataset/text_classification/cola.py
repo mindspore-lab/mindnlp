@@ -1,0 +1,139 @@
+# Copyright 2022 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+"""
+CoLA dataset
+"""
+# pylint: disable=C0103
+
+import os
+import zipfile
+from typing import Union, Tuple
+from mindspore.dataset import GeneratorDataset
+from mindnlp.utils.download import cache_file
+from mindnlp.dataset.register import load
+from mindnlp.configs import DEFAULT_ROOT
+
+URL = "https://nyu-mll.github.io/CoLA/cola_public_1.1.zip"
+
+MD5 = "9f6d88c3558ec424cd9d66ea03589aba"
+
+
+def unzip(file_path: str, unzip_path: str):
+    r"""
+    Untar .zip file
+
+    Args:
+        file_path (str): The path where the .zip file is located.
+        unzip_path (str): The directory where the files were unzipped.
+
+    Returns:
+        - **names** (list) -All filenames in the .zip file.
+
+    Raises:
+        TypeError: If `file_path` is not a string.
+        TypeError: If `untar_path` is not a string.
+
+    """
+    zipf = zipfile.ZipFile(file_path, "r")
+    for name in zipf.namelist():
+        zipf.extract(name, unzip_path)
+    zipf.close()
+    return zipf.namelist()
+
+
+class Cola:
+    """
+    CoLA dataset source
+    """
+
+    def __init__(self, path) -> None:
+        self.path: str = path
+        self._source, self._label, self._sentence = [], [], []
+        self._load()
+
+    def _load(self):
+        with open(self.path, "r", encoding="utf-8") as f:
+            dataset = f.read()
+        lines = dataset.split("\n")
+        if not self.path.endswith("out_of_domain_dev.tsv"):
+            lines.pop(len(lines) - 1)
+        for line in lines:
+            l = line.split("\t")
+            self._source.append(l[0])
+            self._label.append(l[1])
+            self._sentence.append(l[-1])
+
+    def __getitem__(self, index):
+        return self._source[index], self._label[index], self._sentence[index]
+
+    def __len__(self):
+        return len(self._sentence)
+
+
+@load.register
+def CoLA(
+    root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", "dev", "test")
+):
+    r"""
+    Load the CoLA dataset
+    Args:
+        root (str): Directory where the datasets are saved.
+            Default:~/.mindnlp
+        split (str|Tuple[str]): Split or splits to be returned.
+            Default:('train', 'dev', 'test').
+
+    Returns:
+        - **datasets_list** (list) -A list of loaded datasets.
+            If only one type of dataset is specified,such as 'trian',
+            this dataset is returned instead of a list of datasets.
+
+    Examples:
+        >>> root = os.path.join(os.path.expanduser('~'), ".mindnlp")
+        >>> dataset_train,dataset_dev,dataset_test = CoLA()
+        >>> train_iter = dataset_train.create_tuple_iterator()
+        >>> print(next(train_iter))
+        [Tensor(shape=[], dtype=String, value= '3'), Tensor(shape=[], dtype=String,\
+             value= "Wall St. Bears Claw Back Into the Black (Reuters) Reuters - \
+            Short-sellers, Wall Street's dwindling\\band of ultra-cynics, are seeing green again.")]
+    """
+    cache_dir = os.path.join(root, "datasets", "CoLA")
+    path_dict = {
+        "train": "in_domain_train.tsv",
+        "dev": "in_domain_dev.tsv",
+        "test": "out_of_domain_dev.tsv",
+    }
+    column_names = ["source", "label", "sentence"]
+    path_list = []
+    datasets_list = []
+    path, _ = cache_file(None, url=URL, cache_dir=cache_dir, md5sum=MD5)
+    unzip(path, cache_dir)
+    if isinstance(split, str):
+        path_list.append(
+            os.path.join(cache_dir, "cola_public", "raw", path_dict[split])
+        )
+    else:
+        for s in split:
+            path_list.append(
+                os.path.join(cache_dir, "cola_public", "raw", path_dict[s])
+            )
+    for path in path_list:
+        datasets_list.append(
+            GeneratorDataset(
+                source=Cola(path), column_names=column_names, shuffle=False
+            )
+        )
+    if len(path_list) == 1:
+        return datasets_list[0]
+    return datasets_list
