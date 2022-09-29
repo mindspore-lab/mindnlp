@@ -22,9 +22,9 @@ import re
 import tarfile
 from operator import itemgetter
 from typing import Union, Tuple
-from mindspore.dataset import TextFileDataset
+from mindspore.dataset import text, TextFileDataset
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.register import load, process
 from mindnlp.configs import DEFAULT_ROOT
 
 URL = {
@@ -168,3 +168,47 @@ def Multi30k(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train',
     if len(datasets_list) == 1:
         return datasets_list[0]
     return datasets_list
+
+@process.register
+def Multi30k_Process(dataset, tokenizer = text.BasicTokenizer(), language = 'en', vocab=None):
+    '''
+    a function transforms multi30K dataset into tensors
+
+    Args:
+        dataset (ZipDataset): Multi30K dataset
+        tokenizer (TextTensorOperation): Tokenizer you what to used
+        language (str): The language column name in multi30K, 'de' or 'en', defaults to 'en'
+        vocab (Vocab): The vocab you use, defaults to None. If None, a new vocab will be created.
+
+    Returns:
+        - **dataset** (MapDataset) -dataset after process
+        - **newVocab** (Vocab) -new vocab created from dataset
+
+    Raises:
+        AssertionError: arg `language` not in ['en', 'de']
+        TypeError: If `language` is not a string.
+
+    Examples:
+        >>> from mindnlp.dataset import Multi30k_Process
+        >>> test_dataset = Multi30k(
+        >>>     root="./dataset",
+        >>>     split="test",
+        >>>     language_pair=("de", "en")
+        >>> )
+        >>> test_dataset, vocab = Multi30k_Process(test_dataset, text.BasicTokenizer(), "en")
+        >>> for i in test_dataset.create_tuple_iterator():
+        >>>     print(i)
+        >>>     break
+        [Tensor(shape=[], dtype=String, value= 'Ein Mann mit einem orangefarbenen Hut, \
+            der etwas anstarrt.'), Tensor(shape=[10], dtype=Int32, value= [   2,    8,    3,   \
+            24,   90,   82, 1783,   15,  131,    1])]
+    '''
+
+    assert language in ['en', 'de'], "language not in ['en', 'de']"
+    if vocab is None :
+        dataset = dataset.map(tokenizer, language)
+        newVocab = text.Vocab.from_dataset(dataset, language)
+        return dataset.map(text.Lookup(newVocab), language), newVocab
+
+    dataset = dataset.map(tokenizer, language)
+    return dataset.map(text.Lookup(vocab), language)
