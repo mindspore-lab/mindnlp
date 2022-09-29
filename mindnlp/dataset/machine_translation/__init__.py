@@ -16,4 +16,4 @@
 MachineTranslation dataset init
 """
 
-from .multi30k import Multi30k
+from .multi30k import Multi30k, Multi30k_Process

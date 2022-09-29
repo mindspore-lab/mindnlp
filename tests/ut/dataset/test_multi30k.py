@@ -17,8 +17,10 @@ Test Multi30k
 """
 import os
 import unittest
-from mindnlp.dataset import Multi30k
-from mindnlp.dataset import load
+import mindspore
+from mindspore.dataset import text
+from mindnlp.dataset import Multi30k, Multi30k_Process
+from mindnlp.dataset import load, process
 
 class TestMulti30k(unittest.TestCase):
     r"""
@@ -64,3 +66,53 @@ class TestMulti30k(unittest.TestCase):
                     split=('train', 'valid', 'test'),
                     language_pair=('de', 'en')
                     )
+
+class TestMulti30k_Process(unittest.TestCase):
+    r"""
+    Test Multi30K Process
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_multi30k_process_no_vocab(self):
+        r"""
+        Test multi30k process with no vocab
+        """
+
+        test_dataset = Multi30k(
+            root="./dataset",
+            split="test",
+            language_pair=("de", "en")
+        )
+
+        test_dataset, vocab = Multi30k_Process(test_dataset, text.BasicTokenizer(), "en")
+
+        for i in test_dataset.create_tuple_iterator():
+            assert i[1].dtype == mindspore.int32
+            break
+
+        for _, value in vocab.vocab().items():
+            assert type(value) == int
+            break
+
+    def test_multi30k_process_no_vocab_by_register(self):
+        '''
+        Test multi30k process with no vocab by register
+        '''
+
+        test_dataset = Multi30k(
+            root="./dataset",
+            split="test",
+            language_pair=("de", "en")
+        )
+
+        test_dataset, vocab = process('Multi30k', test_dataset)
+
+        for i in test_dataset.create_tuple_iterator():
+            assert i[1].dtype == mindspore.int32
+            break
+
+        for _, value in vocab.vocab().items():
+            assert type(value) == int
+            break
