@@ -13,6 +13,8 @@
 # limitations under the License.
 # ============================================================================
 """Test Trainer run function"""
+# pylint: disable=C0103
+
 import unittest
 import numpy as np
 
@@ -90,13 +92,16 @@ class TestTrainerRun(unittest.TestCase):
                                     loss_fn=self.loss_fn)
 
     def test_pure_trainer_pynative(self):
+        """test_pure_trainer_pynative"""
         # 6. trainer run
         self.pure_trainer.run(mode='pynative', tgt_columns='label')
 
     def test_pure_trainer_graph(self):
+        """test_pure_trainer_graph"""
         self.pure_trainer.run(mode='graph', tgt_columns='label')
 
     def test_trainer_timer_pynative(self):
+        """test_trainer_timer_pynative"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
@@ -105,6 +110,7 @@ class TestTrainerRun(unittest.TestCase):
         trainer.run(mode='pynative', tgt_columns='label')
 
     def test_trainer_timer_graph(self):
+        """test_trainer_timer_graph"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
@@ -113,6 +119,7 @@ class TestTrainerRun(unittest.TestCase):
         trainer.run(mode='graph', tgt_columns='label')
 
     def test_trainer_earlystop_pynative(self):
+        """test_trainer_earlystop_pynative"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
@@ -121,6 +128,7 @@ class TestTrainerRun(unittest.TestCase):
         trainer.run(mode='pynative', tgt_columns='label')
 
     def test_trainer_earlystop_graph(self):
+        """test_trainer_earlystop_graph"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
@@ -129,6 +137,7 @@ class TestTrainerRun(unittest.TestCase):
         trainer.run(mode='graph', tgt_columns='label')
 
     def test_trainer_bestmodel_pynative(self):
+        """test_trainer_bestmodel_pynative"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
@@ -137,6 +146,7 @@ class TestTrainerRun(unittest.TestCase):
         trainer.run(mode='pynative', tgt_columns='label')
 
     def test_trainer_bestmodel_graph(self):
+        """test_trainer_bestmodel_graph"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
@@ -145,6 +155,7 @@ class TestTrainerRun(unittest.TestCase):
         trainer.run(mode='graph', tgt_columns='label')
 
     def test_trainer_checkpoint_pynative(self):
+        """test_trainer_checkpoint_pynative"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
@@ -153,6 +164,7 @@ class TestTrainerRun(unittest.TestCase):
         trainer.run(mode='pynative', tgt_columns='label')
 
     def test_trainer_checkpoint_graph(self):
+        """test_trainer_checkpoint_graph"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
@@ -161,6 +173,7 @@ class TestTrainerRun(unittest.TestCase):
         trainer.run(mode='graph', tgt_columns='label')
 
     def test_different_model(self):
+        """test_different_model"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net_2, train_dataset=train_dataset, eval_dataset=eval_dataset,

@@ -52,8 +52,9 @@ class TestCoLA(unittest.TestCase):
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
     def test_agnews_by_register(self):
+        """test agnews by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
-        dataset_train, dataset_dev, dataset_test = load(
+        _ = load(
             "CoLA",
             root=root,
             split=("train", "dev", "test"),

@@ -13,6 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """Test Evaluator with Callback function"""
+# pylint: disable=C0103
 
 import unittest
 import numpy as np
@@ -60,7 +61,9 @@ class TestEvaluatorRun(unittest.TestCase):
                                    callbacks=callbacks, batch_size=10)
 
     def test_evaluator_run_pynative(self):
+        """test evaluator run pynative"""
         self.evaluator.run(mode='pynative', tgt_columns='label')
 
     def test_evaluator_run_graph(self):
+        """test evaluator run graph"""
         self.evaluator.run(mode='graph', tgt_columns='label')

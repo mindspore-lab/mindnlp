@@ -46,13 +46,13 @@ class TestXavierNormal(unittest.TestCase):
                 gain_value = 1
             shape = tensor.asnumpy().shape
             if len(shape) > 2:
-                s = reduce(lambda x, y: x * y, shape[2:])
+                s_num = reduce(lambda x, y: x * y, shape[2:])
             else:
-                s = 1
+                s_num = 1
 
-            fan_in = shape[1] * s
-            fan_out = shape[0] * s
+            fan_in = shape[1] * s_num
+            fan_out = shape[0] * s_num
             std = gain_value * math.sqrt(2 / (fan_in + fan_out))
             samples = tensor.asnumpy().reshape((-1))
-            _, p = stats.kstest(samples, 'norm', (0, std))
-            assert p > 0.0001
+            _, prob = stats.kstest(samples, 'norm', (0, std))
+            assert prob > 0.0001

@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """Test Scaled Dot Attention"""
-
+# pylint: disable=C0103
 import unittest
 import numpy as np
 
@@ -34,6 +34,7 @@ class TestScaledDotAttention(unittest.TestCase):
         self.input = None
 
     def test_scaled_dot_attention_pynative(self):
+        """test scaled dot-attention pynative"""
         context.set_context(mode=context.PYNATIVE_MODE)
         net = ScaledDotAttention(dropout=0.9)
         q = Tensor(np.ones((2, 1024, 512)), mindspore.float32)
@@ -44,6 +45,7 @@ class TestScaledDotAttention(unittest.TestCase):
         assert output.shape == (2, 1024, 500)
 
     def test_scaled_dot_attention_graph(self):
+        """test scaled dot-attention graph"""
         context.set_context(mode=context.GRAPH_MODE)
         net = ScaledDotAttention(dropout=0.9)
         q = Tensor(np.ones((2, 1024, 512)), mindspore.float32)

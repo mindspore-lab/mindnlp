@@ -43,10 +43,12 @@ class TestLCSTS(unittest.TestCase):
         dataset_train = LCSTS(root=root, split='train')
         dataset_dev = LCSTS(root=root, split='dev')
         assert dataset_train.get_dataset_size() == num_lines["train"]
-        assert dataset_dev.get_dataset_size() == num_lines["dev"]     
+        assert dataset_dev.get_dataset_size() == num_lines["dev"]
+
     def test_lcsts_by_register(self):
+        """test lcsts by register"""
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        dataset_train, dataset_dev = load('lcsts',
-                                             root=root,
-                                             split=('train', 'dev')
-                                            )
+        _ = load('lcsts',
+                 root=root,
+                 split=('train', 'dev')
+                 )

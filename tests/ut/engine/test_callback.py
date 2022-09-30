@@ -31,31 +31,31 @@ class TestCallbackRun(unittest.TestCase):
         """Test Timer Callback Initialization."""
         try:
             timer_callback = TimerCallback(print_steps=-1)
-        except Exception as e:
-            raise e
+        except Exception as exception:
+            raise exception
         else:
             print(timer_callback)
     def test_earlystop_callback_init(self):
         """Test Early Stop Callback Initialization."""
         try:
             earlystop_callback = EarlyStopCallback(patience=2)
-        except Exception as e:
-            raise e
+        except Exception as exception:
+            raise exception
         else:
             print(earlystop_callback)
     def test_bestmodel_callback_init(self):
         """Test Best Model Callback Initialization."""
         try:
             bestmodel_callback = BestModelCallback(save_path='save')
-        except Exception as e:
-            raise e
+        except Exception as exception:
+            raise exception
         else:
             print(bestmodel_callback)
     def test_checkpoint_callback_init(self):
         """Test Checkpoint Callback Initialization."""
         try:
             checkpoint_callback = CheckpointCallback(epochs=1)
-        except Exception as e:
-            raise e
+        except Exception as exception:
+            raise exception
         else:
             print(checkpoint_callback)
