@@ -22,6 +22,7 @@ from mindspore.dataset import text
 from mindnlp.dataset import Multi30k, Multi30k_Process
 from mindnlp.dataset import load, process
 
+
 class TestMulti30k(unittest.TestCase):
     r"""
     Test Multi30k
@@ -59,15 +60,16 @@ class TestMulti30k(unittest.TestCase):
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
     def test_multi30k_by_register(self):
+        """test multi30k by register"""
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        dataset_train, dataset_valid, dataset_test = \
-            load('multi30k',
-                    root=root,
-                    split=('train', 'valid', 'test'),
-                    language_pair=('de', 'en')
-                    )
+        _ = load('multi30k',
+                 root=root,
+                 split=('train', 'valid', 'test'),
+                 language_pair=('de', 'en')
+                 )
 
-class TestMulti30k_Process(unittest.TestCase):
+
+class TestMulti30kProcess(unittest.TestCase):
     r"""
     Test Multi30K Process
     """
@@ -86,14 +88,15 @@ class TestMulti30k_Process(unittest.TestCase):
             language_pair=("de", "en")
         )
 
-        test_dataset, vocab = Multi30k_Process(test_dataset, text.BasicTokenizer(), "en")
+        test_dataset, vocab = Multi30k_Process(
+            test_dataset, text.BasicTokenizer(), "en")
 
         for i in test_dataset.create_tuple_iterator():
             assert i[1].dtype == mindspore.int32
             break
 
         for _, value in vocab.vocab().items():
-            assert type(value) == int
+            assert isinstance(value, int)
             break
 
     def test_multi30k_process_no_vocab_by_register(self):
@@ -114,5 +117,5 @@ class TestMulti30k_Process(unittest.TestCase):
             break
 
         for _, value in vocab.vocab().items():
-            assert type(value) == int
+            assert isinstance(value, int)
             break

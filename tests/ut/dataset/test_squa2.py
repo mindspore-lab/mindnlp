@@ -46,8 +46,9 @@ class TestSQuAD2(unittest.TestCase):
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
 
     def test_squad2_by_register(self):
+        """test squad2 by register"""
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        dataset_train, dataset_dev = load('squad2',
-                                             root=root,
-                                             split=('train', 'dev')
-                                            )
+        _ = load('squad2',
+                 root=root,
+                 split=('train', 'dev')
+                 )

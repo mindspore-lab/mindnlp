@@ -20,6 +20,7 @@ import unittest
 from mindnlp.dataset import IWSLT2016
 from mindnlp.dataset import load
 
+
 class TestIWSLT2016(unittest.TestCase):
     r"""
     Test IWSLT2016
@@ -34,12 +35,12 @@ class TestIWSLT2016(unittest.TestCase):
             "train": 196884,
         }
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        dataset_train, dataset_valid, dataset_test = IWSLT2016(root=root,
-                                                              split=(
-                                                                  'train', 'valid', 'test'),
-                                                              language_pair=(
-                                                                  'de', 'en')
-                                                              )
+        dataset_train, _, _ = IWSLT2016(root=root,
+                                        split=(
+                                            'train', 'valid', 'test'),
+                                        language_pair=(
+                                            'de', 'en')
+                                        )
         assert dataset_train.get_dataset_size() == num_lines["train"]
 
         dataset_train = IWSLT2016(
@@ -47,10 +48,10 @@ class TestIWSLT2016(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
 
     def test_iwslt2016_by_register(self):
+        """test iwslt2016 by register"""
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        dataset_train, dataset_valid, dataset_test = \
-            load('iwslt2016',
-                    root=root,
-                    split=('train', 'valid', 'test'),
-                    language_pair=('de', 'en')
-                    )
+        _ = load('iwslt2016',
+                 root=root,
+                 split=('train', 'valid', 'test'),
+                 language_pair=('de', 'en')
+                 )

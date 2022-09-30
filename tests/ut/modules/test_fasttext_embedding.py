@@ -43,7 +43,7 @@ class TestFasttext(unittest.TestCase):
                              [0.7, 0.8, 0.9]])
 
         init_vocab = Vocab.from_list(['i', 'am', 'human'])
-        f = Fasttext(vocab=init_vocab, init_embed=init_embed)
-        f_res = f(wordlist_input)
+        embed = Fasttext(vocab=init_vocab, init_embed=init_embed)
+        f_res = embed(wordlist_input)
 
         assert f_res.shape == (2, 3)

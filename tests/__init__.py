@@ -13,5 +13,5 @@
 # limitations under the License.
 # ============================================================================
 """
-Init MindSpore Text‘s test case.
+Init MindSpore Text's test case.
 """

@@ -40,7 +40,7 @@ class TestGlove(unittest.TestCase):
                              [0.7, 0.8, 0.9]])
 
         init_vocab = Vocab.from_list(['i', 'am', 'human'])
-        g = Glove(vocab=init_vocab, init_embed=init_embed)
-        g_res = g(wordlist_input)
+        embed = Glove(vocab=init_vocab, init_embed=init_embed)
+        g_res = embed(wordlist_input)
 
         assert g_res.shape == (2, 3)

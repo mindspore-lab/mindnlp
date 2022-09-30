@@ -51,9 +51,9 @@ class TestWikiText2(unittest.TestCase):
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
     def test_squad2_by_register(self):
+        """test squad2 by register"""
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        dataset_train, dataset_valid, dataset_test = \
-            load('WikiText2',
-                    root=root,
-                    split=('train', 'valid', 'test')
-                    )
+        _ = load('WikiText2',
+                 root=root,
+                 split=('train', 'valid', 'test')
+                 )

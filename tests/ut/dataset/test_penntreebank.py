@@ -21,6 +21,7 @@ import unittest
 from mindnlp.dataset import PennTreebank
 from mindnlp.dataset import load
 
+
 class TestPennTreebank(unittest.TestCase):
     r"""
     Test PennTreebank
@@ -51,9 +52,9 @@ class TestPennTreebank(unittest.TestCase):
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
     def test_penn_treebank_by_register(self):
+        """test penn treebank by register"""
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        dataset_train, dataset_valid, dataset_test = \
-            load('PennTreebank',
-                    root=root,
-                    split=('train', 'valid', 'test')
-                    )
+        _ = load('PennTreebank',
+                 root=root,
+                 split=('train', 'valid', 'test')
+                 )

@@ -40,7 +40,7 @@ class TestWord2vec(unittest.TestCase):
                              [0.7, 0.8, 0.9]])
 
         init_vocab = Vocab.from_list(['i', 'am', 'human'])
-        w = Word2vec(vocab=init_vocab, init_embed=init_embed)
-        w_res = w(wordlist_input)
+        embed = Word2vec(vocab=init_vocab, init_embed=init_embed)
+        w_res = embed(wordlist_input)
 
         assert w_res.shape == (2, 3)

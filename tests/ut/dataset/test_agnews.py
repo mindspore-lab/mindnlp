@@ -23,14 +23,13 @@ from mindnlp.dataset import AG_NEWS, AG_NEWS_Process
 from mindnlp.dataset import load, process
 
 
-
-class TestAG_NEWS(unittest.TestCase):
+class TestAGNEWS(unittest.TestCase):
     r"""
     Test AG_NEWS
     """
 
     def setUp(self):
-        self.input =None
+        self.input = None
 
     def test_agnews(self):
         """Test agnews"""
@@ -39,22 +38,23 @@ class TestAG_NEWS(unittest.TestCase):
             "test": 7600,
         }
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        dataset_train, dataset_test = AG_NEWS(root=root,split=("train","test"))
+        dataset_train, dataset_test = AG_NEWS(
+            root=root, split=("train", "test"))
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = AG_NEWS(root=root,split="train")
-        dataset_test = AG_NEWS(root=root,split="test")
+        dataset_train = AG_NEWS(root=root, split="train")
+        dataset_test = AG_NEWS(root=root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
     def test_agnews_by_register(self):
+        """test agnews by register"""
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        dataset_train,dataset_test = \
-            load('AG_NEWS',root=root,split=('train','test'),)
+        _ = load('AG_NEWS', root=root, split=('train', 'test'),)
 
 
-class TestAG_NEWS_Process(unittest.TestCase):
+class TestAGNEWSProcess(unittest.TestCase):
     r"""
     Test AG_NEWS_Process
     """
@@ -66,18 +66,19 @@ class TestAG_NEWS_Process(unittest.TestCase):
         r"""
         Test AG_NEWS_Process
         """
-        
-        train_dataset, test_dataset = AG_NEWS()
+
+        train_dataset, _ = AG_NEWS()
         agnews_dataset = AG_NEWS_Process(train_dataset)
         agnews_dataset = agnews_dataset.create_tuple_iterator()
-        
+
         assert (next(agnews_dataset)[1]).dtype == ms.int32
 
-    def test_agnews_process_by_register(self): 
-        train_dataset, test_dataset = AG_NEWS()
-        train_dataset = process('AG_NEWS', 
-                    dataset=train_dataset, 
-                    column="text",
-                    tokenizer=BasicTokenizer(),
-                    vocab=None
-                    )   
+    def test_agnews_process_by_register(self):
+        """test agnews process by register"""
+        train_dataset, _ = AG_NEWS()
+        train_dataset = process('AG_NEWS',
+                                dataset=train_dataset,
+                                column="text",
+                                tokenizer=BasicTokenizer(),
+                                vocab=None
+                                )

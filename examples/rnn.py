@@ -87,8 +87,9 @@ net = MyModel(1000, 32, 16, num_layers=2, has_bias=True, dropout=0.1,
 loss_fn = nn.MSELoss()
 optimizer = nn.Adam(net.trainable_params(), learning_rate=10e-5)
 
-# definr forward function
+# define forward function
 def forward_fn(*data):
+    """forward function"""
     logits = net(data[0], data[1], data[2], data[3])
     loss = loss_fn(logits, data[1])
     return loss, logits
