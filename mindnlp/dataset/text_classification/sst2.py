@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-CoLA dataset
+SST2 dataset
 """
 # pylint: disable=C0103
 
@@ -25,9 +25,9 @@ from mindnlp.utils.download import cache_file
 from mindnlp.dataset.register import load
 from mindnlp.configs import DEFAULT_ROOT
 
-URL = "https://nyu-mll.github.io/CoLA/cola_public_1.1.zip"
+URL = "https://dl.fbaipublicfiles.com/glue/data/SST-2.zip"
 
-MD5 = "9f6d88c3558ec424cd9d66ea03589aba"
+MD5 = "9f81648d4199384278b86e315dac217c"
 
 
 def unzip(file_path: str, unzip_path: str):
@@ -53,41 +53,48 @@ def unzip(file_path: str, unzip_path: str):
     return zipf.namelist()
 
 
-class Cola:
+class Sst2:
     """
-    CoLA dataset source
+    SST2 dataset source
     """
 
     def __init__(self, path) -> None:
         self.path: str = path
-        self._source, self._label, self._sentence = [], [], []
+        self._label, self._text = [], []
         self._load()
 
     def _load(self):
         with open(self.path, "r", encoding="utf-8") as f:
             dataset = f.read()
         lines = dataset.split("\n")
-        if not self.path.endswith("out_of_domain_dev.tsv"):
-            lines.pop(len(lines) - 1)
-        for line in lines:
-            l = line.split("\t")
-            self._source.append(l[0])
-            self._label.append(l[1])
-            self._sentence.append(l[-1])
+        lines.pop(0)
+        lines.pop(len(lines) - 1)
+        print(len(lines))
+        if self.path.endswith("test.tsv"):
+            for line in lines:
+                l = line.split("\t")
+                self._text.append(l[1])
+        else:
+            for line in lines:
+                l = line.split("\t")
+                self._text.append(l[0])
+                self._label.append(l[1])
 
     def __getitem__(self, index):
-        return self._source[index], self._label[index], self._sentence[index]
+        if self.path.endswith("test.tsv"):
+            return self._text[index]
+        return self._label[index], self._text[index]
 
     def __len__(self):
-        return len(self._sentence)
+        return len(self._text)
 
 
 @load.register
-def CoLA(
+def SST2(
     root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", "dev", "test")
 ):
     r"""
-    Load the CoLA dataset
+    Load the SST2 dataset
     Args:
         root (str): Directory where the datasets are saved.
             Default:~/.mindnlp
@@ -100,38 +107,35 @@ def CoLA(
             this dataset is returned instead of a list of datasets.
 
     Examples:
-        >>> root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        >>> dataset_train,dataset_dev,dataset_test = CoLA()
+        >>> dataset_train,dataset_dev,dataset_test = SST2()
         >>> train_iter = dataset_train.create_tuple_iterator()
         >>> print(next(train_iter))
-        [Tensor(shape=[], dtype=String, value= 'gj04'), Tensor(shape=[], dtype=String, \
-        \value= '1'), \Tensor(shape=[], dtype=String, value= "Our friends won't buy \
-        this analysis, let alone the \next one we propose.")]
+        [Tensor(shape=[], dtype=String, value= '0'), Tensor(shape=[], dtype=String, \
+        value= 'hide new secretions from the parental units ')]
     """
-    cache_dir = os.path.join(root, "datasets", "CoLA")
-    path_dict = {
-        "train": "in_domain_train.tsv",
-        "dev": "in_domain_dev.tsv",
-        "test": "out_of_domain_dev.tsv",
-    }
-    column_names = ["source", "label", "sentence"]
+    cache_dir = os.path.join(root, "datasets", "SST2")
+    column_names = []
     path_list = []
     datasets_list = []
     path, _ = cache_file(None, url=URL, cache_dir=cache_dir, md5sum=MD5)
     unzip(path, cache_dir)
     if isinstance(split, str):
-        path_list.append(
-            os.path.join(cache_dir, "cola_public", "raw", path_dict[split])
-        )
+        path_list.append(os.path.join(cache_dir, "SST-2", split + ".tsv"))
+        if split == "test":
+            column_names.append(["text"])
+        else:
+            column_names.append(["label", "text"])
     else:
         for s in split:
-            path_list.append(
-                os.path.join(cache_dir, "cola_public", "raw", path_dict[s])
-            )
-    for path in path_list:
+            path_list.append(os.path.join(cache_dir, "SST-2", s + ".tsv"))
+            if split == "test":
+                column_names.append(["text"])
+            else:
+                column_names.append(["label", "text"])
+    for idx, path in enumerate(path_list):
         datasets_list.append(
             GeneratorDataset(
-                source=Cola(path), column_names=column_names, shuffle=False
+                source=Sst2(path), column_names=column_names[idx], shuffle=False
             )
         )
     if len(path_list) == 1:
