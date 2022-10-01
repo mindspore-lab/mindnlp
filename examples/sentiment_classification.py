@@ -34,7 +34,6 @@ from tqdm import tqdm
 
 import mindspore as ms
 from mindspore import nn
-import mindspore.numpy as mnp
 from mindspore import ops
 import mindspore.dataset as ds
 from mindspore.common.initializer import Uniform, HeUniform
@@ -157,10 +156,10 @@ class Head(nn.Cell):
         weight_init = HeUniform(math.sqrt(5))
         bias_init = Uniform(1 / math.sqrt(hidden_dim * 2))
         self.fc = nn.Dense(hidden_dim * 2, output_dim, weight_init=weight_init, bias_init=bias_init)
-        self.sigmoid = ops.Sigmoid()
+        self.sigmoid = nn.Sigmoid()
 
     def construct(self, context):
-        context = mnp.concatenate((context[-2, :, :], context[-1, :, :]), axis=1)
+        context = ops.concat((context[-2, :, :], context[-1, :, :]), axis=1)
         output = self.fc(context)
         return self.sigmoid(output)
 
@@ -224,5 +223,5 @@ metric = Accuracy()
 
 trainer = Trainer(network=net, train_dataset=imdb_train, eval_dataset=imdb_valid, metrics=metric,
                   epochs=2, batch_size=64, loss_fn=loss, optimizer=optimizer)
-trainer.run(mode="pynative", tgt_columns="label")
+trainer.run(tgt_columns="label")
 print("end train")

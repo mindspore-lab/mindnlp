@@ -18,11 +18,11 @@ IWSLT2016 load function
 # pylint: disable=C0103
 
 import os
-import tarfile
 from mindspore.dataset import IWSLT2016Dataset
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.register import load
 from mindnlp.configs import DEFAULT_ROOT
+from mindnlp.utils import untar
 
 URL = "https://drive.google.com/uc?id=1l5y6Giag9aRPwGtuZHswh3w5v3qEz8D8&confirm=t"
 
@@ -51,39 +51,6 @@ SET_NOT_EXISTS = {
     ("de", "en"): [],
     ("cs", "en"): ["tst2014"],
 }
-
-
-def untar(file_path: str, untar_path: str):
-    r"""
-    Untar tar.gz file
-
-    Args:
-        file_path (str): The path where the tgz file is located.
-        multiple (str): The directory where the files were unzipped.
-
-    Returns:
-        - **names** (list) -All filenames in the tar.gz file.
-
-    Raises:
-        TypeError: If `file_path` is not a string.
-        TypeError: If `untar_path` is not a string.
-
-    Examples:
-        >>> file_path = "./mindnlp/datasets/IWSLT2016/2016-01.tgz"
-        >>> untar_path = "./mindnlp/datasets/IWSLT2016"
-        >>> output = untar(file_path,untar_path)
-        >>> print(output[0])
-        '2016-01'
-
-    """
-    tar = tarfile.open(file_path)
-    names = tar.getnames()
-    for name in names:
-        if os.path.exists(os.path.join(untar_path, name)):
-            continue
-        tar.extract(name, untar_path)
-    tar.close()
-    return names
 
 
 @load.register

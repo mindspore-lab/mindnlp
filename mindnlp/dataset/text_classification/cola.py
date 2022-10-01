@@ -18,39 +18,16 @@ CoLA dataset
 # pylint: disable=C0103
 
 import os
-import zipfile
 from typing import Union, Tuple
 from mindspore.dataset import GeneratorDataset
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.register import load
 from mindnlp.configs import DEFAULT_ROOT
+from mindnlp.utils import unzip
 
 URL = "https://nyu-mll.github.io/CoLA/cola_public_1.1.zip"
 
 MD5 = "9f6d88c3558ec424cd9d66ea03589aba"
-
-
-def unzip(file_path: str, unzip_path: str):
-    r"""
-    Untar .zip file
-
-    Args:
-        file_path (str): The path where the .zip file is located.
-        unzip_path (str): The directory where the files were unzipped.
-
-    Returns:
-        - **names** (list) -All filenames in the .zip file.
-
-    Raises:
-        TypeError: If `file_path` is not a string.
-        TypeError: If `untar_path` is not a string.
-
-    """
-    zipf = zipfile.ZipFile(file_path, "r")
-    for name in zipf.namelist():
-        zipf.extract(name, unzip_path)
-    zipf.close()
-    return zipf.namelist()
 
 
 class Cola:

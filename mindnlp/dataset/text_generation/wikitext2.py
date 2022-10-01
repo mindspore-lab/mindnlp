@@ -19,47 +19,16 @@ WikiText2 load function
 
 import os
 import re
-import zipfile
 from typing import Union, Tuple
 from mindspore.dataset import TextFileDataset
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.register import load
 from mindnlp.configs import DEFAULT_ROOT
+from mindnlp.utils import unzip
 
 URL = "https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-2-v1.zip"
 
 MD5 = "542ccefacc6c27f945fb54453812b3cd"
-
-
-def unzip(file_path: str, untar_path: str):
-    r"""
-    Unzip zip file
-
-    Args:
-        file_path (str): The path where the zip file is located.
-        multiple (str): The directory where the files were unzipped.
-
-    Returns:
-        - **names** (list) -All filenames in the zip file.
-
-    Raises:
-        TypeError: If `file_path` is not a string.
-        TypeError: If `untar_path` is not a string.
-
-    Examples:
-        >>> file_path = "./mindnlp/datasets/WikiText2/wikitext-2-v1.zip"
-        >>> untar_path = "./mindnlp/datasets/WikiText2"
-        >>> output = unzip(file_path,untar_path)
-        >>> print(output)
-        ['wikitext-2']
-
-    """
-    zip_obj = zipfile.ZipFile(file_path)
-    names = zip_obj.namelist()
-    for name in names:
-        zip_obj.extract(name, untar_path)
-    zip_obj.close()
-    return names
 
 
 @load.register
