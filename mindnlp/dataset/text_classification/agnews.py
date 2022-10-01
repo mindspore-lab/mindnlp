@@ -62,7 +62,7 @@ class Agnews:
         return len(self._text)
 
 @load.register
-def AG_NEWS(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", "test")):
+def AG_NEWS(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", "test"),proxies=None):
     r"""
     Load the AG_NEWS dataset
     Args:
@@ -92,11 +92,11 @@ def AG_NEWS(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", 
     datasets_list = []
     path_list = []
     if isinstance(split,str):
-        path, _ = cache_file(None, url=URL[split], cache_dir=cache_dir, md5sum=MD5[split])
+        path, _ = cache_file(None, url=URL[split], cache_dir=cache_dir, md5sum=MD5[split],proxies=proxies)
         path_list.append(path)
     else:
         for s in split:
-            path, _ = cache_file(None, url=URL[s], cache_dir=cache_dir, md5sum=MD5[s])
+            path, _ = cache_file(None, url=URL[s], cache_dir=cache_dir, md5sum=MD5[s],proxies=proxies)
             path_list.append(path)
     for path in path_list:
         datasets_list.append(GeneratorDataset(source=Agnews(path), column_names=column_names, shuffle=False))
