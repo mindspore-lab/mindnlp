@@ -133,15 +133,15 @@ class Trainer:
             raise RuntimeError("The dataset object had been used in other model by model.train(...), "
                                "please create a new dataset.")
 
-    def run(self, mode='pynative', tgt_columns=None):
+    def run(self, tgt_columns=None, jit=False):
         """Training function entry."""
         args_dict = vars(self)
         run_context = RunContext(args_dict)
         self.callback_manager.train_begin(run_context)
-        self.run_progress(mode, run_context, tgt_columns)
+        self.run_progress(run_context, tgt_columns, jit)
         self.callback_manager.train_end(run_context)
 
-    def run_progress(self, mode, run_context, tgt_columns):
+    def run_progress(self, run_context, tgt_columns=None, jit=False):
         """
         Training process for non-data sinking mode. The data would be passed to network directly.
 
@@ -183,10 +183,10 @@ class Trainer:
                     run_context.cur_step_nums += 1
                     self.cur_step_nums += 1
                     self.callback_manager.train_step_begin(run_context)
-                    if mode == 'pynative':
-                        loss = self._run_step(inputs, tgts)
-                    elif mode == 'graph':
+                    if jit:
                         loss = self._run_step_graph(inputs, tgts)
+                    else:
+                        loss = self._run_step(inputs, tgts)
                     loss_total += loss
                     progress.set_postfix(loss=loss_total/self.cur_step_nums)
                     progress.update(self.batch_size)
@@ -196,8 +196,7 @@ class Trainer:
             progress.close()
             self.callback_manager.train_epoch_end(run_context)
             # do epoch evaluation
-            self.do_eval_epoch(run_context, mode, tgt_columns=tgt_columns)
-
+            self.do_eval_epoch(run_context, tgt_columns, jit)
 
     def _run_ds_sink(self, train_dataset, eval_dataset, list_callback,
                      cb_params, print_steps, eval_steps):
@@ -229,11 +228,11 @@ class Trainer:
         """Evaluate the model after n steps."""
         raise NotImplementedError
 
-    def do_eval_epoch(self, run_context, mode='pynative', tgt_columns=None):
+    def do_eval_epoch(self, run_context, tgt_columns=None, jit=False):
         """Evaluate the model after an epoch."""
         self.callback_manager.evaluate_begin(run_context)
         self.evaluator.clear_metrics()
-        metrics_result, metrics_names, metrics_values = self.evaluator.run_progress(mode, tgt_columns)
+        metrics_result, metrics_names, metrics_values = self.evaluator.run_progress(tgt_columns, jit)
         setattr(run_context, "metrics_values", metrics_values)
         setattr(run_context, "metrics_result", metrics_result)
         setattr(run_context, "metrics_names", metrics_names)
