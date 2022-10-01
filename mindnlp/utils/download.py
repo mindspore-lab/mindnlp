@@ -53,7 +53,7 @@ def get_cache_path():
     return cache_dir
 
 
-def http_get(url, path=None, md5sum=None):
+def http_get(url, path=None, md5sum=None, proxies=None):
     r"""
     Download from given url, save to path.
 
@@ -90,11 +90,9 @@ def http_get(url, path=None, md5sum=None):
         if retry_cnt < retry_limit:
             retry_cnt += 1
         else:
-            raise RuntimeError(
-                f"Download from {url} failed. " "Retry limit reached"
-            )
+            raise RuntimeError(f"Download from {url} failed. " "Retry limit reached")
 
-        req = requests.get(url, stream=True, verify=False, timeout=10)
+        req = requests.get(url, stream=True, verify=False, timeout=10, proxies=proxies)
         if req.status_code != 200:
             raise RuntimeError(
                 f"Downloading from {url} failed with code {req.status_code}!"
@@ -104,7 +102,9 @@ def http_get(url, path=None, md5sum=None):
         total_size = req.headers.get("content-length")
         with open(tmp_filename, "wb") as file:
             if total_size:
-                with tqdm(total=int(total_size), unit="B", unit_scale=True, unit_divisor=1024) as pbar:
+                with tqdm(
+                    total=int(total_size), unit="B", unit_scale=True, unit_divisor=1024
+                ) as pbar:
                     for chunk in req.iter_content(chunk_size=1024):
                         file.write(chunk)
                         pbar.update(len(chunk))
@@ -174,7 +174,7 @@ def get_dataset_url(datasetname: str):
 
     """
     default_dataset_json = "./mindnlp/configs/dataset_url.json"
-    with open(default_dataset_json, "r", encoding='utf-8') as json_file:
+    with open(default_dataset_json, "r", encoding="utf-8") as json_file:
         json_dict = json.load(json_file)
 
     url = json_dict.get(datasetname, None)
@@ -215,7 +215,14 @@ def get_filepath(path: str):
     raise FileNotFoundError(f"{path} is not a valid file or directory.")
 
 
-def cache_file(filename: str, cache_dir: str = None, url: str = None, md5sum=None, download_file_name=None):
+def cache_file(
+    filename: str,
+    cache_dir: str = None,
+    url: str = None,
+    md5sum=None,
+    download_file_name=None,
+    proxies=None,
+):
     r"""
     If there is the file in cache_dir, return the path; if there is no such file, use the url to download.
 
@@ -246,14 +253,25 @@ def cache_file(filename: str, cache_dir: str = None, url: str = None, md5sum=Non
     if url is None:
         url = get_dataset_url(filename)
     path, filename = cached_path(
-        filename_or_url=url, cache_dir=cache_dir, foldername=None,
-        md5sum=md5sum, download_file_name=download_file_name
+        filename_or_url=url,
+        cache_dir=cache_dir,
+        foldername=None,
+        md5sum=md5sum,
+        download_file_name=download_file_name,
+        proxies=proxies,
     )
 
     return path, filename
 
 
-def cached_path(filename_or_url: str, cache_dir: str = None, foldername=None, md5sum=None, download_file_name=None):
+def cached_path(
+    filename_or_url: str,
+    cache_dir: str = None,
+    foldername=None,
+    md5sum=None,
+    download_file_name=None,
+    proxies=None,
+):
     r"""
     If there is the file in cache_dir, return the path; if there is no such file, use the url to download.
 
@@ -288,9 +306,17 @@ def cached_path(filename_or_url: str, cache_dir: str = None, foldername=None, md
     parsed = urlparse(filename_or_url)
 
     if parsed.scheme in ("http", "https"):
-        return get_from_cache(filename_or_url, Path(dataset_cache), md5sum=md5sum,
-                              download_file_name=download_file_name)
-    if (parsed.scheme == "" and Path(os.path.join(dataset_cache, filename_or_url)).exists()):
+        return get_from_cache(
+            filename_or_url,
+            Path(dataset_cache),
+            md5sum=md5sum,
+            download_file_name=download_file_name,
+            proxies=proxies,
+        )
+    if (
+        parsed.scheme == ""
+        and Path(os.path.join(dataset_cache, filename_or_url)).exists()
+    ):
         return Path(os.path.join(dataset_cache, filename_or_url))
     if parsed.scheme == "":
         raise FileNotFoundError(f"file {filename_or_url} not found in {dataset_cache}.")
@@ -326,16 +352,22 @@ def match_file(filename: str, cache_dir: str) -> str:
     files = os.listdir(cache_dir)
     matched_filenames = []
     for file_name in files:
-        if re.match(filename + "$", file_name) or re.match(filename + "\\..*", file_name):
+        if re.match(filename + "$", file_name) or re.match(
+            filename + "\\..*", file_name
+        ):
             matched_filenames.append(file_name)
     if not matched_filenames:
         return ""
     if len(matched_filenames) == 1:
         return matched_filenames[-1]
-    raise RuntimeError(f"Duplicate matched files:{matched_filenames}, this should be caused by a bug.")
+    raise RuntimeError(
+        f"Duplicate matched files:{matched_filenames}, this should be caused by a bug."
+    )
 
 
-def get_from_cache(url: str, cache_dir: str = None, md5sum=None, download_file_name=None):
+def get_from_cache(
+    url: str, cache_dir: str = None, md5sum=None, download_file_name=None, proxies=None
+):
     r"""
     If there is the file in cache_dir, return the path; if there is no such file, use the url to download.
 
@@ -376,5 +408,5 @@ def get_from_cache(url: str, cache_dir: str = None, md5sum=None, download_file_n
     cache_path = cache_dir / dir_name
     if cache_path.exists() and check_md5(cache_path, md5sum):
         return get_filepath(cache_path), filename
-    path = http_get(url, cache_dir, md5sum)[1]
+    path = http_get(url, cache_dir, md5sum, proxies=proxies)[1]
     return Path(path), filename
