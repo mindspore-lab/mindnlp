@@ -224,5 +224,5 @@ metric = Accuracy()
 
 trainer = Trainer(network=net, train_dataset=imdb_train, eval_dataset=imdb_valid, metrics=metric,
                   epochs=2, batch_size=64, loss_fn=loss, optimizer=optimizer)
-trainer.run(mode="graph", tgt_columns="label")
+trainer.run(mode="pynative", tgt_columns="label")
 print("end train")

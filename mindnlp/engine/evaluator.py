@@ -120,26 +120,26 @@ class Evaluator:
             raise RuntimeError("The dataset object had been used in other model by model.train(...), "
                                "please create a new dataset.")
 
-    def run(self, mode='pynative', tgt_columns=None):
+    def run(self, tgt_columns=None, jit=False):
         """Evaluating function entry."""
         args_dict = vars(self)
         run_context = RunContext(args_dict)
         self.callback_manager.evaluate_begin(run_context)
         self.clear_metrics()
-        _ = self.run_progress(mode, tgt_columns)
+        _ = self.run_progress(tgt_columns, jit)
         self.callback_manager.evaluate_end(run_context)
         self.earlystop = getattr(run_context, 'earlystop', False)
 
-    def run_progress(self, mode, tgt_columns=None):
+    def run_progress(self, tgt_columns=None, jit=False):
         """Evaluating process for non-data sinking mode. The data would be passed to network directly."""
         with tqdm(total=self.total) as progress:
             progress.set_description('Evaluate')
             for data in self.eval_dataset.create_dict_iterator():
                 inputs, tgts = self.data_process(data, tgt_columns)
-                if mode == 'pynative':
-                    outputs = self._run_step(inputs)
-                elif mode == 'graph':
+                if jit:
                     outputs = self._run_step_graph(inputs)
+                else:
+                    outputs = self._run_step(inputs)
                 self.update_metrics(outputs, *tgts)
                 progress.update(self.batch_size)
         progress.close()

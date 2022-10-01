@@ -60,10 +60,10 @@ class TestEvaluatorRun(unittest.TestCase):
         self.evaluator = Evaluator(network=net, eval_dataset=eval_dataset, metrics=metric,
                                    callbacks=callbacks, batch_size=10)
 
-    def test_evaluator_run_pynative(self):
+    def test_evaluator_run(self):
         """test evaluator run pynative"""
-        self.evaluator.run(mode='pynative', tgt_columns='label')
+        self.evaluator.run(tgt_columns='label')
 
-    def test_evaluator_run_graph(self):
+    def test_evaluator_run_jit(self):
         """test evaluator run graph"""
-        self.evaluator.run(mode='graph', tgt_columns='label')
+        self.evaluator.run(tgt_columns='label', jit=False)

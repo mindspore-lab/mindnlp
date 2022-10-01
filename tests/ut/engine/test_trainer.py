@@ -91,86 +91,86 @@ class TestTrainerRun(unittest.TestCase):
                                     metrics=self.metric, epochs=2, batch_size=4, optimizer=self.optimizer,
                                     loss_fn=self.loss_fn)
 
-    def test_pure_trainer_pynative(self):
+    def test_pure_trainer(self):
         """test_pure_trainer_pynative"""
         # 6. trainer run
-        self.pure_trainer.run(mode='pynative', tgt_columns='label')
+        self.pure_trainer.run(tgt_columns='label')
 
-    def test_pure_trainer_graph(self):
+    def test_pure_trainer_jit(self):
         """test_pure_trainer_graph"""
-        self.pure_trainer.run(mode='graph', tgt_columns='label')
+        self.pure_trainer.run(tgt_columns='label', jit=True)
 
-    def test_trainer_timer_pynative(self):
+    def test_trainer_timer(self):
         """test_trainer_timer_pynative"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
                           epochs=2, batch_size=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
                           callbacks=self.timer_callback_epochs)
-        trainer.run(mode='pynative', tgt_columns='label')
+        trainer.run(tgt_columns='label')
 
-    def test_trainer_timer_graph(self):
+    def test_trainer_timer_jit(self):
         """test_trainer_timer_graph"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
                           epochs=2, batch_size=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
                           callbacks=self.timer_callback_epochs)
-        trainer.run(mode='graph', tgt_columns='label')
+        trainer.run(tgt_columns='label', jit=True)
 
-    def test_trainer_earlystop_pynative(self):
+    def test_trainer_earlystop(self):
         """test_trainer_earlystop_pynative"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
                           epochs=6, batch_size=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
                           callbacks=self.earlystop_callback)
-        trainer.run(mode='pynative', tgt_columns='label')
+        trainer.run(tgt_columns='label')
 
-    def test_trainer_earlystop_graph(self):
+    def test_trainer_earlystop_jit(self):
         """test_trainer_earlystop_graph"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
                           epochs=6, batch_size=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
                           callbacks=self.earlystop_callback)
-        trainer.run(mode='graph', tgt_columns='label')
+        trainer.run(tgt_columns='label', jit=True)
 
-    def test_trainer_bestmodel_pynative(self):
+    def test_trainer_bestmodel(self):
         """test_trainer_bestmodel_pynative"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
                           epochs=4, batch_size=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
                           callbacks=self.bestmodel_callback)
-        trainer.run(mode='pynative', tgt_columns='label')
+        trainer.run(tgt_columns='label')
 
-    def test_trainer_bestmodel_graph(self):
+    def test_trainer_bestmodel_jit(self):
         """test_trainer_bestmodel_graph"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
                           epochs=4, batch_size=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
                           callbacks=self.bestmodel_callback)
-        trainer.run(mode='graph', tgt_columns='label')
+        trainer.run(tgt_columns='label', jit=True)
 
-    def test_trainer_checkpoint_pynative(self):
+    def test_trainer_checkpoint(self):
         """test_trainer_checkpoint_pynative"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
                           epochs=6, batch_size=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
                           callbacks=self.checkpoint_callback)
-        trainer.run(mode='pynative', tgt_columns='label')
+        trainer.run(tgt_columns='label')
 
-    def test_trainer_checkpoint_graph(self):
+    def test_trainer_checkpoint_jit(self):
         """test_trainer_checkpoint_graph"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
                           epochs=6, batch_size=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
                           callbacks=self.checkpoint_callback)
-        trainer.run(mode='graph', tgt_columns='label')
+        trainer.run(tgt_columns='label', jit=True)
 
     def test_different_model(self):
         """test_different_model"""
@@ -179,4 +179,4 @@ class TestTrainerRun(unittest.TestCase):
         trainer = Trainer(network=self.net_2, train_dataset=train_dataset, eval_dataset=eval_dataset,
                           metrics=self.metric, epochs=2, batch_size=4, optimizer=self.optimizer,
                           loss_fn=self.loss_fn)
-        trainer.run(mode='graph', tgt_columns='length')
+        trainer.run(tgt_columns='length', jit=True)
