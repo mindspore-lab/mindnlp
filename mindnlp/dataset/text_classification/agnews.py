@@ -26,8 +26,6 @@ from mindnlp.utils.download import cache_file
 from mindnlp.dataset.register import load, process
 from mindnlp.configs import DEFAULT_ROOT
 
-
-
 URL = {
     "train": "https://raw.githubusercontent.com/mhjabreel/CharCnn_Keras/master/data/ag_news_csv/train.csv",
     "test": "https://raw.githubusercontent.com/mhjabreel/CharCnn_Keras/master/data/ag_news_csv/test.csv",

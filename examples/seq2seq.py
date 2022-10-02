@@ -28,6 +28,7 @@ from mindnlp.engine.trainer import Trainer
 from mindnlp.common.metrics import Accuracy
 from mindnlp.engine.callbacks.timer_callback import TimerCallback
 from mindnlp.engine.callbacks.earlystop_callback import EarlyStopCallback
+from mindnlp.dataset import load, process
 
 np.random.seed(1)
 
@@ -72,10 +73,7 @@ class MyModel(nn.Cell):
 
 
 # define dataset
-train_dataset = ds.GeneratorDataset(MyDataset(),
-                                    ["src_tokens", "tgt_tokens", "src_length", "mask"])
-eval_dataset = ds.GeneratorDataset(MyDataset(),
-                                   ["src_tokens", "tgt_tokens", "src_length", "mask"])
+
 
 # define Models & Loss & Optimizer
 rnn_encoder = RNNEncoder(1000, 32, 16, num_layers=2, has_bias=True,
@@ -104,6 +102,6 @@ metric = Accuracy()
 
 # define trainer
 trainer = Trainer(net, train_dataset=train_dataset, loss_fn=loss_fn,
-                  epochs=2, batch_size=4, optimizer=optimizer)
-trainer.run(mode="pynative")
+                  epochs=2, batch_size=4, optimizer=optimizer, metrics=metric, eval_dataset=eval_dataset)
+trainer.run()
 print("end train")
