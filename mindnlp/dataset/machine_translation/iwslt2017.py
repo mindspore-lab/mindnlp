@@ -43,7 +43,7 @@ SUPPORTED_DATASETS = {
 
 
 @load.register
-def IWSLT2017(root=DEFAULT_ROOT, split=("train", "valid", "test"), language_pair=("de", "en")):
+def IWSLT2017(root=DEFAULT_ROOT, split=("train", "valid", "test"), language_pair=("de", "en"), proxies=None):
     r"""
     Load the IWSLT2017 dataset
 
@@ -118,7 +118,7 @@ def IWSLT2017(root=DEFAULT_ROOT, split=("train", "valid", "test"), language_pair
 
     cache_dir = os.path.join(root, "datasets", "IWSLT2017")
     file_path, _ = cache_file(None, cache_dir=cache_dir, url=URL, md5sum=MD5,
-                              download_file_name="2017-01-trnmted.tgz")
+                              download_file_name="2017-01-trnmted.tgz", proxies=proxies)
     dataset_dir_name = untar(file_path, os.path.dirname(file_path))[0]
     dataset_dir_path = os.path.join(cache_dir, dataset_dir_name)
     untar_flie_name = "DeEnItNlRo-DeEnItNlRo.tgz"

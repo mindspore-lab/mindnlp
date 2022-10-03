@@ -33,7 +33,7 @@ MD5 = "9ddaacaf6af0710eda8c456decff7832"
 
 @load.register
 def WikiText103(root: str = DEFAULT_ROOT,
-                split: Union[Tuple[str], str] = ('train', 'valid', 'test')):
+                split: Union[Tuple[str], str] = ('train', 'valid', 'test'), proxies=None):
     r"""
     Load the WikiText103 dataset
 
@@ -67,7 +67,7 @@ def WikiText103(root: str = DEFAULT_ROOT,
     datasets_list = []
 
     file_path, _ = cache_file(None, cache_dir=cache_dir,
-                              url=URL, md5sum=MD5)
+                              url=URL, md5sum=MD5, proxies=proxies)
     textdir_name = unzip(file_path, os.path.dirname(file_path))
     files_names = os.listdir(os.path.join(cache_dir, textdir_name[0]))
     if isinstance(split, str):

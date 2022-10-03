@@ -55,7 +55,7 @@ SET_NOT_EXISTS = {
 
 @load.register
 def IWSLT2016(root=DEFAULT_ROOT, split=("train", "valid", "test"),
-              language_pair=("de", "en"), valid_set="tst2013", test_set="tst2014"):
+              language_pair=("de", "en"), valid_set="tst2013", test_set="tst2014", proxies=None):
     r"""
     Load the IWSLT2016 dataset
 
@@ -157,7 +157,7 @@ def IWSLT2016(root=DEFAULT_ROOT, split=("train", "valid", "test"),
 
     cache_dir = os.path.join(root, "datasets", "IWSLT2016")
     file_path, _ = cache_file(None, cache_dir=cache_dir, url=URL, md5sum=MD5,
-                              download_file_name="2016-01.tgz")
+                              download_file_name="2016-01.tgz", proxies=proxies)
     dataset_dir_name = untar(file_path, os.path.dirname(file_path))[0]
     dataset_dir_path = os.path.join(cache_dir, dataset_dir_name)
     untar_flie_name = language_pair[0] + '-' + language_pair[1] + '.tgz'

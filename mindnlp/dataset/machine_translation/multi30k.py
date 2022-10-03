@@ -42,7 +42,7 @@ MD5 = {
 
 @load.register
 def Multi30k(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train', 'valid', 'test'),
-             language_pair: Tuple[str] = ('de', 'en')):
+             language_pair: Tuple[str] = ('de', 'en'), proxies=None):
     r"""
     Load the Multi30k dataset
 
@@ -99,7 +99,7 @@ def Multi30k(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train',
 
     if isinstance(split, str):
         file_path, _ = cache_file(
-            None, cache_dir=cache_dir, url=URL[split], md5sum=MD5[split])
+            None, cache_dir=cache_dir, url=URL[split], md5sum=MD5[split], proxies=proxies)
         file_list.append(file_path)
 
     else:
@@ -107,7 +107,7 @@ def Multi30k(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train',
         md5s = itemgetter(*split)(MD5)
         for i, url in enumerate(urls):
             file_path, _ = cache_file(
-                None, cache_dir=cache_dir, url=url, md5sum=md5s[i])
+                None, cache_dir=cache_dir, url=url, md5sum=md5s[i], proxies=proxies)
             file_list.append(file_path)
 
     for file in file_list:
