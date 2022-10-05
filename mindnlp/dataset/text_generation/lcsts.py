@@ -63,7 +63,7 @@ class Lcsts:
         return len(self._source)
 
 @load.register
-def LCSTS(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train', 'dev')):
+def LCSTS(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train', 'dev'), proxies=None):
     r"""
     Load the LCSTS dataset
 
@@ -101,7 +101,7 @@ def LCSTS(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train', 'd
         split = split.split()
     for key in split:
         path, _ = cache_file(
-            None, url=URL[key], cache_dir=cache_dir, md5sum=MD5[key]
+            None, url=URL[key], cache_dir=cache_dir, md5sum=MD5[key], proxies=proxies
         )
         file_list.append(path)
 

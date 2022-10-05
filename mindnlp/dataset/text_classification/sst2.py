@@ -68,7 +68,7 @@ class Sst2:
 
 @load.register
 def SST2(
-    root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", "dev", "test")
+    root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", "dev", "test"), proxies=None
 ):
     r"""
     Load the SST2 dataset
@@ -94,7 +94,7 @@ def SST2(
     column_names = []
     path_list = []
     datasets_list = []
-    path, _ = cache_file(None, url=URL, cache_dir=cache_dir, md5sum=MD5)
+    path, _ = cache_file(None, url=URL, cache_dir=cache_dir, md5sum=MD5, proxies=proxies)
     unzip(path, cache_dir)
     if isinstance(split, str):
         path_list.append(os.path.join(cache_dir, "SST-2", split + ".tsv"))

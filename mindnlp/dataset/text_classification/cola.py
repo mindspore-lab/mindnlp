@@ -61,7 +61,7 @@ class Cola:
 
 @load.register
 def CoLA(
-    root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", "dev", "test")
+    root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", "dev", "test"), proxies=None
 ):
     r"""
     Load the CoLA dataset
@@ -94,7 +94,7 @@ def CoLA(
     column_names = ["source", "label", "sentence"]
     path_list = []
     datasets_list = []
-    path, _ = cache_file(None, url=URL, cache_dir=cache_dir, md5sum=MD5)
+    path, _ = cache_file(None, url=URL, cache_dir=cache_dir, md5sum=MD5, proxies=proxies)
     unzip(path, cache_dir)
     if isinstance(split, str):
         path_list.append(

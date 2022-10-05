@@ -81,7 +81,7 @@ class Squad2:
 
 
 @load.register
-def SQuAD2(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train', 'dev')):
+def SQuAD2(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train', 'dev'), proxies=None):
     r"""
     Load the SQuAD2 dataset
 
@@ -118,7 +118,7 @@ def SQuAD2(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train', '
         split = split.split()
     for s in split:
         path, _ = cache_file(
-            None, url=URL[s], cache_dir=cache_dir, md5sum=MD5[s]
+            None, url=URL[s], cache_dir=cache_dir, md5sum=MD5[s], proxies=proxies
         )
         file_list.append(path)
 

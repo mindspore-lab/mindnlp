@@ -39,7 +39,7 @@ MD5 = {
 
 @load.register
 def PennTreebank(root: str = DEFAULT_ROOT,
-                 split: Union[Tuple[str], str] = ('train', 'valid', 'test')):
+                 split: Union[Tuple[str], str] = ('train', 'valid', 'test'), proxies=None):
     r"""
     Load the PennTreebank dataset
 
@@ -72,7 +72,7 @@ def PennTreebank(root: str = DEFAULT_ROOT,
     datasets_list = []
 
     for key, value in URL.items():
-        cache_file(None, cache_dir=cache_dir, url=value, md5sum=MD5[key])
+        cache_file(None, cache_dir=cache_dir, url=value, md5sum=MD5[key], proxies=proxies)
     if isinstance(split, str):
         split = split.split()
     for s in split:
