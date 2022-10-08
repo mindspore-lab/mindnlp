@@ -31,7 +31,7 @@ URL = "https://drive.google.com/uc?export=download&id=0Bz8a_Dbh9QhbaW12WVVZS2drc
 MD5 = "fe39f8b653cada45afd5792e0f0e8f9b"
 
 
-class Amazonreviewfull:
+class Amazonreviewpolarity:
     """
     AmazonReviewPolarity dataset source
     """
@@ -49,7 +49,7 @@ class Amazonreviewfull:
             self._title_text.append(f"{row[1]} {row[2]}")
 
     def __getitem__(self, index):
-        return self._label[index], self._title_text
+        return self._label[index], self._title_text[index]
 
     def __len__(self):
         return len(self._label)
@@ -107,7 +107,7 @@ def AmazonReviewPolarity(
     for path in path_list:
         datasets_list.append(
             GeneratorDataset(
-                source=Amazonreviewfull(path), column_names=column_names, shuffle=False
+                source=Amazonreviewpolarity(path), column_names=column_names, shuffle=False
             )
         )
     if len(path_list) == 1:

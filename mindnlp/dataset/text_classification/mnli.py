@@ -13,61 +13,72 @@
 # limitations under the License.
 # ============================================================================
 """
-AmazonReviewFull dataset
+MNLI dataset
 """
 # pylint: disable=C0103
 
 import os
-import csv
 from typing import Union, Tuple
 from mindspore.dataset import GeneratorDataset
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.register import load
 from mindnlp.configs import DEFAULT_ROOT
-from mindnlp.utils import untar
+from mindnlp.utils import unzip
 
-URL = "https://drive.google.com/uc?export=download&id=0Bz8a_Dbh9QhbZVhsUnRWRDhETzA&confirm=t"
+URL = "https://cims.nyu.edu/~sbowman/multinli/multinli_1.0.zip"
 
-MD5 = "57d28bd5d930e772930baddf36641c7c"
+MD5 = "0f70aaf66293b3c088a864891db51353"
 
 
-class Amazonreviewfull:
+class Mnli:
     """
-    AmazonReviewFull dataset source
+    MNLI dataset source
     """
+
+    label_map = {
+        "entailment": 0,
+        "neutral": 1,
+        "contradiction": 2,
+    }
 
     def __init__(self, path) -> None:
         self.path: str = path
-        self._label, self._title_text = [], []
+        self._label, self._sentence1, self._sentence2 = [], [], []
         self._load()
 
     def _load(self):
-        csvfile = open(self.path, "r", encoding="utf-8")
-        dict_reader = csv.reader(csvfile)
-        for row in dict_reader:
-            self._label.append(int(row[0]))
-            self._title_text.append(f"{row[1]} {row[2]}")
+        with open(self.path, "r", encoding="utf-8") as f:
+            dataset = f.read()
+        lines = dataset.split("\n")
+        lines.pop(0)
+        lines.pop(len(lines) - 1)
+        for line in lines:
+            l = line.split("\t")
+            if l[0] in self.label_map:
+                self._label.append(self.label_map[l[0]])
+                self._sentence1.append(l[5])
+                self._sentence2.append(l[6])
 
     def __getitem__(self, index):
-        return self._label[index], self._title_text[index]
+        return self._label[index], self._sentence1[index], self._sentence2[index]
 
     def __len__(self):
         return len(self._label)
 
 
 @load.register
-def AmazonReviewFull(
+def MNLI(
     root: str = DEFAULT_ROOT,
-    split: Union[Tuple[str], str] = ("train", "test"),
-    proxies=None,
+    split: Union[Tuple[str], str] = ("train", "dev_matched", "dev_mismatched"),
+    proxies=None
 ):
     r"""
-    Load the AmazonReviewFull dataset
+    Load the MNLI dataset
     Args:
         root (str): Directory where the datasets are saved.
             Default:~/.mindnlp
         split (str|Tuple[str]): Split or splits to be returned.
-            Default:('train', 'test').
+            Default:("train", "dev_matched", "dev_mismatched").
 
     Returns:
         - **datasets_list** (list) -A list of loaded datasets.
@@ -75,38 +86,35 @@ def AmazonReviewFull(
             this dataset is returned instead of a list of datasets.
 
     Examples:
-        >>> dataset_train,dataset_test = AmazonReviewFull()
+        >>> dataset_train, dataset_dev_matched, dataset_dev_mismatched = MNLI()
         >>> train_iter = dataset_train.create_tuple_iterator()
         >>> print(next(train_iter))
-    """
 
-    cache_dir = os.path.join(root, "datasets", "AmazonReviewFull")
+    """
+    cache_dir = os.path.join(root, "datasets", "MNLI")
     path_dict = {
-        "train": "train.csv",
-        "test": "test.csv",
+        "train": "multinli_1.0_train.txt",
+        "dev_matched": "multinli_1.0_dev_matched.txt",
+        "dev_mismatched": "multinli_1.0_dev_mismatched.txt",
     }
-    column_names = ["label", "title_text"]
+    column_names = ["label", "sentence1", "sentence2"]
     path_list = []
     datasets_list = []
-    path, _ = cache_file(
-        None,
-        cache_dir=cache_dir,
-        url=URL,
-        md5sum=MD5,
-        download_file_name="amazon_review_full_csv.tar.gz",
-        proxies=proxies,
-    )
-
-    untar(path, cache_dir)
+    path, _ = cache_file(None, url=URL, cache_dir=cache_dir, md5sum=MD5, proxies=proxies)
+    unzip(path, cache_dir)
     if isinstance(split, str):
-        path_list.append(os.path.join(cache_dir, "amazon_review_full_csv", path_dict[split]))
+        path_list.append(
+            os.path.join(cache_dir, "multinli_1.0", path_dict[split])
+        )
     else:
         for s in split:
-            path_list.append(os.path.join(cache_dir, "amazon_review_full_csv", path_dict[s]))
+            path_list.append(
+                os.path.join(cache_dir, "multinli_1.0", path_dict[s])
+            )
     for path in path_list:
         datasets_list.append(
             GeneratorDataset(
-                source=Amazonreviewfull(path), column_names=column_names, shuffle=False
+                source=Mnli(path), column_names=column_names, shuffle=False
             )
         )
     if len(path_list) == 1:

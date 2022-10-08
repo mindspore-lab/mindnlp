@@ -13,45 +13,40 @@
 # limitations under the License.
 # ============================================================================
 """
-Test AmazonReviewPolarity
+Test MRPC
 """
 import os
 import unittest
-from mindnlp.dataset import AmazonReviewPolarity
+from mindnlp.dataset import MRPC
 from mindnlp.dataset import load
 
 
-class TestAmazonReviewPolarity(unittest.TestCase):
+class TestMRPC(unittest.TestCase):
     r"""
-    Test AmazonReviewPolarity
+    Test MRPC
     """
 
     def setUp(self):
         self.input = None
 
-    def test_amazonreviewpolarity(self):
-        """Test amazonreviewpolarity"""
+    def test_mrpc(self):
+        """Test mrpc"""
         num_lines = {
-            "train": 3600000,
-            "test": 400000,
+            "train": 4076,
+            "test": 1725,
         }
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
-        dataset_train, dataset_test = AmazonReviewPolarity(
-            root=root, split=("train", "test")
-        )
+        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
+        dataset_train, dataset_test = MRPC(
+            root=root, split=("train", "test"))
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = AmazonReviewPolarity(root=root, split="train")
-        dataset_test = AmazonReviewPolarity(root=root, split="test")
+        dataset_train = MRPC(root=root, split="train")
+        dataset_test = MRPC(root=root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    def test_amazonreviewpolarity_by_register(self):
-        """test amazonreviewpolarity by register"""
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
-        _ = load(
-            "AmazonReviewPolarity",
-            root=root,
-            split=("train", "test"),
-        )
+    def test_mrpc_by_register(self):
+        """test mrpc by register"""
+        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
+        _ = load('MRPC', root=root, split=('train', 'test'),)

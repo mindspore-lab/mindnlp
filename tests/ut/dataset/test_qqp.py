@@ -13,45 +13,32 @@
 # limitations under the License.
 # ============================================================================
 """
-Test AmazonReviewPolarity
+Test QQP
 """
 import os
 import unittest
-from mindnlp.dataset import AmazonReviewPolarity
+from mindnlp.dataset import QQP
 from mindnlp.dataset import load
 
 
-class TestAmazonReviewPolarity(unittest.TestCase):
+class TestQQP(unittest.TestCase):
     r"""
-    Test AmazonReviewPolarity
+    Test QQP
     """
 
     def setUp(self):
         self.input = None
 
-    def test_amazonreviewpolarity(self):
-        """Test amazonreviewpolarity"""
+    def test_qqp(self):
+        """Test qqp"""
         num_lines = {
-            "train": 3600000,
-            "test": 400000,
+            "train": 404290,
         }
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
-        dataset_train, dataset_test = AmazonReviewPolarity(
-            root=root, split=("train", "test")
-        )
+        dataset_train = QQP(root=root)
         assert dataset_train.get_dataset_size() == num_lines["train"]
-        assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = AmazonReviewPolarity(root=root, split="train")
-        dataset_test = AmazonReviewPolarity(root=root, split="test")
-        assert dataset_train.get_dataset_size() == num_lines["train"]
-        assert dataset_test.get_dataset_size() == num_lines["test"]
-
-    def test_amazonreviewpolarity_by_register(self):
-        """test amazonreviewpolarity by register"""
+    def test_qqp_by_register(self):
+        """test qqp by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
-        _ = load(
-            "AmazonReviewPolarity",
-            root=root,
-            split=("train", "test"),
-        )
+        _ = load("QQP", root=root)

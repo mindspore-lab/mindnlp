@@ -13,45 +13,45 @@
 # limitations under the License.
 # ============================================================================
 """
-Test AmazonReviewPolarity
+Test IMDB
 """
 import os
 import unittest
-from mindnlp.dataset import AmazonReviewPolarity
+from mindnlp.dataset import IMDB
 from mindnlp.dataset import load
 
 
-class TestAmazonReviewPolarity(unittest.TestCase):
+class TestIMDB(unittest.TestCase):
     r"""
-    Test AmazonReviewPolarity
+    Test IMDB
     """
 
     def setUp(self):
         self.input = None
 
-    def test_amazonreviewpolarity(self):
-        """Test amazonreviewpolarity"""
+    def test_imdb(self):
+        """Test imdb"""
         num_lines = {
-            "train": 3600000,
-            "test": 400000,
+            "train": 25000,
+            "test": 25000,
         }
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
-        dataset_train, dataset_test = AmazonReviewPolarity(
+        dataset_train, dataset_test = IMDB(
             root=root, split=("train", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = AmazonReviewPolarity(root=root, split="train")
-        dataset_test = AmazonReviewPolarity(root=root, split="test")
+        dataset_train = IMDB(root=root, split="train")
+        dataset_test = IMDB(root=root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    def test_amazonreviewpolarity_by_register(self):
-        """test amazonreviewpolarity by register"""
+    def test_imdb_by_register(self):
+        """test imdb by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
-            "AmazonReviewPolarity",
+            "IMDB",
             root=root,
             split=("train", "test"),
         )

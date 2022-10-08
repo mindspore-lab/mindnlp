@@ -13,56 +13,65 @@
 # limitations under the License.
 # ============================================================================
 """
-AmazonReviewFull dataset
+IMDB dataset
 """
 # pylint: disable=C0103
 
 import os
-import csv
+import re
+import tarfile
 from typing import Union, Tuple
 from mindspore.dataset import GeneratorDataset
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.register import load
 from mindnlp.configs import DEFAULT_ROOT
-from mindnlp.utils import untar
 
-URL = "https://drive.google.com/uc?export=download&id=0Bz8a_Dbh9QhbZVhsUnRWRDhETzA&confirm=t"
+URL = "http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
 
-MD5 = "57d28bd5d930e772930baddf36641c7c"
+MD5 = "7c2ac02c03563afcf9b574c7e56c153a"
 
 
-class Amazonreviewfull:
+class Imdb:
     """
-    AmazonReviewFull dataset source
+    IMDB dataset source
     """
+    label_map = {
+        "pos": 1,
+        "neg": 0
+    }
 
-    def __init__(self, path) -> None:
-        self.path: str = path
-        self._label, self._title_text = [], []
-        self._load()
+    def __init__(self, path, mode) -> None:
+        self.path = path
+        self.mode: str = mode
+        self._label, self._text = [], []
+        self._load("pos")
+        self._load("neg")
 
-    def _load(self):
-        csvfile = open(self.path, "r", encoding="utf-8")
-        dict_reader = csv.reader(csvfile)
-        for row in dict_reader:
-            self._label.append(int(row[0]))
-            self._title_text.append(f"{row[1]} {row[2]}")
+    def _load(self, label):
+        pattern = re.compile(fr"aclImdb/{self.mode}/{label}/.*\.txt$")
+        with tarfile.open(self.path) as tarf:
+            tf = tarf.next()
+            while tf is not None:
+                if bool(pattern.match(tf.name)):
+                    self._text.append(str(tarf.extractfile(tf).read()))
+                    self._label.append(self.label_map[label])
+                tf = tarf.next()
 
     def __getitem__(self, index):
-        return self._label[index], self._title_text[index]
+        return self._label[index], self._text[index]
 
     def __len__(self):
         return len(self._label)
 
 
 @load.register
-def AmazonReviewFull(
+def IMDB(
     root: str = DEFAULT_ROOT,
     split: Union[Tuple[str], str] = ("train", "test"),
     proxies=None,
 ):
     r"""
-    Load the AmazonReviewFull dataset
+    Load the IMDB dataset
     Args:
         root (str): Directory where the datasets are saved.
             Default:~/.mindnlp
@@ -75,40 +84,35 @@ def AmazonReviewFull(
             this dataset is returned instead of a list of datasets.
 
     Examples:
-        >>> dataset_train,dataset_test = AmazonReviewFull()
+        >>> dataset_train,dataset_test = IMDB()
         >>> train_iter = dataset_train.create_tuple_iterator()
         >>> print(next(train_iter))
+
     """
 
-    cache_dir = os.path.join(root, "datasets", "AmazonReviewFull")
-    path_dict = {
-        "train": "train.csv",
-        "test": "test.csv",
-    }
-    column_names = ["label", "title_text"]
-    path_list = []
+    cache_dir = os.path.join(root, "datasets", "IMDB")
+    column_names = ["label", "text"]
+    mode_list = []
     datasets_list = []
-    path, _ = cache_file(
+    cache_file(
         None,
         cache_dir=cache_dir,
         url=URL,
         md5sum=MD5,
-        download_file_name="amazon_review_full_csv.tar.gz",
         proxies=proxies,
     )
-
-    untar(path, cache_dir)
     if isinstance(split, str):
-        path_list.append(os.path.join(cache_dir, "amazon_review_full_csv", path_dict[split]))
+        mode_list.append(split)
     else:
         for s in split:
-            path_list.append(os.path.join(cache_dir, "amazon_review_full_csv", path_dict[s]))
-    for path in path_list:
+            mode_list.append(s)
+    for mode in mode_list:
         datasets_list.append(
             GeneratorDataset(
-                source=Amazonreviewfull(path), column_names=column_names, shuffle=False
+                source=Imdb(os.path.join(cache_dir,"aclImdb_v1.tar.gz"), mode),
+                column_names=column_names, shuffle=False
             )
         )
-    if len(path_list) == 1:
+    if len(mode_list) == 1:
         return datasets_list[0]
     return datasets_list
