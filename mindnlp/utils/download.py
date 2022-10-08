@@ -47,13 +47,14 @@ def get_cache_path():
         cache_dir = os.environ.get("CACHE_DIR")
         if os.path.isdir(cache_dir):
             return cache_dir
-        raise NotADirectoryError(f"{os.environ['CACHE_DIR']} is not a directory.")
+        raise NotADirectoryError(
+            f"{os.environ['CACHE_DIR']} is not a directory.")
     cache_dir = os.path.expanduser(os.path.join("~", ".text"))
 
     return cache_dir
 
 
-def http_get(url, path=None, md5sum=None, proxies=None):
+def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None):
     r"""
     Download from given url, save to path.
 
@@ -83,16 +84,23 @@ def http_get(url, path=None, md5sum=None, proxies=None):
 
     retry_cnt = 0
     retry_limit = 3
-    name = os.path.split(url)[-1]
+    name = ""
+    if download_file_name is None:
+        name = os.path.split(url)[-1]
+    else:
+        name = download_file_name
+
     filename = os.path.join(path, name)
 
     while not (os.path.exists(filename) and check_md5(filename, md5sum)):
         if retry_cnt < retry_limit:
             retry_cnt += 1
         else:
-            raise RuntimeError(f"Download from {url} failed. " "Retry limit reached")
+            raise RuntimeError(
+                f"Download from {url} failed. " "Retry limit reached")
 
-        req = requests.get(url, stream=True, verify=False, timeout=10, proxies=proxies)
+        req = requests.get(url, stream=True, verify=False,
+                           timeout=10, proxies=proxies)
         if req.status_code != 200:
             raise RuntimeError(
                 f"Downloading from {url} failed with code {req.status_code}!"
@@ -319,8 +327,10 @@ def cached_path(
     ):
         return Path(os.path.join(dataset_cache, filename_or_url))
     if parsed.scheme == "":
-        raise FileNotFoundError(f"file {filename_or_url} not found in {dataset_cache}.")
-    raise ValueError(f"unable to parse {filename_or_url} as a URL or as a local path")
+        raise FileNotFoundError(
+            f"file {filename_or_url} not found in {dataset_cache}.")
+    raise ValueError(
+        f"unable to parse {filename_or_url} as a URL or as a local path")
 
 
 def match_file(filename: str, cache_dir: str) -> str:
@@ -408,5 +418,6 @@ def get_from_cache(
     cache_path = cache_dir / dir_name
     if cache_path.exists() and check_md5(cache_path, md5sum):
         return get_filepath(cache_path), filename
-    path = http_get(url, cache_dir, md5sum, proxies=proxies)[1]
+    path = http_get(url, cache_dir, md5sum,
+                    download_file_name=download_file_name, proxies=proxies)[1]
     return Path(path), filename
