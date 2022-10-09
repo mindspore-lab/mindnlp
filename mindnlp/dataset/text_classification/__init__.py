@@ -23,3 +23,8 @@ from .amazonreviewfull import AmazonReviewFull
 from .amazonreviewpolarity import AmazonReviewPolarity
 from .stsb import STSB
 from .dbpedia import DBpedia
+from .imdb import IMDB
+from .mnli import MNLI
+from .mrpc import MRPC
+from .qnli import QNLI
+from .qqp import QQP

@@ -13,45 +13,48 @@
 # limitations under the License.
 # ============================================================================
 """
-Test AmazonReviewPolarity
+Test QNLI
 """
 import os
 import unittest
-from mindnlp.dataset import AmazonReviewPolarity
+from mindnlp.dataset import QNLI
 from mindnlp.dataset import load
 
-
-class TestAmazonReviewPolarity(unittest.TestCase):
+class TestQNLI(unittest.TestCase):
     r"""
-    Test AmazonReviewPolarity
+    Test QNLI
     """
 
     def setUp(self):
         self.input = None
 
-    def test_amazonreviewpolarity(self):
-        """Test amazonreviewpolarity"""
+    def test_qnli(self):
+        """Test qnli"""
         num_lines = {
-            "train": 3600000,
-            "test": 400000,
+            "train": 104743,
+            "dev": 5463,
+            "test": 5463,
         }
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
-        dataset_train, dataset_test = AmazonReviewPolarity(
-            root=root, split=("train", "test")
+        dataset_train, dataset_dev, dataset_test = QNLI(
+            root=root, split=("train", "dev", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
+        assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = AmazonReviewPolarity(root=root, split="train")
-        dataset_test = AmazonReviewPolarity(root=root, split="test")
+        dataset_train = QNLI(root=root, split="train")
+        dataset_dev = QNLI(root=root, split="dev")
+        dataset_test = QNLI(root=root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
+        assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    def test_amazonreviewpolarity_by_register(self):
-        """test amazonreviewpolarity by register"""
+    def test_qnli_by_register(self):
+        """test qnli by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
-            "AmazonReviewPolarity",
+            "QNLI",
             root=root,
-            split=("train", "test"),
+            split=("train", "dev", "test"),
         )
