@@ -19,6 +19,7 @@ Decompress functions
 import os
 import tarfile
 import zipfile
+import gzip
 
 def untar(file_path: str, untar_path: str):
     r"""
@@ -74,3 +75,27 @@ def unzip(file_path: str, unzip_path: str):
         zipf.extract(name, unzip_path)
     zipf.close()
     return zipf.namelist()
+
+def ungz(file_path: str, unzip_path: str = None):
+    r"""
+    Untar .gz file
+
+    Args:
+        file_path (str): The path where the .gz file is located.
+        unzip_path (str): The directory where the files were unzipped.
+
+    Returns:
+        - **unzip_path** (str): The directory where the files were unzipped.
+
+    Raises:
+        TypeError: If `file_path` is not a string.
+        TypeError: If `untar_path` is not a string.
+
+    """
+    if not isinstance(unzip_path,str):
+        unzip_path = str(file_path)[:-3]
+    with open(unzip_path,'wb') as file:
+        gz_file = gzip.open(file_path, mode = 'rb')
+        file.write(gz_file.read())
+        gz_file.close()
+    return unzip_path

@@ -19,5 +19,6 @@ Dataset init
 from .text_classification import *
 from .machine_translation import *
 from .question_answer import *
+from .sequence_tagging import *
 from .text_generation import *
 from .register import load, process
