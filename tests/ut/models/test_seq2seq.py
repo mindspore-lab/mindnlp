@@ -18,10 +18,11 @@ import unittest
 import numpy as np
 
 import mindspore
+from mindspore import nn
 from mindspore import context
 from mindspore import Tensor
 
-from mindnlp.modules import RNNEncoder, RNNDecoder, LSTMEncoder, LSTMDecoder, GRUEncoder, GRUDecoder
+from mindnlp.modules import Seq2SeqEncoder, Seq2SeqDecoder
 from mindnlp.models import RNN, LSTM, GRU
 
 
@@ -36,10 +37,21 @@ class TestRNN(unittest.TestCase):
         """
         context.set_context(mode=context.GRAPH_MODE)
 
-        rnn_encoder = RNNEncoder(1000, 32, 16, num_layers=2, has_bias=True,
-                                 dropout=0.1, bidirectional=False)
-        rnn_decoder = RNNDecoder(1000, 32, 16, num_layers=2, has_bias=True,
-                                 dropout=0.1, attention=True, encoder_output_units=16)
+        vocab_size = 1000
+        embedding_size = 32
+        hidden_size = 16
+        num_layers = 2
+        has_bias = True
+        dropout = 0.1
+        bidirectional = False
+        encoder_output_units = 16
+        embedding = nn.Embedding(vocab_size, embedding_size)
+        rnn_layer = nn.RNN(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+                           batch_first=True, dropout=dropout, bidirectional=bidirectional)
+
+        rnn_encoder = Seq2SeqEncoder(embedding, rnn_layer)
+        rnn_decoder = Seq2SeqDecoder(embedding, rnn_layer, dropout=dropout, attention=True,
+                                     encoder_output_units=encoder_output_units)
         rnn = RNN(rnn_encoder, rnn_decoder)
 
         src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
@@ -47,10 +59,9 @@ class TestRNN(unittest.TestCase):
         src_length = Tensor(np.ones([8]), mindspore.int32)
         mask = Tensor(np.ones([8, 16]), mindspore.int32)
 
-        output, attn_scores = rnn(src_tokens, tgt_tokens, src_length, mask=mask)
+        output = rnn(src_tokens, tgt_tokens, src_length, mask=mask)
 
-        assert output.shape == (8, 16, 1000)
-        assert attn_scores.shape == (8, 16, 16)
+        assert output.shape == (8, 1000, 16)
 
     def test_rnn_pynative(self):
         """
@@ -58,10 +69,21 @@ class TestRNN(unittest.TestCase):
         """
         context.set_context(mode=context.PYNATIVE_MODE)
 
-        rnn_encoder = RNNEncoder(1000, 32, 16, num_layers=2, has_bias=True,
-                                 dropout=0.1, bidirectional=False)
-        rnn_decoder = RNNDecoder(1000, 32, 16, num_layers=2, has_bias=True,
-                                 dropout=0.1, attention=True, encoder_output_units=16)
+        vocab_size = 1000
+        embedding_size = 32
+        hidden_size = 16
+        num_layers = 2
+        has_bias = True
+        dropout = 0.1
+        bidirectional = False
+        encoder_output_units = 16
+        embedding = nn.Embedding(vocab_size, embedding_size)
+        rnn_layer = nn.RNN(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+                           batch_first=True, dropout=dropout, bidirectional=bidirectional)
+
+        rnn_encoder = Seq2SeqEncoder(embedding, rnn_layer)
+        rnn_decoder = Seq2SeqDecoder(embedding, rnn_layer, dropout=dropout, attention=True,
+                                     encoder_output_units=encoder_output_units)
         rnn = RNN(rnn_encoder, rnn_decoder)
 
         src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
@@ -69,10 +91,9 @@ class TestRNN(unittest.TestCase):
         src_length = Tensor(np.ones([8]), mindspore.int32)
         mask = Tensor(np.ones([8, 16]), mindspore.int32)
 
-        output, attn_scores = rnn(src_tokens, tgt_tokens, src_length, mask=mask)
+        output = rnn(src_tokens, tgt_tokens, src_length, mask=mask)
 
-        assert output.shape == (8, 16, 1000)
-        assert attn_scores.shape == (8, 16, 16)
+        assert output.shape == (8, 1000, 16)
 
 
 class TestLSTM(unittest.TestCase):
@@ -86,10 +107,21 @@ class TestLSTM(unittest.TestCase):
         """
         context.set_context(mode=context.GRAPH_MODE)
 
-        lstm_encoder = LSTMEncoder(1000, 32, 16, num_layers=2, has_bias=True,
-                                   dropout=0.1, bidirectional=False)
-        lstm_decoder = LSTMDecoder(1000, 32, 16, num_layers=2, has_bias=True,
-                                   dropout=0.1, attention=True, encoder_output_units=16)
+        vocab_size = 1000
+        embedding_size = 32
+        hidden_size = 16
+        num_layers = 2
+        has_bias = True
+        dropout = 0.1
+        bidirectional = False
+        encoder_output_units = 16
+        embedding = nn.Embedding(vocab_size, embedding_size)
+        lstm_layer = nn.LSTM(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+                             batch_first=True, dropout=dropout, bidirectional=bidirectional)
+
+        lstm_encoder = Seq2SeqEncoder(embedding, lstm_layer)
+        lstm_decoder = Seq2SeqDecoder(embedding, lstm_layer, dropout=dropout, attention=True,
+                                      encoder_output_units=encoder_output_units)
         lstm = LSTM(lstm_encoder, lstm_decoder)
 
         src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
@@ -97,10 +129,9 @@ class TestLSTM(unittest.TestCase):
         src_length = Tensor(np.ones([8]), mindspore.int32)
         mask = Tensor(np.ones([8, 16]), mindspore.int32)
 
-        output, attn_scores = lstm(src_tokens, tgt_tokens, src_length, mask=mask)
+        output = lstm(src_tokens, tgt_tokens, src_length, mask=mask)
 
-        assert output.shape == (8, 16, 1000)
-        assert attn_scores.shape == (8, 16, 16)
+        assert output.shape == (8, 1000, 16)
 
     def test_lstm_pynative(self):
         """
@@ -108,10 +139,21 @@ class TestLSTM(unittest.TestCase):
         """
         context.set_context(mode=context.PYNATIVE_MODE)
 
-        lstm_encoder = LSTMEncoder(1000, 32, 16, num_layers=2, has_bias=True,
-                                   dropout=0.1, bidirectional=False)
-        lstm_decoder = LSTMDecoder(1000, 32, 16, num_layers=2, has_bias=True,
-                                   dropout=0.1, attention=True, encoder_output_units=16)
+        vocab_size = 1000
+        embedding_size = 32
+        hidden_size = 16
+        num_layers = 2
+        has_bias = True
+        dropout = 0.1
+        bidirectional = False
+        encoder_output_units = 16
+        embedding = nn.Embedding(vocab_size, embedding_size)
+        lstm_layer = nn.LSTM(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+                             batch_first=True, dropout=dropout, bidirectional=bidirectional)
+
+        lstm_encoder = Seq2SeqEncoder(embedding, lstm_layer)
+        lstm_decoder = Seq2SeqDecoder(embedding, lstm_layer, dropout=dropout, attention=True,
+                                      encoder_output_units=encoder_output_units)
         lstm = GRU(lstm_encoder, lstm_decoder)
 
         src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
@@ -119,10 +161,9 @@ class TestLSTM(unittest.TestCase):
         src_length = Tensor(np.ones([8]), mindspore.int32)
         mask = Tensor(np.ones([8, 16]), mindspore.int32)
 
-        output, attn_scores = lstm(src_tokens, tgt_tokens, src_length, mask=mask)
+        output = lstm(src_tokens, tgt_tokens, src_length, mask=mask)
 
-        assert output.shape == (8, 16, 1000)
-        assert attn_scores.shape == (8, 16, 16)
+        assert output.shape == (8, 1000, 16)
 
 
 class TestGRU(unittest.TestCase):
@@ -136,21 +177,31 @@ class TestGRU(unittest.TestCase):
         """
         context.set_context(mode=context.GRAPH_MODE)
 
-        gru_encoder = GRUEncoder(1000, 32, 16, num_layers=2, has_bias=True,
-                                 dropout=0.1, bidirectional=False)
-        gru_decoder = GRUDecoder(1000, 32, 16, num_layers=2, has_bias=True,
-                                 dropout=0.1, attention=True, encoder_output_units=16)
-        gru = RNN(gru_encoder, gru_decoder)
+        vocab_size = 1000
+        embedding_size = 32
+        hidden_size = 16
+        num_layers = 2
+        has_bias = True
+        dropout = 0.1
+        bidirectional = False
+        encoder_output_units = 16
+        embedding = nn.Embedding(vocab_size, embedding_size)
+        gru_layer = nn.GRU(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+                           batch_first=True, dropout=dropout, bidirectional=bidirectional)
+
+        gru_encoder = Seq2SeqEncoder(embedding, gru_layer)
+        gru_decoder = Seq2SeqDecoder(embedding, gru_layer, dropout=dropout, attention=True,
+                                     encoder_output_units=encoder_output_units)
+        gru = GRU(gru_encoder, gru_decoder)
 
         src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         tgt_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         src_length = Tensor(np.ones([8]), mindspore.int32)
         mask = Tensor(np.ones([8, 16]), mindspore.int32)
 
-        output, attn_scores = gru(src_tokens, tgt_tokens, src_length, mask=mask)
+        output = gru(src_tokens, tgt_tokens, src_length, mask=mask)
 
-        assert output.shape == (8, 16, 1000)
-        assert attn_scores.shape == (8, 16, 16)
+        assert output.shape == (8, 1000, 16)
 
     def test_gru_pynative(self):
         """
@@ -158,18 +209,28 @@ class TestGRU(unittest.TestCase):
         """
         context.set_context(mode=context.PYNATIVE_MODE)
 
-        gru_encoder = GRUEncoder(1000, 32, 16, num_layers=2, has_bias=True,
-                                 dropout=0.1, bidirectional=False)
-        gru_decoder = GRUDecoder(1000, 32, 16, num_layers=2, has_bias=True,
-                                 dropout=0.1, attention=True, encoder_output_units=16)
-        gru = RNN(gru_encoder, gru_decoder)
+        vocab_size = 1000
+        embedding_size = 32
+        hidden_size = 16
+        num_layers = 2
+        has_bias = True
+        dropout = 0.1
+        bidirectional = False
+        encoder_output_units = 16
+        embedding = nn.Embedding(vocab_size, embedding_size)
+        gru_layer = nn.GRU(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+                           batch_first=True, dropout=dropout, bidirectional=bidirectional)
+
+        gru_encoder = Seq2SeqEncoder(embedding, gru_layer)
+        gru_decoder = Seq2SeqDecoder(embedding, gru_layer, dropout=dropout, attention=True,
+                                     encoder_output_units=encoder_output_units)
+        gru = GRU(gru_encoder, gru_decoder)
 
         src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         tgt_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         src_length = Tensor(np.ones([8]), mindspore.int32)
         mask = Tensor(np.ones([8, 16]), mindspore.int32)
 
-        output, attn_scores = gru(src_tokens, tgt_tokens, src_length, mask=mask)
+        output = gru(src_tokens, tgt_tokens, src_length, mask=mask)
 
-        assert output.shape == (8, 16, 1000)
-        assert attn_scores.shape == (8, 16, 16)
+        assert output.shape == (8, 1000, 16)
