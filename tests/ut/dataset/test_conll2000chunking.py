@@ -13,49 +13,45 @@
 # limitations under the License.
 # ============================================================================
 """
-Test CoLA
+Test CoNLL2000Chunking
 """
 import os
 import unittest
-from mindnlp.dataset import CoLA
+from mindnlp.dataset import CoNLL2000Chunking
 from mindnlp.dataset import load
 
 
-class TestCoLA(unittest.TestCase):
+class TestCoNLL2000Chunking(unittest.TestCase):
     r"""
-    Test CoLA
+    Test CoNLL2000Chunking
     """
 
     def setUp(self):
         self.input = None
 
-    def test_cola(self):
-        """Test cola"""
+    def test_conll2000chunking(self):
+        """Test CoNLL2000Chunking"""
         num_lines = {
-            "train": 8551,
-            "dev": 527,
-            "test": 516,
+            "train": 8936,
+            "test": 2012,
         }
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
-        dataset_train, dataset_dev, dataset_test = CoLA(
-            root=root, split=("train", "dev", "test")
+        dataset_train, dataset_test = CoNLL2000Chunking(
+            root=root, split=("train", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
-        assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = CoLA(root=root, split="train")
-        dataset_dev = CoLA(root=root, split="dev")
-        dataset_test = CoLA(root=root, split="test")
+        dataset_train = CoNLL2000Chunking(root=root, split="train")
+        dataset_test = CoNLL2000Chunking(root=root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
-        assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    def test_cola_by_register(self):
-        """test cola by register"""
+    def test_conll2000chunking_by_register(self):
+        """test conll2000chunking by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
-            "CoLA",
+            "CoNLL2000Chunking",
             root=root,
-            split=("train", "dev", "test"),
+            split=("train", "test"),
         )

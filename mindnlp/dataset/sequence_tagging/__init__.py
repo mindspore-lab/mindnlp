@@ -13,21 +13,8 @@
 # limitations under the License.
 # ============================================================================
 """
-TextClassification dataset init
+SequenceTagging dataset init
 """
 
-from .agnews import AG_NEWS, AG_NEWS_Process
-from .cola import CoLA
-from .sst2 import SST2
-from .amazonreviewfull import AmazonReviewFull
-from .amazonreviewpolarity import AmazonReviewPolarity
-from .stsb import STSB
-from .dbpedia import DBpedia
-from .imdb import IMDB
-from .mnli import MNLI
-from .mrpc import MRPC
-from .qnli import QNLI
-from .qqp import QQP
-from .wnli import WNLI
-from .rte import RTE
-from .sogounews import SogouNews
+from .conll2000chunking import CoNLL2000Chunking
+from .udpos import UDPOS

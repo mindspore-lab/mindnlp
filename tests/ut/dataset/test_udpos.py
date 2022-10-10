@@ -13,49 +13,49 @@
 # limitations under the License.
 # ============================================================================
 """
-Test CoLA
+Test UDPOS
 """
 import os
 import unittest
-from mindnlp.dataset import CoLA
+from mindnlp.dataset import UDPOS
 from mindnlp.dataset import load
 
 
-class TestCoLA(unittest.TestCase):
+class TestUDPOS(unittest.TestCase):
     r"""
-    Test CoLA
+    Test UDPOS
     """
 
     def setUp(self):
         self.input = None
 
-    def test_cola(self):
-        """Test cola"""
+    def test_udpos(self):
+        """Test UDPOS"""
         num_lines = {
-            "train": 8551,
-            "dev": 527,
-            "test": 516,
+            "train": 12543,
+            "dev": 2002,
+            "test": 2077,
         }
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
-        dataset_train, dataset_dev, dataset_test = CoLA(
+        dataset_train, dataset_dev, dataset_test = UDPOS(
             root=root, split=("train", "dev", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = CoLA(root=root, split="train")
-        dataset_dev = CoLA(root=root, split="dev")
-        dataset_test = CoLA(root=root, split="test")
+        dataset_train = UDPOS(root=root, split="train")
+        dataset_dev = UDPOS(root=root, split="dev")
+        dataset_test = UDPOS(root=root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    def test_cola_by_register(self):
-        """test cola by register"""
+    def test_udpos_by_register(self):
+        """test udpos by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
-            "CoLA",
+            "UDPOS",
             root=root,
             split=("train", "dev", "test"),
         )
