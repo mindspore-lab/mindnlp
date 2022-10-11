@@ -20,10 +20,11 @@ import unittest
 import numpy as np
 
 import mindspore
+from mindspore import nn
 from mindspore import context
 from mindspore import Tensor
 
-from mindnlp.modules import RNNEncoder, LSTMEncoder, GRUEncoder, CNNEncoder
+from mindnlp.modules import Seq2SeqEncoder, CNNEncoder
 
 
 class TestRNNEncoder(unittest.TestCase):
@@ -37,8 +38,18 @@ class TestRNNEncoder(unittest.TestCase):
         """
         context.set_context(mode=context.GRAPH_MODE)
 
-        rnn_encoder = RNNEncoder(1000, 32, 16, num_layers=2, has_bias=True,
-                                 dropout=0.1, bidirectional=False)
+        vocab_size = 1000
+        embedding_size = 32
+        hidden_size = 16
+        num_layers = 2
+        has_bias = True
+        dropout = 0.1
+        bidirectional = False
+        embedding = nn.Embedding(vocab_size, embedding_size)
+        rnn = nn.RNN(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+                     batch_first=True, dropout=dropout, bidirectional=bidirectional)
+
+        rnn_encoder = Seq2SeqEncoder(embedding, rnn)
 
         src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         src_length = Tensor(np.ones([8]), mindspore.int32)
@@ -56,8 +67,18 @@ class TestRNNEncoder(unittest.TestCase):
         """
         context.set_context(mode=context.PYNATIVE_MODE)
 
-        rnn_encoder = RNNEncoder(1000, 32, 16, num_layers=2, has_bias=True,
-                                 dropout=0.1, bidirectional=False)
+        vocab_size = 1000
+        embedding_size = 32
+        hidden_size = 16
+        num_layers = 2
+        has_bias = True
+        dropout = 0.1
+        bidirectional = False
+        embedding = nn.Embedding(vocab_size, embedding_size)
+        rnn = nn.RNN(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+                     batch_first=True, dropout=dropout, bidirectional=bidirectional)
+
+        rnn_encoder = Seq2SeqEncoder(embedding, rnn)
 
         src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         src_length = Tensor(np.ones([8]), mindspore.int32)
@@ -81,8 +102,18 @@ class TestLSTMEncoder(unittest.TestCase):
         """
         context.set_context(mode=context.GRAPH_MODE)
 
-        lstm_encoder = LSTMEncoder(1000, 32, 16, num_layers=2, has_bias=True,
-                                   dropout=0.1, bidirectional=False)
+        vocab_size = 1000
+        embedding_size = 32
+        hidden_size = 16
+        num_layers = 2
+        has_bias = True
+        dropout = 0.1
+        bidirectional = False
+        embedding = nn.Embedding(vocab_size, embedding_size)
+        lstm = nn.LSTM(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+                     batch_first=True, dropout=dropout, bidirectional=bidirectional)
+
+        lstm_encoder = Seq2SeqEncoder(embedding, lstm)
 
         src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         src_length = Tensor(np.ones([8]), mindspore.int32)
@@ -101,8 +132,18 @@ class TestLSTMEncoder(unittest.TestCase):
         """
         context.set_context(mode=context.PYNATIVE_MODE)
 
-        lstm_encoder = LSTMEncoder(1000, 32, 16, num_layers=2, has_bias=True,
-                                   dropout=0.1, bidirectional=False)
+        vocab_size = 1000
+        embedding_size = 32
+        hidden_size = 16
+        num_layers = 2
+        has_bias = True
+        dropout = 0.1
+        bidirectional = False
+        embedding = nn.Embedding(vocab_size, embedding_size)
+        lstm = nn.LSTM(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+                     batch_first=True, dropout=dropout, bidirectional=bidirectional)
+
+        lstm_encoder = Seq2SeqEncoder(embedding, lstm)
 
         src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         src_length = Tensor(np.ones([8]), mindspore.int32)
@@ -127,8 +168,18 @@ class TestGRUEncoder(unittest.TestCase):
         """
         context.set_context(mode=context.GRAPH_MODE)
 
-        gru_encoder = GRUEncoder(1000, 32, 16, num_layers=2, has_bias=True,
-                                 dropout=0.1, bidirectional=False)
+        vocab_size = 1000
+        embedding_size = 32
+        hidden_size = 16
+        num_layers = 2
+        has_bias = True
+        dropout = 0.1
+        bidirectional = False
+        embedding = nn.Embedding(vocab_size, embedding_size)
+        gru = nn.GRU(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+                     batch_first=True, dropout=dropout, bidirectional=bidirectional)
+
+        gru_encoder = Seq2SeqEncoder(embedding, gru)
 
         src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         src_length = Tensor(np.ones([8]), mindspore.int32)
@@ -146,8 +197,18 @@ class TestGRUEncoder(unittest.TestCase):
         """
         context.set_context(mode=context.PYNATIVE_MODE)
 
-        gru_encoder = GRUEncoder(1000, 32, 16, num_layers=2, has_bias=True,
-                                 dropout=0.1, bidirectional=False)
+        vocab_size = 1000
+        embedding_size = 32
+        hidden_size = 16
+        num_layers = 2
+        has_bias = True
+        dropout = 0.1
+        bidirectional = False
+        embedding = nn.Embedding(vocab_size, embedding_size)
+        gru = nn.GRU(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+                     batch_first=True, dropout=dropout, bidirectional=bidirectional)
+
+        gru_encoder = Seq2SeqEncoder(embedding, gru)
 
         src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         src_length = Tensor(np.ones([8]), mindspore.int32)
@@ -170,13 +231,26 @@ class TestCNNEncoder(unittest.TestCase):
         """
         context.set_context(mode=context.GRAPH_MODE)
 
-        cnn_encoder = CNNEncoder(emb_dim=128, num_filter=128, ngram_filter_sizes=(3,))
+        vocab_size = 1000
+        embedding_size = 32
+        num_filter = 128
+        ngram_filter_sizes = (2, 3, 4, 5)
+        output_dim = 16
+        embedding = nn.Embedding(vocab_size, embedding_size)
+        convs = [
+            nn.Conv2d(in_channels=1,
+                      out_channels=num_filter,
+                      kernel_size=(i, embedding_size),
+                      pad_mode="pad") for i in ngram_filter_sizes
+        ]
 
-        input_dim = cnn_encoder.get_input_dim()
-        output_dim = cnn_encoder.get_input_dim()
+        cnn_encoder = CNNEncoder(embedding, convs, output_dim=output_dim)
 
-        assert input_dim == 128
-        assert output_dim == 128
+        src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
+
+        result = cnn_encoder(src_tokens)
+
+        assert result.shape == (8, 16)
 
     def test_cnn_encoder_pynative(self):
         """
@@ -184,10 +258,23 @@ class TestCNNEncoder(unittest.TestCase):
         """
         context.set_context(mode=context.PYNATIVE_MODE)
 
-        cnn_encoder = CNNEncoder(emb_dim=128, num_filter=128, ngram_filter_sizes=(3,))
+        vocab_size = 1000
+        embedding_size = 32
+        num_filter = 128
+        ngram_filter_sizes = (2, 3, 4, 5)
+        output_dim = 16
+        embedding = nn.Embedding(vocab_size, embedding_size)
+        convs = [
+            nn.Conv2d(in_channels=1,
+                      out_channels=num_filter,
+                      kernel_size=(i, embedding_size),
+                      pad_mode="pad") for i in ngram_filter_sizes
+        ]
 
-        input_dim = cnn_encoder.get_input_dim()
-        output_dim = cnn_encoder.get_input_dim()
+        cnn_encoder = CNNEncoder(embedding, convs, output_dim=output_dim)
 
-        assert input_dim == 128
-        assert output_dim == 128
+        src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
+
+        result = cnn_encoder(src_tokens)
+
+        assert result.shape == (8, 16)

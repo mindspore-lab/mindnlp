@@ -16,6 +16,4 @@
 Decoder class
 """
 
-from .rnn_decoder import RNNDecoder
-from .lstm_decoder import LSTMDecoder
-from .gru_decoder import GRUDecoder
+from .seq2seq_decoder import Seq2SeqDecoder

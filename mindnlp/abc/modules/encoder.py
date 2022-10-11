@@ -21,12 +21,19 @@ class EncoderBase(nn.Cell):
     r"""
     Basic class for encoders
 
+    Args:
+        embedding (Cell): The embedding layer.
+
     Inputs:
         - **src_token** (Tensor) - Tokens in the source language with shape [batch, max_len].
         - **src_length** (Tensor) - Lengths of each sentence with shape [batch].
         - **mask** (Tensor) - Its elements identify whether the corresponding input token is padding or not.
             If True, not padding token. If False, padding token. Defaults to None.
     """
+
+    def __init__(self, embedding):
+        super().__init__()
+        self.embedding = embedding
 
     def construct(self, src_token, src_length=None, mask=None):
         raise NotImplementedError("Model must implement the construct method")

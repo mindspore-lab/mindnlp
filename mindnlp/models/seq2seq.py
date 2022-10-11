@@ -48,42 +48,37 @@ class RNN(Seq2seqModel):
             If True, not padding token. If False, padding token. Defaults to None.
 
     Outputs:
-        Tuple, a tuple contains (`output`, `attn_scores`).
+        Tensor, the shape is of `(batch_size, vocab_size, tgt_length)`.
 
     Examples:
-        >>> import numpy as np
-        >>> import mindspore
-        >>> from mindspore import Tensor
-        >>> from text.modules import RNNEncoder, RNNDecoder
-        >>> from text.models import RNN
-        >>> rnn_encoder = RNNEncoder(1000, 32, 16, num_layers=2, has_bias=True,
-        ...                          dropout=0.1, bidirectional=False)
-        >>> rnn_decoder = RNNDecoder(1000, 32, 16, num_layers=2, has_bias=True,
-        ...                          dropout=0.1, attention=True, encoder_output_units=16)
+        >>> vocab_size = 1000
+        >>> embedding_size = 32
+        >>> hidden_size = 16
+        >>> num_layers = 2
+        >>> has_bias = True
+        >>> dropout = 0.1
+        >>> bidirectional = False
+        >>> encoder_output_units = 16
+        >>> embedding = nn.Embedding(vocab_size, embedding_size)
+        >>> rnn_layer = nn.RNN(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+        ...                    batch_first=True, dropout=dropout, bidirectional=bidirectional)
+        >>> rnn_encoder = Seq2SeqEncoder(embedding, rnn_layer)
+        >>> rnn_decoder = Seq2SeqDecoder(embedding, rnn_layer, dropout=dropout, attention=True,
+        ...                              encoder_output_units=encoder_output_units)
         >>> rnn = RNN(rnn_encoder, rnn_decoder)
         >>> src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         >>> tgt_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         >>> src_length = Tensor(np.ones([8]), mindspore.int32)
-        >>> mask = Tensor(np.ones([8, 16], dtype=bool), mindspore.bool_)
-        >>> output, attn_scores = rnn(src_tokens, tgt_tokens, src_length, mask=mask)
+        >>> mask = Tensor(np.ones([8, 16]), mindspore.int32)
+        >>> output = rnn(src_tokens, tgt_tokens, src_length, mask=mask)
         >>> print(output.shape)
-        >>> print(attn_scores.shape)
-        (8, 16, 1000)
-        (8, 16, 16)
+        (8, 1000, 16)
     """
 
-    def __init__(self, encoder, decoder):
-        super().__init__(encoder, decoder)
-        self.encoder = encoder
-        self.decoder = decoder
-
     def construct(self, src_tokens, tgt_tokens, src_length, mask=None):
-        if mask is None:
-            mask = self._gen_mask(src_tokens)
-
-        encoder_out = self.encoder(src_tokens, src_length=src_length, mask=mask)
-        decoder_out = self.decoder(tgt_tokens, encoder_out=encoder_out)
-        return decoder_out
+        decoder_out = super().construct(src_tokens, tgt_tokens, src_length, mask)
+        output = decoder_out[0].transpose((0, 2, 1))
+        return output
 
 
 class LSTM(Seq2seqModel):
@@ -143,41 +138,37 @@ class LSTM(Seq2seqModel):
             If True, not padding token. If False, padding token. Defaults to None.
 
     Outputs:
-        Tuple, a tuple contains (`output`, `attn_scores`).
+        Tensor, the shape is of `(batch_size, vocab_size, tgt_length)`.
 
     Examples:
-        >>> import numpy as np
-        >>> import mindspore
-        >>> from text.modules import LSTMEncoder, LSTMDecoder
-        >>> from text.models import LSTM
-        >>> lstm_encoder = LSTMEncoder(1000, 32, 16, num_layers=2, has_bias=True,
-        ...                            dropout=0.1, bidirectional=False)
-        >>> lstm_decoder = LSTMDecoder(1000, 32, 16, num_layers=2, has_bias=True,
-        ...                            dropout=0.1, attention=True, encoder_output_units=16)
+        >>> vocab_size = 1000
+        >>> embedding_size = 32
+        >>> hidden_size = 16
+        >>> num_layers = 2
+        >>> has_bias = True
+        >>> dropout = 0.1
+        >>> bidirectional = False
+        >>> encoder_output_units = 16
+        >>> embedding = nn.Embedding(vocab_size, embedding_size)
+        >>> lstm_layer = nn.LSTM(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+        ...                      batch_first=True, dropout=dropout, bidirectional=bidirectional)
+        >>> lstm_encoder = Seq2SeqEncoder(embedding, lstm_layer)
+        >>> lstm_decoder = Seq2SeqDecoder(embedding, lstm_layer, dropout=dropout, attention=True,
+        ...                               encoder_output_units=encoder_output_units)
         >>> lstm = LSTM(lstm_encoder, lstm_decoder)
         >>> src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         >>> tgt_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         >>> src_length = Tensor(np.ones([8]), mindspore.int32)
-        >>> mask = Tensor(np.ones([8, 16], dtype=bool), mindspore.bool_)
-        >>> output, attn_scores = lstm(src_tokens, tgt_tokens, src_length, mask=mask)
+        >>> mask = Tensor(np.ones([8, 16]), mindspore.int32)
+        >>> output = lstm(src_tokens, tgt_tokens, src_length, mask=mask)
         >>> print(output.shape)
-        >>> print(attn_scores.shape)
-        (8, 16, 1000)
-        (8, 16, 16)
+        (8, 1000, 16)
     """
 
-    def __init__(self, encoder, decoder):
-        super().__init__(encoder, decoder)
-        self.encoder = encoder
-        self.decoder = decoder
-
     def construct(self, src_tokens, tgt_tokens, src_length, mask=None):
-        if mask is None:
-            mask = self._gen_mask(src_tokens)
-
-        encoder_out = self.encoder(src_tokens, src_length=src_length, mask=mask)
-        decoder_out = self.decoder(tgt_tokens, encoder_out=encoder_out)
-        return decoder_out
+        decoder_out = super().construct(src_tokens, tgt_tokens, src_length, mask)
+        output = decoder_out[0].transpose((0, 2, 1))
+        return output
 
 
 class GRU(Seq2seqModel):
@@ -223,39 +214,34 @@ class GRU(Seq2seqModel):
             If True, not padding token. If False, padding token. Defaults to None.
 
     Outputs:
-        Tuple, a tuple contains (`output`, `attn_scores`).
+        Tensor, the shape is of `(batch_size, vocab_size, tgt_length)`.
 
     Examples:
-        >>> import numpy as np
-        >>> import mindspore
-        >>> from mindspore import Tensor
-        >>> from text.modules import GRUEncoder, GRUDecoder
-        >>> from text.models import GRU
-        >>> gru_encoder = GRUEncoder(1000, 32, 16, num_layers=2, has_bias=True,
-        ...                          dropout=0.1, bidirectional=False)
-        >>> gru_decoder = GRUDecoder(1000, 32, 16, num_layers=2, has_bias=True,
-        ...                          dropout=0.1, attention=True, encoder_output_units=16)
-        >>> gru = RNN(gru_encoder, gru_decoder)
+        >>> vocab_size = 1000
+        >>> embedding_size = 32
+        >>> hidden_size = 16
+        >>> num_layers = 2
+        >>> has_bias = True
+        >>> dropout = 0.1
+        >>> bidirectional = False
+        >>> encoder_output_units = 16
+        >>> embedding = nn.Embedding(vocab_size, embedding_size)
+        >>> gru_layer = nn.GRU(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+        ...                    batch_first=True, dropout=dropout, bidirectional=bidirectional)
+        >>> gru_encoder = Seq2SeqEncoder(embedding, gru_layer)
+        >>> gru_decoder = Seq2SeqDecoder(embedding, gru_layer, dropout=dropout, attention=True,
+        ...                              encoder_output_units=encoder_output_units)
+        >>> gru = GRU(gru_encoder, gru_decoder)
         >>> src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         >>> tgt_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         >>> src_length = Tensor(np.ones([8]), mindspore.int32)
-        >>> mask = Tensor(np.ones([8, 16], dtype=bool), mindspore.bool_)
-        >>> output, attn_scores = gru(src_tokens, tgt_tokens, src_length, mask=mask)
+        >>> mask = Tensor(np.ones([8, 16]), mindspore.int32)
+        >>> output = gru(src_tokens, tgt_tokens, src_length, mask=mask)
         >>> print(output.shape)
-        >>> print(attn_scores.shape)
-        (8, 16, 1000)
-        (8, 16, 16)
+        (8, 1000, 16)
     """
 
-    def __init__(self, encoder, decoder):
-        super().__init__(encoder, decoder)
-        self.encoder = encoder
-        self.decoder = decoder
-
     def construct(self, src_tokens, tgt_tokens, src_length, mask=None):
-        if mask is None:
-            mask = self._gen_mask(src_tokens)
-
-        encoder_out = self.encoder(src_tokens, src_length=src_length, mask=mask)
-        decoder_out = self.decoder(tgt_tokens, encoder_out=encoder_out)
-        return decoder_out
+        decoder_out = super().construct(src_tokens, tgt_tokens, src_length, mask)
+        output = decoder_out[0].transpose((0, 2, 1))
+        return output

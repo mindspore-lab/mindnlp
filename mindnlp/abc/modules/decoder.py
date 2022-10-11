@@ -21,6 +21,9 @@ class DecoderBase(nn.Cell):
     r"""
     Basic class for dedcoders
 
+    Args:
+        embedding (Cell): The embedding layer.
+
     Inputs:
         - **prev_output_tokens** (Tensor) - output tokens for teacher forcing with shape [batch, tgt_len].
         - **encoder_out** (Tensor) - output of encoder.
@@ -29,8 +32,9 @@ class DecoderBase(nn.Cell):
         - **result** (Tensor) - The result vector of decoder.
     """
 
-    def __init__(self):
+    def __init__(self, embedding):
         super().__init__()
+        self.embedding = embedding
         self.softmax = nn.Softmax()
         self.log_softmax = nn.LogSoftmax()
 
