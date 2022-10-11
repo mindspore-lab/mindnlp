@@ -17,6 +17,7 @@ Test YelpReviewFull
 """
 import os
 import unittest
+import pytest
 from mindnlp.dataset import YelpReviewFull
 from mindnlp.dataset import load
 
@@ -29,6 +30,7 @@ class TestYelpReviewFull(unittest.TestCase):
     def setUp(self):
         self.input = None
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_yelpreviewfull(self):
         """Test yelpreviewfull"""
         num_lines = {
@@ -47,6 +49,7 @@ class TestYelpReviewFull(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_yelpreviewfull_by_register(self):
         """test yelpreviewfull by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")

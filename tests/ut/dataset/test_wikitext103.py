@@ -18,6 +18,7 @@ Test WikiText103
 
 import os
 import unittest
+import pytest
 from mindnlp.dataset import WikiText103, load
 
 
@@ -29,6 +30,7 @@ class TestWikiText103(unittest.TestCase):
     def setUp(self):
         self.input = None
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_wikitext103(self):
         """Test WikiText103"""
         num_lines = {
@@ -50,6 +52,7 @@ class TestWikiText103(unittest.TestCase):
         assert dataset_valid.get_dataset_size() == num_lines["valid"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_wikitext103_by_register(self):
         """test wikitext103 by register"""
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")

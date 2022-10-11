@@ -17,6 +17,7 @@ Test IWSLT2017
 """
 import os
 import unittest
+import pytest
 from mindnlp.dataset import IWSLT2017
 from mindnlp.dataset import load
 
@@ -29,6 +30,7 @@ class TestIWSLT2017(unittest.TestCase):
     def setUp(self):
         self.input = None
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_iwslt2017(self):
         """Test IWSLT2017"""
         num_lines = {
@@ -47,6 +49,7 @@ class TestIWSLT2017(unittest.TestCase):
             root=root, split='train', language_pair=('de', 'en'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_iwslt2017_by_register(self):
         """test iwslt2017 by register"""
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")

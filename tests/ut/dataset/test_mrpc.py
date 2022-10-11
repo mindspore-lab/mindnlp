@@ -17,6 +17,7 @@ Test MRPC
 """
 import os
 import unittest
+import pytest
 from mindnlp.dataset import MRPC
 from mindnlp.dataset import load
 
@@ -29,6 +30,7 @@ class TestMRPC(unittest.TestCase):
     def setUp(self):
         self.input = None
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_mrpc(self):
         """Test mrpc"""
         num_lines = {
@@ -46,6 +48,7 @@ class TestMRPC(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_mrpc_by_register(self):
         """test mrpc by register"""
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")

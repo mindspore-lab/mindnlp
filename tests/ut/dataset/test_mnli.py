@@ -17,6 +17,7 @@ Test MNLI
 """
 import os
 import unittest
+import pytest
 from mindnlp.dataset import MNLI
 from mindnlp.dataset import load
 
@@ -29,6 +30,7 @@ class TestMNLI(unittest.TestCase):
     def setUp(self):
         self.input = None
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_mnli(self):
         """Test mnli"""
         num_lines = {
@@ -52,6 +54,7 @@ class TestMNLI(unittest.TestCase):
         assert dataset_dev_matched.get_dataset_size() == num_lines["dev_matched"]
         assert dataset_dev_mismatched.get_dataset_size() == num_lines["dev_mismatched"]
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_mnli_by_register(self):
         """test mnli by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")

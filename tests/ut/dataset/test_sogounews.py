@@ -17,6 +17,7 @@ Test SogouNews
 """
 import os
 import unittest
+import pytest
 from mindnlp.dataset import SogouNews
 from mindnlp.dataset import load
 
@@ -29,6 +30,7 @@ class TestSogouNews(unittest.TestCase):
     def setUp(self):
         self.input = None
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_sogounews(self):
         """Test sogounews"""
         num_lines = {
@@ -47,6 +49,7 @@ class TestSogouNews(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_sogounews_by_register(self):
         """test sogounews by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
