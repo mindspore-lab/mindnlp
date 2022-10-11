@@ -17,6 +17,7 @@ Test STSB
 """
 import os
 import unittest
+import pytest
 from mindnlp.dataset import STSB
 from mindnlp.dataset import load
 
@@ -29,6 +30,7 @@ class TestSTSB(unittest.TestCase):
     def setUp(self):
         self.input = None
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_stsb(self):
         """Test stsb"""
         num_lines = {
@@ -51,6 +53,7 @@ class TestSTSB(unittest.TestCase):
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_agnews_by_register(self):
         """test agnews by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")

@@ -17,6 +17,7 @@ Test QNLI
 """
 import os
 import unittest
+import pytest
 from mindnlp.dataset import QNLI
 from mindnlp.dataset import load
 
@@ -28,6 +29,7 @@ class TestQNLI(unittest.TestCase):
     def setUp(self):
         self.input = None
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_qnli(self):
         """Test qnli"""
         num_lines = {
@@ -50,6 +52,7 @@ class TestQNLI(unittest.TestCase):
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_qnli_by_register(self):
         """test qnli by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")

@@ -18,6 +18,7 @@ Test SQuAD1
 
 import os
 import unittest
+import pytest
 from mindnlp.dataset import SQuAD1, load
 
 
@@ -29,6 +30,7 @@ class TestSQuAD1(unittest.TestCase):
     def setUp(self):
         self.input = None
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_squad1(self):
         """Test SQuAD1"""
         num_lines = {
@@ -45,6 +47,7 @@ class TestSQuAD1(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_squad1_by_register(self):
         """test squad1 by register"""
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")

@@ -17,6 +17,7 @@ Test RTE
 """
 import os
 import unittest
+import pytest
 from mindnlp.dataset import RTE
 from mindnlp.dataset import load
 
@@ -29,6 +30,7 @@ class TestRTE(unittest.TestCase):
     def setUp(self):
         self.input = None
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_rte(self):
         """Test rte"""
         num_lines = {
@@ -51,6 +53,7 @@ class TestRTE(unittest.TestCase):
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_rte_by_register(self):
         """test rte by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")

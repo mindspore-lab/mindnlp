@@ -17,6 +17,7 @@ Test CoNLL2000Chunking
 """
 import os
 import unittest
+import pytest
 from mindnlp.dataset import CoNLL2000Chunking
 from mindnlp.dataset import load
 
@@ -29,6 +30,7 @@ class TestCoNLL2000Chunking(unittest.TestCase):
     def setUp(self):
         self.input = None
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_conll2000chunking(self):
         """Test CoNLL2000Chunking"""
         num_lines = {
@@ -47,6 +49,7 @@ class TestCoNLL2000Chunking(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_conll2000chunking_by_register(self):
         """test conll2000chunking by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
