@@ -31,3 +31,6 @@ from .qqp import QQP
 from .wnli import WNLI
 from .rte import RTE
 from .sogounews import SogouNews
+from .yelpreviewpolarity import YelpReviewPolarity
+from .yelpreviewfull import YelpReviewFull
+from .yahooanswers import YahooAnswers
