@@ -24,7 +24,7 @@ from mindspore import nn
 from mindspore import context
 from mindspore import Tensor
 
-from mindnlp.modules import RNNDecoder
+from mindnlp.modules import Seq2SeqDecoder
 
 
 class TestRNNDecoder(unittest.TestCase):
@@ -50,7 +50,7 @@ class TestRNNDecoder(unittest.TestCase):
         rnn = nn.RNN(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
                      batch_first=True, dropout=dropout, bidirectional=bidirectional)
 
-        rnn_decoder = RNNDecoder(embedding, rnn, dropout=dropout, attention=True,
+        rnn_decoder = Seq2SeqDecoder(embedding, rnn, dropout=dropout, attention=True,
                                      encoder_output_units=encoder_output_units)
 
         tgt_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
@@ -81,7 +81,7 @@ class TestRNNDecoder(unittest.TestCase):
         rnn = nn.RNN(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
                      batch_first=True, dropout=dropout, bidirectional=bidirectional)
 
-        rnn_decoder = RNNDecoder(embedding, rnn, dropout=dropout, attention=True,
+        rnn_decoder = Seq2SeqDecoder(embedding, rnn, dropout=dropout, attention=True,
                                      encoder_output_units=encoder_output_units)
 
         tgt_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
@@ -118,7 +118,7 @@ class TestLSTMDecoder(unittest.TestCase):
         lstm = nn.LSTM(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
                        batch_first=True, dropout=dropout, bidirectional=bidirectional)
 
-        lstm_decoder = RNNDecoder(embedding, lstm, dropout=dropout, attention=True,
+        lstm_decoder = Seq2SeqDecoder(embedding, lstm, dropout=dropout, attention=True,
                                       encoder_output_units=encoder_output_units)
 
         tgt_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
@@ -151,7 +151,7 @@ class TestLSTMDecoder(unittest.TestCase):
         lstm = nn.LSTM(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
                        batch_first=True, dropout=dropout, bidirectional=bidirectional)
 
-        lstm_decoder = RNNDecoder(embedding, lstm, dropout=dropout, attention=True,
+        lstm_decoder = Seq2SeqDecoder(embedding, lstm, dropout=dropout, attention=True,
                                       encoder_output_units=encoder_output_units)
 
         tgt_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
@@ -190,7 +190,7 @@ class TestGRUDecoder(unittest.TestCase):
         gru = nn.GRU(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
                        batch_first=True, dropout=dropout, bidirectional=bidirectional)
 
-        gru_decoder = RNNDecoder(embedding, gru, dropout=dropout, attention=True,
+        gru_decoder = Seq2SeqDecoder(embedding, gru, dropout=dropout, attention=True,
                                      encoder_output_units=encoder_output_units)
 
         tgt_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
@@ -221,7 +221,7 @@ class TestGRUDecoder(unittest.TestCase):
         gru = nn.GRU(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
                        batch_first=True, dropout=dropout, bidirectional=bidirectional)
 
-        gru_decoder = RNNDecoder(embedding, gru, dropout=dropout, attention=True,
+        gru_decoder = Seq2SeqDecoder(embedding, gru, dropout=dropout, attention=True,
                                      encoder_output_units=encoder_output_units)
 
         tgt_tokens = Tensor(np.ones([8, 16]), mindspore.int32)

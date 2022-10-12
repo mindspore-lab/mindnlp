@@ -15,3 +15,5 @@
 """
 Models init
 """
+
+from .seq2seq import RNN, LSTM, GRU

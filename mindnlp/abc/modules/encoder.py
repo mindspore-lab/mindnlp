@@ -35,7 +35,7 @@ class EncoderBase(nn.Cell):
         super().__init__()
         self.embedding = embedding
 
-    def construct(self, src_token, src_length=None):
+    def construct(self, src_token, src_length=None, mask=None):
         raise NotImplementedError("Model must implement the construct method")
 
     def reorder_encoder_out(self, encoder_out, new_order):

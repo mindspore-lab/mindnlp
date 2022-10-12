@@ -23,7 +23,7 @@ import mindspore.numpy as mnp
 from mindnlp.abc import DecoderBase
 from mindnlp.modules.attentions import ScaledDotAttention
 
-class RNNDecoder(DecoderBase):
+class Seq2SeqDecoder(DecoderBase):
     r"""
     Seq2Seq Decoder.
 

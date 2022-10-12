@@ -19,10 +19,8 @@ IMDB dataset
 
 import os
 import re
-import string
 import tarfile
 from typing import Union, Tuple
-import six
 from mindspore.dataset import GeneratorDataset
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.register import load
@@ -55,8 +53,7 @@ class Imdb:
             tf = tarf.next()
             while tf is not None:
                 if bool(pattern.match(tf.name)):
-                    self._text.append(str(tarf.extractfile(tf).read().rstrip(six.b("\n\r"))
-                                      .translate(None, six.b(string.punctuation)).lower()).split())
+                    self._text.append(str(tarf.extractfile(tf).read()))
                     self._label.append(self.label_map[label])
                 tf = tarf.next()
 

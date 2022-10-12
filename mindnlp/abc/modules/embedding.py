@@ -18,6 +18,7 @@ __all__ = [
     "TokenEmbedding"
 ]
 
+from abc import abstractmethod
 from mindspore import nn
 from mindspore import ops
 from mindspore import Parameter, Tensor
@@ -89,3 +90,11 @@ class TokenEmbedding(nn.Cell):
         output_for_reshape = ops.gather(self.embedding_table, flat_ids, 0)
         output = ops.reshape(output_for_reshape, out_shape)
         return output
+
+    @abstractmethod
+    def from_pretrained(self, url: str):
+        r"""
+        Creates Embedding.
+        """
+
+        raise NotImplementedError
