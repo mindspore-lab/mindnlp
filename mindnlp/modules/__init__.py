@@ -17,5 +17,6 @@
 from .attentions import ScaledDotAttention, SelfAttention, MutiHeadAttention, \
 BinaryAttention, AdditiveAttention, CosineAttention, LocationAwareAttention, \
 LinearAttention
-from .encoder import *
-from .decoder import *
+from .encoder import RNNEncoder, CNNEncoder
+from .decoder import RNNDecoder
+from .embeddings import Fasttext, Word2vec, Glove
