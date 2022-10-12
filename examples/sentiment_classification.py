@@ -41,8 +41,111 @@ from mindspore.common.initializer import Uniform, HeUniform
 from mindnlp.common.metrics import Accuracy
 from mindnlp.engine.trainer import Trainer
 from mindnlp.abc import Seq2vecModel
-from mindnlp.dataset import load
-from mindnlp.modules import Glove
+from mindnlp.modules import LSTMEncoder
+
+cache_dir = Path.home() / '.mindspore_examples'
+
+
+def http_get(url: str, temp_file: IO):
+    """
+    Use requests to download dataset
+    """
+    req = requests.get(url, stream=True)
+    content_length = req.headers.get('Content-Length')
+    total = int(content_length) if content_length is not None else None
+    progress = tqdm(unit='B', total=total)
+    for chunk in req.iter_content(chunk_size=1024):
+        if chunk:
+            progress.update(len(chunk))
+            temp_file.write(chunk)
+    progress.close()
+
+
+def download(file_name: str, url: str):
+    """
+    Download dataset
+    """
+    if not os.path.exists(cache_dir):
+        os.makedirs(cache_dir)
+    cache_path = os.path.join(cache_dir, file_name)
+    cache_exist = os.path.exists(cache_path)
+    if not cache_exist:
+        with tempfile.NamedTemporaryFile() as temp_file:
+            http_get(url, temp_file)
+            temp_file.flush()
+            temp_file.seek(0)
+            with open(cache_path, 'wb') as cache_file:
+                shutil.copyfileobj(temp_file, cache_file)
+    return cache_path
+
+
+class IMDBData():
+    """
+    IMDB dataset
+    """
+    label_map = {
+        "pos": 1,
+        "neg": 0
+    }
+    def __init__(self, path, mode="train"):
+        self.mode = mode
+        self.path = path
+        self.docs, self.labels = [], []
+
+        self._load("pos")
+        self._load("neg")
+
+    def _load(self, label):
+        pattern = re.compile(r"aclImdb/{}/{}/.*\.txt$".format(self.mode, label))
+        with tarfile.open(self.path) as tarf:
+            tf = tarf.next()
+            while tf is not None:
+                if bool(pattern.match(tf.name)):
+                    self.docs.append(str(tarf.extractfile(tf).read().rstrip(six.b("\n\r"))
+                                         .translate(None, six.b(string.punctuation)).lower()).split())
+                    self.labels.append([self.label_map[label]])
+                tf = tarf.next()
+
+    def __getitem__(self, idx):
+        return self.docs[idx], self.labels[idx]
+
+    def __len__(self):
+        return len(self.docs)
+
+
+def load_imdb(data_path):
+    """
+    load IMDB dataset
+    """
+    train_data = ds.GeneratorDataset(IMDBData(data_path, "train"), column_names=["src_tokens", "label"], shuffle=True)
+    test_data = ds.GeneratorDataset(IMDBData(data_path, "test"), column_names=["src_tokens", "label"], shuffle=False)
+    return train_data, test_data
+
+
+def load_glove(embed_path):
+    """
+    load glove
+    """
+    glove_100d_path = os.path.join(cache_dir, 'glove.6B.100d.txt')
+    if not os.path.exists(glove_100d_path):
+        glove_zip = zipfile.ZipFile(embed_path)
+        glove_zip.extractall(cache_dir)
+
+    glove_embeddings = []
+    tokens = []
+    with open(glove_100d_path, encoding='utf-8') as gf:
+        for glove in gf:
+            word, embedding = glove.split(maxsplit=1)
+            tokens.append(word)
+            glove_embeddings.append(np.fromstring(embedding, dtype=np.float32, sep=' '))
+    # 添加 <unk>, <pad> 两个特殊占位符对应的embedding
+    glove_embeddings.append(np.random.rand(100))
+    glove_embeddings.append(np.zeros((100,), np.float32))
+
+    glove_vocab = ds.text.Vocab.from_list(tokens, special_tokens=["<unk>", "<pad>"], special_first=False)
+    glove_embeddings = np.array(glove_embeddings).astype(np.float32)
+    return glove_vocab, glove_embeddings
+
 
 class Head(nn.Cell):
     """
@@ -77,14 +180,18 @@ class SentimentClassification(Seq2vecModel):
         output = self.head(hidden)
         return output
 
+
 # load datasets
-imdb_train, imdb_test = load('imdb')
-embedding, vocab = Glove.from_pretrained('6B', 100)
+glove_path = download('glove.6B.zip', 'https://mindspore-website.obs.myhuaweicloud.com/notebook/datasets/glove.6B.zip')
+vocab, embeddings = load_glove(glove_path)
+vocab_size, embedding_dim = embeddings.shape
 
 lookup_op = ds.text.Lookup(vocab, unknown_token='<unk>')
 pad_op = ds.transforms.PadEnd([500], pad_value=vocab.tokens_to_ids('<pad>'))
 type_cast_op = ds.transforms.TypeCast(ms.float32)
 
+imdb_path = download('aclImdb_v1.tar.gz', 'https://mindspore-website.obs.myhuaweicloud.com/notebook/datasets/aclImdb_v1.tar.gz')
+imdb_train, imdb_test = load_imdb(imdb_path)
 imdb_train = imdb_train.map(operations=[lookup_op, pad_op], input_columns=['src_tokens'])
 imdb_train = imdb_train.map(operations=[type_cast_op], input_columns=['label'])
 
@@ -101,20 +208,20 @@ bidirectional = True
 drop = 0.5
 lr = 0.001
 
-# sentiment_encoder = LSTMEncoder(vocab_size, embedding_dim, hidden_size, num_layers=num_layers,
-#                                 dropout=drop, bidirectional=bidirectional)
-# sentiment_head = Head(hidden_size, output_size)
-# net = SentimentClassification(sentiment_encoder, sentiment_head, drop)
+sentiment_encoder = LSTMEncoder(vocab_size, embedding_dim, hidden_size, num_layers=num_layers,
+                                dropout=drop, bidirectional=bidirectional)
+sentiment_head = Head(hidden_size, output_size)
+net = SentimentClassification(sentiment_encoder, sentiment_head, drop)
 
-# loss = nn.BCELoss(reduction='mean')
-# optimizer = nn.Adam(net.trainable_params(), learning_rate=lr)
+loss = nn.BCELoss(reduction='mean')
+optimizer = nn.Adam(net.trainable_params(), learning_rate=lr)
 
-# # define metrics
-# metric = Accuracy()
+# define metrics
+metric = Accuracy()
 
-# # define trainer
+# define trainer
 
-# trainer = Trainer(network=net, train_dataset=imdb_train, eval_dataset=imdb_valid, metrics=metric,
-#                   epochs=2, batch_size=64, loss_fn=loss, optimizer=optimizer)
-# trainer.run(tgt_columns="label")
-# print("end train")
+trainer = Trainer(network=net, train_dataset=imdb_train, eval_dataset=imdb_valid, metrics=metric,
+                  epochs=2, batch_size=64, loss_fn=loss, optimizer=optimizer)
+trainer.run(tgt_columns="label")
+print("end train")

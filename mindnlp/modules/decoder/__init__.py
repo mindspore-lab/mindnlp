@@ -16,4 +16,4 @@
 Decoder class
 """
 
-from .rnn_decoder import RNNDecoder
+from .seq2seq_decoder import Seq2SeqDecoder

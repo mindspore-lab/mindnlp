@@ -16,30 +16,23 @@
 
 import os
 import re
-import numpy as np
+import zipfile
+import tarfile
+import mindspore
 from mindspore import nn
+import mindspore.numpy as mnp
 from mindspore import ops
 from mindspore import Tensor
 from mindspore.dataset.text.utils import Vocab
-from mindnlp.utils import cache_file, unzip
+from mindnlp.utils import download
 from mindnlp.abc.modules.embedding import TokenEmbedding
-from mindnlp.configs import DEFAULT_ROOT
 
 
 class Glove(TokenEmbedding):
     r"""
     Create vocab and Embedding from a given pre-trained vector file.
     """
-    urls = {
-        "42B": "http://nlp.stanford.edu/data/glove.42B.300d.zip",
-        "840B": "http://nlp.stanford.edu/data/glove.840B.300d.zip",
-        "twitter.27B": "http://nlp.stanford.edu/data/glove.twitter.27B.zip",
-        "6B": "http://nlp.stanford.edu/data/glove.6B.zip",
-    }
-
-    dims = [50, 100, 200, 300]
-
-    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.0, word_dropout=0):
+    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.5, word_dropout=0):
         r"""
         Initize Vocab and Embedding by a given pre-trained word embedding.
 
@@ -57,12 +50,11 @@ class Glove(TokenEmbedding):
         self.embed = init_embed
         self._embed_size = init_embed.shape[1]
         self.requires_grad = requires_grad
-        self.dropout = nn.Dropout(1 - dropout)
+        self.dropout = nn.Dropout(dropout)
         self.word_dropout = word_dropout
 
     @classmethod
-    def from_pretrained(cls, name='6B', dims=300, root=DEFAULT_ROOT,
-                        special_tokens=("<unk>", "<pad>"), special_first=False):
+    def from_pretrained(cls, url: str):
         r"""
         Creates Embedding instance from given 2-dimensional FloatTensor.
 
@@ -73,19 +65,50 @@ class Glove(TokenEmbedding):
             - ** embeddings ** - Word vector extracted from the file.
 
         """
-        if name not in cls.urls:
-            raise ValueError(f"The argument 'name' must in {cls.urls.keys()}, but got {name}.")
-        if dims not in cls.dims:
-            raise ValueError(f"The argument 'dims' must in {cls.dims}, but got {dims}.")
-        cache_dir = os.path.join(root, "embeddings", "Glove")
+        file_name = re.sub(r".+/", "", url)
+        download.cache_file(filename=file_name, cache_dir=None, url=url)
+        cache_dir = download.get_cache_path()
 
-        url = cls.urls[name]
-        download_file_name = re.sub(r".+/", "", url)
-        glove_file_name = f"glove.{name}.{dims}d.txt"
-        path, _ = cache_file(filename=download_file_name, cache_dir=cache_dir, url=url)
-        unzip(path, cache_dir)
+        suffix = ''
+        if file_name.endswith('.tar.gz'):
+            suffix = '.tar.gz'
+        elif file_name.endswith('.zip'):
+            suffix = '.zip'
 
-        glove_file_path = os.path.join(cache_dir, glove_file_name)
+        name_rar = file_name
+        name_dir = name_rar.replace(suffix, '')
+        glove_dir_path = os.path.join(cache_dir, name_dir)
+        glove_compress_path = os.path.join(cache_dir, file_name)
+
+        if not os.path.isdir(glove_dir_path):
+            if suffix == '.tar.gz':
+                glove_tar = tarfile.open(glove_compress_path, 'r')
+                glove_tar.extractall(cache_dir)
+                glove_tar.close()
+            elif file_name == '.zip':
+                glove_zip = zipfile.ZipFile(glove_compress_path)
+                glove_zip.extractall(cache_dir)
+                glove_zip.close()
+
+        file_suffix = ''
+        if os.path.isdir(glove_dir_path):
+            while os.path.isdir(glove_dir_path):
+                next_dir_path = os.path.join(glove_dir_path, name_dir)
+                if not os.path.isdir(next_dir_path):
+                    for file in os.listdir(glove_dir_path):
+                        if file.startswith(name_dir):
+                            file_suffix = os.path.splitext(file)[-1]
+                    break
+                glove_dir_path = next_dir_path
+            name_txt = name_dir + '.50d' + file_suffix
+            glove_file_path = os.path.join(glove_dir_path, name_txt)
+        else:
+            for file in os.listdir(cache_dir):
+                if file.startswith(name_dir):
+                    file_suffix = os.path.splitext(file)[-1]
+                    break
+            name_txt = name_dir + '.50d' + file_suffix
+            glove_file_path = os.path.join(cache_dir, name_txt)
 
         embeddings = []
         tokens = []
@@ -93,14 +116,19 @@ class Glove(TokenEmbedding):
             for glove in file:
                 word, embedding = glove.split(maxsplit=1)
                 tokens.append(word)
-                embeddings.append(np.fromstring(embedding, dtype=np.float32, sep=' '))
+                arr = embedding.split(' ')
+                float_arr = list(map(float, arr))
+                float_tensor = Tensor(float_arr)
+                float32_arr = mnp.asfarray(float_tensor)
 
-        embeddings.append(np.random.rand(dims))
-        embeddings.append(np.zeros((dims,), np.float32))
+                embeddings.append(float32_arr)
 
-        vocab = Vocab.from_list(tokens, special_tokens, special_first)
-        embeddings = np.array(embeddings).astype(np.float32)
-        return cls(vocab, Tensor(embeddings), True, 0.5, 0), vocab
+        embeddings.append(mnp.rand(50))
+        embeddings.append(mnp.zeros((50,), mindspore.float32))
+
+        vocab = Vocab.from_list(tokens, special_tokens=["<unk>", "<pad>"], special_first=False)
+        embeddings = mnp.array(embeddings).astype(mindspore.float32)
+        return cls(vocab, Tensor(embeddings), True, 0.5, 0)
 
     def construct(self, ids):
         r"""

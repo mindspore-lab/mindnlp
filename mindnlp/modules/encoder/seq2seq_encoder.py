@@ -17,7 +17,7 @@
 
 from mindnlp.abc import EncoderBase
 
-class RNNEncoder(EncoderBase):
+class Seq2SeqEncoder(EncoderBase):
     r"""
     Seq2Seq Encoder.
 
@@ -67,7 +67,7 @@ class RNNEncoder(EncoderBase):
         self.rnn = rnn
 
     def construct(self, src_token, src_length=None, mask=None):
-        if mask is not None:
+        if mask is None:
             src_token = src_token * mask
         embed = self.embedding(src_token)
 
