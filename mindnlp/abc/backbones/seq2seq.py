@@ -47,7 +47,7 @@ class Seq2seqModel(BaseModel):
         if mask is None:
             mask = self._gen_mask(src_tokens)
 
-        encoder_out = self.encoder(src_tokens, src_length=src_length, mask=mask)
+        encoder_out = self.encoder(src_tokens, src_length=src_length)
 
         decoder_out = self.decoder(tgt_tokens, encoder_out=encoder_out)
         return decoder_out

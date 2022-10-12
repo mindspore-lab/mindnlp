@@ -30,7 +30,7 @@ class TestGetCachePath(unittest.TestCase):
 
     def test_get_cache_path(self):
         default_cache_path = get_cache_path()
-        assert default_cache_path == (os.path.join(os.path.expanduser('~'), ".text"))
+        assert default_cache_path == (os.path.join(os.path.expanduser('~'), ".mindnlp"))
 
 class TestCheckMd5(unittest.TestCase):
     r"""

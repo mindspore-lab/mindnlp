@@ -24,7 +24,7 @@ from mindspore import nn
 from mindspore import context
 from mindspore import Tensor
 
-from mindnlp.modules import Seq2SeqEncoder, CNNEncoder
+from mindnlp.modules import RNNEncoder, CNNEncoder
 
 
 class TestRNNEncoder(unittest.TestCase):
@@ -49,7 +49,7 @@ class TestRNNEncoder(unittest.TestCase):
         rnn = nn.RNN(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
                      batch_first=True, dropout=dropout, bidirectional=bidirectional)
 
-        rnn_encoder = Seq2SeqEncoder(embedding, rnn)
+        rnn_encoder = RNNEncoder(embedding, rnn)
 
         src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         src_length = Tensor(np.ones([8]), mindspore.int32)
@@ -78,7 +78,7 @@ class TestRNNEncoder(unittest.TestCase):
         rnn = nn.RNN(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
                      batch_first=True, dropout=dropout, bidirectional=bidirectional)
 
-        rnn_encoder = Seq2SeqEncoder(embedding, rnn)
+        rnn_encoder = RNNEncoder(embedding, rnn)
 
         src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         src_length = Tensor(np.ones([8]), mindspore.int32)
@@ -113,7 +113,7 @@ class TestLSTMEncoder(unittest.TestCase):
         lstm = nn.LSTM(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
                      batch_first=True, dropout=dropout, bidirectional=bidirectional)
 
-        lstm_encoder = Seq2SeqEncoder(embedding, lstm)
+        lstm_encoder = RNNEncoder(embedding, lstm)
 
         src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         src_length = Tensor(np.ones([8]), mindspore.int32)
@@ -143,7 +143,7 @@ class TestLSTMEncoder(unittest.TestCase):
         lstm = nn.LSTM(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
                      batch_first=True, dropout=dropout, bidirectional=bidirectional)
 
-        lstm_encoder = Seq2SeqEncoder(embedding, lstm)
+        lstm_encoder = RNNEncoder(embedding, lstm)
 
         src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         src_length = Tensor(np.ones([8]), mindspore.int32)
@@ -179,7 +179,7 @@ class TestGRUEncoder(unittest.TestCase):
         gru = nn.GRU(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
                      batch_first=True, dropout=dropout, bidirectional=bidirectional)
 
-        gru_encoder = Seq2SeqEncoder(embedding, gru)
+        gru_encoder = RNNEncoder(embedding, gru)
 
         src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         src_length = Tensor(np.ones([8]), mindspore.int32)
@@ -208,7 +208,7 @@ class TestGRUEncoder(unittest.TestCase):
         gru = nn.GRU(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
                      batch_first=True, dropout=dropout, bidirectional=bidirectional)
 
-        gru_encoder = Seq2SeqEncoder(embedding, gru)
+        gru_encoder = RNNEncoder(embedding, gru)
 
         src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         src_length = Tensor(np.ones([8]), mindspore.int32)
