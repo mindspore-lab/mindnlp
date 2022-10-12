@@ -25,7 +25,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 import requests
 from tqdm import tqdm
-
+from mindnlp.configs import DEFAULT_ROOT
 
 def get_cache_path():
     r"""
@@ -49,7 +49,7 @@ def get_cache_path():
             return cache_dir
         raise NotADirectoryError(
             f"{os.environ['CACHE_DIR']} is not a directory.")
-    cache_dir = os.path.expanduser(os.path.join("~", ".text"))
+    cache_dir = DEFAULT_ROOT
 
     return cache_dir
 
@@ -99,8 +99,7 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None)
             raise RuntimeError(
                 f"Download from {url} failed. " "Retry limit reached")
 
-        req = requests.get(url, stream=True, verify=False,
-                           timeout=10, proxies=proxies)
+        req = requests.get(url, stream=True, timeout=10, proxies=proxies)
         if req.status_code != 200:
             raise RuntimeError(
                 f"Downloading from {url} failed with code {req.status_code}!"
