@@ -20,9 +20,10 @@ AmazonReviewFull dataset
 import os
 import csv
 from typing import Union, Tuple
-from mindspore.dataset import GeneratorDataset
+from mindspore.dataset import GeneratorDataset, text
+from mindspore.dataset.text import BasicTokenizer
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.register import load, process
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import untar
 
@@ -112,3 +113,43 @@ def AmazonReviewFull(
     if len(path_list) == 1:
         return datasets_list[0]
     return datasets_list
+
+@process.register
+def AmazonReviewFull_Process(dataset, column="title_text", tokenizer=BasicTokenizer(), vocab=None):
+    """
+    the process of the AmazonReviewFull dataset
+
+    Args:
+        dataset (GeneratorDataset): AmazonReviewFull dataset.
+        column (str): the column needed to be transpormed of the AmazonReviewFull dataset.
+        tokenizer (TextTensorOperation): tokenizer you choose to tokenize the text dataset.
+        vocab (Vocab): vocabulary object, used to store the mapping of token and index.
+
+    Returns:
+        - **dataset** (MapDataset) - dataset after transforms.
+        - **Vocab** (Vocab) - vocab created from dataset
+
+    Raises:
+        TypeError: If `input_column` is not a string.
+
+    Examples:
+        >>>from mindnlp.dataset.amazonreviewfull import Amazonreviewfull
+        >>>train_dataset, test_dataset = Amazonreviewfull()
+        >>>column = "title_text"
+        >>>tokenizer = BasicTokenizer()
+        >>>amazonreviewfull_dataset, vocab = AmazonReviewFull_Process(train_dataset, column, tokenizer)
+        >>>amazonreviewfull_dataset = amazonreviewfull_dataset.create_tuple_iterator()
+        >>>print(next(amazonreviewfull_dataset))
+        [Tensor(shape=[], dtype=Int64, value= '3'), Tensor(shape=[27], dtype=Int32, value= \
+        [    53,     37, 912165,   6822,     11,      6,     31,   2589,     13,      5,   \
+        8221,    509,    114,   5478,     16, 126088,      2,     16,     82,    141,      5,  \
+        30284,   2633,     50,      8,      9,     15])]
+
+    """
+
+    if vocab is None:
+        dataset = dataset.map(tokenizer,  input_columns=column)
+        vocab = text.Vocab.from_dataset(dataset, columns=column)
+        return dataset.map(text.Lookup(vocab), input_columns=column), vocab
+    dataset = dataset.map(tokenizer,  input_columns=column)
+    return dataset.map(text.Lookup(vocab), input_columns=column), vocab

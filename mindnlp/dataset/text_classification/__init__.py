@@ -19,8 +19,8 @@ TextClassification dataset init
 from .agnews import AG_NEWS, AG_NEWS_Process
 from .cola import CoLA
 from .sst2 import SST2
-from .amazonreviewfull import AmazonReviewFull
-from .amazonreviewpolarity import AmazonReviewPolarity
+from .amazonreviewfull import AmazonReviewFull, AmazonReviewFull_Process
+from .amazonreviewpolarity import AmazonReviewPolarity, AmazonReviewPolarity_Process
 from .stsb import STSB
 from .dbpedia import DBpedia
 from .imdb import IMDB

@@ -20,9 +20,10 @@ AmazonReviewPolarity dataset
 import os
 import csv
 from typing import Union, Tuple
-from mindspore.dataset import GeneratorDataset
+from mindspore.dataset import GeneratorDataset, text
+from mindspore.dataset.text import BasicTokenizer
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.register import load, process
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import untar
 
@@ -113,3 +114,39 @@ def AmazonReviewPolarity(
     if len(path_list) == 1:
         return datasets_list[0]
     return datasets_list
+
+@process.register
+def AmazonReviewPolarity_Process(dataset, column="title_text", tokenizer=BasicTokenizer(), vocab=None):
+    """
+    the process of the AmazonReviewPolarity dataset
+
+    Args:
+        dataset (GeneratorDataset): AmazonReviewPolarity dataset.
+        column (str): the column needed to be transpormed of the AmazonReviewPolarity dataset.
+        tokenizer (TextTensorOperation): tokenizer you choose to tokenize the text dataset.
+        vocab (Vocab): vocabulary object, used to store the mapping of token and index.
+
+    Returns:
+        - **dataset** (MapDataset) - dataset after transforms.
+        - **Vocab** (Vocab) - vocab created from dataset
+
+    Raises:
+        TypeError: If `input_column` is not a string.
+
+    Examples:
+        >>>from mindnlp.dataset.amazonreviewpolarity import AmazonReviewPolarity
+        >>>train_dataset, test_dataset = AmazonReviewPolarity()
+        >>>column = "title_text"
+        >>>tokenizer = BasicTokenizer()
+        >>>amazonreviewpolarity_dataset, vocab = AmazonReviewPolarity_Process(train_dataset, column, tokenizer)
+        >>>amazonreviewpolarity_dataset = amazonreviewpolarity_dataset.create_tuple_iterator()
+        >>>print(next(amazonreviewpolarity_dataset))
+
+    """
+
+    if vocab is None:
+        dataset = dataset.map(tokenizer,  input_columns=column)
+        vocab = text.Vocab.from_dataset(dataset, columns=column)
+        return dataset.map(text.Lookup(vocab), input_columns=column), vocab
+    dataset = dataset.map(tokenizer,  input_columns=column)
+    return dataset.map(text.Lookup(vocab), input_columns=column)

@@ -102,7 +102,6 @@ def AG_NEWS(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", 
         return datasets_list[0]
     return datasets_list
 
-
 @process.register
 def AG_NEWS_Process(dataset, column="text", tokenizer=BasicTokenizer(), vocab=None):
     """
@@ -116,6 +115,7 @@ def AG_NEWS_Process(dataset, column="text", tokenizer=BasicTokenizer(), vocab=No
 
     Returns:
         - **dataset** (MapDataset) - dataset after transforms.
+        - **Vocab** (Vocab) - vocab created from dataset
 
     Raises:
         TypeError: If `input_column` is not a string.
@@ -125,7 +125,7 @@ def AG_NEWS_Process(dataset, column="text", tokenizer=BasicTokenizer(), vocab=No
         >>>train_dataset, test_dataset = AG_NEWS()
         >>>column = "text"
         >>>tokenizer = BasicTokenizer()
-        >>>agnews_dataset = AG_NEWS_Process(train_dataset, column, tokenizer)
+        >>>agnews_dataset, vocab = AG_NEWS_Process(train_dataset, column, tokenizer)
         >>>agnews_dataset = agnews_dataset.create_tuple_iterator()
         >>>print(next(agnews_dataset))
         [Tensor(shape=[], dtype=String, value= '3'), Tensor(shape=[37], dtype=Int32, value=\
@@ -138,6 +138,6 @@ def AG_NEWS_Process(dataset, column="text", tokenizer=BasicTokenizer(), vocab=No
     if vocab is None:
         dataset = dataset.map(tokenizer,  input_columns=column)
         vocab = text.Vocab.from_dataset(dataset, columns=column, special_tokens=["<pad>", "<unk>"])
-        return dataset.map(text.Lookup(vocab), input_columns=column)
+        return dataset.map(text.Lookup(vocab), input_columns=column), vocab
     dataset = dataset.map(tokenizer,  input_columns=column)
     return dataset.map(text.Lookup(vocab), input_columns=column)
