@@ -18,8 +18,10 @@ Test AmazonReviewPolarity
 import os
 import unittest
 import pytest
-from mindnlp.dataset import AmazonReviewPolarity
-from mindnlp.dataset import load
+import mindspore as ms
+from mindspore.dataset.text import BasicTokenizer
+from mindnlp.dataset import AmazonReviewPolarity, AmazonReviewPolarity_Process
+from mindnlp.dataset import load, process
 
 
 class TestAmazonReviewPolarity(unittest.TestCase):
@@ -58,3 +60,45 @@ class TestAmazonReviewPolarity(unittest.TestCase):
             root=root,
             split=("train", "test"),
         )
+
+class TestAmazonReviewPolarityProcess(unittest.TestCase):
+    r"""
+    Test AmazonReviewPolarity_Process
+    """
+
+    def setUp(self):
+        self.input = None
+
+    @pytest.mark.skip(reason="this ut has already tested")
+    def test_amazonreviewpolarity_process(self):
+        r"""
+        Test AmazonReviewPolarity_Process
+        """
+
+        train_dataset, _ = AmazonReviewPolarity()
+        train_dataset, vocab = AmazonReviewPolarity_Process(train_dataset)
+
+        train_dataset =train_dataset.create_tuple_iterator()
+        assert (next(train_dataset)[1]).dtype == ms.int32
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break
+
+    @pytest.mark.skip(reason="this ut has already tested")
+    def test_amazonreviewpolarity_process_by_register(self):
+        """test AmazonReviewPolarity process by register"""
+        train_dataset, _ = AmazonReviewPolarity()
+        train_dataset, vocab = process('AmazonReviewPolarity',
+                                dataset=train_dataset,
+                                column="title_text",
+                                tokenizer=BasicTokenizer(),
+                                vocab=None
+                                )
+
+        train_dataset = train_dataset.create_tuple_iterator()
+        assert (next(train_dataset)[1]).dtype == ms.int32
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break
