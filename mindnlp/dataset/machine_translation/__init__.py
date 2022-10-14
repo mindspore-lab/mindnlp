@@ -18,4 +18,4 @@ MachineTranslation dataset init
 
 from .multi30k import Multi30k, Multi30k_Process
 from .iwslt2016 import IWSLT2016
-from .iwslt2017 import IWSLT2017
+from .iwslt2017 import IWSLT2017, IWSLT2017_Process
