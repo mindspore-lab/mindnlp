@@ -94,8 +94,9 @@ class CNNEncoder(EncoderBase):
 
     def construct(self, src_token, src_length=None, mask=None):
         """Construct"""
-        if mask:
-            src_token = src_token * mask
+        if mask is None:
+            mask = self._gen_mask(src_token)
+        src_token = src_token * mask
         embed = self.embedding(src_token)
 
         embed = ops.expand_dims(embed, 1)

@@ -67,8 +67,9 @@ class RNNEncoder(EncoderBase):
         self.rnn = rnn
 
     def construct(self, src_token, src_length=None, mask=None):
-        if mask is not None:
-            src_token = src_token * mask
+        if mask is None:
+            mask = self._gen_mask(src_token)
+        src_token = src_token * mask
         embed = self.embedding(src_token)
 
         output, hiddens_n = self.rnn(embed, seq_length=src_length)
