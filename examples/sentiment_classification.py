@@ -26,7 +26,7 @@ import mindspore.dataset as ds
 from mindspore.common.initializer import Uniform, HeUniform
 
 from mindnlp.modules import RNNEncoder
-from mindnlp.engine.metrics import Accuracy
+from mindnlp.common.metrics import Accuracy
 from mindnlp.engine.trainer import Trainer
 from mindnlp.abc import Seq2vecModel
 from mindnlp.dataset import load
@@ -59,8 +59,9 @@ class SentimentClassification(Seq2vecModel):
         self.encoder = encoder
         self.head = head
 
-    def construct(self, text):
+    def construct(self, text, mask=None):
         _, (hidden, _), _ = self.encoder(text)
+        hidden = self.dropout(hidden)
         output = self.head(hidden)
         return output
 
@@ -74,7 +75,7 @@ lr = 0.001
 
 # load datasets
 imdb_train, imdb_test = load('imdb')
-embedding, vocab = Glove.from_pretrained('6B', 100, special_tokens=["<unk>", "<pad>"], dropout=drop)
+embedding, vocab = Glove.from_pretrained('6B', 100, special_tokens=["<unk>", "<pad>"])
 
 lookup_op = ds.text.Lookup(vocab, unknown_token='<unk>')
 pad_op = ds.transforms.PadEnd([500], pad_value=vocab.tokens_to_ids('<pad>'))
@@ -92,10 +93,10 @@ imdb_train, imdb_valid = imdb_train.split([0.7, 0.3])
 lstm_layer = nn.LSTM(100, hidden_size, num_layers=num_layers, batch_first=True,
                      dropout=drop, bidirectional=bidirectional)
 sentiment_encoder = RNNEncoder(embedding, lstm_layer)
-sentiment_head = Head(hidden_size, output_size, drop)
-net = SentimentClassification(sentiment_encoder, sentiment_head)
+sentiment_head = Head(hidden_size, output_size)
+net = SentimentClassification(sentiment_encoder, sentiment_head, drop)
 
-loss = nn.BCEWithLogitsLoss(reduction='mean')
+loss = nn.BCELoss(reduction='mean')
 optimizer = nn.Adam(net.trainable_params(), learning_rate=lr)
 
 # define metrics
@@ -105,5 +106,5 @@ metric = Accuracy()
 
 trainer = Trainer(network=net, train_dataset=imdb_train, eval_dataset=imdb_valid, metrics=metric,
                   epochs=2, batch_size=64, loss_fn=loss, optimizer=optimizer)
-trainer.run(tgt_columns="label", jit=True)
+trainer.run(tgt_columns="label")
 print("end train")
