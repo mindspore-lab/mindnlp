@@ -13,24 +13,11 @@
 # limitations under the License.
 # ============================================================================
 """
-RNN model
+RNN-based sentimental classification model
 """
 # pylint: disable=abstract-method
 
-import os
-import shutil
-import tempfile
-import re
-import string
-import tarfile
-import zipfile
 import math
-from typing import IO
-from pathlib import Path
-import requests
-import six
-import numpy as np
-from tqdm import tqdm
 
 import mindspore as ms
 from mindspore import nn
@@ -38,6 +25,7 @@ from mindspore import ops
 import mindspore.dataset as ds
 from mindspore.common.initializer import Uniform, HeUniform
 
+from mindnlp.modules import RNNEncoder
 from mindnlp.common.metrics import Accuracy
 from mindnlp.engine.trainer import Trainer
 from mindnlp.abc import Seq2vecModel
@@ -71,24 +59,24 @@ class SentimentClassification(Seq2vecModel):
         self.head = head
         self.dropout = nn.Dropout(1 - dropout)
 
-    def construct(self, src_tokens, mask=None):
-        _, (hidden, _), _ = self.encoder(src_tokens)
+    def construct(self, text, mask=None):
+        _, (hidden, _), _ = self.encoder(text)
         hidden = self.dropout(hidden)
         output = self.head(hidden)
         return output
 
 # load datasets
 imdb_train, imdb_test = load('imdb')
-embedding, vocab = Glove.from_pretrained('6B', 100)
+embedding, vocab = Glove.from_pretrained('6B', 100, special_tokens=["<unk>", "<pad>"])
 
 lookup_op = ds.text.Lookup(vocab, unknown_token='<unk>')
 pad_op = ds.transforms.PadEnd([500], pad_value=vocab.tokens_to_ids('<pad>'))
 type_cast_op = ds.transforms.TypeCast(ms.float32)
 
-imdb_train = imdb_train.map(operations=[lookup_op, pad_op], input_columns=['src_tokens'])
+imdb_train = imdb_train.map(operations=[lookup_op, pad_op], input_columns=['text'])
 imdb_train = imdb_train.map(operations=[type_cast_op], input_columns=['label'])
 
-imdb_test = imdb_test.map(operations=[lookup_op, pad_op], input_columns=['src_tokens'])
+imdb_test = imdb_test.map(operations=[lookup_op, pad_op], input_columns=['text'])
 imdb_test = imdb_test.map(operations=[type_cast_op], input_columns=['label'])
 
 imdb_train, imdb_valid = imdb_train.split([0.7, 0.3])
@@ -101,20 +89,21 @@ bidirectional = True
 drop = 0.5
 lr = 0.001
 
-# sentiment_encoder = LSTMEncoder(vocab_size, embedding_dim, hidden_size, num_layers=num_layers,
-#                                 dropout=drop, bidirectional=bidirectional)
-# sentiment_head = Head(hidden_size, output_size)
-# net = SentimentClassification(sentiment_encoder, sentiment_head, drop)
+lstm_layer = nn.LSTM(100, hidden_size, num_layers=num_layers, batch_first=True,
+                     dropout=drop, bidirectional=bidirectional)
+sentiment_encoder = RNNEncoder(embedding, lstm_layer)
+sentiment_head = Head(hidden_size, output_size)
+net = SentimentClassification(sentiment_encoder, sentiment_head, drop)
 
-# loss = nn.BCELoss(reduction='mean')
-# optimizer = nn.Adam(net.trainable_params(), learning_rate=lr)
+loss = nn.BCELoss(reduction='mean')
+optimizer = nn.Adam(net.trainable_params(), learning_rate=lr)
 
-# # define metrics
-# metric = Accuracy()
+# define metrics
+metric = Accuracy()
 
-# # define trainer
+# define trainer
 
-# trainer = Trainer(network=net, train_dataset=imdb_train, eval_dataset=imdb_valid, metrics=metric,
-#                   epochs=2, batch_size=64, loss_fn=loss, optimizer=optimizer)
-# trainer.run(tgt_columns="label")
-# print("end train")
+trainer = Trainer(network=net, train_dataset=imdb_train, eval_dataset=imdb_valid, metrics=metric,
+                  epochs=2, batch_size=64, loss_fn=loss, optimizer=optimizer)
+trainer.run(tgt_columns="label")
+print("end train")

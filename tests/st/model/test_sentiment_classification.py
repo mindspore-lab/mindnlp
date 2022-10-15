@@ -13,26 +13,27 @@
 # limitations under the License.
 # ============================================================================
 """
-Sentiment Calssification model
+RNN-based sentimental classification model
 """
 # pylint: disable=abstract-method
 # pylint: disable=arguments-differ
-
 
 import math
 import pytest
 import numpy as np
 
+import mindspore
 from mindspore import nn
 from mindspore import ops
-import mindspore.numpy as mnp
 import mindspore.dataset as ds
 from mindspore.common.initializer import Uniform, HeUniform
 
 from mindnlp.abc import Seq2vecModel
-from mindnlp.modules import LSTMEncoder
+from mindnlp.modules import RNNEncoder
 from mindnlp.common.metrics import Accuracy
 from mindnlp.engine.trainer import Trainer
+from mindnlp.dataset import load
+from mindnlp.modules import Glove
 
 
 class Dataset:
@@ -57,10 +58,10 @@ class Head(nn.Cell):
         weight_init = HeUniform(math.sqrt(5))
         bias_init = Uniform(1 / math.sqrt(hidden_dim * 2))
         self.fc = nn.Dense(hidden_dim * 2, output_dim, weight_init=weight_init, bias_init=bias_init)
-        self.sigmoid = ops.Sigmoid()
+        self.sigmoid = nn.Sigmoid()
 
     def construct(self, context):
-        context = mnp.concatenate((context[-2, :, :], context[-1, :, :]), axis=1)
+        context = ops.concat((context[-2, :, :], context[-1, :, :]), axis=1)
         output = self.fc(context)
         return self.sigmoid(output)
 
@@ -75,8 +76,8 @@ class SentimentClassification(Seq2vecModel):
         self.head = head
         self.dropout = nn.Dropout(1 - dropout)
 
-    def construct(self, src_tokens):
-        _, (hidden, _), _ = self.encoder(src_tokens)
+    def construct(self, text, mask=None):
+        _, (hidden, _), _ = self.encoder(text)
         hidden = self.dropout(hidden)
         output = self.head(hidden)
         return output
@@ -87,17 +88,26 @@ class SentimentClassification(Seq2vecModel):
 @pytest.mark.platform_x86_cpu
 @pytest.mark.platform_arm_ascend_training
 @pytest.mark.platform_x86_gpu_training
-def test_pynative():
+def test_sentiment_classification():
     """
     Feature: sentiment calssification model.
-    Description: test sentiment calssification model for training in pynative mode.
+    Description: test sentiment calssification model for training.
     Expectation: success.
     """
-    vocab_size = 400000
-    embedding_dim = 100
+    imdb_train, imdb_test = load('imdb')
+    embedding, vocab = Glove.from_pretrained('6B', 100, special_tokens=["<unk>", "<pad>"])
 
-    dataset = ds.GeneratorDataset(Dataset(), column_names=["src_tokens", "label"], shuffle=True)
-    train_dataset, valid_dataset = dataset.split([0.7, 0.3])
+    lookup_op = ds.text.Lookup(vocab, unknown_token='<unk>')
+    pad_op = ds.transforms.PadEnd([500], pad_value=vocab.tokens_to_ids('<pad>'))
+    type_cast_op = ds.transforms.TypeCast(mindspore.float32)
+
+    imdb_train = imdb_train.map(operations=[lookup_op, pad_op], input_columns=['text'])
+    imdb_train = imdb_train.map(operations=[type_cast_op], input_columns=['label'])
+
+    imdb_test = imdb_test.map(operations=[lookup_op, pad_op], input_columns=['text'])
+    imdb_test = imdb_test.map(operations=[type_cast_op], input_columns=['label'])
+
+    imdb_train, imdb_valid = imdb_train.split([0.7, 0.3])
 
     hidden_size = 256
     output_size = 1
@@ -106,54 +116,17 @@ def test_pynative():
     dropout = 0.5
     lr = 0.001
 
-    encoder = LSTMEncoder(vocab_size, embedding_dim, hidden_size, num_layers=num_layers,
-                          dropout=dropout, bidirectional=bidirectional)
-    head = Head(hidden_size, output_size)
-    net = SentimentClassification(encoder, head, dropout)
+    lstm_layer = nn.LSTM(100, hidden_size, num_layers=num_layers, batch_first=True,
+                     dropout=dropout, bidirectional=bidirectional)
+    sentiment_encoder = RNNEncoder(embedding, lstm_layer)
+    sentiment_head = Head(hidden_size, output_size)
+    net = SentimentClassification(sentiment_encoder, sentiment_head, dropout)
 
     loss = nn.BCELoss(reduction='mean')
     optimizer = nn.Adam(net.trainable_params(), learning_rate=lr)
     metric = Accuracy()
 
-    trainer = Trainer(network=net, train_dataset=train_dataset, eval_dataset=valid_dataset,
+    trainer = Trainer(network=net, train_dataset=imdb_train, eval_dataset=imdb_valid,
                       metrics=metric, epochs=2, batch_size=64, loss_fn=loss,
                       optimizer=optimizer)
-    trainer.run(mode="pynative", tgt_columns="label")
-
-@pytest.mark.level0
-@pytest.mark.env_onecard
-@pytest.mark.platform_x86_cpu
-@pytest.mark.platform_arm_ascend_training
-@pytest.mark.platform_x86_gpu_training
-def test_graph():
-    """
-    Feature: sentiment calssification model.
-    Description: test sentiment calssification model for training in graph mode.
-    Expectation: success.
-    """
-    vocab_size = 400000
-    embedding_dim = 100
-
-    dataset = ds.GeneratorDataset(Dataset(), column_names=["src_tokens", "label"], shuffle=True)
-    train_dataset, valid_dataset = dataset.split([0.7, 0.3])
-
-    hidden_size = 256
-    output_size = 1
-    num_layers = 2
-    bidirectional = True
-    dropout = 0.5
-    lr = 0.001
-
-    encoder = LSTMEncoder(vocab_size, embedding_dim, hidden_size, num_layers=num_layers,
-                          dropout=dropout, bidirectional=bidirectional)
-    head = Head(hidden_size, output_size)
-    net = SentimentClassification(encoder, head, dropout)
-
-    loss = nn.BCELoss(reduction='mean')
-    optimizer = nn.Adam(net.trainable_params(), learning_rate=lr)
-    metric = Accuracy()
-
-    trainer = Trainer(network=net, train_dataset=train_dataset, eval_dataset=valid_dataset,
-                      metrics=metric, epochs=2, batch_size=64, loss_fn=loss,
-                      optimizer=optimizer)
-    trainer.run(mode="graph", tgt_columns="label")
+    trainer.run(tgt_columns="label")
