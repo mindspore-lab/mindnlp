@@ -42,7 +42,7 @@ class F1Score(Metric):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from mindnlp.common.metrics import F1Score
+        >>> from mindnlp.engine.metrics import F1Score
         >>> preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]))
         >>> labels = Tensor(np.array([1, 0, 1]))
         >>> metric = F1Score()

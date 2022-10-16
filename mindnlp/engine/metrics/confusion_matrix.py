@@ -23,8 +23,9 @@ from mindnlp.common.metrics import _check_value_type, _convert_data_type
 
 class ConfusionMatrix(Metric):
     r"""
-    Calculate confusion matrix. Confusion matrix is commonly used to evaluate the performance
-    of classification models, including binary classification and multiple classification.
+    Calculates the confusion matrix. Confusion matrix is commonly used to evaluate
+    the performance of classification models, including binary classification and
+    multiple classification.
 
     Args:
         class_num (int): Number of classes in the dataset. Default: 2.
@@ -34,7 +35,7 @@ class ConfusionMatrix(Metric):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from mindnlp.common.metrics import ConfusionMatrix
+        >>> from mindnlp.engine.metrics import ConfusionMatrix
         >>> preds = Tensor(np.array([1, 0, 1, 0]))
         >>> labels = Tensor(np.array([1, 0, 0, 1]))
         >>> metric = ConfusionMatrix()
@@ -52,13 +53,12 @@ class ConfusionMatrix(Metric):
         self.conf_mat = np.zeros((self.class_num, self.class_num))
 
     def clear(self):
-        """Clear the internal evaluation result."""
+        """Clears the internal evaluation result."""
         self.conf_mat = np.zeros((self.class_num, self.class_num))
 
     def update(self, *inputs):
         """
-        Updates local variables. If the index of the maximum of the predicted value matches
-        the label, the predicted result is correct.
+        Updates local variables.
 
         Args:
             inputs: Input `preds` and `labels`.
@@ -111,6 +111,6 @@ class ConfusionMatrix(Metric):
 
     def get_metric_name(self):
         """
-        Return the name of the metric.
+        Returns the name of the metric.
         """
         return self._name

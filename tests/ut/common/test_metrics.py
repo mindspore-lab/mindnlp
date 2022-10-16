@@ -188,6 +188,78 @@ class TestF1Score(unittest.TestCase):
 
         assert f1_s == 0.6666666666666666
 
+class TestMcc(unittest.TestCase):
+    r"""
+    Test mcc
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_mcc(self):
+        """
+        Test mcc
+        """
+        preds = [[0.1, 0.9], [-0.5, 0.5], [0.1, 0.4], [0.1, 0.3]]
+        labels = [[1], [0], [1], [1]]
+        m_c_c = mcc(preds, labels)
+
+        assert m_c_c == 0.0
+
+class TestPearson(unittest.TestCase):
+    r"""
+    Test pearson
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_pearson(self):
+        """
+        Test pearson
+        """
+        preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
+        labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
+        pcc = pearson(preds, labels)
+
+        assert pcc == 0.9985229081857804
+
+class TestSpearman(unittest.TestCase):
+    r"""
+    Test spearman
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_spearman(self):
+        """
+        Test spearman
+        """
+        preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
+        labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
+        scc = spearman(preds, labels)
+
+        assert scc == 1.0
+
+class TestEmScore(unittest.TestCase):
+    r"""
+    Test em_score
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_em_score(self):
+        """
+        Test em_score
+        """
+        preds = "this is the best span"
+        examples = ["this is a good span", "something irrelevant"]
+        exact_match = em_score(preds, examples)
+
+        assert exact_match == 0.0
+
 class TestConfusionMatrix(unittest.TestCase):
     r"""
     Test confusion matrix
@@ -198,7 +270,7 @@ class TestConfusionMatrix(unittest.TestCase):
 
     def test_confusion_matrix(self):
         """
-        Test confusion matrix
+        Test confusion_matrix
         """
         preds = Tensor(np.array([1, 0, 1, 0]))
         labels = Tensor(np.array([1, 0, 0, 1]))
@@ -206,77 +278,6 @@ class TestConfusionMatrix(unittest.TestCase):
 
         assert np.array_equal(conf_mat, np.array([[1., 1.], [1., 1.]]))
 
-class TestMcc(unittest.TestCase):
-    r"""
-    Test MCC
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_mcc(self):
-        """
-        Test MCC
-        """
-        preds = [[0.1, 0.9], [-0.5, 0.5], [0.1, 0.4], [0.1, 0.3]]
-        labels = [[1], [0], [1], [1]]
-        m_c_c = mcc(preds, labels)
-
-        assert m_c_c == 0.0
-
-class TestPearson(unittest.TestCase):
-    r"""
-    Test PCC
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_pearson(self):
-        """
-        Test PCC
-        """
-        preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
-        labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
-        pcc = pearson(preds, labels)
-
-        assert pcc == 0.9985229081857804
-
-class TestSpearman(unittest.TestCase):
-    r"""
-    Test SCC
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_spearman(self):
-        """
-        Test SCC
-        """
-        preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
-        labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
-        scc = spearman(preds, labels)
-
-        assert scc == 1.0
-
-class TestEmScore(unittest.TestCase):
-    r"""
-    Test exact match score
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_em_score(self):
-        """
-        Test exact match score
-        """
-        preds = "this is the best span"
-        examples = ["this is a good span", "something irrelevant"]
-        exact_match = em_score(preds, examples)
-
-        assert exact_match == 0.0
 
 class TestClassPerplexity(unittest.TestCase):
     r"""
@@ -458,26 +459,6 @@ class TestClassF1Score(unittest.TestCase):
 
         assert f1_s == 0.6666666666666666
 
-class TestClassConfusionMatrix(unittest.TestCase):
-    r"""
-    Test class ConfusionMatrix
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_class_confusion_matrix(self):
-        """
-        Test class ConfusionMatrix
-        """
-        preds = Tensor(np.array([1, 0, 1, 0]))
-        labels = Tensor(np.array([1, 0, 0, 1]))
-        metric = ConfusionMatrix()
-        metric.update(preds, labels)
-        conf_mat = metric.eval()
-
-        assert np.array_equal(conf_mat, np.array([[1., 1.], [1., 1.]]))
-
 class TestClassMCC(unittest.TestCase):
     r"""
     Test class MCC
@@ -559,3 +540,23 @@ class TestClassEmScore(unittest.TestCase):
         exact_match = metric.eval()
 
         assert exact_match == 0.0
+
+class TestClassConfusionMatrix(unittest.TestCase):
+    r"""
+    Test class ConfusionMatrix
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_class_confusion_matrix(self):
+        """
+        Test class ConfusionMatrix
+        """
+        preds = Tensor(np.array([1, 0, 1, 0]))
+        labels = Tensor(np.array([1, 0, 0, 1]))
+        metric = ConfusionMatrix()
+        metric.update(preds, labels)
+        conf_mat = metric.eval()
+
+        assert np.array_equal(conf_mat, np.array([[1., 1.], [1., 1.]]))

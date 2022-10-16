@@ -629,8 +629,8 @@ def f1_score(preds, labels):
 
     """
     if preds is None or labels is None:
-        raise RuntimeError("To calculate F1 score, it needs at least 2 inputs (`preds` and "
-                           "`labels`)")
+        raise RuntimeError("To calculate the F1 score, it needs at least 2 inputs (`preds` "
+                           "and `labels`)")
 
     y_pred = _convert_data_type(preds)
     y_true = _convert_data_type(labels)
@@ -658,11 +658,11 @@ def f1_score(preds, labels):
 
 def mcc(preds, labels):
     r"""
-    calculates Matthews correlation coefficient (MCC). MCC is in essence a correlation coefficient
-    between the observed and predicted binary classifications; it returns a value between −1 and +1.
-    A coefficient of +1 represents a perfect prediction, 0 no better than random prediction and
-    −1 indicates total disagreement between prediction and observation. The function is shown
-    as follows:
+    Calculates the Matthews correlation coefficient (MCC). MCC is in essence a correlation
+    coefficient between the observed and predicted binary classifications; it returns a value
+    between −1 and +1. A coefficient of +1 represents a perfect prediction, 0 no better than
+    random prediction and −1 indicates total disagreement between prediction and observation.
+    The function is shown as follows:
 
     .. math::
 
@@ -700,8 +700,8 @@ def mcc(preds, labels):
 
     """
     if preds is None or labels is None:
-        raise RuntimeError('To calculate Matthews correlation coefficient (MCC), it needs at least '
-                           '2 inputs (`preds` and `labels`)')
+        raise RuntimeError('To calculate the Matthews correlation coefficient (MCC), it needs '
+                           'at least 2 inputs (`preds` and `labels`)')
 
     preds = _convert_data_type(preds)
     labels = _convert_data_type(labels)
@@ -742,67 +742,6 @@ def mcc(preds, labels):
             (t_n + f_p) * (t_n + f_n))
     return m_c_c
 
-def confusion_matrix(preds, labels, class_num=2):
-    r"""
-    Calculate confusion matrix. Confusion matrix is commonly used to evaluate the performance
-    of classification models, including binary classification and multiple classification.
-
-    Args:
-        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of
-            floating numbers in range :math:`[0, 1]` and the shape of `preds` is
-            :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number
-            of cases and :math:`C` is the number of categories.
-        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be
-            in one-hot format that shape is :math:`(N, C)`, or can be transformed to
-            one-hot format that shape is :math:`(N,)`.
-        class_num (int): Number of classes in the dataset. Default: 2.
-
-    Returns:
-        - **conf_mat** (float) - The computed result.
-
-    Raises:
-        RuntimeError: If `preds` is None or `labels` is None.
-        ValueError: If `preds` doesn't have the same classes number as `labels`.
-
-    Example:
-        >>> import numpy as np
-        >>> import mindspore
-        >>> from mindspore import Tensor
-        >>> from mindnlp.common.metrics import confusion_matrix
-        >>> preds = Tensor(np.array([1, 0, 1, 0]))
-        >>> labels = Tensor(np.array([1, 0, 0, 1]))
-        >>> conf_mat = confusion_matrix(preds, labels)
-        >>> print(conf_mat)
-        [[1. 1.]
-         [1. 1.]]
-
-    """
-    if preds is None or labels is None:
-        raise RuntimeError("To calculate confusion matrix, it needs at least 2 inputs (`preds` and "
-                           "`labels`)")
-
-    class_num = _check_value_type("class_num", class_num, [int])
-    conf_mat = np.zeros((class_num, class_num))
-
-    preds = _convert_data_type(preds)
-    labels = _convert_data_type(labels)
-
-    if preds.ndim not in (labels.ndim, labels.ndim + 1):
-        raise ValueError(f'`preds` and `labels` should have same dimensions, or the dimension of '
-                         f'`preds` equals the dimension of `labels` add 1, but got predicted value '
-                         f'ndim: {preds.ndim}, true value ndim: {labels.ndim}.')
-
-    if preds.ndim == labels.ndim + 1:
-        preds = np.argmax(preds, axis=1)
-
-    trans = (labels.reshape(-1) * class_num + preds.reshape(-1)).astype(int)
-    bincount = np.bincount(trans, minlength=class_num ** 2)
-    conf_mat = bincount.reshape(class_num, class_num)
-
-    conf_mat = conf_mat.astype(float)
-
-    return conf_mat
-
 def pearson(preds, labels):
     r"""
     calculate Pearson correlation coefficient (PCC). PCC is a measure of linear correlation
@@ -812,12 +751,12 @@ def pearson(preds, labels):
 
     Args:
         preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of
-        floating numbers in range :math:`[0, 1]` and the shape of `preds` is :math:`(N, C)`
-        in most cases (not strictly), where :math:`N` is the number of cases and :math:`C`
-        is the number of categories.
+            floating numbers in range :math:`[0, 1]` and the shape of `preds` is :math:`(N, C)`
+            in most cases (not strictly), where :math:`N` is the number of cases and :math:`C`
+            is the number of categories.
         labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be
-        in one-hot format that shape is :math:`(N, C)`, or can be transformed to one-hot format
-        that shape is :math:`(N,)`.
+            in one-hot format that shape is :math:`(N, C)`, or can be transformed to one-hot format
+            that shape is :math:`(N,)`.
 
     Returns:
         - **pcc** (float) - The computed result.
@@ -857,8 +796,8 @@ def pearson(preds, labels):
         return numerator / denominator
 
     if preds is None or labels is None:
-        raise RuntimeError('To calculate Pearson correlation coefficient (PCC), it needs at least '
-                           '2 inputs `preds` and `labels`)')
+        raise RuntimeError('To calculate the Pearson correlation coefficient (PCC), it needs '
+                          'at least 2 inputs `preds` and `labels`)')
 
     preds = _convert_data_type(preds)
     labels = _convert_data_type(labels)
@@ -876,8 +815,8 @@ def pearson(preds, labels):
 
 def spearman(preds, labels):
     r"""
-    calculate Spearman's rank correlation coefficient. It is a nonparametric measure of
-    rank correlation (statistical dependence between the rankings of two variables).
+    Calculates the Spearman's rank correlation coefficient. It is a nonparametric measure
+    of rank correlation (statistical dependence between the rankings of two variables).
     It assesses how well the relationship between two variables can be described
     using a monotonic function. If there are no repeated data values, a perfect
     Spearman correlation of +1 or −1 occurs when each of the variables is
@@ -923,8 +862,8 @@ def spearman(preds, labels):
         return res
 
     if preds is None or labels is None:
-        raise RuntimeError('To calculate Spearman\'s rank correlation coefficient, it needs '
-                           'at least 2 inputs (`preds` and `labels`)')
+        raise RuntimeError('To calculate the Spearman\'s rank correlation coefficient, it '
+                           'needs at least 2 inputs (`preds` and `labels`)')
 
     preds = _convert_data_type(preds)
     labels = _convert_data_type(labels)
@@ -943,19 +882,15 @@ def spearman(preds, labels):
 
 def em_score(preds, examples):
     r"""
-    calculate exact match (EM) score. This metric measures the percentage of predictions
-    that match any one of the ground truth answers exactly.
+    Calculates the exact match (EM) score. This metric measures the percentage of
+    predictions that match any one of the ground truth answers exactly.
 
     Args:
         preds (Union[str, list]): Predicted value.
         examples (Union[list, list of list]): Ground truth value.
 
     Returns:
-        - **em** (float) - The computed result.
-
-    Raises:
-        RuntimeError: If `preds` is None or `examples` is None.
-        ValueError: If `preds` doesn't have the same classes number as `examples`.
+        - **exact_match** (float) - The computed result.
 
     Example:
         >>> import numpy as np
@@ -969,25 +904,6 @@ def em_score(preds, examples):
         0.0
 
     """
-    def _normalize_answer(txt):
-        """Lower text and remove punctuation, articles and extra whitespace."""
-
-        def remove_articles(text):
-            regex = re.compile(r"\b(a|an|the)\b", re.UNICODE)
-            return re.sub(regex, " ", text)
-
-        def white_space_fix(text):
-            return " ".join(text.split())
-
-        def remove_punc(text):
-            exclude = set(string.punctuation)
-            return "".join(ch for ch in text if ch not in exclude)
-
-        def lower(text):
-            return text.lower()
-
-        return white_space_fix(remove_articles(remove_punc(lower(txt))))
-
     if not isinstance(preds, list):
         preds = [preds]
         examples = [examples]
@@ -1007,11 +923,72 @@ def em_score(preds, examples):
     exact_match = total_em / count if count > 0 else 0
     return exact_match
 
+def confusion_matrix(preds, labels, class_num=2):
+    r"""
+    Calculates the confusion matrix. Confusion matrix is commonly used to evaluate
+    the performance of classification models, including binary classification and
+    multiple classification.
+
+    Args:
+        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of
+            floating numbers in range :math:`[0, 1]` and the shape of `preds` is
+            :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number
+            of cases and :math:`C` is the number of categories.
+        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be
+            in one-hot format that shape is :math:`(N, C)`, or can be transformed to
+            one-hot format that shape is :math:`(N,)`.
+        class_num (int): Number of classes in the dataset. Default: 2.
+
+    Returns:
+        - **conf_mat** (float) - The computed result.
+
+    Raises:
+        RuntimeError: If `preds` is None or `labels` is None.
+        ValueError: If `preds` doesn't have the same classes number as `labels`.
+
+    Example:
+        >>> import numpy as np
+        >>> import mindspore
+        >>> from mindspore import Tensor
+        >>> from mindnlp.common.metrics import confusion_matrix
+        >>> preds = Tensor(np.array([1, 0, 1, 0]))
+        >>> labels = Tensor(np.array([1, 0, 0, 1]))
+        >>> conf_mat = confusion_matrix(preds, labels)
+        >>> print(conf_mat)
+        [[1. 1.]
+         [1. 1.]]
+
+    """
+    if preds is None or labels is None:
+        raise RuntimeError("To calculate the confusion matrix, it needs at least 2 inputs "
+                           "(`preds` and `labels`)")
+
+    class_num = _check_value_type("class_num", class_num, [int])
+
+    preds = _convert_data_type(preds)
+    labels = _convert_data_type(labels)
+
+    if preds.ndim not in (labels.ndim, labels.ndim + 1):
+        raise ValueError(f'`preds` and `labels` should have same dimensions, or the dimension '
+                         f'of preds` equals the dimension of `labels` add 1, but got predicted'
+                         f' value ndim: {preds.ndim}, true value ndim: {labels.ndim}.')
+
+    if preds.ndim == labels.ndim + 1:
+        preds = np.argmax(preds, axis=1)
+
+    trans = (labels.reshape(-1) * class_num + preds.reshape(-1)).astype(int)
+    bincount = np.bincount(trans, minlength=class_num ** 2)
+    conf_mat = bincount.reshape(class_num, class_num)
+
+    conf_mat = conf_mat.astype(float)
+
+    return conf_mat
+
 
 # Common functions.
 def _check_value_type(arg_name, arg_value, valid_types):
     """
-    Check whether the data type is valid
+    Checks whether the data type is valid
 
     Args:
         arg_name (str): Name of the argument validated.
@@ -1039,7 +1016,7 @@ def _check_value_type(arg_name, arg_value, valid_types):
 
 def _check_onehot_data(data):
     """
-    Whether input data is one-hot encoding.
+    Checks whether input data is one-hot encoding.
 
     Args:
         data (numpy.array): Input data.
@@ -1057,7 +1034,7 @@ def _check_onehot_data(data):
 
 def _convert_data_type(data):
     """
-    Convert data type to numpy array.
+    Converts data type to numpy array.
 
     Args:
         data (Union[Tensor, list, np.ndarray]): Input data.
@@ -1092,7 +1069,7 @@ def _count_ngram(input_list, n_gram):
 
 def _check_shape(y_pred, y_true):
     """
-    Check the shapes of y_pred and y_true.
+    Checks the shapes of y_pred and y_true.
 
     Args:
         y_pred (Tensor): Predict tensor.
@@ -1109,7 +1086,8 @@ def _check_shape(y_pred, y_true):
                          f' `y_pred` shape {y_pred.shape} and `y_true` shape {y_true.shape}.')
 
 def _get_ngrams(words, n_size=1):
-    """Calculates word n-grams for multiple sentences.
+    """
+    Calculates n-gram for multiple sentences.
     """
     ngram_set = set()
     max_start = len(words) - n_size
@@ -1120,7 +1098,7 @@ def _get_ngrams(words, n_size=1):
 
 def _lcs(strg, sub):
     """
-    Calculate the length of longest common subsequence of strg and sub.
+    Calculates the length of longest common subsequence of strg and sub.
 
     Args:
         strg (list): The string to be calculated, usually longer the sub string.
@@ -1150,7 +1128,7 @@ def _get_rank(raw_list):
     return rank_x
 
 def _normalize_answer(txt):
-    """Lower text and remove punctuation, articles and extra whitespace."""
+    """Lowers text and removes punctuation, articles and extra whitespace."""
 
     def remove_articles(text):
         regex = re.compile(r"\b(a|an|the)\b", re.UNICODE)
