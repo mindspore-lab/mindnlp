@@ -16,50 +16,25 @@
 Abstract class for Metrics
 """
 from abc import ABCMeta, abstractmethod
-import numpy as np
-from mindspore import Tensor
 
 class Metric(metaclass=ABCMeta):
     """
-    Base class of all metrics. Never use this class directly, but instantiate one of its subclasses instead.
+    Base class of all metrics. Never use this class directly, but instantiate one of
+    its subclasses instead.
 
-    Functions `update` will accumulate intermediate results in the evaluation process, `eval` will evaluate the final
-    result, and `clear` will reinitialize the intermediate results. Function `get_metric_name` will provide class name.
+    Functions `update` will accumulate intermediate results in the evaluation process,
+    `eval` will evaluate the final result, and `clear` will reinitialize the intermediate
+    results. Function `get_metric_name` will provide class name.
 
     """
     def __init__(self):
         pass
 
-    def _convert_data_type(self, data):
-        """
-        Convert data type to numpy array.
-
-        Args:
-            data (Object): Input data.
-
-        Returns:
-            - **data** (np.ndarray) - Data with `np.ndarray` type.
-
-        Raises:
-            TypeError: If `data` is not a tensor, list or numpy.ndarray.
-
-        """
-        if isinstance(data, Tensor):
-            data = data.asnumpy()
-        elif isinstance(data, list):
-            data = np.array(data)
-        elif isinstance(data, np.ndarray):
-            pass
-        else:
-            raise TypeError(f'For class `Metrics` and its derived classes, the input data type must be tensor, list or'
-                            f' numpy.ndarray, but got {type(data)}.')
-        return data
-
     @abstractmethod
     def clear(self):
         """
-        An interface describes the behavior of clearing the internal evaluation result. All subclasses of `Metrics`
-        must override this interface.
+        An interface describes the behavior of clearing the internal evaluation result.
+        All subclasses of `Metrics` must override this interface.
 
         Raises:
             NotImplementedError: If this interface is called.
@@ -70,8 +45,8 @@ class Metric(metaclass=ABCMeta):
     @abstractmethod
     def eval(self):
         """
-        An interface describes the behavior of computing the evaluation result. All subclasses of `Metrics`
-        must override this interface.
+        An interface describes the behavior of computing the evaluation result.
+        All subclasses of `Metrics` must override this interface.
 
         Raises:
             NotImplementedError: If this interface is called.
@@ -80,24 +55,26 @@ class Metric(metaclass=ABCMeta):
         raise NotImplementedError(f'Function `eval` not implemented in {self.__class__.__name__}')
 
     @abstractmethod
-    def updates(self, preds, labels):
+    def update(self, *inputs):
         """
-        An interface describes the behavior of updating the internal evaluation result. All subclasses of `Metrics`
-        must override this interface.
+        An interface describes the behavior of updating the internal evaluation result.
+        All subclasses of `Metrics` must override this interface.
 
         Raises:
             NotImplementedError: If this interface is called.
 
         """
-        raise NotImplementedError(f'Function `updates` not implemented in {self.__class__.__name__}')
+        raise NotImplementedError(f'Function `update` not implemented in {self.__class__.__name__}')
 
     @abstractmethod
     def get_metric_name(self):
         """
-        An interface returns the name of the metric. All subclasses of `Metrics` must override this interface.
+        An interface returns the name of the metric. All subclasses of `Metrics` must
+        override this interface.
 
         Raises:
             NotImplementedError: If this interface is called.
 
         """
-        raise NotImplementedError(f'Function `get_metric_name` not implemented in {self.__class__.__name__}')
+        raise NotImplementedError(f'Function `get_metric_name` not implemented '
+                                  f'in {self.__class__.__name__}')
