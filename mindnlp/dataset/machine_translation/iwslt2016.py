@@ -18,6 +18,7 @@ IWSLT2016 load function
 # pylint: disable=C0103
 
 import os
+from typing import Union, Tuple
 from mindspore.dataset import IWSLT2016Dataset
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.register import load
@@ -54,8 +55,12 @@ SET_NOT_EXISTS = {
 
 
 @load.register
-def IWSLT2016(root=DEFAULT_ROOT, split=("train", "valid", "test"),
-              language_pair=("de", "en"), valid_set="tst2013", test_set="tst2014", proxies=None):
+def IWSLT2016(root: str = DEFAULT_ROOT,
+              split: Union[Tuple[str], str] = ("train", "valid", "test"),
+              language_pair=("de", "en"),
+              valid_set="tst2013",
+              test_set="tst2014",
+              proxies=None):
     r"""
     Load the IWSLT2016 dataset
 
@@ -86,6 +91,7 @@ def IWSLT2016(root=DEFAULT_ROOT, split=("train", "valid", "test"),
         language_pair (Tuple[str]): Tuple containing src and tgt language. Default: ('de', 'en').
         valid_set (str): a string to identify validation set. Default: "tst2013".
         test_set (str): a string to identify test set. Default: "tst2014".
+        proxies (dict): a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
 
     Returns:
         - **datasets_list** (list) -A list of loaded datasets.
@@ -129,7 +135,7 @@ def IWSLT2016(root=DEFAULT_ROOT, split=("train", "valid", "test"),
         raise ValueError(
             f"src_language '{src_language}' is not valid. Supported source languages are \
                 {list(SUPPORTED_DATASETS['language_pair'])}"
-            )
+        )
     if tgt_language not in SUPPORTED_DATASETS["language_pair"][src_language]:
         raise ValueError(
             f"tgt_language '{tgt_language}' is not valid for give src_language '\
@@ -138,16 +144,16 @@ def IWSLT2016(root=DEFAULT_ROOT, split=("train", "valid", "test"),
         )
     if valid_set not in SUPPORTED_DATASETS["valid_test"] or \
             valid_set in SET_NOT_EXISTS[language_pair]:
-        support = [s for s in SUPPORTED_DATASETS['valid_test'] \
-            if s not in SET_NOT_EXISTS[language_pair]]
+        support = [s for s in SUPPORTED_DATASETS['valid_test']
+                   if s not in SET_NOT_EXISTS[language_pair]]
         raise ValueError(
-                f"valid_set '{valid_set}' is not valid for given language pair \
+            f"valid_set '{valid_set}' is not valid for given language pair \
                     {language_pair}. Supported validation sets are {support}"
-            )
+        )
     if test_set not in SUPPORTED_DATASETS["valid_test"] or \
             test_set in SET_NOT_EXISTS[language_pair]:
-        support = [s for s in SUPPORTED_DATASETS['valid_test'] \
-            if s not in SET_NOT_EXISTS[language_pair]]
+        support = [s for s in SUPPORTED_DATASETS['valid_test']
+                   if s not in SET_NOT_EXISTS[language_pair]]
         raise ValueError(
             f"test_set '{valid_set}' is not valid for give language pair \
                 {language_pair}. Supported test sets are {support}"
