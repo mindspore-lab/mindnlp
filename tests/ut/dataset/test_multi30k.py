@@ -86,7 +86,7 @@ class TestMulti30kProcess(unittest.TestCase):
         """
 
         test_dataset = Multi30k(
-            root="./dataset",
+            root="~/mindnlp",
             split="test",
             language_pair=("de", "en")
         )
@@ -108,7 +108,7 @@ class TestMulti30kProcess(unittest.TestCase):
         '''
 
         test_dataset = Multi30k(
-            root="./dataset",
+            root="~/mindnlp",
             split="test",
             language_pair=("de", "en")
         )
