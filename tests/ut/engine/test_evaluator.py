@@ -22,7 +22,7 @@ from mindspore import nn
 import mindspore.dataset as ds
 
 from mindnlp.engine.evaluator import Evaluator
-from mindnlp.common.metrics import Accuracy
+from mindnlp.engine.metrics import Accuracy
 from mindnlp.engine.callbacks.timer_callback import TimerCallback
 
 
