@@ -86,13 +86,13 @@ class TestMulti30kProcess(unittest.TestCase):
         """
 
         test_dataset = Multi30k(
-            root="~/mindnlp",
+            root=os.path.join(os.path.expanduser('~'), ".mindnlp"),
             split="test",
             language_pair=("de", "en")
         )
 
         test_dataset, vocab = Multi30k_Process(
-            test_dataset, text.BasicTokenizer(), "en")
+            test_dataset, "en", text.BasicTokenizer())
 
         for i in test_dataset.create_tuple_iterator():
             assert i[1].dtype == mindspore.int32
@@ -108,7 +108,7 @@ class TestMulti30kProcess(unittest.TestCase):
         '''
 
         test_dataset = Multi30k(
-            root="~/mindnlp",
+            root=os.path.join(os.path.expanduser('~'), ".mindnlp"),
             split="test",
             language_pair=("de", "en")
         )

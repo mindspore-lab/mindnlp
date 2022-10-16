@@ -19,7 +19,7 @@ IWSLT2017 load function
 
 import os
 from typing import Union, Tuple
-from mindspore.dataset import IWSLT2017Dataset
+from mindspore.dataset import IWSLT2017Dataset, text
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.process import common_process
 from mindnlp.dataset.register import load, process
@@ -140,14 +140,14 @@ def IWSLT2017(root: str = DEFAULT_ROOT,
     return datasets_list
 
 @process.register
-def IWSLT2017_Process(dataset, tokenizer, language, vocab=None):
+def IWSLT2017_Process(dataset, column = 'translation', tokenizer = text.BasicTokenizer(), vocab=None):
     '''
     a function transforms specific language column in IWSLT2017 dataset into tensors
 
     Args:
         dataset (GeneratorDataset|ZipDataset): IWSLT2017 dataset
+        column (str): The language column name in IWSLT2017
         tokenizer (TextTensorOperation): Tokenizer you what to used
-        language (str): The language column name in IWSLT2017
         vocab (Vocab): The vocab you use, defaults to None. If None, a new vocab will be created.
 
     Returns:
@@ -165,11 +165,11 @@ def IWSLT2017_Process(dataset, tokenizer, language, vocab=None):
         >>>     split="test",
         >>>     language_pair=("de", "en")
         >>> )
-        >>> test_dataset, vocab = process('IWSLT2017', test_dataset,
-        >>>     text.BasicTokenizer(), "translation")
+        >>> test_dataset, vocab = process('IWSLT2017', test_dataset, "translation",
+        >>>     text.BasicTokenizer())
         >>> for i in test_dataset.create_tuple_iterator():
         >>>     print(i)
         >>>     break
     '''
 
-    return common_process(dataset, tokenizer, language, vocab)
+    return common_process(dataset, column, tokenizer, vocab)
