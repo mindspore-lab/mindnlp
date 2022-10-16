@@ -18,14 +18,14 @@ common process
 
 from mindspore.dataset import text
 
-def common_process(dataset, tokenizer, language, vocab):
+def common_process(dataset, column, tokenizer, vocab):
     '''
     common process
 
     Args:
         dataset (GeneratorDataset|ZipDataset): dataset needs to be process
+        column (str): The language column name
         tokenizer (TextTensorOperation): Tokenizer you what to used
-        language (str): The language column name
         vocab (Vocab): The vocab to be used, defaults to None. If None, a new vocab will be created
 
     Returns:
@@ -35,9 +35,9 @@ def common_process(dataset, tokenizer, language, vocab):
     '''
 
     if vocab is None :
-        dataset = dataset.map(tokenizer, language)
-        new_vocab = text.Vocab.from_dataset(dataset, language)
-        return dataset.map(text.Lookup(new_vocab), language), new_vocab
+        dataset = dataset.map(tokenizer, column)
+        new_vocab = text.Vocab.from_dataset(dataset, column)
+        return dataset.map(text.Lookup(new_vocab), column), new_vocab
 
-    dataset = dataset.map(tokenizer, language)
-    return dataset.map(text.Lookup(vocab), language)
+    dataset = dataset.map(tokenizer, column)
+    return dataset.map(text.Lookup(vocab), column)

@@ -83,7 +83,7 @@ class TestIWSLT2017Process(unittest.TestCase):
         )
 
         test_dataset, vocab = IWSLT2017_Process(
-            test_dataset, text.BasicTokenizer(), "translation")
+            test_dataset, "translation", text.BasicTokenizer())
 
         for i in test_dataset.create_tuple_iterator():
             assert i[1].dtype == mindspore.int32
@@ -105,8 +105,8 @@ class TestIWSLT2017Process(unittest.TestCase):
             language_pair=("de", "en")
         )
 
-        test_dataset, vocab = process('IWSLT2017', test_dataset,
-            text.BasicTokenizer(), "translation")
+        test_dataset, vocab = process('IWSLT2017', test_dataset, "translation",
+            text.BasicTokenizer())
 
         for i in test_dataset.create_tuple_iterator():
             assert i[1].dtype == mindspore.int32
