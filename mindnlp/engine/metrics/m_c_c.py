@@ -24,11 +24,11 @@ from mindnlp.common.metrics import _convert_data_type
 
 class MCC(Metric):
     r"""
-    calculates Matthews correlation coefficient (MCC). MCC is in essence a correlation coefficient
-    between the observed and predicted binary classifications; it returns a value between −1 and +1.
-    A coefficient of +1 represents a perfect prediction, 0 no better than random prediction and
-    −1 indicates total disagreement between prediction and observation. The function is shown
-    as follows:
+    Calculates the Matthews correlation coefficient (MCC). MCC is in essence a correlation
+    coefficient between the observed and predicted binary classifications; it returns a value
+    between −1 and +1. A coefficient of +1 represents a perfect prediction, 0 no better than
+    random prediction and −1 indicates total disagreement between prediction and observation.
+    The function is shown as follows:
 
     .. math::
 
@@ -44,7 +44,7 @@ class MCC(Metric):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from mindnlp.common.metrics import MCC
+        >>> from mindnlp.engine.metrics import MCC
         >>> preds = [[0.1, 0.9], [-0.5, 0.5], [0.1, 0.4], [0.1, 0.3]]
         >>> labels = [[1], [0], [1], [1]]
         >>> metric = MCC()
@@ -63,7 +63,7 @@ class MCC(Metric):
         self.f_n = 0
 
     def clear(self):
-        """Clear the internal evaluation result."""
+        """Clears the internal evaluation result."""
         self.t_p = 0
         self.f_p = 0
         self.t_n = 0
@@ -139,6 +139,6 @@ class MCC(Metric):
 
     def get_metric_name(self):
         """
-        Return the name of the metric.
+        Returns the name of the metric.
         """
         return self._name

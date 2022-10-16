@@ -24,10 +24,11 @@ from mindnlp.common.metrics import _convert_data_type
 
 class Pearson(Metric):
     r"""
-    calculate Pearson correlation coefficient (PCC). PCC is a measure of linear correlation
-    between two sets of data. It is the ratio between the covariance of two variables and
-    the product of their standard deviations; thus, it is essentially a normalized measurement
-    of the covariance, such that the result always has a value between −1 and 1.
+    Calculates the Pearson correlation coefficient (PCC). PCC is a measure of
+    linear correlation between two sets of data. It is the ratio between the covariance
+    of two variables and the product of their standard deviations; thus, it is essentially
+    a normalized measurement of the covariance, such that the result always has a value
+    between −1 and 1.
 
     Args:
         name (str): Name of the metric.
@@ -36,7 +37,7 @@ class Pearson(Metric):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from mindnlp.common.metrics import Pearson
+        >>> from mindnlp.engine.metrics import Pearson
         >>> preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
         >>> labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
         >>> metric = Pearson()
@@ -44,6 +45,7 @@ class Pearson(Metric):
         >>> pcc = metric.eval()
         >>> print(pcc)
         0.9985229081857804
+
     """
     def __init__(self, name='Pearson'):
         super().__init__()
@@ -109,7 +111,7 @@ class Pearson(Metric):
 
     def eval(self):
         """
-        Compute and return the PCC.
+        Computes and returns the PCC.
 
         Returns:
             - **pcc** (float) - The computed result.
@@ -122,6 +124,6 @@ class Pearson(Metric):
 
     def get_metric_name(self):
         """
-        Return the name of the metric.
+        Returns the name of the metric.
         """
         return self._name
