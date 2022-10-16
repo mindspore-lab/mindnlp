@@ -182,7 +182,7 @@ class Evaluator:
     def update_metrics(self, outputs, *tgts):
         """Update metrics values."""
         for metric in self.metrics:
-            metric.updates(outputs, *tgts)
+            metric.update(outputs, *tgts)
         return True
 
     def data_process(self, data, tgt_columns):
