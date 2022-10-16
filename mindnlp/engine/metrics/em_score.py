@@ -21,24 +21,17 @@ from mindnlp.common.metrics import _compute_exact, _metric_max_over_ground_truth
 
 class EmScore(Metric):
     r"""
-    calculate exact match (EM) score. This metric measures the percentage of predictions
-    that match any one of the ground truth answers exactly.
+    Calculates the exact match (EM) score. This metric measures the percentage of
+    predictions that match any one of the ground truth answers exactly.
 
     Args:
         name (str): Name of the metric.
-
-    Returns:
-        - **em** (float) - The computed result.
-
-    Raises:
-        RuntimeError: If `preds` is None or `labels` is None.
-        ValueError: If `preds` doesn't have the same classes number as `labels`.
 
     Example:
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from mindnlp.common.metrics import EmScore
+        >>> from mindnlp.engine.metrics import EmScore
         >>> preds = "this is the best span"
         >>> examples = ["this is a good span", "something irrelevant"]
         >>> metric = EmScore()
@@ -55,13 +48,13 @@ class EmScore(Metric):
         self.exact_match = 0
 
     def clear(self):
-        """Clear the internal evaluation result."""
+        """Clears the internal evaluation result."""
         self.count = 0
         self.exact_match = 0
 
     def update(self, *inputs):
         """
-        Update local variables.
+        Updates local variables.
 
         Args:
             inputs: Input `preds` and `examples`.
@@ -70,7 +63,6 @@ class EmScore(Metric):
 
         Raises:
             ValueError: If the number of inputs is not 2.
-            ValueError: If `preds` doesn't have the same classes number as `examples`.
 
         """
         if len(inputs) != 2:
@@ -95,7 +87,7 @@ class EmScore(Metric):
 
     def eval(self):
         """
-        Compute and return the EM score.
+        Computes and returns the EM score.
 
         Returns:
         - **exact_match** (float) - The computed result.
@@ -108,6 +100,6 @@ class EmScore(Metric):
 
     def get_metric_name(self):
         """
-        Return the name of the metric.
+        Returns the name of the metric.
         """
         return self._name

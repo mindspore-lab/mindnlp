@@ -23,8 +23,8 @@ from mindnlp.common.metrics import _convert_data_type, _get_rank
 
 class Spearman(Metric):
     r"""
-    calculate Spearman's rank correlation coefficient. It is a nonparametric measure of
-    rank correlation (statistical dependence between the rankings of two variables).
+    Calculates the Spearman's rank correlation coefficient. It is a nonparametric measure
+    of rank correlation (statistical dependence between the rankings of two variables).
     It assesses how well the relationship between two variables can be described
     using a monotonic function. If there are no repeated data values, a perfect
     Spearman correlation of +1 or −1 occurs when each of the variables is
@@ -37,7 +37,7 @@ class Spearman(Metric):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from mindnlp.common.metrics import Spearman
+        >>> from mindnlp.engine.metrics import Spearman
         >>> preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
         >>> labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
         >>> metric = Spearman()
@@ -54,7 +54,7 @@ class Spearman(Metric):
         self.n_pred = 0
 
     def clear(self):
-        """Clear the internal evaluation result."""
+        """Clears the internal evaluation result."""
         self.total = 0
         self.n_pred = 0
 
@@ -104,7 +104,7 @@ class Spearman(Metric):
 
     def eval(self):
         """
-        Compute and return the SCC.
+        Computes and returns the SCC.
 
         Returns:
             - **scc** (float) - The computed result.
@@ -115,6 +115,6 @@ class Spearman(Metric):
 
     def get_metric_name(self):
         """
-        Return the name of the metric.
+        Returns the name of the metric.
         """
         return self._name
