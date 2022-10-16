@@ -158,9 +158,17 @@ class Trainer:
         net = self.network
         loss_fn = self.loss_fn
         def forward_fn(inputs, labels):
+            logits_list = ()
             logits = net(*inputs)
-            loss = loss_fn(logits, *labels)
-            return loss, logits
+            if isinstance(logits, tuple):
+                logits_list += logits
+            else:
+                logits_list += (logits,)
+
+            loss = loss_fn(*logits_list, *labels)
+            return_list = (loss,) + logits_list
+            return return_list
+
         self.grad_fn = value_and_grad(forward_fn, None, self.optimizer.parameters, has_aux=True)
         # batchify train_dataset
         total = self.train_dataset.get_dataset_size()
@@ -205,7 +213,7 @@ class Trainer:
 
     def _run_step(self, inputs, labels):
         """Core process of each step, including the forward propagation process and back propagation of data."""
-        (loss, _), grads = self.grad_fn(inputs, labels)
+        (loss, *_), grads = self.grad_fn(inputs, labels)
         self.optimizer(grads)
         return loss
 
