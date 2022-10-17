@@ -82,8 +82,8 @@ class TokenEmbedding(nn.Cell):
         Args:
             ids : Ids to query.
 
-        Returns:
-            - ** compute result ** - Tensor, returns the Embedding query results.
+        Raises:
+            NotImplementedError: If this interface is called.
 
         """
         raise NotImplementedError(f'Function `construct` not implemented in {self.__class__.__name__}')
