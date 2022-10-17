@@ -16,8 +16,8 @@
 
 import os
 import re
-import numpy as np
 from itertools import islice
+import numpy as np
 from mindspore import nn
 from mindspore import ops
 from mindspore import Tensor
@@ -61,7 +61,7 @@ class Fasttext(TokenEmbedding):
 
     @classmethod
     def from_pretrained(cls, name='1M', dims=300, root=DEFAULT_ROOT,
-                        special_tokens=("<unk>", "<pad>"), special_first=False, use_gensim=False):
+                        special_tokens=("<unk>", "<pad>"), special_first=False):
         r"""
         Creates Embedding instance from given 2-dimensional FloatTensor.
 
