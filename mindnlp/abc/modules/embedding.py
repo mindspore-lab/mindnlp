@@ -18,10 +18,12 @@ __all__ = [
     "TokenEmbedding"
 ]
 
+from abc import abstractmethod
 from mindspore import nn
 from mindspore import ops
-from mindspore import Parameter, Tensor
+from mindspore import Parameter
 import mindspore.numpy as mnp
+
 
 class TokenEmbedding(nn.Cell):
     r"""
@@ -73,19 +75,15 @@ class TokenEmbedding(nn.Cell):
         """size"""
         return self.embed.size
 
+    @abstractmethod
     def construct(self, ids):
         r"""
         Use ids to query embedding
         Args:
             ids : Ids to query.
 
-        Returns:
-            - ** compute result ** - Tensor, returns the Embedding query results.
+        Raises:
+            NotImplementedError: If this interface is called.
 
         """
-        tensor_ids = Tensor(ids)
-        out_shape = tensor_ids.shape + (self._embed_size,)
-        flat_ids = tensor_ids.reshape((-1,))
-        output_for_reshape = ops.gather(self.embedding_table, flat_ids, 0)
-        output = ops.reshape(output_for_reshape, out_shape)
-        return output
+        raise NotImplementedError(f'Function `construct` not implemented in {self.__class__.__name__}')

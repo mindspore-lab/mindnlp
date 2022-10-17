@@ -16,23 +16,29 @@
 
 import os
 import re
-import tarfile
-import zipfile
 from itertools import islice
-import mindspore
+import numpy as np
+from gensim.models import KeyedVectors
 from mindspore import nn
-import mindspore.numpy as mnp
 from mindspore import ops
 from mindspore import Tensor
 from mindspore.dataset.text.utils import Vocab
-from mindnlp.utils import download
 from mindnlp.abc.modules.embedding import TokenEmbedding
+from mindnlp.configs import DEFAULT_ROOT
+from mindnlp.utils import cache_file, ungz
 
 
 class Word2vec(TokenEmbedding):
     r"""
     Create vocab and Embedding from a given pre-trained vector file.
     """
+    urls = {
+        "google-news": "https://github.com/RaRe-Technologies/gensim-data/releases/download/word2vec-google-news-300/"
+                       "word2vec-google-news-300.gz"
+    }
+
+    dims = [300]
+
     def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.5, word_dropout=0):
         r"""
         Initize Vocab and Embedding by a given pre-trained word embedding.
@@ -51,78 +57,65 @@ class Word2vec(TokenEmbedding):
         self.embed = init_embed
         self._embed_size = init_embed.shape[1]
         self.requires_grad = requires_grad
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout(1 - dropout)
         self.word_dropout = word_dropout
 
     @classmethod
-    def from_pretrained(cls, url: str):
+    def from_pretrained(cls, name='google-news', dims=300, root=DEFAULT_ROOT,
+                        special_tokens=("<unk>", "<pad>"), special_first=False, use_gensim=True):
         r"""
         Creates Embedding instance from given 2-dimensional FloatTensor.
 
+        Args:
+            name (str): The name of the pretrained vector.
+            dims (int): The dimension of the pretrained vector.
+            root (str): Default storage directory.
+            special_tokens (tuple<str,str>): List of special participles.<unk>:Mark the words that don't exist;
+            <pad>:Align all the sentences.
+            special_first (bool): Indicates whether special participles from special_tokens will be added to
+            the top of the dictionary. If True, add special_tokens to the beginning of the dictionary,
+            otherwise add them to the end.
+            use_gensim (bool): Whether to use gensim library for pretrained word vector loading.
         Returns:
+            - ** cls ** - Returns a embedding instance generated through a pretrained word vector.
             - ** vocab ** - Vocabulary extracted from the file.
-            - ** embeddings ** - Word vector extracted from the file.
 
         """
+        if name not in cls.urls:
+            raise ValueError(f"The argument 'name' must in {cls.urls.keys()}, but got {name}.")
+        if dims not in cls.dims:
+            raise ValueError(f"The argument 'dims' must in {cls.dims}, but got {dims}.")
+        cache_dir = os.path.join(root, "embeddings", "Word2vec")
 
-        file_name = re.sub(r".+/", "", url)
-        download.cache_file(filename=file_name, cache_dir=None, url=url)
-        cache_dir = download.get_cache_path()
-        suffix = ''
-        if file_name.endswith('.tar.gz'):
-            suffix = '.tar.gz'
-        elif file_name.endswith('.zip'):
-            suffix = '.zip'
+        url = cls.urls[name]
+        download_file_name = re.sub(r".+/", "", url)
+        word2vec_file_name = f"word2vec-{name}-{dims}.bin"
+        path, _ = cache_file(filename=download_file_name, cache_dir=cache_dir, url=url)
+        decompress_path = os.path.join(cache_dir, word2vec_file_name)
+        if not os.path.exists(decompress_path):
+            ungz(path, decompress_path)
 
-        name_rar = file_name
-        name_dir = name_rar.replace(suffix, '')
-        word2vec_dir_path = os.path.join(cache_dir, name_dir)
-        word2vec_compress_path = os.path.join(cache_dir, file_name)
+        word2vec_file_path = decompress_path
+        compress_path = os.path.join(cache_dir, download_file_name)
 
-        if not os.path.isdir(word2vec_dir_path):
-            if suffix == '.tar.gz':
-                word2vec_tar = tarfile.open(word2vec_compress_path, 'r')
-                word2vec_tar.extractall(cache_dir)
-                word2vec_tar.close()
-            elif file_name == '.zip':
-                word2vec_zip = zipfile.ZipFile(word2vec_compress_path)
-                word2vec_zip.extractall(cache_dir)
-                word2vec_zip.close()
+        if use_gensim:
+            model = KeyedVectors.load_word2vec_format(compress_path, binary=True)
+            embeddings = list(model.vectors)
+            vocab = Vocab.from_list(list(model.key_to_index), list(special_tokens), special_first)
+        else:
+            embeddings = []
+            tokens = []
+            with open(word2vec_file_path, encoding='utf-8') as file:
+                for line in islice(file, 1, None):
+                    word, embedding = line.split(maxsplit=1)
+                    tokens.append(word)
+                    embeddings.append(np.fromstring(embedding, dtype=np.float32, sep=' '))
+            vocab = Vocab.from_list(tokens, list(special_tokens), special_first)
 
-        file_suffix = ''
-        while os.path.isdir(word2vec_dir_path):
-            next_dir_path = os.path.join(word2vec_dir_path, name_dir)
-            if not os.path.isdir(next_dir_path):
-                for file in os.listdir(word2vec_dir_path):
-                    if file.startswith(name_dir):
-                        file_suffix = os.path.splitext(file)[-1]
-                break
-            word2vec_dir_path = next_dir_path
-
-        name_txt = name_dir + file_suffix
-        word2vec_file_path = os.path.join(word2vec_dir_path, name_txt)
-
-        embeddings = []
-        tokens = []
-
-        with open(word2vec_file_path, encoding='utf-8') as file:
-            for line in islice(file, 1, None):
-                word, embedding = line.split(maxsplit=1)
-                tokens.append(word)
-                arr = embedding.split(' ')
-                float_arr = list(map(float, arr))
-                float_tensor = Tensor(float_arr)
-                float32_arr = mnp.asfarray(float_tensor)
-
-                embeddings.append(float32_arr)
-
-        embeddings.append(mnp.rand(100))
-        embeddings.append(mnp.zeros((100,), mindspore.float32))
-
-        vocab = Vocab.from_list(tokens, special_tokens=["<unk>", "<pad>"], special_first=False)
-        embeddings = mnp.array(embeddings).astype(mindspore.float32)
-
-        return cls(vocab, Tensor(embeddings), True, 0.5, 0)
+        embeddings.append(np.random.rand(dims))
+        embeddings.append(np.zeros((dims,), np.float32))
+        embeddings = np.array(embeddings).astype(np.float32)
+        return cls(vocab, Tensor(embeddings), True, 0.5, 0), vocab
 
     def construct(self, ids):
         r"""
