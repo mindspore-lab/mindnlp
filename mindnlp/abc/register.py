@@ -16,6 +16,8 @@
 Abstract class for Register
 """
 
+from functools import wraps
+
 class Register():
     """Register abstract class"""
     def __init__(self, name, map_rule):
@@ -25,6 +27,7 @@ class Register():
 
     def register(self, func):
         """register function."""
+        @wraps(func)
         def wrapper(*args, **kwargs):
             dataset = func(*args, **kwargs)
             return dataset
