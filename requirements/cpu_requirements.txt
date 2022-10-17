@@ -3,3 +3,4 @@ requests
 tqdm
 pylint
 pytest
+gensim
