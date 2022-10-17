@@ -44,6 +44,7 @@ class Glove(TokenEmbedding):
         Initize Vocab and Embedding by a given pre-trained word embedding.
 
         Args:
+            vocab :
             init_embed : Passing into Tensor, Embedding, Numpy.ndarray, etc.,
                         use this value to initialize Embedding directly.
             requires_grad : Whether this parameter needs to be gradient to update.
@@ -62,15 +63,23 @@ class Glove(TokenEmbedding):
 
     @classmethod
     def from_pretrained(cls, name='6B', dims=300, root=DEFAULT_ROOT,
-                        special_tokens=("<unk>", "<pad>"), special_first=False):
+                        special_tokens=("<unk>", "<pad>"), special_first=False, use_gensim=False):
         r"""
         Creates Embedding instance from given 2-dimensional FloatTensor.
 
         Args:
-            url (str) : url to download file.
+            name (str): The name of the pretrained vector.
+            dims (int): The dimension of the pretrained vector.
+            root (str): Default storage directory.
+            special_tokens (tuple<str,str>): List of special participles.<unk>:Mark the words that don't exist;
+            <pad>:Align all the sentences.
+            special_first (bool): Indicates whether special participles from special_tokens will be added to
+            the top of the dictionary. If True, add special_tokens to the beginning of the dictionary,
+            otherwise add them to the end.
+            use_gensim (bool): Whether to use gensim library for pretrained word vector loading.
         Returns:
+            - ** cls ** - Returns a embedding instance generated through a pretrained word vector.
             - ** vocab ** - Vocabulary extracted from the file.
-            - ** embeddings ** - Word vector extracted from the file.
 
         """
         if name not in cls.urls:
@@ -83,22 +92,24 @@ class Glove(TokenEmbedding):
         download_file_name = re.sub(r".+/", "", url)
         glove_file_name = f"glove.{name}.{dims}d.txt"
         path, _ = cache_file(filename=download_file_name, cache_dir=cache_dir, url=url)
-        unzip(path, cache_dir)
+        decompress_path = os.path.join(cache_dir, glove_file_name)
+        if not os.path.exists(decompress_path):
+            unzip(path, cache_dir)
 
         glove_file_path = os.path.join(cache_dir, glove_file_name)
 
         embeddings = []
         tokens = []
         with open(glove_file_path, encoding='utf-8') as file:
-            for glove in file:
-                word, embedding = glove.split(maxsplit=1)
+            for line in file:
+                word, embedding = line.split(maxsplit=1)
                 tokens.append(word)
                 embeddings.append(np.fromstring(embedding, dtype=np.float32, sep=' '))
 
         embeddings.append(np.random.rand(dims))
         embeddings.append(np.zeros((dims,), np.float32))
 
-        vocab = Vocab.from_list(tokens, special_tokens, special_first)
+        vocab = Vocab.from_list(tokens, list(special_tokens), special_first)
         embeddings = np.array(embeddings).astype(np.float32)
         return cls(vocab, Tensor(embeddings), True, 0.5, 0), vocab
 
