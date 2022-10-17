@@ -19,11 +19,13 @@ import re
 from itertools import islice
 import numpy as np
 from gensim.models import KeyedVectors
+from mindspore import nn
+from mindspore import ops
+from mindspore import Tensor
+from mindspore.dataset.text.utils import Vocab
 from mindnlp.abc.modules.embedding import TokenEmbedding
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import cache_file, ungz
-from mindspore import Tensor, nn, ops
-from mindspore.dataset.text.utils import Vocab
 
 
 class Word2vec(TokenEmbedding):
@@ -31,7 +33,8 @@ class Word2vec(TokenEmbedding):
     Create vocab and Embedding from a given pre-trained vector file.
     """
     urls = {
-        "google-news": "https://github.com/RaRe-Technologies/gensim-data/releases/download/word2vec-google-news-300/word2vec-google-news-300.gz"
+        "google-news": "https://github.com/RaRe-Technologies/gensim-data/releases/download/word2vec-google-news-300/"
+                       "word2vec-google-news-300.gz"
     }
 
     dims = [300]

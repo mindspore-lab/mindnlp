@@ -63,7 +63,7 @@ class Glove(TokenEmbedding):
 
     @classmethod
     def from_pretrained(cls, name='6B', dims=300, root=DEFAULT_ROOT,
-                        special_tokens=("<unk>", "<pad>"), special_first=False, use_gensim=False):
+                        special_tokens=("<unk>", "<pad>"), special_first=False):
         r"""
         Creates Embedding instance from given 2-dimensional FloatTensor.
 
