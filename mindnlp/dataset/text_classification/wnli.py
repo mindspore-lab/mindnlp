@@ -79,6 +79,7 @@ def WNLI(
             Default:~/.mindnlp
         split (str|Tuple[str]): Split or splits to be returned.
             Default:('train', 'dev', 'test').
+        proxies (dict): a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
 
     Returns:
         - **datasets_list** (list) -A list of loaded datasets.

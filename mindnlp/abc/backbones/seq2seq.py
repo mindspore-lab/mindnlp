@@ -15,7 +15,6 @@
 """Sequence-to-sequence basic model"""
 # pylint: disable=abstract-method
 # pylint: disable=arguments-differ
-from mindspore import ops
 from mindnlp.abc.backbones.base import BaseModel
 
 
@@ -44,18 +43,13 @@ class Seq2seqModel(BaseModel):
         self.decoder = decoder
 
     def construct(self, src_tokens, tgt_tokens, src_length, mask=None):
-        if mask is None:
-            mask = self._gen_mask(src_tokens)
-
-        encoder_out = self.encoder(src_tokens, src_length=src_length)
+        encoder_out = self.encoder(src_tokens, src_length=src_length, mask=mask)
 
         decoder_out = self.decoder(tgt_tokens, encoder_out=encoder_out)
         return decoder_out
 
     def get_context(self, src_tokens, mask=None):
         """Get Context from encoder."""
-        if mask is None:
-            mask = self._gen_mask(src_tokens)
         return self.encoder(src_tokens, mask=mask)
 
     def extract_features(self, src_tokens, tgt_tokens, src_length):
@@ -67,7 +61,3 @@ class Seq2seqModel(BaseModel):
     def output_layer(self, features):
         """Project features to the default output size"""
         return self.decoder.output_layer(features)
-
-    def _gen_mask(self, inputs):
-        """Generate mask tensor"""
-        return ops.ones_like(inputs)

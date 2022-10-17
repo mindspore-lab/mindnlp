@@ -53,6 +53,7 @@ def Multi30k(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train',
             Default:('train', 'valid', 'test').
         language_pair (Tuple[str]): Tuple containing src and tgt language.
             Default: ('de', 'en').
+        proxies (dict): a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
 
     Returns:
         - **datasets_list** (list) -A list of loaded datasets.
@@ -140,14 +141,14 @@ def Multi30k(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train',
     return datasets_list
 
 @process.register
-def Multi30k_Process(dataset, tokenizer = text.BasicTokenizer(), language = 'en', vocab=None):
+def Multi30k_Process(dataset, column = 'en', tokenizer = text.BasicTokenizer(), vocab=None):
     '''
     a function transforms multi30K dataset into tensors
 
     Args:
         dataset (ZipDataset): Multi30K dataset
+        column (str): The language column name in multi30K, 'de' or 'en', defaults to 'en'
         tokenizer (TextTensorOperation): Tokenizer you what to used
-        language (str): The language column name in multi30K, 'de' or 'en', defaults to 'en'
         vocab (Vocab): The vocab you use, defaults to None. If None, a new vocab will be created.
 
     Returns:
@@ -155,8 +156,8 @@ def Multi30k_Process(dataset, tokenizer = text.BasicTokenizer(), language = 'en'
         - **newVocab** (Vocab) -new vocab created from dataset
 
     Raises:
-        AssertionError: arg `language` not in ['en', 'de']
-        TypeError: If `language` is not a string.
+        AssertionError: arg `column` not in ['en', 'de']
+        TypeError: If `column` is not a string.
 
     Examples:
         >>> from mindnlp.dataset import Multi30k_Process
@@ -165,7 +166,7 @@ def Multi30k_Process(dataset, tokenizer = text.BasicTokenizer(), language = 'en'
         >>>     split="test",
         >>>     language_pair=("de", "en")
         >>> )
-        >>> test_dataset, vocab = Multi30k_Process(test_dataset, text.BasicTokenizer(), "en")
+        >>> test_dataset, vocab = Multi30k_Process(test_dataset, "en", text.BasicTokenizer())
         >>> for i in test_dataset.create_tuple_iterator():
         >>>     print(i)
         >>>     break
@@ -174,11 +175,11 @@ def Multi30k_Process(dataset, tokenizer = text.BasicTokenizer(), language = 'en'
             24,   90,   82, 1783,   15,  131,    1])]
     '''
 
-    assert language in ['en', 'de'], "language not in ['en', 'de']"
+    assert column in ['en', 'de'], "column not in ['en', 'de']"
     if vocab is None :
-        dataset = dataset.map(tokenizer, language)
-        newVocab = text.Vocab.from_dataset(dataset, language)
-        return dataset.map(text.Lookup(newVocab), language), newVocab
+        dataset = dataset.map(tokenizer, column)
+        newVocab = text.Vocab.from_dataset(dataset, column)
+        return dataset.map(text.Lookup(newVocab), column), newVocab
 
-    dataset = dataset.map(tokenizer, language)
-    return dataset.map(text.Lookup(vocab), language)
+    dataset = dataset.map(tokenizer, column)
+    return dataset.map(text.Lookup(vocab), column)

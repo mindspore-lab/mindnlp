@@ -18,9 +18,11 @@ IWSLT2017 load function
 # pylint: disable=C0103
 
 import os
-from mindspore.dataset import IWSLT2017Dataset
+from typing import Union, Tuple
+from mindspore.dataset import IWSLT2017Dataset, text
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.process import common_process
+from mindnlp.dataset.register import load, process
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import untar
 
@@ -43,7 +45,9 @@ SUPPORTED_DATASETS = {
 
 
 @load.register
-def IWSLT2017(root=DEFAULT_ROOT, split=("train", "valid", "test"), language_pair=("de", "en"), proxies=None):
+def IWSLT2017(root: str = DEFAULT_ROOT,
+              split: Union[Tuple[str], str] = ("train", "valid", "test"),
+              language_pair=("de", "en"), proxies=None):
     r"""
     Load the IWSLT2017 dataset
 
@@ -70,6 +74,7 @@ def IWSLT2017(root=DEFAULT_ROOT, split=("train", "valid", "test"), language_pair
         split (str|Tuple[str]): Split or splits to be returned.
             Default:('train', 'valid', 'test').
         language_pair (Tuple[str]): Tuple containing src and tgt language. Default: ('de', 'en').
+        proxies (dict): a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
 
     Returns:
         - **datasets_list** (list) -A list of loaded datasets.
@@ -106,7 +111,7 @@ def IWSLT2017(root=DEFAULT_ROOT, split=("train", "valid", "test"), language_pair
         raise ValueError(
             f"src_language '{src_language}' is not valid. Supported source languages are \
                 {list(SUPPORTED_DATASETS['language_pair'])}"
-            )
+        )
     if tgt_language not in SUPPORTED_DATASETS["language_pair"][src_language]:
         raise ValueError(
             f"tgt_language '{tgt_language}' is not valid for give src_language '\
@@ -133,3 +138,38 @@ def IWSLT2017(root=DEFAULT_ROOT, split=("train", "valid", "test"), language_pair
     if len(datasets_list) == 1:
         return datasets_list[0]
     return datasets_list
+
+@process.register
+def IWSLT2017_Process(dataset, column = 'translation', tokenizer = text.BasicTokenizer(), vocab=None):
+    '''
+    a function transforms specific language column in IWSLT2017 dataset into tensors
+
+    Args:
+        dataset (GeneratorDataset|ZipDataset): IWSLT2017 dataset
+        column (str): The language column name in IWSLT2017
+        tokenizer (TextTensorOperation): Tokenizer you what to used
+        vocab (Vocab): The vocab you use, defaults to None. If None, a new vocab will be created.
+
+    Returns:
+        - **dataset** (MapDataset) -dataset after process
+        - **newVocab** (Vocab) -new vocab created from dataset if 'vocab' is None
+
+    Raises:
+        TypeError: If `language` is not string.
+
+    Examples:
+        >>> from mindspore.dataset import text
+        >>> from mindnlp.dataset import IWSLT2017, IWSLT2017_Process
+        >>> test_dataset = IWSLT2017(
+        >>>     root='./dataset',
+        >>>     split="test",
+        >>>     language_pair=("de", "en")
+        >>> )
+        >>> test_dataset, vocab = process('IWSLT2017', test_dataset, "translation",
+        >>>     text.BasicTokenizer())
+        >>> for i in test_dataset.create_tuple_iterator():
+        >>>     print(i)
+        >>>     break
+    '''
+
+    return common_process(dataset, column, tokenizer, vocab)

@@ -15,6 +15,7 @@
 """Encoder basic model"""
 
 from mindspore import nn
+from mindspore import ops
 
 
 class EncoderBase(nn.Cell):
@@ -45,3 +46,7 @@ class EncoderBase(nn.Cell):
     def reset_parameters(self, mask=None):
         """Reset model's parameters"""
         raise NotImplementedError
+
+    def _gen_mask(self, inputs):
+        """Generate mask tensor"""
+        return ops.ones_like(inputs)

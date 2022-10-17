@@ -57,7 +57,7 @@ class Imdb:
                 if bool(pattern.match(tf.name)):
                     self._text.append(str(tarf.extractfile(tf).read().rstrip(six.b("\n\r"))
                                       .translate(None, six.b(string.punctuation)).lower()).split())
-                    self._label.append(self.label_map[label])
+                    self._label.append([self.label_map[label]])
                 tf = tarf.next()
 
     def __getitem__(self, index):
@@ -80,6 +80,7 @@ def IMDB(
             Default:~/.mindnlp
         split (str|Tuple[str]): Split or splits to be returned.
             Default:('train', 'test').
+        proxies (dict): a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
 
     Returns:
         - **datasets_list** (list) -A list of loaded datasets.

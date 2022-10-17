@@ -18,9 +18,12 @@ import unittest
 import numpy as np
 import mindspore
 from mindspore import Tensor
-from mindnlp.common.metrics import Accuracy, F1Score, BleuScore
-from mindnlp.common.metrics import (perplexity, bleu, rouge_n, rouge_l, distinct, accuracy, precision,
-                                     recall, f1_score, confusion_matrix, mcc, pearson, spearman, em_score)
+from mindnlp.engine.metrics import (Perplexity, BleuScore, RougeN, RougeL, Distinct,
+                                    Accuracy, Precision, Recall, F1Score, ConfusionMatrix,
+                                    MCC, Pearson, Spearman, EmScore)
+from mindnlp.common.metrics import (perplexity, bleu, rouge_n, rouge_l, distinct,
+                                    accuracy, precision, recall, f1_score, confusion_matrix,
+                                    mcc, pearson, spearman, em_score)
 
 class TestPerplexity(unittest.TestCase):
     r"""
@@ -34,15 +37,15 @@ class TestPerplexity(unittest.TestCase):
         """
         Test perplexity
         """
-        pred_data = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
-        expect_label = Tensor(np.array([1, 0, 1]), mindspore.int32)
+        pred_data = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]))
+        expect_label = Tensor(np.array([1, 0, 1]))
         ppl = perplexity(pred_data, expect_label, ignore_label=None)
 
-        assert ppl == 2.2314431850023855
+        assert ppl == 2.231443166940565
 
 class TestBleu(unittest.TestCase):
     r"""
-    Test BLEU
+    Test bleu
     """
 
     def setUp(self):
@@ -50,10 +53,11 @@ class TestBleu(unittest.TestCase):
 
     def test_bleu(self):
         """
-        Test BLEU
+        Test bleu
         """
         cand = [["The", "cat", "The", "cat", "on", "the", "mat"]]
-        ref_list = [[["The", "cat", "is", "on", "the", "mat"], ["There", "is", "a", "cat", "on", "the", "mat"]]]
+        ref_list = [[["The", "cat", "is", "on", "the", "mat"],
+                    ["There", "is", "a", "cat", "on", "the", "mat"]]]
         bleu_score = bleu(cand, ref_list)
 
         assert bleu_score == 0.46713797772820015
@@ -70,11 +74,11 @@ class TestRougeN(unittest.TestCase):
         """
         Test ROUGE-N
         """
-        cand_list = [["a", "cat", "is", "on", "the", "table"]]
-        ref_list = [["there", "is", "a", "cat", "on", "the", "table"]]
-        rougen_score = rouge_n(cand_list, ref_list)
+        cand_list = [["the", "cat", "was", "found", "under", "the", "bed"]]
+        ref_list = [["the", "cat", "was", "under", "the", "bed"]]
+        rougen_score = rouge_n(cand_list, ref_list, 2)
 
-        assert rougen_score == 0.8571428571428571
+        assert rougen_score == 0.8
 
 class TestRougeL(unittest.TestCase):
     r"""
@@ -88,8 +92,9 @@ class TestRougeL(unittest.TestCase):
         """
         Test ROUGE-L
         """
-        cand_list = ["The", "cat", "The", "cat", "on", "the", "mat"]
-        ref_list = [["The", "cat", "is", "on", "the", "mat"], ["There", "is", "a", "cat", "on", "the", "mat"]]
+        cand_list = ["The","cat","The","cat","on","the","mat"]
+        ref_list = [["The","cat","is","on","the","mat"],
+                    ["There","is","a","cat","on","the","mat"]]
         rougel_score = rouge_l(cand_list, ref_list)
 
         assert rougel_score == 0.7800511508951408
@@ -123,11 +128,11 @@ class TestAccuracy(unittest.TestCase):
         """
         Test accuracy
         """
-        preds = [[0.1, 0.9], [0.5, 0.5], [0.6, 0.4], [0.7, 0.3]]
-        labels = [1, 0, 1, 1]
+        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
+        labels = Tensor(np.array([1, 0, 1]), mindspore.float32)
         acc = accuracy(preds, labels)
 
-        assert acc == 0.5
+        assert acc == 0.6666666666666666
 
 class TestPrecision(unittest.TestCase):
     r"""
@@ -167,7 +172,7 @@ class TestRecall(unittest.TestCase):
 
 class TestF1Score(unittest.TestCase):
     r"""
-    Test F1 score
+    Test f1_score
     """
 
     def setUp(self):
@@ -175,13 +180,85 @@ class TestF1Score(unittest.TestCase):
 
     def test_f1_score(self):
         """
-        Test recall
+        Test f1_score
         """
-        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
-        labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
+        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]))
+        labels = Tensor(np.array([1, 0, 1]))
         f1_s = f1_score(preds, labels)
 
         assert f1_s == 0.6666666666666666
+
+class TestMcc(unittest.TestCase):
+    r"""
+    Test mcc
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_mcc(self):
+        """
+        Test mcc
+        """
+        preds = [[0.1, 0.9], [-0.5, 0.5], [0.1, 0.4], [0.1, 0.3]]
+        labels = [[1], [0], [1], [1]]
+        m_c_c = mcc(preds, labels)
+
+        assert m_c_c == 0.0
+
+class TestPearson(unittest.TestCase):
+    r"""
+    Test pearson
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_pearson(self):
+        """
+        Test pearson
+        """
+        preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
+        labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
+        pcc = pearson(preds, labels)
+
+        assert pcc == 0.9985229081857804
+
+class TestSpearman(unittest.TestCase):
+    r"""
+    Test spearman
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_spearman(self):
+        """
+        Test spearman
+        """
+        preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
+        labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
+        scc = spearman(preds, labels)
+
+        assert scc == 1.0
+
+class TestEmScore(unittest.TestCase):
+    r"""
+    Test em_score
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_em_score(self):
+        """
+        Test em_score
+        """
+        preds = "this is the best span"
+        examples = ["this is a good span", "something irrelevant"]
+        exact_match = em_score(preds, examples)
+
+        assert exact_match == 0.0
 
 class TestConfusionMatrix(unittest.TestCase):
     r"""
@@ -193,7 +270,7 @@ class TestConfusionMatrix(unittest.TestCase):
 
     def test_confusion_matrix(self):
         """
-        Test confusion matrix
+        Test confusion_matrix
         """
         preds = Tensor(np.array([1, 0, 1, 0]))
         labels = Tensor(np.array([1, 0, 0, 1]))
@@ -201,77 +278,106 @@ class TestConfusionMatrix(unittest.TestCase):
 
         assert np.array_equal(conf_mat, np.array([[1., 1.], [1., 1.]]))
 
-class TestMcc(unittest.TestCase):
+
+class TestClassPerplexity(unittest.TestCase):
     r"""
-    Test MCC
+    Test class Perplexity
     """
 
     def setUp(self):
         self.input = None
 
-    def test_mcc(self):
+    def test_class_perplexity(self):
         """
-        Test MCC
+        Test class Perplexity
         """
-        preds = [[0.1, 0.9], [-0.5, 0.5], [0.1, 0.4], [0.1, 0.3]]
-        labels = [[1], [0], [1], [1]]
-        m_c_c = mcc(preds, labels)
+        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]))
+        labels = Tensor(np.array([1, 0, 1]))
+        metric = Perplexity()
+        metric.update(preds, labels)
+        ppl = metric.eval()
 
-        assert m_c_c == 0.0
+        assert ppl == 2.231443166940565
 
-class TestPearson(unittest.TestCase):
+class TestClassBleuScore(unittest.TestCase):
     r"""
-    Test PCC
+    Test class BleuScore
     """
 
     def setUp(self):
         self.input = None
 
-    def test_pearson(self):
+    def test_class_bleu_score(self):
         """
-        Test PCC
+        Test class BleuScore
         """
-        preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
-        labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
-        pcc = pearson(preds, labels)
+        cand = [["The", "cat", "The", "cat", "on", "the", "mat"]]
+        ref_list = [[["The", "cat", "is", "on", "the", "mat"],
+                    ["There", "is", "a", "cat", "on", "the", "mat"]]]
+        metric = BleuScore()
+        metric.update(cand, ref_list)
+        bleu_score = metric.eval()
 
-        assert pcc == 0.9985229081857804
+        assert bleu_score == 0.46713797772820015
 
-class TestSpearman(unittest.TestCase):
+class TestClassRougeN(unittest.TestCase):
     r"""
-    Test SCC
+    Test class RougeN
     """
 
     def setUp(self):
         self.input = None
 
-    def test_spearman(self):
+    def test_class_rouge_n(self):
         """
-        Test SCC
+        Test class RougeN
         """
-        preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
-        labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
-        scc = spearman(preds, labels)
+        cand_list = [["the", "cat", "was", "found", "under", "the", "bed"]]
+        ref_list = [["the", "cat", "was", "under", "the", "bed"]]
+        metric = RougeN(2)
+        metric.update(cand_list, ref_list)
+        rougen_score = metric.eval()
 
-        assert scc == 1.0
+        assert rougen_score == 0.8
 
-class TestEmScore(unittest.TestCase):
+class TestClassRougeL(unittest.TestCase):
     r"""
-    Test exact match score
+    Test class RougeL
     """
 
     def setUp(self):
         self.input = None
 
-    def test_em_score(self):
+    def test_class_rouge_l(self):
         """
-        Test exact match score
+        Test class RougeL
         """
-        preds = "this is the best span"
-        examples = ["this is a good span", "something irrelevant"]
-        exact_match = em_score(preds, examples)
+        cand_list = ["The","cat","The","cat","on","the","mat"]
+        ref_list = [["The","cat","is","on","the","mat"],["There","is","a","cat","on","the","mat"]]
+        metric = RougeL()
+        metric.update(cand_list, ref_list)
+        rougel_score = metric.eval()
 
-        assert exact_match == 0.0
+        assert rougel_score == 0.7800511508951408
+
+class TestClassDistinct(unittest.TestCase):
+    r"""
+    Test class Distinct
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_class_distinct(self):
+        """
+        Test class Distinct
+        """
+        cand_list = ["The", "cat", "The", "cat", "on", "the", "mat"]
+        metric = Distinct()
+        metric.update(cand_list)
+        rougel_score = metric.eval()
+
+        assert rougel_score == 0.8333333333333334
 
 class TestClassAccuracy(unittest.TestCase):
     r"""
@@ -288,10 +394,50 @@ class TestClassAccuracy(unittest.TestCase):
         preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
         labels = Tensor(np.array([1, 0, 1]), mindspore.float32)
         metric = Accuracy()
-        metric.updates(preds, labels)
+        metric.update(preds, labels)
         acc = metric.eval()
 
         assert acc == 0.6666666666666666
+
+class TestClassPrecision(unittest.TestCase):
+    r"""
+    Test class Precision
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_class_precision(self):
+        """
+        Test class Precision
+        """
+        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
+        labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
+        metric = Precision()
+        metric.update(preds, labels)
+        prec = metric.eval()
+
+        assert prec == 0.5
+
+class TestClassRecall(unittest.TestCase):
+    r"""
+    Test class Recall
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_class_recall(self):
+        """
+        Test class Recall
+        """
+        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
+        labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
+        metric = Recall()
+        metric.update(preds, labels)
+        rec = metric.eval()
+
+        assert rec == 0.5
 
 class TestClassF1Score(unittest.TestCase):
     r"""
@@ -305,30 +451,112 @@ class TestClassF1Score(unittest.TestCase):
         """
         Test class F1Score
         """
-        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
-        labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
+        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]))
+        labels = Tensor(np.array([1, 0, 1]))
         metric = F1Score()
-        metric.updates(preds, labels)
+        metric.update(preds, labels)
         f1_s = metric.eval()
 
         assert f1_s == 0.6666666666666666
 
-class TestClassBleuScore(unittest.TestCase):
+class TestClassMCC(unittest.TestCase):
     r"""
-    Test class BleuScore
+    Test class MCC
     """
 
     def setUp(self):
         self.input = None
 
-    def test_class_bleu_score(self):
+    def test_class_mcc(self):
         """
-        Test class BleuScore
+        Test class MCC
         """
-        cand = [["The", "cat", "The", "cat", "on", "the", "mat"]]
-        ref_list = [[["The", "cat", "is", "on", "the", "mat"], ["There", "is", "a", "cat", "on", "the", "mat"]]]
-        metric = BleuScore()
-        metric.updates(cand, ref_list)
-        bleu_score = metric.eval()
+        preds = [[0.1, 0.9], [-0.5, 0.5], [0.1, 0.4], [0.1, 0.3]]
+        labels = [[1], [0], [1], [1]]
+        metric = MCC()
+        metric.update(preds, labels)
+        m_c_c = metric.eval()
 
-        assert bleu_score == 0.46713797772820015
+        assert m_c_c == 0.0
+
+class TestClassPearson(unittest.TestCase):
+    r"""
+    Test class Pearson
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_class_pearson(self):
+        """
+        Test class Pearson
+        """
+        preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
+        labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
+
+        metric = Pearson()
+        metric.update(preds, labels)
+        pcc = metric.eval()
+
+        assert pcc == 0.9985229081857804
+
+class TestClassSpearman(unittest.TestCase):
+    r"""
+    Test class Spearman
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_class_spearman(self):
+        """
+        Test class Spearman
+        """
+        preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
+        labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
+
+        metric = Spearman()
+        metric.update(preds, labels)
+        scc = metric.eval()
+
+        assert scc == 1.0
+
+class TestClassEmScore(unittest.TestCase):
+    r"""
+    Test class EmScore
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_class_em_score(self):
+        """
+        Test class EmScore
+        """
+        preds = "this is the best span"
+        examples = ["this is a good span", "something irrelevant"]
+        metric = EmScore()
+        metric.update(preds, examples)
+        exact_match = metric.eval()
+
+        assert exact_match == 0.0
+
+class TestClassConfusionMatrix(unittest.TestCase):
+    r"""
+    Test class ConfusionMatrix
+    """
+
+    def setUp(self):
+        self.input = None
+
+    def test_class_confusion_matrix(self):
+        """
+        Test class ConfusionMatrix
+        """
+        preds = Tensor(np.array([1, 0, 1, 0]))
+        labels = Tensor(np.array([1, 0, 0, 1]))
+        metric = ConfusionMatrix()
+        metric.update(preds, labels)
+        conf_mat = metric.eval()
+
+        assert np.array_equal(conf_mat, np.array([[1., 1.], [1., 1.]]))
