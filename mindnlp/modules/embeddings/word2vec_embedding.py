@@ -39,26 +39,29 @@ class Word2vec(TokenEmbedding):
 
     dims = [300]
 
-    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.5, word_dropout=0):
+    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.5, train_state: bool = True):
         r"""
-        Initize Vocab and Embedding by a given pre-trained word embedding.
+        Initializer.
 
         Args:
+            vocab (Vocab) : Passins into Vocab for initialization.
             init_embed : Passing into Tensor, Embedding, Numpy.ndarray, etc.,
                         use this value to initialize Embedding directly.
-            requires_grad : Whether this parameter needs to be gradient to update.
-            dropout : Dropout of the output of Embedding.
-            word_dropout : How much is the probability of replacing a word to UNK.
+            requires_grad (bool): Whether this parameter needs to be gradient to update.
+            dropout (float): Dropout of the output of Embedding.
+            train_state (bool): The network is in a state of training or inference.
+                                True:train state;False:inference state.
         """
         super().__init__(vocab, init_embed)
 
-        self.vocab_list = vocab
+        self._word_vocab = vocab
         self.vocab_size = init_embed.shape[0]
         self.embed = init_embed
-        self._embed_size = init_embed.shape[1]
+        self._embed_dim = init_embed.shape[1]
+        self._embed_size = init_embed.shape
         self.requires_grad = requires_grad
-        self.dropout = nn.Dropout(1 - dropout)
-        self.word_dropout = word_dropout
+        self.dropout_layer = nn.Dropout(1 - dropout)
+        self.train_state = train_state
 
     @classmethod
     def from_pretrained(cls, name='google-news', dims=300, root=DEFAULT_ROOT,
@@ -115,7 +118,7 @@ class Word2vec(TokenEmbedding):
         embeddings.append(np.random.rand(dims))
         embeddings.append(np.zeros((dims,), np.float32))
         embeddings = np.array(embeddings).astype(np.float32)
-        return cls(vocab, Tensor(embeddings), True, 0.5, 0), vocab
+        return cls(vocab, Tensor(embeddings), True, 0.5), vocab
 
     def construct(self, ids):
         r"""
@@ -127,8 +130,8 @@ class Word2vec(TokenEmbedding):
             - ** compute result ** - Tensor, returns the Embedding query results.
         """
         tensor_ids = Tensor(ids)
-        out_shape = tensor_ids.shape + (self._embed_size,)
+        out_shape = tensor_ids.shape + (self._embed_dim,)
         flat_ids = tensor_ids.reshape((-1,))
         output_for_reshape = ops.gather(self.embed, flat_ids, 0)
         output = ops.reshape(output_for_reshape, out_shape)
-        return output
+        return self.dropout(output)
