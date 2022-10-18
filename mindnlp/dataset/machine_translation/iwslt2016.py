@@ -19,9 +19,10 @@ IWSLT2016 load function
 
 import os
 from typing import Union, Tuple
-from mindspore.dataset import IWSLT2016Dataset
+from mindspore.dataset import IWSLT2016Dataset, text
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.process import common_process
+from mindnlp.dataset.register import load, process
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import untar
 
@@ -178,3 +179,27 @@ def IWSLT2016(root: str = DEFAULT_ROOT,
     if len(datasets_list) == 1:
         return datasets_list[0]
     return datasets_list
+
+@process.register
+def IWSLT2016_Process(dataset, column = 'translation', tokenizer = text.BasicTokenizer(), vocab=None):
+    '''
+    a function transforms specific language column in IWSLT2017 dataset into tensors
+
+    Args:
+        dataset (GeneratorDataset|ZipDataset): IWSLT2016 dataset
+        column (str): The language column name in IWSLT2016, defaults to 'translation'
+        tokenizer (TextTensorOperation): Tokenizer you what to used
+        vocab (Vocab): The vocab you use, defaults to None. If None, a new vocab will be created.
+
+    Returns:
+        - **dataset** (MapDataset) -dataset after process
+        - **newVocab** (Vocab) -new vocab created from dataset if 'vocab' is None
+
+    Raises:
+        TypeError: If `column` is not a string.
+
+    Examples:
+        Please refers to comments on mindnlp.dataset.Multi30k_Process
+    '''
+
+    return common_process(dataset, column, tokenizer, vocab)

@@ -19,7 +19,9 @@ Test LCSTS
 import os
 import unittest
 import pytest
-from mindnlp.dataset import LCSTS, load
+import mindspore
+from mindspore.dataset import text
+from mindnlp.dataset import LCSTS, LCSTS_Process, load, process
 
 
 class TestLCSTS(unittest.TestCase):
@@ -55,3 +57,55 @@ class TestLCSTS(unittest.TestCase):
                  root=root,
                  split=('train', 'dev')
                  )
+
+class TestLCSTSProcess(unittest.TestCase):
+    r"""
+    Test LCSTS Process
+    """
+
+    def setUp(self):
+        self.input = None
+
+    @pytest.mark.skip(reason="this ut has already tested")
+    def test_lcsts_process_no_vocab(self):
+        r"""
+        Test LCSTS process with no vocab
+        """
+
+        test_dataset = LCSTS(
+            root=os.path.join(os.path.expanduser('~'), ".mindnlp"),
+            split="train"
+        )
+
+        test_dataset, vocab = LCSTS_Process(
+            test_dataset, "target", text.BasicTokenizer())
+
+        for i in test_dataset.create_tuple_iterator():
+            assert i[1].dtype == mindspore.int32
+            break
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break
+
+    @pytest.mark.skip(reason="this ut has already tested")
+    def test_lcsts_process_no_vocab_by_register(self):
+        '''
+        Test LCSTS process with no vocab by register
+        '''
+
+        test_dataset = LCSTS(
+            root=os.path.join(os.path.expanduser('~'), ".mindnlp"),
+            split="train"
+        )
+
+        test_dataset, vocab = process('LCSTS', test_dataset, "target",
+            text.BasicTokenizer())
+
+        for i in test_dataset.create_tuple_iterator():
+            assert i[1].dtype == mindspore.int32
+            break
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break

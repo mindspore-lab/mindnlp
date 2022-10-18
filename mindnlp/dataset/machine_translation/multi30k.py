@@ -146,7 +146,7 @@ def Multi30k_Process(dataset, column = 'en', tokenizer = text.BasicTokenizer(), 
     a function transforms multi30K dataset into tensors
 
     Args:
-        dataset (ZipDataset): Multi30K dataset
+        dataset (GeneratorDataset|ZipDataset): Multi30K dataset
         column (str): The language column name in multi30K, 'de' or 'en', defaults to 'en'
         tokenizer (TextTensorOperation): Tokenizer you what to used
         vocab (Vocab): The vocab you use, defaults to None. If None, a new vocab will be created.
@@ -160,13 +160,30 @@ def Multi30k_Process(dataset, column = 'en', tokenizer = text.BasicTokenizer(), 
         TypeError: If `column` is not a string.
 
     Examples:
-        >>> from mindnlp.dataset import Multi30k_Process
+        >>> from mindspore.dataset import text
+        >>> from mindnlp.dataset import Multi30k, Multi30k_Process
         >>> test_dataset = Multi30k(
         >>>     root="./dataset",
         >>>     split="test",
         >>>     language_pair=("de", "en")
         >>> )
         >>> test_dataset, vocab = Multi30k_Process(test_dataset, "en", text.BasicTokenizer())
+        >>> for i in test_dataset.create_tuple_iterator():
+        >>>     print(i)
+        >>>     break
+        [Tensor(shape=[], dtype=String, value= 'Ein Mann mit einem orangefarbenen Hut, \
+            der etwas anstarrt.'), Tensor(shape=[10], dtype=Int32, value= [   2,    8,    3,   \
+            24,   90,   82, 1783,   15,  131,    1])]
+
+        >>> from mindspore.dataset import text
+        >>> from mindnlp.dataset import Multi30k, process
+        >>> test_dataset = Multi30k(
+        >>>     root="./dataset",
+        >>>     split="test",
+        >>>     language_pair=("de", "en")
+        >>> )
+        >>> test_dataset, vocab = process('Multi30k', test_dataset,
+        >>>     "en", text.BasicTokenizer())
         >>> for i in test_dataset.create_tuple_iterator():
         >>>     print(i)
         >>>     break

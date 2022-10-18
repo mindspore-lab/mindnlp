@@ -20,9 +20,10 @@ WikiText103 load function
 import os
 import re
 from typing import Union, Tuple
-from mindspore.dataset import TextFileDataset
+from mindspore.dataset import TextFileDataset, text
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.process import common_process
+from mindnlp.dataset.register import load, process
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import unzip
 
@@ -82,3 +83,27 @@ def WikiText103(root: str = DEFAULT_ROOT,
     if len(datasets_list) == 1:
         return datasets_list[0]
     return datasets_list
+
+@process.register
+def WikiText103_Process(dataset, column = 'text', tokenizer = text.BasicTokenizer(), vocab=None):
+    '''
+    a function transforms specific language column in WikiText103 dataset into tensors
+
+    Args:
+        dataset (GeneratorDataset|ZipDataset): WikiText103 dataset
+        column (str): The language column name in WikiText103, defaults to 'text'
+        tokenizer (TextTensorOperation): Tokenizer you what to used
+        vocab (Vocab): The vocab you use, defaults to None. If None, a new vocab will be created.
+
+    Returns:
+        - **dataset** (MapDataset) -dataset after process
+        - **newVocab** (Vocab) -new vocab created from dataset if 'vocab' is None
+
+    Raises:
+        TypeError: If `column` is not a string.
+
+    Examples:
+        Please refers to comments on mindnlp.dataset.Multi30k_Process
+    '''
+
+    return common_process(dataset, column, tokenizer, vocab)

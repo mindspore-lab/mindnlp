@@ -16,7 +16,7 @@
 TextGeneration dataset init
 """
 
-from .wikitext2 import WikiText2
-from .wikitext103 import WikiText103
-from .penntreebank import PennTreebank
-from .lcsts import LCSTS
+from .wikitext2 import WikiText2, WikiText2_Process
+from .wikitext103 import WikiText103, WikiText103_Process
+from .penntreebank import PennTreebank, PennTreebank_Process
+from .lcsts import LCSTS, LCSTS_Process

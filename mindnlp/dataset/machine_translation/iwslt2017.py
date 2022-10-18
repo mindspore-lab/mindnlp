@@ -155,21 +155,10 @@ def IWSLT2017_Process(dataset, column = 'translation', tokenizer = text.BasicTok
         - **newVocab** (Vocab) -new vocab created from dataset if 'vocab' is None
 
     Raises:
-        TypeError: If `language` is not string.
+        TypeError: If `column` is not string.
 
     Examples:
-        >>> from mindspore.dataset import text
-        >>> from mindnlp.dataset import IWSLT2017, IWSLT2017_Process
-        >>> test_dataset = IWSLT2017(
-        >>>     root='./dataset',
-        >>>     split="test",
-        >>>     language_pair=("de", "en")
-        >>> )
-        >>> test_dataset, vocab = process('IWSLT2017', test_dataset, "translation",
-        >>>     text.BasicTokenizer())
-        >>> for i in test_dataset.create_tuple_iterator():
-        >>>     print(i)
-        >>>     break
+        Please refers to comments on mindnlp.dataset.Multi30k_Process
     '''
 
     return common_process(dataset, column, tokenizer, vocab)
