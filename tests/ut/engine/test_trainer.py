@@ -79,10 +79,11 @@ class TestTrainerRun(unittest.TestCase):
         self.loss_fn = nn.MSELoss()
         self.optimizer = nn.Adam(self.net.trainable_params(), learning_rate=0.01)
         # 3. define callbacks
-        self.timer_callback_epochs = TimerCallback(print_steps=-1)
+        self.timer_callback_epochs = TimerCallback(print_steps=2)
         self.earlystop_callback = EarlyStopCallback(patience=2)
         self.bestmodel_callback = BestModelCallback(save_path='save/callback/best_model', auto_load=True)
-        self.checkpoint_callback = CheckpointCallback(save_path='save/callback/ckpt_files', epochs=1)
+        self.checkpoint_callback = CheckpointCallback(save_path='save/callback/ckpt_files', epochs=2,\
+                                                      keep_checkpoint_max=2)
         self.callbacks = [self.timer_callback_epochs, self.earlystop_callback, self.bestmodel_callback]
         # 4. define metrics
         self.metric = Accuracy()
@@ -159,7 +160,7 @@ class TestTrainerRun(unittest.TestCase):
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
-                          epochs=6, batch_size=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
+                          epochs=7, batch_size=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
                           callbacks=self.checkpoint_callback)
         trainer.run(tgt_columns='label')
 
@@ -168,7 +169,7 @@ class TestTrainerRun(unittest.TestCase):
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
-                          epochs=6, batch_size=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
+                          epochs=7, batch_size=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
                           callbacks=self.checkpoint_callback)
         trainer.run(tgt_columns='label', jit=True)
 

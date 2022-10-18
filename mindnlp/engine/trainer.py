@@ -21,7 +21,10 @@ from inspect import signature
 from tqdm import tqdm
 from mindspore import ms_function, log, mutable
 from mindspore.ops import value_and_grad
+from mindnlp.abc.callback import Callback
 from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContext
+from mindnlp.engine.callbacks.earlystop_callback import EarlyStopCallback
+from mindnlp.engine.callbacks.best_model_callback import BestModelCallback
 from mindnlp.engine.evaluator import Evaluator
 
 class Trainer:
@@ -53,11 +56,12 @@ class Trainer:
             and parallel if needed. Default: None.
         callbacks (Optional[list[Callback], Callback]): List of callback objects which should be executed
             while training. Default: None.
+        do_eval (bool): Do evaluation or not.
 
     """
 
     def __init__(self, network=None, train_dataset=None, eval_dataset=None, metrics=None, epochs=10, batch_size=2,
-                 loss_fn=None, optimizer=None, callbacks=None):
+                 loss_fn=None, optimizer=None, callbacks=None, do_eval=True):
         self.network = network
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
@@ -67,14 +71,45 @@ class Trainer:
         self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.callbacks = callbacks
+        self.do_eval = do_eval
         self.cur_epoch_nums = 0
         self.cur_step_nums = 0
         self.earlystop = False
-
-        self.callback_manager = CallbackManager(callbacks=self.callbacks)
         self.grad_fn = None
-        self.evaluator = Evaluator(network=self.network, eval_dataset=eval_dataset, metrics=self.metrics,
-                                   batch_size=4, callbacks=callbacks)
+        if callbacks:
+            self._prepare_callbacks(callbacks)
+        self._prepare_eval()
+        self.callback_manager = CallbackManager(callbacks=self.callbacks)
+
+    def _prepare_callbacks(self, callbacks):
+        self.callbacks = []
+        if isinstance(callbacks, Callback):
+            self.callbacks.append(callbacks)
+        elif isinstance(callbacks, list):
+            if all(isinstance(cb, Callback) for cb in callbacks) is True:
+                self.callbacks = callbacks
+            else:
+                obj = [not isinstance(cb, Callback) for cb in callbacks][0]
+                raise TypeError(f"Expect sub-classes of Callback. Got {type(obj)}")
+        else:
+            raise TypeError(f"Expect callbacks to be list or Callback. Got {type(callbacks)}.")
+
+    def _check_callbacks_type(self):
+        for callback in self.callbacks:
+            if isinstance(callback, EarlyStopCallback):
+                raise ValueError("EarlyStopCallback is not effective when do_eval is False.")
+            if isinstance(callback, BestModelCallback):
+                raise ValueError("BestModelCallback is not effective when do_eval is False.")
+
+    def _prepare_eval(self):
+        if self.do_eval:
+            if self.eval_dataset is None:
+                raise ValueError("If do_eval is true, eval_dataset must be not None.")
+            self.evaluator = Evaluator(network=self.network, eval_dataset=self.eval_dataset, metrics=self.metrics,
+                                   batch_size=4, callbacks=self.callbacks)
+        else:
+            self._check_callbacks_type()
+            self.evaluator = None
 
     def _check_amp_level_arg(self, optimizer, amp_level):
         """Check mixed-precision argument rules."""
@@ -164,7 +199,8 @@ class Trainer:
             progress.close()
             self.callback_manager.train_epoch_end(run_context)
             # do epoch evaluation
-            self._do_eval_epoch(run_context, tgt_columns, jit)
+            if self.evaluator is not None:
+                self._do_eval_epoch(run_context, tgt_columns, jit)
 
     def _run_ds_sink(self, train_dataset, eval_dataset, list_callback,
                      cb_params, print_steps, eval_steps):
