@@ -20,9 +20,7 @@ __all__ = [
 
 from abc import abstractmethod
 from mindspore import nn
-from mindspore import ops
 from mindspore import Parameter
-import mindspore.numpy as mnp
 
 
 class TokenEmbedding(nn.Cell):
@@ -30,50 +28,34 @@ class TokenEmbedding(nn.Cell):
     Embedding base class
     """
 
-    def __init__(self, vocab, init_embed,
-                 word_dropout=0, dropout=0.5, unk_index=None, requires_grad=False):
+    def __init__(self, vocab, init_embed, dropout=0.5, requires_grad=False):
         super().__init__()
 
         self._word_vocab = vocab
         self.embed = Parameter(init_embed, name='embed', requires_grad=requires_grad)
-        self.dropout = nn.Dropout(dropout)
-        self._word_pad_index = None
+        self.dropout_layer = nn.Dropout(1 - dropout)
         self._embed_size = self.embed.shape
-        if word_dropout > 0 and not isinstance(unk_index, int):
-            raise ValueError("When drop word is set, you need to pass in the unk_index.")
-        self.unk_index = unk_index
-        self.word_dropout = word_dropout
 
-    def drop_word(self, words):
+    def dropout(self):
         r"""
-        Randomly set Words to UNKNOWN_INDEX
+        drop the word after embedding.
         """
-        if self.word_dropout > 0 and self.training:
-            mask = mnp.full_like(words, fill_value=self.word_dropout, dtype=float, shape=None)
-            mask = ops.bernoulli(mask).eq(1)  # dropout_word越大，越多位置为1
-            pad_mask = words.ne(self._word_pad_index)
-            mask = mask & pad_mask
-            words = words.masked_fill(mask, self._word_unk_index)
-        return words
+        return self.dropout_layer
 
     def __len__(self):
         return len(self.embed)
 
-    def embed_size(self) -> int:
+    def embed_size(self):
         """embed size"""
         return self._embed_size
 
-    def num_embeddings(self) -> int:
+    def num_embeddings(self):
         """num embeddings"""
-        return len(self._word_vocab)
+        return len(self._word_vocab.vocab())
 
     def get_word_vocab(self):
         """get word vocab"""
-        return self._word_vocab
-
-    def size(self):
-        """size"""
-        return self.embed.size
+        return self._word_vocab.vocab()
 
     @abstractmethod
     def construct(self, ids):

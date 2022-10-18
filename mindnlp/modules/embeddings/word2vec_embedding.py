@@ -39,7 +39,7 @@ class Word2vec(TokenEmbedding):
 
     dims = [300]
 
-    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.5, word_dropout=0):
+    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.5):
         r"""
         Initize Vocab and Embedding by a given pre-trained word embedding.
 
@@ -52,13 +52,12 @@ class Word2vec(TokenEmbedding):
         """
         super().__init__(vocab, init_embed)
 
-        self.vocab_list = vocab
+        self._word_vocab = vocab
         self.vocab_size = init_embed.shape[0]
         self.embed = init_embed
         self._embed_size = init_embed.shape[1]
         self.requires_grad = requires_grad
-        self.dropout = nn.Dropout(1 - dropout)
-        self.word_dropout = word_dropout
+        self.dropout_layer = nn.Dropout(1 - dropout)
 
     @classmethod
     def from_pretrained(cls, name='google-news', dims=300, root=DEFAULT_ROOT,
@@ -115,7 +114,7 @@ class Word2vec(TokenEmbedding):
         embeddings.append(np.random.rand(dims))
         embeddings.append(np.zeros((dims,), np.float32))
         embeddings = np.array(embeddings).astype(np.float32)
-        return cls(vocab, Tensor(embeddings), True, 0.5, 0), vocab
+        return cls(vocab, Tensor(embeddings), True, 0.5), vocab
 
     def construct(self, ids):
         r"""

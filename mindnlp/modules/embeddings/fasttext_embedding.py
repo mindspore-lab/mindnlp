@@ -38,7 +38,7 @@ class Fasttext(TokenEmbedding):
 
     dims = [300]
 
-    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.5, word_dropout=0):
+    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.5):
         r"""
         Initize Vocab and Embedding by a given pre-trained word embedding.
 
@@ -51,13 +51,12 @@ class Fasttext(TokenEmbedding):
         """
         super().__init__(vocab, init_embed)
 
-        self.vocab_list = vocab
+        self._word_vocab = vocab
         self.vocab_size = init_embed.shape[0]
         self.embed = init_embed
         self._embed_size = init_embed.shape[1]
         self.requires_grad = requires_grad
-        self.dropout = nn.Dropout(1 - dropout)
-        self.word_dropout = word_dropout
+        self.dropout_layer = nn.Dropout(1 - dropout)
 
     @classmethod
     def from_pretrained(cls, name='1M', dims=300, root=DEFAULT_ROOT,
@@ -74,7 +73,6 @@ class Fasttext(TokenEmbedding):
             special_first (bool): Indicates whether special participles from special_tokens will be added to
             the top of the dictionary. If True, add special_tokens to the beginning of the dictionary,
             otherwise add them to the end.
-            use_gensim (bool): Whether to use gensim library for pretrained word vector loading.
         Returns:
             - ** cls ** - Returns a embedding instance generated through a pretrained word vector.
             - ** vocab ** - Vocabulary extracted from the file.
@@ -109,7 +107,7 @@ class Fasttext(TokenEmbedding):
 
         vocab = Vocab.from_list(tokens, list(special_tokens), special_first)
         embeddings = np.array(embeddings).astype(np.float32)
-        return cls(vocab, Tensor(embeddings), True, 0.5, 0), vocab
+        return cls(vocab, Tensor(embeddings), True, 0.5), vocab
 
     def construct(self, ids):
         r"""
