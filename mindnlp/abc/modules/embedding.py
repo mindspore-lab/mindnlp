@@ -19,10 +19,10 @@ __all__ = [
 ]
 
 from abc import abstractmethod
+import numpy as np
 from mindspore import nn
-from mindspore import ops
 from mindspore import Parameter
-import mindspore.numpy as mnp
+from mindspore.dataset.text.utils import Vocab
 
 
 class TokenEmbedding(nn.Cell):
@@ -30,50 +30,42 @@ class TokenEmbedding(nn.Cell):
     Embedding base class
     """
 
-    def __init__(self, vocab, init_embed,
-                 word_dropout=0, dropout=0.5, unk_index=None, requires_grad=False):
+    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.5, train_state: bool = True):
         super().__init__()
 
         self._word_vocab = vocab
         self.embed = Parameter(init_embed, name='embed', requires_grad=requires_grad)
-        self.dropout = nn.Dropout(dropout)
-        self._word_pad_index = None
+        self.dropout_layer = nn.Dropout(1 - dropout)
         self._embed_size = self.embed.shape
-        if word_dropout > 0 and not isinstance(unk_index, int):
-            raise ValueError("When drop word is set, you need to pass in the unk_index.")
-        self.unk_index = unk_index
-        self.word_dropout = word_dropout
+        self.train_state = train_state
 
-    def drop_word(self, words):
+    def dropout(self, words):
         r"""
-        Randomly set Words to UNKNOWN_INDEX
+        drop the word after embedding.
+
+        Args:
+            words (Tensor): Tensor about to be dropout.
+        Returns:
+            - ** net(words) ** - Dropout processed data.
         """
-        if self.word_dropout > 0 and self.training:
-            mask = mnp.full_like(words, fill_value=self.word_dropout, dtype=float, shape=None)
-            mask = ops.bernoulli(mask).eq(1)  # dropout_word越大，越多位置为1
-            pad_mask = words.ne(self._word_pad_index)
-            mask = mask & pad_mask
-            words = words.masked_fill(mask, self._word_unk_index)
-        return words
+        net = self.dropout_layer.set_train(self.train_state)
+        words = words.astype(np.float32)
+        return net(words)
 
     def __len__(self):
         return len(self.embed)
 
-    def embed_size(self) -> int:
+    def embed_size(self):
         """embed size"""
         return self._embed_size
 
-    def num_embeddings(self) -> int:
+    def num_embeddings(self):
         """num embeddings"""
-        return len(self._word_vocab)
+        return len(self._word_vocab.vocab())
 
     def get_word_vocab(self):
         """get word vocab"""
-        return self._word_vocab
-
-    def size(self):
-        """size"""
-        return self.embed.size
+        return self._word_vocab.vocab()
 
     @abstractmethod
     def construct(self, ids):
@@ -81,7 +73,6 @@ class TokenEmbedding(nn.Cell):
         Use ids to query embedding
         Args:
             ids : Ids to query.
-
         Raises:
             NotImplementedError: If this interface is called.
 
