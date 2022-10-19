@@ -82,9 +82,9 @@ class TimerCallback(Callback):
 
     Args:
         print_steps (int): When to print time information.Default:-1.
-
             - -1: print once at the end of each epoch.
             - positive number n: print once n steps.
+
         time_ndigit (int): Number of decimal places to keep. Default:3
     """
     def __init__(self, print_steps=0, time_ndigit=3):
@@ -114,12 +114,27 @@ class TimerCallback(Callback):
 
     def train_step_begin(self, run_context):
         if self.print_steps > 0 and run_context.cur_step_nums % self.print_steps == 0:
-            self.timers('forward').start()
+            self.timers('step').start()
 
     def train_step_end(self, run_context):
         if self.print_steps > 0 and run_context.cur_step_nums % self.print_steps == 0:
             line = self.format_timer()
             print(f"Running {run_context.cur_step_nums} batches{line}")
+
+    def forward_begin(self, run_context):
+        if self.print_steps > 0 and run_context.cur_step_nums % self.print_steps == 0:
+            self.timers('forward').start()
+
+    def forward_end(self, run_context):
+        if self.print_steps > 0 and run_context.cur_step_nums % self.print_steps == 0:
+            line = self.format_timer()
+            print(f"Running {run_context.cur_step_nums} batches{line}")
+
+    def backward_begin(self, run_context):
+        "backward process begins."
+
+    def backward_end(self, run_context):
+        "backward process ends."
 
     def train_epoch_begin(self, run_context):
         if self.print_steps < 0:
@@ -133,7 +148,7 @@ class TimerCallback(Callback):
     def format_timer(self, reset=True, train_end=False):
         """format the output."""
         line = ''
-        timers = ['forward', 'epoch', 'backward', 'optimize', 'evaluate', 'train', 'total']
+        timers = ['step', 'forward', 'epoch', 'evaluate', 'train', 'total']
         for timer_name in timers:
             if train_end is False:
                 if not timer_name in self.timers or timer_name == 'train' or timer_name == 'total':

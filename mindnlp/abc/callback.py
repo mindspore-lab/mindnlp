@@ -15,6 +15,7 @@
 """
 Abstract class for Callbacks
 """
+
 class Callback():
     """
     Abstract base class used to build a callback class. Callbacks are context managers
@@ -50,6 +51,18 @@ class Callback():
     def train_step_end(self, run_context):
         """Called after each step finished."""
 
+    def forward_begin(self, run_context):
+        """Called before each forward beginning."""
+
+    def forward_end(self, run_context):
+        """Called after each step finished."""
+
+    def backward_begin(self, run_context):
+        """Called before each forward beginning."""
+
+    def backward_end(self, run_context):
+        """Called after each backward finished."""
+
     def ds_sink_begin(self, run_context):
         """Called before each data_sink beginning."""
 
@@ -62,23 +75,11 @@ class Callback():
     def save_model(self, run_context):
         """Called before saving model."""
 
-    def load_checkpoint(self, run_context):
-        """Called before loading checkpoint."""
-
-    def save_checkpoint(self, run_context):
-        """Called before saving checkpoint."""
-
     def evaluate_begin(self, run_context):
         """Called before evaluating epoch/steps/ds_size."""
 
     def evaluate_end(self, run_context):
         """Called after evaluating epoch/steps/ds_size."""
-
-    def before_optimizer_step(self, run_context):
-        """Called before optimizing."""
-
-    def after_optimizer_step(self, run_context):
-        """Called after optimizing."""
 
     def exception(self, run_context):
         """Called if having exceptions."""
