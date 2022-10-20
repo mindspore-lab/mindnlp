@@ -23,8 +23,8 @@ from .accuracy import Accuracy
 from .precision import Precision
 from .recall import Recall
 from .f1 import F1Score
-from .confusion_matrix import ConfusionMatrix
-from .m_c_c import MCC
-from .pearson import Pearson
-from .spearman import Spearman
+from .matthews import MatthewsCorrelation
+from .pearson import PearsonCorrelation
+from .spearman import SpearmanCorrelation
 from .em_score import EmScore
+from .confusion_matrix import ConfusionMatrix

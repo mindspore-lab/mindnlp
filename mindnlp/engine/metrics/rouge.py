@@ -38,7 +38,7 @@ class RougeN(Metric):
 
     Example:
         >>> from mindnlp.common.metrics import RougeN
-        >>> cand_list = [["the", "cat", "was", "found", "under", "the", "bed"]]
+        >>> cand_list = ["the", "cat", "was", "found", "under", "the", "bed"]
         >>> ref_list = [["the", "cat", "was", "under", "the", "bed"]]
         >>> metric = RougeN(2)
         >>> metric.update(cand_list, ref_list)
@@ -55,7 +55,7 @@ class RougeN(Metric):
         self.ref_count = 0
 
     def clear(self):
-        """Clears the internal evaluation result."""
+        """Clears the internal evaluation results."""
         self.overlap_count = 0
         self.ref_count = 0
 
@@ -66,7 +66,7 @@ class RougeN(Metric):
         Args:
             inputs: Input `cand_list` and `ref_list`.
                     cand_list (list): A list of tokenized candidate sentence.
-                    ref_list (list of list): A list of lists of tokenized ground truth sentences.
+                    ref_list (list): A list of lists of tokenized ground truth sentences.
 
         Raises:
             ValueError: If the number of inputs is not 2.
@@ -82,9 +82,9 @@ class RougeN(Metric):
         cand_list = _check_value_type("cand_list", cand_list, list)
         ref_list = _check_value_type("ref_list", ref_list, list)
 
-        for candidate, references in zip(cand_list, ref_list):
-            cand_ngrams = _get_ngrams(candidate, self.n_size)
-            ref_ngrams = _get_ngrams(references, self.n_size)
+        cand_ngrams = _get_ngrams(cand_list, self.n_size)
+        for reference in ref_list:
+            ref_ngrams = _get_ngrams(reference, self.n_size)
             self.ref_count += len(ref_ngrams)
 
             # Gets the overlapping ngrams between evaluated and reference
@@ -134,7 +134,6 @@ class RougeL(Metric):
     the length of `X` and `Y` respectively. `LCS` means the longest common subsequence.
 
     Args:
-
         beta (float): A hyperparameter to decide the weight of recall. Defaults: 1.2.
         name (str): Name of the metric.
 
@@ -157,7 +156,7 @@ class RougeL(Metric):
         self.inst_scores = []
 
     def clear(self):
-        """Clears the internal evaluation result."""
+        """Clears the internal evaluation results."""
         self.inst_scores = []
 
     def update(self, *inputs):
@@ -167,7 +166,7 @@ class RougeL(Metric):
         Args:
             inputs: Input `cand_list` and `ref_list`.
                     cand_list (list): A list of tokenized candidate sentence.
-                    ref_list (list of list): A list of lists of tokenized ground truth sentences.
+                    ref_list (list): A list of lists of tokenized ground truth sentences.
 
         Raises:
             ValueError: If the number of inputs is not 2.

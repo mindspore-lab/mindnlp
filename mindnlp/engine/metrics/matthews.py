@@ -12,17 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-""""Class for Metric MCC"""
+""""Class for Metric MatthewsCorrelation"""
 
 
 import math
 import numpy as np
 
 from mindnlp.abc import Metric
-from mindnlp.common.metrics import _convert_data_type
+from mindnlp.common.metrics import _convert_data_type, _check_onehot_data, _check_shape
 
 
-class MCC(Metric):
+class MatthewsCorrelation(Metric):
     r"""
     Calculates the Matthews correlation coefficient (MCC). MCC is in essence a correlation
     coefficient between the observed and predicted binary classifications; it returns a value
@@ -44,17 +44,17 @@ class MCC(Metric):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from mindnlp.engine.metrics import MCC
-        >>> preds = [[0.1, 0.9], [-0.5, 0.5], [0.1, 0.4], [0.1, 0.3]]
-        >>> labels = [[1], [0], [1], [1]]
-        >>> metric = MCC()
-        >>> metric.update(cand_list, ref_list)
+        >>> from mindnlp.engine.metrics import MatthewsCorrelation
+        >>> preds = [[0.8, 0.2], [-0.5, 0.5], [0.1, 0.4], [0.6, 0.3], [0.6, 0.3]]
+        >>> labels = [0, 1, 0, 1, 0]
+        >>> metric = MatthewsCorrelation()
+        >>> metric.update(preds, labels)
         >>> m_c_c = metric.eval()
         >>> print(m_c_c)
-        0.0
+        0.16666666666666666
 
     """
-    def __init__(self, name='MCC'):
+    def __init__(self, name='MatthewsCorrelation'):
         super().__init__()
         self._name = name
         self.t_p = 0
@@ -63,7 +63,7 @@ class MCC(Metric):
         self.f_n = 0
 
     def clear(self):
-        """Clears the internal evaluation result."""
+        """Clears the internal evaluation results."""
         self.t_p = 0
         self.f_p = 0
         self.t_n = 0
@@ -75,22 +75,21 @@ class MCC(Metric):
 
         Args:
             inputs: Input `preds` and `labels`.
-                    preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is
-                        a list of floating numbers in range :math:`[0, 1]` and the shape of
-                        `preds` is :math:`(N, C)` in most cases (not strictly), where :math:`N`
-                        is the number of cases and :math:`C` is the number of categories.
-                    labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels`
-                        must be in one-hot format that shape is :math:`(N, C)`, or can be
-                        transformed to one-hot format that shape is :math:`(N,)`.
+                preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of
+                    floating numbers in range :math:`[0, 1]` and the shape of `preds` is
+                    :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number of
+                    cases and :math:`C` is the number of categories.
+                labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be in
+                    one-hot format that shape is :math:`(N, C)`, or can be transformed to one-hot
+                    format that shape is :math:`(N,)`.
 
         Raises:
             ValueError: If the number of inputs is not 2.
-            ValueError: If `preds` doesn't have the same classes number as `labels`.
 
         """
         if len(inputs) != 2:
-            raise ValueError(f'For `MCC.update`, it needs 2 inputs (`preds` and `labels`), '
-                             f'but got {len(inputs)}.')
+            raise ValueError(f'For `MatthewsCorrelation.update`, it needs 2 inputs '
+                             f'(`preds` and `labels`), but got {len(inputs)}.')
 
         preds = inputs[0]
         labels = inputs[1]
@@ -98,10 +97,9 @@ class MCC(Metric):
         preds = _convert_data_type(preds)
         labels = _convert_data_type(labels)
 
-        if preds.ndim not in (labels.ndim, labels.ndim + 1):
-            raise ValueError(f'`preds` and `labels` should have same dimensions, or the dimension '
-                             f'of `preds` equals the dimension of `labels` add 1, but got '
-                             f'predicted value ndim: {preds.ndim}, true value ndim: {labels.ndim}.')
+        if preds.ndim == labels.ndim and _check_onehot_data(labels):
+            labels = labels.argmax(axis=1)
+        _check_shape(preds, labels)
 
         preds = np.argmax(preds, axis=1)
         labels = labels.reshape(-1, 1)

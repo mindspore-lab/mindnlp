@@ -12,18 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Metrics"""
+"""Test the Functions for Metrics"""
+
 
 import unittest
 import numpy as np
+import pytest
 import mindspore
 from mindspore import Tensor
-from mindnlp.engine.metrics import (Perplexity, BleuScore, RougeN, RougeL, Distinct,
-                                    Accuracy, Precision, Recall, F1Score, ConfusionMatrix,
-                                    MCC, Pearson, Spearman, EmScore)
-from mindnlp.common.metrics import (perplexity, bleu, rouge_n, rouge_l, distinct,
-                                    accuracy, precision, recall, f1_score, confusion_matrix,
-                                    mcc, pearson, spearman, em_score)
+from mindnlp.common.metrics import (perplexity, bleu, rouge_n, rouge_l, distinct, accuracy,
+                                    precision, recall, f1_score, confusion_matrix,
+                                    matthews_correlation, pearson_correlation,
+                                    spearman_correlation, em_score)
 
 class TestPerplexity(unittest.TestCase):
     r"""
@@ -33,15 +33,49 @@ class TestPerplexity(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    def test_perplexity(self):
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_perplexity_tensor(self):
         """
         Test perplexity
         """
-        pred_data = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]))
-        expect_label = Tensor(np.array([1, 0, 1]))
-        ppl = perplexity(pred_data, expect_label, ignore_label=None)
+        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]))
+        labels = Tensor(np.array([1, 0, 1]))
+        ppl = perplexity(preds, labels, ignore_label=None)
 
         assert ppl == 2.231443166940565
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_perplexity_tensor_onehot(self):
+        """
+        Test perplexity
+        """
+        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]))
+        labels = Tensor(np.array([[0, 1], [1, 0], [0, 1]]))
+        ppl = perplexity(preds, labels, ignore_label=None)
+
+        assert ppl == 2.231443166940565
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_perplexity_np(self):
+        """
+        Test perplexity
+        """
+        preds = np.array([[0.6, 0.5, 0.1], [0.3, 0.6, 0.05], [0.1, 0.6, 0.2], [0.1, 0.2, 0.7]])
+        labels = np.array([2, 1, 0, 1])
+        ppl = perplexity(preds, labels, ignore_label=None)
+
+        assert ppl == 5.37284965911771
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_perplexity_list_multi(self):
+        """
+        Test perplexity
+        """
+        preds = [[0.6, 0.5, 0.1], [0.3, 0.6, 0.05], [0.1, 0.6, 0.2], [0.1, 0.2, 0.7]]
+        labels = [[0, 0, 1], [0, 1, 0], [1, 0, 0], [0, 1, 0]]
+        ppl = perplexity(preds, labels, ignore_label=None)
+
+        assert ppl == 5.37284965911771
 
 class TestBleu(unittest.TestCase):
     r"""
@@ -51,7 +85,8 @@ class TestBleu(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    def test_bleu(self):
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_bleu_normal(self):
         """
         Test bleu
         """
@@ -62,35 +97,127 @@ class TestBleu(unittest.TestCase):
 
         assert bleu_score == 0.46713797772820015
 
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_bleu_perfect(self):
+        """
+        Test bleu
+        """
+        cand = [["The", "cat", "is", "on", "the", "mat"]]
+        ref_list = [[["The", "cat", "is", "on", "the", "mat"],
+                    ["There", "is", "a", "cat", "on", "the", "mat"]]]
+        bleu_score = bleu(cand, ref_list)
+
+        assert bleu_score == 1.0
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_bleu_warning(self):
+        """
+        Test bleu
+        """
+        cand = [["The", "cat", "The", "cat", "on", "the", "mat"]]
+        ref_list = [[["The", "cat", "is", "on", "the", "mat"]]]
+        bleu_score = bleu(cand, ref_list)
+
+        assert bleu_score == 0.0
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_bleu_nsize_weights(self):
+        """
+        Test bleu
+        """
+        cand = [["this", "is", "small", "cat"]]
+        ref_list = [[["this", "is", "a", "small", "cat"]]]
+        bleu_score = bleu(cand, ref_list, 2, [0.5, 0.5])
+
+        assert bleu_score == 0.6358881766016378
+
 class TestRougeN(unittest.TestCase):
     r"""
-    Test ROUGE-N
+    Test rouge_n
     """
 
     def setUp(self):
         self.input = None
 
+    @pytest.mark.skip(reason="It has already been tested.")
     def test_rougen(self):
         """
-        Test ROUGE-N
+        Test rouge_n
         """
-        cand_list = [["the", "cat", "was", "found", "under", "the", "bed"]]
+        cand_list = ["a", "cat", "is", "on", "the", "table"]
+        ref_list = [["there", "is", "a", "cat", "on", "the", "table"]]
+        rougen_score = rouge_n(cand_list, ref_list, 2)
+
+        assert rougen_score == 0.5
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_rougen_1(self):
+        """
+        Test rouge_n
+        """
+        cand_list = ["the", "cat", "was", "found", "under", "the", "bed"]
+        ref_list = [["the", "cat", "was", "under", "the", "bed"]]
+        rougen_score = rouge_n(cand_list, ref_list)
+
+        assert rougen_score == 1.0
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_rougen_2(self):
+        """
+        Test rouge_n
+        """
+        cand_list = ["the", "cat", "was", "found", "under", "the", "bed"]
         ref_list = [["the", "cat", "was", "under", "the", "bed"]]
         rougen_score = rouge_n(cand_list, ref_list, 2)
 
         assert rougen_score == 0.8
 
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_rougen_ref(self):
+        """
+        Test rouge_n
+        """
+        cand_list = ["The","cat","The","cat","on","the","mat"]
+        ref_list = [["The","cat","is","on","the","mat"],
+                    ["There","is","a","cat","on","the","mat"]]
+        rougen_score = rouge_n(cand_list, ref_list, 2)
+
+        assert rougen_score == 0.5454545454545454
+
 class TestRougeL(unittest.TestCase):
     r"""
-    Test ROUGE-L
+    Test rouge_l
     """
 
     def setUp(self):
         self.input = None
 
+    @pytest.mark.skip(reason="It has already been tested.")
     def test_rougel(self):
         """
-        Test ROUGE-L
+        Test rouge_l
+        """
+        cand_list = ["The","cat","The","cat","on","the","mat"]
+        ref_list = [["The","cat","is","on","the","mat"]]
+        rougel_score = rouge_l(cand_list, ref_list)
+
+        assert rougel_score == 0.7800511508951408
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_rougel_ref1(self):
+        """
+        Test rouge_l
+        """
+        cand_list = ["The","cat","The","cat","on","the","mat"]
+        ref_list = [["There","is","a","cat","on","the","mat"]]
+        rougel_score = rouge_l(cand_list, ref_list)
+
+        assert rougel_score == 0.5714285714285714
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_rougel_ref2(self):
+        """
+        Test rouge_l
         """
         cand_list = ["The","cat","The","cat","on","the","mat"]
         ref_list = [["The","cat","is","on","the","mat"],
@@ -99,22 +226,45 @@ class TestRougeL(unittest.TestCase):
 
         assert rougel_score == 0.7800511508951408
 
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_rougel_beta(self):
+        """
+        Test rouge_l
+        """
+        cand_list = ["The","cat","The","cat","on","the","mat"]
+        ref_list = [["The","cat","is","on","the","mat"],
+                    ["There","is","a","cat","on","the","mat"]]
+        rougel_score = rouge_l(cand_list, ref_list, 0.5)
+
+        assert rougel_score == 0.7352941176470589
+
 class TestDistinct(unittest.TestCase):
     r"""
-    Test distinct-n
+    Test distinct
     """
 
     def setUp(self):
         self.input = None
 
+    @pytest.mark.skip(reason="It has already been tested.")
     def test_distinct(self):
         """
-        Test distinct-n
+        Test distinct
         """
         cand_list = ["The", "cat", "The", "cat", "on", "the", "mat"]
         distinct_score = distinct(cand_list)
 
         assert distinct_score == 0.8333333333333334
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_distinct_one(self):
+        """
+        Test distinct
+        """
+        cand_list = ["The", "cat", "on", "the", "mat"]
+        distinct_score = distinct(cand_list)
+
+        assert distinct_score == 1.0
 
 class TestAccuracy(unittest.TestCase):
     r"""
@@ -124,12 +274,49 @@ class TestAccuracy(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    def test_accuracy(self):
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_accuracy_tensor(self):
         """
         Test accuracy
         """
         preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
-        labels = Tensor(np.array([1, 0, 1]), mindspore.float32)
+        labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
+        acc = accuracy(preds, labels)
+
+        assert acc == 0.6666666666666666
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_accuracy_tensor_onehot(self):
+        """
+        Test accuracy
+        """
+        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
+        labels = Tensor(np.array([[0, 1], [1, 0], [0, 1]]), mindspore.int32)
+        acc = accuracy(preds, labels)
+
+        assert acc == 0.6666666666666666
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_accuracy_np_multi(self):
+        """
+        Test accuracy
+        """
+        preds = np.array([[0.2, 0.5, 0.1, 0.05],
+                          [0.3, 0.1, 0.6, 0],
+                          [0.9, 0.05, 0, 0.05],
+                          [0.3, 0.1, 0.2, 0.3]])
+        labels = np.array([1, 0, 2, 3])
+        acc = accuracy(preds, labels)
+
+        assert acc == 0.25
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_accuracy_list(self):
+        """
+        Test accuracy
+        """
+        preds = [[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]
+        labels = [1, 0, 1]
         acc = accuracy(preds, labels)
 
         assert acc == 0.6666666666666666
@@ -142,7 +329,8 @@ class TestPrecision(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    def test_precision(self):
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_precision_tensor(self):
         """
         Test precision
         """
@@ -150,7 +338,43 @@ class TestPrecision(unittest.TestCase):
         labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
         prec = precision(preds, labels)
 
-        assert prec == 0.5
+        assert np.array_equal(prec, [0.5, 1.0])
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_precision_tensor_onehot(self):
+        """
+        Test precision
+        """
+        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
+        labels = Tensor(np.array([[0, 1], [1, 0], [0, 1]]), mindspore.float32)
+        prec = precision(preds, labels)
+
+        assert np.array_equal(prec, [0.5, 1.0])
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_precision_np_multi(self):
+        """
+        Test precision
+        """
+        preds = np.array([[0.2, 0.5, 0.1, 0.05],
+                          [0.3, 0.1, 0.6, 0],
+                          [0.9, 0.05, 0, 0.05],
+                          [0.3, 0.1, 0.2, 0.3]])
+        labels = np.array([1, 0, 2, 3])
+        prec = precision(preds, labels)
+
+        assert np.array_equal(prec, [0., 1., 0., 0.])
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_precision_list(self):
+        """
+        Test precision
+        """
+        preds = [[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]
+        labels = [1, 0, 1]
+        prec = precision(preds, labels)
+
+        assert np.array_equal(prec, [0.5, 1.0])
 
 class TestRecall(unittest.TestCase):
     r"""
@@ -160,7 +384,8 @@ class TestRecall(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    def test_recall(self):
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_recall_tensor(self):
         """
         Test recall
         """
@@ -168,7 +393,43 @@ class TestRecall(unittest.TestCase):
         labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
         rec = recall(preds, labels)
 
-        assert rec == 0.5
+        assert np.array_equal(rec, [1., 0.5])
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_recall_tensor_onehot(self):
+        """
+        Test recall
+        """
+        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
+        labels = Tensor(np.array([[0, 1], [1, 0], [0, 1]]), mindspore.float32)
+        rec = recall(preds, labels)
+
+        assert np.array_equal(rec, [1., 0.5])
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_recall_np_multi(self):
+        """
+        Test recall
+        """
+        preds = np.array([[0.2, 0.5, 0.1, 0.05],
+                          [0.3, 0.1, 0.6, 0],
+                          [0.9, 0.05, 0, 0.05],
+                          [0.3, 0.1, 0.2, 0.3]])
+        labels = np.array([1, 0, 2, 3])
+        rec = recall(preds, labels)
+
+        assert np.array_equal(rec, [0., 1., 0., 0.])
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_recall_list(self):
+        """
+        Test recall
+        """
+        preds = [[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]
+        labels = [1, 0, 1]
+        rec = recall(preds, labels)
+
+        assert np.array_equal(rec, [1., 0.5])
 
 class TestF1Score(unittest.TestCase):
     r"""
@@ -178,7 +439,8 @@ class TestF1Score(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    def test_f1_score(self):
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_f1_score_tensor(self):
         """
         Test f1_score
         """
@@ -186,61 +448,199 @@ class TestF1Score(unittest.TestCase):
         labels = Tensor(np.array([1, 0, 1]))
         f1_s = f1_score(preds, labels)
 
-        assert f1_s == 0.6666666666666666
+        assert np.array_equal(f1_s, [0.6666666666666666, 0.6666666666666666])
 
-class TestMcc(unittest.TestCase):
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_f1_score_tensor_onehot(self):
+        """
+        Test f1_score
+        """
+        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]))
+        labels = Tensor(np.array([[0, 1], [1, 0], [0, 1]]))
+        f1_s = f1_score(preds, labels)
+
+        assert np.array_equal(f1_s, [0.6666666666666666, 0.6666666666666666])
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_f1_score_np_multi(self):
+        """
+        Test f1_score
+        """
+        preds = np.array([[0.2, 0.5, 0.1, 0.05],
+                          [0.3, 0.1, 0.6, 0],
+                          [0.9, 0.05, 0, 0.05],
+                          [0.3, 0.1, 0.2, 0.3]])
+        labels = np.array([1, 0, 2, 3])
+        f1_s = f1_score(preds, labels)
+
+        assert np.array_equal(f1_s, [0., 1., 0., 0.])
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_f1_score_list(self):
+        """
+        Test f1_score
+        """
+        preds = [[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]
+        labels = [1, 0, 1]
+        f1_s = f1_score(preds, labels)
+
+        assert np.array_equal(f1_s, [0.6666666666666666, 0.6666666666666666])
+
+class TestMatthewsCorrelation(unittest.TestCase):
     r"""
-    Test mcc
+    Test matthews_correlation
     """
 
     def setUp(self):
         self.input = None
 
-    def test_mcc(self):
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_matthews_correlation_tensor(self):
         """
-        Test mcc
+        Test matthews_correlation
         """
-        preds = [[0.1, 0.9], [-0.5, 0.5], [0.1, 0.4], [0.1, 0.3]]
-        labels = [[1], [0], [1], [1]]
-        m_c_c = mcc(preds, labels)
+        preds = Tensor(np.array([[0.8, 0.2], [-0.5, 0.5], [0.1, 0.4], [0.6, 0.3], [0.6, 0.3]]))
+        labels = Tensor(np.array([0, 1, 0, 1, 0]))
+        m_c_c = matthews_correlation(preds, labels)
+
+        assert m_c_c == 0.16666666666666666
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_matthews_correlation_tensor_onehot(self):
+        """
+        Test matthews_correlation
+        """
+        preds = Tensor(np.array([[0.8, 0.2], [-0.5, 0.5], [0.1, 0.4], [0.6, 0.3], [0.6, 0.3]]))
+        labels = Tensor(np.array([[1, 0], [0, 1], [1, 0], [0, 1], [1, 0]]))
+        m_c_c = matthews_correlation(preds, labels)
+
+        assert m_c_c == 0.16666666666666666
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_matthews_correlation_np_zero(self):
+        """
+        Test matthews_correlation
+        """
+        preds = np.array([[-0.1, 0.12], [-0.23, 0.23], [-0.32, 0.21], [-0.13, 0.23]])
+        labels = np.array([1, 0, 1, 1])
+        m_c_c = matthews_correlation(preds, labels)
 
         assert m_c_c == 0.0
 
-class TestPearson(unittest.TestCase):
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_matthews_correlation_list(self):
+        """
+        Test matthews_correlation
+        """
+        preds = [[0.8, 0.2], [-0.5, 0.5], [0.1, 0.4], [0.6, 0.3], [0.6, 0.3]]
+        labels = [0, 1, 0, 1, 0]
+        m_c_c = matthews_correlation(preds, labels)
+
+        assert m_c_c == 0.16666666666666666
+
+class TestPearsonCorrelation(unittest.TestCase):
     r"""
-    Test pearson
+    Test pearson_correlation
     """
 
     def setUp(self):
         self.input = None
 
-    def test_pearson(self):
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_pearson_correlation_tensor1(self):
         """
-        Test pearson
+        Test pearson_correlation
         """
         preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
         labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
-        pcc = pearson(preds, labels)
+        p_c_c = pearson_correlation(preds, labels)
 
-        assert pcc == 0.9985229081857804
+        assert p_c_c == 0.9985229081857804
 
-class TestSpearman(unittest.TestCase):
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_pearson_correlation_tensor2(self):
+        """
+        Test pearson_correlation
+        """
+        preds = Tensor(np.array([[0.12], [0.23], [0.21], [0.13]]), mindspore.float32)
+        labels = Tensor(np.array([[1], [0], [1], [1]]), mindspore.float32)
+        p_c_c = pearson_correlation(preds, labels)
+
+        assert p_c_c == -0.689414301147012
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_pearson_correlation_np(self):
+        """
+        Test pearson_correlation
+        """
+        preds = np.array(np.float32([[0.1], [1.0], [2.4], [0.9]]))
+        labels = np.array(np.float32([[0.0], [1.0], [2.9], [1.0]]))
+        p_c_c = pearson_correlation(preds, labels)
+
+        assert p_c_c == 0.9985229081857804
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_pearson_correlation_list(self):
+        """
+        Test pearson_correlation
+        """
+        preds = np.float32([[0.1], [1.0], [2.4], [0.9]])
+        labels = np.float32([[0.0], [1.0], [2.9], [1.0]])
+        p_c_c = pearson_correlation(preds, labels)
+
+        assert p_c_c == 0.9985229081857804
+
+class TestSpearmanCorrelation(unittest.TestCase):
     r"""
-    Test spearman
+    Test spearman_correlation
     """
 
     def setUp(self):
         self.input = None
 
-    def test_spearman(self):
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_spearman_correlation_tensor1(self):
         """
-        Test spearman
+        Test spearman_correlation
         """
         preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
         labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
-        scc = spearman(preds, labels)
+        scc = spearman_correlation(preds, labels)
 
         assert scc == 1.0
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_spearman_correlation_tensor2(self):
+        """
+        Test spearman_correlation
+        """
+        preds = Tensor(np.array([[0.12], [0.23], [0.21], [0.13]]), mindspore.float32)
+        labels = Tensor(np.array([[1], [0], [1], [1]]), mindspore.float32)
+        scc = spearman_correlation(preds, labels)
+
+        assert scc == -0.8
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_spearman_correlation_np(self):
+        """
+        Test spearman_correlation
+        """
+        preds = np.array(np.float32([[0.12], [0.23], [0.21], [0.13]]))
+        labels = np.array(np.float32([[1], [0], [1], [1]]))
+        scc = spearman_correlation(preds, labels)
+
+        assert scc == -0.8
+
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_spearman_correlation_list(self):
+        """
+        Test spearman_correlation
+        """
+        preds = np.float32([[0.12], [0.23], [0.21], [0.13]])
+        labels = np.float32([[1], [0], [1], [1]])
+        scc = spearman_correlation(preds, labels)
+
+        assert scc == -0.8
 
 class TestEmScore(unittest.TestCase):
     r"""
@@ -250,7 +650,8 @@ class TestEmScore(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    def test_em_score(self):
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_em_score_zero(self):
         """
         Test em_score
         """
@@ -260,15 +661,27 @@ class TestEmScore(unittest.TestCase):
 
         assert exact_match == 0.0
 
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_em_score_one(self):
+        """
+        Test em_score
+        """
+        preds = "this is the best span"
+        examples = ["this is the best span", "something irrelevant"]
+        exact_match = em_score(preds, examples)
+
+        assert exact_match == 1.0
+
 class TestConfusionMatrix(unittest.TestCase):
     r"""
-    Test confusion matrix
+    Test confusion_matrix
     """
 
     def setUp(self):
         self.input = None
 
-    def test_confusion_matrix(self):
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_confusion_matrix_tensor(self):
         """
         Test confusion_matrix
         """
@@ -278,285 +691,27 @@ class TestConfusionMatrix(unittest.TestCase):
 
         assert np.array_equal(conf_mat, np.array([[1., 1.], [1., 1.]]))
 
-
-class TestClassPerplexity(unittest.TestCase):
-    r"""
-    Test class Perplexity
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_class_perplexity(self):
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_confusion_matrix_np_classnum(self):
         """
-        Test class Perplexity
+        Test confusion_matrix
         """
-        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]))
-        labels = Tensor(np.array([1, 0, 1]))
-        metric = Perplexity()
-        metric.update(preds, labels)
-        ppl = metric.eval()
+        preds = np.array([2, 1, 3])
+        labels = np.array([2, 2, 1])
+        conf_mat = confusion_matrix(preds, labels, 4)
 
-        assert ppl == 2.231443166940565
+        assert np.array_equal(conf_mat, np.array([[0., 0., 0., 0.],
+                                                  [0., 0., 0., 1.],
+                                                  [0., 1., 1., 0.],
+                                                  [0., 0., 0., 0.]]))
 
-class TestClassBleuScore(unittest.TestCase):
-    r"""
-    Test class BleuScore
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_class_bleu_score(self):
+    @pytest.mark.skip(reason="It has already been tested.")
+    def test_confusion_matrix_list_preds(self):
         """
-        Test class BleuScore
+        Test confusion_matrix
         """
-        cand = [["The", "cat", "The", "cat", "on", "the", "mat"]]
-        ref_list = [[["The", "cat", "is", "on", "the", "mat"],
-                    ["There", "is", "a", "cat", "on", "the", "mat"]]]
-        metric = BleuScore()
-        metric.update(cand, ref_list)
-        bleu_score = metric.eval()
-
-        assert bleu_score == 0.46713797772820015
-
-class TestClassRougeN(unittest.TestCase):
-    r"""
-    Test class RougeN
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_class_rouge_n(self):
-        """
-        Test class RougeN
-        """
-        cand_list = [["the", "cat", "was", "found", "under", "the", "bed"]]
-        ref_list = [["the", "cat", "was", "under", "the", "bed"]]
-        metric = RougeN(2)
-        metric.update(cand_list, ref_list)
-        rougen_score = metric.eval()
-
-        assert rougen_score == 0.8
-
-class TestClassRougeL(unittest.TestCase):
-    r"""
-    Test class RougeL
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_class_rouge_l(self):
-        """
-        Test class RougeL
-        """
-        cand_list = ["The","cat","The","cat","on","the","mat"]
-        ref_list = [["The","cat","is","on","the","mat"],["There","is","a","cat","on","the","mat"]]
-        metric = RougeL()
-        metric.update(cand_list, ref_list)
-        rougel_score = metric.eval()
-
-        assert rougel_score == 0.7800511508951408
-
-class TestClassDistinct(unittest.TestCase):
-    r"""
-    Test class Distinct
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_class_distinct(self):
-        """
-        Test class Distinct
-        """
-        cand_list = ["The", "cat", "The", "cat", "on", "the", "mat"]
-        metric = Distinct()
-        metric.update(cand_list)
-        rougel_score = metric.eval()
-
-        assert rougel_score == 0.8333333333333334
-
-class TestClassAccuracy(unittest.TestCase):
-    r"""
-    Test class Accuracy
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_class_accuracy(self):
-        """
-        Test class Accuracy
-        """
-        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
-        labels = Tensor(np.array([1, 0, 1]), mindspore.float32)
-        metric = Accuracy()
-        metric.update(preds, labels)
-        acc = metric.eval()
-
-        assert acc == 0.6666666666666666
-
-class TestClassPrecision(unittest.TestCase):
-    r"""
-    Test class Precision
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_class_precision(self):
-        """
-        Test class Precision
-        """
-        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
-        labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
-        metric = Precision()
-        metric.update(preds, labels)
-        prec = metric.eval()
-
-        assert prec == 0.5
-
-class TestClassRecall(unittest.TestCase):
-    r"""
-    Test class Recall
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_class_recall(self):
-        """
-        Test class Recall
-        """
-        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
-        labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
-        metric = Recall()
-        metric.update(preds, labels)
-        rec = metric.eval()
-
-        assert rec == 0.5
-
-class TestClassF1Score(unittest.TestCase):
-    r"""
-    Test class F1Score
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_class_f1_score(self):
-        """
-        Test class F1Score
-        """
-        preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]))
-        labels = Tensor(np.array([1, 0, 1]))
-        metric = F1Score()
-        metric.update(preds, labels)
-        f1_s = metric.eval()
-
-        assert f1_s == 0.6666666666666666
-
-class TestClassMCC(unittest.TestCase):
-    r"""
-    Test class MCC
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_class_mcc(self):
-        """
-        Test class MCC
-        """
-        preds = [[0.1, 0.9], [-0.5, 0.5], [0.1, 0.4], [0.1, 0.3]]
-        labels = [[1], [0], [1], [1]]
-        metric = MCC()
-        metric.update(preds, labels)
-        m_c_c = metric.eval()
-
-        assert m_c_c == 0.0
-
-class TestClassPearson(unittest.TestCase):
-    r"""
-    Test class Pearson
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_class_pearson(self):
-        """
-        Test class Pearson
-        """
-        preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
-        labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
-
-        metric = Pearson()
-        metric.update(preds, labels)
-        pcc = metric.eval()
-
-        assert pcc == 0.9985229081857804
-
-class TestClassSpearman(unittest.TestCase):
-    r"""
-    Test class Spearman
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_class_spearman(self):
-        """
-        Test class Spearman
-        """
-        preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
-        labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
-
-        metric = Spearman()
-        metric.update(preds, labels)
-        scc = metric.eval()
-
-        assert scc == 1.0
-
-class TestClassEmScore(unittest.TestCase):
-    r"""
-    Test class EmScore
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_class_em_score(self):
-        """
-        Test class EmScore
-        """
-        preds = "this is the best span"
-        examples = ["this is a good span", "something irrelevant"]
-        metric = EmScore()
-        metric.update(preds, examples)
-        exact_match = metric.eval()
-
-        assert exact_match == 0.0
-
-class TestClassConfusionMatrix(unittest.TestCase):
-    r"""
-    Test class ConfusionMatrix
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_class_confusion_matrix(self):
-        """
-        Test class ConfusionMatrix
-        """
-        preds = Tensor(np.array([1, 0, 1, 0]))
-        labels = Tensor(np.array([1, 0, 0, 1]))
-        metric = ConfusionMatrix()
-        metric.update(preds, labels)
-        conf_mat = metric.eval()
+        preds = [[0.1, 0.8], [0.9, 0.3], [0.1, 1], [1, 0]]
+        labels = [1, 0, 0, 1]
+        conf_mat = confusion_matrix(preds, labels)
 
         assert np.array_equal(conf_mat, np.array([[1., 1.], [1., 1.]]))

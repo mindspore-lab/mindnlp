@@ -49,7 +49,7 @@ class F1Score(Metric):
         >>> metric.update(preds, labels)
         >>> f1_s = metric.eval()
         >>> print(f1_s)
-        0.6666666666666666
+        [0.6666666666666666 0.6666666666666666]
 
     """
     def __init__(self, name='F1Score'):
@@ -62,7 +62,7 @@ class F1Score(Metric):
         self._class_num = 0
 
     def clear(self):
-        """Clears the internal evaluation result."""
+        """Clears the internal evaluation results."""
         self._true_positives = 0
         self._actual_positives = 0
         self._positives = 0
@@ -74,14 +74,13 @@ class F1Score(Metric):
 
         Args:
             inputs: Input `preds` and `labels`.
-                    preds (Union[Tensor, list, numpy.ndarray]): Predicted value.
-                        `preds` is a list of floating numbers in range :math:`[0, 1]`
-                        and the shape of `preds` is :math:`(N, C)` in most cases
-                        (not strictly), where :math:`N` is the number of cases and
-                        :math:`C` is the number of categories.
-                    labels (Union[Tensor, list, numpy.ndarray]): Ground truth value.
-                        `labels` must be in one-hot format that shape is :math:`(N, C)`,
-                        or can be transformed to one-hot format that shape is :math:`(N,)`.
+                    preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
+                        floating numbers in range :math:`[0, 1]` and the shape of `preds` is
+                        :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number
+                        of cases and :math:`C` is the number of categories.
+                    labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` must be in
+                        one-hot format that shape is :math:`(N, C)`, or can be transformed to
+                        one-hot format that shape is :math:`(N,)`.
 
         Raises:
             ValueError: If the number of inputs is not 2.
@@ -93,11 +92,13 @@ class F1Score(Metric):
         if len(inputs) != 2:
             raise ValueError(f'For `F1Score.update`, it needs 2 inputs (`preds` and `labels`), '
                              f'but got {len(inputs)}.')
+
         preds = inputs[0]
         labels = inputs[1]
 
         y_pred = _convert_data_type(preds)
         y_true = _convert_data_type(labels)
+
         if y_pred.ndim == y_true.ndim and _check_onehot_data(y_true):
             y_true = y_true.argmax(axis=1)
         _check_shape(y_pred, y_true)
@@ -132,14 +133,14 @@ class F1Score(Metric):
         Computes and returns the F1 score.
 
         Returns:
-            - **f1_s** (float) - The computed result.
+            - **f1_s** (numpy.ndarray) - The computed result.
 
         Raises:
             RuntimeError: If the number of samples is 0.
 
         """
         f1_s = (2 * self._true_positives / (self._actual_positives + self._positives + \
-            self.epsilon)).item(0)
+            self.epsilon))
         return f1_s
 
     def get_metric_name(self):
