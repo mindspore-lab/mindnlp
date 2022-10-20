@@ -100,11 +100,13 @@ class CNNEncoder(EncoderBase):
         embed = self.embedding(src_token)
 
         embed = ops.expand_dims(embed, 1)
-        convs_out = [self.act(conv(embed)).squeeze(3) for conv in self.convs]
+        convs_out = ()
+        for conv in self.convs:
+            convs_out += (self.act(conv(embed)).squeeze(3),)
 
-        maxpool_out = [
-            (self.pool(t)).squeeze(axis=2) for t in convs_out
-        ]
+        maxpool_out = ()
+        for out in convs_out:
+            maxpool_out += (self.pool(out).squeeze(axis=2),)
         result = ops.concat(maxpool_out, axis=1)
 
         if self.projection_layer:
