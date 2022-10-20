@@ -63,9 +63,10 @@ class Glove(TokenEmbedding):
         self.dropout_layer = nn.Dropout(1 - dropout)
         self.train_state = train_state
 
+
     @classmethod
     def from_pretrained(cls, name='6B', dims=300, root=DEFAULT_ROOT,
-                        special_tokens=("<unk>", "<pad>"), special_first=False):
+                        special_tokens=("<pad>", "<unk>"), special_first=False):
         r"""
         Creates Embedding instance from given 2-dimensional FloatTensor.
 
@@ -107,8 +108,12 @@ class Glove(TokenEmbedding):
                 tokens.append(word)
                 embeddings.append(np.fromstring(embedding, dtype=np.float32, sep=' '))
 
-        embeddings.append(np.random.rand(dims))
-        embeddings.append(np.zeros((dims,), np.float32))
+        if special_first:
+            embeddings.insert(0, np.random.rand(dims))
+            embeddings.insert(1, np.zeros((dims,), np.float32))
+        else:
+            embeddings.append(np.random.rand(dims))
+            embeddings.append(np.zeros((dims,), np.float32))
 
         vocab = Vocab.from_list(tokens, list(special_tokens), special_first)
         embeddings = np.array(embeddings).astype(np.float32)

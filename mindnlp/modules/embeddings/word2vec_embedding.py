@@ -65,7 +65,7 @@ class Word2vec(TokenEmbedding):
 
     @classmethod
     def from_pretrained(cls, name='google-news', dims=300, root=DEFAULT_ROOT,
-                        special_tokens=("<unk>", "<pad>"), special_first=False, use_gensim=True):
+                        special_tokens=("<pad>", "<unk>"), special_first=False, use_gensim=True):
         r"""
         Creates Embedding instance from given 2-dimensional FloatTensor.
 
@@ -115,8 +115,13 @@ class Word2vec(TokenEmbedding):
                     embeddings.append(np.fromstring(embedding, dtype=np.float32, sep=' '))
             vocab = Vocab.from_list(tokens, list(special_tokens), special_first)
 
-        embeddings.append(np.random.rand(dims))
-        embeddings.append(np.zeros((dims,), np.float32))
+            if special_first:
+                embeddings.insert(0, np.random.rand(dims))
+                embeddings.insert(0, np.zeros((dims,), np.float32))
+            else:
+                embeddings.append(np.random.rand(dims))
+                embeddings.append(np.zeros((dims,), np.float32))
+
         embeddings = np.array(embeddings).astype(np.float32)
         return cls(vocab, Tensor(embeddings), True, 0.5), vocab
 
