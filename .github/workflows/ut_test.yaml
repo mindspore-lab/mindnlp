@@ -39,7 +39,7 @@ jobs:
       run: |
         pytest tests/ut
 
-  ms_1_8_1_ut_test:
+  ms_release_ut_test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3

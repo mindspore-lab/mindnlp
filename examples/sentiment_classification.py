@@ -26,7 +26,7 @@ import mindspore.dataset as ds
 from mindspore.common.initializer import Uniform, HeUniform
 
 from mindnlp.modules import RNNEncoder
-from mindnlp.common.metrics import Accuracy
+from mindnlp.engine.metrics import Accuracy
 from mindnlp.engine.trainer import Trainer
 from mindnlp.abc import Seq2vecModel
 from mindnlp.dataset import load
@@ -59,7 +59,7 @@ class SentimentClassification(Seq2vecModel):
         self.head = head
         self.dropout = nn.Dropout(1 - dropout)
 
-    def construct(self, text, mask=None):
+    def construct(self, text):
         _, (hidden, _), _ = self.encoder(text)
         hidden = self.dropout(hidden)
         output = self.head(hidden)
