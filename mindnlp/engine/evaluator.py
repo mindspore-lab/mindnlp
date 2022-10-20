@@ -97,14 +97,18 @@ class Evaluator:
 
     def _run(self, tgt_columns=None, jit=False):
         """Evaluating process for non-data sinking mode. The data would be passed to network directly."""
+        net = self.network
+        def _run_step(inputs):
+            """Core process of each step."""
+            outputs = net(*inputs)
+            return outputs
+        if jit:
+            _run_step = ms_function(_run_step)
         with tqdm(total=self.total) as progress:
             progress.set_description('Evaluate')
             for data in self.eval_dataset.create_dict_iterator():
                 inputs, tgts = self._data_process(data, tgt_columns)
-                if jit:
-                    outputs = self._run_step_graph(inputs)
-                else:
-                    outputs = self._run_step(inputs)
+                outputs = _run_step(inputs)
                 self._update_metrics(outputs, *tgts)
                 progress.update(self.batch_size)
         progress.close()
@@ -115,17 +119,6 @@ class Evaluator:
     def _run_ds_sink(self):
         """Evaluating process for data sinking mode."""
         raise NotImplementedError
-
-    def _run_step(self, inputs):
-        """Core process of each step."""
-        outputs = self.network(*inputs)
-        return outputs
-
-    @ms_function
-    def _run_step_graph(self, inputs):
-        """Core process of each step."""
-        outputs = self.network(*inputs)
-        return outputs
 
     def _get_metrics(self):
         """Get all metrics values."""
