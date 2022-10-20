@@ -18,6 +18,7 @@
 import numpy as np
 import mindspore
 from mindspore import nn, ops
+from mindnlp.common.functional import softmax, kl_div
 
 __all__ = ['RDropLoss',
            'CMRC2018Loss']
@@ -88,12 +89,12 @@ class RDropLoss(nn.Cell):
         """
         Returns tensor `loss`, the rdrop loss of p and q.
         """
-        p_loss = ops.kl_div(ops.log_softmax(p, axis=-1),
-                          ops.softmax(q, axis=-1),
-                          reduction=self.reduction)
-        q_loss = ops.kl_div(ops.log_softmax(q, axis=-1),
-                          ops.softmax(p, axis=-1),
-                          reduction=self.reduction)
+        p_loss = kl_div(ops.log_softmax(p, axis=-1),
+                        softmax(q, axis=-1),
+                        reduction=self.reduction)
+        q_loss = kl_div(ops.log_softmax(q, axis=-1),
+                        softmax(p, axis=-1),
+                        reduction=self.reduction)
 
         # pad_mask is for seq-level tasks
         if pad_mask is not None:

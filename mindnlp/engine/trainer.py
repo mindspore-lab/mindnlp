@@ -152,6 +152,7 @@ class Trainer:
         # forward function
         net = self.network
         loss_fn = self.loss_fn
+        optimizer = self.optimizer
         def forward_fn(inputs, labels):
             logits_list = ()
             logits = net(*inputs)
@@ -164,7 +165,21 @@ class Trainer:
             return_list = (loss,) + logits_list
             return return_list
 
-        self.grad_fn = value_and_grad(forward_fn, None, self.optimizer.parameters, has_aux=True)
+        grad_fn = value_and_grad(forward_fn, None, optimizer.parameters, has_aux=True)
+
+        def _run_step(inputs, labels):
+            """Core process of each step, including the forward propagation process and back propagation of data."""
+            (loss, *_), grads = grad_fn(inputs, labels)
+            optimizer(grads)
+            return loss
+
+        @ms_function
+        def _run_step_graph(inputs, labels):
+            """Core process of each step, including the forward propagation process and back propagation of data."""
+            (loss, _), grads = grad_fn(inputs, labels)
+            optimizer(grads)
+            return loss
+
         # batchify train_dataset
         total = self.train_dataset.get_dataset_size()
         self.train_dataset = self.train_dataset.batch(self.batch_size)
@@ -187,9 +202,9 @@ class Trainer:
                     self.cur_step_nums += 1
                     self.callback_manager.train_step_begin(run_context)
                     if jit:
-                        loss = self._run_step_graph(inputs, tgts)
+                        loss = _run_step_graph(inputs, tgts)
                     else:
-                        loss = self._run_step(inputs, tgts)
+                        loss = _run_step(inputs, tgts)
                     loss_total += loss
                     progress.set_postfix(loss=loss_total/self.cur_step_nums)
                     progress.update(self.batch_size)
@@ -206,19 +221,6 @@ class Trainer:
                      cb_params, print_steps, eval_steps):
         """Training process for data sinking mode."""
         raise NotImplementedError
-
-    def _run_step(self, inputs, labels):
-        """Core process of each step, including the forward propagation process and back propagation of data."""
-        (loss, *_), grads = self.grad_fn(inputs, labels)
-        self.optimizer(grads)
-        return loss
-
-    @ms_function
-    def _run_step_graph(self, inputs, labels):
-        """Core process of each step, including the forward propagation process and back propagation of data."""
-        (loss, _), grads = self.grad_fn(inputs, labels)
-        self.optimizer(grads)
-        return loss
 
     def _load_checkpoint(self, path):
         """Load checkpoint."""
