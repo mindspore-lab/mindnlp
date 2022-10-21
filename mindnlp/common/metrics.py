@@ -24,7 +24,6 @@ import numpy as np
 from mindspore import Tensor
 
 
-# Metric functions.
 def perplexity(preds, labels, ignore_label=None):
     r"""
     Calculates the perplexity. Perplexity is a measure of how well a probabilibity model
@@ -38,13 +37,13 @@ def perplexity(preds, labels, ignore_label=None):
     where :math:`w` represents words in corpus.
 
     Args:
-        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list
+        preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list
             of floating numbers in range :math:`[0, 1]` and the shape of `preds` is
-            :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number
-            of cases and :math:`C` is the number of categories.
-        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must
-            be in one-hot format that shape is :math:`(N, C)`, or can be transformed
-            to one-hot format that shape is :math:`(N,)`.
+            :math:`(N, C)` in most cases (not strictly), where :math:`N` is the
+            number of cases and :math:`C` is the number of categories.
+        labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` must be in
+            one-hot format that shape is :math:`(N, C)`, or can be transformed to
+            one-hot format that shape is :math:`(N,)`.
         ignore_label (Union[int, None]): Index of an invalid label to be ignored
             when counting. If set to `None`, it means there's no invalid label.
             Default: None.
@@ -53,7 +52,6 @@ def perplexity(preds, labels, ignore_label=None):
         - **ppl** (float) - The computed result.
 
     Raises:
-        RuntimeError: If `preds` is None or `labels` is None.
         RuntimeError: If `preds` and `labels` have different lengths.
         RuntimeError: If `pred` and `label` have different shapes.
         RuntimeError: If the sample size is 0.
@@ -73,9 +71,8 @@ def perplexity(preds, labels, ignore_label=None):
     if ignore_label is not None:
         ignore_label = _check_value_type("ignore_label", ignore_label, [int])
 
-    if preds is None or labels is None:
-        raise RuntimeError("To calculate the perplexity, it needs at least 2 inputs (`preds` "
-                           "and `labels`)")
+    preds = _check_value_type("preds", preds, [Tensor, list, np.ndarray])
+    labels = _check_value_type("labels", labels, [Tensor, list, np.ndarray])
 
     y_pred = [_convert_data_type(preds)]
     y_true = [_convert_data_type(labels)]
@@ -90,6 +87,9 @@ def perplexity(preds, labels, ignore_label=None):
     cross_entropy = 0.
     word_num = 0
     for label, pred in zip(y_true, y_pred):
+        if pred.ndim == label.ndim and _check_onehot_data(label):
+            label = label.argmax(axis=1)
+
         if label.size != pred.size / pred.shape[-1]:
             raise RuntimeError(f'`preds` and `labels` should have the same shape, but got `preds` '
                                f'shape {pred.shape}, label shape {label.shape}.')
@@ -136,16 +136,15 @@ def bleu(cand, ref_list, n_size=4, weights=None):
 
     Args:
         cand (list): A list of tokenized candidate sentences.
-        ref_list (list): A list of lists of tokenized ground truth sentences.
+        ref_list (list): A list of lists of tokenized true sentences.
         n_size (int): N_gram value ranges from 1 to 4. Default: 4.
-        weights (list): Weights of precision of each gram. Defaults to None.
+        weights (Union[list, None]): Weights of precision of each gram. Defaults to None.
 
     Returns:
         - **bleu_score** (float) - The computed result.
 
     Raises:
         ValueError: If the value range of `n_size` is not from 1 to 4.
-        RuntimeError: If `cand` is None or `ref_list` is None.
         ValueError: If the lengths of `cand` and `ref_list` are not equal.
         ValueError: If the lengths of `weights` is not equal to `n_size`.
 
@@ -162,10 +161,6 @@ def bleu(cand, ref_list, n_size=4, weights=None):
     n_size = _check_value_type("n_size", n_size, [int])
     if n_size > 4 or n_size < 1:
         raise ValueError(f'`n_size` should range from 1 to 4, but got {n_size}')
-
-    if cand is None or ref_list is None:
-        raise RuntimeError("To calculate the BLEU score, it needs at least 2 inputs "
-                           "(`cand` and `ref_list`)")
 
     cand = _check_value_type("cand", cand, list)
     ref_list = _check_value_type("ref_list", ref_list, list)
@@ -210,7 +205,7 @@ def bleu(cand, ref_list, n_size=4, weights=None):
     precision_scores = numerator / denominator
 
     if weights is None:
-        weights = [0.25] * n_size
+        weights = [1 / n_size for _ in range(n_size)]
 
     if n_size != len(weights):
         raise ValueError("The length of `weights` should be equal to `n_size`")
@@ -237,37 +232,34 @@ def rouge_n(cand_list, ref_list, n_size=1):
 
     Args:
         cand_list (list): A list of tokenized candidate sentences.
-        ref_list (list): A list of lists of tokenized ground truth sentences.
+        ref_list (list): A list of lists of tokenized true sentences.
         n_size (int): N_gram value. Default: 1.
 
     Returns:
         - **rougen_score** (float) - The computed result.
 
     Raises:
-        RuntimeError: If `cand_list` is None or `ref_list` is None.
         RuntimeError: If the reference size is 0.
 
     Example:
         >>> from mindnlp.common.metrics import rouge_n
-        >>> cand_list = [["the", "cat", "was", "found", "under", "the", "bed"]]
+        >>> cand_list = ["the", "cat", "was", "found", "under", "the", "bed"]
         >>> ref_list = [["the", "cat", "was", "under", "the", "bed"]]
         >>> rougen_score = rouge_n(cand_list, ref_list, 2)
         >>> print(rougen_score)
         0.8
 
     """
-    if cand_list is None or ref_list is None:
-        raise RuntimeError("To calculate the ROUGE-N score, it needs at least 2 inputs "
-                           "(`cand_list` and `ref_list`)")
-
     cand_list = _check_value_type("cand_list", cand_list, list)
     ref_list = _check_value_type("ref_list", ref_list, list)
+    n_size = _check_value_type("n_size", n_size, [int])
 
     overlap_count = 0
     ref_count = 0
-    for candidate, references in zip(cand_list, ref_list):
-        cand_ngrams = _get_ngrams(candidate, n_size)
-        ref_ngrams = _get_ngrams(references, n_size)
+
+    cand_ngrams = _get_ngrams(cand_list, n_size)
+    for reference in ref_list:
+        ref_ngrams = _get_ngrams(reference, n_size)
         ref_count += len(ref_ngrams)
 
         # Gets the overlapping ngrams between evaluated and reference
@@ -301,14 +293,11 @@ def rouge_l(cand_list, ref_list, beta=1.2):
 
     Args:
         cand_list (list): A list of tokenized candidate sentence.
-        ref_list (list of list): A list of lists of tokenized ground truth sentences.
+        ref_list (list): A list of lists of tokenized true sentences.
         beta (float): A hyperparameter to decide the weight of recall. Defaults: 1.2.
 
     Returns:
         - **rougel_score** (float) - The computed result.
-
-    Raises:
-        RuntimeError: If `cand_list` is None or `ref_list` is None.
 
     Example:
         >>> from mindnlp.common.metrics import rouge_l
@@ -320,10 +309,6 @@ def rouge_l(cand_list, ref_list, beta=1.2):
         0.7800511508951408
 
     """
-    if cand_list is None or ref_list is None:
-        raise RuntimeError("To calculate the ROUGE-L score, it needs at least 2 inputs "
-                           "(`cand_list` and `ref_list`)")
-
     cand_list = _check_value_type("cand_list", cand_list, list)
     ref_list = _check_value_type("ref_list", ref_list, list)
     beta = _check_value_type("beta", beta, [float])
@@ -402,19 +387,18 @@ def accuracy(preds, labels):
     of false negative cases.
 
     Args:
-        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of
+        preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
             floating numbers in range :math:`[0, 1]` and the shape of `preds` is
             :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number
             of cases and :math:`C` is the number of categories.
-        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be
-            in one-hot format that shape is :math:`(N, C)`, or can be transformed to
+        labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` must be in
+            one-hot format that shape is :math:`(N, C)`, or can be transformed to
             one-hot format that shape is :math:`(N,)`.
 
     Returns:
         - **acc** (float) - The computed result.
 
     Raises:
-        RuntimeError: If `preds` is None or `labels` is None.
         RuntimeError: If the number of samples is 0.
 
     Example:
@@ -423,21 +407,18 @@ def accuracy(preds, labels):
         >>> from mindspore import Tensor
         >>> from mindnlp.common.metrics import accuracy
         >>> preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
-        >>> labels = Tensor(np.array([1, 0, 1]), mindspore.float32)
+        >>> labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
         >>> acc = accuracy(preds, labels)
         >>> print(acc)
         0.6666666666666666
 
     """
-    if preds is None or labels is None:
-        raise RuntimeError("To calculate accuracy, it needs 2 inputs (`preds` and "
-                           "`labels`)")
-
     correct_num = 0
     total_num = 0
 
     y_pred = _convert_data_type(preds)
     y_true = _convert_data_type(labels)
+
     if y_pred.ndim == y_true.ndim and _check_onehot_data(y_true):
         y_true = y_true.argmax(axis=1)
     _check_shape(y_pred, y_true)
@@ -469,19 +450,18 @@ def precision(preds, labels):
     where `TP` is the number of true posistive cases, `FP` is the number of false posistive cases.
 
     Args:
-        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of
+        preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
             floating numbers in range :math:`[0, 1]` and the shape of `preds` is
             :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number
             of cases and :math:`C` is the number of categories.
-        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be
-            in one-hot format that shape is :math:`(N, C)`, or can be transformed to
+        labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` must be in
+            one-hot format that shape is :math:`(N, C)`, or can be transformed to
             one-hot format that shape is :math:`(N,)`.
 
     Returns:
-        - **prec** (float) - The computed result.
+        - **prec** (np.ndarray) - The computed result.
 
     Raises:
-        RuntimeError: If `preds` is None or `labels` is None.
         ValueError: If `preds` doesn't have the same classes number as `labels`.
 
     Example:
@@ -493,15 +473,12 @@ def precision(preds, labels):
         >>> labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
         >>> prec = precision(preds, labels)
         >>> print(prec)
-        0.5
+        [0.5 1. ]
 
     """
-    if preds is None or labels is None:
-        raise RuntimeError("To calculate the precision, it needs at least 2 inputs (`preds` "
-                           "and `labels`)")
-
     y_pred = _convert_data_type(preds)
     y_true = _convert_data_type(labels)
+
     if y_pred.ndim == y_true.ndim and _check_onehot_data(y_true):
         y_true = y_true.argmax(axis=1)
     _check_shape(y_pred, y_true)
@@ -510,6 +487,7 @@ def precision(preds, labels):
     if y_true.max() + 1 > class_num:
         raise ValueError(f'`preds` should have the same classes number as `labels`, but got `preds`'
                          f'classes {class_num}, true value classes {y_true.max() + 1}')
+
     y_true = np.eye(class_num)[y_true.reshape(-1)]
     indices = y_pred.argmax(axis=1).reshape(-1)
     y_pred = np.eye(class_num)[indices]
@@ -519,13 +497,13 @@ def precision(preds, labels):
 
     epsilon = sys.float_info.min
 
-    prec = (true_positives / (positives + epsilon)).item(0)
+    prec = (true_positives / (positives + epsilon))
     return prec
 
 def recall(preds, labels):
     r"""
-    Calculates the recall. Recall is also referred to as the true positive rate
-    or sensitivity. The function is shown as follows:
+    Calculates the recall. Recall is also referred to as the true positive rate or
+    sensitivity. The function is shown as follows:
 
     .. math::
 
@@ -534,19 +512,18 @@ def recall(preds, labels):
     where `TP` is the number of true posistive cases, `FN` is the number of false negative cases.
 
     Args:
-        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of
+        preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
             floating numbers in range :math:`[0, 1]` and the shape of `preds` is
             :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number
             of cases and :math:`C` is the number of categories.
-        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be
-            in one-hot format that shape is :math:`(N, C)`, or can be transformed to
+        labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` must be in
+            one-hot format that shape is :math:`(N, C)`, or can be transformed to
             one-hot format that shape is :math:`(N,)`.
 
     Returns:
-        - **rec** (float) - The computed result.
+        - **rec** (np.ndarray) - The computed result.
 
     Raises:
-        RuntimeError: If `preds` is None or `labels` is None.
         ValueError: If `preds` doesn't have the same classes number as `labels`.
 
     Example:
@@ -558,15 +535,12 @@ def recall(preds, labels):
         >>> labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
         >>> rec = recall(preds, labels)
         >>> print(rec)
-        0.5
+        [1. 0.5]
 
     """
-    if preds is None or labels is None:
-        raise RuntimeError("To calculate the recall, it needs at least 2 inputs (`preds` and "
-                           "`labels`)")
-
     y_pred = _convert_data_type(preds)
     y_true = _convert_data_type(labels)
+
     if y_pred.ndim == y_true.ndim and _check_onehot_data(y_true):
         y_true = y_true.argmax(axis=1)
     _check_shape(y_pred, y_true)
@@ -584,7 +558,7 @@ def recall(preds, labels):
 
     epsilon = sys.float_info.min
 
-    rec = (true_positives / (actual_positives + epsilon)).item(1)
+    rec = (true_positives / (actual_positives + epsilon))
     return rec
 
 def f1_score(preds, labels):
@@ -601,19 +575,18 @@ def f1_score(preds, labels):
     `FP` is the number of false positive cases.
 
     Args:
-        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of
+        preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
             floating numbers in range :math:`[0, 1]` and the shape of `preds` is
             :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number
             of cases and :math:`C` is the number of categories.
-        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be
-            in one-hot format that shape is :math:`(N, C)`, or can be transformed to
+        labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` must be in
+            one-hot format that shape is :math:`(N, C)`, or can be transformed to
             one-hot format that shape is :math:`(N,)`.
 
     Returns:
-        - **f1_s** (float) - The computed result.
+        - **f1_s** (np.ndarray) - The computed result.
 
     Raises:
-        RuntimeError: If `preds` is None or `labels` is None.
         ValueError: If `preds` doesn't have the same classes number as `labels`.
 
     Example:
@@ -625,15 +598,12 @@ def f1_score(preds, labels):
         >>> labels = Tensor(np.array([1, 0, 1]))
         >>> f1_s = f1_score(preds, labels)
         >>> print(f1_s)
-        0.6666666666666666
+        [0.6666666666666666 0.6666666666666666]
 
     """
-    if preds is None or labels is None:
-        raise RuntimeError("To calculate the F1 score, it needs at least 2 inputs (`preds` "
-                           "and `labels`)")
-
     y_pred = _convert_data_type(preds)
     y_true = _convert_data_type(labels)
+
     if y_pred.ndim == y_true.ndim and _check_onehot_data(y_true):
         y_true = y_true.argmax(axis=1)
     _check_shape(y_pred, y_true)
@@ -653,10 +623,10 @@ def f1_score(preds, labels):
 
     epsilon = sys.float_info.min
 
-    f1_s = (2 * true_positives / (actual_positives + positives + epsilon)).item(0)
+    f1_s = (2 * true_positives / (actual_positives + positives + epsilon))
     return f1_s
 
-def mcc(preds, labels):
+def matthews_correlation(preds, labels):
     r"""
     Calculates the Matthews correlation coefficient (MCC). MCC is in essence a correlation
     coefficient between the observed and predicted binary classifications; it returns a value
@@ -672,52 +642,43 @@ def mcc(preds, labels):
     `FN` is the number of false negative cases, `FP` is the number of false positive cases.
 
     Args:
-        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of
-            floating numbers in range :math:`[0, 1]` and the shape of `preds` is
-            :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number
-            of cases and :math:`C` is the number of categories.
-        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must
-            be in one-hot format that shape is :math:`(N, C)`, or can be transformed to
+        preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
+            floating numbers and the shape of `preds` is :math:`(N, C)` in most cases
+            (not strictly), where :math:`N` is the number of cases and :math:`C` is the
+            number of categories.
+        labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` must be in
+            one-hot format that shape is :math:`(N, C)`, or can be transformed to
             one-hot format that shape is :math:`(N,)`.
 
     Returns:
         - **m_c_c** (float) - The computed result.
 
-    Raises:
-        RuntimeError: If `preds` is None or `labels` is None.
-        ValueError: If `preds` doesn't have the same classes number as `labels`.
-
     Example:
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from mindnlp.common.metrics import mcc
-        >>> preds = [[0.1, 0.9], [-0.5, 0.5], [0.1, 0.4], [0.1, 0.3]]
-        >>> labels = [[1], [0], [1], [1]]
-        >>> m_c_c = mcc(x, y)
+        >>> from mindnlp.common.metrics import matthews_correlation
+        >>> preds = [[0.8, 0.2], [-0.5, 0.5], [0.1, 0.4], [0.6, 0.3], [0.6, 0.3]]
+        >>> labels = [0, 1, 0, 1, 0]
+        >>> m_c_c = matthews_correlation(preds, labels)
         >>> print(m_c_c)
-        0.0
+        0.16666666666666666
 
     """
-    if preds is None or labels is None:
-        raise RuntimeError('To calculate the Matthews correlation coefficient (MCC), it needs '
-                           'at least 2 inputs (`preds` and `labels`)')
-
     preds = _convert_data_type(preds)
     labels = _convert_data_type(labels)
 
-    if preds.ndim not in (labels.ndim, labels.ndim + 1):
-        raise ValueError(f'`preds` and `labels` should have same dimensions, or the dimension of '
-                         f'`preds` equals the dimension of `labels` add 1, but got predicted value '
-                         f'ndim: {preds.ndim}, true value ndim: {labels.ndim}.')
+    if preds.ndim == labels.ndim and _check_onehot_data(labels):
+        labels = labels.argmax(axis=1)
+    _check_shape(preds, labels)
+
+    preds = np.argmax(preds, axis=1)
+    labels = labels.reshape(-1, 1)
 
     t_p = 0
     f_p = 0
     t_n = 0
     f_n = 0
-
-    preds = np.argmax(preds, axis=1)
-    labels = labels.reshape(-1, 1)
 
     sample_num = labels.shape[0]
     for i in range(sample_num):
@@ -742,111 +703,104 @@ def mcc(preds, labels):
             (t_n + f_p) * (t_n + f_n))
     return m_c_c
 
-def pearson(preds, labels):
+def pearson_correlation(preds, labels):
     r"""
-    calculate Pearson correlation coefficient (PCC). PCC is a measure of linear correlation
-    between two sets of data. It is the ratio between the covariance of two variables and
-    the product of their standard deviations; thus, it is essentially a normalized measurement
-    of the covariance, such that the result always has a value between −1 and 1.
+    Calculates the Pearson correlation coefficient (PCC). PCC is a measure of linear
+    correlation between two sets of data. It is the ratio between the covariance of
+    two variables and the product of their standard deviations; thus, it is essentially
+    a normalized measurement of the covariance, such that the result always has a value
+    between −1 and 1.
 
     Args:
-        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of
-            floating numbers in range :math:`[0, 1]` and the shape of `preds` is :math:`(N, C)`
-            in most cases (not strictly), where :math:`N` is the number of cases and :math:`C`
-            is the number of categories.
-        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be
-            in one-hot format that shape is :math:`(N, C)`, or can be transformed to one-hot format
-            that shape is :math:`(N,)`.
+        preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
+            floating numbers and the shape of `preds` is :math:`(N, 1)`.
+        labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` is a list of
+            floating numbers and the shape of `preds` is :math:`(N, 1)`.
 
     Returns:
-        - **pcc** (float) - The computed result.
+        - **p_c_c** (float) - The computed result.
 
     Raises:
-        RuntimeError: If `preds` is None or `labels` is None.
-        ValueError: If `preds` doesn't have the same classes number as `labels`.
+        RuntimeError: If `preds` and `labels` have different lengths.
 
     Example:
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from mindnlp.common.metrics import pearson
+        >>> from mindnlp.common.metrics import pearson_correlation
         >>> preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
         >>> labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
-        >>> pcc = pearson(preds, labels)
-        >>> print(pcc)
+        >>> p_c_c = pearson_correlation(preds, labels)
+        >>> print(p_c_c)
         0.9985229081857804
 
     """
-    def _pearson(y_pred, y_true):
+    def _pearson_correlation(y_pred, y_true):
         n_pred = len(y_pred)
+
         # simple sums
         sum1 = sum(float(y_pred[i]) for i in range(n_pred))
         sum2 = sum(float(y_true[i]) for i in range(n_pred))
+
         # sum up the squares
         sum1_pow = sum(pow(v, 2.0) for v in y_pred)
         sum2_pow = sum(pow(v, 2.0) for v in y_true)
+
         # sum up the products
         p_sum = sum(y_pred[i] * y_true[i] for i in range(n_pred))
 
         numerator = p_sum - (sum1 * sum2 / n_pred)
         denominator = math.sqrt(
             (sum1_pow - pow(sum1, 2) / n_pred) * (sum2_pow - pow(sum2, 2) / n_pred))
+
         if denominator == 0:
             return 0.0
-        return numerator / denominator
 
-    if preds is None or labels is None:
-        raise RuntimeError('To calculate the Pearson correlation coefficient (PCC), it needs '
-                          'at least 2 inputs `preds` and `labels`)')
+        return numerator / denominator
 
     preds = _convert_data_type(preds)
     labels = _convert_data_type(labels)
 
-    if preds.ndim not in (labels.ndim, labels.ndim + 1):
-        raise ValueError(f'`preds` and `labels` should have same dimensions, or the dimension of '
-                         f'`preds` equals the dimension of `labels` add 1, but got predicted value '
-                         f'ndim: {preds.ndim}, true value ndim: {labels.ndim}.')
-
     preds = np.squeeze(preds.reshape(-1, 1)).tolist()
     labels = np.squeeze(labels.reshape(-1, 1)).tolist()
 
-    pcc = _pearson(preds, labels)
-    return pcc
+    if len(preds) != len(labels):
+        raise RuntimeError(f'`preds` and `labels` should have the same length, but got `preds` '
+                           f'length {len(preds)}, `labels` length {len(labels)})')
 
-def spearman(preds, labels):
+    p_c_c = _pearson_correlation(preds, labels)
+    return p_c_c
+
+def spearman_correlation(preds, labels):
     r"""
-    Calculates the Spearman's rank correlation coefficient. It is a nonparametric measure
-    of rank correlation (statistical dependence between the rankings of two variables).
-    It assesses how well the relationship between two variables can be described
-    using a monotonic function. If there are no repeated data values, a perfect
-    Spearman correlation of +1 or −1 occurs when each of the variables is
+    Calculates the Spearman's rank correlation coefficient (SRCC). It is a nonparametric
+    measure of rank correlation (statistical dependence between the rankings of two
+    variables). It assesses how well the relationship between two variables can be
+    described using a monotonic function. If there are no repeated data values, a
+    perfect Spearman correlation of +1 or −1 occurs when each of the variables is
     a perfect monotone function of the other.
 
     Args:
-        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of
-            floating numbers in range :math:`[0, 1]` and the shape of `preds` is
-            :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number
-            of cases and :math:`C` is the number of categories.
-        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must
-            be in one-hot format that shape is :math:`(N, C)`, or can be transformed
-            to one-hot format that shape is :math:`(N,)`.
+        preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
+            floating numbers and the shape of `preds` is :math:`(N, 1)`.
+        labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` is a list of
+            floating numbers and the shape of `preds` is :math:`(N, 1)`.
 
     Returns:
-        - **scc** (float) - The computed result.
+        - **s_r_c_c** (float) - The computed result.
 
     Raises:
-        RuntimeError: If `preds` is None or `labels` is None.
-        ValueError: If `preds` doesn't have the same classes number as `labels`.
+        RuntimeError: If `preds` and `labels` have different lengths.
 
     Example:
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from mindnlp.common.metrics import spearman
+        >>> from mindnlp.common.metrics import spearman_correlation
         >>> preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
         >>> labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
-        >>> scc = spearman(preds, labels)
-        >>> print(scc)
+        >>> s_r_c_c = spearman_correlation(preds, labels)
+        >>> print(s_r_c_c)
         1.0
 
     """
@@ -861,36 +815,33 @@ def spearman(preds, labels):
         res = 1 - float(6 * total) / (n_pred * (pow(n_pred, 2) - 1))
         return res
 
-    if preds is None or labels is None:
-        raise RuntimeError('To calculate the Spearman\'s rank correlation coefficient, it '
-                           'needs at least 2 inputs (`preds` and `labels`)')
-
     preds = _convert_data_type(preds)
     labels = _convert_data_type(labels)
-
-    if preds.ndim not in (labels.ndim, labels.ndim + 1):
-        raise ValueError(f'`preds` and `labels` should have same dimensions, or the dimension '
-                         f'of `preds` equals the dimension of `labels` add 1, but got '
-                         f'predicted value ndim: {preds.ndim}, true value ndim: '
-                         f'{labels.ndim}.')
 
     preds = np.squeeze(preds.reshape(-1, 1)).tolist()
     labels = np.squeeze(labels.reshape(-1, 1)).tolist()
 
-    scc = _spearman(preds, labels)
-    return scc
+    if len(preds) != len(labels):
+        raise RuntimeError(f'`preds` and `labels` should have the same length, but got `preds` '
+                           f'length {len(preds)}, `labels` length {len(labels)})')
+
+    s_r_c_c = _spearman(preds, labels)
+    return s_r_c_c
 
 def em_score(preds, examples):
     r"""
     Calculates the exact match (EM) score. This metric measures the percentage of
-    predictions that match any one of the ground truth answers exactly.
+    predictions that match any one of the ground truth exactly.
 
     Args:
         preds (Union[str, list]): Predicted value.
-        examples (Union[list, list of list]): Ground truth value.
+        examples (list): Ground truth.
 
     Returns:
         - **exact_match** (float) - The computed result.
+
+    Raises:
+        RuntimeError: If `preds` and `examples` have different lengths.
 
     Example:
         >>> import numpy as np
@@ -904,11 +855,16 @@ def em_score(preds, examples):
         0.0
 
     """
+    _check_value_type("preds", preds, [str, list])
+    _check_value_type("examples", examples, [list])
+
     if not isinstance(preds, list):
         preds = [preds]
         examples = [examples]
 
-    assert len(preds) == len(examples)
+    if len(preds) != len(examples):
+        raise RuntimeError(f'`preds` and `examples` should have the same length, but got `examples`'
+                           f' length {len(preds)}, `labels` length {len(examples)})')
 
     count = len(preds)
     exact_match = 0
@@ -930,21 +886,17 @@ def confusion_matrix(preds, labels, class_num=2):
     multiple classification.
 
     Args:
-        preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of
-            floating numbers in range :math:`[0, 1]` and the shape of `preds` is
-            :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number
-            of cases and :math:`C` is the number of categories.
-        labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be
-            in one-hot format that shape is :math:`(N, C)`, or can be transformed to
-            one-hot format that shape is :math:`(N,)`.
+        preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
+            floating numbers and the shape of `preds` is :math:`(N, C)` or :math:`(N,)`.
+        labels (Union[Tensor, list, np.ndarray]): Ground truth. The shape of `labels` is
+            :math:`(N,)`.
         class_num (int): Number of classes in the dataset. Default: 2.
 
     Returns:
-        - **conf_mat** (float) - The computed result.
+        - **conf_mat** (np.ndarray) - The computed result.
 
     Raises:
-        RuntimeError: If `preds` is None or `labels` is None.
-        ValueError: If `preds` doesn't have the same classes number as `labels`.
+        ValueError: If `preds` and `labels` do not have valid dimensions.
 
     Example:
         >>> import numpy as np
@@ -959,19 +911,15 @@ def confusion_matrix(preds, labels, class_num=2):
          [1. 1.]]
 
     """
-    if preds is None or labels is None:
-        raise RuntimeError("To calculate the confusion matrix, it needs at least 2 inputs "
-                           "(`preds` and `labels`)")
-
     class_num = _check_value_type("class_num", class_num, [int])
 
     preds = _convert_data_type(preds)
     labels = _convert_data_type(labels)
 
     if preds.ndim not in (labels.ndim, labels.ndim + 1):
-        raise ValueError(f'`preds` and `labels` should have same dimensions, or the dimension '
-                         f'of preds` equals the dimension of `labels` add 1, but got predicted'
-                         f' value ndim: {preds.ndim}, true value ndim: {labels.ndim}.')
+        raise ValueError(f'`preds` and `labels` should have the same dimensions, or the dimension '
+                         f'of `preds` equals the dimension of true value add 1, but got `preds` '
+                         f'ndim: {preds.ndim}, `labels` ndim: {labels.ndim}.')
 
     if preds.ndim == labels.ndim + 1:
         preds = np.argmax(preds, axis=1)
@@ -988,7 +936,7 @@ def confusion_matrix(preds, labels, class_num=2):
 # Common functions.
 def _check_value_type(arg_name, arg_value, valid_types):
     """
-    Checks whether the data type is valid
+    Checks whether the data type of argument is valid
 
     Args:
         arg_name (str): Name of the argument validated.
@@ -1005,13 +953,13 @@ def _check_value_type(arg_name, arg_value, valid_types):
     valid_types = valid_types if isinstance(valid_types, Iterable) else (valid_types,)
     num_types = len(valid_types)
     if isinstance(arg_value, bool) and bool not in tuple(valid_types):
-        raise TypeError(f'Type of \'{arg_name}\' should be {"one of " if num_types > 1 else ""}'
-                        f'\'{valid_types if num_types > 1 else str(valid_types[0])}\', '
-                        f'but got \'{arg_value}\' with type \'{type(arg_value).__name__}\'.')
+        raise TypeError(f'Type of `{arg_name}` should be {"one of " if num_types > 1 else ""}'
+                        f' `{valid_types if num_types > 1 else str(valid_types[0])}`, '
+                        f'but got `{arg_value}` with type `{type(arg_value).__name__}`.')
     if not isinstance(arg_value, tuple(valid_types)):
-        raise TypeError(f'Type of \'{arg_name}\' should be {"one of " if num_types > 1 else ""}'
-                        f'\'{valid_types if num_types > 1 else str(valid_types[0])}\', '
-                        f'but got \'{arg_value}\' with type \'{type(arg_value).__name__}\'.')
+        raise TypeError(f'Type of `{arg_name}` should be {"one of " if num_types > 1 else ""}'
+                        f'`{valid_types if num_types > 1 else str(valid_types[0])}`, '
+                        f'but got `{arg_value}` with type `{type(arg_value).__name__}`.')
     return arg_value
 
 def _check_onehot_data(data):
@@ -1019,13 +967,14 @@ def _check_onehot_data(data):
     Checks whether input data is one-hot encoding.
 
     Args:
-        data (numpy.array): Input data.
+        data (np.array): Input data.
 
     Returns:
         - **ans** (bool) - Rreturn true, if input data is one-hot encoding.
     """
     ans = False
-    if data.ndim > 1 and np.equal(data ** 2, data).all():
+    data = _convert_data_type(data)
+    if np.equal(data ** 2, data).all():
         shp = (data.shape[0],) + data.shape[2:]
         if np.equal(np.ones(shp), data.sum(axis=1)).all():
             ans = True
@@ -1040,10 +989,10 @@ def _convert_data_type(data):
         data (Union[Tensor, list, np.ndarray]): Input data.
 
     Returns:
-        - **data** (numpy.ndarray) - Data with `np.ndarray` type.
+        - **data** (np.ndarray) - Data with `np.ndarray` type.
 
     Raises:
-        TypeError: If the data type is not a tensor, list or numpy.ndarray.
+        TypeError: If the data type is not tensor, list or np.ndarray.
 
     """
     if isinstance(data, Tensor):
@@ -1054,7 +1003,7 @@ def _convert_data_type(data):
         pass
     else:
         raise TypeError(f'Input data type must be tensor, list or '
-                        f'numpy.ndarray, but got {type(data)}.')
+                        f'np.ndarray, but got {type(data)}.')
     return data
 
 def _count_ngram(input_list, n_gram):
@@ -1076,7 +1025,7 @@ def _check_shape(y_pred, y_true):
         y_true (Tensor): Target tensor.
     """
     if y_pred.ndim != y_true.ndim + 1:
-        raise ValueError(f'The dimension of `y_pred` should equal to the dimension of `y_true` '
+        raise ValueError(f'The dimension of `y_pred` should be equal to the dimension of `y_true` '
                          f'add 1, but got `y_pred` dimension: {y_pred.ndim} and `y_true` dimension:'
                          f' {y_true.ndim}.')
     if y_true.shape != (y_pred.shape[0],) + y_pred.shape[2:]:
@@ -1106,7 +1055,7 @@ def _lcs(strg, sub):
 
     Returns:
         - **length** (float) - The length of the longest common subsequence
-        of string and sub.
+                                of string and sub.
     """
     if len(strg) < len(sub):
         sub, strg = strg, sub
@@ -1117,7 +1066,9 @@ def _lcs(strg, sub):
                 lengths[i][j] = lengths[i - 1][j - 1] + 1
             else:
                 lengths[i][j] = max(lengths[i - 1][j], lengths[i][j - 1])
-    return lengths[len(strg)][len(sub)]
+
+    length = lengths[len(strg)][len(sub)]
+    return length
 
 def _get_rank(raw_list):
     raw_x = np.array(raw_list)
@@ -1127,26 +1078,26 @@ def _get_rank(raw_list):
         rank_x[k] = i + 1
     return rank_x
 
-def _normalize_answer(txt):
-    """Lowers text and removes punctuation, articles and extra whitespace."""
-
-    def remove_articles(text):
-        regex = re.compile(r"\b(a|an|the)\b", re.UNICODE)
-        return re.sub(regex, " ", text)
-
-    def white_space_fix(text):
-        return " ".join(text.split())
-
-    def remove_punc(text):
-        exclude = set(string.punctuation)
-        return "".join(ch for ch in text if ch not in exclude)
-
-    def lower(text):
-        return text.lower()
-
-    return white_space_fix(remove_articles(remove_punc(lower(txt))))
-
 def _compute_exact(y_pred, y_true):
+    def _normalize_answer(txt):
+        """Lowers text and removes punctuation, articles and extra whitespace."""
+
+        def remove_articles(text):
+            regex = re.compile(r"\b(a|an|the)\b", re.UNICODE)
+            return re.sub(regex, " ", text)
+
+        def white_space_fix(text):
+            return " ".join(text.split())
+
+        def remove_punc(text):
+            exclude = set(string.punctuation)
+            return "".join(ch for ch in text if ch not in exclude)
+
+        def lower(text):
+            return text.lower()
+
+        return white_space_fix(remove_articles(remove_punc(lower(txt))))
+
     return int(_normalize_answer(y_pred) == _normalize_answer(y_true))
 
 def _metric_max_over_ground_truths(metric_fn, pred, example):

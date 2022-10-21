@@ -42,7 +42,7 @@ class BleuScore(Metric):
 
     Args:
         n_size (int): N_gram value ranges from 1 to 4. Default: 4.
-        weights (list): Weights of precision of each gram. Defaults to None.
+        weights (Union[list, None]): Weights of precision of each gram. Defaults to None.
         name (str): Name of the metric.
 
     Raises:
@@ -70,7 +70,7 @@ class BleuScore(Metric):
                              f'got {n_size}')
 
         if weights is None:
-            self.weights = [0.25] * self.n_size
+            self.weights = [1 / self.n_size for _ in range(self.n_size)]
         else:
             self.weights = weights
 
@@ -86,7 +86,7 @@ class BleuScore(Metric):
         self.ref_len = 0
 
     def clear(self):
-        """Clears the internal evaluation result."""
+        """Clears the internal evaluation results."""
         self.numerator = np.zeros(self.n_size)
         self.denominator = np.zeros(self.n_size)
         self.precision_scores = np.zeros(self.n_size)

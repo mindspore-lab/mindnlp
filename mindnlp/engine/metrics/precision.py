@@ -24,7 +24,7 @@ from mindnlp.common.metrics import _check_onehot_data, _check_shape, _convert_da
 
 class Precision(Metric):
     r"""
-    Calculate precision. Precision (also known as positive predictive value) is the actual
+    Calculates precision. Precision (also known as positive predictive value) is the actual
     positive proportion in the predicted positive sample. It can only be used to evaluate
     the precision score of binary tasks. The function is shown as follows:
 
@@ -45,7 +45,7 @@ class Precision(Metric):
         >>> metric.update(preds, labels)
         >>> prec = metric.eval()
         >>> print(prec)
-        0.5
+        [0.5 1. ]
 
     """
     def __init__(self, name='Precision'):
@@ -56,7 +56,7 @@ class Precision(Metric):
         self.true_positives = 0
 
     def clear(self):
-        """Clears the internal evaluation result."""
+        """Clears the internal evaluation results."""
         self.positives = 0
         self.true_positives = 0
 
@@ -83,19 +83,23 @@ class Precision(Metric):
         if len(inputs) != 2:
             raise ValueError(f'For `Precision.update`, it needs 2 inputs (`preds` and `labels`), '
                              f'but got {len(inputs)}.')
+
         preds = inputs[0]
         labels = inputs[1]
 
         y_pred = _convert_data_type(preds)
         y_true = _convert_data_type(labels)
+
         if y_pred.ndim == y_true.ndim and _check_onehot_data(y_true):
             y_true = y_true.argmax(axis=1)
         _check_shape(y_pred, y_true)
 
         class_num = y_pred.shape[1]
         if y_true.max() + 1 > class_num:
-            raise ValueError(f'`preds` should have the same classes number as `labels`, but got '
-                             f'`preds` classes {class_num}, true value classes {y_true.max() + 1}')
+            raise ValueError(f'For `Precision.update`, `preds` should have the same classes number '
+                             f'as `labels`, but got `preds` classes {class_num}, true value classes'
+                             f' {y_true.max() + 1}')
+
         y_true = np.eye(class_num)[y_true.reshape(-1)]
         indices = y_pred.argmax(axis=1).reshape(-1)
         y_pred = np.eye(class_num)[indices]
@@ -108,10 +112,10 @@ class Precision(Metric):
         Computes and returns the precision.
 
         Returns:
-            - **prec** (float) - The computed result.
+            - **prec** (numpy.ndarray) - The computed result.
 
         """
-        prec = (self.true_positives / (self.positives + self.epsilon)).item(0)
+        prec = (self.true_positives / (self.positives + self.epsilon))
         return prec
 
     def get_metric_name(self):
