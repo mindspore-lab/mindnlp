@@ -21,7 +21,9 @@ import os
 import re
 from operator import itemgetter
 from typing import Union, Tuple
-from mindspore.dataset import text, TextFileDataset
+from mindspore.dataset import TextFileDataset
+from mindspore.dataset import text
+from mindnlp.dataset.transforms import BasicTokenizer
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.register import load, process
 from mindnlp.configs import DEFAULT_ROOT
@@ -141,7 +143,7 @@ def Multi30k(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train',
     return datasets_list
 
 @process.register
-def Multi30k_Process(dataset, column = 'en', tokenizer = text.BasicTokenizer(), vocab=None):
+def Multi30k_Process(dataset, column = 'en', tokenizer = BasicTokenizer(), vocab=None):
     '''
     a function transforms multi30K dataset into tensors
 

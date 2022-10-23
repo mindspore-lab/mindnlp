@@ -21,7 +21,7 @@ import os
 import csv
 from typing import Union, Tuple
 from mindspore.dataset import GeneratorDataset, text
-from mindspore.dataset.text import BasicTokenizer
+from mindnlp.dataset.transforms import BasicTokenizer
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.register import load, process
 from mindnlp.configs import DEFAULT_ROOT

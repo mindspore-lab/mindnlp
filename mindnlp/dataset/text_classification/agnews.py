@@ -21,7 +21,7 @@ import os
 import csv
 from typing import Union, Tuple
 from mindspore.dataset import GeneratorDataset, text
-from mindspore.dataset.text import BasicTokenizer
+from mindnlp.dataset.transforms import BasicTokenizer
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.register import load, process
 from mindnlp.configs import DEFAULT_ROOT
@@ -142,3 +142,4 @@ def AG_NEWS_Process(dataset, column="text", tokenizer=BasicTokenizer(), vocab=No
         return dataset.map(text.Lookup(vocab), input_columns=column), vocab
     dataset = dataset.map(tokenizer,  input_columns=column)
     return dataset.map(text.Lookup(vocab), input_columns=column)
+ 

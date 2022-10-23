@@ -19,9 +19,9 @@ import os
 import unittest
 import pytest
 import mindspore as ms
-from mindspore.dataset.text import BasicTokenizer
 from mindnlp.dataset import AmazonReviewFull, AmazonReviewFull_Process
 from mindnlp.dataset import load, process
+from mindnlp.dataset.transforms import BasicTokenizer
 
 
 class TestAmazonReviewFull(unittest.TestCase):
