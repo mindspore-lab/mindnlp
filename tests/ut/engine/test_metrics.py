@@ -17,7 +17,6 @@
 
 import unittest
 import numpy as np
-import pytest
 import mindspore
 from mindspore import Tensor
 from mindnlp.engine.metrics import (Perplexity, BleuScore, RougeN, RougeL, Distinct, Accuracy,
@@ -30,11 +29,6 @@ class TestClassPerplexity(unittest.TestCase):
     r"""
     Test class Perplexity
     """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="It has already been tested.")
     def test_class_perplexity_tensor(self):
         """
         Test class Perplexity
@@ -47,9 +41,9 @@ class TestClassPerplexity(unittest.TestCase):
 
         ppl = metric.eval()
 
-        assert ppl == 2.231443166940565
+        assert np.allclose(ppl, 2.23144, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_perplexity_tensor_onehot(self):
         """
         Test class Perplexity
@@ -62,9 +56,9 @@ class TestClassPerplexity(unittest.TestCase):
 
         ppl = metric.eval()
 
-        assert ppl == 2.231443166940565
+        assert np.allclose(ppl, 2.23144, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_perplexity_np(self):
         """
         Test class Perplexity
@@ -77,9 +71,9 @@ class TestClassPerplexity(unittest.TestCase):
 
         ppl = metric.eval()
 
-        assert ppl == 5.37284965911771
+        assert np.allclose(ppl, 5.37284, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_perplexity_list_multi(self):
         """
         Test class Perplexity
@@ -92,9 +86,9 @@ class TestClassPerplexity(unittest.TestCase):
 
         ppl = metric.eval()
 
-        assert ppl == 5.37284965911771
+        assert np.allclose(ppl, 5.37284, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_perplexity_update_clear(self):
         """
         Test class Perplexity
@@ -114,24 +108,20 @@ class TestClassPerplexity(unittest.TestCase):
         metric.update(preds2, labels2)
         ppl = metric.eval()
 
-        assert ppl == 2.599615782630921
+        assert np.allclose(ppl, 2.59961, 1e-5, 1e-5)
 
         metric.clear()
         metric.update(preds1, labels1)
 
         ppl = metric.eval()
 
-        assert ppl == 2.231443166940565
+        assert np.allclose(ppl, 2.23144, 1e-5, 1e-5)
+
 
 class TestClassBleuScore(unittest.TestCase):
     r"""
     Test class BleuScore
     """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="It has already been tested.")
     def test_class_bleu_score_normal(self):
         """
         Test class BleuScore
@@ -145,9 +135,9 @@ class TestClassBleuScore(unittest.TestCase):
 
         bleu_score = metric.eval()
 
-        assert bleu_score == 0.46713797772820015
+        assert np.allclose(bleu_score, 0.46713, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_bleu_score_perfect(self):
         """
         Test class BleuScore
@@ -161,9 +151,9 @@ class TestClassBleuScore(unittest.TestCase):
 
         bleu_score = metric.eval()
 
-        assert bleu_score == 1.0
+        assert np.allclose(bleu_score, 1.0, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_bleu_score_warning(self):
         """
         Test class BleuScore
@@ -176,9 +166,9 @@ class TestClassBleuScore(unittest.TestCase):
 
         bleu_score = metric.eval()
 
-        assert bleu_score == 0.0
+        assert np.allclose(bleu_score, 0.0, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_bleu_nsize_weights(self):
         """
         Test class BleuScore
@@ -191,9 +181,9 @@ class TestClassBleuScore(unittest.TestCase):
 
         bleu_score = metric.eval()
 
-        assert bleu_score == 0.6358881766016378
+        assert np.allclose(bleu_score, 0.63588, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_bleu_update_clear(self):
         """
         Test class BleuScore
@@ -213,23 +203,19 @@ class TestClassBleuScore(unittest.TestCase):
 
         bleu_score = metric.eval()
 
-        assert bleu_score == 0.7166258375282707
+        assert np.allclose(bleu_score, 0.71662, 1e-5, 1e-5)
 
         metric.clear()
         metric.update(cand1, ref_list1)
         bleu_score = metric.eval()
 
-        assert bleu_score == 0.46713797772820015
+        assert np.allclose(bleu_score, 0.46713, 1e-5, 1e-5)
+
 
 class TestClassRougeN(unittest.TestCase):
     r"""
     Test class RougeN
     """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="It has already been tested.")
     def test_class_rougen(self):
         """
         Test class RougeN
@@ -242,9 +228,9 @@ class TestClassRougeN(unittest.TestCase):
 
         rougen_score = metric.eval()
 
-        assert rougen_score == 0.5
+        assert np.allclose(rougen_score, 0.5, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_rougen_1(self):
         """
         Test class RougeN
@@ -257,9 +243,9 @@ class TestClassRougeN(unittest.TestCase):
 
         rougen_score = metric.eval()
 
-        assert rougen_score == 1.0
+        assert np.allclose(rougen_score, 1.0, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_rougen_2(self):
         """
         Test class RougeN
@@ -272,9 +258,9 @@ class TestClassRougeN(unittest.TestCase):
 
         rougen_score = metric.eval()
 
-        assert rougen_score == 0.8
+        assert np.allclose(rougen_score, 0.8, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_rougen_ref(self):
         """
         Test class RougeN
@@ -288,9 +274,9 @@ class TestClassRougeN(unittest.TestCase):
 
         rougen_score = metric.eval()
 
-        assert rougen_score == 0.5454545454545454
+        assert np.allclose(rougen_score, 0.54545, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_rougen_update_clear(self):
         """
         Test class RougeN
@@ -307,7 +293,7 @@ class TestClassRougeN(unittest.TestCase):
         metric.update(cand_list2, ref_list2)
         rougen_score = metric.eval()
 
-        assert rougen_score == 0.6363636363636364
+        assert np.allclose(rougen_score, 0.63636, 1e-5, 1e-5)
 
         metric.clear()
         metric.update(cand_list1, ref_list1)
@@ -320,11 +306,6 @@ class TestClassRougeL(unittest.TestCase):
     r"""
     Test class RougeL
     """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="It has already been tested.")
     def test_class_rougel(self):
         """
         Test class RougeL
@@ -337,9 +318,9 @@ class TestClassRougeL(unittest.TestCase):
 
         rougel_score = metric.eval()
 
-        assert rougel_score == 0.7800511508951408
+        assert np.allclose(rougel_score, 0.78005, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_rougel_ref1(self):
         """
         Test class RougeL
@@ -352,9 +333,9 @@ class TestClassRougeL(unittest.TestCase):
 
         rougel_score = metric.eval()
 
-        assert rougel_score == 0.5714285714285714
+        assert np.allclose(rougel_score, 0.57142, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_rougel_ref2(self):
         """
         Test class RougeL
@@ -368,9 +349,9 @@ class TestClassRougeL(unittest.TestCase):
 
         rougel_score = metric.eval()
 
-        assert rougel_score == 0.7800511508951408
+        assert np.allclose(rougel_score, 0.78005, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_rougel_beta(self):
         """
         Test class RougeL
@@ -384,9 +365,9 @@ class TestClassRougeL(unittest.TestCase):
 
         rougel_score = metric.eval()
 
-        assert rougel_score == 0.7352941176470589
+        assert np.allclose(rougel_score, 0.73529, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_rougel_update_clear(self):
         """
         Test class RougeL
@@ -404,24 +385,19 @@ class TestClassRougeL(unittest.TestCase):
 
         rougel_score = metric.eval()
 
-        assert rougel_score == 0.6757398611618561
+        assert np.allclose(rougel_score, 0.67573, 1e-5, 1e-5)
 
         metric.clear()
         metric.update(cand_list1, ref_list1)
 
         rougel_score = metric.eval()
 
-        assert rougel_score == 0.7800511508951408
+        assert np.allclose(rougel_score, 0.78005, 1e-5, 1e-5)
 
 class TestClassDistinct(unittest.TestCase):
     r"""
     Test class Distinct
     """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="It has already been tested.")
     def test_class_distinct(self):
         """
         Test class Distinct
@@ -433,9 +409,9 @@ class TestClassDistinct(unittest.TestCase):
 
         rougel_score = metric.eval()
 
-        assert rougel_score == 0.8333333333333334
+        assert np.allclose(rougel_score, 0.83333, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_distinct_one(self):
         """
         Test class Distinct
@@ -449,7 +425,7 @@ class TestClassDistinct(unittest.TestCase):
 
         assert rougel_score == 1.0
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_distinct_update_clear(self):
         """
         Test class Distinct
@@ -477,11 +453,6 @@ class TestClassAccuracy(unittest.TestCase):
     r"""
     Test class Accuracy
     """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="It has already been tested.")
     def test_class_accuracy_tensor(self):
         """
         Test class Accuracy
@@ -494,9 +465,9 @@ class TestClassAccuracy(unittest.TestCase):
 
         acc = metric.eval()
 
-        assert acc == 0.6666666666666666
+        assert np.allclose(acc, 0.66666, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_accuracy_tensor_onehot(self):
         """
         Test class Accuracy
@@ -509,9 +480,9 @@ class TestClassAccuracy(unittest.TestCase):
 
         acc = metric.eval()
 
-        assert acc == 0.6666666666666666
+        assert np.allclose(acc, 0.66666, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_accuracy_np_multi(self):
         """
         Test class Accuracy
@@ -529,7 +500,7 @@ class TestClassAccuracy(unittest.TestCase):
 
         assert acc == 0.25
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_accuracy_list(self):
         """
         Test class Accuracy
@@ -542,9 +513,9 @@ class TestClassAccuracy(unittest.TestCase):
 
         acc = metric.eval()
 
-        assert acc == 0.6666666666666666
+        assert np.allclose(acc, 0.66666, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_accuracy_update_clear(self):
         """
         Test class Accuracy
@@ -561,24 +532,19 @@ class TestClassAccuracy(unittest.TestCase):
         metric.update(preds2, labels2)
         acc = metric.eval()
 
-        assert acc == 0.5714285714285714
+        assert np.allclose(acc, 0.57142, 1e-5, 1e-5)
 
         metric.clear()
 
         metric.update(preds1, labels1)
         acc = metric.eval()
 
-        assert acc == 0.6666666666666666
+        assert np.allclose(acc, 0.66666, 1e-5, 1e-5)
 
 class TestClassPrecision(unittest.TestCase):
     r"""
     Test class Precision
     """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="It has already been tested.")
     def test_class_precision_tensor(self):
         """
         Test class Precision
@@ -593,7 +559,7 @@ class TestClassPrecision(unittest.TestCase):
 
         assert np.array_equal(prec, [0.5, 1.0])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_precision_tensor_onehot(self):
         """
         Test class Precision
@@ -608,7 +574,7 @@ class TestClassPrecision(unittest.TestCase):
 
         assert np.array_equal(prec, [0.5, 1.0])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_precision_np_multi(self):
         """
         Test class Precision
@@ -626,7 +592,7 @@ class TestClassPrecision(unittest.TestCase):
 
         assert np.array_equal(prec, [0., 1., 0., 0.])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_precision_list(self):
         """
         Test class Precision
@@ -641,7 +607,7 @@ class TestClassPrecision(unittest.TestCase):
 
         assert np.array_equal(prec, [0.5, 1.0])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_precision_update_clear(self):
         """
         Test class Precision
@@ -671,11 +637,6 @@ class TestClassRecall(unittest.TestCase):
     r"""
     Test class Recall
     """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="It has already been tested.")
     def test_class_recall_tensor(self):
         """
         Test class Recall
@@ -690,7 +651,7 @@ class TestClassRecall(unittest.TestCase):
 
         assert np.array_equal(rec, [1., 0.5])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_recall_tensor_onehot(self):
         """
         Test class Recall
@@ -705,7 +666,7 @@ class TestClassRecall(unittest.TestCase):
 
         assert np.array_equal(rec, [1., 0.5])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_recall_np_multi(self):
         """
         Test class Recall
@@ -723,7 +684,7 @@ class TestClassRecall(unittest.TestCase):
 
         assert np.array_equal(rec, [0., 1., 0., 0.])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_recall_list(self):
         """
         Test class Recall
@@ -738,7 +699,7 @@ class TestClassRecall(unittest.TestCase):
 
         assert np.array_equal(rec, [1., 0.5])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_recall_update_clear(self):
         """
         Test class Recall
@@ -769,11 +730,6 @@ class TestClassF1Score(unittest.TestCase):
     r"""
     Test class F1Score
     """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="It has already been tested.")
     def test_class_f1_score_tensor(self):
         """
         Test class F1Score
@@ -788,7 +744,7 @@ class TestClassF1Score(unittest.TestCase):
 
         assert np.array_equal(f1_s, [0.6666666666666666, 0.6666666666666666])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_f1_score_tensor_onehot(self):
         """
         Test class F1Score
@@ -803,7 +759,7 @@ class TestClassF1Score(unittest.TestCase):
 
         assert np.array_equal(f1_s, [0.6666666666666666, 0.6666666666666666])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_f1_score_np_multi(self):
         """
         Test class F1Score
@@ -821,7 +777,7 @@ class TestClassF1Score(unittest.TestCase):
 
         assert np.array_equal(f1_s, [0., 1., 0., 0.])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_f1_score_list(self):
         """
         Test class F1Score
@@ -836,7 +792,7 @@ class TestClassF1Score(unittest.TestCase):
 
         assert np.array_equal(f1_s, [0.6666666666666666, 0.6666666666666666])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_f1_update_clear(self):
         """
         Test class F1Score
@@ -867,11 +823,6 @@ class TestClassMatthewsCorrelation(unittest.TestCase):
     r"""
     Test class MatthewsCorrelation
     """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="It has already been tested.")
     def test_class_matthews_correlation_tensor(self):
         """
         Test class MatthewsCorrelation
@@ -884,9 +835,9 @@ class TestClassMatthewsCorrelation(unittest.TestCase):
 
         m_c_c = metric.eval()
 
-        assert m_c_c == 0.16666666666666666
+        assert np.allclose(m_c_c, 0.16666, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_matthews_correlation_tensor_onehot(self):
         """
         Test class MatthewsCorrelation
@@ -899,9 +850,9 @@ class TestClassMatthewsCorrelation(unittest.TestCase):
 
         m_c_c = metric.eval()
 
-        assert m_c_c == 0.16666666666666666
+        assert np.allclose(m_c_c, 0.16666, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_matthews_correlation_np_zero(self):
         """
         Test class MatthewsCorrelation
@@ -916,7 +867,7 @@ class TestClassMatthewsCorrelation(unittest.TestCase):
 
         assert m_c_c == 0
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_matthews_correlation_list(self):
         """
         Test class MatthewsCorrelation
@@ -929,9 +880,9 @@ class TestClassMatthewsCorrelation(unittest.TestCase):
 
         m_c_c = metric.eval()
 
-        assert m_c_c == 0.16666666666666666
+        assert np.allclose(m_c_c, 0.16666, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_matthews_correlation_update_clear(self):
         """
         Test class MatthewsCorrelation
@@ -948,24 +899,19 @@ class TestClassMatthewsCorrelation(unittest.TestCase):
         metric.update(preds2, labels2)
         m_c_c = metric.eval()
 
-        assert m_c_c == 0.31622776601683794
+        assert np.allclose(m_c_c, 0.31622, 1e-5, 1e-5)
 
         metric.clear()
         metric.update(preds1, labels1)
 
         m_c_c = metric.eval()
 
-        assert m_c_c == 0.16666666666666666
+        assert np.allclose(m_c_c, 0.16666, 1e-5, 1e-5)
 
 class TestClassPearsonCorrelation(unittest.TestCase):
     r"""
     Test class PearsonCorrelation
     """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="It has already been tested.")
     def test_class_pearson_correlation_tensor1(self):
         """
         Test class PearsonCorrelation
@@ -978,9 +924,9 @@ class TestClassPearsonCorrelation(unittest.TestCase):
 
         p_c_c = metric.eval()
 
-        assert p_c_c == 0.9985229081857804
+        assert np.allclose(p_c_c, 0.99852, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_pearson_correlation_tensor2(self):
         """
         Test class PearsonCorrelation
@@ -995,7 +941,7 @@ class TestClassPearsonCorrelation(unittest.TestCase):
 
         assert p_c_c == -0.689414301147012
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_pearson_correlation_np(self):
         """
         Test class PearsonCorrelation
@@ -1008,9 +954,9 @@ class TestClassPearsonCorrelation(unittest.TestCase):
 
         p_c_c = metric.eval()
 
-        assert p_c_c == 0.9985229081857804
+        assert np.allclose(p_c_c, 0.99852, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_pearson_correlation_list(self):
         """
         Test class PearsonCorrelation
@@ -1023,9 +969,9 @@ class TestClassPearsonCorrelation(unittest.TestCase):
 
         p_c_c = metric.eval()
 
-        assert p_c_c == 0.9985229081857804
+        assert np.allclose(p_c_c, 0.99852, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_pearson_correlation_update_clear(self):
         """
         Test class PearsonCorrelation
@@ -1042,24 +988,19 @@ class TestClassPearsonCorrelation(unittest.TestCase):
         metric.update(preds2, labels2)
         p_c_c = metric.eval()
 
-        assert p_c_c == 0.8575266701054296
+        assert np.allclose(p_c_c, 0.85752, 1e-5, 1e-5)
 
         metric.clear()
         metric.update(preds1, labels1)
 
         p_c_c = metric.eval()
 
-        assert p_c_c == 0.9985229081857804
+        assert np.allclose(p_c_c, 0.99852, 1e-5, 1e-5)
 
 class TestClassSpearmanCorrelation(unittest.TestCase):
     r"""
     Test class SpearmanCorrelation
     """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="It has already been tested.")
     def test_class_spearman_correlation_tensor1(self):
         """
         Test class SpearmanCorrelation
@@ -1074,7 +1015,7 @@ class TestClassSpearmanCorrelation(unittest.TestCase):
 
         assert s_r_c_c == 1.0
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_spearman_correlation_tensor2(self):
         """
         Test class SpearmanCorrelation
@@ -1089,7 +1030,7 @@ class TestClassSpearmanCorrelation(unittest.TestCase):
 
         assert s_r_c_c == -0.8
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_spearman_correlation_np(self):
         """
         Test class SpearmanCorrelation
@@ -1104,7 +1045,7 @@ class TestClassSpearmanCorrelation(unittest.TestCase):
 
         assert s_r_c_c == -0.8
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_spearman_correlation_list(self):
         """
         Test class SpearmanCorrelation
@@ -1119,7 +1060,7 @@ class TestClassSpearmanCorrelation(unittest.TestCase):
 
         assert s_r_c_c == -0.8
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_spearman_correlation_update_clear(self):
         """
         Test class SpearmanCorrelation
@@ -1136,7 +1077,7 @@ class TestClassSpearmanCorrelation(unittest.TestCase):
         metric.update(preds2, labels2)
         s_r_c_c = metric.eval()
 
-        assert s_r_c_c == 0.6904761904761905
+        assert np.allclose(s_r_c_c, 0.69047, 1e-5, 1e-5)
 
         metric.clear()
         metric.update(preds1, labels1)
@@ -1149,11 +1090,6 @@ class TestClassEmScore(unittest.TestCase):
     r"""
     Test class EmScore
     """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="It has already been tested.")
     def test_class_em_score_zero(self):
         """
         Test class EmScore
@@ -1168,7 +1104,7 @@ class TestClassEmScore(unittest.TestCase):
 
         assert exact_match == 0.0
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_em_score_one(self):
         """
         Test class EmScore
@@ -1183,7 +1119,7 @@ class TestClassEmScore(unittest.TestCase):
 
         assert exact_match == 1.0
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_em_score_update_clear(self):
         """
         Test class EmScore
@@ -1213,11 +1149,6 @@ class TestClassConfusionMatrix(unittest.TestCase):
     r"""
     Test class ConfusionMatrix
     """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="It has already been tested.")
     def test_class_confusion_matrix_tensor(self):
         """
         Test class ConfusionMatrix
@@ -1232,7 +1163,7 @@ class TestClassConfusionMatrix(unittest.TestCase):
 
         assert np.array_equal(conf_mat, np.array([[1., 1.], [1., 1.]]))
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_confusion_matrix_np_classnum(self):
         """
         Test class ConfusionMatrix
@@ -1250,7 +1181,7 @@ class TestClassConfusionMatrix(unittest.TestCase):
                                                   [0., 1., 1., 0.],
                                                   [0., 0., 0., 0.]]))
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_confusion_list_preds(self):
         """
         Test class ConfusionMatrix
@@ -1265,7 +1196,7 @@ class TestClassConfusionMatrix(unittest.TestCase):
 
         assert np.array_equal(conf_mat, np.array([[1., 1.], [1., 1.]]))
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_class_confusion_update_clear(self):
         """
         Test class ConfusionMatrix
