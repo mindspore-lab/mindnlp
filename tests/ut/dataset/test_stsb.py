@@ -18,8 +18,10 @@ Test STSB
 import os
 import unittest
 import pytest
-from mindnlp.dataset import STSB
-from mindnlp.dataset import load
+import mindspore as ms
+from mindnlp.dataset import STSB, STSB_Process
+from mindnlp.dataset import load, process
+from mindnlp.dataset.transforms import BasicTokenizer
 
 
 class TestSTSB(unittest.TestCase):
@@ -62,3 +64,47 @@ class TestSTSB(unittest.TestCase):
             root=root,
             split=("train", "dev", "test"),
         )
+
+class TestSTSBProcess(unittest.TestCase):
+    r"""
+    Test STSB_Process
+    """
+
+    def setUp(self):
+        self.input = None
+
+    @pytest.mark.skip(reason="this ut has already tested")
+    def test_stsb_process(self):
+        r"""
+        Test STSB_Process
+        """
+
+        train_dataset, _, _ = STSB()
+        train_dataset, vocab = STSB_Process(train_dataset)
+
+        train_dataset = train_dataset.create_tuple_iterator()
+        assert (next(train_dataset)[2]).dtype == ms.int32
+        assert (next(train_dataset)[3]).dtype == ms.int32
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break
+
+    @pytest.mark.skip(reason="this ut has already tested")
+    def test_stsb_process_by_register(self):
+        """test stsb process by register"""
+        train_dataset, _, _ = STSB()
+        train_dataset, vocab = process('STSB',
+                                dataset=train_dataset,
+                                column=("sentence1", "sentence2"),
+                                tokenizer=BasicTokenizer(),
+                                vocab=None
+                                )
+
+        train_dataset = train_dataset.create_tuple_iterator()
+        assert (next(train_dataset)[2]).dtype == ms.int32
+        assert (next(train_dataset)[3]).dtype == ms.int32
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break

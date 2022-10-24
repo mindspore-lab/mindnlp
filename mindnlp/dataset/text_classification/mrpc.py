@@ -19,9 +19,11 @@ MRPC load function
 
 import os
 from typing import Union, Tuple
-from mindspore.dataset import GeneratorDataset
+from mindspore.dataset import GeneratorDataset, text
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.process import common_process
+from mindnlp.dataset.register import load, process
+from mindnlp.dataset.transforms import BasicTokenizer
 from mindnlp.configs import DEFAULT_ROOT
 
 URL = {
@@ -65,7 +67,7 @@ class Mrpc:
 @load.register
 def MRPC(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", "test"), proxies=None):
     r"""
-    Load the AG_NEWS dataset
+    Load the MRPC dataset
     Args:
         root (str): Directory where the datasets are saved.
             Default:~/.mindnlp
@@ -102,3 +104,55 @@ def MRPC(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", "te
     if len(path_list) == 1:
         return datasets_list[0]
     return datasets_list
+
+@process.register
+def MRPC_Process(dataset,
+    column: Union[Tuple[str], str] = ("sentence1", "sentence2"),
+    tokenizer=BasicTokenizer(),
+    vocab=None
+):
+    """
+    the process of the MRPC dataset
+
+    Args:
+        dataset (GeneratorDataset): MRPC dataset.
+        column (Tuple[str]|str): the column or columns needed to be transpormed of the MRPC dataset
+        tokenizer (TextTensorOperation): tokenizer you choose to tokenize the text dataset
+        vocab (Vocab): vocabulary object, used to store the mapping of token and index
+
+    Returns:
+        - **dataset** (MapDataset) - dataset after transforms
+        - **Vocab** (Vocab) - vocab created from dataset
+
+    Raises:
+        TypeError: If `column` is not a string or Tuple[str]
+
+    Examples:
+        >>> from mindnlp.dataset import MRPC, MRPC_Process
+        >>> dataset_train, dataset_test = MRPC()
+        >>> dataset_train, vocab = MRPC_Process(dataset_train)
+        >>> dataset_train = dataset_train.create_tuple_iterator()
+        >>> print(next(dataset_train))
+        [Tensor(shape=[], dtype=Int64, value= 1), Tensor(shape=[19],
+        dtype=Int32, value= [1555,  527,   36, 1838,    1, 1547,   33,  226,    8,    2, 1156,
+        8,    1,    4, 4932, 9179,   36,  362,    0]), Tensor(shape=[20], dtype=Int32,
+        value= [5820,    3,  151,   27,  119,    8,    2, 1156,    8,    1, 1555,  527,   36, 1838,
+        4, 4932, 9179,   36,  362,    0])]
+
+    """
+
+    if isinstance(column, str):
+        return common_process(dataset, column, tokenizer, vocab)
+    if vocab is None:
+        for col in column:
+            dataset = dataset.map(tokenizer, input_columns=col)
+        column = list(column)
+        vocab = text.Vocab.from_dataset(dataset, columns=column)
+        for col in column:
+            dataset = dataset.map(text.Lookup(vocab), input_columns=col)
+        return dataset, vocab
+    for col in column:
+        dataset = dataset.map(tokenizer, input_columns=col)
+    for col in column:
+        dataset = dataset.map(text.Lookup(vocab), input_columns=col)
+    return dataset, vocab

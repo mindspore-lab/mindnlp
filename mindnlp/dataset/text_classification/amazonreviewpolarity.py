@@ -135,13 +135,21 @@ def AmazonReviewPolarity_Process(dataset, column="title_text", tokenizer=BasicTo
         TypeError: If `input_column` is not a string.
 
     Examples:
-        >>>from mindnlp.dataset.amazonreviewpolarity import AmazonReviewPolarity
-        >>>train_dataset, test_dataset = AmazonReviewPolarity()
-        >>>column = "title_text"
-        >>>tokenizer = BasicTokenizer()
-        >>>amazonreviewpolarity_dataset, vocab = AmazonReviewPolarity_Process(train_dataset, column, tokenizer)
-        >>>amazonreviewpolarity_dataset = amazonreviewpolarity_dataset.create_tuple_iterator()
-        >>>print(next(amazonreviewpolarity_dataset))
+        >>> from mindnlp.dataset import AmazonReviewPolarity, AmazonReviewPolarity_Process
+        >>> train_dataset, test_dataset = AmazonReviewPolarity()
+        >>> column = "title_text"
+        >>> tokenizer = BasicTokenizer()
+        >>> amazonreviewpolarity_dataset, vocab = AmazonReviewPolarity_Process(train_dataset, column, tokenizer)
+        >>> amazonreviewpolarity_dataset = amazonreviewpolarity_dataset.create_tuple_iterator()
+        >>> print(next(amazonreviewpolarity_dataset))
+        [Tensor(shape=[], dtype=Int64, value= 2), Tensor(shape=[90], dtype=Int32, value= [277246,     89,
+        14,      1,    680,     16,   7506,     32,    203,    543,     18,    460,     12,     33,   6923,
+        1, 146277,     13,     67,    489,     38,     81,      3,     48,   2004,      9,     89,      5,
+        152,     78,    795,  22921,      0,    170,    137,     12,      3,     28,    567,      1,    170,
+        32075,   4790,     27,     50,      7,     36,      7,      1,    660,      3,     28,    158,    567,
+        9,     54,      1,    112,    137,     12,     33,   7683,    277,     41,   6067,  69373,      4,
+        471,      6,  20149,    991,     21,  10745,   3408,      4,   5257,  24128,      0,     33,     48,
+        5944,    241,     78,   3043,      5,    392,     12,   5075,   1118,   5075])]
 
     """
 

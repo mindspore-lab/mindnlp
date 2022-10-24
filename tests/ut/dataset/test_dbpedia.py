@@ -18,8 +18,10 @@ Test DBpedia
 import os
 import unittest
 import pytest
-from mindnlp.dataset import DBpedia
-from mindnlp.dataset import load
+import mindspore as ms
+from mindnlp.dataset import DBpedia, DBpedia_Process
+from mindnlp.dataset import load, process
+from mindnlp.dataset.transforms import BasicTokenizer
 
 
 class TestDBpedia(unittest.TestCase):
@@ -58,3 +60,45 @@ class TestDBpedia(unittest.TestCase):
             root=root,
             split=("train", "test"),
         )
+
+class TestDBpediaProcess(unittest.TestCase):
+    r"""
+    Test DBpedia_Process
+    """
+
+    def setUp(self):
+        self.input = None
+
+    @pytest.mark.skip(reason="this ut has already tested")
+    def test_dbpedia_process(self):
+        r"""
+        Test DBpedia_Process
+        """
+
+        train_dataset, _ = DBpedia()
+        train_dataset, vocab = DBpedia_Process(train_dataset)
+
+        train_dataset = train_dataset.create_tuple_iterator()
+        assert (next(train_dataset)[1]).dtype == ms.int32
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break
+
+    @pytest.mark.skip(reason="this ut has already tested")
+    def test_dbpedia_process_by_register(self):
+        """test DBpedia process by register"""
+        train_dataset, _ = DBpedia()
+        train_dataset, vocab = process('DBpedia',
+                                dataset=train_dataset,
+                                column="title_text",
+                                tokenizer=BasicTokenizer(),
+                                vocab=None
+                                )
+
+        train_dataset = train_dataset.create_tuple_iterator()
+        assert (next(train_dataset)[1]).dtype == ms.int32
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break

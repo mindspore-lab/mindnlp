@@ -17,10 +17,14 @@ QQP load function
 """
 # pylint: disable=C0103
 
+
 import os
-from mindspore.dataset import GeneratorDataset
+from typing import Union, Tuple
+from mindspore.dataset import GeneratorDataset, text
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.process import common_process
+from mindnlp.dataset.register import load, process
+from mindnlp.dataset.transforms import BasicTokenizer
 from mindnlp.configs import DEFAULT_ROOT
 
 URL = "http://qim.fs.quoracdn.net/quora_duplicate_questions.tsv"
@@ -83,6 +87,10 @@ def QQP(root: str = DEFAULT_ROOT, proxies=None):
         >>> dataset_train = QQP()
         >>> train_iter = dataset_train.create_tuple_iterator()
         >>> print(next(train_iter))
+        [Tensor(shape=[], dtype=Int64, value= 0), Tensor(shape=[],
+        dtype=String, value= 'What is the step by step guide to invest
+        in share market in india?'), Tensor(shape=[], dtype=String, value=
+        'What is the step by step guide to invest in share market?')]
 
     """
 
@@ -90,3 +98,54 @@ def QQP(root: str = DEFAULT_ROOT, proxies=None):
     column_names = ["label", "question1", "question2"]
     path, _ = cache_file(None, url=URL, cache_dir=cache_dir, md5sum=MD5, proxies=proxies)
     return GeneratorDataset(source=Qqp(path), column_names=column_names, shuffle=False)
+
+@process.register
+def QQP_Process(dataset,
+    column: Union[Tuple[str], str] = ("question1", "question2"),
+    tokenizer=BasicTokenizer(),
+    vocab=None
+):
+    """
+    the process of the QQP dataset
+
+    Args:
+        dataset (GeneratorDataset): QQP dataset.
+        column (Tuple[str]|str): the column or columns needed to be transpormed of the QQP dataset
+        tokenizer (TextTensorOperation): tokenizer you choose to tokenize the text dataset
+        vocab (Vocab): vocabulary object, used to store the mapping of token and index
+
+    Returns:
+        - **dataset** (MapDataset) - dataset after transforms
+        - **Vocab** (Vocab) - vocab created from dataset
+
+    Raises:
+        TypeError: If `column` is not a string or Tuple[str]
+
+    Examples:
+        >>> from mindnlp.dataset import QQP, QQP_Process
+        >>> dataset_train = QQP()
+        >>> dataset_train, vocab = QQP_Process(dataset_train)
+        >>> dataset_train = dataset_train.create_tuple_iterator()
+        >>> print(next(dataset_train))
+        [Tensor(shape=[], dtype=Int64, value= 0), Tensor(shape=[15], dtype=Int32, value=
+        [   2,    4,    1, 1280,   68, 1280, 3038,    6,  601,    8,  805,  407,    8,
+        633,    0]), Tensor(shape=[13], dtype=Int32, value= [   2,    4,    1, 1280,   68,
+        1280, 3038,    6,  601,    8,  805,  407,    0])]
+
+    """
+
+    if isinstance(column, str):
+        return common_process(dataset, column, tokenizer, vocab)
+    if vocab is None:
+        for col in column:
+            dataset = dataset.map(tokenizer, input_columns=col)
+        column = list(column)
+        vocab = text.Vocab.from_dataset(dataset, columns=column)
+        for col in column:
+            dataset = dataset.map(text.Lookup(vocab), input_columns=col)
+        return dataset, vocab
+    for col in column:
+        dataset = dataset.map(tokenizer, input_columns=col)
+    for col in column:
+        dataset = dataset.map(text.Lookup(vocab), input_columns=col)
+    return dataset, vocab

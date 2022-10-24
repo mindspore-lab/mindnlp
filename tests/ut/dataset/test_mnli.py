@@ -18,8 +18,10 @@ Test MNLI
 import os
 import unittest
 import pytest
-from mindnlp.dataset import MNLI
-from mindnlp.dataset import load
+import mindspore as ms
+from mindnlp.dataset import MNLI, MNLI_Process
+from mindnlp.dataset import load, process
+from mindnlp.dataset.transforms import BasicTokenizer
 
 
 class TestMNLI(unittest.TestCase):
@@ -63,3 +65,47 @@ class TestMNLI(unittest.TestCase):
             root=root,
             split=("train", "dev_matched", "dev_mismatched"),
         )
+
+class TestMNLIProcess(unittest.TestCase):
+    r"""
+    Test MNLI_Process
+    """
+
+    def setUp(self):
+        self.input = None
+
+    # @pytest.mark.skip(reason="this ut has already tested")
+    def test_mnli_process(self):
+        r"""
+        Test MNLI_Process
+        """
+
+        train_dataset, _, _ = MNLI()
+        train_dataset, vocab = MNLI_Process(train_dataset)
+
+        train_dataset = train_dataset.create_tuple_iterator()
+        assert (next(train_dataset)[1]).dtype == ms.int32
+        assert (next(train_dataset)[2]).dtype == ms.int32
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break
+
+    # @pytest.mark.skip(reason="this ut has already tested")
+    def test_mnli_process_by_register(self):
+        """test mnli process by register"""
+        train_dataset, _, _ = MNLI()
+        train_dataset, vocab = process('MNLI',
+                                dataset=train_dataset,
+                                column=("sentence1", "sentence2"),
+                                tokenizer=BasicTokenizer(),
+                                vocab=None
+                                )
+
+        train_dataset = train_dataset.create_tuple_iterator()
+        assert (next(train_dataset)[1]).dtype == ms.int32
+        assert (next(train_dataset)[2]).dtype == ms.int32
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break

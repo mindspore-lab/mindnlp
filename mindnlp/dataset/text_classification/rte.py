@@ -19,9 +19,11 @@ RTE dataset
 
 import os
 from typing import Union, Tuple
-from mindspore.dataset import GeneratorDataset
+from mindspore.dataset import GeneratorDataset, text
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.process import common_process
+from mindnlp.dataset.register import load, process
+from mindnlp.dataset.transforms import BasicTokenizer
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import unzip
 
@@ -92,6 +94,9 @@ def RTE(
         >>> dataset_train,dataset_dev,dataset_test = RTE()
         >>> train_iter = dataset_train.create_tuple_iterator()
         >>> print(next(train_iter))
+        [Tensor(shape=[], dtype=Int64, value= 1), Tensor(shape=[],
+        dtype=String, value= 'No Weapons of Mass Destruction Found in Iraq Yet.'),
+        Tensor(shape=[], dtype=String, value= 'Weapons of Mass Destruction Found in Iraq.')]
 
     """
     cache_dir = os.path.join(root, "datasets", "CoLA")
@@ -101,9 +106,9 @@ def RTE(
         "test": "test.tsv",
     }
     column_names_dict = {
-        "train": ["label","sentence1","sentece2"],
-        "dev": ["label","sentence1","sentece2"],
-        "test": ["sentence1","sentece2"],
+        "train": ["label","sentence1","sentence2"],
+        "dev": ["label","sentence1","sentence2"],
+        "test": ["sentence1","sentence2"],
     }
     column_names = []
     path_list = []
@@ -130,3 +135,53 @@ def RTE(
     if len(path_list) == 1:
         return datasets_list[0]
     return datasets_list
+
+@process.register
+def RTE_Process(dataset,
+    column: Union[Tuple[str], str] = ("sentence1", "sentence2"),
+    tokenizer=BasicTokenizer(),
+    vocab=None
+):
+    """
+    the process of the RTE dataset
+
+    Args:
+        dataset (GeneratorDataset): RTE dataset
+        column (Tuple[str]|str): the column or columns needed to be transpormed of the RTE dataset
+        tokenizer (TextTensorOperation): tokenizer you choose to tokenize the text dataset
+        vocab (Vocab): vocabulary object, used to store the mapping of token and index
+
+    Returns:
+        - **dataset** (MapDataset) - dataset after transforms
+        - **Vocab** (Vocab) - vocab created from dataset
+
+    Raises:
+        TypeError: If `column` is not a string or Tuple[str]
+
+    Examples:
+        >>> from mindnlp.dataset import RTE, RTE_Process
+        >>> dataset_train, dataset_dev, dataset_test = RTE()
+        >>> dataset_train, vocab = RTE_Process(dataset_train)
+        >>> dataset_train = dataset_train.create_tuple_iterator()
+        >>> print(next(dataset_train))
+        [Tensor(shape=[], dtype=Int64, value= 1), Tensor(shape=[10],
+        dtype=Int32, value= [ 882, 3696,    3, 3599, 7046, 7175,    4,   79, 4518,    0]),
+        Tensor(shape=[8], dtype=Int32, value= [3696,    3, 3599, 7046, 7175,    4,   79,    0])]
+
+    """
+
+    if isinstance(column, str):
+        return common_process(dataset, column, tokenizer, vocab)
+    if vocab is None:
+        for col in column:
+            dataset = dataset.map(tokenizer, input_columns=col)
+        column = list(column)
+        vocab = text.Vocab.from_dataset(dataset, columns=column)
+        for col in column:
+            dataset = dataset.map(text.Lookup(vocab), input_columns=col)
+        return dataset, vocab
+    for col in column:
+        dataset = dataset.map(tokenizer, input_columns=col)
+    for col in column:
+        dataset = dataset.map(text.Lookup(vocab), input_columns=col)
+    return dataset, vocab

@@ -134,13 +134,13 @@ def AmazonReviewFull_Process(dataset, column="title_text", tokenizer=BasicTokeni
         TypeError: If `input_column` is not a string.
 
     Examples:
-        >>>from mindnlp.dataset.amazonreviewfull import Amazonreviewfull
-        >>>train_dataset, test_dataset = Amazonreviewfull()
-        >>>column = "title_text"
-        >>>tokenizer = BasicTokenizer()
-        >>>amazonreviewfull_dataset, vocab = AmazonReviewFull_Process(train_dataset, column, tokenizer)
-        >>>amazonreviewfull_dataset = amazonreviewfull_dataset.create_tuple_iterator()
-        >>>print(next(amazonreviewfull_dataset))
+        >>> from mindnlp.dataset.amazonreviewfull import Amazonreviewfull
+        >>> train_dataset, test_dataset = Amazonreviewfull()
+        >>> column = "title_text"
+        >>> tokenizer = BasicTokenizer()
+        >>> amazonreviewfull_dataset, vocab = AmazonReviewFull_Process(train_dataset, column, tokenizer)
+        >>> amazonreviewfull_dataset = amazonreviewfull_dataset.create_tuple_iterator()
+        >>> print(next(amazonreviewfull_dataset))
         [Tensor(shape=[], dtype=Int64, value= '3'), Tensor(shape=[27], dtype=Int32, value= \
         [    53,     37, 912165,   6822,     11,      6,     31,   2589,     13,      5,   \
         8221,    509,    114,   5478,     16, 126088,      2,     16,     82,    141,      5,  \

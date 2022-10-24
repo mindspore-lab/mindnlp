@@ -19,9 +19,11 @@ WNLI dataset
 
 import os
 from typing import Union, Tuple
-from mindspore.dataset import GeneratorDataset
+from mindspore.dataset import GeneratorDataset, text
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.process import common_process
+from mindnlp.dataset.register import load, process
+from mindnlp.dataset.transforms import BasicTokenizer
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import unzip
 
@@ -90,17 +92,20 @@ def WNLI(
         >>> dataset_train,dataset_dev,dataset_test = WNLI()
         >>> train_iter = dataset_train.create_tuple_iterator()
         >>> print(next(train_iter))
+        [Tensor(shape=[], dtype=String, value= '1'), Tensor(shape=[], dtype=String,
+        value= 'I stuck a pin through a carrot. When I pulled the pin out, it had a hole.'),
+        Tensor(shape=[], dtype=String, value= 'The carrot had a hole.')]
 
     """
-    cache_dir = os.path.join(root, "datasets", "CoLA")
+    cache_dir = os.path.join(root, "datasets", "WNLI")
     path_dict = {
         "train": "train.tsv",
         "dev": "dev.tsv",
         "test": "test.tsv",
     }
     column_names_dict = {
-        "train": ["label","sentence1","sentece2"],
-        "dev": ["label","sentence1","sentece2"],
+        "train": ["label","sentence1","sentence2"],
+        "dev": ["label","sentence1","sentence2"],
         "test": ["sentence1","sentece2"],
     }
     column_names = []
@@ -128,3 +133,54 @@ def WNLI(
     if len(path_list) == 1:
         return datasets_list[0]
     return datasets_list
+
+@process.register
+def WNLI_Process(dataset,
+    column: Union[Tuple[str], str] = ("sentence1", "sentence2"),
+    tokenizer=BasicTokenizer(),
+    vocab=None
+):
+    """
+    the process of the WNLI dataset
+
+    Args:
+        dataset (GeneratorDataset): WNLI dataset.
+        column (Tuple[str]|str): the column or columns needed to be transpormed of the WNLI dataset
+        tokenizer (TextTensorOperation): tokenizer you choose to tokenize the text dataset
+        vocab (Vocab): vocabulary object, used to store the mapping of token and index
+
+    Returns:
+        - **dataset** (MapDataset) - dataset after transforms
+        - **Vocab** (Vocab) - vocab created from dataset
+
+    Raises:
+        TypeError: If `column` is not a string or Tuple[str]
+
+    Examples:
+        >>> from mindnlp.dataset import WNLI, WNLI_Process
+        >>> dataset_train, dataset_dev, dataset_test= WNLI()
+        >>> dataset_train, vocab = WNLI_Process(dataset_train)
+        >>> dataset_train = dataset_train.create_tuple_iterator()
+        >>> print(next(dataset_train))
+        [Tensor(shape=[], dtype=String, value= '1'), Tensor(shape=[20],
+        dtype=Int32, value= [  23, 1102,    6,  341,  109,    6,  607,    0,  105,   23,  468,
+        1,  341,   33,    2,    9,   14,    6,  182,    0]), Tensor(shape=[6], dtype=Int32,
+        value= [  7, 607,  14,   6, 182,   0]
+
+    """
+
+    if isinstance(column, str):
+        return common_process(dataset, column, tokenizer, vocab)
+    if vocab is None:
+        for col in column:
+            dataset = dataset.map(tokenizer, input_columns=col)
+        column = list(column)
+        vocab = text.Vocab.from_dataset(dataset, columns=column)
+        for col in column:
+            dataset = dataset.map(text.Lookup(vocab), input_columns=col)
+        return dataset, vocab
+    for col in column:
+        dataset = dataset.map(tokenizer, input_columns=col)
+    for col in column:
+        dataset = dataset.map(text.Lookup(vocab), input_columns=col)
+    return dataset, vocab

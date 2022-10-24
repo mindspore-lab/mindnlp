@@ -22,7 +22,9 @@ import csv
 from typing import Union, Tuple
 from mindspore.dataset import GeneratorDataset
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.register import load, process
+from mindnlp.dataset.process import common_process
+from mindnlp.dataset.transforms import BasicTokenizer
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import untar
 
@@ -116,3 +118,45 @@ def YelpReviewFull(
     if len(path_list) == 1:
         return datasets_list[0]
     return datasets_list
+
+@process.register
+def YelpReviewFull_Process(dataset, column="title_text", tokenizer=BasicTokenizer(), vocab=None):
+    """
+    the process of the YelpReviewFull dataset
+
+    Args:
+        dataset (GeneratorDataset): YelpReviewFull dataset.
+        column (str): the column needed to be transpormed of the YelpReviewFull dataset.
+        tokenizer (TextTensorOperation): tokenizer you choose to tokenize the text dataset.
+        vocab (Vocab): vocabulary object, used to store the mapping of token and index.
+
+    Returns:
+        - **dataset** (MapDataset) - dataset after transforms.
+        - **Vocab** (Vocab) - vocab created from dataset
+
+    Raises:
+        TypeError: If `input_column` is not a string.
+
+    Examples:
+        >>> from mindnlp.dataset import YelpReviewFull, YelpReviewFull_Process
+        >>> train_dataset, dataset_test  = YelpReviewFull()
+        >>> column = "sentence"
+        >>> tokenizer = BasicTokenizer()
+        >>> train_dataset, vocab = YelpReviewFull_Process(train_dataset, column, tokenizer)
+        >>> train_dataset = train_dataset.create_tuple_iterator()
+        >>> print(next(train_dataset))
+        {'label': Tensor(shape=[], dtype=Int64, value= 5), 'title_text': Tensor(shape=[117],
+        dtype=Int32, value= [  6338,      0, 258139,   1500,    265,    139,    295,     12,     15,
+        6,   1344,  17531,      0,    101,      8,     28,    106,      3,    702,     7,    842,      7,
+        364,    199,  11063,    277,    101,      8,     28,    152,     25,     57,     15,   1076,
+        225,   4021,    277,    101,      8,     28,  12202,     19,      6,    308,     20,   1638,   3077,
+        43, 287710,     38,     76,     23,   1802,     27,   1151,      7,     44,     14,     53,   1617,
+        15,    852,    185,   1865,      3,    21,    248,   3990,    277,      3,     21,     67,     52,
+        16374,      7,    169,  19483,    364,    390,      7,    169,    279,  138,      0,     75,      2,
+        79,     81,    103,     21,    248,     63,    139,      8,     99,    570,     51,    387,      7,
+        143,     10,    155,   1532,    139,     27,     64,    279,      2,     18,    139,      8,     99,
+        75,   9730,      6,   6598,      0])}
+
+    """
+
+    return common_process(dataset, column, tokenizer, vocab)

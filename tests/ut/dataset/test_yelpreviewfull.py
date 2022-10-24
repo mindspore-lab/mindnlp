@@ -18,8 +18,10 @@ Test YelpReviewFull
 import os
 import unittest
 import pytest
-from mindnlp.dataset import YelpReviewFull
-from mindnlp.dataset import load
+import mindspore as ms
+from mindnlp.dataset import YelpReviewFull, YelpReviewFull_Process
+from mindnlp.dataset import load, process
+from mindnlp.dataset.transforms import BasicTokenizer
 
 
 class TestYelpReviewFull(unittest.TestCase):
@@ -58,3 +60,45 @@ class TestYelpReviewFull(unittest.TestCase):
             root=root,
             split=("train", "test"),
         )
+
+class TestYelpReviewFullProcess(unittest.TestCase):
+    r"""
+    Test YelpReviewFull_Process
+    """
+
+    def setUp(self):
+        self.input = None
+
+    @pytest.mark.skip(reason="this ut has already tested")
+    def test_yelpreviewfull_process(self):
+        r"""
+        Test YelpReviewFull_Process
+        """
+
+        train_dataset, _ = YelpReviewFull()
+        train_dataset, vocab = YelpReviewFull_Process(train_dataset)
+
+        train_dataset = train_dataset.create_tuple_iterator()
+        assert (next(train_dataset)[1]).dtype == ms.int32
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break
+
+    @pytest.mark.skip(reason="this ut has already tested")
+    def test_yelpreviewfull_process_by_register(self):
+        """test yelpreviewfull process by register"""
+        train_dataset, _ = YelpReviewFull()
+        train_dataset, vocab = process('YelpReviewFull',
+                                dataset=train_dataset,
+                                column="title_text",
+                                tokenizer=BasicTokenizer(),
+                                vocab=None
+                                )
+
+        train_dataset = train_dataset.create_tuple_iterator()
+        assert (next(train_dataset)[1]).dtype == ms.int32
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break
