@@ -48,7 +48,7 @@ class Distinct(Metric):
         self.count = 0.0
 
     def clear(self):
-        """ClearS the internal evaluation result."""
+        """Clears the internal evaluation results."""
         self.diff_ngram = set()
         self.count = 0.0
 

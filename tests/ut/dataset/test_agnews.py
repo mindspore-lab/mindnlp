@@ -19,9 +19,9 @@ import os
 import unittest
 import pytest
 import mindspore as ms
-from mindspore.dataset.text import BasicTokenizer
 from mindnlp.dataset import AG_NEWS, AG_NEWS_Process
 from mindnlp.dataset import load, process
+from mindnlp.dataset.transforms import BasicTokenizer
 
 
 class TestAGNEWS(unittest.TestCase):

@@ -24,8 +24,8 @@ from mindnlp.common.metrics import _check_onehot_data, _check_shape, _convert_da
 
 class Recall(Metric):
     r"""
-    Calculates the recall. Recall is also referred to as the true positive rate
-    or sensitivity. The function is shown as follows:
+    Calculates the recall. Recall is also referred to as the true positive rate or
+    sensitivity. The function is shown as follows:
 
     .. math::
 
@@ -47,7 +47,7 @@ class Recall(Metric):
         >>> metric.update(preds, labels)
         >>> rec = metric.eval()
         >>> print(rec)
-        0.5
+        [1. 0.5]
 
     """
     def __init__(self, name='Recall'):
@@ -58,7 +58,7 @@ class Recall(Metric):
         self.epsilon = sys.float_info.min
 
     def clear(self):
-        """Clears the internal evaluation result."""
+        """Clears the internal evaluation results."""
         self.actual_positives = 0
         self.true_positives = 0
 
@@ -68,14 +68,13 @@ class Recall(Metric):
 
         Args:
             inputs: Input `preds` and `labels`.
-                    preds (Union[Tensor, list, numpy.ndarray]): Predicted value.
-                        `preds` is a list of floating numbers in range :math:`[0, 1]`
-                        and the shape of `preds` is :math:`(N, C)` in most cases
-                        (not strictly), where :math:`N` is the number of cases and
-                        :math:`C` is the number of categories.
-                    labels (Union[Tensor, list, numpy.ndarray]): Ground truth value.
-                        `labels` must be in one-hot format that shape is :math:`(N, C)`,
-                        or can be transformed to one-hot format that shape is :math:`(N,)`.
+                    preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
+                        floating numbers in range :math:`[0, 1]` and the shape of `preds` is
+                        :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number
+                        of cases and :math:`C` is the number of categories.
+                    labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` must be in
+                        one-hot format that shape is :math:`(N, C)`, or can be transformed to
+                        one-hot format that shape is :math:`(N,)`.
 
         Raises:
             ValueError: If the number of inputs is not 2.
@@ -90,15 +89,16 @@ class Recall(Metric):
 
         y_pred = _convert_data_type(preds)
         y_true = _convert_data_type(labels)
+
         if y_pred.ndim == y_true.ndim and _check_onehot_data(y_true):
             y_true = y_true.argmax(axis=1)
         _check_shape(y_pred, y_true)
 
         class_num = y_pred.shape[1]
         if y_true.max() + 1 > class_num:
-            raise ValueError(f'`preds` should have the same classes number as `labels`, but'
-                             f'got `preds` classes {class_num}, true value classes '
-                             f'{y_true.max() + 1}.')
+            raise ValueError(f'For `Recall.update`, `preds` should have the same classes number '
+                             f'as `labels`, but got `preds` classes {class_num}, true value classes'
+                             f' {y_true.max() + 1}.')
         y_true = np.eye(class_num)[y_true.reshape(-1)]
         indices = y_pred.argmax(axis=1).reshape(-1)
         y_pred = np.eye(class_num)[indices]
@@ -111,10 +111,10 @@ class Recall(Metric):
         Computes and returns the recall.
 
         Returns:
-            - **rec** (float) - The computed result.
+            - **rec** (numpy.ndarray) - The computed result.
 
         """
-        rec = (self.true_positives / (self.actual_positives + self.epsilon)).item(1)
+        rec = (self.true_positives / (self.actual_positives + self.epsilon))
         return rec
 
     def get_metric_name(self):

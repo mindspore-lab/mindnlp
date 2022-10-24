@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-""""Class for Metric Spearman"""
+""""Class for Metric EmScore"""
 
 
 from mindnlp.abc import Metric
-from mindnlp.common.metrics import _compute_exact, _metric_max_over_ground_truths
+from mindnlp.common.metrics import _compute_exact, _metric_max_over_ground_truths, _check_value_type
 
 
 class EmScore(Metric):
@@ -48,7 +48,7 @@ class EmScore(Metric):
         self.exact_match = 0
 
     def clear(self):
-        """Clears the internal evaluation result."""
+        """Clears the internal evaluation results."""
         self.count = 0
         self.exact_match = 0
 
@@ -59,10 +59,11 @@ class EmScore(Metric):
         Args:
             inputs: Input `preds` and `examples`.
                     preds (Union[str, list]): Predicted value.
-                    examples (Union[list, list of list]): Ground truth value.
+                    examples (list): Ground truth.
 
         Raises:
             ValueError: If the number of inputs is not 2.
+            RuntimeError: If `preds` and `examples` have different lengths.
 
         """
         if len(inputs) != 2:
@@ -72,11 +73,17 @@ class EmScore(Metric):
         preds = inputs[0]
         examples = inputs[1]
 
+        _check_value_type("preds", preds, [str, list])
+        _check_value_type("examples", examples, [list])
+
         if not isinstance(preds, list):
             preds = [preds]
             examples = [examples]
 
-        assert len(preds) == len(examples)
+        if len(preds) != len(examples):
+            raise RuntimeError(f'For `EmScore.update`, `preds` and `examples` should have the same '
+                               f'length, but got `examples` length {len(preds)}, `labels` length '
+                               f'{len(examples)})')
 
         self.count += len(preds)
 

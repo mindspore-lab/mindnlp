@@ -18,8 +18,10 @@
 import math
 import numpy as np
 
+from mindspore import Tensor
+
 from mindnlp.abc import Metric
-from mindnlp.common.metrics import _check_value_type, _convert_data_type
+from mindnlp.common.metrics import _check_value_type, _convert_data_type, _check_onehot_data
 
 
 class Perplexity(Metric):
@@ -66,7 +68,7 @@ class Perplexity(Metric):
         self.sum_word_num = 0
 
     def clear(self):
-        """Clears the internal evaluation result."""
+        """Clears the internal evaluation results."""
         self.sum_cross_entropy = 0.0
         self.sum_word_num = 0
 
@@ -76,13 +78,13 @@ class Perplexity(Metric):
 
         Args:
             inputs: Input `preds` and `labels`.
-                    preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is
-                        a list of floating numbers in range :math:`[0, 1]` and the shape of
-                        `preds` is :math:`(N, C)` in most cases (not strictly), where :math:`N`
-                        is the number of cases and :math:`C` is the number of categories.
-                    labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must
-                        be in one-hot format that shape is :math:`(N, C)`, or can be transformed
-                        to one-hot format that shape is :math:`(N,)`.
+                    preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list
+                        of floating numbers in range :math:`[0, 1]` and the shape of `preds` is
+                        :math:`(N, C)` in most cases (not strictly), where :math:`N` is the
+                        number of cases and :math:`C` is the number of categories.
+                    labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` must be in
+                        one-hot format that shape is :math:`(N, C)`, or can be transformed to
+                        one-hot format that shape is :math:`(N,)`.
 
         Raises:
             ValueError: If the number of `inputs` is not 2.
@@ -93,8 +95,12 @@ class Perplexity(Metric):
         if len(inputs) != 2:
             raise ValueError(f'For `Perplexity.update`, it needs 2 inputs (`preds` and `labels`), '
                              f'but got {len(inputs)}.')
+
         preds = inputs[0]
         labels = inputs[1]
+
+        preds = _check_value_type("preds", preds, [Tensor, list, np.ndarray])
+        labels = _check_value_type("labels", labels, [Tensor, list, np.ndarray])
 
         y_pred = [_convert_data_type(preds)]
         y_true = [_convert_data_type(labels)]
@@ -107,21 +113,28 @@ class Perplexity(Metric):
         cross_entropy = 0.
         word_num = 0
         for label, pred in zip(y_true, y_pred):
+            if pred.ndim == label.ndim and _check_onehot_data(label):
+                label = label.argmax(axis=1)
+
             if label.size != pred.size / pred.shape[-1]:
                 raise RuntimeError(f'For `Perplexity.update`, `preds` and `labels` should have '
                                    f'the same shape, but got `preds` shape {pred.shape}, label '
                                    f'shape {label.shape}.')
+
             label = label.reshape((label.size,))
             label_expand = label.astype(int)
             label_expand = np.expand_dims(label_expand, axis=1)
             first_indices = np.arange(label_expand.shape[0])[:, None]
             pred = np.squeeze(pred[first_indices, label_expand])
+
             if self.ignore_label is not None:
                 ignore = (label == self.ignore_label).astype(pred.dtype)
                 word_num -= np.sum(ignore)
                 pred = pred * (1 - ignore) + ignore
+
             cross_entropy -= np.sum(np.log(np.maximum(1e-10, pred)))
             word_num += pred.size
+
         self.sum_cross_entropy += cross_entropy
         self.sum_word_num += word_num
 

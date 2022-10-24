@@ -19,7 +19,8 @@ IWSLT2017 load function
 
 import os
 from typing import Union, Tuple
-from mindspore.dataset import IWSLT2017Dataset, text
+from mindspore.dataset import IWSLT2017Dataset
+from mindnlp.dataset.transforms import BasicTokenizer
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.process import common_process
 from mindnlp.dataset.register import load, process
@@ -140,7 +141,7 @@ def IWSLT2017(root: str = DEFAULT_ROOT,
     return datasets_list
 
 @process.register
-def IWSLT2017_Process(dataset, column = 'translation', tokenizer = text.BasicTokenizer(), vocab=None):
+def IWSLT2017_Process(dataset, column = 'translation', tokenizer = BasicTokenizer(), vocab=None):
     '''
     a function transforms specific language column in IWSLT2017 dataset into tensors
 

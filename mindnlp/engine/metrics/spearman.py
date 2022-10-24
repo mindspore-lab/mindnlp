@@ -21,9 +21,9 @@ from mindnlp.abc import Metric
 from mindnlp.common.metrics import _convert_data_type, _get_rank
 
 
-class Spearman(Metric):
+class SpearmanCorrelation(Metric):
     r"""
-    Calculates the Spearman's rank correlation coefficient. It is a nonparametric measure
+    Calculates the Spearman's rank correlation coefficient (SRCC). It is a nonparametric measure
     of rank correlation (statistical dependence between the rankings of two variables).
     It assesses how well the relationship between two variables can be described
     using a monotonic function. If there are no repeated data values, a perfect
@@ -37,26 +37,26 @@ class Spearman(Metric):
         >>> import numpy as np
         >>> import mindspore
         >>> from mindspore import Tensor
-        >>> from mindnlp.engine.metrics import Spearman
+        >>> from mindnlp.engine.metrics import SpearmanCorrelation
         >>> preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
         >>> labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
-        >>> metric = Spearman()
+        >>> metric = SpearmanCorrelation()
         >>> metric.update(preds, labels)
-        >>> scc = metric.eval()
-        >>> print(scc)
+        >>> s_r_c_c = metric.eval()
+        >>> print(s_r_c_c)
         1.0
 
     """
-    def __init__(self, name='Spearman'):
+    def __init__(self, name='SpearmanCorrelation'):
         super().__init__()
         self._name = name
-        self.total = 0
-        self.n_pred = 0
+        self.preds = []
+        self.labels = []
 
     def clear(self):
-        """Clears the internal evaluation result."""
-        self.total = 0
-        self.n_pred = 0
+        """Clears the internal evaluation results."""
+        self.preds = []
+        self.labels = []
 
     def update(self, *inputs):
         """
@@ -64,22 +64,19 @@ class Spearman(Metric):
 
         Args:
             inputs: Input `preds` and `labels`.
-                    preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list
-                        of floating numbers in range :math:`[0, 1]` and the shape of `preds` is
-                        :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number
-                        of cases and :math:`C` is the number of categories.
-                    labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must
-                        be in one-hot format that shape is :math:`(N, C)`, or can be transformed
-                        to one-hot format that shape is :math:`(N,)`.
+                    preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
+                        floating numbers and the shape of `preds` is :math:`(N, 1)`.
+                    labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` is a list of
+                        floating numbers and the shape of `preds` is :math:`(N, 1)`.
 
         Raises:
             ValueError: If the number of inputs is not 2.
-            ValueError: If `preds` doesn't have the same classes number as `labels`.
+            RuntimeError: If `preds` and `labels` have different lengths.
 
         """
         if len(inputs) != 2:
-            raise ValueError(f'For `Spearman.update`, it needs 2 inputs (`preds` and `labels`), '
-                             f'but got {len(inputs)}.')
+            raise ValueError(f'For `SpearmanCorrelation.update`, it needs 2 inputs (`preds` '
+                             f'and `labels`), but got {len(inputs)}.')
 
         preds = inputs[0]
         labels = inputs[1]
@@ -87,31 +84,38 @@ class Spearman(Metric):
         preds = _convert_data_type(preds)
         labels = _convert_data_type(labels)
 
-        if preds.ndim not in (labels.ndim, labels.ndim + 1):
-            raise ValueError(f'`preds` and `labels` should have same dimensions, or the dimension '
-                             f'of `preds` equals the dimension of `labels` add 1, but got '
-                             f'predicted value ndim: {preds.ndim}, true value ndim: {labels.ndim}.')
-
         preds = np.squeeze(preds.reshape(-1, 1)).tolist()
         labels = np.squeeze(labels.reshape(-1, 1)).tolist()
 
-        preds_rank = _get_rank(preds)
-        labels_rank = _get_rank(labels)
+        if len(preds) != len(labels):
+            raise RuntimeError(f'For `SpearmanCorrelation.update`, `preds` and `labels` should have'
+                               f' the same length, but got `preds` length {len(preds)}, `labels` '
+                               f'length {len(labels)})')
 
-        self.n_pred += len(preds)
-        for i in range(self.n_pred):
-            self.total += pow((preds_rank[i] - labels_rank[i]), 2)
+        self.preds.append(preds)
+        self.labels.append(labels)
 
     def eval(self):
         """
-        Computes and returns the SCC.
+        Computes and returns the SRCC.
 
         Returns:
-            - **scc** (float) - The computed result.
+            - **s_r_c_c** (float) - The computed result.
 
         """
-        scc = 1 - float(6 * self.total) / (self.n_pred * (pow(self.n_pred, 2) - 1))
-        return scc
+        self.preds = [item for pred in self.preds for item in pred]
+        self.labels = [item for label in self.labels for item in label]
+
+        preds_rank = _get_rank(self.preds)
+        labels_rank = _get_rank(self.labels)
+
+        total = 0
+        n_preds = len(self.preds)
+        for i in range(n_preds):
+            total += pow((preds_rank[i] - labels_rank[i]), 2)
+
+        s_r_c_c = 1 - float(6 * total) / (n_preds * (pow(n_preds, 2) - 1))
+        return s_r_c_c
 
     def get_metric_name(self):
         """

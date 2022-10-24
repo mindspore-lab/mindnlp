@@ -43,7 +43,7 @@ class Accuracy(Metric):
         >>> from mindspore import nn, Tensor
         >>> from mindnlp.common.metrics import Accuracy
         >>> preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
-        >>> labels = Tensor(np.array([1, 0, 1]), mindspore.float32)
+        >>> labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
         >>> metric = Accuracy()
         >>> metric.update(preds, labels)
         >>> acc = metric.eval()
@@ -59,14 +59,14 @@ class Accuracy(Metric):
         self._class_num = 0
 
     def clear(self):
-        """Clears the internal evaluation result."""
+        """Clears the internal evaluation results."""
         self._correct_num = 0
         self._total_num = 0
         self._class_num = 0
 
     def update(self, *inputs):
         """
-        update local variables.
+        Updates local variables.
 
         Args:
             inputs: Input `preds` and `labels`.
@@ -87,6 +87,7 @@ class Accuracy(Metric):
         if len(inputs) != 2:
             raise ValueError(f'For `Accuracy.update`, it needs 2 inputs (`preds` and `labels`), '
                              f'but got {len(inputs)}.')
+
         preds = inputs[0]
         labels = inputs[1]
 

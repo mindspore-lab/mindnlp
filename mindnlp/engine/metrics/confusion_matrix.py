@@ -53,7 +53,7 @@ class ConfusionMatrix(Metric):
         self.conf_mat = np.zeros((self.class_num, self.class_num))
 
     def clear(self):
-        """Clears the internal evaluation result."""
+        """Clears the internal evaluation results."""
         self.conf_mat = np.zeros((self.class_num, self.class_num))
 
     def update(self, *inputs):
@@ -62,22 +62,20 @@ class ConfusionMatrix(Metric):
 
         Args:
             inputs: Input `preds` and `labels`.
-                    preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list
-                        of floating numbers in range :math:`[0, 1]` and the shape of `preds` is
-                        :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number
-                        of cases and :math:`C` is the number of categories.
-                    labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must
-                        be in one-hot format that shape is :math:`(N, C)`, or can be transformed to
-                        one-hot format that shape is :math:`(N,)`.
+                    preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
+                        floating numbers and the shape of `preds` is :math:`(N, C)` or :math:`(N,)`.
+                    labels (Union[Tensor, list, np.ndarray]): Ground truth. The shape of `labels` is
+                        :math:`(N,)`.
 
         Raises:
             ValueError: If the number of inputs is not 2.
-            ValueError: If `preds` doesn't have the same classes number as `labels`.
+            ValueError: If `preds` and `labels` do not have valid dimensions.
 
         """
         if len(inputs) != 2:
             raise ValueError(f'For `ConfusionMatrix.update`, it needs 2 inputs (`preds` and '
                              f'`labels`), but got {len(inputs)}.')
+
         preds = inputs[0]
         labels = inputs[1]
 
@@ -85,9 +83,10 @@ class ConfusionMatrix(Metric):
         labels = _convert_data_type(labels)
 
         if preds.ndim not in (labels.ndim, labels.ndim + 1):
-            raise ValueError(f'`preds` and `labels` should have same dimensions, or the dimension'
-                             f' of `preds` equals the dimension of `labels` add 1, but got '
-                             f'predicted value ndim: {preds.ndim}, true value ndim: {labels.ndim}.')
+            raise ValueError(f'For `ConfusionMatrix.update`, `preds` and `labels` should have the '
+                             f'same dimensions, or the dimension of `preds` equals the dimension '
+                             f'of true value add 1, but got `preds` ndim: {preds.ndim}, `labels` '
+                             f'ndim: {labels.ndim}.')
 
         if preds.ndim == labels.ndim + 1:
             preds = np.argmax(preds, axis=1)
@@ -102,7 +101,7 @@ class ConfusionMatrix(Metric):
         Computes and returns the Confusion Matrix.
 
         Returns:
-            - **conf_mat** (float) - The computed result.
+            - **conf_mat** (np.ndarray) - The computed result.
 
         """
         conf_mat = self.conf_mat.astype(float)
