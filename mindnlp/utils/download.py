@@ -59,8 +59,12 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None)
     Download from given url, save to path.
 
     Args:
-        url (str): download url
-        path (str): download to given path (default value: '{home}\.text')
+        url (str) : download url
+        path (str) : download to given path (default value: '{home}\.text')
+        md5sum (str) : The true md5sum of download file.
+        download_file_name(str) : The name of the downloaded file.\
+            (This para meter is required if the end of the link is not the downloaded file name.)
+        proxies (dict): a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
 
     Returns:
         - **cache_dir**(str) - The path of default or the environment 'cache_path'.
@@ -237,6 +241,10 @@ def cache_file(
         filename (str) : The name of the required dataset file.
         cache_dir (str) : The path of save the file.
         url (str) : The url of the required dataset file.
+        md5sum (str) : The true md5sum of download file.
+        download_file_name(str) : The name of the downloaded file.\
+            (This parameter is required if the end of the link is not the downloaded file name.)
+        proxies (dict) : a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
 
     Returns:
         - ** dataset_dir ** (str) - If `path` is a folder containing a file, return `{path}\{filename}`;
@@ -285,7 +293,11 @@ def cached_path(
     Args:
         filename_or_url (str) : The name or url of the required file .
         cache_dir (str) : The path of save the file.
-        name (str) : The name of the required dataset file.
+        foldername (str) : The additional folder to which the dataset is cached.(under the `cache_dir`)
+        md5sum (str) : The true md5sum of download file.
+        download_file_name(str) : The name of the downloaded file.\
+            (This parameter is required if the end of the link is not the downloaded file name.)
+        proxies (dict) : a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
 
     Returns:
         - ** Path ** (str) - If `path` is a folder containing a file, return `{path}\{filename}`;
@@ -383,6 +395,10 @@ def get_from_cache(
     Args:
         url (str) : The path to download the file.
         cache_dir (str) : The path of save the file.
+        md5sum (str) : The true md5sum of download file.
+        download_file_name(str) : The name of the downloaded file.\
+            (This parameter is required if the end of the link is not the downloaded file name.)
+        proxies (dict) : a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
 
     Returns:
         - ** path ** (str) - The path of save the downloaded file.
