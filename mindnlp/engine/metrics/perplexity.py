@@ -14,12 +14,8 @@
 # ============================================================================
 """"Class for Metric Perplexity"""
 
-
-import math
 import numpy as np
-
 from mindspore import Tensor
-
 from mindnlp.abc import Metric
 from mindnlp.common.metrics import _check_value_type, _convert_data_type, _check_onehot_data
 
@@ -153,7 +149,7 @@ class Perplexity(Metric):
             raise RuntimeError(f'Perplexity can not be calculated, because the number of '
                                f'samples is {0}')
 
-        ppl = math.exp(self.sum_cross_entropy / self.sum_word_num)
+        ppl = np.exp(self.sum_cross_entropy / self.sum_word_num)
 
         return ppl
 
