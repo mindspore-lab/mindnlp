@@ -22,7 +22,9 @@ import csv
 from typing import Union, Tuple
 from mindspore.dataset import GeneratorDataset
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.register import load, process
+from mindnlp.dataset.process import common_process
+from mindnlp.dataset.transforms import BasicTokenizer
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import untar
 
@@ -48,7 +50,7 @@ class Dbpedia:
             self._title_text.append(f"{row[1]} {row[2]}")
 
     def __getitem__(self, index):
-        return self._label[index], self._title_text
+        return self._label[index], self._title_text[index]
 
     def __len__(self):
         return len(self._label)
@@ -113,3 +115,39 @@ def DBpedia(
     if len(path_list) == 1:
         return datasets_list[0]
     return datasets_list
+
+@process.register
+def DBpedia_Process(dataset, column="title_text", tokenizer=BasicTokenizer(), vocab=None):
+    """
+    the process of the DBpedia dataset
+
+    Args:
+        dataset (GeneratorDataset): DBpedia dataset.
+        column (str): the column needed to be transpormed of the DBpedia dataset.
+        tokenizer (TextTensorOperation): tokenizer you choose to tokenize the text dataset.
+        vocab (Vocab): vocabulary object, used to store the mapping of token and index.
+
+    Returns:
+        - **dataset** (MapDataset) - dataset after transforms.
+        - **Vocab** (Vocab) - vocab created from dataset
+
+    Raises:
+        TypeError: If `input_column` is not a string.
+
+    Examples:
+        >>> from mindnlp.dataset import DBpedia, DBpedia_Process
+        >>> train_dataset, test_dataset = DBpedia()
+        >>> column = "title_text"
+        >>> tokenizer = BasicTokenizer()
+        >>> train_dataset, vocab = DBpedia_Process(train_dataset, column, tokenizer)
+        >>> train_dataset = train_dataset.create_tuple_iterator()
+        >>> print(next(train_dataset))
+        [Tensor(shape=[], dtype=Int64, value= 1), Tensor(shape=[51], dtype=Int32, value= [  407,
+         0,   347,     0,  7760,   774,  7760,     3, 16106,   407,   347,  7760,   950,
+            10,     5,    99, 88888,   485,    69,     2, 16106,  3996,  3092,   156,
+        42,    73,    20,  1217,     0,    61,   504,    83,     3,   149,  8463,    10,   156,
+          2614,     9,  1604,    13,  3267,  1986,  4858,     0,  1730,   485,  1831,
+        2,   594,     0])]
+    """
+
+    return common_process(dataset, column, tokenizer, vocab)

@@ -19,9 +19,11 @@ STSB dataset
 
 import os
 from typing import Union, Tuple
-from mindspore.dataset import GeneratorDataset
+from mindspore.dataset import GeneratorDataset, text
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.process import common_process
+from mindnlp.dataset.register import load, process
+from mindnlp.dataset.transforms import BasicTokenizer
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import untar
 
@@ -111,3 +113,53 @@ def STSB(root: str = DEFAULT_ROOT,
     if len(path_list) == 1:
         return datasets_list[0]
     return datasets_list
+
+@process.register
+def STSB_Process(dataset,
+    column: Union[Tuple[str], str] = ("sentence1", "sentence2"),
+    tokenizer=BasicTokenizer(),
+    vocab=None
+):
+    """
+    the process of the STSB dataset
+
+    Args:
+        dataset (GeneratorDataset): STSB dataset.
+        column (Tuple[str]|str): the column or columns needed to be transpormed of the STSB dataset
+        tokenizer (TextTensorOperation): tokenizer you choose to tokenize the text dataset
+        vocab (Vocab): vocabulary object, used to store the mapping of token and index
+
+    Returns:
+        - **dataset** (MapDataset) - dataset after transforms
+        - **Vocab** (Vocab) - vocab created from dataset
+
+    Raises:
+        TypeError: If `column` is not a string or Tuple[str]
+
+    Examples:
+        >>> from mindnlp.dataset import STSB, STSB_Process
+        >>> dataset_train, dataset_dev, dataset_test  = STSB()
+        >>> dataset_train, vocab = STSB_Process(dataset_train)
+        >>> dataset_train = dataset_train.create_tuple_iterator()
+        >>> print(next(dataset_train))
+        [Tensor(shape=[], dtype=Int64, value= 1), Tensor(shape=[], dtype=Float64,
+        value= 5), Tensor(shape=[6], dtype=Int32, value= [  5, 263,   6, 448, 135,   0]),
+        Tensor(shape=[7], dtype=Int32, value= [329, 242, 263,   6, 448, 135,   0])]
+
+    """
+
+    if isinstance(column, str):
+        return common_process(dataset, column, tokenizer, vocab)
+    if vocab is None:
+        for col in column:
+            dataset = dataset.map(tokenizer, input_columns=col)
+        column = list(column)
+        vocab = text.Vocab.from_dataset(dataset, columns=column)
+        for col in column:
+            dataset = dataset.map(text.Lookup(vocab), input_columns=col)
+        return dataset, vocab
+    for col in column:
+        dataset = dataset.map(tokenizer, input_columns=col)
+    for col in column:
+        dataset = dataset.map(text.Lookup(vocab), input_columns=col)
+    return dataset, vocab

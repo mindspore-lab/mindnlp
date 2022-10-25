@@ -19,9 +19,11 @@ QNLI dataset
 
 import os
 from typing import Union, Tuple
-from mindspore.dataset import GeneratorDataset
+from mindspore.dataset import GeneratorDataset, text
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.process import common_process
+from mindnlp.dataset.register import load, process
+from mindnlp.dataset.transforms import BasicTokenizer
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import unzip
 
@@ -126,3 +128,56 @@ def QNLI(
     if len(path_list) == 1:
         return datasets_list[0]
     return datasets_list
+
+@process.register
+def QNLI_Process(dataset,
+    column: Union[Tuple[str], str] = ("question", "sentence"),
+    tokenizer=BasicTokenizer(),
+    vocab=None
+):
+    """
+    the process of the QNLI dataset
+
+    Args:
+        dataset (GeneratorDataset): QNLI dataset.
+        column (Tuple[str]|str): the column or columns needed to be transpormed of the QNLI dataset
+        tokenizer (TextTensorOperation): tokenizer you choose to tokenize the text dataset
+        vocab (Vocab): vocabulary object, used to store the mapping of token and index
+
+    Returns:
+        - **dataset** (MapDataset) - dataset after transforms
+        - **Vocab** (Vocab) - vocab created from dataset
+
+    Raises:
+        TypeError: If `column` is not a string or Tuple[str]
+
+    Examples:
+        >>> from mindnlp.dataset import QNLI, QNLI_Process
+        >>> dataset_train, dataset_dev, dataset_test = QNLI()
+        >>> dataset_train, vocab = QNLI_Process(dataset_train)
+        >>> dataset_train = dataset_train.create_tuple_iterator()
+        >>> print(next(dataset_train))
+        [Tensor(shape=[], dtype=Int64, value= 1), Tensor(shape=[8],
+        dtype=Int32, value= [  49,   25,    0,  382, 2323,  574,  380,    4]),
+        Tensor(shape=[45], dtype=Int32, value= [ 3377,     0,    65,  1913,   180,    36,
+        5,    53,     2,     0,  1913,    19,   662,     1,  2323, 26903,  1857,     8,  8531,
+        5,    63,  9937,  1420,     7,    45,  1325,  3042,  2323,    58,    77,    44,
+        76653,    70,    46,  3140,     5,    63,  1164,   793,   272,     6,     0,   389,   486,     3])]
+
+    """
+
+    if isinstance(column, str):
+        return common_process(dataset, column, tokenizer, vocab)
+    if vocab is None:
+        for col in column:
+            dataset = dataset.map(tokenizer, input_columns=col)
+        column = list(column)
+        vocab = text.Vocab.from_dataset(dataset, columns=column)
+        for col in column:
+            dataset = dataset.map(text.Lookup(vocab), input_columns=col)
+        return dataset, vocab
+    for col in column:
+        dataset = dataset.map(tokenizer, input_columns=col)
+    for col in column:
+        dataset = dataset.map(text.Lookup(vocab), input_columns=col)
+    return dataset, vocab

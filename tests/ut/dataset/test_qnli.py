@@ -18,8 +18,10 @@ Test QNLI
 import os
 import unittest
 import pytest
-from mindnlp.dataset import QNLI
-from mindnlp.dataset import load
+import mindspore as ms
+from mindnlp.dataset import QNLI, QNLI_Process
+from mindnlp.dataset import load, process
+from mindnlp.dataset.transforms import BasicTokenizer
 
 class TestQNLI(unittest.TestCase):
     r"""
@@ -61,3 +63,47 @@ class TestQNLI(unittest.TestCase):
             root=root,
             split=("train", "dev", "test"),
         )
+
+class TestQNLIProcess(unittest.TestCase):
+    r"""
+    Test QNLI_Process
+    """
+
+    def setUp(self):
+        self.input = None
+
+    @pytest.mark.skip(reason="this ut has already tested")
+    def test_qnli_process(self):
+        r"""
+        Test QNLI_Process
+        """
+
+        train_dataset, _, _ = QNLI()
+        train_dataset, vocab = QNLI_Process(train_dataset)
+
+        train_dataset = train_dataset.create_tuple_iterator()
+        assert (next(train_dataset)[1]).dtype == ms.int32
+        assert (next(train_dataset)[2]).dtype == ms.int32
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break
+
+    @pytest.mark.skip(reason="this ut has already tested")
+    def test_qnli_process_by_register(self):
+        """test qnli process by register"""
+        train_dataset, _, _ = QNLI()
+        train_dataset, vocab = process('QNLI',
+                                dataset=train_dataset,
+                                column=("question", "sentence"),
+                                tokenizer=BasicTokenizer(),
+                                vocab=None
+                                )
+
+        train_dataset = train_dataset.create_tuple_iterator()
+        assert (next(train_dataset)[1]).dtype == ms.int32
+        assert (next(train_dataset)[2]).dtype == ms.int32
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break
