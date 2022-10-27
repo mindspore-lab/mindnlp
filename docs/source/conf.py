@@ -1,0 +1,45 @@
+# Configuration file for the Sphinx documentation builder.
+#
+# For the full list of built-in configuration values, see the documentation:
+# https://www.sphinx-doc.org/en/master/usage/configuration.html
+
+# -- Project information -----------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+import os
+import sys
+import mindnlp
+sys.path.append(os.path.relpath('../..'))
+
+
+project = 'mindnlp document'
+copyright = '2022, MindSpore Team'
+author = 'MindSpore Team'
+
+# -- General configuration ---------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+
+extensions = []
+
+templates_path = ['_templates']
+# exclude_patterns = []
+extensions = [
+    'sphinx.ext.autodoc', 
+    'sphinx.ext.doctest', 
+    'sphinx.ext.intersphinx', 
+    'sphinx.ext.todo', 
+    'sphinx.ext.coverage', 
+    'sphinx.ext.mathjax',
+    'sphinx.ext.viewcode',
+    'sphinx.ext.napoleon'
+]
+
+
+
+# -- Options for HTML output -------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
+
+# html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
+html_static_path = ['_static']
+
+master_doc = 'index'
