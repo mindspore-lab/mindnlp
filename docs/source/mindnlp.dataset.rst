@@ -12,7 +12,7 @@ dataset
    mindnlp.dataset.text_generation
 
 
-process.py
+process
 ------------------------------
 
 .. automodule:: mindnlp.dataset.process
@@ -20,7 +20,7 @@ process.py
    :undoc-members:
    :show-inheritance:
 
-register.py
+register
 -------------------------------
 
 .. automodule:: mindnlp.dataset.register
@@ -28,7 +28,7 @@ register.py
    :undoc-members:
    :show-inheritance:
 
-transforms.py
+transforms
 ---------------------------------
 
 .. automodule:: mindnlp.dataset.transforms

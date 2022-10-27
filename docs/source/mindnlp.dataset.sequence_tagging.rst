@@ -2,7 +2,7 @@ sequence\_tagging
 =========================================
 
 
-conll2000chunking.py
+conll2000chunking
 ----------------------------------------------------------
 
 .. automodule:: mindnlp.dataset.sequence_tagging.conll2000chunking
@@ -10,7 +10,7 @@ conll2000chunking.py
    :undoc-members:
    :show-inheritance:
 
-udpos.py
+udpos
 ----------------------------------------------
 
 .. automodule:: mindnlp.dataset.sequence_tagging.udpos

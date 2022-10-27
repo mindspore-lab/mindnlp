@@ -2,7 +2,7 @@ machine\_translation
 ============================================
 
 
-iwslt2016.py
+iwslt2016
 -----------------------------------------------------
 
 .. automodule:: mindnlp.dataset.machine_translation.iwslt2016
@@ -10,7 +10,7 @@ iwslt2016.py
    :undoc-members:
    :show-inheritance:
 
-iwslt2017.py
+iwslt2017
 -----------------------------------------------------
 
 .. automodule:: mindnlp.dataset.machine_translation.iwslt2017
@@ -18,7 +18,7 @@ iwslt2017.py
    :undoc-members:
    :show-inheritance:
 
-multi30k.py
+multi30k
 ----------------------------------------------------
 
 .. automodule:: mindnlp.dataset.machine_translation.multi30k

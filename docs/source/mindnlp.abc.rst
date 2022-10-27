@@ -9,7 +9,7 @@ abc
    mindnlp.abc.modules
 
 
-callback.py
+callback
 ---------------------------
 
 .. automodule:: mindnlp.abc.callback
@@ -17,7 +17,7 @@ callback.py
    :undoc-members:
    :show-inheritance:
 
-metric.py
+metric
 -------------------------
 
 .. automodule:: mindnlp.abc.metric
@@ -25,7 +25,7 @@ metric.py
    :undoc-members:
    :show-inheritance:
 
-register.py
+register
 ---------------------------
 
 .. automodule:: mindnlp.abc.register

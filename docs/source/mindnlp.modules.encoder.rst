@@ -2,7 +2,7 @@ encoder
 ===============================
 
 
-cnn\_encoder.py
+cnn\_encoder
 -------------------------------------------
 
 .. automodule:: mindnlp.modules.encoder.cnn_encoder
@@ -10,7 +10,7 @@ cnn\_encoder.py
    :undoc-members:
    :show-inheritance:
 
-rnn\_encoder.py
+rnn\_encoder
 -------------------------------------------
 
 .. automodule:: mindnlp.modules.encoder.rnn_encoder
@@ -18,7 +18,7 @@ rnn\_encoder.py
    :undoc-members:
    :show-inheritance:
 
-transformer\_encoder.py
+transformer\_encoder
 ---------------------------------------------------
 
 .. automodule:: mindnlp.modules.encoder.transformer_encoder

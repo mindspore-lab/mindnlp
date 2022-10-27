@@ -2,7 +2,7 @@ utils
 =====================
 
 
-decompress.py
+decompress
 -------------------------------
 
 .. automodule:: mindnlp.utils.decompress
@@ -10,7 +10,7 @@ decompress.py
    :undoc-members:
    :show-inheritance:
 
-download.py
+download
 -----------------------------
 
 .. automodule:: mindnlp.utils.download

@@ -9,7 +9,7 @@ engine
    mindnlp.engine.metrics
 
 
-evaluator.py
+evaluator
 -------------------------------
 
 .. automodule:: mindnlp.engine.evaluator
@@ -17,7 +17,7 @@ evaluator.py
    :undoc-members:
    :show-inheritance:
 
-export.py
+export
 ----------------------------
 
 .. automodule:: mindnlp.engine.export
@@ -25,7 +25,7 @@ export.py
    :undoc-members:
    :show-inheritance:
 
-trainer.py
+trainer
 -----------------------------
 
 .. automodule:: mindnlp.engine.trainer

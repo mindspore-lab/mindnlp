@@ -2,7 +2,7 @@ modules
 ===========================
 
 
-decoder.py
+decoder
 ----------------------------------
 
 .. automodule:: mindnlp.abc.modules.decoder
@@ -10,7 +10,7 @@ decoder.py
    :undoc-members:
    :show-inheritance:
 
-embedding.py
+embedding
 ------------------------------------
 
 .. automodule:: mindnlp.abc.modules.embedding
@@ -18,7 +18,7 @@ embedding.py
    :undoc-members:
    :show-inheritance:
 
-encoder.py
+encoder
 ----------------------------------
 
 .. automodule:: mindnlp.abc.modules.encoder
@@ -26,7 +26,7 @@ encoder.py
    :undoc-members:
    :show-inheritance:
 
-generator.py
+generator
 ------------------------------------
 
 .. automodule:: mindnlp.abc.modules.generator

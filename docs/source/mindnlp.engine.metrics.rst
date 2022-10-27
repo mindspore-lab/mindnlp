@@ -2,7 +2,7 @@ metrics
 ==============================
 
 
-accuracy.py
+accuracy
 --------------------------------------
 
 .. automodule:: mindnlp.engine.metrics.accuracy
@@ -10,7 +10,7 @@ accuracy.py
    :undoc-members:
    :show-inheritance:
 
-bleu.py
+bleu
 ----------------------------------
 
 .. automodule:: mindnlp.engine.metrics.bleu
@@ -18,7 +18,7 @@ bleu.py
    :undoc-members:
    :show-inheritance:
 
-confusion\_matrix.py
+confusion\_matrix
 -----------------------------------------------
 
 .. automodule:: mindnlp.engine.metrics.confusion_matrix
@@ -26,7 +26,7 @@ confusion\_matrix.py
    :undoc-members:
    :show-inheritance:
 
-distinct.py
+distinct
 --------------------------------------
 
 .. automodule:: mindnlp.engine.metrics.distinct
@@ -34,7 +34,7 @@ distinct.py
    :undoc-members:
    :show-inheritance:
 
-em\_score.py
+em\_score
 ---------------------------------------
 
 .. automodule:: mindnlp.engine.metrics.em_score
@@ -42,7 +42,7 @@ em\_score.py
    :undoc-members:
    :show-inheritance:
 
-f1.py
+f1
 --------------------------------
 
 .. automodule:: mindnlp.engine.metrics.f1
@@ -50,7 +50,7 @@ f1.py
    :undoc-members:
    :show-inheritance:
 
-matthews.py
+matthews
 --------------------------------------
 
 .. automodule:: mindnlp.engine.metrics.matthews
@@ -58,7 +58,7 @@ matthews.py
    :undoc-members:
    :show-inheritance:
 
-pearson.py
+pearson
 -------------------------------------
 
 .. automodule:: mindnlp.engine.metrics.pearson
@@ -66,7 +66,7 @@ pearson.py
    :undoc-members:
    :show-inheritance:
 
-perplexity.py
+perplexity
 ----------------------------------------
 
 .. automodule:: mindnlp.engine.metrics.perplexity
@@ -74,7 +74,7 @@ perplexity.py
    :undoc-members:
    :show-inheritance:
 
-precision.py
+precision
 ---------------------------------------
 
 .. automodule:: mindnlp.engine.metrics.precision
@@ -82,7 +82,7 @@ precision.py
    :undoc-members:
    :show-inheritance:
 
-recall.py
+recall
 ------------------------------------
 
 .. automodule:: mindnlp.engine.metrics.recall
@@ -90,7 +90,7 @@ recall.py
    :undoc-members:
    :show-inheritance:
 
-rouge.py
+rouge
 -----------------------------------
 
 .. automodule:: mindnlp.engine.metrics.rouge
@@ -98,7 +98,7 @@ rouge.py
    :undoc-members:
    :show-inheritance:
 
-spearman.py
+spearman
 --------------------------------------
 
 .. automodule:: mindnlp.engine.metrics.spearman

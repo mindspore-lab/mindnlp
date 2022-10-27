@@ -2,7 +2,7 @@ common
 ======================
 
 
-amp.py
+amp
 -------------------------
 
 .. automodule:: mindnlp.common.amp
@@ -10,7 +10,7 @@ amp.py
    :undoc-members:
    :show-inheritance:
 
-functional.py
+functional
 --------------------------------
 
 .. automodule:: mindnlp.common.functional
@@ -18,7 +18,7 @@ functional.py
    :undoc-members:
    :show-inheritance:
 
-loss.py
+loss
 --------------------------
 
 .. automodule:: mindnlp.common.loss
@@ -26,7 +26,7 @@ loss.py
    :undoc-members:
    :show-inheritance:
 
-metrics.py
+metrics
 -----------------------------
 
 .. automodule:: mindnlp.common.metrics

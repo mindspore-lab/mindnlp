@@ -2,7 +2,7 @@ backbones
 =============================
 
 
-base.py
+base
 ---------------------------------
 
 .. automodule:: mindnlp.abc.backbones.base
@@ -10,7 +10,7 @@ base.py
    :undoc-members:
    :show-inheritance:
 
-pretrained.py
+pretrained
 ---------------------------------------
 
 .. automodule:: mindnlp.abc.backbones.pretrained
@@ -18,7 +18,7 @@ pretrained.py
    :undoc-members:
    :show-inheritance:
 
-seq2seq.py
+seq2seq
 ------------------------------------
 
 .. automodule:: mindnlp.abc.backbones.seq2seq
@@ -26,7 +26,7 @@ seq2seq.py
    :undoc-members:
    :show-inheritance:
 
-seq2vec.py
+seq2vec
 ------------------------------------
 
 .. automodule:: mindnlp.abc.backbones.seq2vec

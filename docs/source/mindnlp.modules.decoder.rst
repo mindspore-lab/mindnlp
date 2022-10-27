@@ -2,7 +2,7 @@ decoder
 ===============================
 
 
-rnn\_decoder.py
+rnn\_decoder
 -------------------------------------------
 
 .. automodule:: mindnlp.modules.decoder.rnn_decoder
@@ -10,7 +10,7 @@ rnn\_decoder.py
    :undoc-members:
    :show-inheritance:
 
-transformer\_decoder.py
+transformer\_decoder
 ---------------------------------------------------
 
 .. automodule:: mindnlp.modules.decoder.transformer_decoder

@@ -2,7 +2,7 @@ text\_classification
 ============================================
 
 
-agnews.py
+agnews
 --------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_classification.agnews
@@ -10,7 +10,7 @@ agnews.py
    :undoc-members:
    :show-inheritance:
 
-amazonreviewfull.py
+amazonreviewfull
 ------------------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_classification.amazonreviewfull
@@ -18,7 +18,7 @@ amazonreviewfull.py
    :undoc-members:
    :show-inheritance:
 
-amazonreviewpolarity.py
+amazonreviewpolarity
 ----------------------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_classification.amazonreviewpolarity
@@ -26,7 +26,7 @@ amazonreviewpolarity.py
    :undoc-members:
    :show-inheritance:
 
-cola.py
+cola
 ------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_classification.cola
@@ -34,7 +34,7 @@ cola.py
    :undoc-members:
    :show-inheritance:
 
-dbpedia.py
+dbpedia
 ---------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_classification.dbpedia
@@ -42,7 +42,7 @@ dbpedia.py
    :undoc-members:
    :show-inheritance:
 
-imdb.py
+imdb
 ------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_classification.imdb
@@ -50,7 +50,7 @@ imdb.py
    :undoc-members:
    :show-inheritance:
 
-mnli.py
+mnli
 ------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_classification.mnli
@@ -58,7 +58,7 @@ mnli.py
    :undoc-members:
    :show-inheritance:
 
-mrpc.py
+mrpc
 ------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_classification.mrpc
@@ -66,7 +66,7 @@ mrpc.py
    :undoc-members:
    :show-inheritance:
 
-qnli.py
+qnli
 ------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_classification.qnli
@@ -74,7 +74,7 @@ qnli.py
    :undoc-members:
    :show-inheritance:
 
-qqp.py
+qqp
 -----------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_classification.qqp
@@ -82,7 +82,7 @@ qqp.py
    :undoc-members:
    :show-inheritance:
 
-rte.py
+rte
 -----------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_classification.rte
@@ -90,7 +90,7 @@ rte.py
    :undoc-members:
    :show-inheritance:
 
-sogounews.py
+sogounews
 -----------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_classification.sogounews
@@ -98,7 +98,7 @@ sogounews.py
    :undoc-members:
    :show-inheritance:
 
-sst2.py
+sst2
 ------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_classification.sst2
@@ -106,7 +106,7 @@ sst2.py
    :undoc-members:
    :show-inheritance:
 
-stsb.py
+stsb
 ------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_classification.stsb
@@ -114,7 +114,7 @@ stsb.py
    :undoc-members:
    :show-inheritance:
 
-wnli.py
+wnli
 ------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_classification.wnli
@@ -122,7 +122,7 @@ wnli.py
    :undoc-members:
    :show-inheritance:
 
-yahooanswers.py
+yahooanswers
 --------------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_classification.yahooanswers
@@ -130,7 +130,7 @@ yahooanswers.py
    :undoc-members:
    :show-inheritance:
 
-yelpreviewfull.py
+yelpreviewfull
 ----------------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_classification.yelpreviewfull
@@ -138,7 +138,7 @@ yelpreviewfull.py
    :undoc-members:
    :show-inheritance:
 
-yelpreviewpolarity.py
+yelpreviewpolarity
 --------------------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_classification.yelpreviewpolarity
