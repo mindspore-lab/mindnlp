@@ -2,7 +2,7 @@ text\_generation
 ========================================
 
 
-lcsts.py
+lcsts
 ---------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_generation.lcsts
@@ -10,7 +10,7 @@ lcsts.py
    :undoc-members:
    :show-inheritance:
 
-penntreebank.py
+penntreebank
 ----------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_generation.penntreebank
@@ -18,7 +18,7 @@ penntreebank.py
    :undoc-members:
    :show-inheritance:
 
-wikitext103.py
+wikitext103
 ---------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_generation.wikitext103
@@ -26,7 +26,7 @@ wikitext103.py
    :undoc-members:
    :show-inheritance:
 
-wikitext2.py
+wikitext2
 -------------------------------------------------
 
 .. automodule:: mindnlp.dataset.text_generation.wikitext2

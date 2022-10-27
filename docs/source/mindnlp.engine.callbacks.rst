@@ -2,7 +2,7 @@ callbacks
 ================================
 
 
-best\_model\_callback.py
+best\_model\_callback
 -----------------------------------------------------
 
 .. automodule:: mindnlp.engine.callbacks.best_model_callback
@@ -10,7 +10,7 @@ best\_model\_callback.py
    :undoc-members:
    :show-inheritance:
 
-callback\_manager.py
+callback\_manager
 -------------------------------------------------
 
 .. automodule:: mindnlp.engine.callbacks.callback_manager
@@ -18,7 +18,7 @@ callback\_manager.py
    :undoc-members:
    :show-inheritance:
 
-checkpoint\_callback.py
+checkpoint\_callback
 ----------------------------------------------------
 
 .. automodule:: mindnlp.engine.callbacks.checkpoint_callback
@@ -26,7 +26,7 @@ checkpoint\_callback.py
    :undoc-members:
    :show-inheritance:
 
-earlystop\_callback.py
+earlystop\_callback
 ---------------------------------------------------
 
 .. automodule:: mindnlp.engine.callbacks.earlystop_callback
@@ -34,7 +34,7 @@ earlystop\_callback.py
    :undoc-members:
    :show-inheritance:
 
-timer\_callback.py
+timer\_callback
 -----------------------------------------------
 
 .. automodule:: mindnlp.engine.callbacks.timer_callback

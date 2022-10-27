@@ -10,7 +10,7 @@ modules
    mindnlp.modules.encoder
 
 
-attentions.py
+attentions
 ---------------------------------
 
 .. automodule:: mindnlp.modules.attentions
@@ -18,7 +18,7 @@ attentions.py
    :undoc-members:
    :show-inheritance:
 
-beam\_search.py
+beam\_search
 -----------------------------------
 
 .. automodule:: mindnlp.modules.beam_search
@@ -26,7 +26,7 @@ beam\_search.py
    :undoc-members:
    :show-inheritance:
 
-crf.py
+crf
 --------------------------
 
 .. automodule:: mindnlp.modules.crf

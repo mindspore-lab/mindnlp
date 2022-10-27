@@ -2,7 +2,7 @@ question\_answer
 ========================================
 
 
-squad1.py
+squad1
 ----------------------------------------------
 
 .. automodule:: mindnlp.dataset.question_answer.squad1
@@ -10,7 +10,7 @@ squad1.py
    :undoc-members:
    :show-inheritance:
 
-squad2.py
+squad2
 ----------------------------------------------
 
 .. automodule:: mindnlp.dataset.question_answer.squad2

@@ -2,7 +2,7 @@ embeddings
 ==================================
 
 
-fasttext\_embedding.py
+fasttext\_embedding
 -----------------------------------------------------
 
 .. automodule:: mindnlp.modules.embeddings.fasttext_embedding
@@ -10,7 +10,7 @@ fasttext\_embedding.py
    :undoc-members:
    :show-inheritance:
 
-glove\_embedding.py
+glove\_embedding
 --------------------------------------------------
 
 .. automodule:: mindnlp.modules.embeddings.glove_embedding
@@ -18,7 +18,7 @@ glove\_embedding.py
    :undoc-members:
    :show-inheritance:
 
-word2vec\_embedding.py
+word2vec\_embedding
 -----------------------------------------------------
 
 .. automodule:: mindnlp.modules.embeddings.word2vec_embedding

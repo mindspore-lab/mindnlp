@@ -2,7 +2,7 @@ models
 ======================
 
 
-bert.py
+bert
 --------------------------
 
 .. automodule:: mindnlp.models.bert
@@ -10,7 +10,7 @@ bert.py
    :undoc-members:
    :show-inheritance:
 
-elmo.py
+elmo
 --------------------------
 
 .. automodule:: mindnlp.models.elmo
@@ -18,7 +18,7 @@ elmo.py
    :undoc-members:
    :show-inheritance:
 
-gpt.py
+gpt
 -------------------------
 
 .. automodule:: mindnlp.models.gpt

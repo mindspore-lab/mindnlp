@@ -8,7 +8,7 @@ workflow
    mindnlp.workflow.tasks
 
 
-inference\_pipeline.py
+inference\_pipeline
 -------------------------------------------
 
 .. automodule:: mindnlp.workflow.inference_pipeline
@@ -16,7 +16,7 @@ inference\_pipeline.py
    :undoc-members:
    :show-inheritance:
 
-pipeline.py
+pipeline
 --------------------------------
 
 .. automodule:: mindnlp.workflow.pipeline
@@ -24,7 +24,7 @@ pipeline.py
    :undoc-members:
    :show-inheritance:
 
-task.py
+task
 ----------------------------
 
 .. automodule:: mindnlp.workflow.task
@@ -32,7 +32,7 @@ task.py
    :undoc-members:
    :show-inheritance:
 
-training\_pipeline.py
+training\_pipeline
 ------------------------------------------
 
 .. automodule:: mindnlp.workflow.training_pipeline

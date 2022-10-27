@@ -2,7 +2,7 @@ tasks
 ==============================
 
 
-classification.py
+classification
 --------------------------------------------
 
 .. automodule:: mindnlp.workflow.tasks.classification
@@ -10,7 +10,7 @@ classification.py
    :undoc-members:
    :show-inheritance:
 
-ner.py
+ner
 ---------------------------------
 
 .. automodule:: mindnlp.workflow.tasks.ner
@@ -18,7 +18,7 @@ ner.py
    :undoc-members:
    :show-inheritance:
 
-qa.py
+qa
 --------------------------------
 
 .. automodule:: mindnlp.workflow.tasks.qa

@@ -1,0 +1,9 @@
+sphinx == 5.1.1
+sphinx-markdown-tables
+sphinx_rtd_theme
+IPython
+mindspore>=1.8.1
+requests
+tqdm
+gensim
+git+https://github.com/mindspore-ecosystem/mindnlp
