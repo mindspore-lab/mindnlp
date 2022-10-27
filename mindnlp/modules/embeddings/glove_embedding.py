@@ -16,6 +16,9 @@
 
 import os
 import re
+import json
+import logging
+from itertools import islice
 import numpy as np
 from mindspore import nn
 from mindspore import ops
@@ -24,6 +27,10 @@ from mindspore.dataset.text.utils import Vocab
 from mindnlp.utils import cache_file, unzip
 from mindnlp.abc.modules.embedding import TokenEmbedding
 from mindnlp.configs import DEFAULT_ROOT
+
+JSON_FILENAME = 'glove_hyper.json'
+EMBED_FILENAME = 'glove.txt'
+logging.getLogger().setLevel(logging.INFO)
 
 
 class Glove(TokenEmbedding):
@@ -39,7 +46,11 @@ class Glove(TokenEmbedding):
 
     dims = [50, 100, 200, 300]
 
-    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.5, train_state: bool = True):
+    default_vocab = Vocab.from_list(['default'])
+    default_embed = Tensor(np.zeros((1, 1)).astype(np.float32))
+
+    def __init__(self, vocab: Vocab = default_vocab, init_embed=default_embed,
+                 requires_grad: bool = True, dropout=0.5, train_state: bool = True, **kwargs):
         r"""
         Initializer.
 
@@ -62,7 +73,8 @@ class Glove(TokenEmbedding):
         self.requires_grad = requires_grad
         self.dropout_layer = nn.Dropout(1 - dropout)
         self.train_state = train_state
-
+        self.dropout_p = dropout
+        self.kwargs = kwargs
 
     @classmethod
     def from_pretrained(cls, name='6B', dims=300, root=DEFAULT_ROOT,
@@ -135,3 +147,78 @@ class Glove(TokenEmbedding):
         output_for_reshape = ops.gather(self.embed, flat_ids, 0)
         output = ops.reshape(output_for_reshape, out_shape)
         return self.dropout(output)
+
+    def save(self, foldername, root=DEFAULT_ROOT):
+        r"""
+        Args:
+            foldername (str): Name of the folder to save.
+            root (str): Path of the embedding folder.
+
+        Returns:
+
+        """
+
+        folder = os.path.join(root, 'embeddings', 'Glove', 'save', foldername)
+        os.makedirs(folder, exist_ok=True)
+
+        vocab = self.get_word_vocab()
+        embed = self.embed
+        embed_list = embed
+        vocab_list = list(vocab.keys())
+        nums = self.vocab_size
+        dims = self._embed_dim
+
+        kwargs = self.kwargs.copy()
+        kwargs['dropout'] = self.dropout_p
+        kwargs['requires_grad'] = self.requires_grad
+        kwargs['train_state'] = self.train_state
+
+        with open(os.path.join(folder, JSON_FILENAME), 'w', encoding='utf-8') as file:
+            json.dump(kwargs, file, indent=2)
+
+        with open(os.path.join(folder, EMBED_FILENAME), 'w', encoding='utf-8') as file:
+            file.write(f'{" " * 30}\n')
+            for i in range(0, nums):
+                vocab_write = vocab_list[i]
+                embed_write = list(embed_list[i])
+                vec_write = ' '.join(map(str, embed_write))
+                file.write(f'{vocab_write} {vec_write}\n')
+
+            file.seek(0)
+            file.write(f'{nums} {dims}')
+
+        logging.info('Embedding has been saved to %s', folder)
+
+    @classmethod
+    def load(cls, foldername, root=DEFAULT_ROOT):
+        r"""
+
+        Args:
+            foldername: Name of the folder to load.
+            root: Path of the embedding folder.
+
+        Returns:
+
+        """
+
+        folder = os.path.join(root, 'embeddings', 'Glove', 'save', foldername)
+        for name in [JSON_FILENAME, EMBED_FILENAME]:
+            assert os.path.exists(os.path.join(folder, name)), f"{name} not found in {folder}."
+
+        with open(os.path.join(folder, JSON_FILENAME), 'r', encoding='utf-8') as file:
+            hyper = json.load(file)
+
+        embeddings = []
+        tokens = []
+        with open(os.path.join(folder, EMBED_FILENAME), encoding='utf-8') as file:
+            for line in islice(file, 1, None):
+                word, embedding = line.split(maxsplit=1)
+                tokens.append(word)
+                embeddings.append(np.fromstring(embedding, dtype=np.float32, sep=' '))
+
+        vocab = Vocab.from_list(tokens)
+        embeddings = np.array(embeddings).astype(np.float32)
+
+        logging.info("Load embedding from %s", folder)
+
+        return cls(vocab, Tensor(embeddings), **hyper)
