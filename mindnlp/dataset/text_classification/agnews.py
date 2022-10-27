@@ -122,22 +122,22 @@ def AG_NEWS_Process(dataset, column="text", tokenizer=BasicTokenizer(), vocab=No
         TypeError: If `input_column` is not a string.
 
     Examples:
-        >>>from mindnlp.dataset.ag_news import AG_NEWS, Agnews
-        >>>train_dataset, test_dataset = AG_NEWS()
-        >>>column = "text"
-        >>>tokenizer = BasicTokenizer()
-        >>>agnews_dataset, vocab = AG_NEWS_Process(train_dataset, column, tokenizer)
-        >>>agnews_dataset = agnews_dataset.create_tuple_iterator()
-        >>>print(next(agnews_dataset))
-        [Tensor(shape=[], dtype=String, value= '3'), Tensor(shape=[37], dtype=Int32, value=\
-        [20885,   124,  7077, 34402,  2230,  4963,    11,    53,   540,   342, 45788,  \
-        161,  2854,   123,   644, 41765,     4,     3,  1320,     8,  7281,  4277, \
-        31,    86,  9,    27,   345,  8776,  6539,    82,     3,   244,  1107,   562,    55,   187,     2])]
+        >>> from mindnlp.dataset import AG_NEWS, AG_NEWS_Process
+        >>> train_dataset, test_dataset = AG_NEWS()
+        >>> column = "text"
+        >>> tokenizer = BasicTokenizer()
+        >>> agnews_dataset, vocab = AG_NEWS_Process(train_dataset, column, tokenizer)
+        >>> agnews_dataset = agnews_dataset.create_tuple_iterator()
+        >>> print(next(agnews_dataset))
+        {'label': Tensor(shape=[], dtype=String, value= '3'), 'text': Tensor(shape=[35],
+        dtype=Int32, value= [  462,   503,     2,  2102, 47615,  1228,  1766,     3,  1388,
+        17,    34,    18,    34,     5,  4076,     5, 10244,     4,   462,   434,    19,    13,
+        14141,    21,  3547,     8,  8356,     5, 38127,     4,    55,  4770,  2987,   390,     2])}
 
     """
 
     if vocab is None:
-        dataset = dataset.map(tokenizer,  input_columns=column)
+        dataset = dataset.map(tokenizer, input_columns=column)
         vocab = text.Vocab.from_dataset(dataset, columns=column, special_tokens=["<pad>", "<unk>"])
         return dataset.map(text.Lookup(vocab), input_columns=column), vocab
     dataset = dataset.map(tokenizer,  input_columns=column)

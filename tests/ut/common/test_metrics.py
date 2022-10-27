@@ -17,7 +17,6 @@
 
 import unittest
 import numpy as np
-import pytest
 import mindspore
 from mindspore import Tensor
 from mindnlp.common.metrics import (perplexity, bleu, rouge_n, rouge_l, distinct, accuracy,
@@ -33,7 +32,7 @@ class TestPerplexity(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_perplexity_tensor(self):
         """
         Test perplexity
@@ -42,9 +41,9 @@ class TestPerplexity(unittest.TestCase):
         labels = Tensor(np.array([1, 0, 1]))
         ppl = perplexity(preds, labels, ignore_label=None)
 
-        assert ppl == 2.231443166940565
+        assert np.allclose(ppl, 2.23144, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_perplexity_tensor_onehot(self):
         """
         Test perplexity
@@ -53,9 +52,9 @@ class TestPerplexity(unittest.TestCase):
         labels = Tensor(np.array([[0, 1], [1, 0], [0, 1]]))
         ppl = perplexity(preds, labels, ignore_label=None)
 
-        assert ppl == 2.231443166940565
+        assert np.allclose(ppl, 2.23144, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_perplexity_np(self):
         """
         Test perplexity
@@ -64,9 +63,9 @@ class TestPerplexity(unittest.TestCase):
         labels = np.array([2, 1, 0, 1])
         ppl = perplexity(preds, labels, ignore_label=None)
 
-        assert ppl == 5.37284965911771
+        assert np.allclose(ppl, 5.37284, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_perplexity_list_multi(self):
         """
         Test perplexity
@@ -75,7 +74,7 @@ class TestPerplexity(unittest.TestCase):
         labels = [[0, 0, 1], [0, 1, 0], [1, 0, 0], [0, 1, 0]]
         ppl = perplexity(preds, labels, ignore_label=None)
 
-        assert ppl == 5.37284965911771
+        assert np.allclose(ppl, 5.37284, 1e-5, 1e-5)
 
 class TestBleu(unittest.TestCase):
     r"""
@@ -85,7 +84,7 @@ class TestBleu(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_bleu_normal(self):
         """
         Test bleu
@@ -95,9 +94,9 @@ class TestBleu(unittest.TestCase):
                     ["There", "is", "a", "cat", "on", "the", "mat"]]]
         bleu_score = bleu(cand, ref_list)
 
-        assert bleu_score == 0.46713797772820015
+        assert np.allclose(bleu_score, 0.46713, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_bleu_perfect(self):
         """
         Test bleu
@@ -109,7 +108,7 @@ class TestBleu(unittest.TestCase):
 
         assert bleu_score == 1.0
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_bleu_warning(self):
         """
         Test bleu
@@ -120,7 +119,7 @@ class TestBleu(unittest.TestCase):
 
         assert bleu_score == 0.0
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_bleu_nsize_weights(self):
         """
         Test bleu
@@ -129,7 +128,7 @@ class TestBleu(unittest.TestCase):
         ref_list = [[["this", "is", "a", "small", "cat"]]]
         bleu_score = bleu(cand, ref_list, 2, [0.5, 0.5])
 
-        assert bleu_score == 0.6358881766016378
+        assert np.allclose(bleu_score, 0.63588, 1e-5, 1e-5)
 
 class TestRougeN(unittest.TestCase):
     r"""
@@ -139,7 +138,7 @@ class TestRougeN(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_rougen(self):
         """
         Test rouge_n
@@ -150,7 +149,7 @@ class TestRougeN(unittest.TestCase):
 
         assert rougen_score == 0.5
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_rougen_1(self):
         """
         Test rouge_n
@@ -161,7 +160,7 @@ class TestRougeN(unittest.TestCase):
 
         assert rougen_score == 1.0
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_rougen_2(self):
         """
         Test rouge_n
@@ -172,7 +171,7 @@ class TestRougeN(unittest.TestCase):
 
         assert rougen_score == 0.8
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_rougen_ref(self):
         """
         Test rouge_n
@@ -182,7 +181,7 @@ class TestRougeN(unittest.TestCase):
                     ["There","is","a","cat","on","the","mat"]]
         rougen_score = rouge_n(cand_list, ref_list, 2)
 
-        assert rougen_score == 0.5454545454545454
+        assert np.allclose(rougen_score, 0.54545, 1e-5, 1e-5)
 
 class TestRougeL(unittest.TestCase):
     r"""
@@ -192,7 +191,7 @@ class TestRougeL(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_rougel(self):
         """
         Test rouge_l
@@ -201,9 +200,9 @@ class TestRougeL(unittest.TestCase):
         ref_list = [["The","cat","is","on","the","mat"]]
         rougel_score = rouge_l(cand_list, ref_list)
 
-        assert rougel_score == 0.7800511508951408
+        assert np.allclose(rougel_score, 0.78005, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_rougel_ref1(self):
         """
         Test rouge_l
@@ -212,9 +211,9 @@ class TestRougeL(unittest.TestCase):
         ref_list = [["There","is","a","cat","on","the","mat"]]
         rougel_score = rouge_l(cand_list, ref_list)
 
-        assert rougel_score == 0.5714285714285714
+        assert np.allclose(rougel_score, 0.57142, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_rougel_ref2(self):
         """
         Test rouge_l
@@ -224,9 +223,9 @@ class TestRougeL(unittest.TestCase):
                     ["There","is","a","cat","on","the","mat"]]
         rougel_score = rouge_l(cand_list, ref_list)
 
-        assert rougel_score == 0.7800511508951408
+        assert np.allclose(rougel_score, 0.78005, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_rougel_beta(self):
         """
         Test rouge_l
@@ -236,7 +235,7 @@ class TestRougeL(unittest.TestCase):
                     ["There","is","a","cat","on","the","mat"]]
         rougel_score = rouge_l(cand_list, ref_list, 0.5)
 
-        assert rougel_score == 0.7352941176470589
+        assert np.allclose(rougel_score, 0.73529, 1e-5, 1e-5)
 
 class TestDistinct(unittest.TestCase):
     r"""
@@ -246,7 +245,7 @@ class TestDistinct(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_distinct(self):
         """
         Test distinct
@@ -254,9 +253,9 @@ class TestDistinct(unittest.TestCase):
         cand_list = ["The", "cat", "The", "cat", "on", "the", "mat"]
         distinct_score = distinct(cand_list)
 
-        assert distinct_score == 0.8333333333333334
+        assert np.allclose(distinct_score, 0.83333, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_distinct_one(self):
         """
         Test distinct
@@ -274,7 +273,7 @@ class TestAccuracy(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_accuracy_tensor(self):
         """
         Test accuracy
@@ -283,9 +282,9 @@ class TestAccuracy(unittest.TestCase):
         labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
         acc = accuracy(preds, labels)
 
-        assert acc == 0.6666666666666666
+        assert np.allclose(acc, 0.66666, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_accuracy_tensor_onehot(self):
         """
         Test accuracy
@@ -294,9 +293,9 @@ class TestAccuracy(unittest.TestCase):
         labels = Tensor(np.array([[0, 1], [1, 0], [0, 1]]), mindspore.int32)
         acc = accuracy(preds, labels)
 
-        assert acc == 0.6666666666666666
+        assert np.allclose(acc, 0.66666, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_accuracy_np_multi(self):
         """
         Test accuracy
@@ -310,7 +309,7 @@ class TestAccuracy(unittest.TestCase):
 
         assert acc == 0.25
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_accuracy_list(self):
         """
         Test accuracy
@@ -319,7 +318,7 @@ class TestAccuracy(unittest.TestCase):
         labels = [1, 0, 1]
         acc = accuracy(preds, labels)
 
-        assert acc == 0.6666666666666666
+        assert np.allclose(acc, 0.66666, 1e-5, 1e-5)
 
 class TestPrecision(unittest.TestCase):
     r"""
@@ -329,7 +328,7 @@ class TestPrecision(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_precision_tensor(self):
         """
         Test precision
@@ -340,7 +339,7 @@ class TestPrecision(unittest.TestCase):
 
         assert np.array_equal(prec, [0.5, 1.0])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_precision_tensor_onehot(self):
         """
         Test precision
@@ -351,7 +350,7 @@ class TestPrecision(unittest.TestCase):
 
         assert np.array_equal(prec, [0.5, 1.0])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_precision_np_multi(self):
         """
         Test precision
@@ -365,7 +364,7 @@ class TestPrecision(unittest.TestCase):
 
         assert np.array_equal(prec, [0., 1., 0., 0.])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_precision_list(self):
         """
         Test precision
@@ -384,7 +383,7 @@ class TestRecall(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_recall_tensor(self):
         """
         Test recall
@@ -395,7 +394,7 @@ class TestRecall(unittest.TestCase):
 
         assert np.array_equal(rec, [1., 0.5])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_recall_tensor_onehot(self):
         """
         Test recall
@@ -406,7 +405,7 @@ class TestRecall(unittest.TestCase):
 
         assert np.array_equal(rec, [1., 0.5])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_recall_np_multi(self):
         """
         Test recall
@@ -420,7 +419,7 @@ class TestRecall(unittest.TestCase):
 
         assert np.array_equal(rec, [0., 1., 0., 0.])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_recall_list(self):
         """
         Test recall
@@ -439,7 +438,7 @@ class TestF1Score(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_f1_score_tensor(self):
         """
         Test f1_score
@@ -450,7 +449,7 @@ class TestF1Score(unittest.TestCase):
 
         assert np.array_equal(f1_s, [0.6666666666666666, 0.6666666666666666])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_f1_score_tensor_onehot(self):
         """
         Test f1_score
@@ -461,7 +460,7 @@ class TestF1Score(unittest.TestCase):
 
         assert np.array_equal(f1_s, [0.6666666666666666, 0.6666666666666666])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_f1_score_np_multi(self):
         """
         Test f1_score
@@ -475,7 +474,7 @@ class TestF1Score(unittest.TestCase):
 
         assert np.array_equal(f1_s, [0., 1., 0., 0.])
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_f1_score_list(self):
         """
         Test f1_score
@@ -494,7 +493,7 @@ class TestMatthewsCorrelation(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_matthews_correlation_tensor(self):
         """
         Test matthews_correlation
@@ -503,9 +502,9 @@ class TestMatthewsCorrelation(unittest.TestCase):
         labels = Tensor(np.array([0, 1, 0, 1, 0]))
         m_c_c = matthews_correlation(preds, labels)
 
-        assert m_c_c == 0.16666666666666666
+        assert np.allclose(m_c_c, 0.16666, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_matthews_correlation_tensor_onehot(self):
         """
         Test matthews_correlation
@@ -514,9 +513,9 @@ class TestMatthewsCorrelation(unittest.TestCase):
         labels = Tensor(np.array([[1, 0], [0, 1], [1, 0], [0, 1], [1, 0]]))
         m_c_c = matthews_correlation(preds, labels)
 
-        assert m_c_c == 0.16666666666666666
+        assert np.allclose(m_c_c, 0.16666, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_matthews_correlation_np_zero(self):
         """
         Test matthews_correlation
@@ -527,7 +526,7 @@ class TestMatthewsCorrelation(unittest.TestCase):
 
         assert m_c_c == 0.0
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_matthews_correlation_list(self):
         """
         Test matthews_correlation
@@ -536,7 +535,7 @@ class TestMatthewsCorrelation(unittest.TestCase):
         labels = [0, 1, 0, 1, 0]
         m_c_c = matthews_correlation(preds, labels)
 
-        assert m_c_c == 0.16666666666666666
+        assert np.allclose(m_c_c, 0.16666, 1e-5, 1e-5)
 
 class TestPearsonCorrelation(unittest.TestCase):
     r"""
@@ -546,7 +545,7 @@ class TestPearsonCorrelation(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_pearson_correlation_tensor1(self):
         """
         Test pearson_correlation
@@ -555,9 +554,9 @@ class TestPearsonCorrelation(unittest.TestCase):
         labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
         p_c_c = pearson_correlation(preds, labels)
 
-        assert p_c_c == 0.9985229081857804
+        assert np.allclose(p_c_c, 0.99852, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_pearson_correlation_tensor2(self):
         """
         Test pearson_correlation
@@ -568,7 +567,7 @@ class TestPearsonCorrelation(unittest.TestCase):
 
         assert p_c_c == -0.689414301147012
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_pearson_correlation_np(self):
         """
         Test pearson_correlation
@@ -577,9 +576,9 @@ class TestPearsonCorrelation(unittest.TestCase):
         labels = np.array(np.float32([[0.0], [1.0], [2.9], [1.0]]))
         p_c_c = pearson_correlation(preds, labels)
 
-        assert p_c_c == 0.9985229081857804
+        assert np.allclose(p_c_c, 0.99852, 1e-5, 1e-5)
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_pearson_correlation_list(self):
         """
         Test pearson_correlation
@@ -588,7 +587,7 @@ class TestPearsonCorrelation(unittest.TestCase):
         labels = np.float32([[0.0], [1.0], [2.9], [1.0]])
         p_c_c = pearson_correlation(preds, labels)
 
-        assert p_c_c == 0.9985229081857804
+        assert np.allclose(p_c_c, 0.99852, 1e-5, 1e-5)
 
 class TestSpearmanCorrelation(unittest.TestCase):
     r"""
@@ -598,7 +597,7 @@ class TestSpearmanCorrelation(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_spearman_correlation_tensor1(self):
         """
         Test spearman_correlation
@@ -609,7 +608,7 @@ class TestSpearmanCorrelation(unittest.TestCase):
 
         assert scc == 1.0
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_spearman_correlation_tensor2(self):
         """
         Test spearman_correlation
@@ -620,7 +619,7 @@ class TestSpearmanCorrelation(unittest.TestCase):
 
         assert scc == -0.8
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_spearman_correlation_np(self):
         """
         Test spearman_correlation
@@ -631,7 +630,7 @@ class TestSpearmanCorrelation(unittest.TestCase):
 
         assert scc == -0.8
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_spearman_correlation_list(self):
         """
         Test spearman_correlation
@@ -650,7 +649,7 @@ class TestEmScore(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_em_score_zero(self):
         """
         Test em_score
@@ -661,7 +660,7 @@ class TestEmScore(unittest.TestCase):
 
         assert exact_match == 0.0
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_em_score_one(self):
         """
         Test em_score
@@ -680,7 +679,7 @@ class TestConfusionMatrix(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_confusion_matrix_tensor(self):
         """
         Test confusion_matrix
@@ -691,7 +690,7 @@ class TestConfusionMatrix(unittest.TestCase):
 
         assert np.array_equal(conf_mat, np.array([[1., 1.], [1., 1.]]))
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_confusion_matrix_np_classnum(self):
         """
         Test confusion_matrix
@@ -705,7 +704,7 @@ class TestConfusionMatrix(unittest.TestCase):
                                                   [0., 1., 1., 0.],
                                                   [0., 0., 0., 0.]]))
 
-    @pytest.mark.skip(reason="It has already been tested.")
+
     def test_confusion_matrix_list_preds(self):
         """
         Test confusion_matrix

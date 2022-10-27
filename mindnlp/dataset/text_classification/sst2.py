@@ -21,7 +21,9 @@ import os
 from typing import Union, Tuple
 from mindspore.dataset import GeneratorDataset
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.register import load, process
+from mindnlp.dataset.process import common_process
+from mindnlp.dataset.transforms import BasicTokenizer
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import unzip
 
@@ -46,7 +48,6 @@ class Sst2:
         lines = dataset.split("\n")
         lines.pop(0)
         lines.pop(len(lines) - 1)
-        print(len(lines))
         if self.path.endswith("test.tsv"):
             for line in lines:
                 l = line.split("\t")
@@ -119,3 +120,36 @@ def SST2(
     if len(path_list) == 1:
         return datasets_list[0]
     return datasets_list
+
+@process.register
+def SST2_Process(dataset, column="text", tokenizer=BasicTokenizer(), vocab=None):
+    """
+    the process of the SST2 dataset
+
+    Args:
+        dataset (GeneratorDataset): SST2 dataset.
+        column (str): the column needed to be transpormed of the sst2 dataset.
+        tokenizer (TextTensorOperation): tokenizer you choose to tokenize the text dataset.
+        vocab (Vocab): vocabulary object, used to store the mapping of token and index.
+
+    Returns:
+        - **dataset** (MapDataset) - dataset after transforms.
+        - **Vocab** (Vocab) - vocab created from dataset
+
+    Raises:
+        TypeError: If `input_column` is not a string.
+
+    Examples:
+        >>> from mindnlp.dataset import SST2, SST2_Process
+        >>> train_dataset, dataset_dev, test_dataset = SST2()
+        >>> column = "text"
+        >>> tokenizer = BasicTokenizer()
+        >>> train_dataset, vocab = SST2_Process(train_dataset, column, tokenizer)
+        >>> train_dataset = train_dataset.create_tuple_iterator()
+        >>> print(next(train_dataset))
+        {'label': Tensor(shape=[], dtype=String, value= '0'), 'text': Tensor(shape=[7],
+        dtype=Int32, value= [ 4699,    92, 12483,    36,     0,  7598,  9597])}
+
+    """
+
+    return common_process(dataset, column, tokenizer, vocab)
