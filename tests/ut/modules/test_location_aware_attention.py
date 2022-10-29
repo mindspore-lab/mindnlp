@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=import-outside-toplevel
 """Test Location Aware Attention"""
 
 import unittest
@@ -20,11 +21,8 @@ import numpy as np
 
 import mindspore
 
-from mindspore import ops, Tensor
-from mindspore import context
-
+from mindspore import Tensor, context
 from mindnlp.modules.attentions import LocationAwareAttention
-
 
 class TestLocationAwareAttention(unittest.TestCase):
     r"""
@@ -42,43 +40,45 @@ class TestLocationAwareAttention(unittest.TestCase):
         unit test for location aware attention with pynative mode.
         """
         context.set_context(mode=context.PYNATIVE_MODE)
-        batch_size, seq_len, enc_d, dec_d, attn_d = 2, 40, 32, 20, 512
-        standard_normal = ops.StandardNormal(seed=114514)
-        query = standard_normal((batch_size, 1, dec_d))
-        value = standard_normal((batch_size, seq_len, enc_d))
-        last_attn = standard_normal((batch_size, seq_len))
-        net = LocationAwareAttention(
-            decoder_dim=dec_d,
-            encoder_dim=enc_d,
-            attn_dim=attn_d,
-            smoothing=False)
-        mask_shape = (batch_size, seq_len)
-        mask = Tensor(np.ones(mask_shape), mindspore.bool_)
-        net.set_mask(mask)
-        cont, attn = net(query, value, last_attn)
+        batch_size, seq_len, hidden_dim = 2, 40, 20
+        # [2, 1, 20]
+        q_test = np.random.random((batch_size, 1, hidden_dim)).astype(np.float32)
+        # [2, 40, 20]
+        v_test = np.random.random((batch_size, seq_len, hidden_dim)).astype(np.float32)
+        # [2, 40]
+        last_attn_test = np.random.random((batch_size, seq_len)).astype(np.float32)
 
-        assert cont.shape == (batch_size, 1, enc_d)
-        assert attn.shape == (batch_size, seq_len)
+        q_ms = Tensor(q_test, mindspore.float32)
+        v_ms = Tensor(v_test, mindspore.float32)
+        last_attn_ms = Tensor(last_attn_test, mindspore.float32)
+        ms_net = LocationAwareAttention(hidden_dim=20, smoothing=True)
+
+        result_ms =  ms_net(q_ms, v_ms, last_attn_ms)
+
+        # test shape
+        assert result_ms[0].shape == (2, 1, 20) #[batch, 1, hidden_dims]
+        assert result_ms[1].shape == (2, 40)    #[batch, seq_len]
 
     def test_location_aware_attention_graph(self):
         """
         unit test for location aware attention whit graph mode.
         """
         context.set_context(mode=context.GRAPH_MODE)
-        batch_size, seq_len, enc_d, dec_d, attn_d = 2, 40, 32, 20, 512
-        standard_normal = ops.StandardNormal(seed=114514)
-        query = standard_normal((batch_size, 1, dec_d))
-        value = standard_normal((batch_size, seq_len, enc_d))
-        last_attn = standard_normal((batch_size, seq_len))
-        net = LocationAwareAttention(
-            decoder_dim=dec_d,
-            encoder_dim=enc_d,
-            attn_dim=attn_d,
-            smoothing=False)
-        mask_shape = (batch_size, seq_len)
-        mask = Tensor(np.ones(mask_shape), mindspore.bool_)
-        net.set_mask(mask)
-        cont, attn = net(query, value, last_attn)
+        batch_size, seq_len, hidden_dim = 2, 40, 20
+        # [2, 1, 20]
+        q_test = np.random.random((batch_size, 1, hidden_dim)).astype(np.float32)
+        # [2, 40, 20]
+        v_test = np.random.random((batch_size, seq_len, hidden_dim)).astype(np.float32)
+        # [2, 40]
+        last_attn_test = np.random.random((batch_size, seq_len)).astype(np.float32)
 
-        assert cont.shape == (batch_size, 1, enc_d)
-        assert attn.shape == (batch_size, seq_len)
+        q_ms = Tensor(q_test, mindspore.float32)
+        v_ms = Tensor(v_test, mindspore.float32)
+        last_attn_ms = Tensor(last_attn_test, mindspore.float32)
+        ms_net = LocationAwareAttention(hidden_dim=20, smoothing=True)
+
+        result_ms =  ms_net(q_ms, v_ms, last_attn_ms)
+
+        # test shape
+        assert result_ms[0].shape == (2, 1, 20) #[batch, 1, hidden_dims]
+        assert result_ms[1].shape == (2, 40)    #[batch, seq_len]
