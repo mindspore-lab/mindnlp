@@ -60,6 +60,9 @@ class Metric(metaclass=ABCMeta):
         An interface describes the behavior of updating the internal evaluation result.
         All subclasses of `Metrics` must override this interface.
 
+        Args:
+            inputs: Variable parameter list.
+
         Raises:
             NotImplementedError: If this interface is called.
 

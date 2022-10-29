@@ -74,13 +74,14 @@ class Perplexity(Metric):
 
         Args:
             inputs: Input `preds` and `labels`.
-                    preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list
-                        of floating numbers in range :math:`[0, 1]` and the shape of `preds` is
-                        :math:`(N, C)` in most cases (not strictly), where :math:`N` is the
-                        number of cases and :math:`C` is the number of categories.
-                    labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` must be in
-                        one-hot format that shape is :math:`(N, C)`, or can be transformed to
-                        one-hot format that shape is :math:`(N,)`.
+
+                - preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list
+                  of floating numbers in range :math:`[0, 1]` and the shape of `preds` is
+                  :math:`(N, C)` in most cases (not strictly), where :math:`N` is the
+                  number of cases and :math:`C` is the number of categories.
+                - labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` must be in
+                  one-hot format that shape is :math:`(N, C)`, or can be transformed to
+                  one-hot format that shape is :math:`(N,)`.
 
         Raises:
             ValueError: If the number of `inputs` is not 2.

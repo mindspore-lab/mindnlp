@@ -58,7 +58,8 @@ class Distinct(Metric):
 
         Args:
             inputs: Input `cand_list`.
-                    cand_list (list): A list of tokenized candidate sentence.
+
+                - cand_list (list): A list of tokenized candidate sentence.
 
         Raises:
             ValueError: If the number of inputs is not 1.
