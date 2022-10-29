@@ -13,19 +13,26 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=W0212
-
+# pylint: disable=no-name-in-module, ungrouped-imports
 """
 Trainer for training.
 """
 from inspect import signature
+from packaging import version
 from tqdm import tqdm
-from mindspore import ms_function, log, mutable
+import mindspore
+from mindspore import log, mutable
 from mindspore.ops import value_and_grad
 from mindnlp.abc.callback import Callback
 from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContext
 from mindnlp.engine.callbacks.earlystop_callback import EarlyStopCallback
 from mindnlp.engine.callbacks.best_model_callback import BestModelCallback
 from mindnlp.engine.evaluator import Evaluator
+
+if version.parse(mindspore.__version__) <= version.parse('2.0.0'):
+    from mindspore import ms_function as ms_jit
+else:
+    from mindspore import jit as ms_jit
 
 class Trainer:
     r"""
@@ -173,16 +180,17 @@ class Trainer:
             optimizer(grads)
             return loss
 
-        @ms_function
+        @ms_jit
         def _run_step_graph(inputs, labels):
             """Core process of each step, including the forward propagation process and back propagation of data."""
             (loss, _), grads = grad_fn(inputs, labels)
             optimizer(grads)
             return loss
 
+        net.set_train()
         # batchify train_dataset
-        total = self.train_dataset.get_dataset_size()
         self.train_dataset = self.train_dataset.batch(self.batch_size)
+        total = self.train_dataset.get_dataset_size()
         # train epoch begin
         for epoch in range(0, self.epochs):
             self.cur_epoch_nums = epoch + 1
@@ -207,7 +215,7 @@ class Trainer:
                         loss = _run_step(inputs, tgts)
                     loss_total += loss
                     progress.set_postfix(loss=loss_total/self.cur_step_nums)
-                    progress.update(self.batch_size)
+                    progress.update(1)
                     # step end
                     self.callback_manager.train_step_end(run_context)
             # train epoch end

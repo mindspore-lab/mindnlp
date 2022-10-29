@@ -13,7 +13,27 @@ permissions:
   contents: read
 
 jobs:
+  pylint-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.7
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements/dev_requirements.txt
+    - name: Analysing the mindnlp code with pylint
+      run: |
+        pylint mindnlp --rcfile=.github/pylint.conf
+    - name: Analysing the tests code with pylint
+      run: |
+        pylint tests/ut --rcfile=.github/pylint.conf
+
   ut-test:
+    needs: pylint-check
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
@@ -29,17 +49,12 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements/dev_requirements.txt
-    - name: Analysing the mindnlp code with pylint
-      run: |
-        pylint mindnlp --rcfile=.github/pylint.conf
-    - name: Analysing the tests code with pylint
-      run: |
-        pylint tests/ut --rcfile=.github/pylint.conf
     - name: Test with pytest
       run: |
         pytest tests/ut
 
   ms_release_ut_test:
+    needs: pylint-check
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3

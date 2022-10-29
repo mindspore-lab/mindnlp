@@ -36,38 +36,45 @@ class Head(nn.Cell):
     """
     Head for Sentiment Classification model
     """
-    def __init__(self, hidden_dim, output_dim):
+    def __init__(self, hidden_dim, output_dim, dropout):
         super().__init__()
         weight_init = HeUniform(math.sqrt(5))
         bias_init = Uniform(1 / math.sqrt(hidden_dim * 2))
         self.fc = nn.Dense(hidden_dim * 2, output_dim, weight_init=weight_init, bias_init=bias_init)
         self.sigmoid = nn.Sigmoid()
+        self.dropout = nn.Dropout(1 - dropout)
 
     def construct(self, context):
         context = ops.concat((context[-2, :, :], context[-1, :, :]), axis=1)
-        output = self.fc(context)
-        return self.sigmoid(output)
+        context = self.dropout(context)
+        return self.fc(context)
 
 
 class SentimentClassification(Seq2vecModel):
     """
     Sentiment Classification model
     """
-    def __init__(self, encoder, head, dropout):
-        super().__init__(encoder, head, dropout)
+    def __init__(self, encoder, head):
+        super().__init__(encoder, head)
         self.encoder = encoder
         self.head = head
-        self.dropout = nn.Dropout(1 - dropout)
 
     def construct(self, text):
         _, (hidden, _), _ = self.encoder(text)
-        hidden = self.dropout(hidden)
         output = self.head(hidden)
         return output
 
+# define Models & Loss & Optimizer
+hidden_size = 256
+output_size = 1
+num_layers = 2
+bidirectional = True
+drop = 0.5
+lr = 0.001
+
 # load datasets
 imdb_train, imdb_test = load('imdb')
-embedding, vocab = Glove.from_pretrained('6B', 100, special_tokens=["<unk>", "<pad>"])
+embedding, vocab = Glove.from_pretrained('6B', 100, special_tokens=["<unk>", "<pad>"], dropout=drop)
 
 lookup_op = ds.text.Lookup(vocab, unknown_token='<unk>')
 pad_op = ds.transforms.PadEnd([500], pad_value=vocab.tokens_to_ids('<pad>'))
@@ -81,21 +88,14 @@ imdb_test = imdb_test.map(operations=[type_cast_op], input_columns=['label'])
 
 imdb_train, imdb_valid = imdb_train.split([0.7, 0.3])
 
-# define Models & Loss & Optimizer
-hidden_size = 256
-output_size = 1
-num_layers = 2
-bidirectional = True
-drop = 0.5
-lr = 0.001
 
 lstm_layer = nn.LSTM(100, hidden_size, num_layers=num_layers, batch_first=True,
                      dropout=drop, bidirectional=bidirectional)
 sentiment_encoder = RNNEncoder(embedding, lstm_layer)
-sentiment_head = Head(hidden_size, output_size)
-net = SentimentClassification(sentiment_encoder, sentiment_head, drop)
+sentiment_head = Head(hidden_size, output_size, drop)
+net = SentimentClassification(sentiment_encoder, sentiment_head)
 
-loss = nn.BCELoss(reduction='mean')
+loss = nn.BCEWithLogitsLoss(reduction='mean')
 optimizer = nn.Adam(net.trainable_params(), learning_rate=lr)
 
 # define metrics
@@ -105,5 +105,5 @@ metric = Accuracy()
 
 trainer = Trainer(network=net, train_dataset=imdb_train, eval_dataset=imdb_valid, metrics=metric,
                   epochs=2, batch_size=64, loss_fn=loss, optimizer=optimizer)
-trainer.run(tgt_columns="label")
+trainer.run(tgt_columns="label", jit=True)
 print("end train")

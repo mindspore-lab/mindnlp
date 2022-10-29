@@ -50,7 +50,7 @@ class Glove(TokenEmbedding):
     default_embed = Tensor(np.zeros((1, 1)).astype(np.float32))
 
     def __init__(self, vocab: Vocab = default_vocab, init_embed=default_embed,
-                 requires_grad: bool = True, dropout=0.5, train_state: bool = True, **kwargs):
+                 requires_grad: bool = True, dropout=0.5):
         r"""
         Initializer.
 
@@ -60,8 +60,6 @@ class Glove(TokenEmbedding):
                         use this value to initialize Embedding directly.
             requires_grad (bool): Whether this parameter needs to be gradient to update.
             dropout (float): Dropout of the output of Embedding.
-            train_state (bool): The network is in a state of training or inference.
-                                True:train state;False:inference state.
         """
         super().__init__(vocab, init_embed)
 
@@ -72,13 +70,11 @@ class Glove(TokenEmbedding):
         self._embed_size = init_embed.shape
         self.requires_grad = requires_grad
         self.dropout_layer = nn.Dropout(1 - dropout)
-        self.train_state = train_state
         self.dropout_p = dropout
-        self.kwargs = kwargs
 
     @classmethod
     def from_pretrained(cls, name='6B', dims=300, root=DEFAULT_ROOT,
-                        special_tokens=("<pad>", "<unk>"), special_first=False):
+                        special_tokens=("<pad>", "<unk>"), special_first=False, **kwargs):
         r"""
         Creates Embedding instance from given 2-dimensional FloatTensor.
 
@@ -129,7 +125,11 @@ class Glove(TokenEmbedding):
 
         vocab = Vocab.from_list(tokens, list(special_tokens), special_first)
         embeddings = np.array(embeddings).astype(np.float32)
-        return cls(vocab, Tensor(embeddings), True, 0.5), vocab
+
+        requires_grad = kwargs.get('requires_grad', True)
+        dropout = kwargs.get('dropout', 0.0)
+
+        return cls(vocab, Tensor(embeddings), requires_grad, dropout), vocab
 
     def construct(self, ids):
         r"""
@@ -141,9 +141,8 @@ class Glove(TokenEmbedding):
             - ** compute result ** - Tensor, returns the Embedding query results.
 
         """
-        tensor_ids = Tensor(ids)
-        out_shape = tensor_ids.shape + (self._embed_dim,)
-        flat_ids = tensor_ids.reshape((-1,))
+        out_shape = ids.shape + (self._embed_dim,)
+        flat_ids = ids.reshape((-1,))
         output_for_reshape = ops.gather(self.embed, flat_ids, 0)
         output = ops.reshape(output_for_reshape, out_shape)
         return self.dropout(output)
@@ -171,7 +170,6 @@ class Glove(TokenEmbedding):
         kwargs = self.kwargs.copy()
         kwargs['dropout'] = self.dropout_p
         kwargs['requires_grad'] = self.requires_grad
-        kwargs['train_state'] = self.train_state
 
         with open(os.path.join(folder, JSON_FILENAME), 'w', encoding='utf-8') as file:
             json.dump(kwargs, file, indent=2)
