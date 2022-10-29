@@ -64,10 +64,11 @@ class PearsonCorrelation(Metric):
 
         Args:
             inputs: Input `preds` and `labels`.
-                    preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
-                        floating numbers and the shape of `preds` is :math:`(N, 1)`.
-                    labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` is a list of
-                        floating numbers and the shape of `preds` is :math:`(N, 1)`.
+
+                - preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
+                  floating numbers and the shape of `preds` is :math:`(N, 1)`.
+                - labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` is a list of
+                  floating numbers and the shape of `preds` is :math:`(N, 1)`.
 
         Raises:
             ValueError: If the number of inputs is not 2.

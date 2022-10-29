@@ -58,8 +58,9 @@ class EmScore(Metric):
 
         Args:
             inputs: Input `preds` and `examples`.
-                    preds (Union[str, list]): Predicted value.
-                    examples (list): Ground truth.
+
+                - preds (Union[str, list]): Predicted value.
+                - examples (list): Ground truth.
 
         Raises:
             ValueError: If the number of inputs is not 2.
