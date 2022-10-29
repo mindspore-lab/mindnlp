@@ -86,7 +86,14 @@ class Evaluator:
                                "please create a new dataset.")
 
     def run(self, tgt_columns=None, jit=False):
-        """Evaluating function entry."""
+        """
+        Evaluating function entry.
+
+        Args:
+            tgt_columns (Optional[list[str], str]): Target label column names for loss function.
+            jit (bool): Whether use Just-In-Time compile.
+
+        """
         args_dict = vars(self)
         run_context = RunContext(args_dict)
         self.callback_manager.evaluate_begin(run_context)

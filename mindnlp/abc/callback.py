@@ -34,10 +34,10 @@ class Callback():
         """Called once after network training."""
 
     def train_epoch_begin(self, run_context):
-        """Called before each epoch beginning."""
+        """Called before each train epoch beginning."""
 
     def train_epoch_end(self, run_context):
-        """Called after each epoch finished."""
+        """Called after each train epoch finished."""
 
     def fetch_data_begin(self, run_context):
         """Called before fetch each batch/ds_sink_size data."""
@@ -46,10 +46,10 @@ class Callback():
         """Called after fetch each batch/ds_sink_size data."""
 
     def train_step_begin(self, run_context):
-        """Called before each step beginning."""
+        """Called before each train step beginning."""
 
     def train_step_end(self, run_context):
-        """Called after each step finished."""
+        """Called after each train step finished."""
 
     def forward_begin(self, run_context):
         """Called before each forward beginning."""
@@ -76,10 +76,10 @@ class Callback():
         """Called before saving model."""
 
     def evaluate_begin(self, run_context):
-        """Called before evaluating epoch/steps/ds_size."""
+        """Called before evaluating."""
 
     def evaluate_end(self, run_context):
-        """Called after evaluating epoch/steps/ds_size."""
+        """Called after evaluating."""
 
     def exception(self, run_context):
         """Called if having exceptions."""

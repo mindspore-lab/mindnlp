@@ -94,61 +94,104 @@ class TimerCallback(Callback):
         self.time_ndigit = time_ndigit
 
     def train_begin(self, run_context):
-        """Called once before the network training."""
+        """
+        Called once before the network training.
+
+        Args:
+            run_context (RunContext): Information about the model.
+
+        """
         self.timers('total').start()
         self.timers('train').start()
 
     def train_end(self, run_context):
-        """Called once after network training."""
+        """
+        Called once after network training.
+
+        Args:
+            run_context (RunContext): Information about the model.
+
+        """
         line = self.format_timer(train_end=True)
         print(f"Training finished{line}")
 
     def evaluate_begin(self, run_context):
-        """Called once before the network evaluating."""
+        """
+        Called once before the network evaluating.
+
+        Args:
+            run_context (RunContext): Information about the model.
+
+        """
         self.timers('evaluate').start()
 
     def evaluate_end(self, run_context):
-        """Called once after the network evaluating."""
+        """
+        Called once after the network evaluating.
+
+        Args:
+            run_context (RunContext): Information about the model.
+
+        """
         line = self.format_timer()
         print(f"Evaluating finished{line}")
 
     def train_step_begin(self, run_context):
+        """
+        Called before each train step beginning.
+
+        Args:
+            run_context (RunContext): Information about the model.
+
+        """
         if self.print_steps > 0 and run_context.cur_step_nums % self.print_steps == 0:
             self.timers('step').start()
 
     def train_step_end(self, run_context):
+        """
+        Called after each train step finished.
+
+        Args:
+            run_context (RunContext): Information about the model.
+
+        """
         if self.print_steps > 0 and run_context.cur_step_nums % self.print_steps == 0:
             line = self.format_timer()
             print(f"Running {run_context.cur_step_nums} batches{line}")
-
-    def forward_begin(self, run_context):
-        if self.print_steps > 0 and run_context.cur_step_nums % self.print_steps == 0:
-            self.timers('forward').start()
-
-    def forward_end(self, run_context):
-        if self.print_steps > 0 and run_context.cur_step_nums % self.print_steps == 0:
-            line = self.format_timer()
-            print(f"Running {run_context.cur_step_nums} batches{line}")
-
-    def backward_begin(self, run_context):
-        "backward process begins."
-
-    def backward_end(self, run_context):
-        "backward process ends."
 
     def train_epoch_begin(self, run_context):
+        """
+        Called before each train epoch beginning.
+
+        Args:
+            run_context (RunContext): Information about the model.
+
+        """
         if self.print_steps < 0:
             self.timers('epoch').start()
 
     def train_epoch_end(self, run_context):
+        """
+        Called after each train epoch finished.
+
+        Args:
+            run_context (RunContext): Information about the model.
+
+        """
         if self.print_steps < 0 and run_context.cur_epoch_nums % abs(self.print_steps) == 0:
             line = self.format_timer()
             print(f"Running {run_context.cur_epoch_nums} epochs{line}")
 
     def format_timer(self, reset=True, train_end=False):
-        """format the output."""
+        """
+        Format the output.
+
+        Args:
+            run_context (RunContext): Information about the model.
+
+        """
         line = ''
-        timers = ['step', 'forward', 'epoch', 'evaluate', 'train', 'total']
+        timers = ['step', 'epoch', 'evaluate', 'train', 'total']
         for timer_name in timers:
             if train_end is False:
                 if not timer_name in self.timers or timer_name == 'train' or timer_name == 'total':

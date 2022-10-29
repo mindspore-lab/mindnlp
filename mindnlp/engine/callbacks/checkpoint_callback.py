@@ -22,7 +22,7 @@ from mindnlp.abc import Callback
 
 
 class CheckpointCallback(Callback):
-    r"""
+    """
     Save checkpoint of the model. save the current Trainer state at the end of each epoch, which can be used to
     resume previous operations.
     Continue training a sample code using the most recent epoch
@@ -34,8 +34,6 @@ class CheckpointCallback(Callback):
                          when the Trainer starts training. Default: None.
         epochs (int): Save a checkpoint file every n epochs.
         keep_checkpoint_max (int): Save checkpoint files at most. Default:5.
-
-
 
     """
     def __init__(self, save_path=None, epochs=None, keep_checkpoint_max=5):
@@ -59,13 +57,24 @@ class CheckpointCallback(Callback):
         #                         you must assign one of them.")
 
     def train_begin(self, run_context):
+        """
+        Notice the file saved path of checkpoints at the beginning of training.
+
+        Args:
+            run_context (RunContext): Information about the model.
+
+        """
         if self.epochs is None:
             print('For saving checkpoints, epoch cannont be `None` !')
         print(f"\nThe train will start from the checkpoint saved in {self.save_path}.\n")
 
     def train_epoch_end(self, run_context):
-        r"""
+        """
         Save checkpoint every n epochs at the end of the epoch.
+
+        Args:
+            run_context (RunContext): Information about the model.
+
         """
         if self.checkpoint_nums == self.keep_checkpoint_max:
             print('The maximum number of stored checkpoints has been reached.')
