@@ -62,10 +62,11 @@ class ConfusionMatrix(Metric):
 
         Args:
             inputs: Input `preds` and `labels`.
-                    preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
-                        floating numbers and the shape of `preds` is :math:`(N, C)` or :math:`(N,)`.
-                    labels (Union[Tensor, list, np.ndarray]): Ground truth. The shape of `labels` is
-                        :math:`(N,)`.
+
+                - preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
+                  floating numbers and the shape of `preds` is :math:`(N, C)` or :math:`(N,)`.
+                - labels (Union[Tensor, list, np.ndarray]): Ground truth. The shape of `labels` is
+                  :math:`(N,)`.
 
         Raises:
             ValueError: If the number of inputs is not 2.

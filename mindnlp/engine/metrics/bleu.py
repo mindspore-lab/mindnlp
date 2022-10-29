@@ -101,8 +101,9 @@ class BleuScore(Metric):
 
         Args:
             inputs: Input `cand` and `ref_list`.
-                    cand (list): A list of tokenized candidate sentences.
-                    ref_list (list): A list of lists of tokenized ground truth sentences.
+
+                - cand (list): A list of tokenized candidate sentences.
+                - ref_list (list): A list of lists of tokenized ground truth sentences.
 
         Raises:
             ValueError: If the number of inputs is not 2.

@@ -222,13 +222,7 @@ def rouge_n(cand_list, ref_list, n_size=1):
     Calculates the ROUGE-N score. ROUGE (Recall-Oriented Understudy for Gisting Evaluation) is
     a set of metrics used for evaluating automatic summarization and machine translation
     models. ROUGE-N refers to the overlap of n-grams between candidates and reference
-    summaries. The function is shown as follows:
-
-    .. math::
-
-        ROUGE $-N=\frac{\sum_{S \epsilon\{\text {RefSummaries}\}} \sum_{n-\text {grameS}}
-        \text {Count}_{\text {match}}(n-\text {gram})} {\sum_{S \epsilon\
-        {\text {RRfSummaries}\}} \sum_{n-\text {grameS}} \operatorname{Count}(n-\text {gram})}$
+    summaries.
 
     Args:
         cand_list (list): A list of tokenized candidate sentences.

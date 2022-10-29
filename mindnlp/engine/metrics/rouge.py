@@ -24,13 +24,6 @@ class RougeN(Metric):
     Calculates the ROUGE-N. ROUGE (Recall-Oriented Understudy for Gisting Evaluation) is a set
     of metrics used for evaluating automatic summarization and machine translation models.
     ROUGE-N refers to the overlap of n-grams between candidates and reference summaries.
-    The function is shown as follows:
-
-    .. math::
-
-        ROUGE $-N=\frac{\sum_{S \epsilon\{\text {RefSummaries}\}} \sum_{n-\text {grameS}}
-        \text {Count}_{\text {match}}(n-\text {gram})} {\sum_{S \epsilon\
-        {\text {RRfSummaries}\}} \sum_{n-\text {grameS}} \operatorname{Count}(n-\text {gram})}$
 
     Args:
         n_size (int): N_gram value. Default: 1.
@@ -65,8 +58,9 @@ class RougeN(Metric):
 
         Args:
             inputs: Input `cand_list` and `ref_list`.
-                    cand_list (list): A list of tokenized candidate sentence.
-                    ref_list (list): A list of lists of tokenized ground truth sentences.
+
+                - cand_list (list): A list of tokenized candidate sentence.
+                - ref_list (list): A list of lists of tokenized ground truth sentences.
 
         Raises:
             ValueError: If the number of inputs is not 2.
