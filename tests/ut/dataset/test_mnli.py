@@ -74,7 +74,7 @@ class TestMNLIProcess(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    # @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_mnli_process(self):
         r"""
         Test MNLI_Process
@@ -91,7 +91,7 @@ class TestMNLIProcess(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    # @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_mnli_process_by_register(self):
         """test mnli process by register"""
         train_dataset, _, _ = MNLI()

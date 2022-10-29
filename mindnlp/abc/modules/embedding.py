@@ -19,7 +19,6 @@ __all__ = [
 ]
 
 from abc import abstractmethod
-import numpy as np
 from mindspore import nn
 from mindspore import Parameter
 from mindspore.dataset.text.utils import Vocab
@@ -30,14 +29,13 @@ class TokenEmbedding(nn.Cell):
     Embedding base class
     """
 
-    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.5, train_state: bool = True):
+    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.5):
         super().__init__()
 
         self._word_vocab = vocab
         self.embed = Parameter(init_embed, name='embed', requires_grad=requires_grad)
         self.dropout_layer = nn.Dropout(1 - dropout)
         self._embed_size = self.embed.shape
-        self.train_state = train_state
 
     def dropout(self, words):
         r"""
@@ -48,9 +46,7 @@ class TokenEmbedding(nn.Cell):
         Returns:
             - ** net(words) ** - Dropout processed data.
         """
-        net = self.dropout_layer.set_train(self.train_state)
-        words = words.astype(np.float32)
-        return net(words)
+        return self.dropout_layer(words)
 
     def __len__(self):
         return len(self.embed)
