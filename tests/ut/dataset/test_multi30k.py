@@ -32,7 +32,7 @@ class TestMulti30k(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_multi30k(self):
         """Test Multi30k"""
         num_lines = {
@@ -61,7 +61,7 @@ class TestMulti30k(unittest.TestCase):
         assert dataset_valid.get_dataset_size() == num_lines["valid"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_multi30k_by_register(self):
         """test multi30k by register"""
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")

@@ -32,7 +32,7 @@ class TestAmazonReviewFull(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_amazonreviewfull(self):
         """Test amazonreviewfull"""
         num_lines = {
@@ -51,7 +51,7 @@ class TestAmazonReviewFull(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_amazonreviewfull_by_register(self):
         """test amazonreviewfull by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
@@ -69,7 +69,7 @@ class TestAmazonReviewFullProcess(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_amazonreviewfull_process(self):
         r"""
         Test AmazonReviewFull_Process
@@ -85,7 +85,7 @@ class TestAmazonReviewFullProcess(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_amazonreviewfull_process_by_register(self):
         """test amazonreviewfull process by register"""
         train_dataset, _ = AmazonReviewFull()

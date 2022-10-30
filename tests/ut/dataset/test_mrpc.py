@@ -32,7 +32,7 @@ class TestMRPC(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_mrpc(self):
         """Test mrpc"""
         num_lines = {
@@ -50,7 +50,7 @@ class TestMRPC(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_mrpc_by_register(self):
         """test mrpc by register"""
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")
@@ -64,7 +64,7 @@ class TestMRPCProcess(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_mrpc_process(self):
         r"""
         Test MRPC_Process
@@ -81,7 +81,7 @@ class TestMRPCProcess(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_mrpc_process_by_register(self):
         """test mrpc process by register"""
         train_dataset, _ = MRPC()

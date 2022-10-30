@@ -30,7 +30,7 @@ class TestLCSTS(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_lcsts(self):
         """Test LCSTS"""
         num_lines = {
@@ -47,7 +47,7 @@ class TestLCSTS(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_lcsts_by_register(self):
         """test lcsts by register"""
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")

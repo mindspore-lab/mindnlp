@@ -30,7 +30,7 @@ class TestIWSLT2016(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_iwslt2016(self):
         """Test IWSLT2016"""
         num_lines = {
@@ -49,7 +49,7 @@ class TestIWSLT2016(unittest.TestCase):
             root=root, split='train', language_pair=('de', 'en'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_iwslt2016_by_register(self):
         """test iwslt2016 by register"""
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")
