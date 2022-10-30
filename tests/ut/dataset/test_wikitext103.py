@@ -17,6 +17,7 @@ Test WikiText103
 """
 
 import os
+import shutil
 import unittest
 import pytest
 from mindnlp.dataset import WikiText103, load
@@ -27,10 +28,16 @@ class TestWikiText103(unittest.TestCase):
     Test WikiText103
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_wikitext103(self):
         """Test WikiText103"""
         num_lines = {
@@ -38,25 +45,24 @@ class TestWikiText103(unittest.TestCase):
             "valid": 3760,
             "test": 4358,
         }
-        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        dataset_train, dataset_valid, dataset_test = WikiText103(root=root,
+        dataset_train, dataset_valid, dataset_test = WikiText103(root=self.root,
                                                                  split=('train', 'valid', 'test'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_valid.get_dataset_size() == num_lines["valid"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = WikiText103(root=root, split='train')
-        dataset_valid = WikiText103(root=root, split='valid')
-        dataset_test = WikiText103(root=root, split='test')
+        dataset_train = WikiText103(root=self.root, split='train')
+        dataset_valid = WikiText103(root=self.root, split='valid')
+        dataset_test = WikiText103(root=self.root, split='test')
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_valid.get_dataset_size() == num_lines["valid"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_wikitext103_by_register(self):
         """test wikitext103 by register"""
-        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
         _ = load('WikiText103',
-                 root=root,
-                 split=('train', 'valid', 'test')
+                 root=self.root,
+                 split=('valid', 'test')
                  )

@@ -16,6 +16,7 @@
 Test CoLA
 """
 import os
+import shutil
 import unittest
 import pytest
 import mindspore as ms
@@ -29,8 +30,13 @@ class TestCoLA(unittest.TestCase):
     Test CoLA
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
 
     @pytest.mark.dataset
     def test_cola(self):
@@ -40,17 +46,16 @@ class TestCoLA(unittest.TestCase):
             "dev": 527,
             "test": 516,
         }
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         dataset_train, dataset_dev, dataset_test = CoLA(
-            root=root, split=("train", "dev", "test")
+            root=self.root, split=("train", "dev", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = CoLA(root=root, split="train")
-        dataset_dev = CoLA(root=root, split="dev")
-        dataset_test = CoLA(root=root, split="test")
+        dataset_train = CoLA(root=self.root, split="train")
+        dataset_dev = CoLA(root=self.root, split="dev")
+        dataset_test = CoLA(root=self.root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
@@ -58,20 +63,11 @@ class TestCoLA(unittest.TestCase):
     @pytest.mark.dataset
     def test_cola_by_register(self):
         """test cola by register"""
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
             "CoLA",
-            root=root,
+            root=self.root,
             split=("train", "dev", "test"),
         )
-
-class TestCoLAProcess(unittest.TestCase):
-    r"""
-    Test CoLA_Process
-    """
-
-    def setUp(self):
-        self.input = None
 
     @pytest.mark.dataset
     def test_cola_process(self):

@@ -16,6 +16,7 @@
 Test YelpReviewPolarity
 """
 import os
+import shutil
 import unittest
 import pytest
 import mindspore as ms
@@ -29,47 +30,45 @@ class TestYelpReviewPolarity(unittest.TestCase):
     Test YelpReviewPolarity
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_yelpreviewpolarity(self):
         """Test yelpreviewpolarity"""
         num_lines = {
             "train": 560000,
             "test": 38000,
         }
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         dataset_train, dataset_test = YelpReviewPolarity(
-            root=root, split=("train", "test")
+            root=self.root, split=("train", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = YelpReviewPolarity(root=root, split="train")
-        dataset_test = YelpReviewPolarity(root=root, split="test")
+        dataset_train = YelpReviewPolarity(root=self.root, split="train")
+        dataset_test = YelpReviewPolarity(root=self.root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_yelpreviewpolarity_by_register(self):
         """test yelpreviewpolarity by register"""
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
             "YelpReviewPolarity",
-            root=root,
+            root=self.root,
             split=("train", "test"),
         )
 
-class TestYelpReviewPolarityProcess(unittest.TestCase):
-    r"""
-    Test YelpReviewPolarity_Process
-    """
-
-    def setUp(self):
-        self.input = None
-
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_yelpreviewpolarity_process(self):
         r"""
         Test YelpReviewPolarity_Process
@@ -86,6 +85,7 @@ class TestYelpReviewPolarityProcess(unittest.TestCase):
             break
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_yelpreviewpolarity_process_by_register(self):
         """test yelpreviewpolarity process by register"""
         train_dataset, _ = YelpReviewPolarity()

@@ -5,7 +5,7 @@ on:
     branches: [ "master" ]
     paths:
       - 'mindnlp/dataset/**'
-      - 'test/ut/dataset/**'
+      - 'tests/ut/dataset/**'
       - '!docs/**'
 
 permissions:
@@ -32,6 +32,7 @@ jobs:
         pylint tests/ut --rcfile=.github/pylint.conf
 
   dataset-ut-test:
+    needs: pylint-check
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -45,4 +46,4 @@ jobs:
         pip install -r requirements/dev_requirements.txt
     - name: Test with pytest
       run: |
-        pytest -m 'dataset' tests/ut
+        pytest -m 'dataset and not local' tests/ut

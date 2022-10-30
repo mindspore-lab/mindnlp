@@ -17,6 +17,7 @@ Test SQuAD1
 """
 
 import os
+import shutil
 import unittest
 import pytest
 from mindnlp.dataset import SQuAD1, load
@@ -27,31 +28,35 @@ class TestSQuAD1(unittest.TestCase):
     Test SQuAD1
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_squad1(self):
         """Test SQuAD1"""
         num_lines = {
             "train": 87599,
             "dev": 10570,
         }
-        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        dataset_train, dataset_dev = SQuAD1(root=root, split=('train', 'dev'))
+        dataset_train, dataset_dev = SQuAD1(root=self.root, split=('train', 'dev'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
 
-        dataset_train = SQuAD1(root=root, split='train')
-        dataset_dev = SQuAD1(root=root, split='dev')
+        dataset_train = SQuAD1(root=self.root, split='train')
+        dataset_dev = SQuAD1(root=self.root, split='dev')
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
 
     @pytest.mark.dataset
     def test_squad1_by_register(self):
         """test squad1 by register"""
-        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
         _ = load('squad1',
-                 root=root,
-                 split=('train', 'dev')
+                 root=self.root,
+                 split=('dev')
                  )
