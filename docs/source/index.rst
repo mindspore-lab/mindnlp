@@ -3,11 +3,16 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to mindnlp document's documentation!
+:github_url: https://github.com/mindspore-ecosystem/mindnlp
+
+MindNLP Documentation
 ============================================
 
 .. toctree::
-   :maxdepth: 10
-   :caption: Contents:
+   :maxdepth: 1
+   :caption: API Reference
 
-   modules.rst
+   abc
+   common
+
+
