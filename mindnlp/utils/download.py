@@ -35,7 +35,7 @@ def get_cache_path():
         None
 
     Returns:
-        - **cache_dir**(str) - The path of default or the environment 'cache_path'.
+        str, the path of default or the environment 'cache_path'.
 
     Examples:
         >>> default_cache_path = get_cache_path()
@@ -59,15 +59,15 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None)
     Download from given url, save to path.
 
     Args:
-        url (str) : download url
-        path (str) : download to given path (default value: '{home}\.text')
-        md5sum (str) : The true md5sum of download file.
-        download_file_name(str) : The name of the downloaded file.\
+        url (str): download url
+        path (str): download to given path (default value: '{home}\.text')
+        md5sum (str): The true md5sum of download file.
+        download_file_name(str): The name of the downloaded file.\
             (This para meter is required if the end of the link is not the downloaded file name.)
         proxies (dict): a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
 
     Returns:
-        - **cache_dir**(str) - The path of default or the environment 'cache_path'.
+        str, the path of default or the environment 'cache_path'.
 
     Raises:
         TypeError: If `url` is not a String.
@@ -133,11 +133,11 @@ def check_md5(filename: str, md5sum=None):
     Check md5 of download file.
 
     Args:
-        filename (str) : The fullname of download file.
-        md5sum (str) : The true md5sum of download file.
+        filename (str): The fullname of download file.
+        md5sum (str): The true md5sum of download file.
 
     Returns:
-        - ** md5_check_result ** (bool) - The md5 check result.
+        bool, the md5 check result.
 
     Raises:
         TypeError: If `filename` is not a string.
@@ -168,10 +168,10 @@ def get_dataset_url(datasetname: str):
     Get dataset url for download
 
     Args:
-        datasetname (str) : The name of the dataset to download.
+        datasetname (str): The name of the dataset to download.
 
     Returns:
-        - ** url ** (str) - The url of the dataset to download.
+        str, the url of the dataset to download.
 
     Raises:
         TypeError: If `datasetname` is not a string.
@@ -199,11 +199,11 @@ def get_filepath(path: str):
     Get the filepath of file.
 
     Args:
-        path (str) : The path of the required file.
+        path (str): The path of the required file.
 
     Returns:
-        - ** get_filepath_result ** (str) - If `path` is a folder containing a file, return `{path}\{filename}`;
-                                        if `path` is a folder containing multiple files or a single file, return `path`.
+        - str, If `path` is a folder containing a file, return `{path}\{filename}`;
+          if `path` is a folder containing multiple files or a single file, return `path`.
 
     Raises:
         TypeError: If `path` is not a string.
@@ -238,17 +238,17 @@ def cache_file(
     If there is the file in cache_dir, return the path; if there is no such file, use the url to download.
 
     Args:
-        filename (str) : The name of the required dataset file.
-        cache_dir (str) : The path of save the file.
-        url (str) : The url of the required dataset file.
-        md5sum (str) : The true md5sum of download file.
-        download_file_name(str) : The name of the downloaded file.\
+        filename (str): The name of the required dataset file.
+        cache_dir (str): The path of save the file.
+        url (str): The url of the required dataset file.
+        md5sum (str): The true md5sum of download file.
+        download_file_name(str): The name of the downloaded file.\
             (This parameter is required if the end of the link is not the downloaded file name.)
-        proxies (dict) : a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
+        proxies (dict): a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
 
     Returns:
-        - ** dataset_dir ** (str) - If `path` is a folder containing a file, return `{path}\{filename}`;
-                                        if `path` is a folder containing multiple files or a single file, return `path`.
+        - str, If `path` is a folder containing a file, return `{path}\{filename}`;
+          if `path` is a folder containing multiple files or a single file, return `path`.
 
     Raises:
         TypeError: If `filename` is not a string.
@@ -291,17 +291,17 @@ def cached_path(
     If there is the file in cache_dir, return the path; if there is no such file, use the url to download.
 
     Args:
-        filename_or_url (str) : The name or url of the required file .
-        cache_dir (str) : The path of save the file.
-        foldername (str) : The additional folder to which the dataset is cached.(under the `cache_dir`)
-        md5sum (str) : The true md5sum of download file.
-        download_file_name(str) : The name of the downloaded file.\
+        filename_or_url (str): The name or url of the required file .
+        cache_dir (str): The path of save the file.
+        foldername (str): The additional folder to which the dataset is cached.(under the `cache_dir`)
+        md5sum (str): The true md5sum of download file.
+        download_file_name(str): The name of the downloaded file.\
             (This parameter is required if the end of the link is not the downloaded file name.)
-        proxies (dict) : a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
+        proxies (dict): a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
 
     Returns:
-        - ** Path ** (str) - If `path` is a folder containing a file, return `{path}\{filename}`;
-                            if `path` is a folder containing multiple files or a single file, return `path`.
+        - str, If `path` is a folder containing a file, return `{path}\{filename}`;
+          if `path` is a folder containing multiple files or a single file, return `path`.
 
     Raises:
         TypeError: If `path` is not a string.
@@ -349,13 +349,13 @@ def match_file(filename: str, cache_dir: str) -> str:
     If there is the file in cache_dir, return the path; otherwise, return empty string or error.
 
     Args:
-        filename (str) : The name of the required file.
-        cache_dir (str) : The path of save the file.
+        filename (str): The name of the required file.
+        cache_dir (str): The path of save the file.
 
     Returns:
-        - ** match_file_result ** (str) - If there is the file in cache_dir, return filename;
-                                        if there is no such file, return empty string '';
-                                        if there are two or more matching file, report an error.
+        - str, If there is the file in cache_dir, return filename;
+          if there is no such file, return empty string '';
+          if there are two or more matching file, report an error.
 
     Raises:
         TypeError: If `filename` is not a string.
@@ -393,16 +393,16 @@ def get_from_cache(
     If there is the file in cache_dir, return the path; if there is no such file, use the url to download.
 
     Args:
-        url (str) : The path to download the file.
-        cache_dir (str) : The path of save the file.
-        md5sum (str) : The true md5sum of download file.
-        download_file_name(str) : The name of the downloaded file.\
+        url (str): The path to download the file.
+        cache_dir (str): The path of save the file.
+        md5sum (str): The true md5sum of download file.
+        download_file_name(str): The name of the downloaded file.\
             (This parameter is required if the end of the link is not the downloaded file name.)
-        proxies (dict) : a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
+        proxies (dict): a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
 
     Returns:
-        - ** path ** (str) - The path of save the downloaded file.
-        - ** filename ** (str) - The name of downloaded file.
+        - str, The path of save the downloaded file.
+        - str, The name of downloaded file.
 
     Raises:
         TypeError: If `url` is not a string.

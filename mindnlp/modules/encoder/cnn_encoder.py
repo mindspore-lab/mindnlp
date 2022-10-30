@@ -23,11 +23,7 @@ class CNNEncoder(EncoderBase):
     r"""
     CNN Encoder.
 
-     Convolutional encoder consisting of `len(convolutions)` layers.
-
-    Details can be found in paper
-    `Relation classification via convolutional deep neural network
-    <https://aclanthology.org/C14-1220.pdf>`
+    Convolutional encoder consisting of `len(convolutions)` layers.
 
     Args:
         embedding (Cell): The embedding layer.
@@ -36,14 +32,13 @@ class CNNEncoder(EncoderBase):
         output_dim (int): The output vector of collected features after doing convolutions and pooling.
             If this value is `None`, return the result of the max pooling, an output of shape.
 
-    Inputs:
-        - **src_token** (Tensor) - Tokens in the source language with shape [batch, max_len].
-        - **mask** (Tensor) - Its elements identify whether the corresponding input token is padding or not.
-          If the value is 1, not padding token. If the value is 0, padding token. Defaults to None.
-
-    Outputs:
-        Tensor. If output_dim is None, the result shape is of `(batch_size, len(convs) * num_filter)`
-        and dtype is `float`; If not, the result shape is of `(batch_size, output_dim)`.
+    Raises:
+        TypeError: if `embedding` is not a Cell.
+        TypeErrpr: if `convs` is not a list[Cell].
+        TypeError: if `conv_layer_activation` is not a Module.
+        TypeError: if `output_dim` is not a int.
+        RuntimeError: If `embedding` is None.
+        RuntimeError: If `convs` is None.
 
     Examples:
         >>> vocab_size = 1000
@@ -63,6 +58,7 @@ class CNNEncoder(EncoderBase):
         >>> result = cnn_encoder(src_tokens)
         >>> print(result.shape)
         (8, 16)
+
     """
 
     def __init__(self, embedding, convs, conv_layer_activation=nn.Tanh(), output_dim=None):
@@ -93,7 +89,17 @@ class CNNEncoder(EncoderBase):
         return self.output_axis
 
     def construct(self, src_token, src_length=None, mask=None):
-        """Construct"""
+        """Construct function of CNNEncoder.
+
+        Args:
+            src_token (Tensor): Tokens in the source language with shape [batch, max_len].
+            mask (Tensor): Its elements identify whether the corresponding input token is padding or not.
+                If the value is 1, not padding token. If the value is 0, padding token. Defaults to None.
+
+        Returns:
+            Tensor. If output_dim is None, the result shape is of `(batch_size, len(convs) * num_filter)`
+                and dtype is `float`; If not, the result shape is of `(batch_size, output_dim)`.
+        """
         if mask is None:
             mask = self._gen_mask(src_token)
         src_token = src_token * mask
