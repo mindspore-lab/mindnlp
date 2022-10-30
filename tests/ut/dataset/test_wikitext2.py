@@ -17,6 +17,7 @@ Test WikiText2
 """
 
 import os
+import shutil
 import unittest
 import pytest
 from mindnlp.dataset import WikiText2, load
@@ -27,8 +28,13 @@ class TestWikiText2(unittest.TestCase):
     Test WikiText2
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
 
     @pytest.mark.dataset
     def test_wikitext2(self):
@@ -38,16 +44,15 @@ class TestWikiText2(unittest.TestCase):
             "valid": 3760,
             "test": 4358,
         }
-        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        dataset_train, dataset_valid, dataset_test = WikiText2(root=root,
+        dataset_train, dataset_valid, dataset_test = WikiText2(root=self.root,
                                                                split=('train', 'valid', 'test'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_valid.get_dataset_size() == num_lines["valid"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = WikiText2(root=root, split='train')
-        dataset_valid = WikiText2(root=root, split='valid')
-        dataset_test = WikiText2(root=root, split='test')
+        dataset_train = WikiText2(root=self.root, split='train')
+        dataset_valid = WikiText2(root=self.root, split='valid')
+        dataset_test = WikiText2(root=self.root, split='test')
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_valid.get_dataset_size() == num_lines["valid"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
@@ -55,8 +60,7 @@ class TestWikiText2(unittest.TestCase):
     @pytest.mark.dataset
     def test_squad2_by_register(self):
         """test squad2 by register"""
-        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
         _ = load('WikiText2',
-                 root=root,
+                 root=self.root,
                  split=('train', 'valid', 'test')
                  )

@@ -17,6 +17,7 @@ Test PennTreebank
 """
 
 import os
+import shutil
 import unittest
 import pytest
 from mindnlp.dataset import PennTreebank
@@ -28,8 +29,13 @@ class TestPennTreebank(unittest.TestCase):
     Test PennTreebank
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
 
     @pytest.mark.dataset
     def test_penn_treebank(self):
@@ -39,16 +45,15 @@ class TestPennTreebank(unittest.TestCase):
             "valid": 3370,
             "test": 3761,
         }
-        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        dataset_train, dataset_valid, dataset_test = PennTreebank(root=root,
+        dataset_train, dataset_valid, dataset_test = PennTreebank(root=self.root,
                                                                   split=('train', 'valid', 'test'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_valid.get_dataset_size() == num_lines["valid"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = PennTreebank(root=root, split='train')
-        dataset_valid = PennTreebank(root=root, split='valid')
-        dataset_test = PennTreebank(root=root, split='test')
+        dataset_train = PennTreebank(root=self.root, split='train')
+        dataset_valid = PennTreebank(root=self.root, split='valid')
+        dataset_test = PennTreebank(root=self.root, split='test')
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_valid.get_dataset_size() == num_lines["valid"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
@@ -56,8 +61,7 @@ class TestPennTreebank(unittest.TestCase):
     @pytest.mark.dataset
     def test_penn_treebank_by_register(self):
         """test penn treebank by register"""
-        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
         _ = load('PennTreebank',
-                 root=root,
+                 root=self.root,
                  split=('train', 'valid', 'test')
                  )

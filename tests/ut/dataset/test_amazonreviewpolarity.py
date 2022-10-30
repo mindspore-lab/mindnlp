@@ -16,6 +16,7 @@
 Test AmazonReviewPolarity
 """
 import os
+import shutil
 import unittest
 import pytest
 import mindspore as ms
@@ -29,47 +30,45 @@ class TestAmazonReviewPolarity(unittest.TestCase):
     Test AmazonReviewPolarity
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
+
+    def tearDownClass(self):
+        shutil.rmtree(self.root)
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_amazonreviewpolarity(self):
         """Test amazonreviewpolarity"""
         num_lines = {
             "train": 3600000,
             "test": 400000,
         }
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         dataset_train, dataset_test = AmazonReviewPolarity(
-            root=root, split=("train", "test")
+            root=self.root, split=("train", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = AmazonReviewPolarity(root=root, split="train")
-        dataset_test = AmazonReviewPolarity(root=root, split="test")
+        dataset_train = AmazonReviewPolarity(root=self.root, split="train")
+        dataset_test = AmazonReviewPolarity(root=self.root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_amazonreviewpolarity_by_register(self):
         """test amazonreviewpolarity by register"""
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
             "AmazonReviewPolarity",
-            root=root,
+            root=self.root,
             split=("train", "test"),
         )
 
-class TestAmazonReviewPolarityProcess(unittest.TestCase):
-    r"""
-    Test AmazonReviewPolarity_Process
-    """
-
-    def setUp(self):
-        self.input = None
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_amazonreviewpolarity_process(self):
         r"""
         Test AmazonReviewPolarity_Process
@@ -86,6 +85,7 @@ class TestAmazonReviewPolarityProcess(unittest.TestCase):
             break
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_amazonreviewpolarity_process_by_register(self):
         """test AmazonReviewPolarity process by register"""
         train_dataset, _ = AmazonReviewPolarity()

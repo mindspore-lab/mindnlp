@@ -16,6 +16,7 @@
 Test QNLI
 """
 import os
+import shutil
 import unittest
 import pytest
 import mindspore as ms
@@ -28,10 +29,16 @@ class TestQNLI(unittest.TestCase):
     Test QNLI
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_qnli(self):
         """Test qnli"""
         num_lines = {
@@ -39,70 +46,64 @@ class TestQNLI(unittest.TestCase):
             "dev": 5463,
             "test": 5463,
         }
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         dataset_train, dataset_dev, dataset_test = QNLI(
-            root=root, split=("train", "dev", "test")
+            root=self.root, split=("train", "dev", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = QNLI(root=root, split="train")
-        dataset_dev = QNLI(root=root, split="dev")
-        dataset_test = QNLI(root=root, split="test")
+        dataset_train = QNLI(root=self.root, split="train")
+        dataset_dev = QNLI(root=self.root, split="dev")
+        dataset_test = QNLI(root=self.root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_qnli_by_register(self):
         """test qnli by register"""
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
             "QNLI",
-            root=root,
-            split=("train", "dev", "test"),
+            root=self.root,
+            split=("dev", "test"),
         )
 
-class TestQNLIProcess(unittest.TestCase):
-    r"""
-    Test QNLI_Process
-    """
-
-    def setUp(self):
-        self.input = None
-
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_qnli_process(self):
         r"""
         Test QNLI_Process
         """
 
-        train_dataset, _, _ = QNLI()
-        train_dataset, vocab = QNLI_Process(train_dataset)
+        test_dataset = QNLI(split='test')
+        test_dataset, vocab = QNLI_Process(test_dataset)
 
-        train_dataset = train_dataset.create_tuple_iterator()
-        assert (next(train_dataset)[1]).dtype == ms.int32
-        assert (next(train_dataset)[2]).dtype == ms.int32
+        test_dataset = test_dataset.create_tuple_iterator()
+        assert (next(test_dataset)[0]).dtype == ms.int32
+        assert (next(test_dataset)[1]).dtype == ms.int32
 
         for _, value in vocab.vocab().items():
             assert isinstance(value, int)
             break
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_qnli_process_by_register(self):
         """test qnli process by register"""
-        train_dataset, _, _ = QNLI()
-        train_dataset, vocab = process('QNLI',
-                                dataset=train_dataset,
+        test_dataset = QNLI(split='test')
+        test_dataset, vocab = process('QNLI',
+                                dataset=test_dataset,
                                 column=("question", "sentence"),
                                 tokenizer=BasicTokenizer(),
                                 vocab=None
                                 )
 
-        train_dataset = train_dataset.create_tuple_iterator()
-        assert (next(train_dataset)[1]).dtype == ms.int32
-        assert (next(train_dataset)[2]).dtype == ms.int32
+        print(test_dataset.get_col_names())
+        test_dataset = test_dataset.create_tuple_iterator()
+        assert (next(test_dataset)[0]).dtype == ms.int32
+        assert (next(test_dataset)[1]).dtype == ms.int32
 
         for _, value in vocab.vocab().items():
             assert isinstance(value, int)

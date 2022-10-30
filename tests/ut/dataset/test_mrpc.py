@@ -16,6 +16,7 @@
 Test MRPC
 """
 import os
+import shutil
 import unittest
 import pytest
 import mindspore as ms
@@ -29,8 +30,13 @@ class TestMRPC(unittest.TestCase):
     Test MRPC
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
 
     @pytest.mark.dataset
     def test_mrpc(self):
@@ -39,30 +45,20 @@ class TestMRPC(unittest.TestCase):
             "train": 4076,
             "test": 1725,
         }
-        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
         dataset_train, dataset_test = MRPC(
-            root=root, split=("train", "test"))
+            root=self.root, split=("train", "test"))
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = MRPC(root=root, split="train")
-        dataset_test = MRPC(root=root, split="test")
+        dataset_train = MRPC(root=self.root, split="train")
+        dataset_test = MRPC(root=self.root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
     @pytest.mark.dataset
     def test_mrpc_by_register(self):
         """test mrpc by register"""
-        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        _ = load('MRPC', root=root, split=('train', 'test'),)
-
-class TestMRPCProcess(unittest.TestCase):
-    r"""
-    Test MRPC_Process
-    """
-
-    def setUp(self):
-        self.input = None
+        _ = load('MRPC', root=self.root, split=('train', 'test'),)
 
     @pytest.mark.dataset
     def test_mrpc_process(self):

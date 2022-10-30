@@ -16,6 +16,7 @@
 Test QQP
 """
 import os
+import shutil
 import unittest
 import pytest
 import mindspore as ms
@@ -29,34 +30,32 @@ class TestQQP(unittest.TestCase):
     Test QQP
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_qqp(self):
         """Test qqp"""
         num_lines = {
             "train": 404290,
         }
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
-        dataset_train = QQP(root=root)
+        dataset_train = QQP(root=self.root)
         assert dataset_train.get_dataset_size() == num_lines["train"]
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_qqp_by_register(self):
         """test qqp by register"""
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
-        _ = load("QQP", root=root)
-
-class TestQQPProcess(unittest.TestCase):
-    r"""
-    Test QQP_Process
-    """
-
-    def setUp(self):
-        self.input = None
+        _ = load("QQP", root=self.root)
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_qqp_process(self):
         r"""
         Test QQP_Process
@@ -74,6 +73,7 @@ class TestQQPProcess(unittest.TestCase):
             break
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_qqp_process_by_register(self):
         """test qqp process by register"""
         train_dataset = QQP()

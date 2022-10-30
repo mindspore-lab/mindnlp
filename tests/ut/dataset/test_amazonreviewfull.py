@@ -16,6 +16,7 @@
 Test AmazonReviewFull
 """
 import os
+import shutil
 import unittest
 import pytest
 import mindspore as ms
@@ -29,54 +30,52 @@ class TestAmazonReviewFull(unittest.TestCase):
     Test AmazonReviewFull
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_amazonreviewfull(self):
         """Test amazonreviewfull"""
         num_lines = {
             "train": 3000000,
             "test": 650000,
         }
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         dataset_train, dataset_test = AmazonReviewFull(
-            root=root, split=("train", "test")
+            root=self.root, split=("train", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = AmazonReviewFull(root=root, split="train")
-        dataset_test = AmazonReviewFull(root=root, split="test")
+        dataset_train = AmazonReviewFull(root=self.root, split="train")
+        dataset_test = AmazonReviewFull(root=self.root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_amazonreviewfull_by_register(self):
         """test amazonreviewfull by register"""
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
             "AmazonReviewFull",
-            root=root,
-            split=("train", "test"),
+            root=self.root,
+            split="test"
         )
 
-class TestAmazonReviewFullProcess(unittest.TestCase):
-    r"""
-    Test AmazonReviewFull_Process
-    """
-
-    def setUp(self):
-        self.input = None
-
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_amazonreviewfull_process(self):
         r"""
         Test AmazonReviewFull_Process
         """
 
-        train_dataset, _ = AmazonReviewFull()
-        amazonreviewfull_dataset, vocab = AmazonReviewFull_Process(train_dataset)
+        test_dataset = AmazonReviewFull(split='test')
+        amazonreviewfull_dataset, vocab = AmazonReviewFull_Process(test_dataset)
 
         amazonreviewfull_dataset = amazonreviewfull_dataset.create_tuple_iterator()
         assert (next(amazonreviewfull_dataset)[1]).dtype == ms.int32
@@ -86,18 +85,19 @@ class TestAmazonReviewFullProcess(unittest.TestCase):
             break
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_amazonreviewfull_process_by_register(self):
         """test amazonreviewfull process by register"""
-        train_dataset, _ = AmazonReviewFull()
-        train_dataset, vocab = process('AmazonReviewFull',
-                                dataset=train_dataset,
+        test_dataset = AmazonReviewFull(split='test')
+        test_dataset, vocab = process('AmazonReviewFull',
+                                dataset=test_dataset,
                                 column="title_text",
                                 tokenizer=BasicTokenizer(),
                                 vocab=None
                                 )
 
-        train_dataset = train_dataset.create_tuple_iterator()
-        assert (next(train_dataset)[1]).dtype == ms.int32
+        test_dataset = test_dataset.create_tuple_iterator()
+        assert (next(test_dataset)[1]).dtype == ms.int32
 
         for _, value in vocab.vocab().items():
             assert isinstance(value, int)

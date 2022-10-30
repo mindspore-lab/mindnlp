@@ -16,6 +16,7 @@
 Test YelpReviewFull
 """
 import os
+import shutil
 import unittest
 import pytest
 import mindspore as ms
@@ -29,45 +30,42 @@ class TestYelpReviewFull(unittest.TestCase):
     Test YelpReviewFull
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_yelpreviewfull(self):
         """Test yelpreviewfull"""
         num_lines = {
             "train": 650000,
             "test": 50000,
         }
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         dataset_train, dataset_test = YelpReviewFull(
-            root=root, split=("train", "test")
+            root=self.root, split=("train", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = YelpReviewFull(root=root, split="train")
-        dataset_test = YelpReviewFull(root=root, split="test")
+        dataset_train = YelpReviewFull(root=self.root, split="train")
+        dataset_test = YelpReviewFull(root=self.root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_yelpreviewfull_by_register(self):
         """test yelpreviewfull by register"""
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
             "YelpReviewFull",
-            root=root,
+            root=self.root,
             split=("train", "test"),
         )
-
-class TestYelpReviewFullProcess(unittest.TestCase):
-    r"""
-    Test YelpReviewFull_Process
-    """
-
-    def setUp(self):
-        self.input = None
 
     @pytest.mark.dataset
     def test_yelpreviewfull_process(self):
@@ -86,6 +84,7 @@ class TestYelpReviewFullProcess(unittest.TestCase):
             break
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_yelpreviewfull_process_by_register(self):
         """test yelpreviewfull process by register"""
         train_dataset, _ = YelpReviewFull()

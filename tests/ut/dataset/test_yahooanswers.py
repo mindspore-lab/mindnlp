@@ -16,6 +16,7 @@
 Test YahooAnswers
 """
 import os
+import shutil
 import unittest
 import pytest
 import mindspore as ms
@@ -29,47 +30,45 @@ class TestYahooAnswers(unittest.TestCase):
     Test YahooAnswers
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_yahooanswers(self):
         """Test yahooanswers"""
         num_lines = {
             "train": 1400000,
             "test": 60000,
         }
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         dataset_train, dataset_test = YahooAnswers(
-            root=root, split=("train", "test")
+            root=self.root, split=("train", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = YahooAnswers(root=root, split="train")
-        dataset_test = YahooAnswers(root=root, split="test")
+        dataset_train = YahooAnswers(root=self.root, split="train")
+        dataset_test = YahooAnswers(root=self.root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_yahooanswers_by_register(self):
         """test yahooanswers by register"""
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
             "YahooAnswers",
-            root=root,
+            root=self.root,
             split=("train", "test"),
         )
 
-class TestYahooAnswersProcess(unittest.TestCase):
-    r"""
-    Test YahooAnswers_Process
-    """
-
-    def setUp(self):
-        self.input = None
-
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_yahooanswers_process(self):
         r"""
         Test YahooAnswers_Process
@@ -86,6 +85,7 @@ class TestYahooAnswersProcess(unittest.TestCase):
             break
 
     @pytest.mark.dataset
+    @pytest.mark.local
     def test_yahooanswers_process_by_register(self):
         """test yahooanswers process by register"""
         train_dataset, _ = YahooAnswers()

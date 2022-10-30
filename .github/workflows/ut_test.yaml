@@ -8,9 +8,9 @@ on:
     branches: [ "master" ]
     paths:
       - 'mindnlp/**'
-      - 'test/ut/**'
+      - 'tests/ut/**'
       - '!mindnlp/dataset/**'
-      - '!test/ut/dataset/**'
+      - '!tests/ut/dataset/**'
       - '!docs/**'
 
 permissions:
