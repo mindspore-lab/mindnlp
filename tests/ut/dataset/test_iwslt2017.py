@@ -32,7 +32,7 @@ class TestIWSLT2017(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_iwslt2017(self):
         """Test IWSLT2017"""
         num_lines = {
@@ -51,7 +51,7 @@ class TestIWSLT2017(unittest.TestCase):
             root=root, split='train', language_pair=('de', 'en'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_iwslt2017_by_register(self):
         """test iwslt2017 by register"""
         root = os.path.join(os.path.expanduser('~'), ".mindnlp")
@@ -70,7 +70,7 @@ class TestIWSLT2017Process(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_iwslt2017_process_no_vocab(self):
         r"""
         Test IWSLT2017 process with no vocab
@@ -93,7 +93,7 @@ class TestIWSLT2017Process(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_iwslt2017_process_no_vocab_by_register(self):
         '''
         Test IWSLT2017 process with no vocab by register

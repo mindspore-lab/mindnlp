@@ -32,7 +32,7 @@ class TestMNLI(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_mnli(self):
         """Test mnli"""
         num_lines = {
@@ -56,7 +56,7 @@ class TestMNLI(unittest.TestCase):
         assert dataset_dev_matched.get_dataset_size() == num_lines["dev_matched"]
         assert dataset_dev_mismatched.get_dataset_size() == num_lines["dev_mismatched"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_mnli_by_register(self):
         """test mnli by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
@@ -74,7 +74,7 @@ class TestMNLIProcess(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_mnli_process(self):
         r"""
         Test MNLI_Process
@@ -91,7 +91,7 @@ class TestMNLIProcess(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_mnli_process_by_register(self):
         """test mnli process by register"""
         train_dataset, _, _ = MNLI()

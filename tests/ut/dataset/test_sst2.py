@@ -31,7 +31,7 @@ class TestSST2(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_sst2(self):
         """Test sst2"""
         num_lines = {
@@ -54,7 +54,7 @@ class TestSST2(unittest.TestCase):
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_agnews_by_register(self):
         """test agnews by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
@@ -72,7 +72,7 @@ class TestSST2Process(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_sst2_process(self):
         r"""
         Test SST2_Process
@@ -88,7 +88,7 @@ class TestSST2Process(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_sst2_process_by_register(self):
         """test sst2 process by register"""
         train_dataset, _, _ = SST2()

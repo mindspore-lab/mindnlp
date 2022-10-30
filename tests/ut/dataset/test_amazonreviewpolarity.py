@@ -32,7 +32,7 @@ class TestAmazonReviewPolarity(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_amazonreviewpolarity(self):
         """Test amazonreviewpolarity"""
         num_lines = {
@@ -51,7 +51,7 @@ class TestAmazonReviewPolarity(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_amazonreviewpolarity_by_register(self):
         """test amazonreviewpolarity by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
@@ -69,7 +69,7 @@ class TestAmazonReviewPolarityProcess(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_amazonreviewpolarity_process(self):
         r"""
         Test AmazonReviewPolarity_Process
@@ -85,7 +85,7 @@ class TestAmazonReviewPolarityProcess(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_amazonreviewpolarity_process_by_register(self):
         """test AmazonReviewPolarity process by register"""
         train_dataset, _ = AmazonReviewPolarity()

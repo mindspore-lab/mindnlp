@@ -32,7 +32,7 @@ class TestQQP(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_qqp(self):
         """Test qqp"""
         num_lines = {
@@ -42,7 +42,7 @@ class TestQQP(unittest.TestCase):
         dataset_train = QQP(root=root)
         assert dataset_train.get_dataset_size() == num_lines["train"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_qqp_by_register(self):
         """test qqp by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
@@ -56,7 +56,7 @@ class TestQQPProcess(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_qqp_process(self):
         r"""
         Test QQP_Process
@@ -73,7 +73,7 @@ class TestQQPProcess(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_qqp_process_by_register(self):
         """test qqp process by register"""
         train_dataset = QQP()

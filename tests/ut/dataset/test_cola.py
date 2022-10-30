@@ -32,7 +32,7 @@ class TestCoLA(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_cola(self):
         """Test cola"""
         num_lines = {
@@ -55,7 +55,7 @@ class TestCoLA(unittest.TestCase):
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_cola_by_register(self):
         """test cola by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
@@ -73,7 +73,7 @@ class TestCoLAProcess(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_cola_process(self):
         r"""
         Test CoLA_Process
@@ -89,7 +89,7 @@ class TestCoLAProcess(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_cola_process_by_register(self):
         """test cola process by register"""
         train_dataset, _, _ = CoLA()

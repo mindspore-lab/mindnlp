@@ -32,7 +32,7 @@ class TestYelpReviewFull(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_yelpreviewfull(self):
         """Test yelpreviewfull"""
         num_lines = {
@@ -51,7 +51,7 @@ class TestYelpReviewFull(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_yelpreviewfull_by_register(self):
         """test yelpreviewfull by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
@@ -69,7 +69,7 @@ class TestYelpReviewFullProcess(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_yelpreviewfull_process(self):
         r"""
         Test YelpReviewFull_Process
@@ -85,7 +85,7 @@ class TestYelpReviewFullProcess(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_yelpreviewfull_process_by_register(self):
         """test yelpreviewfull process by register"""
         train_dataset, _ = YelpReviewFull()

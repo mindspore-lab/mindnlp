@@ -32,7 +32,7 @@ class TestWNLI(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_wnli(self):
         """Test wnli"""
         num_lines = {
@@ -55,7 +55,7 @@ class TestWNLI(unittest.TestCase):
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_wnli_by_register(self):
         """test wnli by register"""
         root = os.path.join(os.path.expanduser("~"), ".mindnlp")
@@ -73,7 +73,7 @@ class TestWNLIProcess(unittest.TestCase):
     def setUp(self):
         self.input = None
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_wnli_process(self):
         r"""
         Test WNLI_Process
@@ -90,7 +90,7 @@ class TestWNLIProcess(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_wnli_process_by_register(self):
         """test wnli process by register"""
         train_dataset, _, _ = WNLI()
