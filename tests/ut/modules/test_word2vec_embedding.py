@@ -12,9 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=import-outside-toplevel
 """Test Word2vec_embedding"""
 
 import unittest
+import pytest
+import numpy as np
+import mindspore
 from mindspore import Tensor
 from mindspore.dataset.text import Vocab
 from mindnlp.modules.embeddings.word2vec_embedding import Word2vec
@@ -28,19 +32,45 @@ class TestWord2vec(unittest.TestCase):
     def setUp(self):
         self.input = None
 
+    @pytest.mark.skip(reason="this ut has already tested")
     def test_word2vec_embedding(self):
         r"""
         Unit test for word2vec embedding.
         """
-        wordlist = [0, 2]
-        wordlist_input = Tensor(wordlist)
+        import torch
+        from torch.nn.modules.sparse import Embedding as Embedding
 
-        init_embed = Tensor([[0.1, 0.2, 0.3],
-                             [0.4, 0.5, 0.6],
-                             [0.7, 0.8, 0.9]])
+        # pytorch embedding
+        embed_pt = torch.nn.Embedding(10, 3)
+        input_pt = torch.LongTensor([0, 1, 2])
 
-        init_vocab = Vocab.from_list(['i', 'am', 'human'])
-        embed = Word2vec(vocab=init_vocab, init_embed=init_embed)
-        w_res = embed(wordlist_input)
+        # mindnlp embedding
+        vocab_ms = Vocab.from_list(["one", "two", "three"])
+        init_embed = Tensor(embed_pt.weight.detach().numpy())
+        embed_ms = Word2vec(vocab_ms, init_embed, dropout=0.0)
+        input_ms= Tensor([0, 1, 2])
 
-        assert w_res.shape == (2, 3)
+        # forward
+        import time
+        pt_s = time.time()
+        output_pt = embed_pt(input_pt)
+        pt_t = time.time() - pt_s
+
+        ms_s = time.time()
+        output_ms = embed_ms(input_ms)
+        ms_t = time.time() - ms_s
+
+        print("pytorch:", pt_t)
+        print("mindnlp:", ms_t)
+
+        assert np.allclose(output_ms.asnumpy(), output_pt.detach().numpy(), 1e-3, 1e-3)
+
+        # backward
+        grad_fn = mindspore.grad(embed_ms, grad_position=0, weights=embed_ms.trainable_params(), has_aux=False)
+        embed_ms_grads = grad_fn(input_ms)
+
+        output_pt.backward(torch.ones_like(output_pt), retain_graph=True)
+        embed_pt_grads = [param.grad for param in embed_pt.parameters()]
+
+        for ms_grad, pt_grad in zip(embed_ms_grads, embed_pt_grads):
+            assert np.mean(ms_grad.asnumpy() - pt_grad.detach().numpy()) < 1e-3
