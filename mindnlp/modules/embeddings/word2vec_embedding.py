@@ -38,16 +38,10 @@ class Word2vec(TokenEmbedding):
     r"""
     Create vocab and Embedding from a given pre-trained vector file.
     Args:
-        vocab (Vocab) : Passins into Vocab for initialization.
-        init_embed : Passing into Vocab and Tensor,use these values to initialize Embedding directly.
-        requires_grad (bool): Whether this parameter needs to be gradient to update.
-        dropout (float): Dropout of the output of Embedding.
-
-    Inputs:
-        - **ids** (Tensor) - Ids to query.
-
-    Outputs:
-        - **self.dropout(output)** (Tensor) - Tensor, returns the Embedding query results.
+        vocab (Vocab): Passins into Vocab for initialization.
+        init_embed (Tensor): Passing into Tensor,use these values to initialize Embedding directly.
+        requires_grad (bool): Whether this parameter needs to be gradient to update. Default: True.
+        dropout (float): Dropout of the output of Embedding. Default: 0.5.
 
     Examples:
         >>> vocab = Vocab.from_list(['default','one','two','three'])
@@ -83,19 +77,21 @@ class Word2vec(TokenEmbedding):
         Creates Embedding instance from given 2-dimensional FloatTensor.
 
         Args:
-            name (str): The name of the pretrained vector.
-            dims (int): The dimension of the pretrained vector.
-            root (str): Default storage directory.
-            special_tokens (tuple<str,str>): List of special participles.<unk>:Mark the words that don't exist;
-                <pad>:Align all the sentences.
+            name (str): The name of the pretrained vector. Default: 'google-news'.
+            dims (int): The dimension of the pretrained vector. Default: 300.
+            root (str): Default storage directory. Default: DEFAULT_ROOT.
+            special_tokens (tuple<str,str>): List of special participles. Default: ("<pad>", "<unk>").
             special_first (bool): Indicates whether special participles from special_tokens will be added to
                 the top of the dictionary. If True, add special_tokens to the beginning of the dictionary,
-                otherwise add them to the end.
-            use_gensim (bool): Whether to use gensim library for pretrained word vector loading.
+                otherwise add them to the end. Default: False.
+            use_gensim (bool): Whether to load word vectors with gensim library.
+            kwargs (dict):
+                - requires_grad (bool): Whether this parameter needs to be gradient to update.
+                - dropout (float): Dropout of the output of Embedding.
 
         Returns:
-            - **cls** (Word2vec) - Returns an embedding instance generated through a pretrained word vector.
-            - **vocab** (Vocab) - Vocabulary extracted from the file.
+            - Word2vec, Returns an embedding instance generated through a pretrained word vector.
+            - Vocab, Vocabulary extracted from the file.
 
         """
         if name not in cls.urls:
@@ -144,6 +140,15 @@ class Word2vec(TokenEmbedding):
         return cls(vocab, Tensor(embeddings), requires_grad, dropout), vocab
 
     def construct(self, ids):
+        r"""
+
+        Args:
+            ids (Tensor): Ids to query.
+
+        Returns:
+            - Tensor, returns the Embedding query results.
+
+        """
         out_shape = ids.shape + (self._embed_dim,)
         flat_ids = ids.reshape((-1,))
         output_for_reshape = ops.gather(self.embed, flat_ids, 0)
@@ -156,7 +161,10 @@ class Word2vec(TokenEmbedding):
 
         Args:
             foldername (str): Name of the folder to store.
-            root (Path): Path of the embedding folder.Default:DEFAULT_ROOT.
+            root (Path): Path of the embedding folder. Default: DEFAULT_ROOT.
+
+        Returns:
+            None
 
         """
 
@@ -197,7 +205,10 @@ class Word2vec(TokenEmbedding):
 
         Args:
             foldername (str): Name of the folder to load.
-            root (Path): Path of the embedding folder.Default:DEFAULT_ROOT.
+            root (Path): Path of the embedding folder. Default: DEFAULT_ROOT.
+
+        Returns:
+            None
 
         """
 
