@@ -26,9 +26,20 @@ from mindspore.dataset.text.utils import Vocab
 
 class TokenEmbedding(nn.Cell):
     r"""
-    Embedding base class
-    """
+    Create vocab and Embedding from a given pre-trained vector file.
+    Args:
+        vocab (Vocab) : Passins into Vocab for initialization.
+        init_embed : Passing into Vocab and Tensor,use these values to initialize Embedding directly.
+        requires_grad (bool): Whether this parameter needs to be gradient to update.
+        dropout (float): Dropout of the output of Embedding.
 
+    Inputs:
+        - **ids** (Tensor) - Ids to query.
+
+    Raises:
+        NotImplementedError: If construct interface is not called.
+
+    """
     def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.5):
         super().__init__()
 
@@ -43,12 +54,15 @@ class TokenEmbedding(nn.Cell):
 
         Args:
             words (Tensor): Tensor about to be dropout.
+
         Returns:
-            - ** net(words) ** - Dropout processed data.
+            - **self.dropout_layer(words)** (Tensor) - Dropout processed data.
+
         """
         return self.dropout_layer(words)
 
     def __len__(self):
+        """embed len"""
         return len(self.embed)
 
     def embed_size(self):
@@ -65,12 +79,4 @@ class TokenEmbedding(nn.Cell):
 
     @abstractmethod
     def construct(self, ids):
-        r"""
-        Use ids to query embedding
-        Args:
-            ids : Ids to query.
-        Raises:
-            NotImplementedError: If this interface is called.
-
-        """
         raise NotImplementedError(f'Function `construct` not implemented in {self.__class__.__name__}')
