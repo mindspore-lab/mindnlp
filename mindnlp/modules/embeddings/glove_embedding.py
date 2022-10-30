@@ -36,6 +36,25 @@ logging.getLogger().setLevel(logging.INFO)
 class Glove(TokenEmbedding):
     r"""
     Create vocab and Embedding from a given pre-trained vector file.
+    Args:
+        vocab (Vocab) : Passins into Vocab for initialization.
+        init_embed : Passing into Vocab and Tensor,use these values to initialize Embedding directly.
+        requires_grad (bool): Whether this parameter needs to be gradient to update.
+        dropout (float): Dropout of the output of Embedding.
+
+    Inputs:
+        - **ids** (Tensor) - Ids to query.
+
+    Outputs:
+        - **self.dropout(output)** (Tensor) - Tensor, returns the Embedding query results.
+
+    Examples:
+        >>> vocab = Vocab.from_list(['default','one','two','three'])
+        >>> init_embed = Tensor(np.zeros((4, 4)).astype(np.float32))
+        >>> glove_embed = Glove(vocab, init_embed)
+        >>> ids = Tensor([1, 2, 3])
+        >>> output = glove_embed(ids)
+
     """
     urls = {
         "42B": "http://nlp.stanford.edu/data/glove.42B.300d.zip",
@@ -46,21 +65,7 @@ class Glove(TokenEmbedding):
 
     dims = [50, 100, 200, 300]
 
-    default_vocab = Vocab.from_list(['default'])
-    default_embed = Tensor(np.zeros((1, 1)).astype(np.float32))
-
-    def __init__(self, vocab: Vocab = default_vocab, init_embed=default_embed,
-                 requires_grad: bool = True, dropout=0.5):
-        r"""
-        Initializer.
-
-        Args:
-            vocab (Vocab) : Passins into Vocab for initialization.
-            init_embed : Passing into Tensor, Embedding, Numpy.ndarray, etc.,
-                        use this value to initialize Embedding directly.
-            requires_grad (bool): Whether this parameter needs to be gradient to update.
-            dropout (float): Dropout of the output of Embedding.
-        """
+    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.5):
         super().__init__(vocab, init_embed)
 
         self._word_vocab = vocab
@@ -87,9 +92,10 @@ class Glove(TokenEmbedding):
             special_first (bool): Indicates whether special participles from special_tokens will be added to
             the top of the dictionary. If True, add special_tokens to the beginning of the dictionary,
             otherwise add them to the end.
+
         Returns:
-            - ** cls ** - Returns a embedding instance generated through a pretrained word vector.
-            - ** vocab ** - Vocabulary extracted from the file.
+            - **cls** (Glove) - Returns an embedding instance generated through a pretrained word vector.
+            - **vocab** (Vocab) - Vocabulary extracted from the file.
 
         """
         if name not in cls.urls:
@@ -132,15 +138,6 @@ class Glove(TokenEmbedding):
         return cls(vocab, Tensor(embeddings), requires_grad, dropout), vocab
 
     def construct(self, ids):
-        r"""
-        Use ids to query embedding
-        Args:
-            ids : Ids to query.
-
-        Returns:
-            - ** compute result ** - Tensor, returns the Embedding query results.
-
-        """
         out_shape = ids.shape + (self._embed_dim,)
         flat_ids = ids.reshape((-1,))
         output_for_reshape = ops.gather(self.embed, flat_ids, 0)
@@ -149,11 +146,11 @@ class Glove(TokenEmbedding):
 
     def save(self, foldername, root=DEFAULT_ROOT):
         r"""
-        Args:
-            foldername (str): Name of the folder to save.
-            root (str): Path of the embedding folder.
+        Save the embedding to the specified location.
 
-        Returns:
+        Args:
+            foldername (str): Name of the folder to store.
+            root (Path): Path of the embedding folder.Default:DEFAULT_ROOT.
 
         """
 
@@ -167,9 +164,9 @@ class Glove(TokenEmbedding):
         nums = self.vocab_size
         dims = self._embed_dim
 
-        kwargs = self.kwargs.copy()
-        kwargs['dropout'] = self.dropout_p
-        kwargs['requires_grad'] = self.requires_grad
+        kwargs = {}
+        kwargs['dropout'] = kwargs.get('dropout', self.dropout_p)
+        kwargs['requires_grad'] = kwargs.get('requires_grad', self.requires_grad)
 
         with open(os.path.join(folder, JSON_FILENAME), 'w', encoding='utf-8') as file:
             json.dump(kwargs, file, indent=2)
@@ -190,12 +187,11 @@ class Glove(TokenEmbedding):
     @classmethod
     def load(cls, foldername, root=DEFAULT_ROOT):
         r"""
+        Load embedding from the specified location.
 
         Args:
-            foldername: Name of the folder to load.
-            root: Path of the embedding folder.
-
-        Returns:
+            foldername (str): Name of the folder to load.
+            root (Path): Path of the embedding folder.Default:DEFAULT_ROOT.
 
         """
 

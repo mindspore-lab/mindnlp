@@ -36,6 +36,25 @@ logging.getLogger().setLevel(logging.INFO)
 class Fasttext(TokenEmbedding):
     r"""
     Create vocab and Embedding from a given pre-trained vector file.
+    Args:
+        vocab (Vocab) : Passins into Vocab for initialization.
+        init_embed : Passing into Vocab and Tensor,use these values to initialize Embedding directly.
+        requires_grad (bool): Whether this parameter needs to be gradient to update.
+        dropout (float): Dropout of the output of Embedding.
+
+    Inputs:
+        - **ids** (Tensor) - Ids to query.
+
+    Outputs:
+        - **self.dropout(output)** (Tensor) - Tensor, returns the Embedding query results.
+
+    Examples:
+        >>> vocab = Vocab.from_list(['default','one','two','three'])
+        >>> init_embed = Tensor(np.zeros((4, 4)).astype(np.float32))
+        >>> fasttext_embed = Fasttext(vocab, init_embed)
+        >>> ids = Tensor([1, 2, 3])
+        >>> output = fasttext_embed(ids)
+
     """
     urls = {
         "1M": "https://dl.fbaipublicfiles.com/fasttext/vectors-english/wiki-news-300d-1M.vec.zip",
@@ -44,20 +63,7 @@ class Fasttext(TokenEmbedding):
 
     dims = [300]
 
-    def __init__(self, vocab: Vocab, init_embed,
-                 requires_grad: bool = True, dropout=0.5, train_state: bool = True, **kwargs):
-        r"""
-        Initializer.
-
-        Args:
-            vocab (Vocab) : Passins into Vocab for initialization.
-            init_embed : Passing into Tensor, Embedding, Numpy.ndarray, etc.,
-                        use this value to initialize Embedding directly.
-            requires_grad (bool): Whether this parameter needs to be gradient to update.
-            dropout (float): Dropout of the output of Embedding.
-            train_state (bool): The network is in a state of training or inference.
-                                True:train state;False:inference state.
-        """
+    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.5):
         super().__init__(vocab, init_embed)
 
         self._word_vocab = vocab
@@ -67,13 +73,11 @@ class Fasttext(TokenEmbedding):
         self._embed_size = init_embed.shape
         self.requires_grad = requires_grad
         self.dropout_layer = nn.Dropout(1 - dropout)
-        self.train_state = train_state
         self.dropout_p = dropout
-        self.kwargs = kwargs
 
     @classmethod
     def from_pretrained(cls, name='1M', dims=300, root=DEFAULT_ROOT,
-                        special_tokens=("<pad>", "<unk>"), special_first=False):
+                        special_tokens=("<pad>", "<unk>"), special_first=False, **kwargs):
         r"""
         Creates Embedding instance from given 2-dimensional FloatTensor.
 
@@ -86,9 +90,10 @@ class Fasttext(TokenEmbedding):
             special_first (bool): Indicates whether special participles from special_tokens will be added to
             the top of the dictionary. If True, add special_tokens to the beginning of the dictionary,
             otherwise add them to the end.
+
         Returns:
-            - ** cls ** - Returns a embedding instance generated through a pretrained word vector.
-            - ** vocab ** - Vocabulary extracted from the file.
+            - **cls** (Fasttext) - Returns an embedding instance generated through a pretrained word vector.
+            - **vocab** (Vocab) - Vocabulary extracted from the file.
 
         """
         if name not in cls.urls:
@@ -124,32 +129,26 @@ class Fasttext(TokenEmbedding):
 
         vocab = Vocab.from_list(tokens, list(special_tokens), special_first)
         embeddings = np.array(embeddings).astype(np.float32)
-        return cls(vocab, Tensor(embeddings), True, 0.5), vocab
+
+        requires_grad = kwargs.get('requires_grad', True)
+        dropout = kwargs.get('dropout', 0.0)
+
+        return cls(vocab, Tensor(embeddings), requires_grad, dropout), vocab
 
     def construct(self, ids):
-        r"""
-        Use ids to query embedding
-        Args:
-            ids : Ids to query.
-
-        Returns:
-            - ** compute result ** - Tensor, returns the Embedding query results.
-
-        """
-        tensor_ids = Tensor(ids)
-        out_shape = tensor_ids.shape + (self._embed_dim,)
-        flat_ids = tensor_ids.reshape((-1,))
+        out_shape = ids.shape + (self._embed_dim,)
+        flat_ids = ids.reshape((-1,))
         output_for_reshape = ops.gather(self.embed, flat_ids, 0)
         output = ops.reshape(output_for_reshape, out_shape)
         return self.dropout(output)
 
     def save(self, foldername, root=DEFAULT_ROOT):
         r"""
+        Save the embedding to the specified location.
+
         Args:
             foldername (str): Name of the folder to store.
-            root (str): Path of the embedding folder.
-
-        Returns:
+            root (Path): Path of the embedding folder.Default:DEFAULT_ROOT.
 
         """
         folder = os.path.join(root, 'embeddings', 'Fasttext', 'save', foldername)
@@ -162,10 +161,9 @@ class Fasttext(TokenEmbedding):
         nums = self.vocab_size
         dims = self._embed_dim
 
-        kwargs = self.kwargs.copy()
-        kwargs['dropout'] = self.dropout_p
-        kwargs['requires_grad'] = self.requires_grad
-        kwargs['train_state'] = self.train_state
+        kwargs = {}
+        kwargs['dropout'] = kwargs.get('dropout', self.dropout_p)
+        kwargs['requires_grad'] = kwargs.get('requires_grad', self.requires_grad)
 
         with open(os.path.join(folder, JSON_FILENAME), 'w', encoding='utf-8') as file:
             json.dump(kwargs, file, indent=2)
@@ -186,12 +184,11 @@ class Fasttext(TokenEmbedding):
     @classmethod
     def load(cls, foldername, root=DEFAULT_ROOT):
         r"""
+        Load embedding from the specified location.
 
         Args:
-            foldername: Name of the folder to load.
-            root: Path of the embedding folder.
-
-        Returns:
+            foldername (str): Name of the folder to load.
+            root (Path): Path of the embedding folder.Default:DEFAULT_ROOT.
 
         """
 
