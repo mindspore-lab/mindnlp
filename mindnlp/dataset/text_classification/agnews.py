@@ -63,6 +63,7 @@ class Agnews:
 def AG_NEWS(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", "test"), proxies=None):
     r"""
     Load the AG_NEWS dataset
+
     Args:
         root (str): Directory where the datasets are saved.
             Default:~/.mindnlp
@@ -72,8 +73,8 @@ def AG_NEWS(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", 
 
     Returns:
         - **datasets_list** (list) -A list of loaded datasets.
-            If only one type of dataset is specified,such as 'trian',
-            this dataset is returned instead of a list of datasets.
+          If only one type of dataset is specified,such as 'trian',
+          this dataset is returned instead of a list of datasets.
 
     Examples:
         >>> root = os.path.join(os.path.expanduser('~'), ".mindnlp")

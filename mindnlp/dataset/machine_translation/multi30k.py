@@ -59,8 +59,8 @@ def Multi30k(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train',
 
     Returns:
         - **datasets_list** (list) -A list of loaded datasets.
-            If only one type of dataset is specified,such as 'trian',
-            this dataset is returned instead of a list of datasets.
+          If only one type of dataset is specified,such as 'trian',
+          this dataset is returned instead of a list of datasets.
 
     Raises:
         TypeError: If `root` is not a string.

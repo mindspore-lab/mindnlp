@@ -75,6 +75,7 @@ def IMDB(
 ):
     r"""
     Load the IMDB dataset
+
     Args:
         root (str): Directory where the datasets are saved.
             Default:~/.mindnlp
@@ -84,8 +85,8 @@ def IMDB(
 
     Returns:
         - **datasets_list** (list) -A list of loaded datasets.
-            If only one type of dataset is specified,such as 'trian',
-            this dataset is returned instead of a list of datasets.
+          If only one type of dataset is specified,such as 'trian',
+          this dataset is returned instead of a list of datasets.
 
     Examples:
         >>> dataset_train,dataset_test = IMDB()
