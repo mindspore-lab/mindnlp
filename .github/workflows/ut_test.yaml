@@ -12,6 +12,12 @@ on:
       - '!mindnlp/dataset/**'
       - '!tests/ut/dataset/**'
       - '!docs/**'
+  push:
+    branches: [ "master" ]
+    paths:
+      - 'mindnlp/**'
+      - '!mindnlp/dataset/**'
+      - '!docs/**'
 
 permissions:
   contents: read
@@ -72,4 +78,4 @@ jobs:
         pip install -r requirements/release_requirements.txt
     - name: Test with pytest
       run: |
-        pytest tests/ut
+        pytest -m 'not dataset' tests/ut
