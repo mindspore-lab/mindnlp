@@ -25,19 +25,6 @@ class RNNEncoder(EncoderBase):
         embedding (Cell): The embedding layer.
         rnn (Cell): The RNN Layer.
 
-    Inputs:
-        - **src_token** (Tensor) - Tokens in the source language with shape [batch, max_len].
-        - **src_length** (Tensor) - Lengths of each sentence with shape [batch].
-        - **mask** (Tensor) - Its elements identify whether the corresponding input token is padding or not.
-          If the value is 1, not padding token. If the value is 0, padding token. Defaults to None.
-
-    Outputs:
-        Tuple, a tuple contains (`output`, `hiddens_n`, `mask`).
-
-        - **output** (Tensor) - Tensor of shape (seq_len, batch_size, num_directions * `hidden_size`).
-        - **hiddens_n** (Tensor) - Tensor of shape (num_directions * `num_layers`, batch_size, `hidden_size`).
-        - **mask** (Tensor) - Mask Tensor used in decoder.
-
     Examples:
         >>> vocab_size = 1000
         >>> embedding_size = 32
@@ -67,6 +54,22 @@ class RNNEncoder(EncoderBase):
         self.rnn = rnn
 
     def construct(self, src_token, src_length=None, mask=None):
+        """
+        Construct method.
+
+        Args:
+            src_token (Tensor): Tokens in the source language with shape [batch, max_len].
+            src_length (Tensor): Lengths of each sentence with shape [batch].
+            mask (Tensor): Its elements identify whether the corresponding input token is padding or not.
+                If the value is 1, not padding token. If the value is 0, padding token. Defaults to None.
+
+        Returns:
+            Tuple, a tuple contains (`output`, `hiddens_n`, `mask`).
+
+            - output (Tensor): Tensor of shape (seq_len, batch_size, num_directions * `hidden_size`).
+            - hiddens_n (Tensor): Tensor of shape (num_directions * `num_layers`, batch_size, `hidden_size`).
+            - mask (Tensor): Mask Tensor used in decoder.
+        """
         if mask is None:
             mask = self._gen_mask(src_token)
         src_token = src_token * mask
@@ -76,7 +79,16 @@ class RNNEncoder(EncoderBase):
         return output, hiddens_n, mask
 
     def reorder_encoder_out(self, encoder_out, new_order):
-        """Reorder encoder output according to `new_order`."""
+        """
+        Reorder encoder output according to `new_order`.
+
+        Args:
+            encoder_out (Union[Tensor, tuple]): The encoder's output.
+            new_order (Tensor): Desired order.
+
+        Returns:
+            Tuple, encoder_out rearranged according to new_order.
+        """
         encoder_output = encoder_out[0]
         encoder_hiddens = encoder_out[1]
         encoder_padding_mask = encoder_out[2]
