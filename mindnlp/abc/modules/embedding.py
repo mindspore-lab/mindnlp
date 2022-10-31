@@ -57,19 +57,27 @@ class TokenEmbedding(nn.Cell):
         return self.dropout_layer(words)
 
     def __len__(self):
-        """embed len"""
+        """
+        embed len
+        """
         return len(self.embed)
 
     def embed_size(self):
-        """embed size"""
+        """
+        embed size
+        """
         return self._embed_size
 
     def num_embeddings(self):
-        """num embeddings"""
+        """
+        num embeddings
+        """
         return len(self._word_vocab.vocab())
 
     def get_word_vocab(self):
-        """get word vocab"""
+        """
+        get word vocab
+        """
         return self._word_vocab.vocab()
 
     @abstractmethod

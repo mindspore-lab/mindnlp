@@ -16,6 +16,7 @@
 Test WNLI
 """
 import os
+import shutil
 import unittest
 import pytest
 import mindspore as ms
@@ -29,10 +30,15 @@ class TestWNLI(unittest.TestCase):
     Test WNLI
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
+
+    @pytest.mark.dataset
     def test_wnli(self):
         """Test wnli"""
         num_lines = {
@@ -40,28 +46,26 @@ class TestWNLI(unittest.TestCase):
             "dev": 71,
             "test": 146,
         }
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         dataset_train, dataset_dev, dataset_test = WNLI(
-            root=root, split=("train", "dev", "test")
+            root=self.root, split=("train", "dev", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = WNLI(root=root, split="train")
-        dataset_dev = WNLI(root=root, split="dev")
-        dataset_test = WNLI(root=root, split="test")
+        dataset_train = WNLI(root=self.root, split="train")
+        dataset_dev = WNLI(root=self.root, split="dev")
+        dataset_test = WNLI(root=self.root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_wnli_by_register(self):
         """test wnli by register"""
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
             "WNLI",
-            root=root,
+            root=self.root,
             split=("train", "dev", "test"),
         )
 
@@ -70,10 +74,15 @@ class TestWNLIProcess(unittest.TestCase):
     Test WNLI_Process
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
+
+    @pytest.mark.dataset
     def test_wnli_process(self):
         r"""
         Test WNLI_Process
@@ -90,7 +99,7 @@ class TestWNLIProcess(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_wnli_process_by_register(self):
         """test wnli process by register"""
         train_dataset, _, _ = WNLI()

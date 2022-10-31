@@ -16,6 +16,7 @@
 Test MNLI
 """
 import os
+import shutil
 import unittest
 import pytest
 import mindspore as ms
@@ -29,10 +30,16 @@ class TestMNLI(unittest.TestCase):
     Test MNLI
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
+
+    @pytest.mark.dataset
+    @pytest.mark.local
     def test_mnli(self):
         """Test mnli"""
         num_lines = {
@@ -40,71 +47,63 @@ class TestMNLI(unittest.TestCase):
             "dev_matched": 9815,
             "dev_mismatched": 9832,
         }
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
-        root = "./lijiaming/data"
         dataset_train, dataset_dev_matched, dataset_dev_mismatched = MNLI(
-            root=root, split=("train", "dev_matched", "dev_mismatched")
+            root=self.root, split=("train", "dev_matched", "dev_mismatched")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev_matched.get_dataset_size() == num_lines["dev_matched"]
         assert dataset_dev_mismatched.get_dataset_size() == num_lines["dev_mismatched"]
 
-        dataset_train = MNLI(root=root, split="train")
-        dataset_dev_matched = MNLI(root=root, split="dev_matched")
-        dataset_dev_mismatched = MNLI(root=root, split="dev_mismatched")
+        dataset_train = MNLI(root=self.root, split="train")
+        dataset_dev_matched = MNLI(root=self.root, split="dev_matched")
+        dataset_dev_mismatched = MNLI(root=self.root, split="dev_mismatched")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev_matched.get_dataset_size() == num_lines["dev_matched"]
         assert dataset_dev_mismatched.get_dataset_size() == num_lines["dev_mismatched"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
+    @pytest.mark.local
     def test_mnli_by_register(self):
         """test mnli by register"""
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
             "MNLI",
-            root=root,
-            split=("train", "dev_matched", "dev_mismatched"),
+            root=self.root,
+            split=("dev_matched", "dev_mismatched"),
         )
 
-class TestMNLIProcess(unittest.TestCase):
-    r"""
-    Test MNLI_Process
-    """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
+    @pytest.mark.local
     def test_mnli_process(self):
         r"""
         Test MNLI_Process
         """
 
-        train_dataset, _, _ = MNLI()
-        train_dataset, vocab = MNLI_Process(train_dataset)
+        dev_dataset = MNLI(split='dev_matched')
+        dev_dataset, vocab = MNLI_Process(dev_dataset)
 
-        train_dataset = train_dataset.create_tuple_iterator()
-        assert (next(train_dataset)[1]).dtype == ms.int32
-        assert (next(train_dataset)[2]).dtype == ms.int32
+        dev_dataset = dev_dataset.create_tuple_iterator()
+        assert (next(dev_dataset)[1]).dtype == ms.int32
+        assert (next(dev_dataset)[2]).dtype == ms.int32
 
         for _, value in vocab.vocab().items():
             assert isinstance(value, int)
             break
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
+    @pytest.mark.local
     def test_mnli_process_by_register(self):
         """test mnli process by register"""
-        train_dataset, _, _ = MNLI()
-        train_dataset, vocab = process('MNLI',
-                                dataset=train_dataset,
+        dev_dataset = MNLI(split='dev_matched')
+        dev_dataset, vocab = process('MNLI',
+                                dataset=dev_dataset,
                                 column=("sentence1", "sentence2"),
                                 tokenizer=BasicTokenizer(),
                                 vocab=None
                                 )
 
-        train_dataset = train_dataset.create_tuple_iterator()
-        assert (next(train_dataset)[1]).dtype == ms.int32
-        assert (next(train_dataset)[2]).dtype == ms.int32
+        dev_dataset = dev_dataset.create_tuple_iterator()
+        assert (next(dev_dataset)[1]).dtype == ms.int32
+        assert (next(dev_dataset)[2]).dtype == ms.int32
 
         for _, value in vocab.vocab().items():
             assert isinstance(value, int)

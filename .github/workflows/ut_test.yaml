@@ -1,13 +1,17 @@
 # This workflow will install Python dependencies, run tests and lint with a single version of Python
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
-name: Run ut tests
+name: Run ut tests(without dataset)
 
 on:
-  push:
-    branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
+    paths:
+      - 'mindnlp/**'
+      - 'tests/ut/**'
+      - '!mindnlp/dataset/**'
+      - '!tests/ut/dataset/**'
+      - '!docs/**'
 
 permissions:
   contents: read
@@ -51,7 +55,7 @@ jobs:
         pip install -r requirements/dev_requirements.txt
     - name: Test with pytest
       run: |
-        pytest tests/ut
+        pytest -m 'not dataset' tests/ut
 
   ms_release_ut_test:
     needs: pylint-check

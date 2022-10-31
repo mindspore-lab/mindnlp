@@ -16,6 +16,7 @@
 Test RTE
 """
 import os
+import shutil
 import unittest
 import pytest
 import mindspore as ms
@@ -29,10 +30,15 @@ class TestRTE(unittest.TestCase):
     Test RTE
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
+
+    @pytest.mark.dataset
     def test_rte(self):
         """Test rte"""
         num_lines = {
@@ -40,40 +46,30 @@ class TestRTE(unittest.TestCase):
             "dev": 277,
             "test": 3000,
         }
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         dataset_train, dataset_dev, dataset_test = RTE(
-            root=root, split=("train", "dev", "test")
+            root=self.root, split=("train", "dev", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = RTE(root=root, split="train")
-        dataset_dev = RTE(root=root, split="dev")
-        dataset_test = RTE(root=root, split="test")
+        dataset_train = RTE(root=self.root, split="train")
+        dataset_dev = RTE(root=self.root, split="dev")
+        dataset_test = RTE(root=self.root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_rte_by_register(self):
         """test rte by register"""
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
             "RTE",
-            root=root,
+            root=self.root,
             split=("train", "dev", "test"),
         )
 
-class TestRTEProcess(unittest.TestCase):
-    r"""
-    Test RTE_Process
-    """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_rte_process(self):
         r"""
         Test RTE_Process
@@ -90,7 +86,7 @@ class TestRTEProcess(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_rte_process_by_register(self):
         """test rte process by register"""
         train_dataset, _, _ = RTE()

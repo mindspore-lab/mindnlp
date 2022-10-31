@@ -16,6 +16,7 @@
 Test SST2
 """
 import os
+import shutil
 import unittest
 import pytest
 import mindspore as ms
@@ -28,10 +29,15 @@ class TestSST2(unittest.TestCase):
     Test SST2
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
+
+    @pytest.mark.dataset
     def test_sst2(self):
         """Test sst2"""
         num_lines = {
@@ -39,40 +45,30 @@ class TestSST2(unittest.TestCase):
             "dev": 872,
             "test": 1821,
         }
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         dataset_train, dataset_dev, dataset_test = SST2(
-            root=root, split=("train", "dev", "test")
+            root=self.root, split=("train", "dev", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = SST2(root=root, split="train")
-        dataset_dev = SST2(root=root, split="dev")
-        dataset_test = SST2(root=root, split="test")
+        dataset_train = SST2(root=self.root, split="train")
+        dataset_dev = SST2(root=self.root, split="dev")
+        dataset_test = SST2(root=self.root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_agnews_by_register(self):
         """test agnews by register"""
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
             "SST2",
-            root=root,
+            root=self.root,
             split=("train", "dev", "test"),
         )
 
-class TestSST2Process(unittest.TestCase):
-    r"""
-    Test SST2_Process
-    """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_sst2_process(self):
         r"""
         Test SST2_Process
@@ -88,7 +84,7 @@ class TestSST2Process(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_sst2_process_by_register(self):
         """test sst2 process by register"""
         train_dataset, _, _ = SST2()

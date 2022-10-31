@@ -16,6 +16,7 @@
 Test STSB
 """
 import os
+import shutil
 import unittest
 import pytest
 import mindspore as ms
@@ -29,10 +30,15 @@ class TestSTSB(unittest.TestCase):
     Test STSB
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
+
+    @pytest.mark.dataset
     def test_stsb(self):
         """Test stsb"""
         num_lines = {
@@ -40,40 +46,30 @@ class TestSTSB(unittest.TestCase):
             "dev": 1500,
             "test": 1379,
         }
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         dataset_train, dataset_dev, dataset_test = STSB(
-            root=root, split=("train", "dev", "test")
+            root=self.root, split=("train", "dev", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = STSB(root=root, split="train")
-        dataset_dev = STSB(root=root, split="dev")
-        dataset_test = STSB(root=root, split="test")
+        dataset_train = STSB(root=self.root, split="train")
+        dataset_dev = STSB(root=self.root, split="dev")
+        dataset_test = STSB(root=self.root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_agnews_by_register(self):
         """test agnews by register"""
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
             "STSB",
-            root=root,
+            root=self.root,
             split=("train", "dev", "test"),
         )
 
-class TestSTSBProcess(unittest.TestCase):
-    r"""
-    Test STSB_Process
-    """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_stsb_process(self):
         r"""
         Test STSB_Process
@@ -90,7 +86,7 @@ class TestSTSBProcess(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_stsb_process_by_register(self):
         """test stsb process by register"""
         train_dataset, _, _ = STSB()

@@ -16,6 +16,7 @@
 Test CoNLL2000Chunking
 """
 import os
+import shutil
 import unittest
 import pytest
 from mindnlp.dataset import CoNLL2000Chunking
@@ -27,34 +28,37 @@ class TestCoNLL2000Chunking(unittest.TestCase):
     Test CoNLL2000Chunking
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
+
+    @pytest.mark.dataset
     def test_conll2000chunking(self):
         """Test CoNLL2000Chunking"""
         num_lines = {
             "train": 8936,
             "test": 2012,
         }
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         dataset_train, dataset_test = CoNLL2000Chunking(
-            root=root, split=("train", "test")
+            root=self.root, split=("train", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = CoNLL2000Chunking(root=root, split="train")
-        dataset_test = CoNLL2000Chunking(root=root, split="test")
+        dataset_train = CoNLL2000Chunking(root=self.root, split="train")
+        dataset_test = CoNLL2000Chunking(root=self.root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_conll2000chunking_by_register(self):
         """test conll2000chunking by register"""
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
             "CoNLL2000Chunking",
-            root=root,
+            root=self.root,
             split=("train", "test"),
         )

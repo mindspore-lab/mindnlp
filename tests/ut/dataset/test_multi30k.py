@@ -16,6 +16,7 @@
 Test Multi30k
 """
 import os
+import shutil
 import unittest
 import pytest
 import mindspore
@@ -29,10 +30,15 @@ class TestMulti30k(unittest.TestCase):
     Test Multi30k
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
+
+    @pytest.mark.dataset
     def test_multi30k(self):
         """Test Multi30k"""
         num_lines = {
@@ -40,8 +46,7 @@ class TestMulti30k(unittest.TestCase):
             "valid": 1014,
             "test": 1000,
         }
-        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        dataset_train, dataset_valid, dataset_test = Multi30k(root=root,
+        dataset_train, dataset_valid, dataset_test = Multi30k(root=self.root,
                                                               split=(
                                                                   'train', 'valid', 'test'),
                                                               language_pair=(
@@ -52,33 +57,23 @@ class TestMulti30k(unittest.TestCase):
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
         dataset_train = Multi30k(
-            root=root, split='train', language_pair=('de', 'en'))
+            root=self.root, split='train', language_pair=('de', 'en'))
         dataset_valid = Multi30k(
-            root=root, split='valid', language_pair=('en', 'de'))
+            root=self.root, split='valid', language_pair=('en', 'de'))
         dataset_test = Multi30k(
-            root=root, split='test', language_pair=('de', 'en'))
+            root=self.root, split='test', language_pair=('de', 'en'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_valid.get_dataset_size() == num_lines["valid"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_multi30k_by_register(self):
         """test multi30k by register"""
-        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
         _ = load('multi30k',
-                 root=root,
+                 root=self.root,
                  split=('train', 'valid', 'test'),
                  language_pair=('de', 'en')
                  )
-
-
-class TestMulti30kProcess(unittest.TestCase):
-    r"""
-    Test Multi30K Process
-    """
-
-    def setUp(self):
-        self.input = None
 
     def test_multi30k_process_no_vocab(self):
         r"""

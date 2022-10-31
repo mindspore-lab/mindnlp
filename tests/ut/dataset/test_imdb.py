@@ -16,6 +16,7 @@
 Test IMDB
 """
 import os
+import shutil
 import unittest
 import pytest
 from mindnlp.dataset import IMDB
@@ -27,34 +28,37 @@ class TestIMDB(unittest.TestCase):
     Test IMDB
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
+
+    @pytest.mark.dataset
     def test_imdb(self):
         """Test imdb"""
         num_lines = {
             "train": 25000,
             "test": 25000,
         }
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         dataset_train, dataset_test = IMDB(
-            root=root, split=("train", "test")
+            root=self.root, split=("train", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = IMDB(root=root, split="train")
-        dataset_test = IMDB(root=root, split="test")
+        dataset_train = IMDB(root=self.root, split="train")
+        dataset_test = IMDB(root=self.root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_imdb_by_register(self):
         """test imdb by register"""
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
             "IMDB",
-            root=root,
+            root=self.root,
             split=("train", "test"),
         )

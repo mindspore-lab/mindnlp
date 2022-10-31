@@ -16,6 +16,7 @@
 Test UDPOS
 """
 import os
+import shutil
 import unittest
 import pytest
 from mindnlp.dataset import UDPOS
@@ -27,10 +28,15 @@ class TestUDPOS(unittest.TestCase):
     Test UDPOS
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
+
+    @pytest.mark.dataset
     def test_udpos(self):
         """Test UDPOS"""
         num_lines = {
@@ -38,27 +44,25 @@ class TestUDPOS(unittest.TestCase):
             "dev": 2002,
             "test": 2077,
         }
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         dataset_train, dataset_dev, dataset_test = UDPOS(
-            root=root, split=("train", "dev", "test")
+            root=self.root, split=("train", "dev", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = UDPOS(root=root, split="train")
-        dataset_dev = UDPOS(root=root, split="dev")
-        dataset_test = UDPOS(root=root, split="test")
+        dataset_train = UDPOS(root=self.root, split="train")
+        dataset_dev = UDPOS(root=self.root, split="dev")
+        dataset_test = UDPOS(root=self.root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
     def test_udpos_by_register(self):
         """test udpos by register"""
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
         _ = load(
             "UDPOS",
-            root=root,
+            root=self.root,
             split=("train", "dev", "test"),
         )

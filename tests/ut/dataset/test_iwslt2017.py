@@ -16,6 +16,7 @@
 Test IWSLT2017
 """
 import os
+import shutil
 import unittest
 import pytest
 import mindspore
@@ -29,17 +30,22 @@ class TestIWSLT2017(unittest.TestCase):
     Test IWSLT2017
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
+
+    @pytest.mark.dataset
+    @pytest.mark.local
     def test_iwslt2017(self):
         """Test IWSLT2017"""
         num_lines = {
             "train": 206112,
         }
-        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        dataset_train, _, _ = IWSLT2017(root=root,
+        dataset_train, _, _ = IWSLT2017(root=self.root,
                                         split=(
                                             'train', 'valid', 'test'),
                                         language_pair=(
@@ -48,29 +54,21 @@ class TestIWSLT2017(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
 
         dataset_train = IWSLT2017(
-            root=root, split='train', language_pair=('de', 'en'))
+            root=self.root, split='train', language_pair=('de', 'en'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
+    @pytest.mark.local
     def test_iwslt2017_by_register(self):
         """test iwslt2017 by register"""
-        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
         _ = load('iwslt2017',
-                 root=root,
+                 root=self.root,
                  split=('train', 'valid', 'test'),
                  language_pair=('de', 'en')
                  )
 
-
-class TestIWSLT2017Process(unittest.TestCase):
-    r"""
-    Test IWSLT2017 Process
-    """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
+    @pytest.mark.local
     def test_iwslt2017_process_no_vocab(self):
         r"""
         Test IWSLT2017 process with no vocab
@@ -93,7 +91,8 @@ class TestIWSLT2017Process(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
+    @pytest.mark.local
     def test_iwslt2017_process_no_vocab_by_register(self):
         '''
         Test IWSLT2017 process with no vocab by register

@@ -16,6 +16,7 @@
 Test IWSLT2016
 """
 import os
+import shutil
 import unittest
 import pytest
 from mindnlp.dataset import IWSLT2016
@@ -27,17 +28,22 @@ class TestIWSLT2016(unittest.TestCase):
     Test IWSLT2016
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
+
+    @pytest.mark.dataset
+    @pytest.mark.local
     def test_iwslt2016(self):
         """Test IWSLT2016"""
         num_lines = {
             "train": 196884,
         }
-        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        dataset_train, _, _ = IWSLT2016(root=root,
+        dataset_train, _, _ = IWSLT2016(root=self.root,
                                         split=(
                                             'train', 'valid', 'test'),
                                         language_pair=(
@@ -46,15 +52,15 @@ class TestIWSLT2016(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
 
         dataset_train = IWSLT2016(
-            root=root, split='train', language_pair=('de', 'en'))
+            root=self.root, split='train', language_pair=('de', 'en'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
+    @pytest.mark.local
     def test_iwslt2016_by_register(self):
         """test iwslt2016 by register"""
-        root = os.path.join(os.path.expanduser('~'), ".mindnlp")
         _ = load('iwslt2016',
-                 root=root,
+                 root=self.root,
                  split=('train', 'valid', 'test'),
                  language_pair=('de', 'en')
                  )

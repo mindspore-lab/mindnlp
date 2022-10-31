@@ -67,6 +67,7 @@ def CoLA(
 ):
     r"""
     Load the CoLA dataset
+
     Args:
         root (str): Directory where the datasets are saved.
             Default:~/.mindnlp
@@ -76,8 +77,8 @@ def CoLA(
 
     Returns:
         - **datasets_list** (list) -A list of loaded datasets.
-            If only one type of dataset is specified,such as 'trian',
-            this dataset is returned instead of a list of datasets.
+          If only one type of dataset is specified,such as 'trian',
+          this dataset is returned instead of a list of datasets.
 
     Examples:
         >>> root = os.path.join(os.path.expanduser('~'), ".mindnlp")

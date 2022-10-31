@@ -36,6 +36,7 @@ logging.getLogger().setLevel(logging.INFO)
 class Fasttext(TokenEmbedding):
     r"""
     Create vocab and Embedding from a given pre-trained vector file.
+
     Args:
         vocab (Vocab): Passins into Vocab for initialization.
         init_embed (Tensor): Passing into Tensor,use these values to initialize Embedding directly.

@@ -16,6 +16,7 @@
 Test QQP
 """
 import os
+import shutil
 import unittest
 import pytest
 import mindspore as ms
@@ -29,34 +30,32 @@ class TestQQP(unittest.TestCase):
     Test QQP
     """
 
-    def setUp(self):
-        self.input = None
+    @classmethod
+    def setUpClass(cls):
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
+
+    @pytest.mark.dataset
+    @pytest.mark.local
     def test_qqp(self):
         """Test qqp"""
         num_lines = {
             "train": 404290,
         }
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
-        dataset_train = QQP(root=root)
+        dataset_train = QQP(root=self.root)
         assert dataset_train.get_dataset_size() == num_lines["train"]
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
+    @pytest.mark.local
     def test_qqp_by_register(self):
         """test qqp by register"""
-        root = os.path.join(os.path.expanduser("~"), ".mindnlp")
-        _ = load("QQP", root=root)
+        _ = load("QQP", root=self.root)
 
-class TestQQPProcess(unittest.TestCase):
-    r"""
-    Test QQP_Process
-    """
-
-    def setUp(self):
-        self.input = None
-
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
+    @pytest.mark.local
     def test_qqp_process(self):
         r"""
         Test QQP_Process
@@ -73,7 +72,8 @@ class TestQQPProcess(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.skip(reason="this ut has already tested")
+    @pytest.mark.dataset
+    @pytest.mark.local
     def test_qqp_process_by_register(self):
         """test qqp process by register"""
         train_dataset = QQP()
