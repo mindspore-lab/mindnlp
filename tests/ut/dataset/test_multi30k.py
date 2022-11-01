@@ -75,13 +75,14 @@ class TestMulti30k(unittest.TestCase):
                  language_pair=('de', 'en')
                  )
 
+    @pytest.mark.dataset
     def test_multi30k_process_no_vocab(self):
         r"""
         Test multi30k process with no vocab
         """
 
         test_dataset = Multi30k(
-            root=os.path.join(os.path.expanduser('~'), ".mindnlp"),
+            root=self.root,
             split="test",
             language_pair=("de", "en")
         )
@@ -97,13 +98,14 @@ class TestMulti30k(unittest.TestCase):
             assert isinstance(value, int)
             break
 
+    @pytest.mark.dataset
     def test_multi30k_process_no_vocab_by_register(self):
         '''
         Test multi30k process with no vocab by register
         '''
 
         test_dataset = Multi30k(
-            root=os.path.join(os.path.expanduser('~'), ".mindnlp"),
+            root=self.root,
             split="test",
             language_pair=("de", "en")
         )
