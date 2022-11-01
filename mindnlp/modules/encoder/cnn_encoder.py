@@ -97,8 +97,8 @@ class CNNEncoder(EncoderBase):
                 If the value is 1, not padding token. If the value is 0, padding token. Defaults to None.
 
         Returns:
-            Tensor. If output_dim is None, the result shape is of `(batch_size, len(convs) * num_filter)`
-                and dtype is `float`; If not, the result shape is of `(batch_size, output_dim)`.
+            Tensor, If output_dim is None, the result shape is of `(batch_size, len(convs) * num_filter)`
+            and dtype is `float`; If not, the result shape is of `(batch_size, output_dim)`.
         """
         if mask is None:
             mask = self._gen_mask(src_token)
