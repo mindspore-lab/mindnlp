@@ -75,7 +75,7 @@ class TestIWSLT2017(unittest.TestCase):
         """
 
         test_dataset = IWSLT2017(
-            root=os.path.join(os.path.expanduser('~'), ".mindnlp"),
+            root=self.root,
             split="test",
             language_pair=("de", "en"),
         )
@@ -99,7 +99,7 @@ class TestIWSLT2017(unittest.TestCase):
         '''
 
         test_dataset = IWSLT2017(
-            root=os.path.join(os.path.expanduser('~'), ".mindnlp"),
+            root=self.root,
             split="test",
             language_pair=("de", "en")
         )
