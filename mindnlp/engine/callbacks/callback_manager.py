@@ -35,7 +35,14 @@ def _transfer(func):
     return wrapper
 
 class CallbackManager(Callback):
-    """Callback Manager."""
+    """
+    Callback Manager.
+
+    Args:
+        callbacks (Optional[list[Callback], Callback]): List of callback objects which should be executed
+            while training. Default: None.
+
+    """
 
     def __init__(self, callbacks):
         self.callbacks = callbacks
@@ -68,11 +75,11 @@ class CallbackManager(Callback):
 
     @_transfer
     def train_step_begin(self, run_context):
-        """Called before each step beginning."""
+        """Called before each train step beginning."""
 
     @_transfer
     def train_step_end(self, run_context):
-        """Called after each step finished."""
+        """Called after each train step finished."""
 
     @_transfer
     def forward_begin(self, run_context):
@@ -108,11 +115,11 @@ class CallbackManager(Callback):
 
     @_transfer
     def evaluate_begin(self, run_context):
-        """Called before evaluating epoch/steps/ds_size."""
+        """Called before evaluating."""
 
     @_transfer
     def evaluate_end(self, run_context):
-        """Called after evaluating epoch/steps/ds_size."""
+        """Called after evaluating."""
 
     @_transfer
     def exception(self, run_context):

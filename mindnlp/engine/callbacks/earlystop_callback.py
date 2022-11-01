@@ -33,6 +33,13 @@ class EarlyStopCallback(Callback):
         self.larger_better = larger_better
 
     def evaluate_end(self, run_context):
+        """
+        Called after evaluating.
+
+        Args:
+            run_context (RunContext): Information about the model.
+
+        """
         metrics_values = run_context.metrics_values
         if metrics_values is None:
             return
@@ -47,7 +54,13 @@ class EarlyStopCallback(Callback):
                         f"metric `{run_context.metrics_names}`(best value: {self.best_metrics_values})")
 
     def is_better_metric_value(self, metrics_values):
-        """Compare each metrics values with the best metrics values."""
+        """
+        Compare each metrics values with the best metrics values.
+
+        Args:
+            metrics_values (float): metrics values used to compared with the best metrics values so far.
+
+        """
         if self.best_metrics_values == {}:
             return True
         values_larger = (metrics_values > self.best_metrics_values)

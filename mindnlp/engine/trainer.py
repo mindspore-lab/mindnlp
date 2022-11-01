@@ -63,12 +63,11 @@ class Trainer:
             and parallel if needed. Default: None.
         callbacks (Optional[list[Callback], Callback]): List of callback objects which should be executed
             while training. Default: None.
-        do_eval (bool): Do evaluation or not.
 
     """
 
     def __init__(self, network=None, train_dataset=None, eval_dataset=None, metrics=None, epochs=10, batch_size=2,
-                 loss_fn=None, optimizer=None, callbacks=None, do_eval=True):
+                 loss_fn=None, optimizer=None, callbacks=None):
         self.network = network
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
@@ -78,7 +77,6 @@ class Trainer:
         self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.callbacks = callbacks
-        self.do_eval = do_eval
         self.cur_epoch_nums = 0
         self.cur_step_nums = 0
         self.earlystop = False
@@ -104,19 +102,20 @@ class Trainer:
     def _check_callbacks_type(self):
         for callback in self.callbacks:
             if isinstance(callback, EarlyStopCallback):
-                raise ValueError("EarlyStopCallback is not effective when do_eval is False.")
+                raise ValueError("EarlyStopCallback is not effective when eval_dataset is None.")
             if isinstance(callback, BestModelCallback):
-                raise ValueError("BestModelCallback is not effective when do_eval is False.")
+                raise ValueError("BestModelCallback is not effective when eval_dataset is None.")
 
     def _prepare_eval(self):
-        if self.do_eval:
-            if self.eval_dataset is None:
-                raise ValueError("If do_eval is true, eval_dataset must be not None.")
+        if self.eval_dataset is not None and self.metrics is not None:
             self.evaluator = Evaluator(network=self.network, eval_dataset=self.eval_dataset, metrics=self.metrics,
-                                   batch_size=4, callbacks=self.callbacks)
-        else:
-            self._check_callbacks_type()
+                                batch_size=4, callbacks=self.callbacks)
+        elif self.eval_dataset is None and self.metrics is None:
+            if self.callbacks:
+                self._check_callbacks_type()
             self.evaluator = None
+        else:
+            raise ValueError("For evaluation in training process, both eval dataset and metrics should be not None.")
 
     def _check_amp_level_arg(self, optimizer, amp_level):
         """Check mixed-precision argument rules."""
@@ -139,11 +138,13 @@ class Trainer:
                                "please create a new dataset.")
 
     def run(self, tgt_columns=None, jit=False):
-        """Training function entry.
+        """
+        Training process entry.
 
         Args:
-            tgt_columns (str/[str]): label(s) name(s) in dataset.
-            jit (bool): if jit is False, trainer will be run under `pynative` mode, or under `graph` mode.
+            tgt_columns (Optional[list[str], str]): Target label column names for loss function.
+            jit (bool): Whether use Just-In-Time compile.
+
         """
 
         args_dict = vars(self)

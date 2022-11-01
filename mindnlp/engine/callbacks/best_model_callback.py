@@ -45,7 +45,7 @@ class BestModelCallback(Callback):
 
     def evaluate_end(self, run_context):
         """
-        Called after evaluating epoch/steps/ds_size.
+        Called after evaluating.
 
         Args:
             run_context (RunContext): Information about the model.
@@ -59,13 +59,13 @@ class BestModelCallback(Callback):
             self._save_model(run_context=run_context)
 
     def train_end(self, run_context):
-        '''
+        """
         Called once after network training and load the best model params.
 
         Args:
             run_context (RunContext): Information about the model.
 
-        '''
+        """
         if self.auto_load:
             print(f"Loading best model from {self.save_path} with {run_context.metrics_names}: "
                   f"{self.best_metrics_values}...")
@@ -81,7 +81,13 @@ class BestModelCallback(Callback):
         #         only_state_dict=self.only_state_dict)
 
     def is_better_metric_value(self, metrics_values):
-        """Compare each metrics values with the best metrics values."""
+        """
+        Compare each metrics values with the best metrics values.
+
+        Args:
+            metrics_values (float): metrics values used to compared with the best metrics values so far.
+
+        """
         if self.best_metrics_values == []:
             return True
         values_larger = (metrics_values > self.best_metrics_values)

@@ -181,3 +181,10 @@ class TestTrainerRun(unittest.TestCase):
                           metrics=self.metric, epochs=2, batch_size=4, optimizer=self.optimizer,
                           loss_fn=self.loss_fn)
         trainer.run(tgt_columns='length', jit=True)
+
+    def test_no_eval_in_trainer(self):
+        """test_eval_in_trainer"""
+        train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
+        trainer = Trainer(network=self.net, train_dataset=train_dataset, epochs=2, batch_size=4,
+                          optimizer=self.optimizer, loss_fn=self.loss_fn)
+        trainer.run(tgt_columns='length', jit=True)
