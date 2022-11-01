@@ -8,12 +8,12 @@
 import os
 import sys
 import mindnlp
-sys.path.append(os.path.relpath('../..'))
+sys.path.append(os.path.relpath('..'))
 
 
 project = 'MindNLP'
-copyright = 'MindSpore Team and CQU NLP Team'
-author = 'MindSpore Team and CQU NLP Team'
+copyright = 'MindSpore and CQU NLP Team'
+author = 'MindSpore and CQU NLP Team'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
