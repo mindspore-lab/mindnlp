@@ -367,7 +367,6 @@ def match_file(filename: str, cache_dir: str) -> str:
         >>> name = 'aclImdb_v1.tar.gz'
         >>> path = get_cache_path()
         >>> match_file_result = match_file(name, path)
-        ''
 
     """
     files = os.listdir(cache_dir)

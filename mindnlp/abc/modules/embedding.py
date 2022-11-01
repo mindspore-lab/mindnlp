@@ -29,7 +29,7 @@ class TokenEmbedding(nn.Cell):
     Create vocab and Embedding from a given pre-trained vector file.
 
     Args:
-        vocab (Vocab) : Passins into Vocab for initialization.
+        vocab (Vocab): Passins into Vocab for initialization.
         init_embed (Tensor): Passing into Vocab and Tensor,use these values to initialize Embedding directly.
         requires_grad (bool): Whether this parameter needs to be gradient to update.
         dropout (float): Dropout of the output of Embedding.
@@ -51,7 +51,7 @@ class TokenEmbedding(nn.Cell):
             words (Tensor): Tensor about to be dropout.
 
         Returns:
-            - **self.dropout_layer(words)** (Tensor) - Dropout processed data.
+            Tensor, Dropout processed data.
 
         """
         return self.dropout_layer(words)

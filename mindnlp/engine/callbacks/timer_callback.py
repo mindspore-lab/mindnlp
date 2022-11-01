@@ -82,6 +82,7 @@ class TimerCallback(Callback):
 
     Args:
         print_steps (int): When to print time information.Default:-1.
+
             - -1: print once at the end of each epoch.
             - positive number n: print once n steps.
 
