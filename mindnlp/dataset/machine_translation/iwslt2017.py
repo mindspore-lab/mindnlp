@@ -146,14 +146,14 @@ def IWSLT2017_Process(dataset, column = 'translation', tokenizer = BasicTokenize
     a function transforms specific language column in IWSLT2017 dataset into tensors
 
     Args:
-        dataset (GeneratorDataset|ZipDataset): IWSLT2017 dataset
+        dataset (GeneratorDataset, ZipDataset): IWSLT2017 dataset
         column (str): The language column name in IWSLT2017
         tokenizer (TextTensorOperation): Tokenizer you what to used
         vocab (Vocab): The vocab you use, defaults to None. If None, a new vocab will be created.
 
     Returns:
-        - **dataset** (MapDataset) -dataset after process
-        - **newVocab** (Vocab) -new vocab created from dataset if 'vocab' is None
+        - MapDataset, dataset after process.
+        - Vocab, new vocab created from dataset if 'vocab' is None.
 
     Raises:
         TypeError: If `language` is not string.

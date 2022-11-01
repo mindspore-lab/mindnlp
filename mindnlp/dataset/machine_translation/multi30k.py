@@ -148,17 +148,17 @@ def Multi30k_Process(dataset, column = 'en', tokenizer = BasicTokenizer(), vocab
     a function transforms multi30K dataset into tensors
 
     Args:
-        dataset (ZipDataset): Multi30K dataset
-        column (str): The language column name in multi30K, 'de' or 'en', defaults to 'en'
-        tokenizer (TextTensorOperation): Tokenizer you what to used
+        dataset (ZipDataset): Multi30K dataset.
+        column (str): The language column name in multi30K, 'de' or 'en', defaults to 'en'.
+        tokenizer (TextTensorOperation): Tokenizer you what to used.
         vocab (Vocab): The vocab you use, defaults to None. If None, a new vocab will be created.
 
     Returns:
-        - **dataset** (MapDataset) -dataset after process
-        - **newVocab** (Vocab) -new vocab created from dataset
+        - MapDataset, dataset after process.
+        - Vocab, new vocab created from dataset if 'vocab'=None.
 
     Raises:
-        AssertionError: arg `column` not in ['en', 'de']
+        AssertionError: arg `column` not in ['en', 'de'].
         TypeError: If `column` is not a string.
 
     Examples:
