@@ -12,10 +12,10 @@ MindNLP Documentation
    :maxdepth: 1
    :caption: API Reference
 
-   abc
-   common
-   dataset
-   engine
-   modules
-   utils
+   api/abc
+   api/common
+   api/dataset
+   api/engine
+   api/modules
+   api/utils
 
