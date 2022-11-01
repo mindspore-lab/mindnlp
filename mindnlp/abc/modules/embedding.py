@@ -27,17 +27,12 @@ from mindspore.dataset.text.utils import Vocab
 class TokenEmbedding(nn.Cell):
     r"""
     Create vocab and Embedding from a given pre-trained vector file.
+
     Args:
         vocab (Vocab) : Passins into Vocab for initialization.
-        init_embed : Passing into Vocab and Tensor,use these values to initialize Embedding directly.
+        init_embed (Tensor): Passing into Vocab and Tensor,use these values to initialize Embedding directly.
         requires_grad (bool): Whether this parameter needs to be gradient to update.
         dropout (float): Dropout of the output of Embedding.
-
-    Inputs:
-        - **ids** (Tensor) - Ids to query.
-
-    Raises:
-        NotImplementedError: If construct interface is not called.
 
     """
     def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.5):
@@ -62,21 +57,38 @@ class TokenEmbedding(nn.Cell):
         return self.dropout_layer(words)
 
     def __len__(self):
-        """embed len"""
+        """
+        embed len
+        """
         return len(self.embed)
 
     def embed_size(self):
-        """embed size"""
+        """
+        embed size
+        """
         return self._embed_size
 
     def num_embeddings(self):
-        """num embeddings"""
+        """
+        num embeddings
+        """
         return len(self._word_vocab.vocab())
 
     def get_word_vocab(self):
-        """get word vocab"""
+        """
+        get word vocab
+        """
         return self._word_vocab.vocab()
 
     @abstractmethod
     def construct(self, ids):
+        r"""
+
+        Args:
+            ids (Tensor): Ids to query.
+
+        Raises:
+            NotImplementedError: If construct interface is not called.
+
+        """
         raise NotImplementedError(f'Function `construct` not implemented in {self.__class__.__name__}')
