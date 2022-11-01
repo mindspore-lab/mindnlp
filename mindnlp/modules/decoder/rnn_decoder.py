@@ -29,40 +29,36 @@ class RNNDecoder(DecoderBase):
     Args:
         embedding (Cell): The embedding layer.
         rnns (list): The list of RNN Layers.
-        dropout_in (float, int): If not 0, append `Dropout` layer on the inputs of each
-          RNN layer. Default 0. The range of dropout is [0.0, 1.0).
-        dropout_out (float, int): If not 0, append `Dropout` layer on the outputs of each
-          RNN layer except the last layer. Default 0. The range of dropout is [0.0, 1.0).
+        dropout_in (Union[float, int]): If not 0, append `Dropout` layer on the inputs of each
+            RNN layer. Default 0. The range of dropout is [0.0, 1.0).
+        dropout_out (Union[float, int]): If not 0, append `Dropout` layer on the outputs of each
+            RNN layer except the last layer. Default 0. The range of dropout is [0.0, 1.0).
         attention (bool): Whether to use attention. Default: True.
-        encoder_output_units (int): Number of features of encoder output.
-
-    Inputs:
-        - **prev_output_tokens** (Tensor) - Output tokens for teacher forcing with shape [batch, tgt_len].
-        - **encoder_out** (Tensor) - Output of encoder.
-
-    Outputs:
-        Tuple, a tuple contains (`output`, `attn_scores`).
-
-        - **output** (Tensor) - Tensor of shape (batch, `tgt_len`, `vocab_size`).
-        - **attn_scores** (Tensor) - Tensor of shape (`tgt_len`, batch, `embedding_size`)
-          if attention=True otherwise None.
+        encoder_output_units (int): Number of features of encoder output. Default: 512.
 
     Examples:
         >>> vocab_size = 1000
         >>> embedding_size = 32
         >>> hidden_size = 16
         >>> num_layers = 2
-        >>> has_bias = True
-        >>> dropout = 0.1
-        >>> bidirectional = False
+        >>> dropout_in = 0.1
+        >>> dropout_out = 0.1
         >>> encoder_output_units = 16
         >>> embedding = nn.Embedding(vocab_size, embedding_size)
-        >>> rnn = nn.RNN(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
-        ...              batch_first=True, dropout=dropout, bidirectional=bidirectional)
-        >>> rnn_decoder = Seq2SeqDecoder(embedding, rnn, dropout=dropout, attention=True,
-        ...                              encoder_output_units=encoder_output_units)
+        >>> input_feed_size = 0 if encoder_output_units == 0 else hidden_size
+        >>> rnns = [
+        ...     nn.RNNCell(
+        ...         input_size=embedding_size + input_feed_size
+        ...         if layer == 0
+        ...             else hidden_size,
+        ...         hidden_size=hidden_size
+        ...         )
+        ...         for layer in range(num_layers)
+        >>> ]
+        >>> rnn_decoder = RNNDecoder(embedding, rnns, dropout_in=dropout_in, dropout_out=dropout_out,
+        ...                          attention=True, encoder_output_units=encoder_output_units, mode="RNN")
         >>> tgt_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
-        >>> encoder_output = Tensor(np.ones([8, 16, 16]), mindspore.int32)
+        >>> encoder_output = Tensor(np.ones([8, 16, 16]), mindspore.float32)
         >>> hiddens_n = Tensor(np.ones([2, 8, 16]), mindspore.float32)
         >>> mask = Tensor(np.ones([8, 16]), mindspore.int32)
         >>> output, attn_scores = rnn_decoder(tgt_tokens, (encoder_output, hiddens_n, mask))
@@ -72,7 +68,7 @@ class RNNDecoder(DecoderBase):
         (8, 16, 16)
     """
 
-    def __init__(self, embedding, rnns, dropout_in=0, dropout_out=0, attention=None,
+    def __init__(self, embedding, rnns, dropout_in=0, dropout_out=0, attention=True,
                  encoder_output_units=512, mode="RNN"):
         super().__init__(embedding)
         self.dropout_in_module = nn.Dropout(1 - dropout_in)
@@ -93,13 +89,27 @@ class RNNDecoder(DecoderBase):
         self.fc_out = nn.Dense(self.hidden_size, self.vocab_size)
 
     def construct(self, prev_output_tokens, encoder_out=None):
+        """
+        Construct method.
+
+        Args:
+            prev_output_tokens (Tensor): Output tokens for teacher forcing with shape [batch, tgt_len].
+            encoder_out (Tensor): Output of encoder. Default: None.
+
+        Returns:
+            Tuple, a tuple contains (`output`, `attn_scores`).
+
+            - output (Tensor): Tensor of shape (batch, `tgt_len`, `vocab_size`).
+            - attn_scores (Tensor): Tensor of shape (batch, `tgt_len`, `src_len`)
+              if attention=True otherwise None.
+        """
         output, attn_scores = self.extract_features(prev_output_tokens, encoder_out)
         output = self.output_layer(output)
         return output, attn_scores
 
     def _attention_layer(self, hidden, encoder_output, mask):
         """
-        Attention method
+        Attention method.
         """
         # hidden: [batch, hidden_size]
         # encoder_output: [batch, src_len, encoder_output_units]
@@ -124,7 +134,18 @@ class RNNDecoder(DecoderBase):
 
     def extract_features(self, prev_output_tokens, encoder_out=None):
         """
-        Extract features of encoder output
+        Extract features of encoder output.
+
+        Args:
+            prev_output_tokens (Tensor): Output tokens for teacher forcing with shape [batch, tgt_len].
+            encoder_out (Tensor): Output of encoder. Default: None.
+
+        Returns:
+            Tuple, a tuple contains (`output`, `attn_scores`).
+
+            - output (Tensor): The extracted feature Tensor of shape (batch, `tgt_len`, `hidden_size`).
+            - attn_scores (Tensor): Tensor of shape (batch, `tgt_len`, `src_len`)
+              if attention=True otherwise None.
         """
         batch_size, tgt_len = prev_output_tokens.shape
 
@@ -213,7 +234,13 @@ class RNNDecoder(DecoderBase):
 
     def output_layer(self, features):
         """
-        Project features to the vocabulary size
+        Project features to the vocabulary size.
+
+        Args:
+            features (Tensor): The extracted feature Tensor.
+
+        Returns:
+            Tensor, the output of decoder.
         """
         output = self.fc_out(features)  # [batch, tgt_len, vocab_size]
         return output

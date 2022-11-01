@@ -23,13 +23,6 @@ class DecoderBase(nn.Cell):
 
     Args:
         embedding (Cell): The embedding layer.
-
-    Inputs:
-        - **prev_output_tokens** (Tensor) - output tokens for teacher forcing with shape [batch, tgt_len].
-        - **encoder_out** (Tensor) - output of encoder.
-
-    Returns:
-        - **result** (Tensor) - The result vector of decoder.
     """
 
     def __init__(self, embedding):
@@ -39,20 +32,51 @@ class DecoderBase(nn.Cell):
         self.log_softmax = nn.LogSoftmax()
 
     def construct(self, prev_output_tokens, encoder_out=None):
+        """
+        Construct method.
+
+        Args:
+            prev_output_tokens (Tensor): output tokens for teacher forcing with shape [batch, tgt_len].
+            encoder_out (Tensor): output of encoder. Defaults to None.
+
+        Returns:
+            Tensor, The result vector of decoder.
+        """
         result = self.extract_features(prev_output_tokens, encoder_out)
         result = self.output_layer(result)
         return result
 
     def extract_features(self, prev_output_tokens, encoder_out=None):
-        """Extract features of encoder output"""
+        """
+        Extract features of encoder output.
+
+        Args:
+            prev_output_tokens (Tensor): output tokens for teacher forcing with shape [batch, tgt_len].
+            encoder_out (Tensor): output of encoder. Defaults to None.
+        """
         raise NotImplementedError
 
     def output_layer(self, features):
-        """Project features to the default output size"""
+        """
+        Project features to the default output size.
+
+        Args:
+            features (Tensor): The extracted features.
+        """
         raise NotImplementedError
 
     def get_normalized_probs(self, net_output, log_probs):
-        """Get normalized probabilities from net's output"""
+        """
+        Get normalized probabilities from net's output.
+
+        Args:
+            net_output (tuple): The net's output.
+            log_probs (bool): Decide whether to use log_softmax or softmax. If True, use log_softmax.
+                If False, user softmax.
+
+        Return:
+            Tensor, the ormalized probabilities from net's output.
+        """
         logits = net_output[0]
         if log_probs:
             result = self.log_softmax(logits)
