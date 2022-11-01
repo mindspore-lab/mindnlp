@@ -15,14 +15,6 @@ amp
    :undoc-members:
    :show-inheritance:
 
-functional
---------------------------------
-
-.. automodule:: mindnlp.common.functional
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 loss
 --------------------------
 

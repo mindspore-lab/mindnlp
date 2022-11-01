@@ -1,6 +1,14 @@
+Modules
+=======================
 
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 2
 
-   mindnlp
+   modules/embeddings
+   modules/encoder
+   modules/decoder
+   modules/attentions
+
+
+
