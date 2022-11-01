@@ -1,4 +1,4 @@
-machine\_translation
+Machine Translation
 ============================================
 
 
