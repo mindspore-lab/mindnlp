@@ -19,3 +19,4 @@ Abstract classes for Modules.
 
 from .encoder import EncoderBase
 from .decoder import DecoderBase
+from .embedding import TokenEmbedding

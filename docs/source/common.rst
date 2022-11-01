@@ -1,5 +1,10 @@
-common
-======================
+.. role:: hidden
+    :class: hidden-section
+
+.. module:: mindnlp.common
+
+Common
+==============
 
 
 amp

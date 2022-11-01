@@ -34,8 +34,9 @@ class TestAmazonReviewPolarity(unittest.TestCase):
     def setUpClass(cls):
         cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
 
-    def tearDownClass(self):
-        shutil.rmtree(self.root)
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root)
 
     @pytest.mark.dataset
     @pytest.mark.local
