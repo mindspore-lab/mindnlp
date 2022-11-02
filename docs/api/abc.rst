@@ -1,9 +1,3 @@
-.. role:: hidden
-    :class: hidden-section
-
-.. module:: mindnlp.abc
-
-
 Abstract Class
 ==============
 
