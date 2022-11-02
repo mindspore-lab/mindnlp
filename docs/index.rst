@@ -8,6 +8,32 @@
 MindNLP Documentation
 ============================================
 
+
+What is MindNLP
+----------------
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Overview
+
+   overview/about
+   overview/prerequisites
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Quick Start
+
+   quick_start/first_model
+   quick_start/dataset_and_transforms
+   quick_start/train_and_eval
+   quick_start/modules
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Examples
+
+   examples/sentiment_analysis
+
 .. toctree::
    :maxdepth: 1
    :caption: API Reference
@@ -18,4 +44,3 @@ MindNLP Documentation
    api/engine
    api/modules
    api/utils
-

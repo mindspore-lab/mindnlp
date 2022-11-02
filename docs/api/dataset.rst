@@ -1,8 +1,3 @@
-.. role:: hidden
-    :class: hidden-section
-
-.. module:: mindnlp.dataset
-
 Dataset
 ==============
 

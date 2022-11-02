@@ -1,9 +1,3 @@
-.. role:: hidden
-    :class: hidden-section
-
-.. module:: mindnlp.engine
-
-
 Engine
 ======
 
