@@ -79,7 +79,9 @@ def SogouNews(
           this dataset is returned instead of a list of datasets.
 
     Examples:
-        >>> dataset_train,dataset_test = SogouNews()
+        >>> root = "~/.mindnlp"
+        >>> split = ("train", "test")
+        >>> dataset_train,dataset_test = SogouNews(root, split)
         >>> train_iter = dataset_train.create_tuple_iterator()
         >>> print(next(train_iter))
     """

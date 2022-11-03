@@ -92,7 +92,9 @@ def RTE(
           this dataset is returned instead of a list of datasets.
 
     Examples:
-        >>> dataset_train,dataset_dev,dataset_test = RTE()
+        >>> root = "~/.mindnlp"
+        >>> split = ("train", "dev, "test")
+        >>> dataset_train,dataset_dev,dataset_test = RTE(root, split)
         >>> train_iter = dataset_train.create_tuple_iterator()
         >>> print(next(train_iter))
         [Tensor(shape=[], dtype=Int64, value= 1), Tensor(shape=[],
