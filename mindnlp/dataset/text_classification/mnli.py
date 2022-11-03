@@ -90,7 +90,9 @@ def MNLI(
           this dataset is returned instead of a list of datasets.
 
     Examples:
-        >>> dataset_train, dataset_dev_matched, dataset_dev_mismatched = MNLI()
+        >>> root = "~/.mindnlp"
+        >>> split = ("train", "dev_matched", "dev_mismatched")
+        >>> dataset_train, dataset_dev_matched, dataset_dev_mismatched = MNLI(root, split)
         >>> train_iter = dataset_train.create_tuple_iterator()
         >>> print(next(train_iter))
 

@@ -85,7 +85,8 @@ def QQP(root: str = DEFAULT_ROOT, proxies=None):
           this dataset is returned instead of a list of datasets.
 
     Examples:
-        >>> dataset_train = QQP()
+        >>> root = "~/.mindnlp"
+        >>> dataset_train = QQP(root)
         >>> train_iter = dataset_train.create_tuple_iterator()
         >>> print(next(train_iter))
         [Tensor(shape=[], dtype=Int64, value= 0), Tensor(shape=[],

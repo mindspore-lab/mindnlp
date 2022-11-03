@@ -77,8 +77,9 @@ def AG_NEWS(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", 
           this dataset is returned instead of a list of datasets.
 
     Examples:
-        >>> root = os.path.join(os.path.expanduser('~'), ".mindnlp")
-        >>> dataset_train,dataset_test = agnews()
+        >>> root = "~/.mindnlp"
+        >>> split = ('train', 'test')
+        >>> dataset_train,dataset_test = AG_NEWS(root, split)
         >>> train_iter = dataset_train.create_tuple_iterator()
         >>> print(next(train_iter))
         [Tensor(shape=[], dtype=String, value= '3'), Tensor(shape=[], dtype=String,\
