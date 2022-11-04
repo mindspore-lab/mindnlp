@@ -17,7 +17,7 @@
 
 import numpy as np
 import mindspore
-from mindspore import nn, ops
+from mindspore import nn, ops, Tensor
 from mindnlp.common.functional import softmax, kl_div
 
 __all__ = ['RDropLoss',
@@ -26,9 +26,10 @@ __all__ = ['RDropLoss',
 
 def sequence_mask(lengths, maxlen):
     """generate mask matrix by seq_length"""
-    range_vector = ops.arange(0, maxlen, 1, lengths.dtype)
+    length_dtype = lengths.dtype
+    range_vector = Tensor(np.arange(0, maxlen, 1), length_dtype)
     result = range_vector < lengths.view(lengths.shape + (1,))
-    return result
+    return result.astype(mindspore.float32)
 
 
 class RDropLoss(nn.Cell):
@@ -157,8 +158,8 @@ class CMRC2018Loss(nn.Cell):
 
         zero_tensor = mindspore.Tensor(
             np.zeros((batch_size, max_len)), mindspore.float32)
-        mask = sequence_mask(
-            context_len, max_len).approximate_equal(zero_tensor)
+
+        mask = ops.equal(sequence_mask(context_len, max_len), zero_tensor)
 
         pred_start = pred_start.masked_fill(mask, -1e10)
         pred_end = pred_end.masked_fill(mask, -1e10)

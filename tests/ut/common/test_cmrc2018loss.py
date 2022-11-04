@@ -12,14 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=ungrouped-imports
 """Test CMRC2018Loss"""
 
 import unittest
 import numpy as np
+from packaging import version
 import mindspore
 from mindspore import Tensor
 from mindnlp.common.loss import CMRC2018Loss
 
+if version.parse(mindspore.__version__) <= version.parse('2.0.0'):
+    from mindspore import ms_function as ms_jit
+else:
+    from mindspore import jit as ms_jit
 
 class TestCMRC2018Loss(unittest.TestCase):
     r"""
@@ -49,4 +55,33 @@ class TestCMRC2018Loss(unittest.TestCase):
             [0.2, 0.1, 0.2]
         ]), mindspore.float32)
         loss = cmrc_loss(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)
+        assert loss.shape == ()
+
+    def test_loss_graph(self):
+        r"""
+        Test CMRC2018Loss loss in graph mode
+        """
+
+        tensor_a = Tensor(np.array([1, 2, 1]), mindspore.int32)
+        tensor_b = Tensor(np.array([2, 1, 2]), mindspore.int32)
+        my_context_len = Tensor(np.array([2., 1., 2.]), mindspore.float32)
+        tensor_c = Tensor(np.array([
+            [0.1, 0.2, 0.1],
+            [0.1, 0.2, 0.1],
+            [0.1, 0.2, 0.1]
+        ]), mindspore.float32)
+        tensor_d = Tensor(np.array([
+            [0.2, 0.1, 0.2],
+            [0.2, 0.1, 0.2],
+            [0.2, 0.1, 0.2]
+        ]), mindspore.float32)
+
+        cmrc_loss = CMRC2018Loss()
+
+        @ms_jit
+        def loss_graph(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d):
+            loss = cmrc_loss(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)
+            return loss
+
+        loss = loss_graph(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)
         assert loss.shape == ()

@@ -12,15 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=ungrouped-imports
 """Test RDropLoss"""
 
 import unittest
 import pytest
 import numpy as np
+from packaging import version
 import mindspore
 from mindspore import Tensor
 from mindnlp.common.loss import RDropLoss
 
+if version.parse(mindspore.__version__) <= version.parse('2.0.0'):
+    from mindspore import ms_function as ms_jit
+else:
+    from mindspore import jit as ms_jit
 
 class TestRDropLoss(unittest.TestCase):
     r"""
@@ -60,4 +66,23 @@ class TestRDropLoss(unittest.TestCase):
         temp_p = Tensor(np.array([1., 0., 1.]), mindspore.float32)
         temp_q = Tensor(np.array([0.2, 0.3, 1.1]), mindspore.float32)
         loss = r_drop_loss(temp_p, temp_q)
-        assert (loss - 0.10013707) <= 0.000001
+
+        assert np.allclose(loss.asnumpy(), np.array([0.10013707]))
+
+    def test_loss_graph(self):
+        r"""
+        Test RDropLoss loss in graph mode
+        """
+
+        r_drop_loss = RDropLoss()
+        temp_p = Tensor(np.array([1., 0., 1.]), mindspore.float32)
+        temp_q = Tensor(np.array([0.2, 0.3, 1.1]), mindspore.float32)
+
+        @ms_jit
+        def loss_graph(temp_p, temp_q):
+            loss = r_drop_loss(temp_p, temp_q)
+            return loss
+
+        loss = loss_graph(temp_p, temp_q)
+
+        assert np.allclose(loss.asnumpy(), np.array([0.10013707]))
