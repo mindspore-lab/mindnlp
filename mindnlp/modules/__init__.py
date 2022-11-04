@@ -20,3 +20,4 @@ LinearAttention
 from .encoder import RNNEncoder, CNNEncoder
 from .decoder import RNNDecoder
 from .embeddings import Fasttext, Word2vec, Glove
+from .crf import CRF
