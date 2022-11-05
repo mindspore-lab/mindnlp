@@ -74,8 +74,6 @@ lr = 0.001
 
 # load datasets
 imdb_train, imdb_test = load('imdb', shuffle=True)
-
-
 embedding, vocab = Glove.from_pretrained('6B', 100, special_tokens=["<unk>", "<pad>"], dropout=drop)
 
 lookup_op = ds.text.Lookup(vocab, unknown_token='<unk>')
