@@ -71,6 +71,7 @@ class Imdb:
 def IMDB(
     root: str = DEFAULT_ROOT,
     split: Union[Tuple[str], str] = ("train", "test"),
+    shuffle=True,
     proxies=None,
 ):
     r"""
@@ -117,7 +118,7 @@ def IMDB(
         datasets_list.append(
             GeneratorDataset(
                 source=Imdb(os.path.join(cache_dir,"aclImdb_v1.tar.gz"), mode),
-                column_names=column_names, shuffle=False
+                column_names=column_names, shuffle=shuffle
             )
         )
     if len(mode_list) == 1:

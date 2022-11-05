@@ -17,9 +17,11 @@ Evaluator for testing.
 """
 from inspect import signature
 from tqdm import tqdm
-from mindspore import ms_function, log, mutable
-from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContext
+from mindspore import log, mutable
+from mindnlp import ms_jit
 from mindnlp.abc import Metric
+from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContext
+
 
 class Evaluator:
     r"""
@@ -36,15 +38,15 @@ class Evaluator:
             while training. Default: None.
     """
 
-    def __init__(self, network, eval_dataset=None, batch_size=2, metrics=None, callbacks=None):
+    def __init__(self, network, eval_dataset=None, metrics=None, callbacks=None):
+        print(id(network))
         self.network = network
-        self.batch_size = batch_size
         self.callbacks = callbacks
         self.earlystop = False
 
         self._check_metric_type(metrics)
+        self.eval_dataset = eval_dataset
         self.total = eval_dataset.get_dataset_size()
-        self.eval_dataset = eval_dataset.batch(batch_size)
 
         self.callback_manager = CallbackManager(callbacks=self.callbacks)
 
@@ -105,21 +107,27 @@ class Evaluator:
     def _run(self, tgt_columns=None, jit=False):
         """Evaluating process for non-data sinking mode. The data would be passed to network directly."""
         net = self.network
+
         def _run_step(inputs):
             """Core process of each step."""
             outputs = net(*inputs)
             return outputs
+
         if jit:
-            _run_step = ms_function(_run_step)
+            _run_step = ms_jit(_run_step)
+
+        net.set_train(False)
         with tqdm(total=self.total) as progress:
             progress.set_description('Evaluate')
             for data in self.eval_dataset.create_dict_iterator():
                 inputs, tgts = self._data_process(data, tgt_columns)
                 outputs = _run_step(inputs)
                 self._update_metrics(outputs, *tgts)
-                progress.update(self.batch_size)
+                progress.update(1)
+
         progress.close()
         metrics_result, metrics_names, metrics_values = self._get_metrics()
+
         print(f'Evaluate Score: {metrics_result}')
         return metrics_result, metrics_names, metrics_values
 

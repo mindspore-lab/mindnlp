@@ -57,8 +57,9 @@ class TestEvaluatorRun(unittest.TestCase):
         metric = Accuracy()
         callbacks = [TimerCallback()]
         eval_dataset = ds.GeneratorDataset(dataset_generator, ["data", "label"], shuffle=False)
+        eval_dataset = eval_dataset.batch(10)
         self.evaluator = Evaluator(network=net, eval_dataset=eval_dataset, metrics=metric,
-                                   callbacks=callbacks, batch_size=10)
+                                   callbacks=callbacks)
 
     def test_evaluator_run(self):
         """test evaluator run pynative"""
