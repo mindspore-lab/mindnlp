@@ -19,10 +19,8 @@ RNN-based sentimental classification model
 
 import math
 
-import mindspore as ms
 from mindspore import nn
 from mindspore import ops
-import mindspore.dataset as ds
 from mindspore.common.initializer import Uniform, HeUniform
 
 from mindnlp.modules import RNNEncoder
@@ -31,7 +29,6 @@ from mindnlp.engine.trainer import Trainer
 from mindnlp.abc import Seq2vecModel
 from mindnlp.dataset import load, process
 from mindnlp.modules import Glove
-from mindnlp.dataset.transforms import BasicTokenizer
 
 class Head(nn.Cell):
     """
@@ -79,7 +76,8 @@ print(imdb_train.get_col_names())
 
 embedding, vocab = Glove.from_pretrained('6B', 100, special_tokens=["<unk>", "<pad>"], dropout=drop)
 
-imdb_train = process('imdb', imdb_train, vocab=vocab, bucket_boundaries=[100, 200, 300], drop_remainder=True)
+imdb_train = process('imdb', imdb_train, vocab=vocab, \
+                     bucket_boundaries=[400, 500], max_len=600, drop_remainder=True)
 imdb_train, imdb_valid = imdb_train.split([0.7, 0.3])
 
 lstm_layer = nn.LSTM(100, hidden_size, num_layers=num_layers, batch_first=True,
