@@ -18,21 +18,16 @@
 Trainer for training.
 """
 from inspect import signature
-from packaging import version
 from tqdm import tqdm
-import mindspore
+from mindspore import ops
 from mindspore import log, mutable
 from mindspore.ops import value_and_grad
+from mindnlp import ms_jit
 from mindnlp.abc.callback import Callback
 from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContext
 from mindnlp.engine.callbacks.earlystop_callback import EarlyStopCallback
 from mindnlp.engine.callbacks.best_model_callback import BestModelCallback
 from mindnlp.engine.evaluator import Evaluator
-
-if version.parse(mindspore.__version__) <= version.parse('2.0.0'):
-    from mindspore import ms_function as ms_jit
-else:
-    from mindspore import jit as ms_jit
 
 class Trainer:
     r"""
@@ -66,14 +61,13 @@ class Trainer:
 
     """
 
-    def __init__(self, network=None, train_dataset=None, eval_dataset=None, metrics=None, epochs=10, batch_size=2,
+    def __init__(self, network=None, train_dataset=None, eval_dataset=None, metrics=None, epochs=10,
                  loss_fn=None, optimizer=None, callbacks=None):
         self.network = network
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
         self.metrics = metrics
         self.epochs = epochs
-        self.batch_size = batch_size
         self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.callbacks = callbacks
@@ -109,7 +103,7 @@ class Trainer:
     def _prepare_eval(self):
         if self.eval_dataset is not None and self.metrics is not None:
             self.evaluator = Evaluator(network=self.network, eval_dataset=self.eval_dataset, metrics=self.metrics,
-                                batch_size=4, callbacks=self.callbacks)
+                                        callbacks=self.callbacks)
         elif self.eval_dataset is None and self.metrics is None:
             if self.callbacks:
                 self._check_callbacks_type()
@@ -159,6 +153,7 @@ class Trainer:
         """
         # forward function
         net = self.network
+
         loss_fn = self.loss_fn
         optimizer = self.optimizer
         def forward_fn(inputs, labels):
@@ -185,15 +180,13 @@ class Trainer:
         def _run_step_graph(inputs, labels):
             """Core process of each step, including the forward propagation process and back propagation of data."""
             (loss, _), grads = grad_fn(inputs, labels)
-            optimizer(grads)
+            loss = ops.depend(loss, optimizer(grads))
             return loss
 
-        net.set_train()
-        # batchify train_dataset
-        self.train_dataset = self.train_dataset.batch(self.batch_size)
         total = self.train_dataset.get_dataset_size()
         # train epoch begin
         for epoch in range(0, self.epochs):
+            net.set_train()
             self.cur_epoch_nums = epoch + 1
             self.cur_step_nums = 0
             run_context.cur_epoch_nums = self.cur_epoch_nums

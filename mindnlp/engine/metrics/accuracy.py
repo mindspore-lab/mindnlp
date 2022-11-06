@@ -95,10 +95,6 @@ class Accuracy(Metric):
         y_pred = _convert_data_type(preds)
         y_true = _convert_data_type(labels)
 
-        if y_pred.ndim == y_true.ndim and (_check_onehot_data(y_true) or y_true[0].shape == (1,)):
-            y_true = y_true.argmax(axis=1)
-        _check_shape(y_pred, y_true)
-
         if self._class_num == 0:
             self._class_num = y_pred.shape[1]
         elif y_pred.shape[1] != self._class_num:
@@ -107,7 +103,17 @@ class Accuracy(Metric):
                              f'predicted data contain {y_pred.shape[1]} classes. Please check '
                              f'your predicted value (`preds`).')
 
-        indices = y_pred.argmax(axis=1)
+        if self._class_num != 1 and y_pred.ndim == y_true.ndim and \
+                (_check_onehot_data(y_true) or y_true[0].shape == (1,)):
+            y_true = y_true.argmax(axis=1)
+
+        _check_shape(y_pred, y_true, self._class_num)
+
+        if self._class_num == 1:
+            indices = np.around(y_pred)
+        else:
+            indices = y_pred.argmax(axis=1)
+
         res = (np.equal(indices, y_true) * 1).reshape(-1)
 
         self._correct_num += res.sum()
