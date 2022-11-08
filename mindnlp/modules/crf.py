@@ -103,7 +103,7 @@ class CRF(nn.Cell):
         # shape: (batch_size,)
         denominator = self._compute_normalizer(emissions, mask)
         # shape: (batch_size,)
-        llh = numerator - denominator
+        llh = denominator - numerator
 
         if self.reduction == 'none':
             return llh
