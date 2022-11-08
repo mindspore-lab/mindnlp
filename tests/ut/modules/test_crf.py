@@ -197,7 +197,7 @@ class TestForward:
                 for t in itertools.product(range(crf.num_tags), repeat=seq_length)
             ]
             denominator = math.log(sum(math.exp(s) for s in all_scores))
-            manual_llh.append(numerator - denominator)
+            manual_llh.append(denominator - numerator)
 
         for llh_, manual_llh_ in zip(llh, manual_llh):
             assert np.allclose(llh_.asnumpy(), manual_llh_,rtol=1e-3,atol=1e-3)
@@ -232,7 +232,7 @@ class TestForward:
                 for t in itertools.product(range(crf.num_tags), repeat=seq_length)
             ]
             denominator = math.log(sum(math.exp(s) for s in all_scores))
-            manual_llh += numerator - denominator
+            manual_llh += denominator - numerator
 
         assert np.allclose(llh.asnumpy(), manual_llh / batch_size, rtol=1e-3, atol=1e-3)
 
