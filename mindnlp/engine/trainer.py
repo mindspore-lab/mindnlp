@@ -51,7 +51,6 @@ class Trainer:
         metrcis (Optional[list[Metrics], Metrics]): List of metrics objects which should be used
             while evaluating. Default:None.
         epochs (int): Total number of iterations on the data. Default: 10.
-        batc_size (int): numbers of samples in each batch.
         optimizer (Cell): Optimizer for updating the weights. If `optimizer` is None, the `network` needs to
             do backpropagation and update weights. Default value: None.
         loss_fn (Cell): Objective function. If `loss_fn` is None, the `network` should contain the calculation of loss
