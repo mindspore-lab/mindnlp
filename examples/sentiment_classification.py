@@ -29,6 +29,7 @@ from mindnlp.engine.trainer import Trainer
 from mindnlp.abc import Seq2vecModel
 from mindnlp.dataset import load, process
 from mindnlp.modules import Glove
+from mindnlp.dataset.transforms import BasicTokenizer
 
 class Head(nn.Cell):
     """
