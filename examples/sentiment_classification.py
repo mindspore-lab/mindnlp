@@ -29,8 +29,9 @@ from mindnlp.modules import RNNEncoder
 from mindnlp.engine.metrics import Accuracy
 from mindnlp.engine.trainer import Trainer
 from mindnlp.abc import Seq2vecModel
-from mindnlp.dataset import load
+from mindnlp.dataset import load, process
 from mindnlp.modules import Glove
+from mindnlp.dataset.transforms import BasicTokenizer
 
 class Head(nn.Cell):
     """
@@ -74,40 +75,27 @@ lr = 0.001
 
 # load datasets
 imdb_train, imdb_test = load('imdb', shuffle=True)
-
+print(imdb_train.get_col_names())
 
 embedding, vocab = Glove.from_pretrained('6B', 100, special_tokens=["<unk>", "<pad>"], dropout=drop)
 
-lookup_op = ds.text.Lookup(vocab, unknown_token='<unk>')
-pad_op = ds.transforms.PadEnd([500], pad_value=vocab.tokens_to_ids('<pad>'))
-type_cast_op = ds.transforms.TypeCast(ms.float32)
-
-imdb_train = imdb_train.map(operations=[lookup_op, pad_op], input_columns=['text'])
-imdb_train = imdb_train.map(operations=[type_cast_op], input_columns=['label'])
-
-imdb_test = imdb_test.map(operations=[lookup_op, pad_op], input_columns=['text'])
-imdb_test = imdb_test.map(operations=[type_cast_op], input_columns=['label'])
-
+imdb_train = process('imdb', imdb_train, vocab=vocab, bucket_boundaries=[100, 200, 300], drop_remainder=True)
 imdb_train, imdb_valid = imdb_train.split([0.7, 0.3])
-imdb_train = imdb_train.batch(64, drop_remainder=True)
-imdb_valid = imdb_valid.batch(64, drop_remainder=True)
 
 lstm_layer = nn.LSTM(100, hidden_size, num_layers=num_layers, batch_first=True,
                      dropout=drop, bidirectional=bidirectional)
 sentiment_encoder = RNNEncoder(embedding, lstm_layer)
 sentiment_head = Head(hidden_size, output_size, drop)
-net = SentimentClassification(sentiment_encoder, sentiment_head)
 
+net = SentimentClassification(sentiment_encoder, sentiment_head)
 loss = nn.BCELoss(reduction='mean')
+optimizer = nn.Adam(net.trainable_params(), learning_rate=lr)
 
 # define metrics
 metric = Accuracy()
 
-optimizer = nn.Adam(net.trainable_params(), learning_rate=lr)
-
 # define trainer
-
 trainer = Trainer(network=net, train_dataset=imdb_train, eval_dataset=imdb_valid, metrics=metric,
                   epochs=5, loss_fn=loss, optimizer=optimizer)
-trainer.run(tgt_columns="label", jit=True)
+trainer.run(tgt_columns="label", jit=False)
 print("end train")

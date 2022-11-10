@@ -18,15 +18,10 @@
 import unittest
 import pytest
 import numpy as np
-from packaging import version
 import mindspore
 from mindspore import Tensor
 from mindnlp.common.loss import RDropLoss
-
-if version.parse(mindspore.__version__) <= version.parse('2.0.0'):
-    from mindspore import ms_function as ms_jit
-else:
-    from mindspore import jit as ms_jit
+from mindnlp import ms_jit
 
 class TestRDropLoss(unittest.TestCase):
     r"""

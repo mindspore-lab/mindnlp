@@ -39,7 +39,6 @@ class Evaluator:
     """
 
     def __init__(self, network, eval_dataset=None, metrics=None, callbacks=None):
-        print(id(network))
         self.network = network
         self.callbacks = callbacks
         self.earlystop = False
