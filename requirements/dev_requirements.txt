@@ -1,4 +1,4 @@
-mindspore-dev==2.0.0.dev20221030
+mindspore-dev
 requests
 tqdm
 pylint

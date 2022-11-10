@@ -1,4 +1,4 @@
-# Copyright 2021 Huawei Technologies Co., Ltd
+# Copyright 2022 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,17 +13,20 @@
 # limitations under the License.
 # ============================================================================
 """
-text
+Dataset utils
 """
 
-from packaging import version
-import mindspore
-from mindspore import context
-if version.parse(mindspore.__version__) < version.parse('2.0.0'):
-    from mindspore import ms_function as ms_jit
-else:
-    from mindspore import jit as ms_jit
+def make_bucket(dataset, column_name, pad_index, \
+                bucket_boundaries, bucket_batch_sizes, drop_remainder):
+    """make bucket function."""
+    pad_info = {column_name: ([None], pad_index)}
 
-context.set_context(mode=context.PYNATIVE_MODE)
+    dataset = dataset.bucket_batch_by_length(
+            [column_name],
+            element_length_function=lambda elem:elem.shape[0],
+            bucket_boundaries=bucket_boundaries,
+            bucket_batch_sizes=bucket_batch_sizes,
+            pad_info=pad_info,
+            drop_remainder=drop_remainder)
 
-__all__ = ['ms_jit']
+    return dataset
