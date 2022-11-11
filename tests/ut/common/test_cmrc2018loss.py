@@ -17,15 +17,10 @@
 
 import unittest
 import numpy as np
-from packaging import version
 import mindspore
 from mindspore import Tensor
 from mindnlp.common.loss import CMRC2018Loss
-
-if version.parse(mindspore.__version__) <= version.parse('2.0.0'):
-    from mindspore import ms_function as ms_jit
-else:
-    from mindspore import jit as ms_jit
+from mindnlp import ms_jit
 
 class TestCMRC2018Loss(unittest.TestCase):
     r"""
