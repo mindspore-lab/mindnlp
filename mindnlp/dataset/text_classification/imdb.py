@@ -24,7 +24,7 @@ from typing import Union, Tuple
 import mindspore
 from mindspore.dataset import GeneratorDataset, text, transforms
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp.dataset.transforms import TruncateSequence
 from mindnlp.dataset.register import load, process
 from mindnlp.dataset.utils import make_bucket
 from mindnlp.configs import DEFAULT_ROOT
@@ -125,7 +125,7 @@ def IMDB(
     return datasets_list
 
 @process.register
-def IMDB_Process(dataset, tokenizer=BasicTokenizer(True), vocab=None, max_len=500, batch_size=64, \
+def IMDB_Process(dataset, tokenizer, vocab, batch_size=64, max_len=500, \
                  bucket_boundaries=None, drop_remainder=False):
     """
     the process of the IMDB dataset
@@ -143,23 +143,7 @@ def IMDB_Process(dataset, tokenizer=BasicTokenizer(True), vocab=None, max_len=50
         TypeError: If `input_column` is not a string.
 
     Examples:
-        >>> from mindnlp.dataset import AG_NEWS, AG_NEWS_Process
-        >>> train_dataset, test_dataset = AG_NEWS()
-        >>> column = "text"
-        >>> tokenizer = BasicTokenizer()
-        >>> agnews_dataset, vocab = AG_NEWS_Process(train_dataset, column, tokenizer)
-        >>> agnews_dataset = agnews_dataset.create_tuple_iterator()
-        >>> print(next(agnews_dataset))
-        {'label': Tensor(shape=[], dtype=String, value= '3'), 'text': Tensor(shape=[35],
-        dtype=Int32, value= [  462,   503,     2,  2102, 47615,  1228,  1766,     3,  1388,
-        17,    34,    18,    34,     5,  4076,     5, 10244,     4,   462,   434,    19,    13,
-        14141,    21,  3547,     8,  8356,     5, 38127,     4,    55,  4770,  2987,   390,     2])}
-
     """
-
-    if vocab is None:
-        dataset = dataset.map(tokenizer, 'text')
-        vocab = text.Vocab.from_dataset(dataset, 'text', special_tokens=["<pad>", "<unk>"])
 
     pad_value = vocab.tokens_to_ids('<pad>')
 
@@ -171,6 +155,10 @@ def IMDB_Process(dataset, tokenizer=BasicTokenizer(True), vocab=None, max_len=50
     if bucket_boundaries is not None:
         if not isinstance(bucket_boundaries, list):
             raise ValueError(f"'bucket_boundaries' must be a list of int, but get {type(bucket_boundaries)}")
+        trancate_op = TruncateSequence(max_len)
+        dataset = dataset.map([trancate_op], 'text')
+        if bucket_boundaries[-1] < max_len + 1:
+            bucket_boundaries.append(max_len + 1)
         bucket_batch_sizes = [batch_size] * (len(bucket_boundaries) + 1)
         dataset = make_bucket(dataset, 'text', pad_value, \
                               bucket_boundaries, bucket_batch_sizes, drop_remainder)
@@ -178,4 +166,5 @@ def IMDB_Process(dataset, tokenizer=BasicTokenizer(True), vocab=None, max_len=50
         pad_op = transforms.PadEnd([max_len], pad_value)
         dataset = dataset.map([pad_op], 'text')
         dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)
+
     return dataset

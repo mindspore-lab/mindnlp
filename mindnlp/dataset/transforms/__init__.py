@@ -13,21 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-Dataset utils
+Transforms
 """
-
-def make_bucket(dataset, column_name, pad_index, \
-                bucket_boundaries, bucket_batch_sizes, drop_remainder):
-    """make bucket function."""
-    pad_info = {column_name: ([None], pad_index)}
-
-    dataset = dataset.bucket_batch_by_length(
-            [column_name],
-            element_length_function=lambda elem:elem.shape[0],
-            bucket_boundaries=bucket_boundaries,
-            bucket_batch_sizes=bucket_batch_sizes,
-            pad_info=pad_info,
-            pad_to_bucket_boundary=True,
-            drop_remainder=drop_remainder)
-
-    return dataset
+from .tokenizers import BasicTokenizer
+from .seq_process import TruncateSequence
