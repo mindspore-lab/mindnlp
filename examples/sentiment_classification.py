@@ -76,8 +76,9 @@ imdb_train, imdb_test = load('imdb', shuffle=True)
 print(imdb_train.get_col_names())
 
 embedding, vocab = Glove.from_pretrained('6B', 100, special_tokens=["<unk>", "<pad>"], dropout=drop)
+tokenizer = BasicTokenizer(True)
 
-imdb_train = process('imdb', imdb_train, vocab=vocab, \
+imdb_train = process('imdb', imdb_train, tokenizer=tokenizer, vocab=vocab, \
                      bucket_boundaries=[400, 500], max_len=600, drop_remainder=True)
 imdb_train, imdb_valid = imdb_train.split([0.7, 0.3])
 
