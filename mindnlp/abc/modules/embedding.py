@@ -35,7 +35,7 @@ class TokenEmbedding(nn.Cell):
         dropout (float): Dropout of the output of Embedding.
 
     """
-    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.5):
+    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.0):
         super().__init__()
 
         self._word_vocab = vocab
