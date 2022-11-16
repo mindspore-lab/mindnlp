@@ -60,7 +60,7 @@ class Glove(TokenEmbedding):
 
     dims = [50, 100, 200, 300]
 
-    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.5):
+    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.0):
         super().__init__(vocab, init_embed)
 
         self._word_vocab = vocab
@@ -194,18 +194,28 @@ class Glove(TokenEmbedding):
         logging.info('Embedding has been saved to %s', folder)
 
     @classmethod
-    def load(cls, foldername, root=DEFAULT_ROOT):
+    def load(cls, foldername=None, root=DEFAULT_ROOT, load_npy=False, vocab=None, npy_path=None):
         r"""
         Load embedding from the specified location.
 
         Args:
-            foldername (str): Name of the folder to load.
+            foldername (str): Name of the folder to load. Default: None.
             root (Path): Path of the embedding folder. Default: DEFAULT_ROOT.
+            load_npy (Bool): Whether to initialize the embedding as a npy file. Vocab and npy_path are valid
+                when load_npy is True. Default: False.
+            vocab (Vocab): If initialized with a npy file, pass in vocab. Default: None.
+            npy_path (Path): Location of the npy file. Default: None.
 
         Returns:
             None
 
         """
+
+        if load_npy:
+            load_embed = np.load(npy_path)
+            load_vocab = vocab
+
+            return cls(load_vocab, Tensor(load_embed))
 
         folder = os.path.join(root, 'embeddings', 'Glove', 'save', foldername)
         for name in [JSON_FILENAME, EMBED_FILENAME]:
