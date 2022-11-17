@@ -19,8 +19,10 @@ import os
 import shutil
 import unittest
 import pytest
-from mindnlp.dataset import CoNLL2000Chunking
-from mindnlp.dataset import load
+import mindspore as ms
+from mindspore.dataset import text
+from mindnlp.dataset import CoNLL2000Chunking, CoNLL2000Chunking_Process
+from mindnlp.dataset import load, process
 
 
 class TestCoNLL2000Chunking(unittest.TestCase):
@@ -62,3 +64,30 @@ class TestCoNLL2000Chunking(unittest.TestCase):
             root=self.root,
             split=("train", "test"),
         )
+
+
+    @pytest.mark.dataset
+    def test_conll2000chunking_process(self):
+        r"""
+        Test CoNLL2000Chunking_Process
+        """
+
+        test_dataset = CoNLL2000Chunking(split='test')
+        vocab = text.Vocab.from_dataset(test_dataset,columns=["words"],freq_range=None,top_k=None,
+                                   special_tokens=["<pad>","<unk>"],special_first=True)
+        agnews_dataset = CoNLL2000Chunking_Process(test_dataset,vocab)
+
+        agnews_dataset = agnews_dataset.create_tuple_iterator()
+        assert (next(agnews_dataset)[1]).dtype == ms.int64
+
+
+    @pytest.mark.dataset
+    def test_conll2000chunking_process_by_register(self):
+        """test CoNLL2000Chunking process by register"""
+        test_dataset = CoNLL2000Chunking(split='test')
+        vocab = text.Vocab.from_dataset(test_dataset,columns=["words"],freq_range=None,top_k=None,
+                                   special_tokens=["<pad>","<unk>"],special_first=True)
+        test_dataset = process('CoNLL2000Chunking', test_dataset, vocab)
+
+        test_dataset = test_dataset.create_tuple_iterator()
+        assert (next(test_dataset)[1]).dtype == ms.int64

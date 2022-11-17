@@ -31,3 +31,19 @@ def make_bucket(dataset, column_name, pad_index, \
             drop_remainder=drop_remainder)
 
     return dataset
+
+def make_bucket_2cloums(dataset, column_name, pad_value1, pad_value2, \
+                bucket_boundaries, bucket_batch_sizes, drop_remainder):
+    """make bucket 2cloums function."""
+    pad_info = {column_name[0]: ([None], pad_value1),column_name[1]: ([None], pad_value2)}
+
+    dataset = dataset.bucket_batch_by_length(
+            column_name,
+            element_length_function=lambda elem1,elem2:elem1.shape[0],
+            bucket_boundaries=bucket_boundaries,
+            bucket_batch_sizes=bucket_batch_sizes,
+            pad_info=pad_info,
+            pad_to_bucket_boundary=True,
+            drop_remainder=drop_remainder)
+
+    return dataset
