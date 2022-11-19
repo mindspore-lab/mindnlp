@@ -22,7 +22,6 @@ import pytest
 import mindspore as ms
 from mindnlp.dataset import AG_NEWS, AG_NEWS_Process
 from mindnlp.dataset import load, process
-from mindnlp.dataset.transforms import BasicTokenizer
 
 
 class TestAGNEWS(unittest.TestCase):
@@ -68,29 +67,17 @@ class TestAGNEWS(unittest.TestCase):
         """
 
         test_dataset = AG_NEWS(split='test')
-        agnews_dataset, vocab = AG_NEWS_Process(test_dataset)
+        agnews_dataset = AG_NEWS_Process(test_dataset)
 
         agnews_dataset = agnews_dataset.create_tuple_iterator()
         assert (next(agnews_dataset)[1]).dtype == ms.int32
 
-        for _, value in vocab.vocab().items():
-            assert isinstance(value, int)
-            break
 
     @pytest.mark.dataset
     def test_agnews_process_by_register(self):
         """test agnews process by register"""
         test_dataset = AG_NEWS(split='test')
-        test_dataset, vocab = process('AG_NEWS',
-                                dataset=test_dataset,
-                                column="text",
-                                tokenizer=BasicTokenizer(),
-                                vocab=None
-                                )
+        test_dataset = process('ag_news', test_dataset)
 
         test_dataset = test_dataset.create_tuple_iterator()
         assert (next(test_dataset)[1]).dtype == ms.int32
-
-        for _, value in vocab.vocab().items():
-            assert isinstance(value, int)
-            break

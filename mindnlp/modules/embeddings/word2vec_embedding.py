@@ -73,7 +73,7 @@ class Word2vec(TokenEmbedding):
 
     @classmethod
     def from_pretrained(cls, name='google-news', dims=300, root=DEFAULT_ROOT,
-                        special_tokens=("<pad>", "<unk>"), special_first=False, use_gensim=True, **kwargs):
+                        special_tokens=("<pad>", "<unk>"), special_first=True, use_gensim=True, **kwargs):
         r"""
         Creates Embedding instance from given 2-dimensional FloatTensor.
 
@@ -84,7 +84,7 @@ class Word2vec(TokenEmbedding):
             special_tokens (tuple<str,str>): List of special participles. Default: ("<pad>", "<unk>").
             special_first (bool): Indicates whether special participles from special_tokens will be added to
                 the top of the dictionary. If True, add special_tokens to the beginning of the dictionary,
-                otherwise add them to the end. Default: False.
+                otherwise add them to the end. Default: True.
             use_gensim (bool): Whether to load word vectors with gensim library.
             kwargs (dict):
                 - requires_grad (bool): Whether this parameter needs to be gradient to update.
