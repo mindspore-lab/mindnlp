@@ -167,7 +167,14 @@ class Trainer:
             return_list = (loss,) + logits_list
             return return_list
 
-        grad_fn = value_and_grad(forward_fn, None, optimizer.parameters, has_aux=True)
+        def forward_without_loss_fn(inputs, labels):
+            loss_and_logits = net(*inputs, *labels)
+            return loss_and_logits
+
+        if self.loss_fn is None:
+            grad_fn = value_and_grad(forward_without_loss_fn, None, optimizer.parameters, has_aux=True)
+        else:
+            grad_fn = value_and_grad(forward_fn, None, optimizer.parameters, has_aux=True)
 
         def _run_step(inputs, labels):
             """Core process of each step, including the forward propagation process and back propagation of data."""
