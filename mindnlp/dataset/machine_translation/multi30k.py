@@ -21,9 +21,8 @@ import os
 import re
 from operator import itemgetter
 from typing import Union, Tuple
-from mindspore.dataset import TextFileDataset
+from mindspore.dataset import TextFileDataset, transforms
 from mindspore.dataset import text
-from mindnlp.dataset.transforms import BasicTokenizer
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.register import load, process
 from mindnlp.configs import DEFAULT_ROOT
@@ -143,45 +142,52 @@ def Multi30k(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train',
     return datasets_list
 
 @process.register
-def Multi30k_Process(dataset, column = 'en', tokenizer = BasicTokenizer(), vocab=None):
-    '''
-    a function transforms multi30K dataset into tensors
+def Multi30k_Process(dataset, vocab, batch_size=64, max_len=500, \
+                drop_remainder=False):
+    """
+    the process of the IMDB dataset
 
     Args:
-        dataset (ZipDataset): Multi30K dataset.
-        column (str): The language column name in multi30K, 'de' or 'en', defaults to 'en'.
-        tokenizer (TextTensorOperation): Tokenizer you what to used.
-        vocab (Vocab): The vocab you use, defaults to None. If None, a new vocab will be created.
+        dataset (GeneratorDataset): IMDB dataset.
+        vocab (Vocab): vocabulary object, used to store the mapping of token and index.
 
     Returns:
-        - MapDataset, dataset after process.
-        - Vocab, new vocab created from dataset if 'vocab'=None.
+        - **dataset** (MapDataset) - dataset after transforms.
 
     Raises:
-        AssertionError: arg `column` not in ['en', 'de'].
-        TypeError: If `column` is not a string.
+        TypeError: If `input_column` is not a string.
 
     Examples:
-        >>> from mindnlp.dataset import Multi30k_Process
-        >>> test_dataset = Multi30k(
-        >>>     root="./dataset",
-        >>>     split="test",
+        >>> train_dataset = Multi30k(
+        >>>     root=self.root,
+        >>>     split="train",
         >>>     language_pair=("de", "en")
         >>> )
-        >>> test_dataset, vocab = Multi30k_Process(test_dataset, "en", text.BasicTokenizer())
-        >>> for i in test_dataset.create_tuple_iterator():
-        >>>     print(i)
-        >>>     break
-        [Tensor(shape=[], dtype=String, value= 'Ein Mann mit einem orangefarbenen Hut, \
-            der etwas anstarrt.'), Tensor(shape=[10], dtype=Int32, value= [   2,    8,    3,   \
-            24,   90,   82, 1783,   15,  131,    1])]
-    '''
+        >>> tokenizer = BasicTokenizer(True)
+        >>> train_dataset = train_dataset.map([tokenizer], 'en')
+        >>> train_dataset = train_dataset.map([tokenizer], 'de')
+        >>> en_vocab = text.Vocab.from_dataset(train_dataset, 'en', special_tokens=
+        >>>   ['<pad>', '<unk>'], special_first= True)
+        >>> de_vocab = text.Vocab.from_dataset(train_dataset, 'de', special_tokens=
+        >>>   ['<pad>', '<unk>'], special_first= True)
+        >>> vocab = {'en':en_vocab, 'de':de_vocab}
+        >>> train_dataset = process('Multi30k', train_dataset, vocab = vocab)
+    """
 
-    assert column in ['en', 'de'], "column not in ['en', 'de']"
-    if vocab is None :
-        dataset = dataset.map(tokenizer, column)
-        newVocab = text.Vocab.from_dataset(dataset, column)
-        return dataset.map(text.Lookup(newVocab), column), newVocab
+    en_pad_value = vocab['en'].tokens_to_ids('<pad>')
+    de_pad_value = vocab['de'].tokens_to_ids('<pad>')
 
-    dataset = dataset.map(tokenizer, column)
-    return dataset.map(text.Lookup(vocab), column)
+    en_lookup_op = text.Lookup(vocab['en'], unknown_token='<unk>')
+    de_lookup_op = text.Lookup(vocab['de'], unknown_token='<unk>')
+
+    dataset = dataset.map([en_lookup_op], 'en')
+    dataset = dataset.map([de_lookup_op], 'de')
+
+    en_pad_op = transforms.PadEnd([max_len], en_pad_value)
+    de_pad_op = transforms.PadEnd([max_len], de_pad_value)
+
+    dataset = dataset.map([en_pad_op], 'en')
+    dataset = dataset.map([de_pad_op], 'de')
+
+    dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)
+    return dataset
