@@ -72,7 +72,7 @@ class Fasttext(TokenEmbedding):
 
     @classmethod
     def from_pretrained(cls, name='1M', dims=300, root=DEFAULT_ROOT,
-                        special_tokens=("<pad>", "<unk>"), special_first=False, **kwargs):
+                        special_tokens=("<pad>", "<unk>"), special_first=True, **kwargs):
         r"""
         Creates Embedding instance from given 2-dimensional FloatTensor.
 
@@ -83,7 +83,7 @@ class Fasttext(TokenEmbedding):
             special_tokens (tuple<str,str>): List of special participles. Default: ("<pad>", "<unk>").
             special_first (bool): Indicates whether special participles from special_tokens will be added to
                 the top of the dictionary. If True, add special_tokens to the beginning of the dictionary,
-                otherwise add them to the end. Default: False.
+                otherwise add them to the end. Default: True.
             kwargs (dict):
                 - requires_grad (bool): Whether this parameter needs to be gradient to update.
                 - dropout (float): Dropout of the output of Embedding.
