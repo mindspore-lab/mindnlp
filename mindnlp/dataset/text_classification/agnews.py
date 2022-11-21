@@ -30,6 +30,7 @@ from mindnlp.dataset.utils import make_bucket
 from mindnlp.dataset.register import load, process
 from mindnlp.configs import DEFAULT_ROOT
 
+
 URL = {
     "train": "https://raw.githubusercontent.com/mhjabreel/CharCnn_Keras/master/data/ag_news_csv/train.csv",
     "test": "https://raw.githubusercontent.com/mhjabreel/CharCnn_Keras/master/data/ag_news_csv/test.csv",
@@ -56,7 +57,8 @@ class Agnews:
         csvfile = open(self.path, "r", encoding="utf-8")
         dict_reader = csv.reader(csvfile)
         for row in dict_reader:
-            self._label.append(int(row[0]))
+            label = int(row[0]) - 1
+            self._label.append(label)
             src_text1 = row[1]
             src_text2 = row[2]
             if src_text2:
@@ -83,7 +85,6 @@ def AG_NEWS(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", 
         split (str|Tuple[str]): Split or splits to be returned.
             Default:('train', 'test').
         proxies (dict): a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
-        shuffle (bool): Whether to shuffle the data set. Default: False.
 
     Returns:
         - **datasets_list** (list) -A list of loaded datasets.
@@ -121,22 +122,16 @@ def AG_NEWS(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", 
 
 
 @process.register
-def AG_NEWS_Process(dataset, vocab=None, tokenizer=BasicTokenizer(), bucket_boundaries=None, batch_size=64, max_len=500,
-                    column="text", drop_remainder=False):
+def AG_NEWS_Process(dataset, vocab=None, tokenizer=BasicTokenizer(), bucket_boundaries=None,
+                    batch_size=512, max_len=500, column="text", drop_remainder=False):
     """
     the process of the AG_News dataset
 
     Args:
         dataset (GeneratorDataset): AG_News dataset.
-        vocab (Vocab): vocabulary object, used to store the mapping of token and index. Default: None.
-        tokenizer (TextTensorOperation): tokenizer you choose to tokenize the text dataset. Default: BasicTokenizer.
-        bucket_boundaries (list):Specifies the upper boundary value of each bucket. The list must be strictly
-            incremented. If there are n boundaries, n+1 buckets are created, and the boundaries of the allocated
-            buckets are as follows: [0, bucket_boundaries[0]), [bucket_boundaries[i], bucket_boundaries[i+1]),
-            [bucket_boundaries[n-1], inf), where 0<i<n-1. Default: None.
-        batch_size (Union[int, Callable]): Specifies the data entries that each batch data contains. Default: 64.
-        max_len (int): Specifies the length of the fill. Default: 500.
-        column (str): the column needed to be transpormed of the agnews dataset. Default: "text".
+        column (str): the column needed to be transpormed of the agnews dataset.
+        tokenizer (TextTensorOperation): tokenizer you choose to tokenize the text dataset.
+        vocab (Vocab): vocabulary object, used to store the mapping of token and index.
         drop_remainder (bool): When the last batch of data contains a data entry smaller than batch_size, whether
             to discard the batch and not pass it to the next operation. Default: False.
 
@@ -186,7 +181,7 @@ def AG_NEWS_Process(dataset, vocab=None, tokenizer=BasicTokenizer(), bucket_boun
     pad_value = vocab.tokens_to_ids('<pad>')
 
     lookup_op = text.Lookup(vocab, unknown_token='<unk>')
-    type_cast_op = transforms.TypeCast(mindspore.float32)
+    type_cast_op = transforms.TypeCast(mindspore.int32)
 
     dataset = dataset.map([lookup_op], 'text')
     dataset = dataset.map([type_cast_op], 'label')
