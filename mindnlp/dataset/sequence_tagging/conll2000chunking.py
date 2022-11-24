@@ -18,10 +18,14 @@ CoNLL2000Chunking load function
 # pylint: disable=C0103
 
 import os
+import re
 from typing import Union, Tuple
-from mindspore.dataset import GeneratorDataset
+import mindspore
+from mindspore.dataset import GeneratorDataset, text, transforms
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.register import load, process
+from mindnlp.dataset.utils import make_bucket_2cloums
+from mindnlp.dataset.transforms.seq_process import TruncateSequence
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import ungz
 
@@ -134,3 +138,92 @@ def CoNLL2000Chunking(
     if len(path_list) == 1:
         return datasets_list[0]
     return datasets_list
+
+@process.register
+def CoNLL2000Chunking_Process(dataset, vocab, batch_size=64, max_len=500, \
+                 bucket_boundaries=None, drop_remainder=False):
+    """
+    the process of the CoNLL2000Chunking dataset
+
+    Args:
+        dataset (GeneratorDataset): CoNLL2000Chunking dataset.
+        vocab (Vocab): vocabulary object, used to store the mapping of token and index.
+
+    Returns:
+        - **dataset** (MapDataset) - dataset after transforms.
+
+    Raises:
+        TypeError: If `input_column` is not a string.
+
+    Examples:
+    """
+    columns_to_project = ["words", "chunk_tag"]
+    dataset = dataset.project(columns=columns_to_project)
+    input_columns = ["words", "chunk_tag"]
+    output_columns = ["text", "label"]
+    dataset = dataset.rename(input_columns=input_columns, output_columns=output_columns)
+
+    class TmpDataset:
+        """ a Dataset for seq_length column """
+        def __init__(self, dataset):
+            self._dataset = dataset
+            self._seq_length = []
+            self._load()
+
+        def _load(self):
+            for data in self._dataset.create_dict_iterator():
+                self._seq_length.append(len(data["text"]))
+
+        def __getitem__(self, index):
+            return self._seq_length[index]
+
+        def __len__(self):
+            return len(self._seq_length)
+
+    dataset_tmp = GeneratorDataset(TmpDataset(dataset), ["seq_length"],shuffle=False)
+    dataset = dataset.zip(dataset_tmp)
+    columns_order = ["text", "seq_length", "label"]
+    dataset = dataset.project(columns=columns_order)
+
+    pad_value_text = vocab.tokens_to_ids('<pad>')
+    pad_value_label = 0
+    lookup_op = text.Lookup(vocab, unknown_token='<unk>')
+    type_cast_op = transforms.TypeCast(mindspore.int64)
+
+    def tag_idx(tags):
+        """ tag_idx """
+        tag_idx_list = []
+        regex_dic = {"O":0,"B-ADJP":1,"I-ADJP":2,"B-ADVP":3,"I-ADVP":4,"B-CONJP":5,
+                     "I-CONJP":6,"B-INTJ":7,"I-INTJ":8,"B-LST":9,"I-LST":10,"B-NP":11,
+                     "I-NP":12,"B-PP":13,"I-PP":14,"B-PRT":15,"I-PRT":16,"B-SBAR":17,
+                     "I-SBAR":18,"B-UCP":19,"I-UCP":20,"B-VP":21,"I-VP":22}
+        for tag in tags:
+            for key, value in regex_dic.items():
+                if re.match(key, tag):
+                    tag_idx_list.append(value)
+        return tag_idx_list
+
+    dataset = dataset.map(operations=[tag_idx], input_columns=["label"])
+    dataset = dataset.map(operations=[lookup_op], input_columns=["text"])
+    dataset = dataset.map(operations=[type_cast_op])
+
+    if bucket_boundaries is not None:
+        if not isinstance(bucket_boundaries, list):
+            raise ValueError(f"'bucket_boundaries' must be a list of int, but get {type(bucket_boundaries)}")
+        trancate_op = TruncateSequence(max_len)
+        dataset = dataset.map([trancate_op], 'text')
+        dataset = dataset.map([trancate_op], 'label')
+        dataset.get_dataset_size()
+        if bucket_boundaries[-1] < max_len + 1:
+            bucket_boundaries.append(max_len + 1)
+        bucket_batch_sizes = [batch_size] * (len(bucket_boundaries) + 1)
+        dataset =  make_bucket_2cloums(dataset, ['text','label'], pad_value_text, pad_value_label, \
+                              bucket_boundaries, bucket_batch_sizes, drop_remainder)
+    else:
+        pad_op_text = transforms.PadEnd([max_len], pad_value_text)
+        pad_op_label = transforms.PadEnd([max_len], pad_value_label)
+        dataset = dataset.map([pad_op_text], 'text')
+        dataset = dataset.map([pad_op_label], 'label')
+        dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)
+
+    return dataset

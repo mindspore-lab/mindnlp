@@ -16,5 +16,5 @@
 SequenceTagging dataset init
 """
 
-from .conll2000chunking import CoNLL2000Chunking
+from .conll2000chunking import CoNLL2000Chunking,CoNLL2000Chunking_Process
 from .udpos import UDPOS
