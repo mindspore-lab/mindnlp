@@ -20,8 +20,18 @@ import os
 import shutil
 import unittest
 import pytest
-from mindnlp.dataset import SQuAD1, load
+import mindspore as ms
+from mindspore.dataset import text
+from mindnlp.dataset import SQuAD1, SQuAD1_Process, load, process
 
+char_dic = {"<unk>": 0, "<pad>": 1, "e": 2, "t": 3, "a": 4, "i": 5, "n": 6,\
+                    "o": 7, "s": 8, "r": 9, "h": 10, "l": 11, "d": 12, "c": 13, "u": 14,\
+                    "m": 15, "f": 16, "p": 17, "g": 18, "w": 19, "y": 20, "b": 21, ",": 22,\
+                    "v": 23, ".": 24, "k": 25, "1": 26, "0": 27, "x": 28, "2": 29, "\"": 30, \
+                    "-": 31, "j": 32, "9": 33, "'": 34, ")": 35, "(": 36, "?": 37, "z": 38,\
+                    "5": 39, "8": 40, "q": 41, "3": 42, "4": 43, "7": 44, "6": 45, ";": 46,\
+                    ":": 47, "\u2013": 48, "%": 49, "/": 50, "]": 51, "[": 52}
+char_vocab = text.Vocab.from_dict(char_dic)
 
 class TestSQuAD1(unittest.TestCase):
     r"""
@@ -60,3 +70,45 @@ class TestSQuAD1(unittest.TestCase):
                  root=self.root,
                  split=('dev')
                  )
+
+    @pytest.mark.dataset
+    def test_squad1_process(self):
+        """
+        Test SQuAD1_Process
+        """
+        dev_dataset = SQuAD1(split='dev')
+        squad_dev = SQuAD1_Process(dataset=dev_dataset, char_vocab=char_vocab)
+        squad_dev = squad_dev.create_tuple_iterator()
+        assert (next(squad_dev)[1]).dtype == ms.int32
+        assert (next(squad_dev)[1]).shape == (64, 768)
+        assert (next(squad_dev)[2]).dtype == ms.int32
+        assert (next(squad_dev)[2]).shape == (64, 64)
+        assert (next(squad_dev)[3]).dtype == ms.int32
+        assert (next(squad_dev)[3]).shape == (64, 768, 48)
+        assert (next(squad_dev)[4]).dtype == ms.int32
+        assert (next(squad_dev)[4]).shape == (64, 64, 48)
+        assert (next(squad_dev)[5]).dtype == ms.int32
+        assert (next(squad_dev)[6]).dtype == ms.int32
+        assert (next(squad_dev)[7]).dtype == ms.int32
+        assert (next(squad_dev)[8]).dtype == ms.int32
+
+    @pytest.mark.dataset
+    def test_squad1_process_by_register(self):
+        """
+        Test SQuAD1_Process by register
+        """
+        dev_dataset = SQuAD1(split='dev')
+        squad_dev = process('squad1', dataset=dev_dataset, char_vocab=char_vocab)
+        squad_dev = squad_dev.create_tuple_iterator()
+        assert (next(squad_dev)[1]).dtype == ms.int32
+        assert (next(squad_dev)[1]).shape == (64, 768)
+        assert (next(squad_dev)[2]).dtype == ms.int32
+        assert (next(squad_dev)[2]).shape == (64, 64)
+        assert (next(squad_dev)[3]).dtype == ms.int32
+        assert (next(squad_dev)[3]).shape == (64, 768, 48)
+        assert (next(squad_dev)[4]).dtype == ms.int32
+        assert (next(squad_dev)[4]).shape == (64, 64, 48)
+        assert (next(squad_dev)[5]).dtype == ms.int32
+        assert (next(squad_dev)[6]).dtype == ms.int32
+        assert (next(squad_dev)[7]).dtype == ms.int32
+        assert (next(squad_dev)[8]).dtype == ms.int32
