@@ -1,0 +1,42 @@
+name: Make Wheel and Releases
+
+on:
+  push:
+    tags:
+    - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Make Wheel and Releases
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.x
+  
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build
+
+    - name: Build package
+      run: python -m build --wheel
+
+    - name: Upload file
+      uses: actions/upload-artifact@v3
+      with: 
+        name: mindnlp-whl
+        path: dist/*
+
+    - name: Release and Upload Assets
+      uses: ncipollo/release-action@v1
+      with:
+        bodyFile: ""
+        allowUpdates: true
+        removeArtifacts: true
+        artifacts: |
+          dist/*.whl
