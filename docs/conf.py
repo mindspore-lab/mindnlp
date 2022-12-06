@@ -42,3 +42,6 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 
 master_doc = 'index'
+
+# multi-language docs
+locale_dirs = ['./locales/'] # the path of zh_CN files(.po files)

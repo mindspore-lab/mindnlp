@@ -1,0 +1,43 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) MindSpore and CQU NLP Team
+# This file is distributed under the same license as the MindNLP package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2022.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: MindNLP \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2022-12-06 18:04+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.10.3\n"
+
+#: ../../index.rst:15
+msgid "Overview"
+msgstr "概述"
+
+#: ../../index.rst:22
+msgid "Quick Start"
+msgstr "快速开始"
+
+#: ../../index.rst:31
+msgid "Examples"
+msgstr "示例"
+
+#: ../../index.rst:37
+msgid "API Reference"
+msgstr "API 参考"
+
+#: ../../index.rst:9
+msgid "MindNLP Documentation"
+msgstr "MindNLP 文档"
+
+#: ../../index.rst:13
+msgid "What is MindNLP"
+msgstr "什么是MindNLP"
+
