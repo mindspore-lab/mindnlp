@@ -15,3 +15,6 @@
 """
 Models init
 """
+from .bert import BertConfig, BertAttention, BertEmbeddings, BertEncoder, BertForPretraining, \
+    BertIntermediate, BertLayer, BertLMPredictionHead, BertModel, BertOutput, BertPooler, \
+        BertPredictionHeadTransform, BertPreTrainingHeads, BertSelfAttention, BertSelfOutput
