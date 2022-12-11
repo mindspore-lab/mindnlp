@@ -128,9 +128,6 @@ class CallbackManager(Callback):
 class RunContext:
     """
         Provide information about the model.
-
-        Provide information about original request to model function.
-        Callback objects can stop the loop by calling request_stop() of run_context.
         This class needs to be used with :class:`mindspore.train.callback.Callback`.
 
         Args:

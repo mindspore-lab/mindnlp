@@ -13,14 +13,14 @@
 # limitations under the License.
 # ============================================================================
 """
-Callback for loading best model
+Callback for saving and loading best model
 """
 import os
 import mindspore
 from mindnlp.abc import Callback
 
 class BestModelCallback(Callback):
-    """
+    r"""
     Save the model with the best `metrics` value and reload the model at the end of the training.
     The best model can only be loaded at the end of the training.
 
@@ -44,7 +44,7 @@ class BestModelCallback(Callback):
         self.save_on_exception = save_on_exception
 
     def evaluate_end(self, run_context):
-        """
+        r"""
         Called after evaluating.
 
         Args:
@@ -59,7 +59,7 @@ class BestModelCallback(Callback):
             self._save_model(run_context=run_context)
 
     def train_end(self, run_context):
-        """
+        r"""
         Called once after network training and load the best model params.
 
         Args:
@@ -81,7 +81,7 @@ class BestModelCallback(Callback):
         #         only_state_dict=self.only_state_dict)
 
     def is_better_metric_value(self, metrics_values):
-        """
+        r"""
         Compare each metrics values with the best metrics values.
 
         Args:
@@ -95,7 +95,7 @@ class BestModelCallback(Callback):
         return is_better
 
     def _save_model(self, run_context):
-        """
+        r"""
         Function to save model.
 
         Args:
@@ -111,7 +111,7 @@ class BestModelCallback(Callback):
               f"has been saved in epoch: {run_context.cur_epoch_nums - 1}.---------------")
 
     def _load_model(self, run_context):
-        """
+        r"""
         Function to load model.
 
         Args:
