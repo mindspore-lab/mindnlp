@@ -156,6 +156,11 @@ def CoNLL2000Chunking_Process(dataset, vocab, batch_size=64, max_len=500, \
         TypeError: If `input_column` is not a string.
 
     Examples:
+        >>> dataset_train,dataset_test = CoNLL2000Chunking()
+        >>> vocab = text.Vocab.from_dataset(dataset_train,columns=["words"],freq_range=None,
+                                    top_k=None,special_tokens=["<pad>","<unk>"],special_first=True)
+        >>> dataset_train = CoNLL2000Chunking_Process(dataset=dataset_train, vocab=vocab,
+                                          batch_size=32, max_len=80)
     """
     columns_to_project = ["words", "chunk_tag"]
     dataset = dataset.project(columns=columns_to_project)
