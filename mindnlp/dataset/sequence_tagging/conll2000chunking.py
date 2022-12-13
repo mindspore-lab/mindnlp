@@ -89,6 +89,7 @@ def CoNLL2000Chunking(
 ):
     r"""
     Load the CoNLL2000Chunking dataset
+
     Args:
         root (str): Directory where the datasets are saved.
             Default:~/.mindnlp
@@ -148,6 +149,12 @@ def CoNLL2000Chunking_Process(dataset, vocab, batch_size=64, max_len=500, \
     Args:
         dataset (GeneratorDataset): CoNLL2000Chunking dataset.
         vocab (Vocab): vocabulary object, used to store the mapping of token and index.
+        batch_size (int): The number of rows each batch is created with. Default: 64.
+        max_len (int): The max length of the sentence. Default: 500.
+        bucket_boundaries (list[int]): A list consisting of the upper boundaries of the
+            buckets. Must be strictly increasing. Default: None.
+        drop_remainder (bool): When the last batch of data contains a data entry smaller than batch_size, whether
+            to discard the batch and not pass it to the next operation. Default: False.
 
     Returns:
         - **dataset** (MapDataset) - dataset after transforms.

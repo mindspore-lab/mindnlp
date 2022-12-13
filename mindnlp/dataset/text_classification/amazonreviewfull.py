@@ -153,7 +153,7 @@ def AmazonReviewFull_Process(dataset, column="title_text", tokenizer=BasicTokeni
 
     if vocab is None:
         dataset = dataset.map(tokenizer,  input_columns=column)
-        vocab = text.Vocab.from_dataset(dataset, columns=column)
-        return dataset.map(text.Lookup(vocab), input_columns=column), vocab
+        vocab = text.Vocab.from_dataset(dataset, columns=column, special_tokens=["<pad>", "<unk>"])
+        return dataset.map(text.Lookup(vocab, unknown_token='<unk>'), input_columns=column), vocab
     dataset = dataset.map(tokenizer,  input_columns=column)
-    return dataset.map(text.Lookup(vocab), input_columns=column), vocab
+    return dataset.map(text.Lookup(vocab, unknown_token='<unk>'), input_columns=column), vocab
