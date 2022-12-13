@@ -129,9 +129,13 @@ def AG_NEWS_Process(dataset, vocab=None, tokenizer=BasicTokenizer(), bucket_boun
 
     Args:
         dataset (GeneratorDataset): AG_News dataset.
-        column (str): the column needed to be transpormed of the agnews dataset.
-        tokenizer (TextTensorOperation): tokenizer you choose to tokenize the text dataset.
         vocab (Vocab): vocabulary object, used to store the mapping of token and index.
+        tokenizer (TextTensorOperation): tokenizer you choose to tokenize the text dataset.
+        bucket_boundaries (list[int]): A list consisting of the upper boundaries of the
+            buckets. Must be strictly increasing. Default: None.
+        batch_size (int): The number of rows each batch is created with. Default: 512.
+        max_len (int): The max length of the sentence. Default: 500.
+        column (str): the column needed to be transpormed of the agnews dataset.
         drop_remainder (bool): When the last batch of data contains a data entry smaller than batch_size, whether
             to discard the batch and not pass it to the next operation. Default: False.
 

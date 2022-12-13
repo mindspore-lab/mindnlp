@@ -145,11 +145,15 @@ def Multi30k(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train',
 def Multi30k_Process(dataset, vocab, batch_size=64, max_len=500, \
                 drop_remainder=False):
     """
-    the process of the IMDB dataset
+    the process of the Multi30k dataset
 
     Args:
-        dataset (GeneratorDataset): IMDB dataset.
+        dataset (GeneratorDataset): Multi30k dataset.
         vocab (Vocab): vocabulary object, used to store the mapping of token and index.
+        batch_size (int): The number of rows each batch is created with. Default: 64.
+        max_len (int): The max length of the sentence. Default: 500.
+        drop_remainder (bool): When the last batch of data contains a data entry smaller than batch_size, whether
+            to discard the batch and not pass it to the next operation. Default: False.
 
     Returns:
         - **dataset** (MapDataset) - dataset after transforms.

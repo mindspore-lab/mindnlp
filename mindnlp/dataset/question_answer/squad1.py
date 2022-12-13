@@ -89,7 +89,6 @@ class Squad1():
 def SQuAD1(
     root: str = DEFAULT_ROOT,
     split: Union[Tuple[str], str] = ('train', 'dev'),
-    shuffle=False,
     proxies=None
 ):
     r"""
@@ -99,7 +98,6 @@ def SQuAD1(
         root (str): Directory where the datasets are saved.
         split (str|Tuple[str]): Split or splits to be returned.
             Default:('train','dev').
-        shuffle (bool): Whether or not to perform shuffle on the dataset.
         proxies (dict): a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
 
     Returns:
@@ -140,7 +138,7 @@ def SQuAD1(
         dataset = GeneratorDataset(source=Squad1(file),
                                    column_names=[
                                        "id" ,"context", "question", "answers", "answer_start"],
-                                   shuffle=shuffle)
+                                   shuffle=False)
         datasets_list.append(dataset)
     if len(file_list) == 1:
         return datasets_list[0]

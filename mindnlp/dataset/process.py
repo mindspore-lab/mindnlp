@@ -36,8 +36,8 @@ def common_process(dataset, column, tokenizer, vocab):
 
     if vocab is None :
         dataset = dataset.map(tokenizer, column)
-        new_vocab = text.Vocab.from_dataset(dataset, column)
-        return dataset.map(text.Lookup(new_vocab), column), new_vocab
+        new_vocab = text.Vocab.from_dataset(dataset, column, special_tokens=["<pad>", "<unk>"])
+        return dataset.map(text.Lookup(new_vocab, unknown_token='<unk>'), column), new_vocab
 
     dataset = dataset.map(tokenizer, column)
-    return dataset.map(text.Lookup(vocab), column)
+    return dataset.map(text.Lookup(vocab, unknown_token='<unk>'), column)
