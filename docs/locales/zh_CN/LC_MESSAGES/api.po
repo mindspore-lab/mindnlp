@@ -27,11 +27,11 @@ msgstr ""
 
 #: mindnlp.abc.backbones.base.BaseModel:1 of
 msgid "Basic class for models"
-msgstr ""
+msgstr "模型的基类"
 
 #: mindnlp.abc.backbones.seq2seq.Seq2seqModel:1 of
 msgid "Basic class for seq2seq models"
-msgstr ""
+msgstr "seq2seq模型的基类"
 
 #: mindnlp.abc.backbones.seq2seq.Seq2seqModel
 #: mindnlp.abc.backbones.seq2vec.Seq2vecModel
@@ -191,38 +191,38 @@ msgstr ""
 #: mindnlp.utils.download.get_filepath mindnlp.utils.download.get_from_cache
 #: mindnlp.utils.download.http_get mindnlp.utils.download.match_file of
 msgid "Parameters"
-msgstr ""
+msgstr "参数"
 
 #: mindnlp.abc.backbones.seq2seq.Seq2seqModel:3
 #: mindnlp.abc.backbones.seq2vec.Seq2vecModel:3 of
 msgid "The encoder."
-msgstr ""
+msgstr "编码器"
 
 #: mindnlp.abc.backbones.seq2seq.Seq2seqModel:5 of
 msgid "The decoder."
-msgstr ""
+msgstr "解码器"
 
 #: mindnlp.abc.backbones.seq2vec.Seq2vecModel:1 of
 msgid "Basic class for seq2vec models"
-msgstr ""
+msgstr "seq2vec模型的基类"
 
 #: mindnlp.abc.backbones.seq2vec.Seq2vecModel:5 of
 msgid "The module to process encoder output."
-msgstr ""
+msgstr "处理编码器输出的模块"
 
 #: mindnlp.abc.backbones.seq2vec.Seq2vecModel:7 of
 msgid ""
 "The drop out rate, greater than 0 and less equal than 1. If None, not "
 "dropping out input units. Drfault: None."
-msgstr ""
+msgstr "输入神经元丢弃概率，数值范围在0到1之间。如果值为None，则不丢弃输入神经元。默认值：None"
 
 #: mindnlp.abc.backbones.pretrained.PretrainedModel:1 of
 msgid "Abstract class for Pretrained models"
-msgstr ""
+msgstr "预训练模型的抽象类"
 
 #: mindnlp.abc.backbones.pretrained.PretrainedConfig:1 of
 msgid "Abstract class for Pretrained models config."
-msgstr ""
+msgstr "用于预训练模型配置的抽象类"
 
 #: ../../api/abc.rst:14
 msgid "Callback"
@@ -266,7 +266,7 @@ msgstr ""
 
 #: mindnlp.abc.modules.encoder.EncoderBase:1 of
 msgid "Basic class for encoders"
-msgstr ""
+msgstr "编码器模块的基类"
 
 #: mindnlp.abc.modules.decoder.DecoderBase:3
 #: mindnlp.abc.modules.encoder.EncoderBase:3
@@ -274,11 +274,11 @@ msgstr ""
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder:5
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder:3 of
 msgid "The embedding layer."
-msgstr ""
+msgstr "嵌入层"
 
 #: mindnlp.abc.modules.decoder.DecoderBase:1 of
 msgid "Basic class for dedcoders"
-msgstr ""
+msgstr "解码器模块的基类"
 
 #: mindnlp.abc.modules.embedding.TokenEmbedding:1
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext:1
@@ -414,7 +414,7 @@ msgstr ""
 
 #: mindnlp.common.loss:1 of
 msgid "Losses"
-msgstr "各种Loss"
+msgstr ""
 
 #: mindnlp.common.loss.CMRC2018Loss:1 mindnlp.common.loss.RDropLoss:1
 #: mindnlp.modules.attentions.AdditiveAttention:1
@@ -4105,54 +4105,54 @@ msgstr ""
 
 #: mindnlp.modules.decoder.rnn_decoder:1 of
 msgid "RNN Decoder modules"
-msgstr ""
+msgstr "RNN解码器模块"
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder:1 of
 msgid "Bases: :py:class:`~mindnlp.abc.modules.decoder.DecoderBase`"
 msgstr ""
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder:1 of
-msgid "Seq2Seq Decoder."
-msgstr ""
+msgid "Stacked Elman RNN Decoder."
+msgstr "循环神经网络（RNN）解码器"
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder:5 of
-msgid "The list of RNN Layers."
-msgstr ""
+msgid "The list of RNN cells."
+msgstr "循环神经网络单元的列表"
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder:7 of
 msgid ""
 "If not 0, append `Dropout` layer on the inputs of each RNN layer. Default"
 " 0. The range of dropout is [0.0, 1.0)."
-msgstr ""
+msgstr "如果值不为0，则对每一个rnn层的输入进行`Dropout`操作，值为神经元丢弃概率。默认值：0，范围为[0.0, 1.0)。"
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder:10 of
 msgid ""
 "If not 0, append `Dropout` layer on the outputs of each RNN layer except "
 "the last layer. Default 0. The range of dropout is [0.0, 1.0)."
-msgstr ""
+msgstr "如果值不为0，则对每一个rnn层的输出进行`Dropout`操作，值为神经元丢弃概率。默认值：0，范围为[0.0, 1.0)。"
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder:13 of
 msgid "Whether to use attention. Default: True."
-msgstr ""
+msgstr "指定是否使用attention。默认值：True。"
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder:15 of
 msgid "Number of features of encoder output. Default: 512."
-msgstr ""
+msgstr "编码器输出特征的数目。默认值：512."
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.construct:1
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:1 of
 msgid "Construct method."
-msgstr ""
+msgstr "Cell的construct方法"
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.construct:3
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.extract_features:3 of
 msgid "Output tokens for teacher forcing with shape [batch, tgt_len]."
-msgstr ""
+msgstr "用于teacher-forcing模式的token，shape为[batch, tgt_len]。"
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.construct:5
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.extract_features:5 of
 msgid "Output of encoder. Default: None."
-msgstr ""
+msgstr "编码器的输出。默认值：None。"
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.construct:8 of
 msgid ""
@@ -4161,26 +4161,29 @@ msgid ""
 " Tensor of shape (batch, `tgt_len`, `src_len`)   if attention=True "
 "otherwise None."
 msgstr ""
+"Tuple类型，返回一个包含(`output`, `attn_scores`)的tuple。 - output (Tensor): "
+"shape为(batch, `tgt_len`, `vocab_size`)的Tensor。 - attn_scores (Tensor): "
+"如果attention=True，则是shape为(batch, `tgt_len`, `src_len`)的Tensor；否则为None。"
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.construct:8
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.extract_features:8 of
 msgid "Tuple, a tuple contains (`output`, `attn_scores`)."
-msgstr ""
+msgstr "Tuple类型，返回一个包含(`output`, `attn_scores`)的tuple。"
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.construct:10 of
 msgid "output (Tensor): Tensor of shape (batch, `tgt_len`, `vocab_size`)."
-msgstr ""
+msgstr "output (Tensor): shape为(batch, `tgt_len`, `vocab_size`)的Tensor。"
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.construct:11
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.extract_features:11 of
 msgid ""
 "attn_scores (Tensor): Tensor of shape (batch, `tgt_len`, `src_len`) if "
 "attention=True otherwise None."
-msgstr ""
+msgstr "attn_scores (Tensor): 如果attention=True，则是shape为(batch, `tgt_len`, `src_len`)的Tensor；否则为None。"
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.extract_features:1 of
 msgid "Extract features of encoder output."
-msgstr ""
+msgstr "提取编码器输出的特征"
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.extract_features:8 of
 msgid ""
@@ -4189,24 +4192,27 @@ msgid ""
 "- attn_scores (Tensor): Tensor of shape (batch, `tgt_len`, `src_len`)   "
 "if attention=True otherwise None."
 msgstr ""
+"Tuple类型，返回一个包含(`output`, `attn_scores`)的tuple。 - output (Tensor): "
+"shape为(batch, `tgt_len`, `hidden_size`)的Tensor。 - attn_scores (Tensor): "
+"如果attention=True，则是shape为(batch, `tgt_len`, `src_len`)的Tensor；否则为None。"
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.extract_features:10 of
 msgid ""
 "output (Tensor): The extracted feature Tensor of shape (batch, `tgt_len`,"
 " `hidden_size`)."
-msgstr ""
+msgstr "output (Tensor): shape为(batch, `tgt_len`, `hidden_size`)的Tensor。"
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.output_layer:1 of
 msgid "Project features to the vocabulary size."
-msgstr ""
+msgstr "将特征映射到词汇中元素的个数"
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.output_layer:3 of
 msgid "The extracted feature Tensor."
-msgstr ""
+msgstr "提取的特征Tensor"
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.output_layer:6 of
 msgid "Tensor, the output of decoder."
-msgstr ""
+msgstr "Tensor类型，返回解码器的结果。"
 
 #: ../../api/modules/decoder.rst:14
 msgid "transformer\\_decoder"
@@ -4537,7 +4543,7 @@ msgstr ""
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder.construct:3
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:3 of
 msgid "Tokens in the source language with shape [batch, max_len]."
-msgstr ""
+msgstr "源语言中的token，shape为[batch, max_len]。"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder.construct:5
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:7 of
@@ -4545,7 +4551,7 @@ msgid ""
 "Its elements identify whether the corresponding input token is padding or"
 " not. If the value is 1, not padding token. If the value is 0, padding "
 "token. Defaults to None."
-msgstr ""
+msgstr "用于判断对应的输入token是否为padding部分。若值为1，则不是padding部分；若值为0，则是padding部分。默认值：None"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder.construct:9 of
 msgid ""
@@ -4568,19 +4574,19 @@ msgstr ""
 
 #: mindnlp.modules.encoder.rnn_encoder:1 of
 msgid "RNN encoder modules"
-msgstr ""
+msgstr "RNN编码器模块"
 
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder:1 of
-msgid "Seq2Seq Encoder."
-msgstr ""
+msgid "Stacked Elman RNN Encoder."
+msgstr "循环神经网络（RNN）编码器"
 
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder:5 of
 msgid "The RNN Layer."
-msgstr ""
+msgstr "RNN层"
 
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:5 of
 msgid "Lengths of each sentence with shape [batch]."
-msgstr ""
+msgstr "输入batch的序列长度，shape为[batch]。"
 
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:11 of
 msgid ""
@@ -4590,42 +4596,46 @@ msgid ""
 "`num_layers`, batch_size, `hidden_size`). - mask (Tensor): Mask Tensor "
 "used in decoder."
 msgstr ""
+"Tuple类型，返回一个包含(`output`, `hiddens_n`, `mask`)的tuple。 - output (Tensor): "
+"shape为(seq_len, batch_size, num_directions * `hidden_size`)的Tensor。 - hiddens_n (Tensor): "
+"shape为(num_directions * `num_layers`, batch_size, `hidden_size`)的Tensor。 - mask (Tensor): "
+"需要在解码器中使用的Mask Tensor。"
 
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:11 of
 msgid "Tuple, a tuple contains (`output`, `hiddens_n`, `mask`)."
-msgstr ""
+msgstr "Tuple类型，返回一个包含(`output`, `hiddens_n`, `mask`)的tuple。"
 
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:13 of
 msgid ""
 "output (Tensor): Tensor of shape (seq_len, batch_size, num_directions * "
 "`hidden_size`)."
-msgstr ""
+msgstr "output (Tensor): shape为(seq_len, batch_size, num_directions * `hidden_size`)的Tensor。"
 
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:14 of
 msgid ""
 "hiddens_n (Tensor): Tensor of shape (num_directions * `num_layers`, "
 "batch_size, `hidden_size`)."
-msgstr ""
+msgstr "hiddens_n (Tensor): shape为(num_directions * `num_layers`, batch_size, `hidden_size`)的Tensor。"
 
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:15 of
 msgid "mask (Tensor): Mask Tensor used in decoder."
-msgstr ""
+msgstr "mask (Tensor): 需要在解码器中使用的Mask Tensor。"
 
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.reorder_encoder_out:1 of
 msgid "Reorder encoder output according to `new_order`."
-msgstr ""
+msgstr "根据`new_order`重新排序编码器的输出顺序"
 
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.reorder_encoder_out:3 of
 msgid "The encoder's output."
-msgstr ""
+msgstr "编码器的输出"
 
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.reorder_encoder_out:5 of
 msgid "Desired order."
-msgstr ""
+msgstr "预期的顺序"
 
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.reorder_encoder_out:8 of
 msgid "Tuple, encoder_out rearranged according to new_order."
-msgstr ""
+msgstr "Tuple类型，返回根据`new_order`重新排列的编码器输出"
 
 #: ../../api/modules/encoder.rst:22
 msgid "transformer\\_encoder"
