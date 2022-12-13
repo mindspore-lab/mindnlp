@@ -134,6 +134,10 @@ def IMDB_Process(dataset, tokenizer, vocab, batch_size=64, max_len=500, \
         dataset (GeneratorDataset): IMDB dataset.
         tokenizer (TextTensorOperation): tokenizer you choose to tokenize the text dataset.
         vocab (Vocab): vocabulary object, used to store the mapping of token and index.
+        batch_size (int): size of the batch.
+        max_len (int): max length of the sentence.
+        bucket_boundaries (list[int]): A list consisting of the upper boundaries of the buckets.
+        drop_remainder (bool): If True, will drop the last batch for each bucket if it is not a full batch
 
     Returns:
         - **dataset** (MapDataset) - dataset after transforms.
@@ -143,6 +147,11 @@ def IMDB_Process(dataset, tokenizer, vocab, batch_size=64, max_len=500, \
         TypeError: If `input_column` is not a string.
 
     Examples:
+        >>> imdb_train, imdb_test = load('imdb', shuffle=True)
+        >>> embedding, vocab = Glove.from_pretrained('6B', 100, special_tokens=["<unk>", "<pad>"], dropout=drop)
+        >>> tokenizer = BasicTokenizer(True)
+        >>> imdb_train = process('imdb', imdb_train, tokenizer=tokenizer, vocab=vocab, \
+                        bucket_boundaries=[400, 500], max_len=600, drop_remainder=True)
     """
 
     pad_value = vocab.tokens_to_ids('<pad>')
