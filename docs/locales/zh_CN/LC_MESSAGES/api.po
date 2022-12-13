@@ -218,11 +218,11 @@ msgstr ""
 
 #: mindnlp.abc.backbones.pretrained.PretrainedModel:1 of
 msgid "Abstract class for Pretrained models"
-msgstr ""
+msgstr "预训练模型的基类"
 
 #: mindnlp.abc.backbones.pretrained.PretrainedConfig:1 of
 msgid "Abstract class for Pretrained models config."
-msgstr ""
+msgstr "预训练模型的配置基类"
 
 #: ../../api/abc.rst:14
 msgid "Callback"
@@ -3690,7 +3690,7 @@ msgstr ""
 
 #: ../../api/models.rst:6
 msgid "bert"
-msgstr ""
+msgstr "函数式融合编程的BERT模型实现，对标huggingface"
 
 #: ../../api/models.rst:14
 msgid "elmo"
@@ -3706,25 +3706,25 @@ msgstr ""
 
 #: ../../api/modules/attentions.rst:2
 msgid "Attentions"
-msgstr ""
+msgstr "注意力机制"
 
 #: mindnlp.modules.attentions:1 of
-msgid "attention module"
+msgid "注意力机制模块"
 msgstr ""
 
 #: mindnlp.modules.attentions.AdditiveAttention:1 of
 msgid ""
 "Additive Attention Additive Attention proposed in \"Neural Machine "
 "Translation by Jointly Learning to Align and Translate\" paper"
-msgstr ""
+msgstr "加性注意力机制由文章《Neural Machine Translation by Jointly Learning to Align and Translate》提出"
 
 #: mindnlp.modules.attentions.AdditiveAttention:4 of
 msgid "Attention(Q,K,V) = (W_v)T *(tanh(W_q * Q + W_k * K))"
-msgstr ""
+msgstr "加性注意力公式：Attention(Q,K,V) = (W_v)T *(tanh(W_q * Q + W_k * K))"
 
 #: mindnlp.modules.attentions.AdditiveAttention:8 of
 msgid "The dimesion of hidden state vector"
-msgstr ""
+msgstr "向量hidden state的维度大小"
 
 #: mindnlp.modules.attentions.AdditiveAttention:10
 #: mindnlp.modules.attentions.CosineAttention:10
@@ -3733,7 +3733,7 @@ msgstr ""
 msgid ""
 "The keep rate, greater than 0 and less equal than 1. E.g. rate=0.9, "
 "dropping out 10% of input units. Default: 0.9."
-msgstr ""
+msgstr "保留率，数值在0和1之间的，例如0.9表示dropout率为10%，保留率为90%"
 
 #: mindnlp.modules.attentions.AdditiveAttention:18
 #: mindnlp.modules.attentions.CosineAttention:18
@@ -3743,7 +3743,7 @@ msgstr ""
 #: mindnlp.modules.attentions.ScaledDotAttention:16
 #: mindnlp.modules.attentions.SelfAttention:17 of
 msgid "Inputs:"
-msgstr ""
+msgstr "输入"
 
 #: mindnlp.modules.attentions.AdditiveAttention:15
 #: mindnlp.modules.attentions.CosineAttention:15
@@ -3752,7 +3752,7 @@ msgstr ""
 msgid ""
 "**query** (mindspore.Tensor) - The query vector. [batch_size, query_size,"
 " hidden_size]"
-msgstr ""
+msgstr "query向量，一般为[batch size, query_size, hidden_size]（仅供参考）"
 
 #: mindnlp.modules.attentions.AdditiveAttention:16
 #: mindnlp.modules.attentions.CosineAttention:16
@@ -3761,7 +3761,7 @@ msgstr ""
 msgid ""
 "**key** (mindspore.Tensor) - The key vector. [batch_size, key_size, "
 "hidden_size]"
-msgstr ""
+msgstr "key向量，一般为[batch size, key_size, hidden_size]（仅供参考）"
 
 #: mindnlp.modules.attentions.AdditiveAttention:17
 #: mindnlp.modules.attentions.CosineAttention:17
@@ -3770,7 +3770,7 @@ msgstr ""
 msgid ""
 "**value** (mindspore.Tensor) - The value vector. [batch_size, seq_len, "
 "value_hidden_size]"
-msgstr ""
+msgstr "value向量，一般为[batch size, seq_len, value_hidden_size]（仅供参考）"
 
 #: mindnlp.modules.attentions.AdditiveAttention:18
 #: mindnlp.modules.attentions.CosineAttention:18
@@ -3779,7 +3779,7 @@ msgstr ""
 msgid ""
 "**mask** Optional[mindspore.Tensor[bool]] - The mask vector. [batch_size,"
 " query_size, key_size]"
-msgstr ""
+msgstr "mask张量，一般为[batch size, query_size, key_size]（仅供参考）"
 
 #: mindnlp.modules.attentions.AdditiveAttention:20
 #: mindnlp.modules.attentions.CosineAttention:20
@@ -3789,7 +3789,7 @@ msgid ""
 "- output (mindspore.Tensor) - The output of linear attention.  "
 "[batch_size, query_size, value_hidden_size] - attn (mindspore.Tensor) - "
 "The last layer of attention weights. [batch_size, query_size, key_size]"
-msgstr ""
+msgstr "线性注意力输出，输出注意力计算output，和注意力分数attn"
 
 #: mindnlp.modules.attentions.AdditiveAttention:22
 #: mindnlp.modules.attentions.CosineAttention:22
@@ -3798,7 +3798,7 @@ msgstr ""
 msgid ""
 "output (mindspore.Tensor) - The output of linear attention.  [batch_size,"
 " query_size, value_hidden_size]"
-msgstr ""
+msgstr "线性注意力输出，维度参考[batch_size, query_size, value_hidden_size]"
 
 #: mindnlp.modules.attentions.AdditiveAttention:23
 #: mindnlp.modules.attentions.CosineAttention:23
@@ -3807,7 +3807,7 @@ msgstr ""
 msgid ""
 "attn (mindspore.Tensor) - The last layer of attention weights. "
 "[batch_size, query_size, key_size]"
-msgstr ""
+msgstr "线性注意力分数，维度参考[batch_size, query_size, key_size]"
 
 #: mindnlp.modules.attentions.AdditiveAttention.construct:1 of
 msgid "Additive attention network construction."
@@ -3819,6 +3819,8 @@ msgid ""
 "BiAttention module will compute the attention result by the following "
 "equation:"
 msgstr ""
+"针对所给的2个序列所表示的向量如x_i和y_i"
+"BiAttentio模块会根据以下公式计算注意力结果"
 
 #: mindnlp.modules.attentions.BinaryAttention:5 of
 msgid ""
@@ -3833,37 +3835,48 @@ msgid ""
 "\\mathrm{exp}(e_{ij})}{\\sum_{k=1}^{\\mathcal{l}_{x}}{\\mathrm{exp}(e_{ik})}}}{x}_{i}"
 " \\\\\n"
 "\\end{array}"
-msgstr ""
+msgstr "公式："
+"  \\begin{array}{ll} \\\\\n"
+"    e_{ij} = {x}^{\\mathrm{T}}_{i}{y}_{j} \\\\\n"
+"    {\\hat{x}}_{i} = \\sum_{j=1}^{\\mathcal{l}_{y}}{\\frac{\n"
+"        "
+"\\mathrm{exp}(e_{ij})}{\\sum_{k=1}^{\\mathcal{l}_{y}}{\\mathrm{exp}(e_{ik})}}}{y}_{j}"
+" \\\\\n"
+"    {\\hat{y}}_{j} = \\sum_{i=1}^{\\mathcal{l}_{x}}{\\frac{\n"
+"        "
+"\\mathrm{exp}(e_{ij})}{\\sum_{k=1}^{\\mathcal{l}_{x}}{\\mathrm{exp}(e_{ik})}}}{x}_{i}"
+" \\\\\n"
+"\\end{array}"
 
 #: mindnlp.modules.attentions.BinaryAttention:15 of
 msgid "[batch_size, x_seq_len, hidden_size]"
-msgstr ""
+msgstr "参考shape维度 [batch_size, x_seq_len, hidden_size]"
 
 #: mindnlp.modules.attentions.BinaryAttention:17 of
 msgid "[batch_size, x_seq_len]"
-msgstr ""
+msgstr "参考shape维度 [batch_size, x_seq_len]"
 
 #: mindnlp.modules.attentions.BinaryAttention:19 of
 msgid "[batch_size, y_seq_len, hidden_size]"
-msgstr ""
+msgstr "参考shape维度 [batch_size, y_seq_len, hidden_size]"
 
 #: mindnlp.modules.attentions.BinaryAttention:21 of
 msgid "[batch_size, y_seq_len]"
-msgstr ""
+msgstr "参考shape维度 [batch_size, y_seq_len]"
 
 #: mindnlp.modules.attentions.BinaryAttention:24 of
 msgid ""
 "- attended_x (mindspore.Tensor) - The output of the attention_x. - "
 "attended_y (mindspore.Tensor) - The output of the attention_y."
-msgstr ""
+msgstr "x向量的注意力结果和y向量的注意力结果"
 
 #: mindnlp.modules.attentions.BinaryAttention:26 of
 msgid "attended_x (mindspore.Tensor) - The output of the attention_x."
-msgstr ""
+msgstr "x向量的注意力结果"
 
 #: mindnlp.modules.attentions.BinaryAttention:27 of
 msgid "attended_y (mindspore.Tensor) - The output of the attention_y."
-msgstr ""
+msgstr "y向量的注意力结果"
 
 #: mindnlp.modules.attentions.BinaryAttention.construct:1
 #: mindnlp.modules.attentions.LinearAttention.construct:1
@@ -3908,59 +3921,68 @@ msgstr ""
 msgid ""
 "Cosine Attention Cosine Attention proposed in \"Neural Turing Machines\" "
 "paper"
-msgstr ""
+msgstr "Cosine Attention由论文《Neural Turing Machines》提出"
 
 #: mindnlp.modules.attentions.CosineAttention:4 of
 msgid ""
 "Sim(Q, K) = (Q * (K)T) / |Q| * |K|\n"
 "Attention(Q,K,V) = softmax(Sim(Q, K)) * V"
 msgstr ""
-
+"注意力计算公式：Sim(Q, K) = (Q * (K)T) / |Q| * |K|"
+"Attention(Q,K,V) = softmax(Sim(Q, K)) * V"
 #: mindnlp.modules.attentions.CosineAttention.construct:1 of
 msgid "Consine attention network construction."
-msgstr ""
+msgstr "Consine attention 网络前向传播"
 
 #: mindnlp.modules.attentions.LinearAttention:1 of
 msgid "Linear attention computes attention by concat the query and key vector."
-msgstr ""
+msgstr "线性注意力计算的方式采用对query向量和key向量进行拼接"
 
 #: mindnlp.modules.attentions.LinearAttention:9
 #: mindnlp.modules.attentions.MutiHeadAttention:10
 #: mindnlp.modules.attentions.SelfAttention:6 of
 msgid "The keep rate, greater than 0 and less equal than 1. Default: 0.9."
-msgstr ""
+msgstr "保留率，数值为0至1，默认为0.9"
 
 #: mindnlp.modules.attentions.LocationAwareAttention:1 of
 msgid ""
 "Location Aware Attention Location Aware Attention proposed in "
 "\"Attention-Based Models for Speech Recognition\""
 msgstr ""
+"Location Aware Attention由"
+"论文《Attention-Based Models for Speech Recognition》提出"
 
 #: mindnlp.modules.attentions.LocationAwareAttention:4 of
 msgid "The dimension of the hidden states"
-msgstr ""
+msgstr "隐藏状态维度"
 
 #: mindnlp.modules.attentions.LocationAwareAttention:6 of
 msgid "Smoothing label from \"Attention-Based Models for Speech Recognition\""
-msgstr ""
+msgstr "《Attention-Based Models for Speech Recognition》中的Smoothing label"
 
 #: mindnlp.modules.attentions.LocationAwareAttention:10 of
 msgid ""
 "**query** (mindspore.Tensor) - Decoder hidden states, Shape=(batch_size, "
 "1, decoder_dim)."
 msgstr ""
+"query向量，同时也是Decoder的hidden states，shape参考[batch_size, "
+"1, decoder_dim]"
 
 #: mindnlp.modules.attentions.LocationAwareAttention:11 of
 msgid ""
 "**value** (mindspore.Tensor) - Encoder outputs, Shape=(batch_size, "
 "seq_len, encoder_dim)."
 msgstr ""
+"key向量，同时也是Encoder的hidden states，shape参考[batch_size, "
+"seq_len, encoder_dim]"
 
 #: mindnlp.modules.attentions.LocationAwareAttention:12 of
 msgid ""
 "**last_attn** (mindspore.Tensor) - Attention weight of previous step, "
 "Shape=(batch_size, seq_len)."
 msgstr ""
+"最后一个状态的注意力分数，shape参考[batch_size, "
+"seq_len]"
 
 #: mindnlp.modules.attentions.LocationAwareAttention:14 of
 msgid ""
@@ -3968,36 +3990,39 @@ msgid ""
 " 1, decoder_dim). - **attn** (mindspore.Tensor) - Attention weight of "
 "this step, Shape=(batch_size, seq_len)."
 msgstr ""
-
+"context上下文向量，shape参考[batch_size, 1, decoder_dim]"
+"attn当前状态下的注意力分数，shape参考[batch_size, seq_len]"
 #: mindnlp.modules.attentions.LocationAwareAttention:16 of
 msgid ""
 "**context** (mindspore.Tensor) - The context vector, Shape=(batch_size, "
 "1, decoder_dim)."
-msgstr ""
+msgstr "context上下文向量，shape参考[batch_size, 1, decoder_dim]"
 
 #: mindnlp.modules.attentions.LocationAwareAttention:17 of
 msgid ""
 "**attn** (mindspore.Tensor) - Attention weight of this step, "
 "Shape=(batch_size, seq_len)."
-msgstr ""
+msgstr "attn当前状态下的注意力分数，shape参考[batch_size, seq_len]"
 
 #: mindnlp.modules.attentions.LocationAwareAttention.construct:1 of
 msgid "Location aware attention network construction."
-msgstr ""
+msgstr "Location aware attention 前向传播"
 
 #: mindnlp.modules.attentions.LocationAwareAttention.set_mask:1 of
 msgid "Set the mask"
-msgstr ""
+msgstr "设置mask张量"
 
 #: mindnlp.modules.attentions.LocationAwareAttention.set_mask:3 of
 msgid "Args: - **mask** mindspore.Tensor[bool] - The mask vector."
-msgstr ""
+msgstr "mask张量"
 
 #: mindnlp.modules.attentions.MutiHeadAttention:1 of
 msgid ""
 "Muti-head attention is from the paper “attention is all you need” where "
 "heads == 1 Muti-head attention is normal self-attention"
 msgstr ""
+"多头注意力机制由论文《attention is all you need》提出"
+"当head数为1时，多头注意力机制及正常的自注意力机制"
 
 #: mindnlp.modules.attentions.MutiHeadAttention:4 of
 msgid "8."
@@ -4016,84 +4041,90 @@ msgstr ""
 #: mindnlp.modules.attentions.MutiHeadAttention:14
 #: mindnlp.modules.attentions.SelfAttention:10 of
 msgid "\"dot\"."
-msgstr ""
+msgstr "点乘"
 
 #: mindnlp.modules.attentions.MutiHeadAttention:18 of
 msgid ""
 "**query** (mindspore.Tensor) - The query vector. Usually is [batch_size, "
 "seq_len, d_model]"
-msgstr ""
+msgstr "query向量，一般为[batch size, seq_len, d_model]（仅供参考）"
 
 #: mindnlp.modules.attentions.MutiHeadAttention:19 of
 msgid ""
 "**key** (mindspore.Tensor) - The key vector. Usually is [batch_size, "
 "seq_len, d_model]"
-msgstr ""
+msgstr "key向量，一般为[batch size, seq_len, d_model]（仅供参考）"
 
 #: mindnlp.modules.attentions.MutiHeadAttention:20
 #: mindnlp.modules.attentions.SelfAttention:16 of
 msgid ""
 "**value** (mindspore.Tensor) - The value vector. [batch_size, seq_len, "
 "d_model]"
-msgstr ""
+msgstr "value向量，一般为[batch size, seq_len, d_model]（仅供参考）"
 
 #: mindnlp.modules.attentions.MutiHeadAttention:21
 #: mindnlp.modules.attentions.SelfAttention:17 of
 msgid ""
 "**mask** Optional[mindspore.Tensor[bool]] - The mask vector. [batch_size,"
 " seq_len, seq_len]"
-msgstr ""
+msgstr "mask张量，一般为[batch size, query_size, key_size]（仅供参考）"
 
 #: mindnlp.modules.attentions.MutiHeadAttention:23 of
 msgid ""
 "- output (mindspore.Tensor) - The output of muti-head attention. - attn "
 "(mindspore.Tensor) - The last layer of attention weights"
 msgstr ""
+"多头注意力输出"
+"多头注意力注意力分数"
 
 #: mindnlp.modules.attentions.MutiHeadAttention:25 of
 msgid "output (mindspore.Tensor) - The output of muti-head attention."
-msgstr ""
+msgstr "多头注意力输出"
 
 #: mindnlp.modules.attentions.MutiHeadAttention:26
 #: mindnlp.modules.attentions.SelfAttention:22 of
 msgid "attn (mindspore.Tensor) - The last layer of attention weights"
-msgstr ""
+msgstr "多头注意力注意力分数"
 
 #: mindnlp.modules.attentions.MutiHeadAttention.construct:1 of
 msgid "Get muti-head attention output and attention weights."
-msgstr ""
+msgstr "获取多头注意力输出和其注意力分数"
 
 #: mindnlp.modules.attentions.ScaledDotAttention:1 of
 msgid ""
 "Scaled Dot-Product Attention Scaled Dot-Product Attention proposed in "
 "\"Attention Is All You Need\""
 msgstr ""
+"缩放点乘注意力机制由论文"
+"《Attention Is All You Need》提出"
 
 #: mindnlp.modules.attentions.ScaledDotAttention:4 of
 msgid "Attention(Q,K,V)=softmax(\\frac{QK^T}{\\sqrt{d_k}})V"
-msgstr ""
+msgstr "注意力公式：Attention(Q,K,V)=softmax(\\frac{QK^T}{\\sqrt{d_k}})V"
 
 #: mindnlp.modules.attentions.SelfAttention:1 of
 msgid "Self attention is from the paper “attention is all you need”"
-msgstr ""
+msgstr "自注意力机制由论文《attention is all you need》提出"
 
 #: mindnlp.modules.attentions.SelfAttention:14 of
 msgid "**query** (mindspore.Tensor) - The query vector."
-msgstr ""
+msgstr "query向量"
 
 #: mindnlp.modules.attentions.SelfAttention:15 of
 msgid "**key** (mindspore.Tensor) - The key vector."
-msgstr ""
+msgstr "key向量"
 
 #: mindnlp.modules.attentions.SelfAttention:19 of
 msgid ""
 "- output (mindspore.Tensor) - The output of self attention. - attn "
 "(mindspore.Tensor) - The last layer of attention weights"
 msgstr ""
+"output 注意力输出"
+"attn 对应的注意力分数"
 
 #: mindnlp.modules.attentions.SelfAttention:21 of
 msgid "output (mindspore.Tensor) - The output of self attention."
-msgstr ""
+msgstr "output 注意力输出"
 
 #: ../../api/modules/decoder.rst:2
 msgid "Decoder"
