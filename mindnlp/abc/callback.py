@@ -28,7 +28,7 @@ class Callback():
     """
 
     def train_begin(self, run_context):
-        """Called once before the network executing."""
+        """Called once before network training."""
 
     def train_end(self, run_context):
         """Called once after network training."""

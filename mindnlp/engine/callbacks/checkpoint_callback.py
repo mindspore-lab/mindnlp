@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-Callback for load and save checkpoint.
+Callback for saving checkpoint.
 """
 import os
 
@@ -29,9 +29,7 @@ class CheckpointCallback(Callback):
 
     Args:
         save_path (str): The path to save the state. A specific path needs to be specified,
-            such as 'checkpoints/chtp.pt'. If it is checked that the file exists,
-            it will automatically start running from this Checkpoint
-            when the Trainer starts training. Default: None.
+            such as 'checkpoints/chtp.pt'. Default: None.
         epochs (int): Save a checkpoint file every n epochs.
         keep_checkpoint_max (int): Save checkpoint files at most. Default:5.
 
