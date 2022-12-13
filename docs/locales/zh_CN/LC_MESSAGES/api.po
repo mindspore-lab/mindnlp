@@ -284,29 +284,29 @@ msgstr "解码器模块的基类"
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext:1
 #: mindnlp.modules.embeddings.glove_embedding.Glove:1
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec:1 of
-msgid "Create vocab and Embedding from a given pre-trained vector file."
-msgstr ""
+msgid "Embedding layer"
+msgstr "embedding层"
 
 #: mindnlp.abc.modules.embedding.TokenEmbedding:3
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext:3
 #: mindnlp.modules.embeddings.glove_embedding.Glove:3
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec:3 of
 msgid "Passins into Vocab for initialization."
-msgstr ""
+msgstr "传入vocab用于初始化."
 
 #: mindnlp.abc.modules.embedding.TokenEmbedding:5 of
 msgid ""
-"Passing into Vocab and Tensor,use these values to initialize Embedding "
+"Passing into Tensor,use these values to initialize Embedding "
 "directly."
-msgstr ""
+msgstr "用传入的Tensor直接初始化embedding."
 
 #: mindnlp.abc.modules.embedding.TokenEmbedding:7 of
 msgid "Whether this parameter needs to be gradient to update."
-msgstr ""
+msgstr "是否需要梯度下降更新参数."
 
 #: mindnlp.abc.modules.embedding.TokenEmbedding:9 of
 msgid "Dropout of the output of Embedding."
-msgstr ""
+msgstr "embedding层的dropout率."
 
 #: ../../api/common.rst:2
 msgid "Common"
