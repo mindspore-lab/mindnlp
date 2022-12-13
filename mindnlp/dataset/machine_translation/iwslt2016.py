@@ -172,8 +172,15 @@ def IWSLT2016(root: str = DEFAULT_ROOT,
     untar(untar_file_path, os.path.dirname(untar_file_path))
     datasets_list = []
     for usage in split:
-        dataset = IWSLT2016Dataset(
-            dataset_dir=dataset_dir_path, usage=usage, shuffle=False)
+        if usage == 'valid':
+            dataset = IWSLT2016Dataset(
+                dataset_dir=dataset_dir_path, usage=usage, valid_set=valid_set, shuffle=False)
+        elif usage == 'test':
+            dataset = IWSLT2016Dataset(
+                dataset_dir=dataset_dir_path, usage=usage, test_set=test_set, shuffle=False)
+        else:
+            dataset = IWSLT2016Dataset(
+                dataset_dir=dataset_dir_path, usage=usage, shuffle=False)
         datasets_list.append(dataset)
     if len(datasets_list) == 1:
         return datasets_list[0]
