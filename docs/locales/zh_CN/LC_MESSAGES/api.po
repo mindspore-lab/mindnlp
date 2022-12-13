@@ -4224,85 +4224,85 @@ msgstr ""
 
 #: ../../api/modules/embedding.rst:2
 msgid "Embeddings"
-msgstr ""
+msgstr "Embeddings"
 
 #: ../../api/modules/embedding.rst:6
 msgid "fasttext\\_embedding"
-msgstr ""
+msgstr "fasttext\\_embedding"
 
 #: mindnlp.modules.embeddings.fasttext_embedding:1 of
 msgid "Fasttext_embedding"
-msgstr ""
+msgstr "Fasttext_embedding"
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext:1
 #: mindnlp.modules.embeddings.glove_embedding.Glove:1
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec:1 of
 msgid "Bases: :py:class:`~mindnlp.abc.modules.embedding.TokenEmbedding`"
-msgstr ""
+msgstr "Bases: :py:class:`~mindnlp.abc.modules.embedding.TokenEmbedding`"
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext:5
 #: mindnlp.modules.embeddings.glove_embedding.Glove:5
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec:5 of
 msgid "Passing into Tensor,use these values to initialize Embedding directly."
-msgstr ""
+msgstr "用传入的Tensor直接初始化embedding."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext:7
 #: mindnlp.modules.embeddings.glove_embedding.Glove:7
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec:7 of
 msgid "Whether this parameter needs to be gradient to update. Default: True."
-msgstr ""
+msgstr "参数是否需要梯度下降来更新.默认值：True."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext:9
 #: mindnlp.modules.embeddings.glove_embedding.Glove:9
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec:9 of
 msgid "Dropout of the output of Embedding. Default: 0.5."
-msgstr ""
+msgstr "Embedding层的Dropout丢弃率.默认值：0.5."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.construct:1
 #: mindnlp.modules.embeddings.glove_embedding.Glove.construct:1
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.construct:1 of
 msgid "Ids to query."
-msgstr ""
+msgstr "通过embedding查询的词典下标。"
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.construct:4
 #: mindnlp.modules.embeddings.glove_embedding.Glove.construct:4
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.construct:4 of
 msgid "- Tensor, returns the Embedding query results."
-msgstr ""
+msgstr "- Tensor, 返回embedding运算结果."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.construct:6
 #: mindnlp.modules.embeddings.glove_embedding.Glove.construct:6
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.construct:6 of
 msgid "Tensor, returns the Embedding query results."
-msgstr ""
+msgstr "Tensor, 返回embedding运算结果."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:1
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:1
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:1 of
-msgid "Creates Embedding instance from given 2-dimensional FloatTensor."
-msgstr ""
+msgid "Initialize the Embedding based on the pre-trained word vectors."
+msgstr "根据预训练词向量初始化Embedding."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:3 of
 msgid "The name of the pretrained vector. Default: \"1M\"."
-msgstr ""
+msgstr "预训练词向量的名字.默认值：\"1M\"."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:5
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:5
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:5 of
 msgid "The dimension of the pretrained vector. Default: 300."
-msgstr ""
+msgstr "预训练词向量的维度.默认值：300."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:7
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:7
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:7 of
 msgid "Default storage directory. Default: DEFAULT_ROOT."
-msgstr ""
+msgstr "默认保存路径.默认值：DEFAULT_ROOT."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:9
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:9
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:9 of
 msgid "List of special participles. Default: (\"<pad>\", \"<unk>\")."
-msgstr ""
+msgstr "由特殊token组成的list.默认值：(\"<pad>\", \"<unk>\")."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:11
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:11
@@ -4312,7 +4312,7 @@ msgid ""
 "to the top of the dictionary. If True, add special_tokens to the "
 "beginning of the dictionary, otherwise add them to the end. Default: "
 "True."
-msgstr ""
+msgstr "是否添加special_tokens中的元素到字典头部.如果为True,则添加到头部,反之添加到尾部。默认值：True."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:15
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:15
@@ -4321,50 +4321,54 @@ msgid ""
 "- requires_grad (bool): Whether this parameter needs to be gradient to "
 "update. - dropout (float): Dropout of the output of Embedding."
 msgstr ""
+"- requires_grad (bool): 参数是否需要梯度下降来更新."
+"- dropout (float): Embedding层的Dropout丢弃率.默认值：0.5."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:16
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:16
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:18 of
 msgid ""
 "requires_grad (bool): Whether this parameter needs to be gradient to "
-"update."
-msgstr ""
+"update.Default: True."
+msgstr "requires_grad (bool): 参数是否需要梯度下降来更新.默认值: True."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:17
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:17
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:19 of
 msgid "dropout (float): Dropout of the output of Embedding."
-msgstr ""
+msgstr "dropout (float): Embedding层的Dropout丢弃率.默认值：0.5."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:20 of
 msgid ""
 "- Fasttext, Returns an embedding instance generated through a pretrained "
 "word vector. - Vocab, Vocabulary extracted from the file."
 msgstr ""
+"- Fasttext, 返回一个由预训练词向量生成的embedding."
+"- Vocab, 从词向量文件中提取的词汇."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:22 of
 msgid ""
 "Fasttext, Returns an embedding instance generated through a pretrained "
 "word vector."
-msgstr ""
+msgstr "Fasttext, 返回一个由预训练词向量生成的embedding."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:23
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:23
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:25 of
 msgid "Vocab, Vocabulary extracted from the file."
-msgstr ""
+msgstr "Vocab, 从词向量文件中提取的词汇."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.load:1
 #: mindnlp.modules.embeddings.glove_embedding.Glove.load:1
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.load:1 of
 msgid "Load embedding from the specified location."
-msgstr ""
+msgstr "通过指定路径的参数文件初始化embedding."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.load:3
 #: mindnlp.modules.embeddings.glove_embedding.Glove.load:3
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.load:3 of
 msgid "Name of the folder to load. Default: None."
-msgstr ""
+msgstr "加载embedding所在的目录名.默认值：None."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.load:5
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.save:5
@@ -4373,7 +4377,7 @@ msgstr ""
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.load:5
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.save:5 of
 msgid "Path of the embedding folder. Default: DEFAULT_ROOT."
-msgstr ""
+msgstr "embedding参数文件所在的路径.默认值：DEFAULT_ROOT."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.load:7
 #: mindnlp.modules.embeddings.glove_embedding.Glove.load:7
@@ -4381,19 +4385,19 @@ msgstr ""
 msgid ""
 "Whether to initialize the embedding as a npy file. Vocab and npy_path are"
 " valid when load_npy is True. Default: False."
-msgstr ""
+msgstr "是否以npy文件的方式初始化embedding.当load_npy为True时,Vocab和npy_path有效。默认值：False."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.load:10
 #: mindnlp.modules.embeddings.glove_embedding.Glove.load:10
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.load:10 of
 msgid "If initialized with a npy file, pass in vocab. Default: None."
-msgstr ""
+msgstr "如果用npy文件初始化,则传入Vocab.默认值：None."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.load:12
 #: mindnlp.modules.embeddings.glove_embedding.Glove.load:12
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.load:12 of
 msgid "Location of the npy file. Default: None."
-msgstr ""
+msgstr "npy文件的路径.默认值：None."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.load:15
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.save:8
@@ -4402,75 +4406,79 @@ msgstr ""
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.load:15
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.save:8 of
 msgid "None"
-msgstr ""
+msgstr "None"
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.save:1
 #: mindnlp.modules.embeddings.glove_embedding.Glove.save:1
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.save:1 of
 msgid "Save the embedding to the specified location."
-msgstr ""
+msgstr "保存embedding到指定路径."
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.save:3
 #: mindnlp.modules.embeddings.glove_embedding.Glove.save:3
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.save:3 of
 msgid "Name of the folder to store."
-msgstr ""
+msgstr "保存embedding参数的目录名."
 
 #: ../../api/modules/embedding.rst:14
 msgid "glove\\_embedding"
-msgstr ""
+msgstr "glove\\_embedding"
 
 #: mindnlp.modules.embeddings.glove_embedding:1 of
 msgid "glove_embedding"
-msgstr ""
+msgstr "glove_embedding"
 
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:3 of
 msgid "The name of the pretrained vector. Default: '6B'."
-msgstr ""
+msgstr "预训练词向量的名字.默认值：'6B'."
 
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:20 of
 msgid ""
 "- Glove, Returns an embedding instance generated through a pretrained "
 "word vector. - Vocab, Vocabulary extracted from the file."
 msgstr ""
+"- Glove, 返回一个由预训练词向量生成的embedding."
+"- Vocab, 从词向量文件中提取的词汇."
 
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:22 of
 msgid ""
 "Glove, Returns an embedding instance generated through a pretrained word "
 "vector."
-msgstr ""
+msgstr "Glove, 返回一个由预训练词向量生成的embedding."
 
 #: ../../api/modules/embedding.rst:22
 msgid "word2vec\\_embedding"
-msgstr ""
+msgstr "word2vec\\_embedding"
 
 #: mindnlp.modules.embeddings.word2vec_embedding:1 of
 msgid "Word2vec_embedding"
-msgstr ""
+msgstr "Word2vec_embedding"
 
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:3 of
 msgid "The name of the pretrained vector. Default: 'google-news'."
-msgstr ""
+msgstr "预训练词向量的名字。默认值：'google-news'."
 
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:15 of
 msgid "Whether to load word vectors with gensim library."
-msgstr ""
+msgstr "是否用gensim库加载词向量.若为True则表示使用gensim库.默认值：True."
 
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:22 of
 msgid ""
 "- Word2vec, Returns an embedding instance generated through a pretrained "
 "word vector. - Vocab, Vocabulary extracted from the file."
 msgstr ""
+"- Word2vec, 返回一个由预训练词向量生成的embedding."
+"- Vocab, 从词向量文件提取的词汇."
 
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:24 of
 msgid ""
 "Word2vec, Returns an embedding instance generated through a pretrained "
 "word vector."
-msgstr ""
+msgstr "Word2vec, 返回一个由预训练词向量生成的embedding."
 
 #: mindnlp.modules.embeddings:1 of
 msgid "Embedding class"
-msgstr ""
+msgstr "Embedding class"
 
 #: ../../api/modules/encoder.rst:2
 msgid "Encoder"
