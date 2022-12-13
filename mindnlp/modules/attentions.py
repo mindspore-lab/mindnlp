@@ -67,8 +67,10 @@ class ScaledDotAttention(nn.Cell):
                 [batch_size, query_size, key_size]
 
         Returns:
-            - output (mindspore.Tensor): The output of linear attention. [batch_size, query_size, value_hidden_size]
-            - attn (mindspore.Tensor): The last layer of attention weights. [batch_size, query_size, key_size]
+            - **output** (mindspore.Tensor) - The output of linear attention.
+              [batch_size, query_size, value_hidden_size]
+            - **attn** (mindspore.Tensor) - The last layer of attention weights.
+              [batch_size, query_size, key_size]
         """
         scale = mnp.sqrt(ops.scalar_to_tensor(query.shape[-1]))
         scores = ops.matmul(query, key.swapaxes(-1, -2)) / scale
@@ -133,8 +135,10 @@ class AdditiveAttention(nn.Cell):
                 [batch_size, query_size, key_size]
 
         Returns:
-            - output (mindspore.Tensor): The output of linear attention. [batch_size, query_size, value_hidden_size]
-            - attn (mindspore.Tensor): The last layer of attention weights. [batch_size, query_size, key_size]
+            - **output** (mindspore.Tensor) - The output of linear attention.
+              [batch_size, query_size, value_hidden_size]
+            - **attn** (mindspore.Tensor) - The last layer of attention weights.
+              [batch_size, query_size, key_size]
         """
         query = self.w_q(query)
         key = self.w_k(key)
@@ -201,8 +205,10 @@ class LinearAttention(nn.Cell):
                 [batch_size, query_size, key_size]
 
         Returns:
-            - output (mindspore.Tensor): The output of linear attention. [batch_size, query_size, value_hidden_size]
-            - attn (mindspore.Tensor): The last layer of attention weights. [batch_size, query_size, key_size]
+            - **output** (mindspore.Tensor) - The output of linear attention.
+              [batch_size, query_size, value_hidden_size]
+            - **attn** (mindspore.Tensor) - The last layer of attention weights.
+              [batch_size, query_size, key_size]
         """
         features = self.w_linear(ops.concat((query, key), -2).swapaxes(-1, -2)).swapaxes(-1, -2)
         scores = self.v_linear(self.tanh(features + self.bias))
@@ -262,8 +268,10 @@ class CosineAttention(nn.Cell):
                 [batch_size, query_size, key_size]
 
         Returns:
-            - output (mindspore.Tensor): The output of linear attention. [batch_size, query_size, value_hidden_size]
-            - attn (mindspore.Tensor): The last layer of attention weights. [batch_size, query_size, key_size]
+            - **output** (mindspore.Tensor) - The output of linear attention.
+              [batch_size, query_size, value_hidden_size]
+            - **attn** (mindspore.Tensor) - The last layer of attention weights.
+              [batch_size, query_size, key_size]
         """
         query_length = ops.sqrt((query * query).sum())
         key_length = ops.sqrt((key * key).sum())
@@ -352,8 +360,8 @@ class BinaryAttention(nn.Cell):
             y_mask (mindspore.Tensor): [batch_size, y_seq_len]
 
         Returns:
-            - attended_x (mindspore.Tensor): The output of the attention_x.
-            - attended_y (mindspore.Tensor): The output of the attention_y.
+            - **attended_x** (mindspore.Tensor) - The output of the attention_x.
+            - **attended_y** (mindspore.Tensor) - The output of the attention_y.
         """
         similarity_matrix = self.bmm(x_batch, ops.transpose(y_batch, (0, 2, 1)))
         x_y_attn = _masked_softmax(similarity_matrix, y_mask)
@@ -438,8 +446,8 @@ class MutiHeadAttention(nn.Cell):
                 [batch_size, seq_len, seq_len]
 
         Returns:
-            - output (mindspore.Tensor): The output of muti-head attention.
-            - attn (mindspore.Tensor): The last layer of attention weights.
+            - **output** (mindspore.Tensor) - The output of muti-head attention.
+            - **attn** (mindspore.Tensor) - The last layer of attention weights.
         """
         num_batch = query.shape[0]
         if mask is not None:
@@ -509,8 +517,8 @@ class SelfAttention(nn.Cell):
                 [batch_size, seq_len, seq_len]
 
         Returns:
-            - output (mindspore.Tensor): The output of self attention.
-            - attn (mindspore.Tensor): The last layer of attention weights
+            - **output** (mindspore.Tensor) - The output of self attention.
+            - **attn** (mindspore.Tensor) - The last layer of attention weights
         """
         query = self.linear_query(query)
         key = self.linear_key(key)
@@ -586,8 +594,8 @@ class LocationAwareAttention(nn.Cell):
             last_attn (mindspore.Tensor): Attention weight of previous step,
                 Shape=(batch_size, seq_len).
         Returns:
-            - context (mindspore.Tensor): The context vector, Shape=(batch_size, 1, decoder_dim).
-            - attn (mindspore.Tensor): Attention weight of this step, Shape=(batch_size, seq_len).
+            - **context** (mindspore.Tensor) - The context vector, Shape=(batch_size, 1, decoder_dim).
+            - **attn** (mindspore.Tensor) - Attention weight of this step, Shape=(batch_size, seq_len).
         """
         batch_size, seq_len = query.shape[0], value.shape[1]
         if last_attn is None:
