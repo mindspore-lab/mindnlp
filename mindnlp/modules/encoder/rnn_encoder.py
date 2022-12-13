@@ -19,7 +19,7 @@ from mindnlp.abc import EncoderBase
 
 class RNNEncoder(EncoderBase):
     r"""
-    Seq2Seq Encoder.
+    Stacked Elman RNN Encoder.
 
     Args:
         embedding (Cell): The embedding layer.
@@ -36,7 +36,7 @@ class RNNEncoder(EncoderBase):
         >>> embedding = nn.Embedding(vocab_size, embedding_size)
         >>> rnn = nn.RNN(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
         ...              batch_first=True, dropout=dropout, bidirectional=bidirectional)
-        >>> rnn_encoder = Seq2SeqEncoder(embedding, rnn)
+        >>> rnn_encoder = RNNEncoder(embedding, rnn)
         >>> src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
         >>> src_length = Tensor(np.ones([8]), mindspore.int32)
         >>> mask = Tensor(np.ones([8, 16]), mindspore.int32)

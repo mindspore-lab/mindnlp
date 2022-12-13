@@ -24,11 +24,11 @@ from mindnlp.abc import DecoderBase
 
 class RNNDecoder(DecoderBase):
     r"""
-    Seq2Seq Decoder.
+    Stacked Elman RNN Decoder.
 
     Args:
         embedding (Cell): The embedding layer.
-        rnns (list): The list of RNN Layers.
+        rnns (list): The list of RNN cells.
         dropout_in (Union[float, int]): If not 0, append `Dropout` layer on the inputs of each
             RNN layer. Default 0. The range of dropout is [0.0, 1.0).
         dropout_out (Union[float, int]): If not 0, append `Dropout` layer on the outputs of each
@@ -54,7 +54,7 @@ class RNNDecoder(DecoderBase):
         ...         hidden_size=hidden_size
         ...         )
         ...         for layer in range(num_layers)
-        >>> ]
+        ... ]
         >>> rnn_decoder = RNNDecoder(embedding, rnns, dropout_in=dropout_in, dropout_out=dropout_out,
         ...                          attention=True, encoder_output_units=encoder_output_units, mode="RNN")
         >>> tgt_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
