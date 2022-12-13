@@ -414,7 +414,7 @@ msgstr ""
 
 #: mindnlp.common.loss:1 of
 msgid "Losses"
-msgstr ""
+msgstr "各种Loss"
 
 #: mindnlp.common.loss.CMRC2018Loss:1 mindnlp.common.loss.RDropLoss:1
 #: mindnlp.modules.attentions.AdditiveAttention:1
@@ -430,17 +430,18 @@ msgstr ""
 
 #: mindnlp.common.loss.CMRC2018Loss:1 of
 msgid "used to compute CMRC2018 chinese Q&A task"
-msgstr ""
+msgstr "用于计算CMRC2018中文问答任务"
 
 #: mindnlp.common.loss.CMRC2018Loss:3 of
 msgid ""
 "Indicate how to average the loss, the candicates are \"mean\" and "
 "\"sum\". Default: \"mean\"."
-msgstr ""
+msgstr "计算loss的方式，候选有 `mean` 和 "
+"`sum`. 默认：`mean`"
 
 #: mindnlp.common.loss.CMRC2018Loss.construct:1 of
 msgid "compute CMRC2018Loss"
-msgstr ""
+msgstr "计算 CMRC2018Loss"
 
 #: mindnlp.common.loss.CMRC2018Loss.construct:3
 #: mindnlp.common.loss.CMRC2018Loss.construct:5 of
@@ -569,7 +570,7 @@ msgstr ""
 
 #: mindnlp.common.loss.CMRC2018Loss.construct:14 of
 msgid "Tensor, the CMRC2018 loss."
-msgstr ""
+msgstr "Tensor, 计算后的 CMRC2018Loss"
 
 #: mindnlp.common.loss.CMRC2018Loss.construct
 #: mindnlp.common.loss.RDropLoss.construct mindnlp.common.metrics.accuracy
@@ -638,7 +639,7 @@ msgstr ""
 
 #: mindnlp.common.loss.CMRC2018Loss.construct:16 of
 msgid "if 'reduction' is not 'sum' or 'mean'."
-msgstr ""
+msgstr "计算方式 `reduction` 没有选择 `sum` 或 `mean`"
 
 #: mindnlp.common.loss.CMRC2018Loss.construct:19
 #: mindnlp.common.metrics.accuracy:29 mindnlp.common.metrics.bleu:36
@@ -671,12 +672,17 @@ msgid ""
 "R-Drop Loss implementation For more information about R-drop please refer"
 " to this paper: https://arxiv.org/abs/2106.14448"
 msgstr ""
+"R-Drop Loss 的实现。"
+"更多关于R-drop的信息请参考这篇文章："
+"https://arxiv.org/abs/2106.14448"
 
 #: mindnlp.common.loss.RDropLoss:4 of
 msgid ""
 "Original implementation please refer to this code: "
 "https://github.com/dropreg/R-Drop"
 msgstr ""
+"原始实现请参考这里的代码："
+"https://github.com/dropreg/R-Drop"
 
 #: mindnlp.common.loss.RDropLoss:6 of
 msgid ""
@@ -692,48 +698,50 @@ msgid ""
 "Indicate how to average the loss, the candicates are \"none\", "
 "\"batchmean\",\"mean\",\"sum\". Default: \"none\"."
 msgstr ""
+"计算loss的方式，候选有 `none`, `batchmean`, `mean`, `sum`。默认: `none`"
 
 #: mindnlp.common.loss.RDropLoss:9 of
 msgid "\"mean\": The reduced mean loss is returned."
-msgstr ""
+msgstr "`mean`：将返回降维后的loss均值"
 
 #: mindnlp.common.loss.RDropLoss:10 of
 msgid "\"batchmean\": The sum loss divided by batch size is returned."
-msgstr ""
+msgstr "`batchmean`：将返回降维后的loss批次均值"
 
 #: mindnlp.common.loss.RDropLoss:11 of
 msgid "\"sum\": The reduced sum loss is returned."
-msgstr ""
+msgstr "`sum`：将返回降维后的loss求和"
 
 #: mindnlp.common.loss.RDropLoss:12 of
 msgid "\"none\": No reduction will be applied."
-msgstr ""
+msgstr "`none`：不采取任何降维方法"
 
 #: mindnlp.common.loss.RDropLoss.construct:1 of
 msgid "Returns loss tensor, the rdrop loss of p and q."
-msgstr ""
+msgstr "返回p和q的rdrop loss"
 
 #: mindnlp.common.loss.RDropLoss.construct:3 of
 msgid "The first forward logits of training examples."
-msgstr ""
+msgstr "训练样本的第一次前向向量"
 
 #: mindnlp.common.loss.RDropLoss.construct:5 of
 msgid "The second forward logits of training examples."
-msgstr ""
+msgstr "训练样本的第二次前向向量"
 
 #: mindnlp.common.loss.RDropLoss.construct:7 of
 msgid ""
 "The Tensor containing the binary mask to index with, it's data type is "
 "bool. Default: None."
 msgstr ""
+"包含要索引的二进制掩码的张量Tensor，其数据类型为 `bool`。默认: `None`"
 
 #: mindnlp.common.loss.RDropLoss.construct:11 of
 msgid "Tensor, the rdrop loss of p and q."
-msgstr ""
+msgstr "Tensor， p和q的rdrop loss"
 
 #: mindnlp.common.loss.RDropLoss.construct:13 of
 msgid "if 'reduction' in 'RDropLoss' is not 'sum', 'mean' 'batchmean', or 'none'."
-msgstr ""
+msgstr "计算方式 `reduction` 不是 `sum` , `mean` , `batchmean` 或 `none` 的其中一个。"
 
 #: mindnlp.common.loss.RDropLoss.construct:16
 #: mindnlp.common.metrics.perplexity:34
