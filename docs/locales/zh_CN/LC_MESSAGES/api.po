@@ -5021,7 +5021,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/models/bert.py:docstring
 #: of mindnlp.models.bert:1
 msgid "MindNLP bert model"
-msgstr ""
+msgstr "函数式融合编程的BERT模型实现，对标huggingface"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/models/bert.py:docstring
 #: of mindnlp.models.bert.BertAttention:1
@@ -5137,12 +5137,12 @@ msgstr "Bases: :py:class:`~mindnlp.abc.modules.embedding.TokenEmbedding`"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/models/bert.py:docstring
 #: of mindnlp.models.bert.BertConfig:1
 msgid "Configuration for BERT-base"
-msgstr ""
+msgstr "BERT-base配置类"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/models/bert.py:docstring
 #: of mindnlp.models.bert.BertEmbeddings:1
 msgid "Embeddings for BERT, include word, position and token_type"
-msgstr ""
+msgstr "Bert编码层，包括word embeddings，position embeddings和token type embeddings"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/models/bert.py:docstring
 #: of mindnlp.models.bert.BertEncoder:1
@@ -5236,12 +5236,12 @@ msgstr ""
 
 #: ../../api/modules/attentions.rst:2
 msgid "Attentions"
-msgstr ""
+msgstr "注意力机制"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions:1
 msgid "attention module"
-msgstr ""
+msgstr "注意力机制模块"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.AdditiveAttention:1
@@ -5249,16 +5249,18 @@ msgid ""
 "Additive Attention Additive Attention proposed in \"Neural Machine "
 "Translation by Jointly Learning to Align and Translate\" paper"
 msgstr ""
+"加性注意力机制由文章"
+"《Neural Machine Translation by Jointly Learning to Align and Translate》提出"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.AdditiveAttention:4
 msgid "Attention(Q,K,V) = (W_v)T *(tanh(W_q * Q + W_k * K))"
-msgstr ""
+msgstr "加性注意力公式：Attention(Q,K,V) = (W_v)T *(tanh(W_q * Q + W_k * K))"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.AdditiveAttention:8
 msgid "The dimesion of hidden state vector"
-msgstr ""
+msgstr "向量hidden state的维度大小"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.AdditiveAttention:10
@@ -5268,11 +5270,13 @@ msgid ""
 "The keep rate, greater than 0 and less equal than 1. E.g. rate=0.9, dropping "
 "out 10% of input units. Default: 0.9."
 msgstr ""
+"保留率，数值在0和1之间的，例如0.9"
+"表示dropout率为10%，保留率为90%"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.AdditiveAttention.construct:1
 msgid "Additive attention network construction."
-msgstr ""
+msgstr "Additive attention网络前向传播"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.AdditiveAttention.construct:3
@@ -5280,7 +5284,7 @@ msgstr ""
 #: mindnlp.modules.attentions.LinearAttention.construct:3
 #: mindnlp.modules.attentions.ScaledDotAttention.construct:3
 msgid "The query vector. [batch_size, query_size, hidden_size]"
-msgstr ""
+msgstr "query向量，一般为[batch size, query_size, hidden_size]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.AdditiveAttention.construct:6
@@ -5288,7 +5292,7 @@ msgstr ""
 #: mindnlp.modules.attentions.LinearAttention.construct:6
 #: mindnlp.modules.attentions.ScaledDotAttention.construct:6
 msgid "The key vector. [batch_size, key_size, hidden_size]"
-msgstr ""
+msgstr "key向量，一般为[batch size, key_size, hidden_size]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.AdditiveAttention.construct:9
@@ -5296,7 +5300,7 @@ msgstr ""
 #: mindnlp.modules.attentions.LinearAttention.construct:9
 #: mindnlp.modules.attentions.ScaledDotAttention.construct:9
 msgid "The value vector. [batch_size, seq_len, value_hidden_size]"
-msgstr ""
+msgstr "value向量，一般为[batch size, seq_len, value_hidden_size]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.AdditiveAttention.construct:12
@@ -5304,7 +5308,7 @@ msgstr ""
 #: mindnlp.modules.attentions.LinearAttention.construct:12
 #: mindnlp.modules.attentions.ScaledDotAttention.construct:12
 msgid "The mask vector. [batch_size, query_size, key_size]"
-msgstr ""
+msgstr "mask张量，一般为[batch size, query_size, key_size]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.AdditiveAttention.construct:15
@@ -5316,6 +5320,9 @@ msgid ""
 "[batch_size, query_size, value_hidden_size] - **attn** (mindspore.Tensor) - "
 "The last layer of attention weights.   [batch_size, query_size, key_size]"
 msgstr ""
+"线性注意力输出output和注意力分数attn"
+"线性注意力输出output，维度参考[batch_size, query_size, value_hidden_size]"
+"线性注意力分数attn，维度参考[batch_size, query_size, key_size]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.AdditiveAttention.construct:17
@@ -5326,6 +5333,8 @@ msgid ""
 "**output** (mindspore.Tensor) - The output of linear attention. [batch_size, "
 "query_size, value_hidden_size]"
 msgstr ""
+"线性注意力输出output"
+"维度参考[batch_size, query_size, value_hidden_size]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.AdditiveAttention.construct:19
@@ -5336,7 +5345,8 @@ msgid ""
 "**attn** (mindspore.Tensor) - The last layer of attention weights. "
 "[batch_size, query_size, key_size]"
 msgstr ""
-
+"线性注意力分数attn"
+"维度参考[batch_size, query_size, key_size]"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.BinaryAttention:1
 msgid ""
@@ -5344,7 +5354,9 @@ msgid ""
 "BiAttention module will compute the attention result by the following "
 "equation:"
 msgstr ""
-
+"针对所给的2个序列所表示的向量如x_i和y_i"
+"BiAttentio模块会根据以下公式计算注意力结果"
+"公式："
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.BinaryAttention:5
 msgid ""
@@ -5362,27 +5374,27 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.BinaryAttention.construct:1
 msgid "Compute the attention result"
-msgstr ""
+msgstr "计算注意力结果"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.BinaryAttention.construct:3
 msgid "[batch_size, x_seq_len, hidden_size]"
-msgstr ""
+msgstr "参考shape维度 [batch_size, x_seq_len, hidden_size]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.BinaryAttention.construct:5
 msgid "[batch_size, x_seq_len]"
-msgstr ""
+msgstr "参考shape维度 [batch_size, x_seq_len]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.BinaryAttention.construct:7
 msgid "[batch_size, y_seq_len, hidden_size]"
-msgstr ""
+msgstr "参考shape维度 [batch_size, y_seq_len, hidden_size]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.BinaryAttention.construct:9
 msgid "[batch_size, y_seq_len]"
-msgstr ""
+msgstr "参考shape维度 [batch_size, y_seq_len]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.BinaryAttention.construct:12
@@ -5390,16 +5402,17 @@ msgid ""
 "- **attended_x** (mindspore.Tensor) - The output of the attention_x. - "
 "**attended_y** (mindspore.Tensor) - The output of the attention_y."
 msgstr ""
-
+"attended_x，x向量的注意力在y向量下的注意力结果"
+"attended_y，y向量的注意力在x向量下的注意力结果"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.BinaryAttention.construct:14
 msgid "**attended_x** (mindspore.Tensor) - The output of the attention_x."
-msgstr ""
+msgstr "attended_x，x向量的注意力在y向量下的注意力结果"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.BinaryAttention.construct:15
 msgid "**attended_y** (mindspore.Tensor) - The output of the attention_y."
-msgstr ""
+msgstr "attended_y，y向量的注意力在x向量下的注意力结果"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.CosineAttention:1
@@ -5407,6 +5420,7 @@ msgid ""
 "Cosine Attention Cosine Attention proposed in \"Neural Turing Machines\" "
 "paper"
 msgstr ""
+"Cosine Attention由论文《Neural Turing Machines》提出"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.CosineAttention:4
@@ -5418,22 +5432,22 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.CosineAttention.construct:1
 msgid "Consine attention network construction."
-msgstr ""
+msgstr "Consine attention 网络前向传播"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LinearAttention:1
 msgid "Linear attention computes attention by concat the query and key vector."
-msgstr ""
+msgstr "线性注意力计算的方式采用对query向量和key向量进行拼接进行计算"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LinearAttention:3
 msgid "The sentence length of `query`. Usually query.shape[-2]"
-msgstr ""
+msgstr "query的序列长度，通常为query.shape[-2]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LinearAttention:5
 msgid "The sentence length of `key`. Usually key.shape[-2]"
-msgstr ""
+msgstr "key的序列长度，通常为key.shape[-2]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LinearAttention:7
@@ -5447,12 +5461,12 @@ msgstr "预训练词向量的维度.默认值：300."
 #: mindnlp.modules.attentions.MutiHeadAttention:9
 #: mindnlp.modules.attentions.SelfAttention:6
 msgid "The keep rate, greater than 0 and less equal than 1. Default: 0.9."
-msgstr ""
+msgstr "保留率，数值在0和1之间的，例如0.9"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LinearAttention.construct:1
 msgid "linear attention with concatenate construction"
-msgstr ""
+msgstr "linear attention网络前向传播"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LocationAwareAttention:1
@@ -5460,36 +5474,38 @@ msgid ""
 "Location Aware Attention Location Aware Attention proposed in \"Attention-"
 "Based Models for Speech Recognition\""
 msgstr ""
+"Location Aware Attention由"
+"论文《Attention-Based Models for Speech Recognition》提出"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LocationAwareAttention:4
 msgid "The dimension of the hidden states"
-msgstr ""
+msgstr "隐藏状态维度"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LocationAwareAttention:6
 msgid "Smoothing label from \"Attention-Based Models for Speech Recognition\""
-msgstr ""
+msgstr "《Attention-Based Models for Speech Recognition》论文中的Smoothing label"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LocationAwareAttention.construct:1
 msgid "Location aware attention network construction."
-msgstr ""
+msgstr "Location aware attention网络前向传播"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LocationAwareAttention.construct:3
 msgid "Decoder hidden states, Shape=(batch_size, 1, decoder_dim)."
-msgstr ""
+msgstr "query向量，同时也是Decoder的hidden states，shape参考[batch_size, 1, decoder_dim]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LocationAwareAttention.construct:6
 msgid "Encoder outputs, Shape=(batch_size, seq_len, encoder_dim)."
-msgstr ""
+msgstr "key向量，同时也是Encoder的hidden states，shape参考[batch_size, seq_len, encoder_dim]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LocationAwareAttention.construct:9
 msgid "Attention weight of previous step, Shape=(batch_size, seq_len)."
-msgstr ""
+msgstr "最后一个状态的注意力分数，shape参考[batch_size, seq_len]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LocationAwareAttention.construct:13
@@ -5498,6 +5514,8 @@ msgid ""
 "decoder_dim). - **attn** (mindspore.Tensor) - Attention weight of this step, "
 "Shape=(batch_size, seq_len)."
 msgstr ""
+"context上下文向量，shape参考[batch_size, 1, decoder_dim]"
+"attn当前状态下的注意力分数，shape参考[batch_size, seq_len]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LocationAwareAttention.construct:15
@@ -5505,23 +5523,23 @@ msgid ""
 "**context** (mindspore.Tensor) - The context vector, Shape=(batch_size, 1, "
 "decoder_dim)."
 msgstr ""
-
+"context上下文向量，shape参考[batch_size, 1, decoder_dim]"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LocationAwareAttention.construct:16
 msgid ""
 "**attn** (mindspore.Tensor) - Attention weight of this step, "
 "Shape=(batch_size, seq_len)."
 msgstr ""
-
+"attn当前状态下的注意力分数，shape参考[batch_size, seq_len]"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LocationAwareAttention.set_mask:1
 msgid "Set the mask"
-msgstr ""
+msgstr "设置mask张量"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LocationAwareAttention.set_mask:3
 msgid "Args: mask mindspore.Tensor[bool]: The mask vector."
-msgstr ""
+msgstr "mask张量类型为mindspore.Tensor[bool]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.MutiHeadAttention:1
@@ -5529,19 +5547,21 @@ msgid ""
 "Muti-head attention is from the paper “attention is all you need” where "
 "heads == 1 Muti-head attention is normal self-attention"
 msgstr ""
+"多头注意力机制由论文《attention is all you need》提出"
+"当head数为1时，多头注意力机制及正常的自注意力机制"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.MutiHeadAttention:4
 #, fuzzy
 #| msgid "The name of the pretrained vector. Default: \"1M\"."
 msgid "The number of head. Default: 8."
-msgstr "预训练词向量的名字.默认值：\"1M\"."
+msgstr "多头注意力中的head数，默认为8"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.MutiHeadAttention:6
 #: mindnlp.modules.attentions.SelfAttention:3
 msgid "The `query`, `key` and `value` vectors dimensions. Default: 512."
-msgstr ""
+msgstr "query、key、value向量隐藏维度大小，默认为512"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.MutiHeadAttention:12
@@ -5549,7 +5569,7 @@ msgstr ""
 #, fuzzy
 #| msgid "Whether to use attention. Default: True."
 msgid "whether to use a bias vector. Default: True."
-msgstr "指定是否使用attention。默认值：True。"
+msgstr ""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.MutiHeadAttention:14
@@ -5557,28 +5577,28 @@ msgstr "指定是否使用attention。默认值：True。"
 #, fuzzy
 #| msgid "Output of encoder. Default: None."
 msgid "attention mode. Default: \"dot\"."
-msgstr "编码器的输出。默认值：None。"
+msgstr "attention模式，可选dot、cos、add，默认为dot点乘"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.MutiHeadAttention.construct:1
 msgid "Get muti-head attention output and attention weights."
-msgstr ""
+msgstr "获取多头注意力输出和其注意力分数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.MutiHeadAttention.construct:3
 msgid "The query vector. Usually is [batch_size, seq_len, d_model]"
-msgstr ""
+msgstr "query向量，维度参考[batch_size, seq_len, d_model]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.MutiHeadAttention.construct:6
 msgid "The key vector. Usually is [batch_size, seq_len, d_model]"
-msgstr ""
+msgstr "key向量，维度参考[batch_size, seq_len, d_model]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.MutiHeadAttention.construct:9
 #: mindnlp.modules.attentions.SelfAttention.construct:7
 msgid "The value vector. [batch_size, seq_len, d_model]"
-msgstr ""
+msgstr "value向量，维度参考[batch_size, seq_len, d_model]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.MutiHeadAttention.construct:12
@@ -5592,16 +5612,18 @@ msgid ""
 "- **output** (mindspore.Tensor) - The output of muti-head attention. - "
 "**attn** (mindspore.Tensor) - The last layer of attention weights."
 msgstr ""
+"output多头注意力输出"
+"attn多头注意力的注意力分数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.MutiHeadAttention.construct:17
 msgid "**output** (mindspore.Tensor) - The output of muti-head attention."
-msgstr ""
+msgstr "output多头注意力输出"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.MutiHeadAttention.construct:18
 msgid "**attn** (mindspore.Tensor) - The last layer of attention weights."
-msgstr ""
+msgstr "attn多头注意力的注意力分数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.ScaledDotAttention:1
@@ -5609,6 +5631,8 @@ msgid ""
 "Scaled Dot-Product Attention Scaled Dot-Product Attention proposed in "
 "\"Attention Is All You Need\""
 msgstr ""
+"缩放点乘注意力机制由论文"
+"《Attention Is All You Need》提出"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.ScaledDotAttention:4
@@ -5618,31 +5642,31 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.ScaledDotAttention.construct:1
 msgid "Scaled dot-product attention network construction."
-msgstr ""
+msgstr "缩放点乘注意力网络前向传播"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.SelfAttention:1
 msgid "Self attention is from the paper “attention is all you need”"
-msgstr ""
+msgstr "自注意力机制由论文《Attention Is All You Need》提出""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.SelfAttention.construct:1
 msgid "Get self-attention output and attention weights."
-msgstr ""
+msgstr "获取自注意力输出和其注意力分数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.SelfAttention.construct:3
 #, fuzzy
 #| msgid "The encoder."
 msgid "The query vector."
-msgstr "编码器"
+msgstr "query向量"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.SelfAttention.construct:5
 #, fuzzy
 #| msgid "The encoder."
 msgid "The key vector."
-msgstr "编码器"
+msgstr "key向量"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.SelfAttention.construct:13
@@ -5650,16 +5674,18 @@ msgid ""
 "- **output** (mindspore.Tensor) - The output of self attention. - **attn** "
 "(mindspore.Tensor) - The last layer of attention weights"
 msgstr ""
+"output多头注意力输出"
+"attn多头注意力的注意力分数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.SelfAttention.construct:15
 msgid "**output** (mindspore.Tensor) - The output of self attention."
-msgstr ""
+msgstr "output多头注意力输出"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.SelfAttention.construct:16
 msgid "**attn** (mindspore.Tensor) - The last layer of attention weights"
-msgstr ""
+msgstr "attn多头注意力的注意力分数"
 
 #: ../../api/modules/decoder.rst:2
 msgid "Decoder"
