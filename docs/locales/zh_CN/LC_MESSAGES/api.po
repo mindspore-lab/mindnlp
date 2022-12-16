@@ -3769,7 +3769,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/best_model_callback.py:docstring
 #: of mindnlp.engine.callbacks.best_model_callback:1
 msgid "Callback for saving and loading best model"
-msgstr ""
+msgstr "用于加载和保存最好效果模型参数的回调函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/best_model_callback.py:docstring
 #: of mindnlp.engine.callbacks.best_model_callback.BestModelCallback:1
@@ -3782,7 +3782,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: mindnlp.engine.callbacks.timer_callback.TimerCallback:1
 msgid "Bases: :py:class:`~mindnlp.abc.callback.Callback`"
-msgstr ""
+msgstr "基类：:py:class:`~mindnlp.abc.callback.Callback`"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/best_model_callback.py:docstring
 #: of mindnlp.engine.callbacks.best_model_callback.BestModelCallback:1
@@ -3791,26 +3791,28 @@ msgid ""
 "of the training. The best model can only be loaded at the end of the "
 "training."
 msgstr ""
+"保存具有最佳评测指标值的模型，并在训练结束时重新加载模型。"
+"最佳模型只在训练结束时加载。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/best_model_callback.py:docstring
 #: of mindnlp.engine.callbacks.best_model_callback.BestModelCallback:4
 msgid "Folder for saving."
-msgstr ""
+msgstr "用于保存效果最好模型的参数文件路径。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/best_model_callback.py:docstring
 #: of mindnlp.engine.callbacks.best_model_callback.BestModelCallback:6
 msgid "Whether the larger `metrics`, the better `metrics`. Default: True."
-msgstr ""
+msgstr "评测指标值是否越大越好。默认值：是。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/best_model_callback.py:docstring
 #: of mindnlp.engine.callbacks.best_model_callback.BestModelCallback:8
 msgid "Whether load the best model at the end of the training."
-msgstr ""
+msgstr "是否在训练结束时加载效果最好的模型参数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/best_model_callback.py:docstring
 #: of mindnlp.engine.callbacks.best_model_callback.BestModelCallback:10
 msgid "Whether save the model on exception."
-msgstr ""
+msgstr "在遇到异常时，是否保存当前的模型参数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/best_model_callback.py:docstring
 #: of
@@ -3820,7 +3822,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/earlystop_callback.py:docstring
 #: mindnlp.engine.callbacks.earlystop_callback.EarlyStopCallback.evaluate_end:1
 msgid "Called after evaluating."
-msgstr ""
+msgstr "在评测结束后调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/best_model_callback.py:docstring
 #: of
@@ -3842,7 +3844,7 @@ msgstr ""
 #: mindnlp.engine.callbacks.timer_callback.TimerCallback.train_step_begin:3
 #: mindnlp.engine.callbacks.timer_callback.TimerCallback.train_step_end:3
 msgid "Information about the model."
-msgstr ""
+msgstr "模型训练或评测过程中的相关信息。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/best_model_callback.py:docstring
 #: of
@@ -3850,7 +3852,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/earlystop_callback.py:docstring
 #: mindnlp.engine.callbacks.earlystop_callback.EarlyStopCallback.is_better_metric_value:1
 msgid "Compare each metrics values with the best metrics values."
-msgstr ""
+msgstr "将本次每个评测指标值和当前最好的结果进行比较。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/best_model_callback.py:docstring
 #: of
@@ -3858,13 +3860,13 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/earlystop_callback.py:docstring
 #: mindnlp.engine.callbacks.earlystop_callback.EarlyStopCallback.is_better_metric_value:3
 msgid "metrics values used to compared with the best metrics values so far."
-msgstr ""
+msgstr "用于和当前最好评测指标值进行比较的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/best_model_callback.py:docstring
 #: of
 #: mindnlp.engine.callbacks.best_model_callback.BestModelCallback.train_end:1
 msgid "Called once after network training and load the best model params."
-msgstr ""
+msgstr "在模型训练结束后调用，并为模型加载效果最好的参数。"
 
 #: ../../api/engine/callbacks.rst:14
 msgid "callback\\_manager"
@@ -3874,7 +3876,7 @@ msgstr ""
 #: of mindnlp.engine.callbacks.callback_manager:1
 #: mindnlp.engine.callbacks.callback_manager.CallbackManager:1
 msgid "Callback Manager."
-msgstr ""
+msgstr "回调函数管理器"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager.CallbackManager:3
@@ -3886,101 +3888,103 @@ msgid ""
 "List of callback objects which should be executed while training. Default: "
 "None."
 msgstr ""
+"在模型训练过程中应当执行的回调函数方法列表。"
+"默认值：无。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
 msgid "Called before each forward beginning."
-msgstr ""
+msgstr "在每次前向过程开始前调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
 msgid "Called after each backward finished."
-msgstr ""
+msgstr "在每次反向传播结束后调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
 msgid "Called before each data_sink beginning."
-msgstr ""
+msgstr "在每次数据下沉开始前调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
 msgid "Called after each data_sink finished."
-msgstr ""
+msgstr "在每次数据下沉结束后调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
 msgid "Called before evaluating."
-msgstr ""
+msgstr "在模型评测开始前调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
 msgid "Called if having exceptions."
-msgstr ""
+msgstr "在模型训练或评测过程中遇到异常时调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
 msgid "Called before fetch each batch/ds_sink_size data."
-msgstr ""
+msgstr "在每次获取一个batch或数据下沉大小的数据前调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
 msgid "Called after fetch each batch/ds_sink_size data."
-msgstr ""
+msgstr "在每次获取一个batch或数据下沉大小的数据后调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
 msgid "Called after each step finished."
-msgstr ""
+msgstr "在每个step结束后调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
 msgid "Called before loading model."
-msgstr ""
+msgstr "在每次加载模型参数前调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
 msgid "Called before saving model."
-msgstr ""
+msgstr "在每次保存模型参数后调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
 msgid "Called once before network training."
-msgstr ""
+msgstr "在每次模型开始训练前调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: mindnlp.engine.callbacks.timer_callback.TimerCallback.train_end:1
 msgid "Called once after network training."
-msgstr ""
+msgstr "在每次模型训练结束后调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: mindnlp.engine.callbacks.timer_callback.TimerCallback.train_epoch_begin:1
 msgid "Called before each train epoch beginning."
-msgstr ""
+msgstr "在每次模型训练一个epoch前调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: mindnlp.engine.callbacks.timer_callback.TimerCallback.train_epoch_end:1
 msgid "Called after each train epoch finished."
-msgstr ""
+msgstr "在每次模型训练一个epoch结束后调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: mindnlp.engine.callbacks.timer_callback.TimerCallback.train_step_begin:1
 msgid "Called before each train step beginning."
-msgstr ""
+msgstr "在每次模型训练一个step前调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: mindnlp.engine.callbacks.timer_callback.TimerCallback.train_step_end:1
 msgid "Called after each train step finished."
-msgstr ""
+msgstr "在每次模型训练一个step结束后调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager.RunContext:1
@@ -3988,11 +3992,13 @@ msgid ""
 "Provide information about the model. This class needs to be used with :class:"
 "`mindspore.train.callback.Callback`."
 msgstr ""
+"提供有关模型功能的原始请求的信息。"
+"此类需要与 :class:`mindspore.train.callback.Callback` 一起使用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: of mindnlp.engine.callbacks.callback_manager.RunContext:4
 msgid "Holding the related information of model."
-msgstr ""
+msgstr "保存关于模型训练或评测过程中的相关信息。"
 
 #: ../../api/engine/callbacks.rst:22
 msgid "checkpoint\\_callback"
@@ -4001,7 +4007,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/checkpoint_callback.py:docstring
 #: of mindnlp.engine.callbacks.checkpoint_callback:1
 msgid "Callback for saving checkpoint."
-msgstr ""
+msgstr "用于保存checkpoint的回调函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/checkpoint_callback.py:docstring
 #: of mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback:1
@@ -4010,6 +4016,9 @@ msgid ""
 "each epoch, which can be used to resume previous operations. Continue "
 "training a sample code using the most recent epoch"
 msgstr ""
+"保存模型的checkpoint。"
+"在每个 epoch 结束时保存当前的 Trainer 状态，可用于恢复之前的操作。"
+"使用最近epoch继续训练示例代码。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/checkpoint_callback.py:docstring
 #: of mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback:5
@@ -4017,28 +4026,30 @@ msgid ""
 "The path to save the state. A specific path needs to be specified, such as "
 "'checkpoints/chtp.pt'. Default: None."
 msgstr ""
+"保存模型训练状态的路径。"
+"需要指定一个特定的路径，例如'checkpoints/chtp.pt'。默认值：无。”
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/checkpoint_callback.py:docstring
 #: of mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback:8
 msgid "Save a checkpoint file every n epochs."
-msgstr ""
+msgstr "每n个epoch存一个checkpoint。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/checkpoint_callback.py:docstring
 #: of mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback:10
 msgid "Save checkpoint files at most. Default:5."
-msgstr ""
+msgstr "存checkpoint的最大数量。默认：5。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/checkpoint_callback.py:docstring
 #: of
 #: mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback.train_begin:1
 msgid "Notice the file saved path of checkpoints at the beginning of training."
-msgstr ""
+msgstr "训练开始时checkpoint文件保存路径。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/checkpoint_callback.py:docstring
 #: of
 #: mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback.train_epoch_end:1
 msgid "Save checkpoint every n epochs at the end of the epoch."
-msgstr ""
+msgstr "每n个epoch存一个checkpoint。"
 
 #: ../../api/engine/callbacks.rst:30
 msgid "earlystop\\_callback"
@@ -4047,22 +4058,22 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/earlystop_callback.py:docstring
 #: of mindnlp.engine.callbacks.earlystop_callback:1
 msgid "Callback for Early Stop."
-msgstr ""
+msgstr "用于早停的回调函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/earlystop_callback.py:docstring
 #: of mindnlp.engine.callbacks.earlystop_callback.EarlyStopCallback:1
 msgid "Stop training without getting better after n epochs."
-msgstr ""
+msgstr "如果n个epoch后评测指标的值都没有提升，则停止模型训练。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/earlystop_callback.py:docstring
 #: of mindnlp.engine.callbacks.earlystop_callback.EarlyStopCallback:3
 msgid "Numbers of epochs evaluations without raising. Default:10."
-msgstr ""
+msgstr "评估指标没有提升的限额数量。 默认值：10。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/earlystop_callback.py:docstring
 #: of mindnlp.engine.callbacks.earlystop_callback.EarlyStopCallback:5
 msgid "Whether the larger value of the metric is better. Default:True."
-msgstr ""
+msgstr "评价指标的值是否越大越好。默认值：是。"
 
 #: ../../api/engine/callbacks.rst:38
 msgid "timer\\_callback"
@@ -4071,7 +4082,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: of mindnlp.engine.callbacks.timer_callback:1
 msgid "Callback for timing."
-msgstr ""
+msgstr "用于计时的回调函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: of mindnlp.engine.callbacks.timer_callback.TimerCallback:1
@@ -4079,6 +4090,7 @@ msgid ""
 "Print relevant event information during the training process, such as "
 "training duration, evaluation duration, total duration."
 msgstr ""
+"打印训练过程中的相关事件信息，如训练时长、评估时长、总时长。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: of mindnlp.engine.callbacks.timer_callback.TimerCallback:4
@@ -4086,51 +4098,52 @@ msgid ""
 "When to print time information.Default:-1.  - -1: print once at the end of "
 "each epoch. - positive number n: print once n steps."
 msgstr ""
+"何时打印时间信息。默认值：-1。 -1：在每个epoch结束时打印一次。 正数 n：打印一次 n 步。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: of mindnlp.engine.callbacks.timer_callback.TimerCallback:4
 msgid "When to print time information.Default:-1."
-msgstr ""
+msgstr "何时打印时间信息。默认值：-1。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: of mindnlp.engine.callbacks.timer_callback.TimerCallback:6
 msgid "-1: print once at the end of each epoch."
-msgstr ""
+msgstr "-1：在每个epoch结束的时候打印。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: of mindnlp.engine.callbacks.timer_callback.TimerCallback:7
 msgid "positive number n: print once n steps."
-msgstr ""
+msgstr "正数n：每n个steps打印一次。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: of mindnlp.engine.callbacks.timer_callback.TimerCallback:9
 msgid "Number of decimal places to keep. Default:3"
-msgstr ""
+msgstr "要保留的小数位数。 默认值：3。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: of mindnlp.engine.callbacks.timer_callback.TimerCallback.evaluate_begin:1
 msgid "Called once before the network evaluating."
-msgstr ""
+msgstr "在每次模型评估前调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: of mindnlp.engine.callbacks.timer_callback.TimerCallback.evaluate_end:1
 msgid "Called once after the network evaluating."
-msgstr ""
+msgstr "在每次模型评估结束后调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: of mindnlp.engine.callbacks.timer_callback.TimerCallback.format_timer:1
 msgid "Format the output."
-msgstr ""
+msgstr "格式化输出。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: of mindnlp.engine.callbacks.timer_callback.TimerCallback.train_begin:1
 msgid "Called once before the network training."
-msgstr ""
+msgstr "在每次模型训练开始前调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: of mindnlp.engine.callbacks.timer_callback.Timers:1
 msgid "Group of timers."
-msgstr ""
+msgstr "计数器组。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/__init__.py:docstring
 #: of mindnlp.engine.callbacks:1
@@ -4146,57 +4159,58 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/evaluator.py:docstring
 #: of mindnlp.engine.evaluator:1
 msgid "Evaluator for testing."
-msgstr ""
+msgstr "用于模型评估的评测器。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/evaluator.py:docstring
 #: of mindnlp.engine.evaluator.Evaluator:1
 msgid "Evaluator to test the model."
-msgstr ""
+msgstr "用于测试模型的评测器。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/evaluator.py:docstring
 #: of mindnlp.engine.evaluator.Evaluator:4
 msgid "A network for evaluating."
-msgstr ""
+msgstr "用于评估的模型网络。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/evaluator.py:docstring
 #: of mindnlp.engine.evaluator.Evaluator:6
 msgid "A evaluating dataset iterator."
-msgstr ""
+msgstr "测试数据集迭代器。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/evaluator.py:docstring
 #: of mindnlp.engine.evaluator.Evaluator:8
 msgid "numbers of samples in each batch."
-msgstr ""
+msgstr "每个batch的样本数量。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/evaluator.py:docstring
 #: of mindnlp.engine.evaluator.Evaluator:10
 msgid ""
 "List of metric objects which should be used while evaluating. Default:None."
 msgstr ""
+"模型评估时应使用的metric对象列表。 默认值：无。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/evaluator.py:docstring
 #: of mindnlp.engine.evaluator.Evaluator.clear_metrics:1
 msgid "Clear metrics values."
-msgstr ""
+msgstr "清空评估指标值。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/evaluator.py:docstring
 #: of mindnlp.engine.evaluator.Evaluator.run:1
 msgid "Evaluating function entry."
-msgstr ""
+msgstr "评测过程入口。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/evaluator.py:docstring
 #: of mindnlp.engine.evaluator.Evaluator.run:3
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: mindnlp.engine.trainer.Trainer.run:3
 msgid "Target label column names for loss function."
-msgstr ""
+msgstr "用于计算损失函数的目标标签列名称。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/evaluator.py:docstring
 #: of mindnlp.engine.evaluator.Evaluator.run:5
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: mindnlp.engine.trainer.Trainer.run:5
 msgid "Whether use Just-In-Time compile."
-msgstr ""
+msgstr "是否使用Just-In-Time编译模式。"
 
 #: ../../api/engine/metrics.rst:2
 msgid "Metrics"
@@ -4946,17 +4960,17 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: of mindnlp.engine.trainer:1
 msgid "Trainer for training."
-msgstr ""
+msgstr "用于模型训练。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: of mindnlp.engine.trainer.Trainer:1
 msgid "Trainer to train the model."
-msgstr ""
+msgstr "用于模型训练的训练器。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: of mindnlp.engine.trainer.Trainer:4
 msgid "A training network."
-msgstr ""
+msgstr "用于训练的模型网络。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: of mindnlp.engine.trainer.Trainer:6
@@ -4968,6 +4982,12 @@ msgid ""
 "`network`, then a tuple (data1, data2, data3, ...) with all data returned "
 "from dataset will be passed to the `network`."
 msgstr ""
+"训练数据集迭代器。"
+"如果定义了 `loss_fn`，数据和标签将分别传递给 `network` 和 `loss_fn`，"
+"所以应该从数据集中返回一个元组（数据，标签）。"
+"如果有多个数据或标签，将`loss_fn`设置为None，并在`network`中实现loss的计算，"
+"然后将一个元组（data1，data2，data3，...）"
+"从数据集返回的所有数据传递给` 网络`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: of mindnlp.engine.trainer.Trainer:13
@@ -4979,17 +4999,24 @@ msgid ""
 "`network`, then a tuple (data1, data2, data3, ...) with all data returned "
 "from dataset will be passed to the `network`."
 msgstr ""
+"测试数据集迭代器。"
+"如果定义了 `loss_fn`，数据和标签将分别传递给 `network` 和 `loss_fn`，"
+"所以应该从数据集中返回一个元组（数据，标签）。"
+"如果有多个数据或标签，将`loss_fn`设置为None，并在`network`中实现loss的计算，"
+"然后将一个元组（data1，data2，data3，...）"
+"从数据集返回的所有数据传递给` 网络`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: of mindnlp.engine.trainer.Trainer:20
 msgid ""
 "List of metrics objects which should be used while evaluating. Default:None."
 msgstr ""
+"评估时应使用的评测指标对象列表。 默认值：无。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: of mindnlp.engine.trainer.Trainer:23
 msgid "Total number of iterations on the data. Default: 10."
-msgstr ""
+msgstr "数据的总迭代次数。 默认值：10。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: of mindnlp.engine.trainer.Trainer:25
@@ -4997,6 +5024,8 @@ msgid ""
 "Optimizer for updating the weights. If `optimizer` is None, the `network` "
 "needs to do backpropagation and update weights. Default value: None."
 msgstr ""
+"用于更新权重的优化器。"
+"如果 optimizer 为 None，则 network 需要进行反向传播和更新权重。 默认值：无。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: of mindnlp.engine.trainer.Trainer:28
@@ -5004,11 +5033,13 @@ msgid ""
 "Objective function. If `loss_fn` is None, the `network` should contain the "
 "calculation of loss and parallel if needed. Default: None."
 msgstr ""
+"目标函数。 "
+"如果 `loss_fn` 为 None，则 `network` 应包含损失计算和并行计算（如果需要）。 默认值：无。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: of mindnlp.engine.trainer.Trainer.run:1
 msgid "Training process entry."
-msgstr ""
+msgstr "训练过程入口。"
 
 #: ../../api/models.rst:2
 msgid "models"
