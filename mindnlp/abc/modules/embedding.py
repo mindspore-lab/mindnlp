@@ -31,8 +31,8 @@ class TokenEmbedding(nn.Cell):
     Args:
         vocab (Vocab): Passins into Vocab for initialization.
         init_embed (Tensor): Passing into Tensor,use these values to initialize Embedding directly.
-        requires_grad (bool): Whether this parameter needs to be gradient to update.
-        dropout (float): Dropout of the output of Embedding.
+        requires_grad (bool): Whether this parameter needs to be gradient to update.Default: True.
+        dropout (float): Dropout of the output of Embedding.Default: 0.0.
 
     """
     def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.0):

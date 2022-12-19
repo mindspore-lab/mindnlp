@@ -19,7 +19,7 @@ msgstr ""
 
 #: ../../quick_start/dataset_and_transforms.rst:2
 msgid "Dataset and transforms"
-msgstr ""
+msgstr "数据集和数据变换"
 
 #: ../../quick_start/first_model.rst:2
 msgid "First Model"
