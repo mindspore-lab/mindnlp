@@ -358,6 +358,8 @@ msgid ""
 "Base class of all metrics. Never use this class directly, but instantiate "
 "one of its subclasses instead."
 msgstr ""
+"所有metrics的基类。不能直接使用这个类，而是实例化"
+"它的一个子类。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/abc/metric.py:docstring
 #: of mindnlp.abc.metric.Metric:4
@@ -367,6 +369,10 @@ msgid ""
 "reinitialize the intermediate results. Function `get_metric_name` will "
 "provide class name."
 msgstr ""
+"函数`update`会在评估过程中累积中间结果，"
+"`eval`会评估最终结果，`clear`会"
+"重新初始化中间结果。函数`get_metric_name`会"
+"提供类名。"
 
 #: ../../api/abc.rst:26 ../../api/modules.rst:2
 msgid "Modules"
@@ -1201,12 +1207,12 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics:1
 msgid "\"Functions for Metrics"
-msgstr ""
+msgstr "metrics函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.accuracy:1
 msgid "Calculates the accuracy. The function is shown as follows:"
-msgstr ""
+msgstr "计算准确率accuracy。函数如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.accuracy:3
@@ -1226,6 +1232,9 @@ msgid ""
 "the number of true negative cases, `FP` is the number of false posistive "
 "cases, `FN` is the number of false negative cases."
 msgstr ""
+"其中`ACC`是准确率accuracy，`TP`是正确预测的正样本数量，`TN`是"
+"正确预测的负样本数量，`FP`是错误预测的正样本数量，"
+"`FN`是错误预测的负样本数量。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.accuracy:12 mindnlp.common.metrics.f1_score:12
@@ -1237,6 +1246,10 @@ msgid ""
 "where :math:`N` is the number of cases and :math:`C` is the number of "
 "categories."
 msgstr ""
+"预测值。范围在`[0，1]`中的浮点数列表，"
+"在大多数情况下（不严格要求），shape是`(N, C)`，"
+"其中`N`是样本数，`C`是类别数。"
+""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.accuracy:17 mindnlp.common.metrics.f1_score:17
@@ -1247,20 +1260,22 @@ msgid ""
 "Ground truth. `labels` must be in one-hot format that shape is :math:`(N, "
 "C)`, or can be transformed to one-hot format that shape is :math:`(N,)`."
 msgstr ""
+"真实值。必须是one-hot编码格式，shape为`(N, C)`，"
+"或能够转换为one-hot格式，shape为`(N,)`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.accuracy:22
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: mindnlp.engine.metrics.accuracy.Accuracy.eval:3
 msgid "- **acc** (float) - The computed result."
-msgstr ""
+msgstr "- **acc** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.accuracy:24
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: mindnlp.engine.metrics.accuracy.Accuracy.eval:5
 msgid "**acc** (float) - The computed result."
-msgstr ""
+msgstr "**acc** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.accuracy:26
@@ -1269,7 +1284,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/f1.py:docstring
 #: mindnlp.engine.metrics.f1.F1Score.eval:7
 msgid "If the number of samples is 0."
-msgstr ""
+msgstr "如果样本数为0。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.bleu:1
@@ -1281,6 +1296,10 @@ msgid ""
 "modified form of precision to compare a candidate translation against "
 "multiple reference translations. The function is shown as follows:"
 msgstr ""
+"计算BLEU分数。BLEU (bilingual evaluation understudy)是一种"
+"用于评价机器翻译文本质量的指标。它使用一种"
+"精确度precision的修正形式来比较候选翻译与"
+"多个参考翻译。函数如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.bleu:6
@@ -1304,66 +1323,68 @@ msgid ""
 "where `c` is the length of candidate sentence, and `r` is the length of "
 "reference sentence."
 msgstr ""
+"其中`c`是候选句子的长度，`r`是参考句子的长度。"
+""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.bleu:18 mindnlp.common.metrics.rouge_n:6
 msgid "A list of tokenized candidate sentences."
-msgstr ""
+msgstr "分词后的候选句子列表。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.bleu:20 mindnlp.common.metrics.rouge_l:19
 #: mindnlp.common.metrics.rouge_n:8
 msgid "A list of lists of tokenized true sentences."
-msgstr ""
+msgstr "分词后的真实句子列表。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.bleu:22
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: mindnlp.engine.metrics.bleu.BleuScore:18
 msgid "N_gram value ranges from 1 to 4. Default: 4."
-msgstr ""
+msgstr "N_gram值的范围从1到4。默认：4。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.bleu:24
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: mindnlp.engine.metrics.bleu.BleuScore:20
 msgid "Weights of precision of each gram. Defaults to None."
-msgstr ""
+msgstr "每个gram的precision的权重。默认为None。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.bleu:27
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: mindnlp.engine.metrics.bleu.BleuScore.eval:3
 msgid "- **bleu_score** (float) - The computed result."
-msgstr ""
+msgstr "- **bleu_score** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.bleu:29
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: mindnlp.engine.metrics.bleu.BleuScore.eval:5
 msgid "**bleu_score** (float) - The computed result."
-msgstr ""
+msgstr "**bleu_score** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.bleu:31
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: mindnlp.engine.metrics.bleu.BleuScore:25
 msgid "If the value range of `n_size` is not from 1 to 4."
-msgstr ""
+msgstr "如果`n_size`的值范围不是从1到4。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.bleu:32
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: mindnlp.engine.metrics.bleu.BleuScore.update:9
 msgid "If the lengths of `cand` and `ref_list` are not equal."
-msgstr ""
+msgstr "如果`cand`和`ref_list`的长度不相等"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.bleu:33
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: mindnlp.engine.metrics.bleu.BleuScore:26
 msgid "If the lengths of `weights` is not equal to `n_size`."
-msgstr ""
+msgstr "如果`weights`的长度不等于`n_size`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.confusion_matrix:1
@@ -1374,6 +1395,9 @@ msgid ""
 "evaluate the performance of classification models, including binary "
 "classification and multiple classification."
 msgstr ""
+"计算混淆矩阵confusion matrix。混淆矩阵confusion matrix被广泛用于"
+"评价分类模型的性能，包括二分类和"
+"多分类。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.confusion_matrix:5
@@ -1381,39 +1405,41 @@ msgid ""
 "Predicted value. `preds` is a list of floating numbers and the shape of "
 "`preds` is :math:`(N, C)` or :math:`(N,)`."
 msgstr ""
+"预测值。一个浮点数列表，其shape为"
+"`(N, C)`或`(N,)`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.confusion_matrix:8
 msgid "Ground truth. The shape of `labels` is :math:`(N,)`."
-msgstr ""
+msgstr "真实值。shape为`(N,)`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.confusion_matrix:11
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/confusion_matrix.py:docstring
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix:5
 msgid "Number of classes in the dataset. Default: 2."
-msgstr ""
+msgstr "数据集中类的数量。默认：2。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.confusion_matrix:14
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/confusion_matrix.py:docstring
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.eval:3
 msgid "- **conf_mat** (np.ndarray) - The computed result."
-msgstr ""
+msgstr "- **conf_mat** (np.ndarray) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.confusion_matrix:16
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/confusion_matrix.py:docstring
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.eval:5
 msgid "**conf_mat** (np.ndarray) - The computed result."
-msgstr ""
+msgstr "**conf_mat** (np.ndarray) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.confusion_matrix:18
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/confusion_matrix.py:docstring
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.update:11
 msgid "If `preds` and `labels` do not have valid dimensions."
-msgstr ""
+msgstr "如果`preds`和`labels`没有有效的维度。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.distinct:1
@@ -1425,32 +1451,36 @@ msgid ""
 "sentence. The larger the number of distinct n-grams, the higher the "
 "diversity of the text. The function is shown as follows:"
 msgstr ""
+"计算Distinct-N。Distinct-N是一种测量"
+"句子多样性的指标。它关注一个句子中不同n-gram的数量。"
+"不同n-gram的数量越多，文本的多样性越高。"
+"函数如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.distinct:6 mindnlp.common.metrics.rouge_l:17
 msgid "A list of tokenized candidate sentence."
-msgstr ""
+msgstr "分词后的候选句子列表。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.distinct:8
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/distinct.py:docstring
 #: mindnlp.engine.metrics.distinct.Distinct:6
 msgid "N_gram value. Defaults: 2."
-msgstr ""
+msgstr "N_gram值。默认：2。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.distinct:11
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/distinct.py:docstring
 #: mindnlp.engine.metrics.distinct.Distinct.eval:3
 msgid "- **distinct_score** (float) - The computed result."
-msgstr ""
+msgstr "- **distinct_score** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.distinct:13
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/distinct.py:docstring
 #: mindnlp.engine.metrics.distinct.Distinct.eval:5
 msgid "**distinct_score** (float) - The computed result."
-msgstr ""
+msgstr "**distinct_score** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.em_score:1
@@ -1458,33 +1488,35 @@ msgid ""
 "Calculates the exact match (EM) score. This metric measures the percentage "
 "of predictions that match any one of the ground truth exactly."
 msgstr ""
+"计算exact match (EM)分数。这个指标测量预测值"
+"精准匹配任一真实值的百分比。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.em_score:4
 msgid "Predicted value."
-msgstr ""
+msgstr "预测值。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.em_score:6
 msgid "Ground truth."
-msgstr ""
+msgstr "真实值。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.em_score:9
 msgid "- **exact_match** (float) - The computed result."
-msgstr ""
+msgstr "- **exact_match** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.em_score:11
 msgid "**exact_match** (float) - The computed result."
-msgstr ""
+msgstr "**exact_match** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.em_score:13
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/em_score.py:docstring
 #: mindnlp.engine.metrics.em_score.EmScore.update:9
 msgid "If `preds` and `examples` have different lengths."
-msgstr ""
+msgstr "如果`preds`和`examples`长度不同。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.f1_score:1
@@ -1495,6 +1527,9 @@ msgid ""
 "recall, and F1 score is a special case of Fbeta when beta is 1. The function "
 "is shown as follows:"
 msgstr ""
+"计算F1分数。Fbeta分数是precision和recall的加权平均，"
+"F1分数是Fbeta的一种特殊情况，此时beta为1。函数"
+"如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.f1_score:5
@@ -1511,16 +1546,18 @@ msgid ""
 "where `TP` is the number of true posistive cases, `FN` is the number of "
 "false negative cases, `FP` is the number of false positive cases."
 msgstr ""
+"其中`TP`是正确预测的正样本数量，`FN`是错误预测的负样本数量，"
+"`FP`是错误预测的正样本数量。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.f1_score:22
 msgid "- **f1_s** (np.ndarray) - The computed result."
-msgstr ""
+msgstr "- **f1_s** (np.ndarray) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.f1_score:24
 msgid "**f1_s** (np.ndarray) - The computed result."
-msgstr ""
+msgstr "**f1_s** (np.ndarray) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.f1_score:26 mindnlp.common.metrics.precision:26
@@ -1532,7 +1569,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/recall.py:docstring
 #: mindnlp.engine.metrics.recall.Recall.update:14
 msgid "If `preds` doesn't have the same classes number as `labels`."
-msgstr ""
+msgstr "如果`preds`和`labels`没有相同数量的类。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.matthews_correlation:1
@@ -1546,6 +1583,12 @@ msgid ""
 "indicates total disagreement between prediction and observation. The "
 "function is shown as follows:"
 msgstr ""
+"计算Matthews相关系数(MCC)。MCC本质上是"
+"观测的和预测的二分类之间的相关系数；"
+"它返回了一个介于-1和+1之间的值。系数+1"
+"表示一次完美的预测，0不比随机预测好，−1"
+"表示预测值和观测值完全不同。"
+"函数如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.matthews_correlation:7
@@ -1564,6 +1607,9 @@ msgid ""
 "negative cases, `FN` is the number of false negative cases, `FP` is the "
 "number of false positive cases."
 msgstr ""
+"其中`TP`是正确预测的正样本数，`TN`是正确预测的负样本数，"
+"`FN`是错误预测的负样本数，`FP`是"
+"错误预测的正样本数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.matthews_correlation:14
@@ -1572,20 +1618,23 @@ msgid ""
 "`preds` is :math:`(N, C)` in most cases (not strictly), where :math:`N` is "
 "the number of cases and :math:`C` is the number of categories."
 msgstr ""
+"预测值。浮点数列表，大多数情况下（不严格要求），shape是"
+"`(N, C)`，其中`N`是样本数，"
+"`C`是类别数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.matthews_correlation:24
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/matthews.py:docstring
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation.eval:3
 msgid "- **m_c_c** (float) - The computed result."
-msgstr ""
+msgstr "- **m_c_c** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.matthews_correlation:26
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/matthews.py:docstring
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation.eval:5
 msgid "**m_c_c** (float) - The computed result."
-msgstr ""
+msgstr "**m_c_c** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.pearson_correlation:1
@@ -1598,6 +1647,11 @@ msgid ""
 "thus, it is essentially a normalized measurement of the covariance, such "
 "that the result always has a value between −1 and 1."
 msgstr ""
+"计算Pearson相关系数(PCC)。PCC是两组数据之间线性相关系数的测量方式。"
+"它是两个变量之间的协方差之比，"
+"他们标准差的乘积；"
+"因此，它本质上是协方差的归一化测量，"
+"结果值总在−1和1之间。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.pearson_correlation:7
@@ -1606,6 +1660,8 @@ msgid ""
 "Predicted value. `preds` is a list of floating numbers and the shape of "
 "`preds` is :math:`(N, 1)`."
 msgstr ""
+"预测值。浮点数列表，shape为"
+"`(N, 1)`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.pearson_correlation:10
@@ -1614,20 +1670,22 @@ msgid ""
 "Ground truth. `labels` is a list of floating numbers and the shape of "
 "`preds` is :math:`(N, 1)`."
 msgstr ""
+"真实值。浮点数列表，shape是"
+"`(N, 1)`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.pearson_correlation:14
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/pearson.py:docstring
 #: mindnlp.engine.metrics.pearson.PearsonCorrelation.eval:3
 msgid "- **p_c_c** (float) - The computed result."
-msgstr ""
+msgstr "- **p_c_c** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.pearson_correlation:16
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/pearson.py:docstring
 #: mindnlp.engine.metrics.pearson.PearsonCorrelation.eval:5
 msgid "**p_c_c** (float) - The computed result."
-msgstr ""
+msgstr "**p_c_c** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.pearson_correlation:18
@@ -1640,7 +1698,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.update:11
 msgid "If `preds` and `labels` have different lengths."
-msgstr ""
+msgstr "如果`preds`和`labels`长度不同。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.perplexity:1
@@ -1651,6 +1709,9 @@ msgid ""
 "probabilibity model predicts a sample. A low perplexity indicates the model "
 "is good at predicting the sample. The function is shown as follows:"
 msgstr ""
+"计算perplexity。Perplexity衡量概率模型预测样本的能力。"
+"低的perplexity说明模型"
+"善于预测样本。函数如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.perplexity:5
@@ -1664,7 +1725,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.perplexity:9
 msgid "where :math:`w` represents words in corpus."
-msgstr ""
+msgstr "其中`w`表示语料库中的词。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.perplexity:20
@@ -1674,34 +1735,36 @@ msgid ""
 "Index of an invalid label to be ignored when counting. If set to `None`, it "
 "means there's no invalid label. Default: None."
 msgstr ""
+"计数时要忽略的无效标签的索引。如果设置为`None`，它"
+"意味着没有无效标签。默认：None。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.perplexity:25
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/perplexity.py:docstring
 #: mindnlp.engine.metrics.perplexity.Perplexity.eval:3
 msgid "- **ppl** (float) - The computed result."
-msgstr ""
+msgstr "- **ppl** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.perplexity:27
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/perplexity.py:docstring
 #: mindnlp.engine.metrics.perplexity.Perplexity.eval:5
 msgid "**ppl** (float) - The computed result."
-msgstr ""
+msgstr "**ppl** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.perplexity:30
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/perplexity.py:docstring
 #: mindnlp.engine.metrics.perplexity.Perplexity.update:15
 msgid "If `pred` and `label` have different shapes."
-msgstr ""
+msgstr "如果`pred`和`label`有不同的shape。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.perplexity:31
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/perplexity.py:docstring
 #: mindnlp.engine.metrics.perplexity.Perplexity.eval:7
 msgid "If the sample size is 0."
-msgstr ""
+msgstr "如果样本数为0。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.precision:1
@@ -1711,6 +1774,10 @@ msgid ""
 "It can only be used to evaluate the precision score of binary tasks. The "
 "function is shown as follows:"
 msgstr ""
+"计算精确度precision。精确度precision（也称为正预测值）"
+"是预测的正样本中的实际正样本比例。"
+"它只被用来评价二分类任务的精确度precision分数。"
+"函数如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.precision:6
@@ -1727,16 +1794,18 @@ msgid ""
 "where `TP` is the number of true posistive cases, `FP` is the number of "
 "false posistive cases."
 msgstr ""
+"其中`TP`是正确预测的正样本数，`FP`是错误预测的正样本数。"
+""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.precision:22
 msgid "- **prec** (np.ndarray) - The computed result."
-msgstr ""
+msgstr "- **prec** (np.ndarray) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.precision:24
 msgid "**prec** (np.ndarray) - The computed result."
-msgstr ""
+msgstr "**prec** (np.ndarray) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.recall:1
@@ -1746,6 +1815,8 @@ msgid ""
 "Calculates the recall. Recall is also referred to as the true positive rate "
 "or sensitivity. The function is shown as follows:"
 msgstr ""
+"计算召回率recall。召回率也指真的正确率"
+"或灵敏度。函数如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.recall:4
@@ -1762,16 +1833,18 @@ msgid ""
 "where `TP` is the number of true posistive cases, `FN` is the number of "
 "false negative cases."
 msgstr ""
+"其中`TP`是正确预测的正样本数，`FN`是"
+"错误预测的负样本数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.recall:20
 msgid "- **rec** (np.ndarray) - The computed result."
-msgstr ""
+msgstr "- **rec** (np.ndarray) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.recall:22
 msgid "**rec** (np.ndarray) - The computed result."
-msgstr ""
+msgstr "**rec** (np.ndarray) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.rouge_l:1
@@ -1783,6 +1856,10 @@ msgid ""
 "and machine translation models. ROUGE-L is calculated based on Longest "
 "Common Subsequence (LCS). The function is shown as follows:"
 msgstr ""
+"计算ROUGE-L分数。ROUGE (Recall-Oriented Understudy for Gisting "
+"Evaluation)是一组用于评估自动摘要和机器翻译模型的指标。"
+"ROUGE-L基于最长公共子序列(LCS)计算。"
+"函数如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.rouge_l:6
@@ -1806,27 +1883,30 @@ msgid ""
 "`n` represent the length of `X` and `Y` respectively. `LCS` means the "
 "longest common subsequence."
 msgstr ""
+"其中`X`是候选句子，`Y`是参考句子。`m`和"
+"`n`分别表示`X`和`Y`的长度。`LCS`意味着"
+"最长公共子序列。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.rouge_l:21
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: mindnlp.engine.metrics.rouge.RougeL:17
 msgid "A hyperparameter to decide the weight of recall. Defaults: 1.2."
-msgstr ""
+msgstr "一个决定召回率recall权重的超参数。默认：1.2。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.rouge_l:24
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: mindnlp.engine.metrics.rouge.RougeL.eval:3
 msgid "- **rougel_score** (float) - The computed result."
-msgstr ""
+msgstr "- **rougel_score** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.rouge_l:26
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: mindnlp.engine.metrics.rouge.RougeL.eval:5
 msgid "**rougel_score** (float) - The computed result."
-msgstr ""
+msgstr "**rougel_score** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.rouge_n:1
@@ -1836,34 +1916,38 @@ msgid ""
 "and machine translation models. ROUGE-N refers to the overlap of n-grams "
 "between candidates and reference summaries."
 msgstr ""
+"计算ROUGE-N分数。ROUGE(Recall-Oriented Understudy for Gisting "
+"Evaluation)是一组用于评估自动摘要和机器翻译模型的指标。"
+"ROUGE-N指的是候选句子和参考摘要之间的"
+"n-gram重叠。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.rouge_n:10
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: mindnlp.engine.metrics.rouge.RougeN:5
 msgid "N_gram value. Default: 1."
-msgstr ""
+msgstr "N_gram值。默认：1。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.rouge_n:13
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: mindnlp.engine.metrics.rouge.RougeN.eval:3
 msgid "- **rougen_score** (float) - The computed result."
-msgstr ""
+msgstr "- **rougen_score** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.rouge_n:15
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: mindnlp.engine.metrics.rouge.RougeN.eval:5
 msgid "**rougen_score** (float) - The computed result."
-msgstr ""
+msgstr "**rougen_score** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.rouge_n:17
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: mindnlp.engine.metrics.rouge.RougeN.eval:7
 msgid "If the reference size is 0."
-msgstr ""
+msgstr "如果参考句子的长度为0。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.spearman_correlation:1
@@ -1878,20 +1962,27 @@ msgid ""
 "occurs when each of the variables is a perfect monotone function of the "
 "other."
 msgstr ""
+"计算斯皮尔曼秩相关系数（Spearman's rank correlation coefficient，SRCC）。它是一种"
+"非参数的秩相关性（两个变量的秩之间的统计相关性）度量。"
+"它使用单调函数，评估了模型描述两个变量之间的关系的能力。"
+"如果不存在"
+"重复的数值，当每一个变量都是另一个变量的一个完美的单调函数时，"
+"此时的斯皮尔曼相关系数是完美的，为+1或−1。"
+""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.spearman_correlation:15
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.eval:3
 msgid "- **s_r_c_c** (float) - The computed result."
-msgstr ""
+msgstr "- **s_r_c_c** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.spearman_correlation:17
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.eval:5
 msgid "**s_r_c_c** (float) - The computed result."
-msgstr ""
+msgstr "**s_r_c_c** (float) - 计算得到的结果。"
 
 #: ../../api/dataset.rst:2
 msgid "Dataset"
@@ -4209,7 +4300,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy:1
 msgid "\"Class for Metric Accuracy"
-msgstr ""
+msgstr "评价指标accuracy类"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy:1
@@ -4238,12 +4329,12 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation:1
 msgid "Bases: :py:class:`~mindnlp.abc.metric.Metric`"
-msgstr ""
+msgstr "基类：:py:class:`~mindnlp.abc.metric.Metric`"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy:1
 msgid "Calculates accuracy. The function is shown as follows:"
-msgstr ""
+msgstr "计算准确率accuracy。函数如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy:12
@@ -4272,7 +4363,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation:8
 msgid "Name of the metric."
-msgstr ""
+msgstr "metric名称。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy.clear:1
@@ -4302,12 +4393,12 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.clear:1
 msgid "Clears the internal evaluation results."
-msgstr ""
+msgstr "清空中间评估结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy.eval:1
 msgid "Computes and returns the accuracy."
-msgstr ""
+msgstr "计算并返回准确率accuracy。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy.get_metric_name:1
@@ -4335,7 +4426,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.get_metric_name:1
 msgid "Returns the name of the metric."
-msgstr ""
+msgstr "返回metric名称。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy.update:1
@@ -4363,7 +4454,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.update:1
 msgid "Updates local variables."
-msgstr ""
+msgstr "更新局部变量。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy.update:3
@@ -4376,6 +4467,13 @@ msgid ""
 "truth value. `labels` must   be in one-hot format that shape is :math:`(N, "
 "C)`, or can be transformed to   one-hot format that shape is :math:`(N,)`."
 msgstr ""
+"输入`preds`和`labels`。 - preds (Union[Tensor, list, numpy.ndarray]): "
+"预测值。范围在`[0, 1]`的浮点数列表，"
+"大多数情况下（不严格要求），shape是`(N, C)`，"
+"其中`N`是样本数， ` C ` 是类别数，"
+" - labels (Union[Tensor, list, numpy.ndarray]): 真实值。"
+"必须是one-hot格式，shape为 ` (N, C) ` ，"
+"或能够转换为one-hot格式，shape为`(N,)`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy.update:3
@@ -4396,7 +4494,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.update:3
 msgid "Input `preds` and `labels`."
-msgstr ""
+msgstr "输入`preds`和`labels`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy.update:5
@@ -4410,6 +4508,10 @@ msgid ""
 "is :math:`(N, C)` in most cases (not strictly), where :math:`N` is the "
 "number of cases and :math:`C` is the number of categories."
 msgstr ""
+"preds (Union[Tensor, list, numpy.ndarray]): 预测值。"
+"范围在`[0, 1]`的浮点数列表，大多数情况下（不严格要求），shape是"
+"`(N, C)`，其中`N`是样本数，"
+"`C`是类别数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy.update:9
@@ -4422,13 +4524,16 @@ msgid ""
 "must be in one-hot format that shape is :math:`(N, C)`, or can be "
 "transformed to one-hot format that shape is :math:`(N,)`."
 msgstr ""
+"labels (Union[Tensor, list, numpy.ndarray]): 真实值。"
+"必须是one-hot格式，shape为`(N, C)`，或能够"
+"转换为one-hot格式，shape为`(N,)`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy.update:13
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/perplexity.py:docstring
 #: mindnlp.engine.metrics.perplexity.Perplexity.update:13
 msgid "If the number of `inputs` is not 2."
-msgstr ""
+msgstr "如果`inputs`数量不为2。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy.update:14
@@ -4436,6 +4541,8 @@ msgid ""
 "class numbers of last input predicted data and current predicted data     "
 "not match."
 msgstr ""
+"上一个输入的预测值的类的数量与当前预测值"
+"不匹配。"
 
 #: ../../api/engine/metrics.rst:14
 msgid "bleu"
@@ -4444,12 +4551,12 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: of mindnlp.engine.metrics.bleu:1
 msgid "\"Class for Metric BleuScore"
-msgstr ""
+msgstr "评价指标BleuScore类"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: of mindnlp.engine.metrics.bleu.BleuScore.eval:1
 msgid "Computes and returns the BLEU score."
-msgstr ""
+msgstr "计算并返回BLEU分数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: of mindnlp.engine.metrics.bleu.BleuScore.update:3
@@ -4458,23 +4565,26 @@ msgid ""
 "sentences. - ref_list (list): A list of lists of tokenized ground truth "
 "sentences."
 msgstr ""
+"输入`cand`和`ref_list`。  - cand (list): 分词后的候选句子列表。"
+" - ref_list (list): 分词后的真实句子列表。"
+""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: of mindnlp.engine.metrics.bleu.BleuScore.update:3
 msgid "Input `cand` and `ref_list`."
-msgstr ""
+msgstr "输入`cand`和`ref_list`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: of mindnlp.engine.metrics.bleu.BleuScore.update:5
 msgid "cand (list): A list of tokenized candidate sentences."
-msgstr ""
+msgstr "cand (list): 分词后的候选句子列表。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: of mindnlp.engine.metrics.bleu.BleuScore.update:6
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: mindnlp.engine.metrics.rouge.RougeN.update:6
 msgid "ref_list (list): A list of lists of tokenized ground truth sentences."
-msgstr ""
+msgstr "ref_list (list): 分词后的真实句子列表。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: of mindnlp.engine.metrics.bleu.BleuScore.update:8
@@ -4498,7 +4608,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.update:10
 msgid "If the number of inputs is not 2."
-msgstr ""
+msgstr "如果输入数量不为2。"
 
 #: ../../api/engine/metrics.rst:22
 msgid "confusion\\_matrix"
@@ -4507,12 +4617,12 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/confusion_matrix.py:docstring
 #: of mindnlp.engine.metrics.confusion_matrix:1
 msgid "\"Class for Metric ConfusionMatrix"
-msgstr ""
+msgstr "评价指标ConfusionMatrix类"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/confusion_matrix.py:docstring
 #: of mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.eval:1
 msgid "Computes and returns the Confusion Matrix."
-msgstr ""
+msgstr "计算并返回混淆矩阵。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/confusion_matrix.py:docstring
 #: of mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.update:3
@@ -4522,6 +4632,10 @@ msgid ""
 "`preds` is :math:`(N, C)` or :math:`(N,)`. - labels (Union[Tensor, list, np."
 "ndarray]): Ground truth. The shape of `labels` is   :math:`(N,)`."
 msgstr ""
+"输入`preds`和`labels`。  - preds (Union[Tensor, list, np.ndarray]): "
+"预测值。浮点数列表，shape是"
+"`(N, C)`或`(N,)`。 - labels (Union[Tensor, list, np."
+"ndarray]): 真实值。shape是`(N,)`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/confusion_matrix.py:docstring
 #: of mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.update:5
@@ -4530,6 +4644,9 @@ msgid ""
 "of floating numbers and the shape of `preds` is :math:`(N, C)` or :math:"
 "`(N,)`."
 msgstr ""
+"preds (Union[Tensor, list, np.ndarray]): 预测值。浮点数列表，"
+"shape是`(N, C)`或"
+"`(N,)`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/confusion_matrix.py:docstring
 #: of mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.update:7
@@ -4537,6 +4654,8 @@ msgid ""
 "labels (Union[Tensor, list, np.ndarray]): Ground truth. The shape of "
 "`labels` is :math:`(N,)`."
 msgstr ""
+"labels (Union[Tensor, list, np.ndarray]): 真实值。shape是"
+"`(N,)`。"
 
 #: ../../api/engine/metrics.rst:30
 msgid "distinct"
@@ -4545,12 +4664,12 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/distinct.py:docstring
 #: of mindnlp.engine.metrics.distinct:1
 msgid "\"Class for Metric Distinct"
-msgstr ""
+msgstr "评价指标Distinct类"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/distinct.py:docstring
 #: of mindnlp.engine.metrics.distinct.Distinct.eval:1
 msgid "Computes and returns the Distinct-N."
-msgstr ""
+msgstr "计算并返回Distinct-N。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/distinct.py:docstring
 #: of mindnlp.engine.metrics.distinct.Distinct.update:3
@@ -4558,23 +4677,25 @@ msgid ""
 "Input `cand_list`.  - cand_list (list): A list of tokenized candidate "
 "sentence."
 msgstr ""
+"输入`cand_list`。  - cand_list (list): 分词后的候选句子列表。"
+""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/distinct.py:docstring
 #: of mindnlp.engine.metrics.distinct.Distinct.update:3
 msgid "Input `cand_list`."
-msgstr ""
+msgstr "输入`cand_list`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/distinct.py:docstring
 #: of mindnlp.engine.metrics.distinct.Distinct.update:5
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: mindnlp.engine.metrics.rouge.RougeN.update:5
 msgid "cand_list (list): A list of tokenized candidate sentence."
-msgstr ""
+msgstr "cand_list (list): 分词后的候选句子列表。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/distinct.py:docstring
 #: of mindnlp.engine.metrics.distinct.Distinct.update:7
 msgid "If the number of inputs is not 1."
-msgstr ""
+msgstr "如果输入数量不为1。"
 
 #: ../../api/engine/metrics.rst:38
 msgid "em\\_score"
@@ -4583,7 +4704,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/em_score.py:docstring
 #: of mindnlp.engine.metrics.em_score:1
 msgid "\"Class for Metric EmScore"
-msgstr ""
+msgstr "评价指标EmScore类"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/em_score.py:docstring
 #: of mindnlp.engine.metrics.em_score.EmScore:1
@@ -4591,16 +4712,18 @@ msgid ""
 "Calculates the exact match (EM) score. This metric measures the percentage "
 "of predictions that match any one of the ground truth answers exactly."
 msgstr ""
+"计算exact match(EM)分数。这个指标测量预测值"
+"精准匹配任一真实值的百分比。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/em_score.py:docstring
 #: of mindnlp.engine.metrics.em_score.EmScore.eval:1
 msgid "Computes and returns the EM score."
-msgstr ""
+msgstr "计算并返回EM分数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/em_score.py:docstring
 #: of mindnlp.engine.metrics.em_score.EmScore.eval:3
 msgid "Returns: - **exact_match** (float) - The computed result."
-msgstr ""
+msgstr "返回: - **exact_match** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/em_score.py:docstring
 #: of mindnlp.engine.metrics.em_score.EmScore.update:3
@@ -4608,21 +4731,23 @@ msgid ""
 "Input `preds` and `examples`.  - preds (Union[str, list]): Predicted value. "
 "- examples (list): Ground truth."
 msgstr ""
+"输入`preds`和`examples`。  - preds (Union[str, list]): 预测值。"
+"- examples (list): 真实值。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/em_score.py:docstring
 #: of mindnlp.engine.metrics.em_score.EmScore.update:3
 msgid "Input `preds` and `examples`."
-msgstr ""
+msgstr "输入`preds`和`examples`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/em_score.py:docstring
 #: of mindnlp.engine.metrics.em_score.EmScore.update:5
 msgid "preds (Union[str, list]): Predicted value."
-msgstr ""
+msgstr "preds (Union[str, list]): 预测值。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/em_score.py:docstring
 #: of mindnlp.engine.metrics.em_score.EmScore.update:6
 msgid "examples (list): Ground truth."
-msgstr ""
+msgstr "examples (list): 真实值。"
 
 #: ../../api/engine/metrics.rst:46
 msgid "f1"
@@ -4631,22 +4756,22 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/f1.py:docstring
 #: of mindnlp.engine.metrics.f1:1
 msgid "\"Class for Metric F1Score"
-msgstr ""
+msgstr "评价指标F1Score类"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/f1.py:docstring
 #: of mindnlp.engine.metrics.f1.F1Score.eval:1
 msgid "Computes and returns the F1 score."
-msgstr ""
+msgstr "计算并返回F1分数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/f1.py:docstring
 #: of mindnlp.engine.metrics.f1.F1Score.eval:3
 msgid "- **f1_s** (numpy.ndarray) - The computed result."
-msgstr ""
+msgstr "- **f1_s** (numpy.ndarray) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/f1.py:docstring
 #: of mindnlp.engine.metrics.f1.F1Score.eval:5
 msgid "**f1_s** (numpy.ndarray) - The computed result."
-msgstr ""
+msgstr "**f1_s** (numpy.ndarray) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/f1.py:docstring
 #: of mindnlp.engine.metrics.f1.F1Score.update:3
@@ -4661,6 +4786,13 @@ msgid ""
 "truth. `labels` must be in   one-hot format that shape is :math:`(N, C)`, or "
 "can be transformed to   one-hot format that shape is :math:`(N,)`."
 msgstr ""
+"输入`preds`和`labels`。  - preds (Union[Tensor, list, np.ndarray]): "
+"预测值。范围在`[0, 1]`的浮点数列表，"
+"大多数情况下（不严格要求），shape是`(N, C)`，"
+"其中`N`是样本数，`C`是"
+"类别数。 - labels (Union[Tensor, list, np.ndarray]): 真实值。"
+"必须是one-hot格式，shape为`(N, C)`，或"
+"能够转换为one-hot格式，shape为`(N,)`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/f1.py:docstring
 #: of mindnlp.engine.metrics.f1.F1Score.update:5
@@ -4674,6 +4806,10 @@ msgid ""
 "math:`(N, C)` in most cases (not strictly), where :math:`N` is the number of "
 "cases and :math:`C` is the number of categories."
 msgstr ""
+"preds (Union[Tensor, list, np.ndarray]): 预测值。范围在`[0, 1]`的"
+"浮点数列表，在大多数情况下（不严格要求），shape是"
+"`(N, C)`，其中`N`是样本数，"
+"`C`是类别数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/f1.py:docstring
 #: of mindnlp.engine.metrics.f1.F1Score.update:9
@@ -4686,6 +4822,9 @@ msgid ""
 "one-hot format that shape is :math:`(N, C)`, or can be transformed to one-"
 "hot format that shape is :math:`(N,)`."
 msgstr ""
+"labels (Union[Tensor, list, np.ndarray]): 真实值。必须是"
+"one-hot格式，shape为`(N, C)`，或能够转换为one-"
+"hot格式，shape为`(N,)`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/f1.py:docstring
 #: of mindnlp.engine.metrics.f1.F1Score.update:14
@@ -4693,6 +4832,8 @@ msgid ""
 "class numbers of last input predicted data and current     predicted data "
 "not match."
 msgstr ""
+"上一输入预测值的类的数量与当前预测值不匹配。"
+""
 
 #: ../../api/engine/metrics.rst:54
 msgid "matthews"
@@ -4701,12 +4842,12 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/matthews.py:docstring
 #: of mindnlp.engine.metrics.matthews:1
 msgid "\"Class for Metric MatthewsCorrelation"
-msgstr ""
+msgstr "评价指标MatthewsCorrelation类"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/matthews.py:docstring
 #: of mindnlp.engine.metrics.matthews.MatthewsCorrelation.eval:1
 msgid "Computes and returns the MCC."
-msgstr ""
+msgstr "计算并返回MCC。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/matthews.py:docstring
 #: of mindnlp.engine.metrics.matthews.MatthewsCorrelation.update:3
@@ -4719,6 +4860,13 @@ msgid ""
 "truth value. `labels` must be in   one-hot format that shape is :math:`(N, "
 "C)`, or can be transformed to one-hot   format that shape is :math:`(N,)`."
 msgstr ""
+"输入`preds` and `labels`。  - preds (Union[Tensor, list, numpy.ndarray]): "
+"预测值。范围在`[0, 1]`的浮点数列表，"
+"大多数情况下（不严格要求），shape是`(N, C)`，"
+"其中`N`是样本数，`C`是"
+"类别数。 - labels (Union[Tensor, list, numpy.ndarray]): 真实值。"
+"必须是one-hot格式，shape为`(N, "
+"C)`，或能够转换为one-hot格式，shape为`(N,)`。"
 
 #: ../../api/engine/metrics.rst:62
 msgid "pearson"
@@ -4727,12 +4875,12 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/pearson.py:docstring
 #: of mindnlp.engine.metrics.pearson:1
 msgid "\"Class for Metric PearsonCorrelation"
-msgstr ""
+msgstr "评价指标PearsonCorrelation类"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/pearson.py:docstring
 #: of mindnlp.engine.metrics.pearson.PearsonCorrelation.eval:1
 msgid "Computes and returns the PCC."
-msgstr ""
+msgstr "计算并返回PCC。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/pearson.py:docstring
 #: of mindnlp.engine.metrics.pearson.PearsonCorrelation.update:3
@@ -4745,6 +4893,11 @@ msgid ""
 "Ground truth. `labels` is a list of   floating numbers and the shape of "
 "`preds` is :math:`(N, 1)`."
 msgstr ""
+"输入`preds`和`labels`。  - preds (Union[Tensor, list, np.ndarray]): "
+"预测值。浮点数列表，shape为"
+"`(N, 1)`。 - labels (Union[Tensor, list, np.ndarray]): "
+"真实值。浮点数列表，shape为"
+"`(N, 1)`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/pearson.py:docstring
 #: of mindnlp.engine.metrics.pearson.PearsonCorrelation.update:5
@@ -4754,6 +4907,8 @@ msgid ""
 "preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list "
 "of floating numbers and the shape of `preds` is :math:`(N, 1)`."
 msgstr ""
+"preds (Union[Tensor, list, np.ndarray]): 预测值。浮点数列表，"
+"shape是`(N, 1)`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/pearson.py:docstring
 #: of mindnlp.engine.metrics.pearson.PearsonCorrelation.update:7
@@ -4763,6 +4918,8 @@ msgid ""
 "labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` is a list "
 "of floating numbers and the shape of `preds` is :math:`(N, 1)`."
 msgstr ""
+"labels (Union[Tensor, list, np.ndarray]): 真实值。浮点数列表，"
+"shape是`(N, 1)`。"
 
 #: ../../api/engine/metrics.rst:70
 msgid "perplexity"
@@ -4771,22 +4928,22 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/perplexity.py:docstring
 #: of mindnlp.engine.metrics.perplexity:1
 msgid "\"Class for Metric Perplexity"
-msgstr ""
+msgstr "评价指标Perplexity类"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/perplexity.py:docstring
 #: of mindnlp.engine.metrics.perplexity.Perplexity:9
 msgid "Where :math:`w` represents words in corpus."
-msgstr ""
+msgstr "其中`w`表示语料库中的词。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/perplexity.py:docstring
 #: of mindnlp.engine.metrics.perplexity.Perplexity.eval:1
 msgid "Computes and returns the perplexity."
-msgstr ""
+msgstr "计算并返回perplexity。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/perplexity.py:docstring
 #: of mindnlp.engine.metrics.perplexity.Perplexity.get_metric_name:1
 msgid "Return the name of the metric."
-msgstr ""
+msgstr "返回metric名称。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/perplexity.py:docstring
 #: of mindnlp.engine.metrics.perplexity.Perplexity.update:3
@@ -4799,6 +4956,13 @@ msgid ""
 "truth. `labels` must be in   one-hot format that shape is :math:`(N, C)`, or "
 "can be transformed to   one-hot format that shape is :math:`(N,)`."
 msgstr ""
+"输入`preds` and `labels`。  - preds (Union[Tensor, list, np.ndarray]): "
+"预测值。范围在`[0, "
+"1]`的浮点数列表，大多数情况下（不严格要求），shape是`(N, C)`，"
+"其中`N`是样本数，`C`是"
+"类别数。 - labels (Union[Tensor, list, np.ndarray]): 真实值。"
+"必须是one-hot格式，shape为`(N, C)`，或"
+"能够转换为one-hot格式，shape为`(N,)`。"
 
 #: ../../api/engine/metrics.rst:78
 msgid "precision"
@@ -4807,7 +4971,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/precision.py:docstring
 #: of mindnlp.engine.metrics.precision:1
 msgid "\"Class for Metric Precision"
-msgstr ""
+msgstr "评价指标Precision类。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/precision.py:docstring
 #: of mindnlp.engine.metrics.precision.Precision:1
@@ -4817,21 +4981,25 @@ msgid ""
 "be used to evaluate the precision score of binary tasks. The function is "
 "shown as follows:"
 msgstr ""
+"计算精确度precision。精确度precision（也称为正预测值）"
+"是预测的正样本中的实际正样本比例。"
+"它只被用来评价二分类任务的精确度precision分数。"
+"函数如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/precision.py:docstring
 #: of mindnlp.engine.metrics.precision.Precision.eval:1
 msgid "Computes and returns the precision."
-msgstr ""
+msgstr "计算并返回精确度precision。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/precision.py:docstring
 #: of mindnlp.engine.metrics.precision.Precision.eval:3
 msgid "- **prec** (numpy.ndarray) - The computed result."
-msgstr ""
+msgstr "- **prec** (numpy.ndarray) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/precision.py:docstring
 #: of mindnlp.engine.metrics.precision.Precision.eval:5
 msgid "**prec** (numpy.ndarray) - The computed result."
-msgstr ""
+msgstr "**prec** (numpy.ndarray) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/precision.py:docstring
 #: of mindnlp.engine.metrics.precision.Precision.update:1
@@ -4839,6 +5007,8 @@ msgid ""
 "Updates local variables. If the index of the maximum of the predicted value "
 "matches the label, the predicted result is correct."
 msgstr ""
+"更新局部变量。如果预测值的最大值的索引与标签匹配，"
+"则预测结果是正确的。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/precision.py:docstring
 #: of mindnlp.engine.metrics.precision.Precision.update:4
@@ -4851,6 +5021,13 @@ msgid ""
 "truth value. `labels` must   be in one-hot format that shape is :math:`(N, "
 "C)`, or can be transformed   to one-hot format that shape is :math:`(N,)`."
 msgstr ""
+"输入`preds`和`labels`。  - preds (Union[Tensor, list, numpy.ndarray]): "
+"预测值。范围在:math:`[0, "
+"1]`的浮点数列表，大多数情况下（不严格要求），shape是`(N, C)`，"
+"其中`N`是样本数，`C`是"
+"类别数。 - labels (Union[Tensor, list, numpy.ndarray]): 真实值。"
+"必须是one-hot格式，shape为`(N, "
+"C)`，或能够转换为one-hot格式，shape为`(N,)`。"
 
 #: ../../api/engine/metrics.rst:86
 msgid "recall"
@@ -4859,22 +5036,22 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/recall.py:docstring
 #: of mindnlp.engine.metrics.recall:1
 msgid "\"Class for Metric Recall"
-msgstr ""
+msgstr "评价指标Recall类"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/recall.py:docstring
 #: of mindnlp.engine.metrics.recall.Recall.eval:1
 msgid "Computes and returns the recall."
-msgstr ""
+msgstr "计算并返回召回率recall。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/recall.py:docstring
 #: of mindnlp.engine.metrics.recall.Recall.eval:3
 msgid "- **rec** (numpy.ndarray) - The computed result."
-msgstr ""
+msgstr "- **rec** (numpy.ndarray) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/recall.py:docstring
 #: of mindnlp.engine.metrics.recall.Recall.eval:5
 msgid "**rec** (numpy.ndarray) - The computed result."
-msgstr ""
+msgstr "**rec** (numpy.ndarray) - 计算得到的结果。"
 
 #: ../../api/engine/metrics.rst:94
 msgid "rouge"
@@ -4883,12 +5060,12 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: of mindnlp.engine.metrics.rouge:1
 msgid "\"Classes for Metrics RougeN and RougeL"
-msgstr ""
+msgstr "评价指标RougeN和RougeL类"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: of mindnlp.engine.metrics.rouge.RougeL.eval:1
 msgid "Computes and returns the Rouge-L score."
-msgstr ""
+msgstr "计算并返回Rouge-L分数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: of mindnlp.engine.metrics.rouge.RougeL.update:3
@@ -4897,6 +5074,9 @@ msgid ""
 "candidate sentence. ref_list (list): A list of lists of tokenized ground "
 "truth sentences."
 msgstr ""
+"输入`cand_list`和`ref_list`。 cand_list (list): 分词后的候选句子列表。"
+" ref_list (list): 分词后的真实句子列表。"
+""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: of mindnlp.engine.metrics.rouge.RougeN:1
@@ -4906,11 +5086,15 @@ msgid ""
 "and machine translation models. ROUGE-N refers to the overlap of n-grams "
 "between candidates and reference summaries."
 msgstr ""
+"计算ROUGE-N分数。ROUGE(Recall-Oriented Understudy for Gisting "
+"Evaluation)是一组用于评估自动摘要和机器翻译模型的指标。"
+"ROUGE-N指的是候选句子和参考摘要之间的"
+"n-gram重叠。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: of mindnlp.engine.metrics.rouge.RougeN.eval:1
 msgid "Computes and returns the Rouge-N score."
-msgstr ""
+msgstr "计算并返回Rouge-N分数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: of mindnlp.engine.metrics.rouge.RougeN.update:3
@@ -4919,11 +5103,14 @@ msgid ""
 "candidate sentence. - ref_list (list): A list of lists of tokenized ground "
 "truth sentences."
 msgstr ""
+"输入`cand_list`和`ref_list`。  - cand_list (list): 分词后的候选句子列表。"
+" - ref_list (list): 分词后的真实句子列表。"
+""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: of mindnlp.engine.metrics.rouge.RougeN.update:3
 msgid "Input `cand_list` and `ref_list`."
-msgstr ""
+msgstr "输入`cand_list`和`ref_list`。"
 
 #: ../../api/engine/metrics.rst:102
 msgid "spearman"
@@ -4932,12 +5119,12 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: of mindnlp.engine.metrics.spearman:1
 msgid "\"Class for Metric Spearman"
-msgstr ""
+msgstr "评价指标Spearman类"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: of mindnlp.engine.metrics.spearman.SpearmanCorrelation.eval:1
 msgid "Computes and returns the SRCC."
-msgstr ""
+msgstr "计算并返回SRCC。"
 
 #: ../../api/engine/trainer.rst:2
 msgid "Trainer"
