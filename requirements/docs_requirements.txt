@@ -6,4 +6,4 @@ mindspore>=1.8.1
 requests
 tqdm
 gensim
-git+https://github.com/mindspore-ecosystem/mindnlp
+git+https://github.com/ZZhangyutong/mindnlp/
