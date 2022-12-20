@@ -1908,26 +1908,26 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016:1
 msgid "IWSLT2016 load function"
-msgstr ""
+msgstr "IWSLT2016加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:1
 msgid "Load the IWSLT2016 dataset"
-msgstr ""
+msgstr "加载IWSLT2016数据集"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:3
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
 #: mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017:3
 msgid "The available datasets include following:"
-msgstr ""
+msgstr "可以使用的数据集包括如下："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:5
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
 #: mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017:5
 msgid "**Language pairs**:"
-msgstr ""
+msgstr "**语言对表格**"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:8
@@ -1992,7 +1992,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
 #: mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017:21
 msgid "Directory where the datasets are saved. Default: \"~/.mindnlp\""
-msgstr ""
+msgstr "存放数据集的目录。默认：\"~/.mindnlp\""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:25
@@ -2007,7 +2007,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_generation/wikitext2.py:docstring
 #: mindnlp.dataset.text_generation.wikitext2.WikiText2:5
 msgid "Split or splits to be returned. Default:('train', 'valid', 'test')."
-msgstr ""
+msgstr "要返回的数据集分块。默认：('train', 'valid', 'test')"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:28
@@ -2016,17 +2016,17 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: mindnlp.dataset.machine_translation.multi30k.Multi30k:9
 msgid "Tuple containing src and tgt language. Default: ('de', 'en')."
-msgstr ""
+msgstr "包含源语言和目标语言的元组。默认：('de', 'en')"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:30
 msgid "a string to identify validation set. Default: \"tst2013\"."
-msgstr ""
+msgstr "定义验证集的字符串。默认：\"tst2013\""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:32
 msgid "a string to identify test set. Default: \"tst2014\"."
-msgstr ""
+msgstr "定义测试集的字符串。默认：\"tst2014\""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:34
@@ -2092,7 +2092,9 @@ msgstr ""
 msgid ""
 "a dict to identify proxies,for example: {\"https\": "
 "\"https://127.0.0.1:7890\"}."
-msgstr ""
+msgstr "" 
+"定义代理的字典，例如：{\"https\": "
+"\"https://127.0.0.1:7890\"}"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:37
@@ -2157,6 +2159,8 @@ msgid ""
 "dataset is specified,such as 'trian',   this dataset is returned instead of "
 "a list of datasets."
 msgstr ""
+"- **datasets_list** (list) -加载完成的数据集分块列表。如果只加载了一个数据集分块，"
+" 如：'trian'，那么就只返回这个数据集分块，而不是一个列表。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:39
@@ -2221,6 +2225,8 @@ msgid ""
 "dataset is specified,such as 'trian', this dataset is returned instead of a "
 "list of datasets."
 msgstr ""
+"**datasets_list** (list) -加载完成的数据集分块列表。如果只加载了一个数据集分块，"
+" 如：'trian'，那么就只返回这个数据集分块，而不是一个列表。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:43
@@ -2241,7 +2247,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_generation/wikitext2.py:docstring
 #: mindnlp.dataset.text_generation.wikitext2.WikiText2:17
 msgid "If `root` is not a string."
-msgstr ""
+msgstr "如果 `root` 不是string。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:44
@@ -2262,7 +2268,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_generation/wikitext2.py:docstring
 #: mindnlp.dataset.text_generation.wikitext2.WikiText2:18
 msgid "If `split` is not a string or Tuple[str]."
-msgstr ""
+msgstr "如果 `split` 不是string或者Tuple[str]。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:45
@@ -2271,7 +2277,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: mindnlp.dataset.machine_translation.multi30k.Multi30k:23
 msgid "If `language_pair` is not a Tuple[str]."
-msgstr ""
+msgstr "如果 `language_pair` 不是Tuple[str]。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:46
@@ -2280,24 +2286,24 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: mindnlp.dataset.machine_translation.multi30k.Multi30k:24
 msgid "If the length of `language_pair` is not 2."
-msgstr ""
+msgstr "如果 `language_pair` 的长度不是2。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:47
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
 #: mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017:41
 msgid "If `language_pair` is not in the range of supported datasets."
-msgstr ""
+msgstr "如果 `language_pair` 不在支持的数据集范围内。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:48
 msgid "If `valid_set` is not in the range of supported datasets."
-msgstr ""
+msgstr "如果 `valid_set` 不在支持的数据集范围内。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:49
 msgid "If `test_set` is not in the range of supported datasets."
-msgstr ""
+msgstr "如果 `test_set` 不在支持的数据集范围内。"
 
 #: ../../api/dataset/machine_translation.rst:14
 msgid "iwslt2017"
@@ -2306,12 +2312,12 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2017:1
 msgid "IWSLT2017 load function"
-msgstr ""
+msgstr "IWSLT2017加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017:1
 msgid "Load the IWSLT2017 dataset"
-msgstr ""
+msgstr "加载IWSLT2017数据集"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017:8
@@ -2388,12 +2394,12 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: of mindnlp.dataset.machine_translation.multi30k:1
 msgid "Multi30k load function"
-msgstr ""
+msgstr "Multi30k加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: of mindnlp.dataset.machine_translation.multi30k.Multi30k:1
 msgid "Load the Multi30k dataset"
-msgstr ""
+msgstr "加载Multi30k数据集"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: of mindnlp.dataset.machine_translation.multi30k.Multi30k:3
@@ -2432,12 +2438,12 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/wnli.py:docstring
 #: mindnlp.dataset.text_classification.wnli.WNLI:3
 msgid "Directory where the datasets are saved. Default:~/.mindnlp"
-msgstr ""
+msgstr "存放数据集的目录。默认：\"~/.mindnlp\""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: of mindnlp.dataset.machine_translation.multi30k.Multi30k:25
 msgid "If `language_pair` is neither ('de', 'en') nor ('en', 'de')."
-msgstr ""
+msgstr "如果 `language_pair` 不是('de', 'en')或('en', 'de')。" 
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: of mindnlp.dataset.machine_translation.multi30k.Multi30k_Process:1
@@ -2574,7 +2580,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/__init__.py:docstring
 #: of mindnlp.dataset.machine_translation:1
 msgid "MachineTranslation dataset init"
-msgstr ""
+msgstr "机器翻译数据集初始化"
 
 #: ../../api/dataset/question_answer.rst:2
 msgid "Question Answer"
@@ -2587,12 +2593,12 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1:1
 msgid "SQuAD1 load function"
-msgstr ""
+msgstr "SQuAD1加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1:1
 msgid "Load the SQuAD1 dataset"
-msgstr ""
+msgstr "加载SQuAD1数据集"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1:3
@@ -2607,14 +2613,14 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_generation/wikitext2.py:docstring
 #: mindnlp.dataset.text_generation.wikitext2.WikiText2:3
 msgid "Directory where the datasets are saved."
-msgstr ""
+msgstr "存放数据集的目录。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1:5
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad2.py:docstring
 #: mindnlp.dataset.question_answer.squad2.SQuAD2:5
 msgid "Split or splits to be returned. Default:('train','dev')."
-msgstr ""
+msgstr "要返回的数据集分块。默认：('train','dev')。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:1
@@ -2706,7 +2712,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.Squad1:1
 msgid "SQuAD1 dataset source"
-msgstr ""
+msgstr "SQuAD1数据集源"
 
 #: ../../api/dataset/question_answer.rst:14
 msgid "squad2"
@@ -2715,22 +2721,22 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad2.py:docstring
 #: of mindnlp.dataset.question_answer.squad2:1
 msgid "SQuAD2 load function"
-msgstr ""
+msgstr "SQuAD2加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad2.py:docstring
 #: of mindnlp.dataset.question_answer.squad2.SQuAD2:1
 msgid "Load the SQuAD2 dataset"
-msgstr ""
+msgstr "加载SQuAD2数据集"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad2.py:docstring
 #: of mindnlp.dataset.question_answer.squad2.Squad2:1
 msgid "SQuAD2 dataset source"
-msgstr ""
+msgstr "SQuAD2数据集源"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/__init__.py:docstring
 #: of mindnlp.dataset.question_answer:1
 msgid "QuestionAnswer dataset init"
-msgstr ""
+msgstr "问答数据集初始化"
 
 #: ../../api/dataset/registered.rst:2
 msgid "Registered Function"
@@ -2783,13 +2789,13 @@ msgstr ""
 #: of
 #: mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking_Process:1
 msgid "the process of the CoNLL2000Chunking dataset"
-msgstr ""
+msgstr "CoNLL2000Chunking数据集的处理函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/conll2000chunking.py:docstring
 #: of
 #: mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking_Process:3
 msgid "CoNLL2000Chunking dataset."
-msgstr ""
+msgstr "CoNLL2000Chunking数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/conll2000chunking.py:docstring
 #: of
@@ -2800,11 +2806,12 @@ msgid ""
 "A list consisting of the upper boundaries of the buckets. Must be strictly "
 "increasing. Default: None."
 msgstr ""
+"由桶的上边界组成的列表。必须严格递增。默认值：None"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/conll2000chunking.py:docstring
 #: of mindnlp.dataset.sequence_tagging.conll2000chunking.Conll2000chunking:1
 msgid "CoNLL2000Chunking dataset source"
-msgstr ""
+msgstr "CoNLL2000Chunking数据集源"
 
 #: ../../api/dataset/sequence_tagging.rst:14
 msgid "udpos"
@@ -2849,7 +2856,7 @@ msgstr ""
 
 #: ../../api/dataset/text_classification.rst:2
 msgid "Text Classification"
-msgstr "文本分类"
+msgstr ""
 
 #: ../../api/dataset/text_classification.rst:6
 msgid "agnews"
@@ -3676,7 +3683,7 @@ msgstr ""
 
 #: ../../api/dataset/text_generation.rst:2
 msgid "Text Generation"
-msgstr "文本生成"
+msgstr ""
 
 #: ../../api/dataset/text_generation.rst:6
 msgid "lcsts"
@@ -3685,7 +3692,7 @@ msgstr "lcsts"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_generation/lcsts.py:docstring
 #: of mindnlp.dataset.text_generation.lcsts:1
 msgid "LCSTS load function"
-msgstr ""
+msgstr "LCSTS加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_generation/lcsts.py:docstring
 #: of mindnlp.dataset.text_generation.lcsts.LCSTS:1
@@ -3695,7 +3702,7 @@ msgstr "加载LCSTS数据集"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_generation/lcsts.py:docstring
 #: of mindnlp.dataset.text_generation.lcsts.LCSTS:5
 msgid "Split or splits to be returned. Default:('train', 'dev')."
-msgstr ""
+msgstr "要返回的数据集分块。默认：('train', 'dev')。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_generation/lcsts.py:docstring
 #: of mindnlp.dataset.text_generation.lcsts.Lcsts:1
@@ -3709,7 +3716,7 @@ msgstr "penntreebank"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_generation/penntreebank.py:docstring
 #: of mindnlp.dataset.text_generation.penntreebank:1
 msgid "PennTreebank load function"
-msgstr ""
+msgstr "PennTreebank加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_generation/penntreebank.py:docstring
 #: of mindnlp.dataset.text_generation.penntreebank.PennTreebank:1
@@ -3723,12 +3730,12 @@ msgstr "wikitext103"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_generation/wikitext103.py:docstring
 #: of mindnlp.dataset.text_generation.wikitext103:1
 msgid "WikiText103 load function"
-msgstr ""
+msgstr "WikiText103加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_generation/wikitext103.py:docstring
 #: of mindnlp.dataset.text_generation.wikitext103.WikiText103:1
 msgid "Load the WikiText103 dataset"
-msgstr ""
+msgstr "加载WikiText103数据集"
 
 #: ../../api/dataset/text_generation.rst:30
 msgid "wikitext2"
@@ -3737,7 +3744,7 @@ msgstr "wikitext2"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_generation/wikitext2.py:docstring
 #: of mindnlp.dataset.text_generation.wikitext2:1
 msgid "WikiText2 load function"
-msgstr ""
+msgstr "WikiText2加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_generation/wikitext2.py:docstring
 #: of mindnlp.dataset.text_generation.wikitext2.WikiText2:1
@@ -3747,7 +3754,7 @@ msgstr "加载WikiText2数据集"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_generation/__init__.py:docstring
 #: of mindnlp.dataset.text_generation:1
 msgid "TextGeneration dataset init"
-msgstr ""
+msgstr "文本生成数据集初始化"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/transforms/__init__.py:docstring
 #: of mindnlp.dataset.transforms:1 ../../api/dataset/transforms.rst:2
