@@ -3,19 +3,20 @@
 # This file is distributed under the same license as the MindNLP package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2022.
 #
-#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: MindNLP \n"
+"Project-Id-Version: MindNLP\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2022-12-06 18:04+0800\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
+"PO-Revision-Date: 2022-12-20 17:59+0800\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: zh_CN\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.10.3\n"
+"X-Generator: Poedit 3.2.2\n"
 
 #: ../../api/abc.rst:2
 msgid "Abstract Class"
@@ -33,10 +34,8 @@ msgstr ""
 msgid "Basic class for seq2seq models"
 msgstr ""
 
-#: mindnlp.abc.backbones.seq2seq.Seq2seqModel
-#: mindnlp.abc.backbones.seq2vec.Seq2vecModel
-#: mindnlp.abc.modules.decoder.DecoderBase
-#: mindnlp.abc.modules.embedding.TokenEmbedding
+#: mindnlp.abc.backbones.seq2seq.Seq2seqModel mindnlp.abc.backbones.seq2vec.Seq2vecModel
+#: mindnlp.abc.modules.decoder.DecoderBase mindnlp.abc.modules.embedding.TokenEmbedding
 #: mindnlp.abc.modules.encoder.EncoderBase mindnlp.common.loss.CMRC2018Loss
 #: mindnlp.common.loss.CMRC2018Loss.construct mindnlp.common.loss.RDropLoss
 #: mindnlp.common.loss.RDropLoss.construct mindnlp.common.metrics.accuracy
@@ -120,16 +119,12 @@ msgstr ""
 #: mindnlp.engine.callbacks.timer_callback.TimerCallback.train_step_begin
 #: mindnlp.engine.callbacks.timer_callback.TimerCallback.train_step_end
 #: mindnlp.engine.evaluator.Evaluator mindnlp.engine.evaluator.Evaluator.run
-#: mindnlp.engine.metrics.accuracy.Accuracy
-#: mindnlp.engine.metrics.accuracy.Accuracy.update
-#: mindnlp.engine.metrics.bleu.BleuScore
-#: mindnlp.engine.metrics.bleu.BleuScore.update
+#: mindnlp.engine.metrics.accuracy.Accuracy mindnlp.engine.metrics.accuracy.Accuracy.update
+#: mindnlp.engine.metrics.bleu.BleuScore mindnlp.engine.metrics.bleu.BleuScore.update
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.update
-#: mindnlp.engine.metrics.distinct.Distinct
-#: mindnlp.engine.metrics.distinct.Distinct.update
-#: mindnlp.engine.metrics.em_score.EmScore
-#: mindnlp.engine.metrics.em_score.EmScore.update
+#: mindnlp.engine.metrics.distinct.Distinct mindnlp.engine.metrics.distinct.Distinct.update
+#: mindnlp.engine.metrics.em_score.EmScore mindnlp.engine.metrics.em_score.EmScore.update
 #: mindnlp.engine.metrics.f1.F1Score mindnlp.engine.metrics.f1.F1Score.update
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation.update
@@ -137,29 +132,21 @@ msgstr ""
 #: mindnlp.engine.metrics.pearson.PearsonCorrelation.update
 #: mindnlp.engine.metrics.perplexity.Perplexity
 #: mindnlp.engine.metrics.perplexity.Perplexity.update
-#: mindnlp.engine.metrics.precision.Precision
-#: mindnlp.engine.metrics.precision.Precision.update
-#: mindnlp.engine.metrics.recall.Recall
-#: mindnlp.engine.metrics.recall.Recall.update
-#: mindnlp.engine.metrics.rouge.RougeL
-#: mindnlp.engine.metrics.rouge.RougeL.update
-#: mindnlp.engine.metrics.rouge.RougeN
-#: mindnlp.engine.metrics.rouge.RougeN.update
+#: mindnlp.engine.metrics.precision.Precision mindnlp.engine.metrics.precision.Precision.update
+#: mindnlp.engine.metrics.recall.Recall mindnlp.engine.metrics.recall.Recall.update
+#: mindnlp.engine.metrics.rouge.RougeL mindnlp.engine.metrics.rouge.RougeL.update
+#: mindnlp.engine.metrics.rouge.RougeN mindnlp.engine.metrics.rouge.RougeN.update
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation
-#: mindnlp.engine.metrics.spearman.SpearmanCorrelation.update
-#: mindnlp.engine.trainer.Trainer mindnlp.engine.trainer.Trainer.run
-#: mindnlp.modules.attentions.AdditiveAttention
+#: mindnlp.engine.metrics.spearman.SpearmanCorrelation.update mindnlp.engine.trainer.Trainer
+#: mindnlp.engine.trainer.Trainer.run mindnlp.modules.attentions.AdditiveAttention
 #: mindnlp.modules.attentions.BinaryAttention
 #: mindnlp.modules.attentions.BinaryAttention.construct
-#: mindnlp.modules.attentions.CosineAttention
-#: mindnlp.modules.attentions.LinearAttention
+#: mindnlp.modules.attentions.CosineAttention mindnlp.modules.attentions.LinearAttention
 #: mindnlp.modules.attentions.LinearAttention.construct
 #: mindnlp.modules.attentions.LocationAwareAttention
-#: mindnlp.modules.attentions.MutiHeadAttention
-#: mindnlp.modules.attentions.ScaledDotAttention
+#: mindnlp.modules.attentions.MutiHeadAttention mindnlp.modules.attentions.ScaledDotAttention
 #: mindnlp.modules.attentions.ScaledDotAttention.construct
-#: mindnlp.modules.attentions.SelfAttention
-#: mindnlp.modules.attentions.SelfAttention.construct
+#: mindnlp.modules.attentions.SelfAttention mindnlp.modules.attentions.SelfAttention.construct
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.construct
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.extract_features
@@ -184,17 +171,16 @@ msgstr ""
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.reorder_encoder_out
-#: mindnlp.utils.decompress.ungz mindnlp.utils.decompress.untar
-#: mindnlp.utils.decompress.unzip mindnlp.utils.download.cache_file
-#: mindnlp.utils.download.cached_path mindnlp.utils.download.check_md5
-#: mindnlp.utils.download.get_cache_path mindnlp.utils.download.get_dataset_url
-#: mindnlp.utils.download.get_filepath mindnlp.utils.download.get_from_cache
-#: mindnlp.utils.download.http_get mindnlp.utils.download.match_file of
+#: mindnlp.utils.decompress.ungz mindnlp.utils.decompress.untar mindnlp.utils.decompress.unzip
+#: mindnlp.utils.download.cache_file mindnlp.utils.download.cached_path
+#: mindnlp.utils.download.check_md5 mindnlp.utils.download.get_cache_path
+#: mindnlp.utils.download.get_dataset_url mindnlp.utils.download.get_filepath
+#: mindnlp.utils.download.get_from_cache mindnlp.utils.download.http_get
+#: mindnlp.utils.download.match_file of
 msgid "Parameters"
 msgstr ""
 
-#: mindnlp.abc.backbones.seq2seq.Seq2seqModel:3
-#: mindnlp.abc.backbones.seq2vec.Seq2vecModel:3 of
+#: mindnlp.abc.backbones.seq2seq.Seq2seqModel:3 mindnlp.abc.backbones.seq2vec.Seq2vecModel:3 of
 msgid "The encoder."
 msgstr ""
 
@@ -212,8 +198,8 @@ msgstr ""
 
 #: mindnlp.abc.backbones.seq2vec.Seq2vecModel:7 of
 msgid ""
-"The drop out rate, greater than 0 and less equal than 1. If None, not "
-"dropping out input units. Drfault: None."
+"The drop out rate, greater than 0 and less equal than 1. If None, not dropping out input "
+"units. Drfault: None."
 msgstr ""
 
 #: mindnlp.abc.backbones.pretrained.PretrainedModel:1 of
@@ -230,16 +216,16 @@ msgstr ""
 
 #: mindnlp.abc.callback.Callback:1 of
 msgid ""
-"Abstract base class used to build a callback class. Callbacks are context"
-" managers which will be entered and exited when passing into the Model. "
-"You can use this mechanism to do some custom operations."
+"Abstract base class used to build a callback class. Callbacks are context managers which "
+"will be entered and exited when passing into the Model. You can use this mechanism to do "
+"some custom operations."
 msgstr ""
 
 #: mindnlp.abc.callback.Callback:5 of
 msgid ""
-"Callback function can perform some operations before and after step or "
-"epoch. To create a custom callback, subclass Callback and override the "
-"method associated with the stage of interest."
+"Callback function can perform some operations before and after step or epoch. To create a "
+"custom callback, subclass Callback and override the method associated with the stage of "
+"interest."
 msgstr ""
 
 #: ../../api/abc.rst:20
@@ -248,16 +234,15 @@ msgstr ""
 
 #: mindnlp.abc.metric.Metric:1 of
 msgid ""
-"Base class of all metrics. Never use this class directly, but instantiate"
-" one of its subclasses instead."
+"Base class of all metrics. Never use this class directly, but instantiate one of its "
+"subclasses instead."
 msgstr ""
 
 #: mindnlp.abc.metric.Metric:4 of
 msgid ""
-"Functions `update` will accumulate intermediate results in the evaluation"
-" process, `eval` will evaluate the final result, and `clear` will "
-"reinitialize the intermediate results. Function `get_metric_name` will "
-"provide class name."
+"Functions `update` will accumulate intermediate results in the evaluation process, `eval` "
+"will evaluate the final result, and `clear` will reinitialize the intermediate results. "
+"Function `get_metric_name` will provide class name."
 msgstr ""
 
 #: ../../api/abc.rst:26 ../../api/modules.rst:2
@@ -268,8 +253,7 @@ msgstr ""
 msgid "Basic class for encoders"
 msgstr ""
 
-#: mindnlp.abc.modules.decoder.DecoderBase:3
-#: mindnlp.abc.modules.encoder.EncoderBase:3
+#: mindnlp.abc.modules.decoder.DecoderBase:3 mindnlp.abc.modules.encoder.EncoderBase:3
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder:3
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder:5
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder:3 of
@@ -295,9 +279,7 @@ msgid "Passins into Vocab for initialization."
 msgstr ""
 
 #: mindnlp.abc.modules.embedding.TokenEmbedding:5 of
-msgid ""
-"Passing into Vocab and Tensor,use these values to initialize Embedding "
-"directly."
+msgid "Passing into Vocab and Tensor,use these values to initialize Embedding directly."
 msgstr ""
 
 #: mindnlp.abc.modules.embedding.TokenEmbedding:7 of
@@ -329,29 +311,22 @@ msgstr ""
 msgid "Dynamic LossScaler"
 msgstr ""
 
-#: mindnlp.common.amp.DynamicLossScaler.adjust:1
-#: mindnlp.common.amp.LossScaler.adjust:1
-#: mindnlp.common.amp.NoLossScaler.adjust:1
-#: mindnlp.common.amp.StaticLossScaler.adjust:1 of
+#: mindnlp.common.amp.DynamicLossScaler.adjust:1 mindnlp.common.amp.LossScaler.adjust:1
+#: mindnlp.common.amp.NoLossScaler.adjust:1 mindnlp.common.amp.StaticLossScaler.adjust:1 of
 msgid "adjust scale value."
 msgstr ""
 
-#: mindnlp.common.amp.DynamicLossScaler.scale:1
-#: mindnlp.common.amp.LossScaler.scale:1
-#: mindnlp.common.amp.NoLossScaler.scale:1
-#: mindnlp.common.amp.StaticLossScaler.scale:1 of
+#: mindnlp.common.amp.DynamicLossScaler.scale:1 mindnlp.common.amp.LossScaler.scale:1
+#: mindnlp.common.amp.NoLossScaler.scale:1 mindnlp.common.amp.StaticLossScaler.scale:1 of
 msgid "scale inputs tensor."
 msgstr ""
 
-#: mindnlp.common.amp.DynamicLossScaler.unscale:1
-#: mindnlp.common.amp.LossScaler.unscale:1
-#: mindnlp.common.amp.NoLossScaler.unscale:1
-#: mindnlp.common.amp.StaticLossScaler.unscale:1 of
+#: mindnlp.common.amp.DynamicLossScaler.unscale:1 mindnlp.common.amp.LossScaler.unscale:1
+#: mindnlp.common.amp.NoLossScaler.unscale:1 mindnlp.common.amp.StaticLossScaler.unscale:1 of
 msgid "unscale inputs tensor."
 msgstr ""
 
-#: mindnlp.common.amp.LossScaler:1
-#: mindnlp.dataset.question_answer.squad1.Squad1:1
+#: mindnlp.common.amp.LossScaler:1 mindnlp.dataset.question_answer.squad1.Squad1:1
 #: mindnlp.dataset.question_answer.squad2.Squad2:1
 #: mindnlp.dataset.sequence_tagging.conll2000chunking.Conll2000chunking:1
 #: mindnlp.dataset.sequence_tagging.udpos.Udpos:1
@@ -364,8 +339,7 @@ msgstr ""
 #: mindnlp.dataset.text_classification.mnli.Mnli:1
 #: mindnlp.dataset.text_classification.mrpc.Mrpc:1
 #: mindnlp.dataset.text_classification.qnli.Qnli:1
-#: mindnlp.dataset.text_classification.qqp.Qqp:1
-#: mindnlp.dataset.text_classification.rte.Rte:1
+#: mindnlp.dataset.text_classification.qqp.Qqp:1 mindnlp.dataset.text_classification.rte.Rte:1
 #: mindnlp.dataset.text_classification.sogounews.Sogounews:1
 #: mindnlp.dataset.text_classification.sst2.Sst2:1
 #: mindnlp.dataset.text_classification.stsb.Stsb:1
@@ -375,8 +349,8 @@ msgstr ""
 #: mindnlp.dataset.text_classification.yelpreviewpolarity.Yelpreviewpolarity:1
 #: mindnlp.dataset.text_generation.lcsts.Lcsts:1
 #: mindnlp.engine.callbacks.callback_manager.RunContext:1
-#: mindnlp.engine.callbacks.timer_callback.Timers:1
-#: mindnlp.engine.evaluator.Evaluator:1 mindnlp.engine.trainer.Trainer:1 of
+#: mindnlp.engine.callbacks.timer_callback.Timers:1 mindnlp.engine.evaluator.Evaluator:1
+#: mindnlp.engine.trainer.Trainer:1 of
 msgid "Bases: :py:class:`object`"
 msgstr ""
 
@@ -417,14 +391,12 @@ msgid "Losses"
 msgstr ""
 
 #: mindnlp.common.loss.CMRC2018Loss:1 mindnlp.common.loss.RDropLoss:1
-#: mindnlp.modules.attentions.AdditiveAttention:1
-#: mindnlp.modules.attentions.BinaryAttention:1
-#: mindnlp.modules.attentions.CosineAttention:1
-#: mindnlp.modules.attentions.LinearAttention:1
+#: mindnlp.modules.attentions.AdditiveAttention:1 mindnlp.modules.attentions.BinaryAttention:1
+#: mindnlp.modules.attentions.CosineAttention:1 mindnlp.modules.attentions.LinearAttention:1
 #: mindnlp.modules.attentions.LocationAwareAttention:1
 #: mindnlp.modules.attentions.MutiHeadAttention:1
-#: mindnlp.modules.attentions.ScaledDotAttention:1
-#: mindnlp.modules.attentions.SelfAttention:1 of
+#: mindnlp.modules.attentions.ScaledDotAttention:1 mindnlp.modules.attentions.SelfAttention:1
+#: of
 msgid "Bases: :py:class:`~mindspore.nn.cell.Cell`"
 msgstr ""
 
@@ -434,16 +406,14 @@ msgstr ""
 
 #: mindnlp.common.loss.CMRC2018Loss:3 of
 msgid ""
-"Indicate how to average the loss, the candicates are \"mean\" and "
-"\"sum\". Default: \"mean\"."
+"Indicate how to average the loss, the candicates are \"mean\" and \"sum\". Default: \"mean\"."
 msgstr ""
 
 #: mindnlp.common.loss.CMRC2018Loss.construct:1 of
 msgid "compute CMRC2018Loss"
 msgstr ""
 
-#: mindnlp.common.loss.CMRC2018Loss.construct:3
-#: mindnlp.common.loss.CMRC2018Loss.construct:5 of
+#: mindnlp.common.loss.CMRC2018Loss.construct:3 mindnlp.common.loss.CMRC2018Loss.construct:5 of
 msgid "size: batch_size, dtype: int."
 msgstr ""
 
@@ -451,19 +421,18 @@ msgstr ""
 msgid "size: batch_size, dtype: float."
 msgstr ""
 
-#: mindnlp.common.loss.CMRC2018Loss.construct:9
-#: mindnlp.common.loss.CMRC2018Loss.construct:11 of
+#: mindnlp.common.loss.CMRC2018Loss.construct:9 mindnlp.common.loss.CMRC2018Loss.construct:11
+#: of
 msgid "size: batch_size*max_len, dtype: float."
 msgstr ""
 
-#: mindnlp.common.loss.CMRC2018Loss.construct
-#: mindnlp.common.loss.RDropLoss.construct mindnlp.common.metrics.accuracy
-#: mindnlp.common.metrics.bleu mindnlp.common.metrics.confusion_matrix
-#: mindnlp.common.metrics.distinct mindnlp.common.metrics.em_score
-#: mindnlp.common.metrics.f1_score mindnlp.common.metrics.matthews_correlation
-#: mindnlp.common.metrics.pearson_correlation mindnlp.common.metrics.perplexity
-#: mindnlp.common.metrics.precision mindnlp.common.metrics.recall
-#: mindnlp.common.metrics.rouge_l mindnlp.common.metrics.rouge_n
+#: mindnlp.common.loss.CMRC2018Loss.construct mindnlp.common.loss.RDropLoss.construct
+#: mindnlp.common.metrics.accuracy mindnlp.common.metrics.bleu
+#: mindnlp.common.metrics.confusion_matrix mindnlp.common.metrics.distinct
+#: mindnlp.common.metrics.em_score mindnlp.common.metrics.f1_score
+#: mindnlp.common.metrics.matthews_correlation mindnlp.common.metrics.pearson_correlation
+#: mindnlp.common.metrics.perplexity mindnlp.common.metrics.precision
+#: mindnlp.common.metrics.recall mindnlp.common.metrics.rouge_l mindnlp.common.metrics.rouge_n
 #: mindnlp.common.metrics.spearman_correlation
 #: mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016
 #: mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017
@@ -515,31 +484,23 @@ msgstr ""
 #: mindnlp.dataset.text_generation.penntreebank.PennTreebank
 #: mindnlp.dataset.text_generation.wikitext103.WikiText103
 #: mindnlp.dataset.text_generation.wikitext2.WikiText2
-#: mindnlp.engine.metrics.accuracy.Accuracy.eval
-#: mindnlp.engine.metrics.bleu.BleuScore.eval
+#: mindnlp.engine.metrics.accuracy.Accuracy.eval mindnlp.engine.metrics.bleu.BleuScore.eval
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.eval
-#: mindnlp.engine.metrics.distinct.Distinct.eval
-#: mindnlp.engine.metrics.f1.F1Score.eval
+#: mindnlp.engine.metrics.distinct.Distinct.eval mindnlp.engine.metrics.f1.F1Score.eval
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation.eval
 #: mindnlp.engine.metrics.pearson.PearsonCorrelation.eval
 #: mindnlp.engine.metrics.perplexity.Perplexity.eval
-#: mindnlp.engine.metrics.precision.Precision.eval
-#: mindnlp.engine.metrics.recall.Recall.eval
-#: mindnlp.engine.metrics.rouge.RougeL.eval
-#: mindnlp.engine.metrics.rouge.RougeN.eval
+#: mindnlp.engine.metrics.precision.Precision.eval mindnlp.engine.metrics.recall.Recall.eval
+#: mindnlp.engine.metrics.rouge.RougeL.eval mindnlp.engine.metrics.rouge.RougeN.eval
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.eval
-#: mindnlp.modules.attentions.AdditiveAttention
-#: mindnlp.modules.attentions.BinaryAttention
+#: mindnlp.modules.attentions.AdditiveAttention mindnlp.modules.attentions.BinaryAttention
 #: mindnlp.modules.attentions.BinaryAttention.construct
-#: mindnlp.modules.attentions.CosineAttention
-#: mindnlp.modules.attentions.LinearAttention
+#: mindnlp.modules.attentions.CosineAttention mindnlp.modules.attentions.LinearAttention
 #: mindnlp.modules.attentions.LinearAttention.construct
 #: mindnlp.modules.attentions.LocationAwareAttention
-#: mindnlp.modules.attentions.MutiHeadAttention
-#: mindnlp.modules.attentions.ScaledDotAttention
+#: mindnlp.modules.attentions.MutiHeadAttention mindnlp.modules.attentions.ScaledDotAttention
 #: mindnlp.modules.attentions.ScaledDotAttention.construct
-#: mindnlp.modules.attentions.SelfAttention
-#: mindnlp.modules.attentions.SelfAttention.construct
+#: mindnlp.modules.attentions.SelfAttention mindnlp.modules.attentions.SelfAttention.construct
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.construct
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.extract_features
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.output_layer
@@ -558,12 +519,12 @@ msgstr ""
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder.construct
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.reorder_encoder_out
-#: mindnlp.utils.decompress.ungz mindnlp.utils.decompress.untar
-#: mindnlp.utils.decompress.unzip mindnlp.utils.download.cache_file
-#: mindnlp.utils.download.cached_path mindnlp.utils.download.check_md5
-#: mindnlp.utils.download.get_cache_path mindnlp.utils.download.get_dataset_url
-#: mindnlp.utils.download.get_filepath mindnlp.utils.download.get_from_cache
-#: mindnlp.utils.download.http_get mindnlp.utils.download.match_file of
+#: mindnlp.utils.decompress.ungz mindnlp.utils.decompress.untar mindnlp.utils.decompress.unzip
+#: mindnlp.utils.download.cache_file mindnlp.utils.download.cached_path
+#: mindnlp.utils.download.check_md5 mindnlp.utils.download.get_cache_path
+#: mindnlp.utils.download.get_dataset_url mindnlp.utils.download.get_filepath
+#: mindnlp.utils.download.get_from_cache mindnlp.utils.download.http_get
+#: mindnlp.utils.download.match_file of
 msgid "Returns"
 msgstr ""
 
@@ -571,13 +532,13 @@ msgstr ""
 msgid "Tensor, the CMRC2018 loss."
 msgstr ""
 
-#: mindnlp.common.loss.CMRC2018Loss.construct
-#: mindnlp.common.loss.RDropLoss.construct mindnlp.common.metrics.accuracy
-#: mindnlp.common.metrics.bleu mindnlp.common.metrics.confusion_matrix
-#: mindnlp.common.metrics.em_score mindnlp.common.metrics.f1_score
-#: mindnlp.common.metrics.pearson_correlation mindnlp.common.metrics.perplexity
-#: mindnlp.common.metrics.precision mindnlp.common.metrics.recall
-#: mindnlp.common.metrics.rouge_n mindnlp.common.metrics.spearman_correlation
+#: mindnlp.common.loss.CMRC2018Loss.construct mindnlp.common.loss.RDropLoss.construct
+#: mindnlp.common.metrics.accuracy mindnlp.common.metrics.bleu
+#: mindnlp.common.metrics.confusion_matrix mindnlp.common.metrics.em_score
+#: mindnlp.common.metrics.f1_score mindnlp.common.metrics.pearson_correlation
+#: mindnlp.common.metrics.perplexity mindnlp.common.metrics.precision
+#: mindnlp.common.metrics.recall mindnlp.common.metrics.rouge_n
+#: mindnlp.common.metrics.spearman_correlation
 #: mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016
 #: mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017
 #: mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017_Process
@@ -609,23 +570,19 @@ msgstr ""
 #: mindnlp.dataset.text_generation.wikitext103.WikiText103
 #: mindnlp.dataset.text_generation.wikitext2.WikiText2
 #: mindnlp.engine.metrics.accuracy.Accuracy.eval
-#: mindnlp.engine.metrics.accuracy.Accuracy.update
-#: mindnlp.engine.metrics.bleu.BleuScore
+#: mindnlp.engine.metrics.accuracy.Accuracy.update mindnlp.engine.metrics.bleu.BleuScore
 #: mindnlp.engine.metrics.bleu.BleuScore.update
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.update
 #: mindnlp.engine.metrics.distinct.Distinct.update
-#: mindnlp.engine.metrics.em_score.EmScore.update
-#: mindnlp.engine.metrics.f1.F1Score.eval
+#: mindnlp.engine.metrics.em_score.EmScore.update mindnlp.engine.metrics.f1.F1Score.eval
 #: mindnlp.engine.metrics.f1.F1Score.update
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation.update
 #: mindnlp.engine.metrics.pearson.PearsonCorrelation.update
 #: mindnlp.engine.metrics.perplexity.Perplexity.eval
 #: mindnlp.engine.metrics.perplexity.Perplexity.update
 #: mindnlp.engine.metrics.precision.Precision.update
-#: mindnlp.engine.metrics.recall.Recall.update
-#: mindnlp.engine.metrics.rouge.RougeL.update
-#: mindnlp.engine.metrics.rouge.RougeN.eval
-#: mindnlp.engine.metrics.rouge.RougeN.update
+#: mindnlp.engine.metrics.recall.Recall.update mindnlp.engine.metrics.rouge.RougeL.update
+#: mindnlp.engine.metrics.rouge.RougeN.eval mindnlp.engine.metrics.rouge.RougeN.update
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.update
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder mindnlp.utils.decompress.ungz
 #: mindnlp.utils.decompress.untar mindnlp.utils.decompress.unzip
@@ -640,57 +597,46 @@ msgstr ""
 msgid "if 'reduction' is not 'sum' or 'mean'."
 msgstr ""
 
-#: mindnlp.common.loss.CMRC2018Loss.construct:19
-#: mindnlp.common.metrics.accuracy:29 mindnlp.common.metrics.bleu:36
-#: mindnlp.common.metrics.confusion_matrix:21
+#: mindnlp.common.loss.CMRC2018Loss.construct:19 mindnlp.common.metrics.accuracy:29
+#: mindnlp.common.metrics.bleu:36 mindnlp.common.metrics.confusion_matrix:21
 #: mindnlp.common.metrics.distinct:16 mindnlp.common.metrics.em_score:16
-#: mindnlp.common.metrics.f1_score:29
-#: mindnlp.common.metrics.matthews_correlation:29
-#: mindnlp.common.metrics.pearson_correlation:21
-#: mindnlp.common.metrics.precision:29 mindnlp.common.metrics.recall:27
-#: mindnlp.common.metrics.rouge_l:29 mindnlp.common.metrics.rouge_n:20
-#: mindnlp.common.metrics.spearman_correlation:22
-#: mindnlp.engine.metrics.accuracy.Accuracy:16
-#: mindnlp.engine.metrics.bleu.BleuScore:29
+#: mindnlp.common.metrics.f1_score:29 mindnlp.common.metrics.matthews_correlation:29
+#: mindnlp.common.metrics.pearson_correlation:21 mindnlp.common.metrics.precision:29
+#: mindnlp.common.metrics.recall:27 mindnlp.common.metrics.rouge_l:29
+#: mindnlp.common.metrics.rouge_n:20 mindnlp.common.metrics.spearman_correlation:22
+#: mindnlp.engine.metrics.accuracy.Accuracy:16 mindnlp.engine.metrics.bleu.BleuScore:29
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix:11
-#: mindnlp.engine.metrics.distinct.Distinct:12
-#: mindnlp.engine.metrics.em_score.EmScore:8
-#: mindnlp.engine.metrics.f1.F1Score:16
-#: mindnlp.engine.metrics.matthews.MatthewsCorrelation:18
+#: mindnlp.engine.metrics.distinct.Distinct:12 mindnlp.engine.metrics.em_score.EmScore:8
+#: mindnlp.engine.metrics.f1.F1Score:16 mindnlp.engine.metrics.matthews.MatthewsCorrelation:18
 #: mindnlp.engine.metrics.pearson.PearsonCorrelation:11
-#: mindnlp.engine.metrics.precision.Precision:15
-#: mindnlp.engine.metrics.recall.Recall:14
-#: mindnlp.engine.metrics.rouge.RougeL:23
-#: mindnlp.engine.metrics.rouge.RougeN:11
+#: mindnlp.engine.metrics.precision.Precision:15 mindnlp.engine.metrics.recall.Recall:14
+#: mindnlp.engine.metrics.rouge.RougeL:23 mindnlp.engine.metrics.rouge.RougeN:11
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation:12 of
 msgid "Example"
 msgstr ""
 
 #: mindnlp.common.loss.RDropLoss:1 of
 msgid ""
-"R-Drop Loss implementation For more information about R-drop please refer"
-" to this paper: https://arxiv.org/abs/2106.14448"
+"R-Drop Loss implementation For more information about R-drop please refer to this paper: "
+"https://arxiv.org/abs/2106.14448"
 msgstr ""
 
 #: mindnlp.common.loss.RDropLoss:4 of
-msgid ""
-"Original implementation please refer to this code: "
-"https://github.com/dropreg/R-Drop"
+msgid "Original implementation please refer to this code: https://github.com/dropreg/R-Drop"
 msgstr ""
 
 #: mindnlp.common.loss.RDropLoss:6 of
 msgid ""
-"Indicate how to average the loss, the candicates are \"none\", "
-"\"batchmean\",\"mean\",\"sum\". Default: \"none\".  - \"mean\": The "
-"reduced mean loss is returned. - \"batchmean\": The sum loss divided by "
-"batch size is returned. - \"sum\": The reduced sum loss is returned. - "
-"\"none\": No reduction will be applied."
+"Indicate how to average the loss, the candicates are \"none\", \"batchmean\",\"mean\","
+"\"sum\". Default: \"none\".  - \"mean\": The reduced mean loss is returned. - \"batchmean\": "
+"The sum loss divided by batch size is returned. - \"sum\": The reduced sum loss is returned. "
+"- \"none\": No reduction will be applied."
 msgstr ""
 
 #: mindnlp.common.loss.RDropLoss:6 of
 msgid ""
-"Indicate how to average the loss, the candicates are \"none\", "
-"\"batchmean\",\"mean\",\"sum\". Default: \"none\"."
+"Indicate how to average the loss, the candicates are \"none\", \"batchmean\",\"mean\","
+"\"sum\". Default: \"none\"."
 msgstr ""
 
 #: mindnlp.common.loss.RDropLoss:9 of
@@ -723,8 +669,7 @@ msgstr ""
 
 #: mindnlp.common.loss.RDropLoss.construct:7 of
 msgid ""
-"The Tensor containing the binary mask to index with, it's data type is "
-"bool. Default: None."
+"The Tensor containing the binary mask to index with, it's data type is bool. Default: None."
 msgstr ""
 
 #: mindnlp.common.loss.RDropLoss.construct:11 of
@@ -735,8 +680,7 @@ msgstr ""
 msgid "if 'reduction' in 'RDropLoss' is not 'sum', 'mean' 'batchmean', or 'none'."
 msgstr ""
 
-#: mindnlp.common.loss.RDropLoss.construct:16
-#: mindnlp.common.metrics.perplexity:34
+#: mindnlp.common.loss.RDropLoss.construct:16 mindnlp.common.metrics.perplexity:34
 #: mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:52
 #: mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017:44
 #: mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017_Process:20
@@ -787,24 +731,20 @@ msgstr ""
 #: mindnlp.dataset.text_generation.wikitext2.WikiText2:21
 #: mindnlp.engine.metrics.perplexity.Perplexity:18
 #: mindnlp.modules.attentions.AdditiveAttention:26
-#: mindnlp.modules.attentions.BinaryAttention:30
-#: mindnlp.modules.attentions.CosineAttention:26
+#: mindnlp.modules.attentions.BinaryAttention:30 mindnlp.modules.attentions.CosineAttention:26
 #: mindnlp.modules.attentions.LinearAttention:24
 #: mindnlp.modules.attentions.LocationAwareAttention:20
 #: mindnlp.modules.attentions.MutiHeadAttention:29
-#: mindnlp.modules.attentions.ScaledDotAttention:24
-#: mindnlp.modules.attentions.SelfAttention:25
+#: mindnlp.modules.attentions.ScaledDotAttention:24 mindnlp.modules.attentions.SelfAttention:25
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder:19
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext:13
 #: mindnlp.modules.embeddings.glove_embedding.Glove:13
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec:13
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder:23
-#: mindnlp.modules.encoder.rnn_encoder.RNNEncoder:9
-#: mindnlp.utils.decompress.untar:16 mindnlp.utils.download.cache_file:28
-#: mindnlp.utils.download.cached_path:26 mindnlp.utils.download.check_md5:14
-#: mindnlp.utils.download.get_cache_path:8
-#: mindnlp.utils.download.get_dataset_url:12
-#: mindnlp.utils.download.get_filepath:15
+#: mindnlp.modules.encoder.rnn_encoder.RNNEncoder:9 mindnlp.utils.decompress.untar:16
+#: mindnlp.utils.download.cache_file:28 mindnlp.utils.download.cached_path:26
+#: mindnlp.utils.download.check_md5:14 mindnlp.utils.download.get_cache_path:8
+#: mindnlp.utils.download.get_dataset_url:12 mindnlp.utils.download.get_filepath:15
 #: mindnlp.utils.download.get_from_cache:25 mindnlp.utils.download.http_get:21
 #: mindnlp.utils.download.match_file:20 of
 msgid "Examples"
@@ -822,62 +762,55 @@ msgstr ""
 msgid "Calculates the accuracy. The function is shown as follows:"
 msgstr ""
 
-#: mindnlp.common.metrics.accuracy:3 mindnlp.engine.metrics.accuracy.Accuracy:3
-#: of
+#: mindnlp.common.metrics.accuracy:3 mindnlp.engine.metrics.accuracy.Accuracy:3 of
 msgid ""
 "\\text{ACC} =\\frac{\\text{TP} + \\text{TN}}\n"
 "{\\text{TP} + \\text{TN} + \\text{FP} + \\text{FN}}"
 msgstr ""
 
-#: mindnlp.common.metrics.accuracy:8 mindnlp.engine.metrics.accuracy.Accuracy:8
-#: of
+#: mindnlp.common.metrics.accuracy:8 mindnlp.engine.metrics.accuracy.Accuracy:8 of
 msgid ""
-"where `ACC` is accuracy, `TP` is the number of true posistive cases, `TN`"
-" is the number of true negative cases, `FP` is the number of false "
-"posistive cases, `FN` is the number of false negative cases."
+"where `ACC` is accuracy, `TP` is the number of true posistive cases, `TN` is the number of "
+"true negative cases, `FP` is the number of false posistive cases, `FN` is the number of "
+"false negative cases."
 msgstr ""
 
 #: mindnlp.common.metrics.accuracy:12 mindnlp.common.metrics.f1_score:12
 #: mindnlp.common.metrics.perplexity:11 mindnlp.common.metrics.precision:12
 #: mindnlp.common.metrics.recall:10 of
 msgid ""
-"Predicted value. `preds` is a list of floating numbers in range "
-":math:`[0, 1]` and the shape of `preds` is :math:`(N, C)` in most cases "
-"(not strictly), where :math:`N` is the number of cases and :math:`C` is "
-"the number of categories."
+"Predicted value. `preds` is a list of floating numbers in range :math:`[0, 1]` and the shape "
+"of `preds` is :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number of "
+"cases and :math:`C` is the number of categories."
 msgstr ""
 
 #: mindnlp.common.metrics.accuracy:17 mindnlp.common.metrics.f1_score:17
-#: mindnlp.common.metrics.matthews_correlation:19
-#: mindnlp.common.metrics.perplexity:16 mindnlp.common.metrics.precision:17
-#: mindnlp.common.metrics.recall:15 of
+#: mindnlp.common.metrics.matthews_correlation:19 mindnlp.common.metrics.perplexity:16
+#: mindnlp.common.metrics.precision:17 mindnlp.common.metrics.recall:15 of
 msgid ""
-"Ground truth. `labels` must be in one-hot format that shape is :math:`(N,"
-" C)`, or can be transformed to one-hot format that shape is :math:`(N,)`."
+"Ground truth. `labels` must be in one-hot format that shape is :math:`(N, C)`, or can be "
+"transformed to one-hot format that shape is :math:`(N,)`."
 msgstr ""
 
-#: mindnlp.common.metrics.accuracy:22
-#: mindnlp.engine.metrics.accuracy.Accuracy.eval:3 of
+#: mindnlp.common.metrics.accuracy:22 mindnlp.engine.metrics.accuracy.Accuracy.eval:3 of
 msgid "- **acc** (float) - The computed result."
 msgstr ""
 
-#: mindnlp.common.metrics.accuracy:24
-#: mindnlp.engine.metrics.accuracy.Accuracy.eval:5 of
+#: mindnlp.common.metrics.accuracy:24 mindnlp.engine.metrics.accuracy.Accuracy.eval:5 of
 msgid "**acc** (float) - The computed result."
 msgstr ""
 
-#: mindnlp.common.metrics.accuracy:26
-#: mindnlp.engine.metrics.accuracy.Accuracy.eval:7
+#: mindnlp.common.metrics.accuracy:26 mindnlp.engine.metrics.accuracy.Accuracy.eval:7
 #: mindnlp.engine.metrics.f1.F1Score.eval:7 of
 msgid "If the number of samples is 0."
 msgstr ""
 
 #: mindnlp.common.metrics.bleu:1 mindnlp.engine.metrics.bleu.BleuScore:1 of
 msgid ""
-"Calculates the BLEU score. BLEU (bilingual evaluation understudy) is a "
-"metric for evaluating the quality of text translated by machine. It uses "
-"a modified form of precision to compare a candidate translation against "
-"multiple reference translations. The function is shown as follows:"
+"Calculates the BLEU score. BLEU (bilingual evaluation understudy) is a metric for evaluating "
+"the quality of text translated by machine. It uses a modified form of precision to compare a "
+"candidate translation against multiple reference translations. The function is shown as "
+"follows:"
 msgstr ""
 
 #: mindnlp.common.metrics.bleu:6 mindnlp.engine.metrics.bleu.BleuScore:6 of
@@ -893,8 +826,7 @@ msgstr ""
 
 #: mindnlp.common.metrics.bleu:16 mindnlp.engine.metrics.bleu.BleuScore:16 of
 msgid ""
-"where `c` is the length of candidate sentence, and `r` is the length of "
-"reference sentence."
+"where `c` is the length of candidate sentence, and `r` is the length of reference sentence."
 msgstr ""
 
 #: mindnlp.common.metrics.bleu:18 mindnlp.common.metrics.rouge_n:6 of
@@ -914,13 +846,11 @@ msgstr ""
 msgid "Weights of precision of each gram. Defaults to None."
 msgstr ""
 
-#: mindnlp.common.metrics.bleu:27 mindnlp.engine.metrics.bleu.BleuScore.eval:3
-#: of
+#: mindnlp.common.metrics.bleu:27 mindnlp.engine.metrics.bleu.BleuScore.eval:3 of
 msgid "- **bleu_score** (float) - The computed result."
 msgstr ""
 
-#: mindnlp.common.metrics.bleu:29 mindnlp.engine.metrics.bleu.BleuScore.eval:5
-#: of
+#: mindnlp.common.metrics.bleu:29 mindnlp.engine.metrics.bleu.BleuScore.eval:5 of
 msgid "**bleu_score** (float) - The computed result."
 msgstr ""
 
@@ -928,8 +858,7 @@ msgstr ""
 msgid "If the value range of `n_size` is not from 1 to 4."
 msgstr ""
 
-#: mindnlp.common.metrics.bleu:32
-#: mindnlp.engine.metrics.bleu.BleuScore.update:9 of
+#: mindnlp.common.metrics.bleu:32 mindnlp.engine.metrics.bleu.BleuScore.update:9 of
 msgid "If the lengths of `cand` and `ref_list` are not equal."
 msgstr ""
 
@@ -940,15 +869,15 @@ msgstr ""
 #: mindnlp.common.metrics.confusion_matrix:1
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix:1 of
 msgid ""
-"Calculates the confusion matrix. Confusion matrix is commonly used to "
-"evaluate the performance of classification models, including binary "
-"classification and multiple classification."
+"Calculates the confusion matrix. Confusion matrix is commonly used to evaluate the "
+"performance of classification models, including binary classification and multiple "
+"classification."
 msgstr ""
 
 #: mindnlp.common.metrics.confusion_matrix:5 of
 msgid ""
-"Predicted value. `preds` is a list of floating numbers and the shape of "
-"`preds` is :math:`(N, C)` or :math:`(N,)`."
+"Predicted value. `preds` is a list of floating numbers and the shape of `preds` is :math:"
+"`(N, C)` or :math:`(N,)`."
 msgstr ""
 
 #: mindnlp.common.metrics.confusion_matrix:8 of
@@ -975,38 +904,33 @@ msgstr ""
 msgid "If `preds` and `labels` do not have valid dimensions."
 msgstr ""
 
-#: mindnlp.common.metrics.distinct:1 mindnlp.engine.metrics.distinct.Distinct:1
-#: of
+#: mindnlp.common.metrics.distinct:1 mindnlp.engine.metrics.distinct.Distinct:1 of
 msgid ""
-"Calculates the Distinct-N. Distinct-N is a metric that measures the "
-"diversity of a sentence. It focuses on the number of distinct n-gram of a"
-" sentence. The larger the number of distinct n-grams, the higher the "
-"diversity of the text. The function is shown as follows:"
+"Calculates the Distinct-N. Distinct-N is a metric that measures the diversity of a sentence. "
+"It focuses on the number of distinct n-gram of a sentence. The larger the number of distinct "
+"n-grams, the higher the diversity of the text. The function is shown as follows:"
 msgstr ""
 
 #: mindnlp.common.metrics.distinct:6 mindnlp.common.metrics.rouge_l:17 of
 msgid "A list of tokenized candidate sentence."
 msgstr ""
 
-#: mindnlp.common.metrics.distinct:8 mindnlp.engine.metrics.distinct.Distinct:6
-#: of
+#: mindnlp.common.metrics.distinct:8 mindnlp.engine.metrics.distinct.Distinct:6 of
 msgid "N_gram value. Defaults: 2."
 msgstr ""
 
-#: mindnlp.common.metrics.distinct:11
-#: mindnlp.engine.metrics.distinct.Distinct.eval:3 of
+#: mindnlp.common.metrics.distinct:11 mindnlp.engine.metrics.distinct.Distinct.eval:3 of
 msgid "- **distinct_score** (float) - The computed result."
 msgstr ""
 
-#: mindnlp.common.metrics.distinct:13
-#: mindnlp.engine.metrics.distinct.Distinct.eval:5 of
+#: mindnlp.common.metrics.distinct:13 mindnlp.engine.metrics.distinct.Distinct.eval:5 of
 msgid "**distinct_score** (float) - The computed result."
 msgstr ""
 
 #: mindnlp.common.metrics.em_score:1 of
 msgid ""
-"Calculates the exact match (EM) score. This metric measures the "
-"percentage of predictions that match any one of the ground truth exactly."
+"Calculates the exact match (EM) score. This metric measures the percentage of predictions "
+"that match any one of the ground truth exactly."
 msgstr ""
 
 #: mindnlp.common.metrics.em_score:4 of
@@ -1025,16 +949,14 @@ msgstr ""
 msgid "**exact_match** (float) - The computed result."
 msgstr ""
 
-#: mindnlp.common.metrics.em_score:13
-#: mindnlp.engine.metrics.em_score.EmScore.update:9 of
+#: mindnlp.common.metrics.em_score:13 mindnlp.engine.metrics.em_score.EmScore.update:9 of
 msgid "If `preds` and `examples` have different lengths."
 msgstr ""
 
 #: mindnlp.common.metrics.f1_score:1 mindnlp.engine.metrics.f1.F1Score:1 of
 msgid ""
-"Calculates the F1 score. Fbeta score is a weighted mean of precision and "
-"recall, and F1 score is a special case of Fbeta when beta is 1. The "
-"function is shown as follows:"
+"Calculates the F1 score. Fbeta score is a weighted mean of precision and recall, and F1 "
+"score is a special case of Fbeta when beta is 1. The function is shown as follows:"
 msgstr ""
 
 #: mindnlp.common.metrics.f1_score:5 mindnlp.engine.metrics.f1.F1Score:5 of
@@ -1043,8 +965,8 @@ msgstr ""
 
 #: mindnlp.common.metrics.f1_score:9 mindnlp.engine.metrics.f1.F1Score:9 of
 msgid ""
-"where `TP` is the number of true posistive cases, `FN` is the number of "
-"false negative cases, `FP` is the number of false positive cases."
+"where `TP` is the number of true posistive cases, `FN` is the number of false negative "
+"cases, `FP` is the number of false positive cases."
 msgstr ""
 
 #: mindnlp.common.metrics.f1_score:22 of
@@ -1065,34 +987,30 @@ msgstr ""
 #: mindnlp.common.metrics.matthews_correlation:1
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation:1 of
 msgid ""
-"Calculates the Matthews correlation coefficient (MCC). MCC is in essence "
-"a correlation coefficient between the observed and predicted binary "
-"classifications; it returns a value between −1 and +1. A coefficient of "
-"+1 represents a perfect prediction, 0 no better than random prediction "
-"and −1 indicates total disagreement between prediction and observation. "
+"Calculates the Matthews correlation coefficient (MCC). MCC is in essence a correlation "
+"coefficient between the observed and predicted binary classifications; it returns a value "
+"between −1 and +1. A coefficient of +1 represents a perfect prediction, 0 no better than "
+"random prediction and −1 indicates total disagreement between prediction and observation. "
 "The function is shown as follows:"
 msgstr ""
 
 #: mindnlp.common.metrics.matthews_correlation:7
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation:7 of
-msgid ""
-"MCC=\\frac{TP \\times TN-FP \\times "
-"FN}{\\sqrt{(TP+FP)(TP+FN)(TN+FP)(TN+FN)}}"
+msgid "MCC=\\frac{TP \\times TN-FP \\times FN}{\\sqrt{(TP+FP)(TP+FN)(TN+FP)(TN+FN)}}"
 msgstr ""
 
 #: mindnlp.common.metrics.matthews_correlation:11
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation:11 of
 msgid ""
-"where `TP` is the number of true posistive cases, `TN` is the number of "
-"true negative cases, `FN` is the number of false negative cases, `FP` is "
-"the number of false positive cases."
+"where `TP` is the number of true posistive cases, `TN` is the number of true negative cases, "
+"`FN` is the number of false negative cases, `FP` is the number of false positive cases."
 msgstr ""
 
 #: mindnlp.common.metrics.matthews_correlation:14 of
 msgid ""
-"Predicted value. `preds` is a list of floating numbers and the shape of "
-"`preds` is :math:`(N, C)` in most cases (not strictly), where :math:`N` "
-"is the number of cases and :math:`C` is the number of categories."
+"Predicted value. `preds` is a list of floating numbers and the shape of `preds` is :math:"
+"`(N, C)` in most cases (not strictly), where :math:`N` is the number of cases and :math:`C` "
+"is the number of categories."
 msgstr ""
 
 #: mindnlp.common.metrics.matthews_correlation:24
@@ -1108,25 +1026,24 @@ msgstr ""
 #: mindnlp.common.metrics.pearson_correlation:1
 #: mindnlp.engine.metrics.pearson.PearsonCorrelation:1 of
 msgid ""
-"Calculates the Pearson correlation coefficient (PCC). PCC is a measure of"
-" linear correlation between two sets of data. It is the ratio between the"
-" covariance of two variables and the product of their standard "
-"deviations; thus, it is essentially a normalized measurement of the "
-"covariance, such that the result always has a value between −1 and 1."
+"Calculates the Pearson correlation coefficient (PCC). PCC is a measure of linear correlation "
+"between two sets of data. It is the ratio between the covariance of two variables and the "
+"product of their standard deviations; thus, it is essentially a normalized measurement of "
+"the covariance, such that the result always has a value between −1 and 1."
 msgstr ""
 
-#: mindnlp.common.metrics.pearson_correlation:7
-#: mindnlp.common.metrics.spearman_correlation:8 of
+#: mindnlp.common.metrics.pearson_correlation:7 mindnlp.common.metrics.spearman_correlation:8
+#: of
 msgid ""
-"Predicted value. `preds` is a list of floating numbers and the shape of "
-"`preds` is :math:`(N, 1)`."
+"Predicted value. `preds` is a list of floating numbers and the shape of `preds` is :math:"
+"`(N, 1)`."
 msgstr ""
 
-#: mindnlp.common.metrics.pearson_correlation:10
-#: mindnlp.common.metrics.spearman_correlation:11 of
+#: mindnlp.common.metrics.pearson_correlation:10 mindnlp.common.metrics.spearman_correlation:11
+#: of
 msgid ""
-"Ground truth. `labels` is a list of floating numbers and the shape of "
-"`preds` is :math:`(N, 1)`."
+"Ground truth. `labels` is a list of floating numbers and the shape of `preds` is :math:`(N, "
+"1)`."
 msgstr ""
 
 #: mindnlp.common.metrics.pearson_correlation:14
@@ -1139,8 +1056,7 @@ msgstr ""
 msgid "**p_c_c** (float) - The computed result."
 msgstr ""
 
-#: mindnlp.common.metrics.pearson_correlation:18
-#: mindnlp.common.metrics.perplexity:29
+#: mindnlp.common.metrics.pearson_correlation:18 mindnlp.common.metrics.perplexity:29
 #: mindnlp.common.metrics.spearman_correlation:19
 #: mindnlp.engine.metrics.pearson.PearsonCorrelation.update:11
 #: mindnlp.engine.metrics.perplexity.Perplexity.update:14
@@ -1148,16 +1064,14 @@ msgstr ""
 msgid "If `preds` and `labels` have different lengths."
 msgstr ""
 
-#: mindnlp.common.metrics.perplexity:1
-#: mindnlp.engine.metrics.perplexity.Perplexity:1 of
+#: mindnlp.common.metrics.perplexity:1 mindnlp.engine.metrics.perplexity.Perplexity:1 of
 msgid ""
-"Calculates the perplexity. Perplexity is a measure of how well a "
-"probabilibity model predicts a sample. A low perplexity indicates the "
-"model is good at predicting the sample. The function is shown as follows:"
+"Calculates the perplexity. Perplexity is a measure of how well a probabilibity model "
+"predicts a sample. A low perplexity indicates the model is good at predicting the sample. "
+"The function is shown as follows:"
 msgstr ""
 
-#: mindnlp.common.metrics.perplexity:5
-#: mindnlp.engine.metrics.perplexity.Perplexity:5 of
+#: mindnlp.common.metrics.perplexity:5 mindnlp.engine.metrics.perplexity.Perplexity:5 of
 msgid "PP(W)=P(w_{1}w_{2}...w_{N})^{-\\frac{1}{N}}=\\sqrt[N]{\\frac{1}{P(w_{1}w_{2}...w_{N})}}"
 msgstr ""
 
@@ -1165,51 +1079,44 @@ msgstr ""
 msgid "where :math:`w` represents words in corpus."
 msgstr ""
 
-#: mindnlp.common.metrics.perplexity:20
-#: mindnlp.engine.metrics.perplexity.Perplexity:11 of
+#: mindnlp.common.metrics.perplexity:20 mindnlp.engine.metrics.perplexity.Perplexity:11 of
 msgid ""
-"Index of an invalid label to be ignored when counting. If set to `None`, "
-"it means there's no invalid label. Default: None."
+"Index of an invalid label to be ignored when counting. If set to `None`, it means there's no "
+"invalid label. Default: None."
 msgstr ""
 
-#: mindnlp.common.metrics.perplexity:25
-#: mindnlp.engine.metrics.perplexity.Perplexity.eval:3 of
+#: mindnlp.common.metrics.perplexity:25 mindnlp.engine.metrics.perplexity.Perplexity.eval:3 of
 msgid "- **ppl** (float) - The computed result."
 msgstr ""
 
-#: mindnlp.common.metrics.perplexity:27
-#: mindnlp.engine.metrics.perplexity.Perplexity.eval:5 of
+#: mindnlp.common.metrics.perplexity:27 mindnlp.engine.metrics.perplexity.Perplexity.eval:5 of
 msgid "**ppl** (float) - The computed result."
 msgstr ""
 
-#: mindnlp.common.metrics.perplexity:30
-#: mindnlp.engine.metrics.perplexity.Perplexity.update:15 of
+#: mindnlp.common.metrics.perplexity:30 mindnlp.engine.metrics.perplexity.Perplexity.update:15
+#: of
 msgid "If `pred` and `label` have different shapes."
 msgstr ""
 
-#: mindnlp.common.metrics.perplexity:31
-#: mindnlp.engine.metrics.perplexity.Perplexity.eval:7 of
+#: mindnlp.common.metrics.perplexity:31 mindnlp.engine.metrics.perplexity.Perplexity.eval:7 of
 msgid "If the sample size is 0."
 msgstr ""
 
 #: mindnlp.common.metrics.precision:1 of
 msgid ""
-"Calculates the precision. Precision (also known as positive predictive "
-"value) is the actual positive proportion in the predicted positive "
-"sample. It can only be used to evaluate the precision score of binary "
-"tasks. The function is shown as follows:"
+"Calculates the precision. Precision (also known as positive predictive value) is the actual "
+"positive proportion in the predicted positive sample. It can only be used to evaluate the "
+"precision score of binary tasks. The function is shown as follows:"
 msgstr ""
 
-#: mindnlp.common.metrics.precision:6
-#: mindnlp.engine.metrics.precision.Precision:5 of
+#: mindnlp.common.metrics.precision:6 mindnlp.engine.metrics.precision.Precision:5 of
 msgid "\\text{Precision} =\\frac{\\text{TP}} {\\text{TP} + \\text{FP}}"
 msgstr ""
 
-#: mindnlp.common.metrics.precision:10
-#: mindnlp.engine.metrics.precision.Precision:9 of
+#: mindnlp.common.metrics.precision:10 mindnlp.engine.metrics.precision.Precision:9 of
 msgid ""
-"where `TP` is the number of true posistive cases, `FP` is the number of "
-"false posistive cases."
+"where `TP` is the number of true posistive cases, `FP` is the number of false posistive "
+"cases."
 msgstr ""
 
 #: mindnlp.common.metrics.precision:22 of
@@ -1222,8 +1129,8 @@ msgstr ""
 
 #: mindnlp.common.metrics.recall:1 mindnlp.engine.metrics.recall.Recall:1 of
 msgid ""
-"Calculates the recall. Recall is also referred to as the true positive "
-"rate or sensitivity. The function is shown as follows:"
+"Calculates the recall. Recall is also referred to as the true positive rate or sensitivity. "
+"The function is shown as follows:"
 msgstr ""
 
 #: mindnlp.common.metrics.recall:4 mindnlp.engine.metrics.recall.Recall:4 of
@@ -1232,8 +1139,7 @@ msgstr ""
 
 #: mindnlp.common.metrics.recall:8 mindnlp.engine.metrics.recall.Recall:8 of
 msgid ""
-"where `TP` is the number of true posistive cases, `FN` is the number of "
-"false negative cases."
+"where `TP` is the number of true posistive cases, `FN` is the number of false negative cases."
 msgstr ""
 
 #: mindnlp.common.metrics.recall:20 of
@@ -1246,10 +1152,10 @@ msgstr ""
 
 #: mindnlp.common.metrics.rouge_l:1 mindnlp.engine.metrics.rouge.RougeL:1 of
 msgid ""
-"Calculates the ROUGE-L score. ROUGE (Recall-Oriented Understudy for "
-"Gisting Evaluation) is a set of metrics used for evaluating automatic "
-"summarization and machine translation models. ROUGE-L is calculated based"
-" on Longest Common Subsequence (LCS). The function is shown as follows:"
+"Calculates the ROUGE-L score. ROUGE (Recall-Oriented Understudy for Gisting Evaluation) is a "
+"set of metrics used for evaluating automatic summarization and machine translation models. "
+"ROUGE-L is calculated based on Longest Common Subsequence (LCS). The function is shown as "
+"follows:"
 msgstr ""
 
 #: mindnlp.common.metrics.rouge_l:6 mindnlp.engine.metrics.rouge.RougeL:6 of
@@ -1258,68 +1164,59 @@ msgid ""
 "\n"
 "p_{l c s}=\\frac{L C S(X, Y)}{n}\n"
 "\n"
-"F_{l c s}=\\frac{\\left(1+\\beta^{2}\\right) R_{l c s} P_{l c s}}{R_{l c "
-"s}+\\beta^{2} P_{l c s}}"
+"F_{l c s}=\\frac{\\left(1+\\beta^{2}\\right) R_{l c s} P_{l c s}}{R_{l c s}+\\beta^{2} P_{l "
+"c s}}"
 msgstr ""
 
 #: mindnlp.common.metrics.rouge_l:14 mindnlp.engine.metrics.rouge.RougeL:14 of
 msgid ""
-"where `X` is the candidate sentence, `Y` is the reference sentence. `m` "
-"and `n` represent the length of `X` and `Y` respectively. `LCS` means the"
-" longest common subsequence."
+"where `X` is the candidate sentence, `Y` is the reference sentence. `m` and `n` represent "
+"the length of `X` and `Y` respectively. `LCS` means the longest common subsequence."
 msgstr ""
 
 #: mindnlp.common.metrics.rouge_l:21 mindnlp.engine.metrics.rouge.RougeL:17 of
 msgid "A hyperparameter to decide the weight of recall. Defaults: 1.2."
 msgstr ""
 
-#: mindnlp.common.metrics.rouge_l:24 mindnlp.engine.metrics.rouge.RougeL.eval:3
-#: of
+#: mindnlp.common.metrics.rouge_l:24 mindnlp.engine.metrics.rouge.RougeL.eval:3 of
 msgid "- **rougel_score** (float) - The computed result."
 msgstr ""
 
-#: mindnlp.common.metrics.rouge_l:26 mindnlp.engine.metrics.rouge.RougeL.eval:5
-#: of
+#: mindnlp.common.metrics.rouge_l:26 mindnlp.engine.metrics.rouge.RougeL.eval:5 of
 msgid "**rougel_score** (float) - The computed result."
 msgstr ""
 
 #: mindnlp.common.metrics.rouge_n:1 of
 msgid ""
-"Calculates the ROUGE-N score. ROUGE (Recall-Oriented Understudy for "
-"Gisting Evaluation) is a set of metrics used for evaluating automatic "
-"summarization and machine translation models. ROUGE-N refers to the "
-"overlap of n-grams between candidates and reference summaries."
+"Calculates the ROUGE-N score. ROUGE (Recall-Oriented Understudy for Gisting Evaluation) is a "
+"set of metrics used for evaluating automatic summarization and machine translation models. "
+"ROUGE-N refers to the overlap of n-grams between candidates and reference summaries."
 msgstr ""
 
 #: mindnlp.common.metrics.rouge_n:10 mindnlp.engine.metrics.rouge.RougeN:5 of
 msgid "N_gram value. Default: 1."
 msgstr ""
 
-#: mindnlp.common.metrics.rouge_n:13 mindnlp.engine.metrics.rouge.RougeN.eval:3
-#: of
+#: mindnlp.common.metrics.rouge_n:13 mindnlp.engine.metrics.rouge.RougeN.eval:3 of
 msgid "- **rougen_score** (float) - The computed result."
 msgstr ""
 
-#: mindnlp.common.metrics.rouge_n:15 mindnlp.engine.metrics.rouge.RougeN.eval:5
-#: of
+#: mindnlp.common.metrics.rouge_n:15 mindnlp.engine.metrics.rouge.RougeN.eval:5 of
 msgid "**rougen_score** (float) - The computed result."
 msgstr ""
 
-#: mindnlp.common.metrics.rouge_n:17 mindnlp.engine.metrics.rouge.RougeN.eval:7
-#: of
+#: mindnlp.common.metrics.rouge_n:17 mindnlp.engine.metrics.rouge.RougeN.eval:7 of
 msgid "If the reference size is 0."
 msgstr ""
 
 #: mindnlp.common.metrics.spearman_correlation:1
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation:1 of
 msgid ""
-"Calculates the Spearman's rank correlation coefficient (SRCC). It is a "
-"nonparametric measure of rank correlation (statistical dependence between"
-" the rankings of two variables). It assesses how well the relationship "
-"between two variables can be described using a monotonic function. If "
-"there are no repeated data values, a perfect Spearman correlation of +1 "
-"or −1 occurs when each of the variables is a perfect monotone function of"
-" the other."
+"Calculates the Spearman's rank correlation coefficient (SRCC). It is a nonparametric measure "
+"of rank correlation (statistical dependence between the rankings of two variables). It "
+"assesses how well the relationship between two variables can be described using a monotonic "
+"function. If there are no repeated data values, a perfect Spearman correlation of +1 or −1 "
+"occurs when each of the variables is a perfect monotone function of the other."
 msgstr ""
 
 #: mindnlp.common.metrics.spearman_correlation:15
@@ -1406,8 +1303,8 @@ msgstr ""
 
 #: mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:21 of
 msgid ""
-"**valid/test sets**: [\"dev2010\", \"tst2010\", \"tst2011\", \"tst2012\","
-" \"tst2013\", \"tst2014\"]"
+"**valid/test sets**: [\"dev2010\", \"tst2010\", \"tst2011\", \"tst2012\", \"tst2013\", "
+"\"tst2014\"]"
 msgstr ""
 
 #: mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:23
@@ -1454,8 +1351,7 @@ msgstr ""
 #: mindnlp.dataset.text_classification.mnli.MNLI:9
 #: mindnlp.dataset.text_classification.mrpc.MRPC:9
 #: mindnlp.dataset.text_classification.qnli.QNLI:9
-#: mindnlp.dataset.text_classification.qqp.QQP:6
-#: mindnlp.dataset.text_classification.rte.RTE:9
+#: mindnlp.dataset.text_classification.qqp.QQP:6 mindnlp.dataset.text_classification.rte.RTE:9
 #: mindnlp.dataset.text_classification.sogounews.SogouNews:9
 #: mindnlp.dataset.text_classification.sst2.SST2:9
 #: mindnlp.dataset.text_classification.stsb.STSB:9
@@ -1466,13 +1362,10 @@ msgstr ""
 #: mindnlp.dataset.text_generation.lcsts.LCSTS:8
 #: mindnlp.dataset.text_generation.penntreebank.PennTreebank:8
 #: mindnlp.dataset.text_generation.wikitext103.WikiText103:8
-#: mindnlp.dataset.text_generation.wikitext2.WikiText2:8
-#: mindnlp.utils.download.cache_file:14 mindnlp.utils.download.cached_path:14
-#: mindnlp.utils.download.get_from_cache:12 mindnlp.utils.download.http_get:12
-#: of
-msgid ""
-"a dict to identify proxies,for example: {\"https\": "
-"\"https://127.0.0.1:7890\"}."
+#: mindnlp.dataset.text_generation.wikitext2.WikiText2:8 mindnlp.utils.download.cache_file:14
+#: mindnlp.utils.download.cached_path:14 mindnlp.utils.download.get_from_cache:12
+#: mindnlp.utils.download.http_get:12 of
+msgid "a dict to identify proxies,for example: {\"https\": \"https://127.0.0.1:7890\"}."
 msgstr ""
 
 #: mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:37
@@ -1491,8 +1384,7 @@ msgstr ""
 #: mindnlp.dataset.text_classification.mnli.MNLI:12
 #: mindnlp.dataset.text_classification.mrpc.MRPC:12
 #: mindnlp.dataset.text_classification.qnli.QNLI:12
-#: mindnlp.dataset.text_classification.qqp.QQP:9
-#: mindnlp.dataset.text_classification.rte.RTE:12
+#: mindnlp.dataset.text_classification.qqp.QQP:9 mindnlp.dataset.text_classification.rte.RTE:12
 #: mindnlp.dataset.text_classification.sogounews.SogouNews:12
 #: mindnlp.dataset.text_classification.sst2.SST2:12
 #: mindnlp.dataset.text_classification.stsb.STSB:12
@@ -1505,9 +1397,8 @@ msgstr ""
 #: mindnlp.dataset.text_generation.wikitext103.WikiText103:11
 #: mindnlp.dataset.text_generation.wikitext2.WikiText2:11 of
 msgid ""
-"- **datasets_list** (list) -A list of loaded datasets.   If only one type"
-" of dataset is specified,such as 'trian',   this dataset is returned "
-"instead of a list of datasets."
+"- **datasets_list** (list) -A list of loaded datasets.   If only one type of dataset is "
+"specified,such as 'trian',   this dataset is returned instead of a list of datasets."
 msgstr ""
 
 #: mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:39
@@ -1540,9 +1431,8 @@ msgstr ""
 #: mindnlp.dataset.text_generation.wikitext103.WikiText103:13
 #: mindnlp.dataset.text_generation.wikitext2.WikiText2:13 of
 msgid ""
-"**datasets_list** (list) -A list of loaded datasets. If only one type of "
-"dataset is specified,such as 'trian', this dataset is returned instead of"
-" a list of datasets."
+"**datasets_list** (list) -A list of loaded datasets. If only one type of dataset is "
+"specified,such as 'trian', this dataset is returned instead of a list of datasets."
 msgstr ""
 
 #: mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:43
@@ -1622,9 +1512,7 @@ msgid "\"ro\""
 msgstr ""
 
 #: mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017_Process:1 of
-msgid ""
-"a function transforms specific language column in IWSLT2017 dataset into "
-"tensors"
+msgid "a function transforms specific language column in IWSLT2017 dataset into tensors"
 msgstr ""
 
 #: mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017_Process:3 of
@@ -1645,8 +1533,8 @@ msgstr ""
 
 #: mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017_Process:12 of
 msgid ""
-"- MapDataset, dataset after process. - Vocab, new vocab created from "
-"dataset if 'vocab' is None."
+"- MapDataset, dataset after process. - Vocab, new vocab created from dataset if 'vocab' is "
+"None."
 msgstr ""
 
 #: mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017_Process:14 of
@@ -1683,8 +1571,7 @@ msgstr ""
 #: mindnlp.dataset.text_classification.mnli.MNLI:3
 #: mindnlp.dataset.text_classification.mrpc.MRPC:3
 #: mindnlp.dataset.text_classification.qnli.QNLI:3
-#: mindnlp.dataset.text_classification.qqp.QQP:3
-#: mindnlp.dataset.text_classification.rte.RTE:3
+#: mindnlp.dataset.text_classification.qqp.QQP:3 mindnlp.dataset.text_classification.rte.RTE:3
 #: mindnlp.dataset.text_classification.sogounews.SogouNews:3
 #: mindnlp.dataset.text_classification.sst2.SST2:3
 #: mindnlp.dataset.text_classification.stsb.STSB:3
@@ -1717,14 +1604,12 @@ msgstr ""
 #: mindnlp.dataset.text_classification.sst2.SST2_Process:9
 #: mindnlp.dataset.text_classification.yahooanswers.YahooAnswers_Process:9
 #: mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull_Process:9
-#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:9
-#: of
+#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:9 of
 msgid "vocabulary object, used to store the mapping of token and index."
 msgstr ""
 
 #: mindnlp.dataset.machine_translation.multi30k.Multi30k_Process:8
-#: mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking_Process:8
-#: of
+#: mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking_Process:8 of
 msgid "- **dataset** (MapDataset) - dataset after transforms."
 msgstr ""
 
@@ -1739,8 +1624,7 @@ msgstr ""
 #: mindnlp.dataset.text_classification.sst2.SST2_Process:14
 #: mindnlp.dataset.text_classification.yahooanswers.YahooAnswers_Process:14
 #: mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull_Process:14
-#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:14
-#: of
+#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:14 of
 msgid "**dataset** (MapDataset) - dataset after transforms."
 msgstr ""
 
@@ -1755,8 +1639,7 @@ msgstr ""
 #: mindnlp.dataset.text_classification.sst2.SST2_Process:17
 #: mindnlp.dataset.text_classification.yahooanswers.YahooAnswers_Process:17
 #: mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull_Process:17
-#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:17
-#: of
+#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:17 of
 msgid "If `input_column` is not a string."
 msgstr ""
 
@@ -1807,15 +1690,11 @@ msgid "Tokenizer you choose to tokenize the text dataset."
 msgstr ""
 
 #: mindnlp.dataset.question_answer.squad1.SQuAD1_Process:7 of
-msgid ""
-"Vocabulary object of words, used to store the mapping of the token and "
-"index."
+msgid "Vocabulary object of words, used to store the mapping of the token and index."
 msgstr ""
 
 #: mindnlp.dataset.question_answer.squad1.SQuAD1_Process:9 of
-msgid ""
-"Vocabulary object of chars, used to store the mapping of the token and "
-"index."
+msgid "Vocabulary object of chars, used to store the mapping of the token and index."
 msgstr ""
 
 #: mindnlp.dataset.question_answer.squad1.SQuAD1_Process:11 of
@@ -1837,9 +1716,8 @@ msgstr ""
 #: mindnlp.dataset.question_answer.squad1.SQuAD1_Process:19
 #: mindnlp.dataset.text_classification.agnews.AG_NEWS_Process:11 of
 msgid ""
-"When the last batch of data contains a data entry smaller than "
-"batch_size, whether to discard the batch and not pass it to the next "
-"operation. Default: False."
+"When the last batch of data contains a data entry smaller than batch_size, whether to "
+"discard the batch and not pass it to the next operation. Default: False."
 msgstr ""
 
 #: mindnlp.dataset.question_answer.squad1.SQuAD1_Process:23 of
@@ -1919,9 +1797,7 @@ msgid "CoNLL2000Chunking load function"
 msgstr ""
 
 #: mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking:1 of
-msgid ""
-"Load the CoNLL2000Chunking dataset :param root: Directory where the "
-"datasets are saved."
+msgid "Load the CoNLL2000Chunking dataset :param root: Directory where the datasets are saved."
 msgstr ""
 
 #: mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking:3
@@ -1939,18 +1815,15 @@ msgstr ""
 #: mindnlp.dataset.text_classification.sogounews.SogouNews:6
 #: mindnlp.dataset.text_classification.yahooanswers.YahooAnswers:6
 #: mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull:6
-#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity:6
-#: of
+#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity:6 of
 msgid "Split or splits to be returned. Default:('train', 'test')."
 msgstr ""
 
-#: mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking_Process:1
-#: of
+#: mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking_Process:1 of
 msgid "the process of the CoNLL2000Chunking dataset"
 msgstr ""
 
-#: mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking_Process:3
-#: of
+#: mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking_Process:3 of
 msgid "CoNLL2000Chunking dataset."
 msgstr ""
 
@@ -1972,9 +1845,7 @@ msgid "UDPOS dataset"
 msgstr ""
 
 #: mindnlp.dataset.sequence_tagging.udpos.UDPOS:1 of
-msgid ""
-"Load the UDPOS dataset :param root: Directory where the datasets are "
-"saved."
+msgid "Load the UDPOS dataset :param root: Directory where the datasets are saved."
 msgstr ""
 
 #: mindnlp.dataset.sequence_tagging.udpos.UDPOS:5
@@ -2032,8 +1903,7 @@ msgstr ""
 #: mindnlp.dataset.text_classification.sst2.SST2_Process:7
 #: mindnlp.dataset.text_classification.yahooanswers.YahooAnswers_Process:7
 #: mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull_Process:7
-#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:7
-#: of
+#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:7 of
 msgid "tokenizer you choose to tokenize the text dataset."
 msgstr ""
 
@@ -2046,11 +1916,10 @@ msgstr ""
 #: mindnlp.dataset.text_classification.sst2.SST2_Process:12
 #: mindnlp.dataset.text_classification.yahooanswers.YahooAnswers_Process:12
 #: mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull_Process:12
-#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:12
-#: of
+#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:12 of
 msgid ""
-"- **dataset** (MapDataset) - dataset after transforms. - **Vocab** "
-"(Vocab) - vocab created from dataset"
+"- **dataset** (MapDataset) - dataset after transforms. - **Vocab** (Vocab) - vocab created "
+"from dataset"
 msgstr ""
 
 #: mindnlp.dataset.text_classification.agnews.AG_NEWS_Process:18
@@ -2069,8 +1938,7 @@ msgstr ""
 #: mindnlp.dataset.text_classification.wnli.WNLI_Process:15
 #: mindnlp.dataset.text_classification.yahooanswers.YahooAnswers_Process:15
 #: mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull_Process:15
-#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:15
-#: of
+#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:15 of
 msgid "**Vocab** (Vocab) - vocab created from dataset"
 msgstr ""
 
@@ -2090,18 +1958,15 @@ msgstr ""
 msgid "Load the AmazonReviewFull dataset"
 msgstr ""
 
-#: mindnlp.dataset.text_classification.amazonreviewfull.AmazonReviewFull_Process:1
-#: of
+#: mindnlp.dataset.text_classification.amazonreviewfull.AmazonReviewFull_Process:1 of
 msgid "the process of the AmazonReviewFull dataset"
 msgstr ""
 
-#: mindnlp.dataset.text_classification.amazonreviewfull.AmazonReviewFull_Process:3
-#: of
+#: mindnlp.dataset.text_classification.amazonreviewfull.AmazonReviewFull_Process:3 of
 msgid "AmazonReviewFull dataset."
 msgstr ""
 
-#: mindnlp.dataset.text_classification.amazonreviewfull.AmazonReviewFull_Process:5
-#: of
+#: mindnlp.dataset.text_classification.amazonreviewfull.AmazonReviewFull_Process:5 of
 msgid "the column needed to be transpormed of the AmazonReviewFull dataset."
 msgstr ""
 
@@ -2117,28 +1982,23 @@ msgstr ""
 msgid "AmazonReviewPolarity dataset"
 msgstr ""
 
-#: mindnlp.dataset.text_classification.amazonreviewpolarity.AmazonReviewPolarity:1
-#: of
+#: mindnlp.dataset.text_classification.amazonreviewpolarity.AmazonReviewPolarity:1 of
 msgid "Load the AmazonReviewPolarity datase"
 msgstr ""
 
-#: mindnlp.dataset.text_classification.amazonreviewpolarity.AmazonReviewPolarity_Process:1
-#: of
+#: mindnlp.dataset.text_classification.amazonreviewpolarity.AmazonReviewPolarity_Process:1 of
 msgid "the process of the AmazonReviewPolarity dataset"
 msgstr ""
 
-#: mindnlp.dataset.text_classification.amazonreviewpolarity.AmazonReviewPolarity_Process:3
-#: of
+#: mindnlp.dataset.text_classification.amazonreviewpolarity.AmazonReviewPolarity_Process:3 of
 msgid "AmazonReviewPolarity dataset."
 msgstr ""
 
-#: mindnlp.dataset.text_classification.amazonreviewpolarity.AmazonReviewPolarity_Process:5
-#: of
+#: mindnlp.dataset.text_classification.amazonreviewpolarity.AmazonReviewPolarity_Process:5 of
 msgid "the column needed to be transpormed of the AmazonReviewPolarity dataset."
 msgstr ""
 
-#: mindnlp.dataset.text_classification.amazonreviewpolarity.Amazonreviewpolarity:1
-#: of
+#: mindnlp.dataset.text_classification.amazonreviewpolarity.Amazonreviewpolarity:1 of
 msgid "AmazonReviewPolarity dataset source"
 msgstr ""
 
@@ -2228,8 +2088,7 @@ msgstr ""
 
 #: mindnlp.dataset.text_classification.mnli.MNLI:6 of
 msgid ""
-"Split or splits to be returned. Default:(\"train\", \"dev_matched\", "
-"\"dev_mismatched\")."
+"Split or splits to be returned. Default:(\"train\", \"dev_matched\", \"dev_mismatched\")."
 msgstr ""
 
 #: mindnlp.dataset.text_classification.mnli.MNLI_Process:1 of
@@ -2272,8 +2131,8 @@ msgstr ""
 #: mindnlp.dataset.text_classification.stsb.STSB_Process:12
 #: mindnlp.dataset.text_classification.wnli.WNLI_Process:12 of
 msgid ""
-"- **dataset** (MapDataset) - dataset after transforms - **Vocab** (Vocab)"
-" - vocab created from dataset"
+"- **dataset** (MapDataset) - dataset after transforms - **Vocab** (Vocab) - vocab created "
+"from dataset"
 msgstr ""
 
 #: mindnlp.dataset.text_classification.mnli.MNLI_Process:14
@@ -2520,8 +2379,7 @@ msgstr ""
 
 #: mindnlp.dataset.text_classification.yahooanswers.YahooAnswers:3
 #: mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull:3
-#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity:3
-#: of
+#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity:3 of
 msgid "Directory where the datasets are saved. Default:'~/.mindnlp'"
 msgstr ""
 
@@ -2553,18 +2411,15 @@ msgstr ""
 msgid "Load the YelpReviewFull dataset"
 msgstr ""
 
-#: mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull_Process:1
-#: of
+#: mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull_Process:1 of
 msgid "the process of the YelpReviewFull dataset"
 msgstr ""
 
-#: mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull_Process:3
-#: of
+#: mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull_Process:3 of
 msgid "YelpReviewFull dataset."
 msgstr ""
 
-#: mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull_Process:5
-#: of
+#: mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull_Process:5 of
 msgid "the column needed to be transpormed of the YelpReviewFull dataset."
 msgstr ""
 
@@ -2580,28 +2435,23 @@ msgstr ""
 msgid "YelpReviewPolarity dataset"
 msgstr ""
 
-#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity:1
-#: of
+#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity:1 of
 msgid "Load the YelpReviewPolarity dataset"
 msgstr ""
 
-#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:1
-#: of
+#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:1 of
 msgid "the process of the YelpReviewPolarity dataset"
 msgstr ""
 
-#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:3
-#: of
+#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:3 of
 msgid "YelpReviewPolarity dataset."
 msgstr ""
 
-#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:5
-#: of
+#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:5 of
 msgid "the column needed to be transpormed of the YelpReviewPolarity dataset."
 msgstr ""
 
-#: mindnlp.dataset.text_classification.yelpreviewpolarity.Yelpreviewpolarity:1
-#: of
+#: mindnlp.dataset.text_classification.yelpreviewpolarity.Yelpreviewpolarity:1 of
 msgid "YelpReviewPolarity dataset source"
 msgstr ""
 
@@ -2703,9 +2553,8 @@ msgstr ""
 
 #: mindnlp.engine.callbacks.best_model_callback.BestModelCallback:1 of
 msgid ""
-"Save the model with the best `metrics` value and reload the model at the "
-"end of the training. The best model can only be loaded at the end of the "
-"training."
+"Save the model with the best `metrics` value and reload the model at the end of the "
+"training. The best model can only be loaded at the end of the training."
 msgstr ""
 
 #: mindnlp.engine.callbacks.best_model_callback.BestModelCallback:4 of
@@ -2726,8 +2575,7 @@ msgstr ""
 
 #: mindnlp.engine.callbacks.best_model_callback.BestModelCallback.evaluate_end:1
 #: mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
-#: mindnlp.engine.callbacks.earlystop_callback.EarlyStopCallback.evaluate_end:1
-#: of
+#: mindnlp.engine.callbacks.earlystop_callback.EarlyStopCallback.evaluate_end:1 of
 msgid "Called after evaluating."
 msgstr ""
 
@@ -2749,19 +2597,16 @@ msgid "Information about the model."
 msgstr ""
 
 #: mindnlp.engine.callbacks.best_model_callback.BestModelCallback.is_better_metric_value:1
-#: mindnlp.engine.callbacks.earlystop_callback.EarlyStopCallback.is_better_metric_value:1
-#: of
+#: mindnlp.engine.callbacks.earlystop_callback.EarlyStopCallback.is_better_metric_value:1 of
 msgid "Compare each metrics values with the best metrics values."
 msgstr ""
 
 #: mindnlp.engine.callbacks.best_model_callback.BestModelCallback.is_better_metric_value:3
-#: mindnlp.engine.callbacks.earlystop_callback.EarlyStopCallback.is_better_metric_value:3
-#: of
+#: mindnlp.engine.callbacks.earlystop_callback.EarlyStopCallback.is_better_metric_value:3 of
 msgid "metrics values used to compared with the best metrics values so far."
 msgstr ""
 
-#: mindnlp.engine.callbacks.best_model_callback.BestModelCallback.train_end:1
-#: of
+#: mindnlp.engine.callbacks.best_model_callback.BestModelCallback.train_end:1 of
 msgid "Called once after network training and load the best model params."
 msgstr ""
 
@@ -2776,9 +2621,7 @@ msgstr ""
 
 #: mindnlp.engine.callbacks.callback_manager.CallbackManager:3
 #: mindnlp.engine.evaluator.Evaluator:13 mindnlp.engine.trainer.Trainer:31 of
-msgid ""
-"List of callback objects which should be executed while training. "
-"Default: None."
+msgid "List of callback objects which should be executed while training. Default: None."
 msgstr ""
 
 #: mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1 of
@@ -2860,9 +2703,9 @@ msgstr ""
 
 #: mindnlp.engine.callbacks.callback_manager.RunContext:3 of
 msgid ""
-"Provide information about original request to model function. Callback "
-"objects can stop the loop by calling request_stop() of run_context. This "
-"class needs to be used with :class:`mindspore.train.callback.Callback`."
+"Provide information about original request to model function. Callback objects can stop the "
+"loop by calling request_stop() of run_context. This class needs to be used with :class:"
+"`mindspore.train.callback.Callback`."
 msgstr ""
 
 #: mindnlp.engine.callbacks.callback_manager.RunContext:7 of
@@ -2879,17 +2722,16 @@ msgstr ""
 
 #: mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback:1 of
 msgid ""
-"Save checkpoint of the model. save the current Trainer state at the end "
-"of each epoch, which can be used to resume previous operations. Continue "
-"training a sample code using the most recent epoch"
+"Save checkpoint of the model. save the current Trainer state at the end of each epoch, which "
+"can be used to resume previous operations. Continue training a sample code using the most "
+"recent epoch"
 msgstr ""
 
 #: mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback:5 of
 msgid ""
-"The path to save the state. A specific path needs to be specified, such "
-"as 'checkpoints/chtp.pt'. If it is checked that the file exists, it will "
-"automatically start running from this Checkpoint when the Trainer starts "
-"training. Default: None."
+"The path to save the state. A specific path needs to be specified, such as 'checkpoints/chtp."
+"pt'. If it is checked that the file exists, it will automatically start running from this "
+"Checkpoint when the Trainer starts training. Default: None."
 msgstr ""
 
 #: mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback:10 of
@@ -2900,13 +2742,11 @@ msgstr ""
 msgid "Save checkpoint files at most. Default:5."
 msgstr ""
 
-#: mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback.train_begin:1
-#: of
+#: mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback.train_begin:1 of
 msgid "Notice the file saved path of checkpoints at the beginning of training."
 msgstr ""
 
-#: mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback.train_epoch_end:1
-#: of
+#: mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback.train_epoch_end:1 of
 msgid "Save checkpoint every n epochs at the end of the epoch."
 msgstr ""
 
@@ -2940,14 +2780,14 @@ msgstr ""
 
 #: mindnlp.engine.callbacks.timer_callback.TimerCallback:1 of
 msgid ""
-"Print relevant event information during the training process, such as "
-"training duration, evaluation duration, total duration."
+"Print relevant event information during the training process, such as training duration, "
+"evaluation duration, total duration."
 msgstr ""
 
 #: mindnlp.engine.callbacks.timer_callback.TimerCallback:4 of
 msgid ""
-"When to print time information.Default:-1.  - -1: print once at the end "
-"of each epoch. - positive number n: print once n steps."
+"When to print time information.Default:-1.  - -1: print once at the end of each epoch. - "
+"positive number n: print once n steps."
 msgstr ""
 
 #: mindnlp.engine.callbacks.timer_callback.TimerCallback:4 of
@@ -3015,9 +2855,7 @@ msgid "numbers of samples in each batch."
 msgstr ""
 
 #: mindnlp.engine.evaluator.Evaluator:10 of
-msgid ""
-"List of metric objects which should be used while evaluating. "
-"Default:None."
+msgid "List of metric objects which should be used while evaluating. Default:None."
 msgstr ""
 
 #: mindnlp.engine.evaluator.Evaluator.clear_metrics:1 of
@@ -3028,13 +2866,11 @@ msgstr ""
 msgid "Evaluating function entry."
 msgstr ""
 
-#: mindnlp.engine.evaluator.Evaluator.run:3
-#: mindnlp.engine.trainer.Trainer.run:3 of
+#: mindnlp.engine.evaluator.Evaluator.run:3 mindnlp.engine.trainer.Trainer.run:3 of
 msgid "Target label column names for loss function."
 msgstr ""
 
-#: mindnlp.engine.evaluator.Evaluator.run:5
-#: mindnlp.engine.trainer.Trainer.run:5 of
+#: mindnlp.engine.evaluator.Evaluator.run:5 mindnlp.engine.trainer.Trainer.run:5 of
 msgid "Whether use Just-In-Time compile."
 msgstr ""
 
@@ -3050,19 +2886,15 @@ msgstr ""
 msgid "\"Class for Metric Accuracy"
 msgstr ""
 
-#: mindnlp.engine.metrics.accuracy.Accuracy:1
-#: mindnlp.engine.metrics.bleu.BleuScore:1
+#: mindnlp.engine.metrics.accuracy.Accuracy:1 mindnlp.engine.metrics.bleu.BleuScore:1
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix:1
-#: mindnlp.engine.metrics.distinct.Distinct:1
-#: mindnlp.engine.metrics.em_score.EmScore:1
-#: mindnlp.engine.metrics.f1.F1Score:1
-#: mindnlp.engine.metrics.matthews.MatthewsCorrelation:1
+#: mindnlp.engine.metrics.distinct.Distinct:1 mindnlp.engine.metrics.em_score.EmScore:1
+#: mindnlp.engine.metrics.f1.F1Score:1 mindnlp.engine.metrics.matthews.MatthewsCorrelation:1
 #: mindnlp.engine.metrics.pearson.PearsonCorrelation:1
-#: mindnlp.engine.metrics.perplexity.Perplexity:1
-#: mindnlp.engine.metrics.precision.Precision:1
+#: mindnlp.engine.metrics.perplexity.Perplexity:1 mindnlp.engine.metrics.precision.Precision:1
 #: mindnlp.engine.metrics.recall.Recall:1 mindnlp.engine.metrics.rouge.RougeL:1
-#: mindnlp.engine.metrics.rouge.RougeN:1
-#: mindnlp.engine.metrics.spearman.SpearmanCorrelation:1 of
+#: mindnlp.engine.metrics.rouge.RougeN:1 mindnlp.engine.metrics.spearman.SpearmanCorrelation:1
+#: of
 msgid "Bases: :py:class:`~mindnlp.abc.metric.Metric`"
 msgstr ""
 
@@ -3070,17 +2902,13 @@ msgstr ""
 msgid "Calculates accuracy. The function is shown as follows:"
 msgstr ""
 
-#: mindnlp.engine.metrics.accuracy.Accuracy:12
-#: mindnlp.engine.metrics.bleu.BleuScore:22
+#: mindnlp.engine.metrics.accuracy.Accuracy:12 mindnlp.engine.metrics.bleu.BleuScore:22
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix:7
-#: mindnlp.engine.metrics.distinct.Distinct:8
-#: mindnlp.engine.metrics.em_score.EmScore:4
-#: mindnlp.engine.metrics.f1.F1Score:12
-#: mindnlp.engine.metrics.matthews.MatthewsCorrelation:14
+#: mindnlp.engine.metrics.distinct.Distinct:8 mindnlp.engine.metrics.em_score.EmScore:4
+#: mindnlp.engine.metrics.f1.F1Score:12 mindnlp.engine.metrics.matthews.MatthewsCorrelation:14
 #: mindnlp.engine.metrics.pearson.PearsonCorrelation:7
 #: mindnlp.engine.metrics.perplexity.Perplexity:14
-#: mindnlp.engine.metrics.precision.Precision:11
-#: mindnlp.engine.metrics.recall.Recall:10
+#: mindnlp.engine.metrics.precision.Precision:11 mindnlp.engine.metrics.recall.Recall:10
 #: mindnlp.engine.metrics.rouge.RougeL:19 mindnlp.engine.metrics.rouge.RougeN:7
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation:8 of
 msgid "Name of the metric."
@@ -3090,14 +2918,12 @@ msgstr ""
 #: mindnlp.engine.metrics.bleu.BleuScore.clear:1
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.clear:1
 #: mindnlp.engine.metrics.distinct.Distinct.clear:1
-#: mindnlp.engine.metrics.em_score.EmScore.clear:1
-#: mindnlp.engine.metrics.f1.F1Score.clear:1
+#: mindnlp.engine.metrics.em_score.EmScore.clear:1 mindnlp.engine.metrics.f1.F1Score.clear:1
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation.clear:1
 #: mindnlp.engine.metrics.pearson.PearsonCorrelation.clear:1
 #: mindnlp.engine.metrics.perplexity.Perplexity.clear:1
 #: mindnlp.engine.metrics.precision.Precision.clear:1
-#: mindnlp.engine.metrics.recall.Recall.clear:1
-#: mindnlp.engine.metrics.rouge.RougeL.clear:1
+#: mindnlp.engine.metrics.recall.Recall.clear:1 mindnlp.engine.metrics.rouge.RougeL.clear:1
 #: mindnlp.engine.metrics.rouge.RougeN.clear:1
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.clear:1 of
 msgid "Clears the internal evaluation results."
@@ -3127,13 +2953,11 @@ msgstr ""
 #: mindnlp.engine.metrics.bleu.BleuScore.update:1
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.update:1
 #: mindnlp.engine.metrics.distinct.Distinct.update:1
-#: mindnlp.engine.metrics.em_score.EmScore.update:1
-#: mindnlp.engine.metrics.f1.F1Score.update:1
+#: mindnlp.engine.metrics.em_score.EmScore.update:1 mindnlp.engine.metrics.f1.F1Score.update:1
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation.update:1
 #: mindnlp.engine.metrics.pearson.PearsonCorrelation.update:1
 #: mindnlp.engine.metrics.perplexity.Perplexity.update:1
-#: mindnlp.engine.metrics.recall.Recall.update:1
-#: mindnlp.engine.metrics.rouge.RougeL.update:1
+#: mindnlp.engine.metrics.recall.Recall.update:1 mindnlp.engine.metrics.rouge.RougeL.update:1
 #: mindnlp.engine.metrics.rouge.RougeN.update:1
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.update:1 of
 msgid "Updates local variables."
@@ -3141,14 +2965,12 @@ msgstr ""
 
 #: mindnlp.engine.metrics.accuracy.Accuracy.update:3 of
 msgid ""
-"Input `preds` and `labels`.  - preds (Union[Tensor, list, "
-"numpy.ndarray]): Predicted value. `preds` is a list   of floating numbers"
-" in range :math:`[0, 1]` and the shape of `preds` is   :math:`(N, C)` in "
-"most cases (not strictly), where :math:`N` is the number   of cases and "
-":math:`C` is the number of categories. - labels (Union[Tensor, list, "
-"numpy.ndarray]): Ground truth value. `labels` must   be in one-hot format"
-" that shape is :math:`(N, C)`, or can be transformed to   one-hot format "
-"that shape is :math:`(N,)`."
+"Input `preds` and `labels`.  - preds (Union[Tensor, list, numpy.ndarray]): Predicted value. "
+"`preds` is a list   of floating numbers in range :math:`[0, 1]` and the shape of `preds` "
+"is   :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number   of cases "
+"and :math:`C` is the number of categories. - labels (Union[Tensor, list, numpy.ndarray]): "
+"Ground truth value. `labels` must   be in one-hot format that shape is :math:`(N, C)`, or "
+"can be transformed to   one-hot format that shape is :math:`(N,)`."
 msgstr ""
 
 #: mindnlp.engine.metrics.accuracy.Accuracy.update:3
@@ -3167,19 +2989,19 @@ msgstr ""
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation.update:5
 #: mindnlp.engine.metrics.precision.Precision.update:6 of
 msgid ""
-"preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a"
-" list of floating numbers in range :math:`[0, 1]` and the shape of "
-"`preds` is :math:`(N, C)` in most cases (not strictly), where :math:`N` "
-"is the number of cases and :math:`C` is the number of categories."
+"preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of floating "
+"numbers in range :math:`[0, 1]` and the shape of `preds` is :math:`(N, C)` in most cases "
+"(not strictly), where :math:`N` is the number of cases and :math:`C` is the number of "
+"categories."
 msgstr ""
 
 #: mindnlp.engine.metrics.accuracy.Accuracy.update:9
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation.update:9
 #: mindnlp.engine.metrics.precision.Precision.update:10 of
 msgid ""
-"labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels`"
-" must be in one-hot format that shape is :math:`(N, C)`, or can be "
-"transformed to one-hot format that shape is :math:`(N,)`."
+"labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be in one-hot "
+"format that shape is :math:`(N, C)`, or can be transformed to one-hot format that shape is :"
+"math:`(N,)`."
 msgstr ""
 
 #: mindnlp.engine.metrics.accuracy.Accuracy.update:13
@@ -3188,9 +3010,7 @@ msgid "If the number of `inputs` is not 2."
 msgstr ""
 
 #: mindnlp.engine.metrics.accuracy.Accuracy.update:14 of
-msgid ""
-"class numbers of last input predicted data and current predicted data"
-"     not match."
+msgid "class numbers of last input predicted data and current predicted data     not match."
 msgstr ""
 
 #: ../../api/engine/metrics.rst:14
@@ -3207,9 +3027,8 @@ msgstr ""
 
 #: mindnlp.engine.metrics.bleu.BleuScore.update:3 of
 msgid ""
-"Input `cand` and `ref_list`.  - cand (list): A list of tokenized "
-"candidate sentences. - ref_list (list): A list of lists of tokenized "
-"ground truth sentences."
+"Input `cand` and `ref_list`.  - cand (list): A list of tokenized candidate sentences. - "
+"ref_list (list): A list of lists of tokenized ground truth sentences."
 msgstr ""
 
 #: mindnlp.engine.metrics.bleu.BleuScore.update:3 of
@@ -3220,20 +3039,18 @@ msgstr ""
 msgid "cand (list): A list of tokenized candidate sentences."
 msgstr ""
 
-#: mindnlp.engine.metrics.bleu.BleuScore.update:6
-#: mindnlp.engine.metrics.rouge.RougeN.update:6 of
+#: mindnlp.engine.metrics.bleu.BleuScore.update:6 mindnlp.engine.metrics.rouge.RougeN.update:6
+#: of
 msgid "ref_list (list): A list of lists of tokenized ground truth sentences."
 msgstr ""
 
 #: mindnlp.engine.metrics.bleu.BleuScore.update:8
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.update:10
-#: mindnlp.engine.metrics.em_score.EmScore.update:8
-#: mindnlp.engine.metrics.f1.F1Score.update:13
+#: mindnlp.engine.metrics.em_score.EmScore.update:8 mindnlp.engine.metrics.f1.F1Score.update:13
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation.update:13
 #: mindnlp.engine.metrics.pearson.PearsonCorrelation.update:10
 #: mindnlp.engine.metrics.precision.Precision.update:14
-#: mindnlp.engine.metrics.recall.Recall.update:13
-#: mindnlp.engine.metrics.rouge.RougeL.update:7
+#: mindnlp.engine.metrics.recall.Recall.update:13 mindnlp.engine.metrics.rouge.RougeL.update:7
 #: mindnlp.engine.metrics.rouge.RougeN.update:8
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.update:10 of
 msgid "If the number of inputs is not 2."
@@ -3253,23 +3070,22 @@ msgstr ""
 
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.update:3 of
 msgid ""
-"Input `preds` and `labels`.  - preds (Union[Tensor, list, np.ndarray]): "
-"Predicted value. `preds` is a list of   floating numbers and the shape of"
-" `preds` is :math:`(N, C)` or :math:`(N,)`. - labels (Union[Tensor, list,"
-" np.ndarray]): Ground truth. The shape of `labels` is   :math:`(N,)`."
+"Input `preds` and `labels`.  - preds (Union[Tensor, list, np.ndarray]): Predicted value. "
+"`preds` is a list of   floating numbers and the shape of `preds` is :math:`(N, C)` or :math:"
+"`(N,)`. - labels (Union[Tensor, list, np.ndarray]): Ground truth. The shape of `labels` "
+"is   :math:`(N,)`."
 msgstr ""
 
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.update:5 of
 msgid ""
-"preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a "
-"list of floating numbers and the shape of `preds` is :math:`(N, C)` or "
-":math:`(N,)`."
+"preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of floating "
+"numbers and the shape of `preds` is :math:`(N, C)` or :math:`(N,)`."
 msgstr ""
 
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.update:7 of
 msgid ""
-"labels (Union[Tensor, list, np.ndarray]): Ground truth. The shape of "
-"`labels` is :math:`(N,)`."
+"labels (Union[Tensor, list, np.ndarray]): Ground truth. The shape of `labels` is :math:"
+"`(N,)`."
 msgstr ""
 
 #: ../../api/engine/metrics.rst:30
@@ -3285,9 +3101,7 @@ msgid "Computes and returns the Distinct-N."
 msgstr ""
 
 #: mindnlp.engine.metrics.distinct.Distinct.update:3 of
-msgid ""
-"Input `cand_list`.  - cand_list (list): A list of tokenized candidate "
-"sentence."
+msgid "Input `cand_list`.  - cand_list (list): A list of tokenized candidate sentence."
 msgstr ""
 
 #: mindnlp.engine.metrics.distinct.Distinct.update:3 of
@@ -3313,9 +3127,8 @@ msgstr ""
 
 #: mindnlp.engine.metrics.em_score.EmScore:1 of
 msgid ""
-"Calculates the exact match (EM) score. This metric measures the "
-"percentage of predictions that match any one of the ground truth answers "
-"exactly."
+"Calculates the exact match (EM) score. This metric measures the percentage of predictions "
+"that match any one of the ground truth answers exactly."
 msgstr ""
 
 #: mindnlp.engine.metrics.em_score.EmScore.eval:1 of
@@ -3328,8 +3141,8 @@ msgstr ""
 
 #: mindnlp.engine.metrics.em_score.EmScore.update:3 of
 msgid ""
-"Input `preds` and `examples`.  - preds (Union[str, list]): Predicted "
-"value. - examples (list): Ground truth."
+"Input `preds` and `examples`.  - preds (Union[str, list]): Predicted value. - examples "
+"(list): Ground truth."
 msgstr ""
 
 #: mindnlp.engine.metrics.em_score.EmScore.update:3 of
@@ -3364,42 +3177,37 @@ msgstr ""
 msgid "**f1_s** (numpy.ndarray) - The computed result."
 msgstr ""
 
-#: mindnlp.engine.metrics.f1.F1Score.update:3
-#: mindnlp.engine.metrics.recall.Recall.update:3 of
+#: mindnlp.engine.metrics.f1.F1Score.update:3 mindnlp.engine.metrics.recall.Recall.update:3 of
 msgid ""
-"Input `preds` and `labels`.  - preds (Union[Tensor, list, np.ndarray]): "
-"Predicted value. `preds` is a list of   floating numbers in range "
-":math:`[0, 1]` and the shape of `preds` is   :math:`(N, C)` in most cases"
-" (not strictly), where :math:`N` is the number   of cases and :math:`C` "
-"is the number of categories. - labels (Union[Tensor, list, np.ndarray]): "
-"Ground truth. `labels` must be in   one-hot format that shape is "
-":math:`(N, C)`, or can be transformed to   one-hot format that shape is "
-":math:`(N,)`."
+"Input `preds` and `labels`.  - preds (Union[Tensor, list, np.ndarray]): Predicted value. "
+"`preds` is a list of   floating numbers in range :math:`[0, 1]` and the shape of `preds` "
+"is   :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number   of cases "
+"and :math:`C` is the number of categories. - labels (Union[Tensor, list, np.ndarray]): "
+"Ground truth. `labels` must be in   one-hot format that shape is :math:`(N, C)`, or can be "
+"transformed to   one-hot format that shape is :math:`(N,)`."
 msgstr ""
 
 #: mindnlp.engine.metrics.f1.F1Score.update:5
 #: mindnlp.engine.metrics.perplexity.Perplexity.update:5
 #: mindnlp.engine.metrics.recall.Recall.update:5 of
 msgid ""
-"preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a "
-"list of floating numbers in range :math:`[0, 1]` and the shape of `preds`"
-" is :math:`(N, C)` in most cases (not strictly), where :math:`N` is the "
-"number of cases and :math:`C` is the number of categories."
+"preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of floating "
+"numbers in range :math:`[0, 1]` and the shape of `preds` is :math:`(N, C)` in most cases "
+"(not strictly), where :math:`N` is the number of cases and :math:`C` is the number of "
+"categories."
 msgstr ""
 
 #: mindnlp.engine.metrics.f1.F1Score.update:9
 #: mindnlp.engine.metrics.perplexity.Perplexity.update:9
 #: mindnlp.engine.metrics.recall.Recall.update:9 of
 msgid ""
-"labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` must be "
-"in one-hot format that shape is :math:`(N, C)`, or can be transformed to "
-"one-hot format that shape is :math:`(N,)`."
+"labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` must be in one-hot format "
+"that shape is :math:`(N, C)`, or can be transformed to one-hot format that shape is :math:"
+"`(N,)`."
 msgstr ""
 
 #: mindnlp.engine.metrics.f1.F1Score.update:14 of
-msgid ""
-"class numbers of last input predicted data and current     predicted data"
-" not match."
+msgid "class numbers of last input predicted data and current     predicted data not match."
 msgstr ""
 
 #: ../../api/engine/metrics.rst:54
@@ -3416,14 +3224,12 @@ msgstr ""
 
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation.update:3 of
 msgid ""
-"Input `preds` and `labels`.  - preds (Union[Tensor, list, "
-"numpy.ndarray]): Predicted value. `preds` is a list of   floating numbers"
-" in range :math:`[0, 1]` and the shape of `preds` is   :math:`(N, C)` in "
-"most cases (not strictly), where :math:`N` is the number of   cases and "
-":math:`C` is the number of categories. - labels (Union[Tensor, list, "
-"numpy.ndarray]): Ground truth value. `labels` must be in   one-hot format"
-" that shape is :math:`(N, C)`, or can be transformed to one-hot   format "
-"that shape is :math:`(N,)`."
+"Input `preds` and `labels`.  - preds (Union[Tensor, list, numpy.ndarray]): Predicted value. "
+"`preds` is a list of   floating numbers in range :math:`[0, 1]` and the shape of `preds` "
+"is   :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number of   cases "
+"and :math:`C` is the number of categories. - labels (Union[Tensor, list, numpy.ndarray]): "
+"Ground truth value. `labels` must be in   one-hot format that shape is :math:`(N, C)`, or "
+"can be transformed to one-hot   format that shape is :math:`(N,)`."
 msgstr ""
 
 #: ../../api/engine/metrics.rst:62
@@ -3441,25 +3247,24 @@ msgstr ""
 #: mindnlp.engine.metrics.pearson.PearsonCorrelation.update:3
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.update:3 of
 msgid ""
-"Input `preds` and `labels`.  - preds (Union[Tensor, list, np.ndarray]): "
-"Predicted value. `preds` is a list of   floating numbers and the shape of"
-" `preds` is :math:`(N, 1)`. - labels (Union[Tensor, list, np.ndarray]): "
-"Ground truth. `labels` is a list of   floating numbers and the shape of "
-"`preds` is :math:`(N, 1)`."
+"Input `preds` and `labels`.  - preds (Union[Tensor, list, np.ndarray]): Predicted value. "
+"`preds` is a list of   floating numbers and the shape of `preds` is :math:`(N, 1)`. - labels "
+"(Union[Tensor, list, np.ndarray]): Ground truth. `labels` is a list of   floating numbers "
+"and the shape of `preds` is :math:`(N, 1)`."
 msgstr ""
 
 #: mindnlp.engine.metrics.pearson.PearsonCorrelation.update:5
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.update:5 of
 msgid ""
-"preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a "
-"list of floating numbers and the shape of `preds` is :math:`(N, 1)`."
+"preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of floating "
+"numbers and the shape of `preds` is :math:`(N, 1)`."
 msgstr ""
 
 #: mindnlp.engine.metrics.pearson.PearsonCorrelation.update:7
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.update:7 of
 msgid ""
-"labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` is a "
-"list of floating numbers and the shape of `preds` is :math:`(N, 1)`."
+"labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` is a list of floating "
+"numbers and the shape of `preds` is :math:`(N, 1)`."
 msgstr ""
 
 #: ../../api/engine/metrics.rst:70
@@ -3484,14 +3289,12 @@ msgstr ""
 
 #: mindnlp.engine.metrics.perplexity.Perplexity.update:3 of
 msgid ""
-"Input `preds` and `labels`.  - preds (Union[Tensor, list, np.ndarray]): "
-"Predicted value. `preds` is a list   of floating numbers in range "
-":math:`[0, 1]` and the shape of `preds` is   :math:`(N, C)` in most cases"
-" (not strictly), where :math:`N` is the   number of cases and :math:`C` "
-"is the number of categories. - labels (Union[Tensor, list, np.ndarray]): "
-"Ground truth. `labels` must be in   one-hot format that shape is "
-":math:`(N, C)`, or can be transformed to   one-hot format that shape is "
-":math:`(N,)`."
+"Input `preds` and `labels`.  - preds (Union[Tensor, list, np.ndarray]): Predicted value. "
+"`preds` is a list   of floating numbers in range :math:`[0, 1]` and the shape of `preds` "
+"is   :math:`(N, C)` in most cases (not strictly), where :math:`N` is the   number of cases "
+"and :math:`C` is the number of categories. - labels (Union[Tensor, list, np.ndarray]): "
+"Ground truth. `labels` must be in   one-hot format that shape is :math:`(N, C)`, or can be "
+"transformed to   one-hot format that shape is :math:`(N,)`."
 msgstr ""
 
 #: ../../api/engine/metrics.rst:78
@@ -3504,10 +3307,9 @@ msgstr ""
 
 #: mindnlp.engine.metrics.precision.Precision:1 of
 msgid ""
-"Calculates precision. Precision (also known as positive predictive value)"
-" is the actual positive proportion in the predicted positive sample. It "
-"can only be used to evaluate the precision score of binary tasks. The "
-"function is shown as follows:"
+"Calculates precision. Precision (also known as positive predictive value) is the actual "
+"positive proportion in the predicted positive sample. It can only be used to evaluate the "
+"precision score of binary tasks. The function is shown as follows:"
 msgstr ""
 
 #: mindnlp.engine.metrics.precision.Precision.eval:1 of
@@ -3524,20 +3326,18 @@ msgstr ""
 
 #: mindnlp.engine.metrics.precision.Precision.update:1 of
 msgid ""
-"Updates local variables. If the index of the maximum of the predicted "
-"value matches the label, the predicted result is correct."
+"Updates local variables. If the index of the maximum of the predicted value matches the "
+"label, the predicted result is correct."
 msgstr ""
 
 #: mindnlp.engine.metrics.precision.Precision.update:4 of
 msgid ""
-"Input `preds` and `labels`.  - preds (Union[Tensor, list, "
-"numpy.ndarray]): Predicted value. `preds` is a list   of floating numbers"
-" in range :math:`[0, 1]` and the shape of `preds` is   :math:`(N, C)` in "
-"most cases (not strictly), where :math:`N` is   the number of cases and "
-":math:`C` is the number of categories. - labels (Union[Tensor, list, "
-"numpy.ndarray]): Ground truth value. `labels` must   be in one-hot format"
-" that shape is :math:`(N, C)`, or can be transformed   to one-hot format "
-"that shape is :math:`(N,)`."
+"Input `preds` and `labels`.  - preds (Union[Tensor, list, numpy.ndarray]): Predicted value. "
+"`preds` is a list   of floating numbers in range :math:`[0, 1]` and the shape of `preds` "
+"is   :math:`(N, C)` in most cases (not strictly), where :math:`N` is   the number of cases "
+"and :math:`C` is the number of categories. - labels (Union[Tensor, list, numpy.ndarray]): "
+"Ground truth value. `labels` must   be in one-hot format that shape is :math:`(N, C)`, or "
+"can be transformed   to one-hot format that shape is :math:`(N,)`."
 msgstr ""
 
 #: ../../api/engine/metrics.rst:86
@@ -3574,17 +3374,15 @@ msgstr ""
 
 #: mindnlp.engine.metrics.rouge.RougeL.update:3 of
 msgid ""
-"Input `cand_list` and `ref_list`. cand_list (list): A list of tokenized "
-"candidate sentence. ref_list (list): A list of lists of tokenized ground "
-"truth sentences."
+"Input `cand_list` and `ref_list`. cand_list (list): A list of tokenized candidate sentence. "
+"ref_list (list): A list of lists of tokenized ground truth sentences."
 msgstr ""
 
 #: mindnlp.engine.metrics.rouge.RougeN:1 of
 msgid ""
-"Calculates the ROUGE-N. ROUGE (Recall-Oriented Understudy for Gisting "
-"Evaluation) is a set of metrics used for evaluating automatic "
-"summarization and machine translation models. ROUGE-N refers to the "
-"overlap of n-grams between candidates and reference summaries."
+"Calculates the ROUGE-N. ROUGE (Recall-Oriented Understudy for Gisting Evaluation) is a set "
+"of metrics used for evaluating automatic summarization and machine translation models. ROUGE-"
+"N refers to the overlap of n-grams between candidates and reference summaries."
 msgstr ""
 
 #: mindnlp.engine.metrics.rouge.RougeN.eval:1 of
@@ -3593,9 +3391,8 @@ msgstr ""
 
 #: mindnlp.engine.metrics.rouge.RougeN.update:3 of
 msgid ""
-"Input `cand_list` and `ref_list`.  - cand_list (list): A list of "
-"tokenized candidate sentence. - ref_list (list): A list of lists of "
-"tokenized ground truth sentences."
+"Input `cand_list` and `ref_list`.  - cand_list (list): A list of tokenized candidate "
+"sentence. - ref_list (list): A list of lists of tokenized ground truth sentences."
 msgstr ""
 
 #: mindnlp.engine.metrics.rouge.RougeN.update:3 of
@@ -3632,28 +3429,24 @@ msgstr ""
 
 #: mindnlp.engine.trainer.Trainer:6 of
 msgid ""
-"A training dataset iterator. If `loss_fn` is defined, the data and label "
-"will be passed to the `network` and the `loss_fn` respectively, so a "
-"tuple (data, label) should be returned from dataset. If there is multiple"
-" data or labels, set `loss_fn` to None and implement calculation of loss "
-"in `network`, then a tuple (data1, data2, data3, ...) with all data "
+"A training dataset iterator. If `loss_fn` is defined, the data and label will be passed to "
+"the `network` and the `loss_fn` respectively, so a tuple (data, label) should be returned "
+"from dataset. If there is multiple data or labels, set `loss_fn` to None and implement "
+"calculation of loss in `network`, then a tuple (data1, data2, data3, ...) with all data "
 "returned from dataset will be passed to the `network`."
 msgstr ""
 
 #: mindnlp.engine.trainer.Trainer:13 of
 msgid ""
-"A evaluating dataset iterator. If `loss_fn` is defined, the data and "
-"label will be passed to the `network` and the `loss_fn` respectively, so "
-"a tuple (data, label) should be returned from dataset. If there is "
-"multiple data or labels, set `loss_fn` to None and implement calculation "
-"of loss in `network`, then a tuple (data1, data2, data3, ...) with all "
-"data returned from dataset will be passed to the `network`."
+"A evaluating dataset iterator. If `loss_fn` is defined, the data and label will be passed to "
+"the `network` and the `loss_fn` respectively, so a tuple (data, label) should be returned "
+"from dataset. If there is multiple data or labels, set `loss_fn` to None and implement "
+"calculation of loss in `network`, then a tuple (data1, data2, data3, ...) with all data "
+"returned from dataset will be passed to the `network`."
 msgstr ""
 
 #: mindnlp.engine.trainer.Trainer:20 of
-msgid ""
-"List of metrics objects which should be used while evaluating. "
-"Default:None."
+msgid "List of metrics objects which should be used while evaluating. Default:None."
 msgstr ""
 
 #: mindnlp.engine.trainer.Trainer:23 of
@@ -3662,14 +3455,14 @@ msgstr ""
 
 #: mindnlp.engine.trainer.Trainer:25 of
 msgid ""
-"Optimizer for updating the weights. If `optimizer` is None, the `network`"
-" needs to do backpropagation and update weights. Default value: None."
+"Optimizer for updating the weights. If `optimizer` is None, the `network` needs to do "
+"backpropagation and update weights. Default value: None."
 msgstr ""
 
 #: mindnlp.engine.trainer.Trainer:28 of
 msgid ""
-"Objective function. If `loss_fn` is None, the `network` should contain "
-"the calculation of loss and parallel if needed. Default: None."
+"Objective function. If `loss_fn` is None, the `network` should contain the calculation of "
+"loss and parallel if needed. Default: None."
 msgstr ""
 
 #: mindnlp.engine.trainer.Trainer.run:1 of
@@ -3706,8 +3499,8 @@ msgstr ""
 
 #: mindnlp.modules.attentions.AdditiveAttention:1 of
 msgid ""
-"Additive Attention Additive Attention proposed in \"Neural Machine "
-"Translation by Jointly Learning to Align and Translate\" paper"
+"Additive Attention Additive Attention proposed in \"Neural Machine Translation by Jointly "
+"Learning to Align and Translate\" paper"
 msgstr ""
 
 #: mindnlp.modules.attentions.AdditiveAttention:4 of
@@ -3723,82 +3516,69 @@ msgstr ""
 #: mindnlp.modules.attentions.ScaledDotAttention:8 of
 #, python-format
 msgid ""
-"The keep rate, greater than 0 and less equal than 1. E.g. rate=0.9, "
-"dropping out 10% of input units. Default: 0.9."
+"The keep rate, greater than 0 and less equal than 1. E.g. rate=0.9, dropping out 10% of "
+"input units. Default: 0.9."
 msgstr ""
 
 #: mindnlp.modules.attentions.AdditiveAttention:18
-#: mindnlp.modules.attentions.CosineAttention:18
-#: mindnlp.modules.attentions.LinearAttention:16
+#: mindnlp.modules.attentions.CosineAttention:18 mindnlp.modules.attentions.LinearAttention:16
 #: mindnlp.modules.attentions.LocationAwareAttention:12
 #: mindnlp.modules.attentions.MutiHeadAttention:21
-#: mindnlp.modules.attentions.ScaledDotAttention:16
-#: mindnlp.modules.attentions.SelfAttention:17 of
+#: mindnlp.modules.attentions.ScaledDotAttention:16 mindnlp.modules.attentions.SelfAttention:17
+#: of
 msgid "Inputs:"
 msgstr ""
 
 #: mindnlp.modules.attentions.AdditiveAttention:15
-#: mindnlp.modules.attentions.CosineAttention:15
-#: mindnlp.modules.attentions.LinearAttention:13
+#: mindnlp.modules.attentions.CosineAttention:15 mindnlp.modules.attentions.LinearAttention:13
 #: mindnlp.modules.attentions.ScaledDotAttention:13 of
-msgid ""
-"**query** (mindspore.Tensor) - The query vector. [batch_size, query_size,"
-" hidden_size]"
+msgid "**query** (mindspore.Tensor) - The query vector. [batch_size, query_size, hidden_size]"
 msgstr ""
 
 #: mindnlp.modules.attentions.AdditiveAttention:16
-#: mindnlp.modules.attentions.CosineAttention:16
-#: mindnlp.modules.attentions.LinearAttention:14
+#: mindnlp.modules.attentions.CosineAttention:16 mindnlp.modules.attentions.LinearAttention:14
 #: mindnlp.modules.attentions.ScaledDotAttention:14 of
-msgid ""
-"**key** (mindspore.Tensor) - The key vector. [batch_size, key_size, "
-"hidden_size]"
+msgid "**key** (mindspore.Tensor) - The key vector. [batch_size, key_size, hidden_size]"
 msgstr ""
 
 #: mindnlp.modules.attentions.AdditiveAttention:17
-#: mindnlp.modules.attentions.CosineAttention:17
-#: mindnlp.modules.attentions.LinearAttention:15
+#: mindnlp.modules.attentions.CosineAttention:17 mindnlp.modules.attentions.LinearAttention:15
 #: mindnlp.modules.attentions.ScaledDotAttention:15 of
 msgid ""
-"**value** (mindspore.Tensor) - The value vector. [batch_size, seq_len, "
-"value_hidden_size]"
+"**value** (mindspore.Tensor) - The value vector. [batch_size, seq_len, value_hidden_size]"
 msgstr ""
 
 #: mindnlp.modules.attentions.AdditiveAttention:18
-#: mindnlp.modules.attentions.CosineAttention:18
-#: mindnlp.modules.attentions.LinearAttention:16
+#: mindnlp.modules.attentions.CosineAttention:18 mindnlp.modules.attentions.LinearAttention:16
 #: mindnlp.modules.attentions.ScaledDotAttention:16 of
 msgid ""
-"**mask** Optional[mindspore.Tensor[bool]] - The mask vector. [batch_size,"
-" query_size, key_size]"
+"**mask** Optional[mindspore.Tensor[bool]] - The mask vector. [batch_size, query_size, "
+"key_size]"
 msgstr ""
 
 #: mindnlp.modules.attentions.AdditiveAttention:20
-#: mindnlp.modules.attentions.CosineAttention:20
-#: mindnlp.modules.attentions.LinearAttention:18
+#: mindnlp.modules.attentions.CosineAttention:20 mindnlp.modules.attentions.LinearAttention:18
 #: mindnlp.modules.attentions.ScaledDotAttention:18 of
 msgid ""
-"- output (mindspore.Tensor) - The output of linear attention.  "
-"[batch_size, query_size, value_hidden_size] - attn (mindspore.Tensor) - "
-"The last layer of attention weights. [batch_size, query_size, key_size]"
+"- output (mindspore.Tensor) - The output of linear attention.  [batch_size, query_size, "
+"value_hidden_size] - attn (mindspore.Tensor) - The last layer of attention weights. "
+"[batch_size, query_size, key_size]"
 msgstr ""
 
 #: mindnlp.modules.attentions.AdditiveAttention:22
-#: mindnlp.modules.attentions.CosineAttention:22
-#: mindnlp.modules.attentions.LinearAttention:20
+#: mindnlp.modules.attentions.CosineAttention:22 mindnlp.modules.attentions.LinearAttention:20
 #: mindnlp.modules.attentions.ScaledDotAttention:20 of
 msgid ""
-"output (mindspore.Tensor) - The output of linear attention.  [batch_size,"
-" query_size, value_hidden_size]"
+"output (mindspore.Tensor) - The output of linear attention.  [batch_size, query_size, "
+"value_hidden_size]"
 msgstr ""
 
 #: mindnlp.modules.attentions.AdditiveAttention:23
-#: mindnlp.modules.attentions.CosineAttention:23
-#: mindnlp.modules.attentions.LinearAttention:21
+#: mindnlp.modules.attentions.CosineAttention:23 mindnlp.modules.attentions.LinearAttention:21
 #: mindnlp.modules.attentions.ScaledDotAttention:21 of
 msgid ""
-"attn (mindspore.Tensor) - The last layer of attention weights. "
-"[batch_size, query_size, key_size]"
+"attn (mindspore.Tensor) - The last layer of attention weights. [batch_size, query_size, "
+"key_size]"
 msgstr ""
 
 #: mindnlp.modules.attentions.AdditiveAttention.construct:1 of
@@ -3807,9 +3587,8 @@ msgstr ""
 
 #: mindnlp.modules.attentions.BinaryAttention:1 of
 msgid ""
-"Binary Attention, For a given sequence of two vectors : x_i and y_j, the "
-"BiAttention module will compute the attention result by the following "
-"equation:"
+"Binary Attention, For a given sequence of two vectors : x_i and y_j, the BiAttention module "
+"will compute the attention result by the following equation:"
 msgstr ""
 
 #: mindnlp.modules.attentions.BinaryAttention:5 of
@@ -3817,13 +3596,11 @@ msgid ""
 "  \\begin{array}{ll} \\\\\n"
 "    e_{ij} = {x}^{\\mathrm{T}}_{i}{y}_{j} \\\\\n"
 "    {\\hat{x}}_{i} = \\sum_{j=1}^{\\mathcal{l}_{y}}{\\frac{\n"
-"        "
-"\\mathrm{exp}(e_{ij})}{\\sum_{k=1}^{\\mathcal{l}_{y}}{\\mathrm{exp}(e_{ik})}}}{y}_{j}"
-" \\\\\n"
+"        \\mathrm{exp}(e_{ij})}{\\sum_{k=1}^{\\mathcal{l}_{y}}{\\mathrm{exp}(e_{ik})}}}{y}"
+"_{j} \\\\\n"
 "    {\\hat{y}}_{j} = \\sum_{i=1}^{\\mathcal{l}_{x}}{\\frac{\n"
-"        "
-"\\mathrm{exp}(e_{ij})}{\\sum_{k=1}^{\\mathcal{l}_{x}}{\\mathrm{exp}(e_{ik})}}}{x}_{i}"
-" \\\\\n"
+"        \\mathrm{exp}(e_{ij})}{\\sum_{k=1}^{\\mathcal{l}_{x}}{\\mathrm{exp}(e_{ik})}}}{x}"
+"_{i} \\\\\n"
 "\\end{array}"
 msgstr ""
 
@@ -3845,8 +3622,8 @@ msgstr ""
 
 #: mindnlp.modules.attentions.BinaryAttention:24 of
 msgid ""
-"- attended_x (mindspore.Tensor) - The output of the attention_x. - "
-"attended_y (mindspore.Tensor) - The output of the attention_y."
+"- attended_x (mindspore.Tensor) - The output of the attention_x. - attended_y (mindspore."
+"Tensor) - The output of the attention_y."
 msgstr ""
 
 #: mindnlp.modules.attentions.BinaryAttention:26 of
@@ -3862,8 +3639,7 @@ msgstr ""
 #: mindnlp.modules.attentions.ScaledDotAttention.construct:1
 #: mindnlp.modules.attentions.SelfAttention.construct:1 of
 msgid ""
-"Defines the computation to be performed. This method must be overridden "
-"by all subclasses."
+"Defines the computation to be performed. This method must be overridden by all subclasses."
 msgstr ""
 
 #: mindnlp.modules.attentions.BinaryAttention.construct:3
@@ -3871,8 +3647,8 @@ msgstr ""
 #: mindnlp.modules.attentions.ScaledDotAttention.construct:3
 #: mindnlp.modules.attentions.SelfAttention.construct:3 of
 msgid ""
-"Note: It is not supported currently that inputs contain both tuple and "
-"non-tuple types at same time."
+"Note: It is not supported currently that inputs contain both tuple and non-tuple types at "
+"same time."
 msgstr ""
 
 #: mindnlp.modules.attentions.BinaryAttention.construct:5
@@ -3897,9 +3673,7 @@ msgid "Tensor, returns the computed result."
 msgstr ""
 
 #: mindnlp.modules.attentions.CosineAttention:1 of
-msgid ""
-"Cosine Attention Cosine Attention proposed in \"Neural Turing Machines\" "
-"paper"
+msgid "Cosine Attention Cosine Attention proposed in \"Neural Turing Machines\" paper"
 msgstr ""
 
 #: mindnlp.modules.attentions.CosineAttention:4 of
@@ -3916,16 +3690,15 @@ msgstr ""
 msgid "Linear attention computes attention by concat the query and key vector."
 msgstr ""
 
-#: mindnlp.modules.attentions.LinearAttention:9
-#: mindnlp.modules.attentions.MutiHeadAttention:10
+#: mindnlp.modules.attentions.LinearAttention:9 mindnlp.modules.attentions.MutiHeadAttention:10
 #: mindnlp.modules.attentions.SelfAttention:6 of
 msgid "The keep rate, greater than 0 and less equal than 1. Default: 0.9."
 msgstr ""
 
 #: mindnlp.modules.attentions.LocationAwareAttention:1 of
 msgid ""
-"Location Aware Attention Location Aware Attention proposed in "
-"\"Attention-Based Models for Speech Recognition\""
+"Location Aware Attention Location Aware Attention proposed in \"Attention-Based Models for "
+"Speech Recognition\""
 msgstr ""
 
 #: mindnlp.modules.attentions.LocationAwareAttention:4 of
@@ -3938,39 +3711,34 @@ msgstr ""
 
 #: mindnlp.modules.attentions.LocationAwareAttention:10 of
 msgid ""
-"**query** (mindspore.Tensor) - Decoder hidden states, Shape=(batch_size, "
-"1, decoder_dim)."
+"**query** (mindspore.Tensor) - Decoder hidden states, Shape=(batch_size, 1, decoder_dim)."
 msgstr ""
 
 #: mindnlp.modules.attentions.LocationAwareAttention:11 of
 msgid ""
-"**value** (mindspore.Tensor) - Encoder outputs, Shape=(batch_size, "
-"seq_len, encoder_dim)."
+"**value** (mindspore.Tensor) - Encoder outputs, Shape=(batch_size, seq_len, encoder_dim)."
 msgstr ""
 
 #: mindnlp.modules.attentions.LocationAwareAttention:12 of
 msgid ""
-"**last_attn** (mindspore.Tensor) - Attention weight of previous step, "
-"Shape=(batch_size, seq_len)."
+"**last_attn** (mindspore.Tensor) - Attention weight of previous step, Shape=(batch_size, "
+"seq_len)."
 msgstr ""
 
 #: mindnlp.modules.attentions.LocationAwareAttention:14 of
 msgid ""
-"- **context** (mindspore.Tensor) - The context vector, Shape=(batch_size,"
-" 1, decoder_dim). - **attn** (mindspore.Tensor) - Attention weight of "
-"this step, Shape=(batch_size, seq_len)."
+"- **context** (mindspore.Tensor) - The context vector, Shape=(batch_size, 1, decoder_dim). - "
+"**attn** (mindspore.Tensor) - Attention weight of this step, Shape=(batch_size, seq_len)."
 msgstr ""
 
 #: mindnlp.modules.attentions.LocationAwareAttention:16 of
 msgid ""
-"**context** (mindspore.Tensor) - The context vector, Shape=(batch_size, "
-"1, decoder_dim)."
+"**context** (mindspore.Tensor) - The context vector, Shape=(batch_size, 1, decoder_dim)."
 msgstr ""
 
 #: mindnlp.modules.attentions.LocationAwareAttention:17 of
 msgid ""
-"**attn** (mindspore.Tensor) - Attention weight of this step, "
-"Shape=(batch_size, seq_len)."
+"**attn** (mindspore.Tensor) - Attention weight of this step, Shape=(batch_size, seq_len)."
 msgstr ""
 
 #: mindnlp.modules.attentions.LocationAwareAttention.construct:1 of
@@ -3987,67 +3755,60 @@ msgstr ""
 
 #: mindnlp.modules.attentions.MutiHeadAttention:1 of
 msgid ""
-"Muti-head attention is from the paper “attention is all you need” where "
-"heads == 1 Muti-head attention is normal self-attention"
+"Muti-head attention is from the paper “attention is all you need” where heads == 1 Muti-head "
+"attention is normal self-attention"
 msgstr ""
 
 #: mindnlp.modules.attentions.MutiHeadAttention:4 of
 msgid "8."
 msgstr ""
 
-#: mindnlp.modules.attentions.MutiHeadAttention:7
-#: mindnlp.modules.attentions.SelfAttention:3 of
+#: mindnlp.modules.attentions.MutiHeadAttention:7 mindnlp.modules.attentions.SelfAttention:3 of
 msgid "512."
 msgstr ""
 
-#: mindnlp.modules.attentions.MutiHeadAttention:12
-#: mindnlp.modules.attentions.SelfAttention:8 of
+#: mindnlp.modules.attentions.MutiHeadAttention:12 mindnlp.modules.attentions.SelfAttention:8
+#: of
 msgid "True."
 msgstr ""
 
-#: mindnlp.modules.attentions.MutiHeadAttention:14
-#: mindnlp.modules.attentions.SelfAttention:10 of
+#: mindnlp.modules.attentions.MutiHeadAttention:14 mindnlp.modules.attentions.SelfAttention:10
+#: of
 msgid "\"dot\"."
 msgstr ""
 
 #: mindnlp.modules.attentions.MutiHeadAttention:18 of
 msgid ""
-"**query** (mindspore.Tensor) - The query vector. Usually is [batch_size, "
-"seq_len, d_model]"
+"**query** (mindspore.Tensor) - The query vector. Usually is [batch_size, seq_len, d_model]"
 msgstr ""
 
 #: mindnlp.modules.attentions.MutiHeadAttention:19 of
-msgid ""
-"**key** (mindspore.Tensor) - The key vector. Usually is [batch_size, "
-"seq_len, d_model]"
+msgid "**key** (mindspore.Tensor) - The key vector. Usually is [batch_size, seq_len, d_model]"
 msgstr ""
 
-#: mindnlp.modules.attentions.MutiHeadAttention:20
-#: mindnlp.modules.attentions.SelfAttention:16 of
-msgid ""
-"**value** (mindspore.Tensor) - The value vector. [batch_size, seq_len, "
-"d_model]"
+#: mindnlp.modules.attentions.MutiHeadAttention:20 mindnlp.modules.attentions.SelfAttention:16
+#: of
+msgid "**value** (mindspore.Tensor) - The value vector. [batch_size, seq_len, d_model]"
 msgstr ""
 
-#: mindnlp.modules.attentions.MutiHeadAttention:21
-#: mindnlp.modules.attentions.SelfAttention:17 of
+#: mindnlp.modules.attentions.MutiHeadAttention:21 mindnlp.modules.attentions.SelfAttention:17
+#: of
 msgid ""
-"**mask** Optional[mindspore.Tensor[bool]] - The mask vector. [batch_size,"
-" seq_len, seq_len]"
+"**mask** Optional[mindspore.Tensor[bool]] - The mask vector. [batch_size, seq_len, seq_len]"
 msgstr ""
 
 #: mindnlp.modules.attentions.MutiHeadAttention:23 of
 msgid ""
-"- output (mindspore.Tensor) - The output of muti-head attention. - attn "
-"(mindspore.Tensor) - The last layer of attention weights"
+"- output (mindspore.Tensor) - The output of muti-head attention. - attn (mindspore.Tensor) - "
+"The last layer of attention weights"
 msgstr ""
 
 #: mindnlp.modules.attentions.MutiHeadAttention:25 of
 msgid "output (mindspore.Tensor) - The output of muti-head attention."
 msgstr ""
 
-#: mindnlp.modules.attentions.MutiHeadAttention:26
-#: mindnlp.modules.attentions.SelfAttention:22 of
+#: mindnlp.modules.attentions.MutiHeadAttention:26 mindnlp.modules.attentions.SelfAttention:22
+#: of
 msgid "attn (mindspore.Tensor) - The last layer of attention weights"
 msgstr ""
 
@@ -4057,8 +3818,8 @@ msgstr ""
 
 #: mindnlp.modules.attentions.ScaledDotAttention:1 of
 msgid ""
-"Scaled Dot-Product Attention Scaled Dot-Product Attention proposed in "
-"\"Attention Is All You Need\""
+"Scaled Dot-Product Attention Scaled Dot-Product Attention proposed in \"Attention Is All You "
+"Need\""
 msgstr ""
 
 #: mindnlp.modules.attentions.ScaledDotAttention:4 of
@@ -4079,8 +3840,8 @@ msgstr ""
 
 #: mindnlp.modules.attentions.SelfAttention:19 of
 msgid ""
-"- output (mindspore.Tensor) - The output of self attention. - attn "
-"(mindspore.Tensor) - The last layer of attention weights"
+"- output (mindspore.Tensor) - The output of self attention. - attn (mindspore.Tensor) - The "
+"last layer of attention weights"
 msgstr ""
 
 #: mindnlp.modules.attentions.SelfAttention:21 of
@@ -4113,14 +3874,14 @@ msgstr ""
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder:7 of
 msgid ""
-"If not 0, append `Dropout` layer on the inputs of each RNN layer. Default"
-" 0. The range of dropout is [0.0, 1.0)."
+"If not 0, append `Dropout` layer on the inputs of each RNN layer. Default 0. The range of "
+"dropout is [0.0, 1.0)."
 msgstr ""
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder:10 of
 msgid ""
-"If not 0, append `Dropout` layer on the outputs of each RNN layer except "
-"the last layer. Default 0. The range of dropout is [0.0, 1.0)."
+"If not 0, append `Dropout` layer on the outputs of each RNN layer except the last layer. "
+"Default 0. The range of dropout is [0.0, 1.0)."
 msgstr ""
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder:13 of
@@ -4148,10 +3909,9 @@ msgstr ""
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.construct:8 of
 msgid ""
-"Tuple, a tuple contains (`output`, `attn_scores`).  - output (Tensor): "
-"Tensor of shape (batch, `tgt_len`, `vocab_size`). - attn_scores (Tensor):"
-" Tensor of shape (batch, `tgt_len`, `src_len`)   if attention=True "
-"otherwise None."
+"Tuple, a tuple contains (`output`, `attn_scores`).  - output (Tensor): Tensor of shape "
+"(batch, `tgt_len`, `vocab_size`). - attn_scores (Tensor): Tensor of shape (batch, `tgt_len`, "
+"`src_len`)   if attention=True otherwise None."
 msgstr ""
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.construct:8
@@ -4166,8 +3926,8 @@ msgstr ""
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.construct:11
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.extract_features:11 of
 msgid ""
-"attn_scores (Tensor): Tensor of shape (batch, `tgt_len`, `src_len`) if "
-"attention=True otherwise None."
+"attn_scores (Tensor): Tensor of shape (batch, `tgt_len`, `src_len`) if attention=True "
+"otherwise None."
 msgstr ""
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.extract_features:1 of
@@ -4176,16 +3936,14 @@ msgstr ""
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.extract_features:8 of
 msgid ""
-"Tuple, a tuple contains (`output`, `attn_scores`).  - output (Tensor): "
-"The extracted feature Tensor of shape (batch, `tgt_len`, `hidden_size`). "
-"- attn_scores (Tensor): Tensor of shape (batch, `tgt_len`, `src_len`)   "
-"if attention=True otherwise None."
+"Tuple, a tuple contains (`output`, `attn_scores`).  - output (Tensor): The extracted feature "
+"Tensor of shape (batch, `tgt_len`, `hidden_size`). - attn_scores (Tensor): Tensor of shape "
+"(batch, `tgt_len`, `src_len`)   if attention=True otherwise None."
 msgstr ""
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.extract_features:10 of
 msgid ""
-"output (Tensor): The extracted feature Tensor of shape (batch, `tgt_len`,"
-" `hidden_size`)."
+"output (Tensor): The extracted feature Tensor of shape (batch, `tgt_len`, `hidden_size`)."
 msgstr ""
 
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.output_layer:1 of
@@ -4294,26 +4052,23 @@ msgstr ""
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:11
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:11 of
 msgid ""
-"Indicates whether special participles from special_tokens will be added "
-"to the top of the dictionary. If True, add special_tokens to the "
-"beginning of the dictionary, otherwise add them to the end. Default: "
-"True."
+"Indicates whether special participles from special_tokens will be added to the top of the "
+"dictionary. If True, add special_tokens to the beginning of the dictionary, otherwise add "
+"them to the end. Default: True."
 msgstr ""
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:15
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:15
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:17 of
 msgid ""
-"- requires_grad (bool): Whether this parameter needs to be gradient to "
-"update. - dropout (float): Dropout of the output of Embedding."
+"- requires_grad (bool): Whether this parameter needs to be gradient to update. - dropout "
+"(float): Dropout of the output of Embedding."
 msgstr ""
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:16
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:16
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:18 of
-msgid ""
-"requires_grad (bool): Whether this parameter needs to be gradient to "
-"update."
+msgid "requires_grad (bool): Whether this parameter needs to be gradient to update."
 msgstr ""
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:17
@@ -4324,14 +4079,12 @@ msgstr ""
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:20 of
 msgid ""
-"- Fasttext, Returns an embedding instance generated through a pretrained "
-"word vector. - Vocab, Vocabulary extracted from the file."
+"- Fasttext, Returns an embedding instance generated through a pretrained word vector. - "
+"Vocab, Vocabulary extracted from the file."
 msgstr ""
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:22 of
-msgid ""
-"Fasttext, Returns an embedding instance generated through a pretrained "
-"word vector."
+msgid "Fasttext, Returns an embedding instance generated through a pretrained word vector."
 msgstr ""
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:23
@@ -4365,8 +4118,8 @@ msgstr ""
 #: mindnlp.modules.embeddings.glove_embedding.Glove.load:7
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.load:7 of
 msgid ""
-"Whether to initialize the embedding as a npy file. Vocab and npy_path are"
-" valid when load_npy is True. Default: False."
+"Whether to initialize the embedding as a npy file. Vocab and npy_path are valid when "
+"load_npy is True. Default: False."
 msgstr ""
 
 #: mindnlp.modules.embeddings.fasttext_embedding.Fasttext.load:10
@@ -4416,14 +4169,12 @@ msgstr ""
 
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:20 of
 msgid ""
-"- Glove, Returns an embedding instance generated through a pretrained "
-"word vector. - Vocab, Vocabulary extracted from the file."
+"- Glove, Returns an embedding instance generated through a pretrained word vector. - Vocab, "
+"Vocabulary extracted from the file."
 msgstr ""
 
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:22 of
-msgid ""
-"Glove, Returns an embedding instance generated through a pretrained word "
-"vector."
+msgid "Glove, Returns an embedding instance generated through a pretrained word vector."
 msgstr ""
 
 #: ../../api/modules/embedding.rst:22
@@ -4444,14 +4195,12 @@ msgstr ""
 
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:22 of
 msgid ""
-"- Word2vec, Returns an embedding instance generated through a pretrained "
-"word vector. - Vocab, Vocabulary extracted from the file."
+"- Word2vec, Returns an embedding instance generated through a pretrained word vector. - "
+"Vocab, Vocabulary extracted from the file."
 msgstr ""
 
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:24 of
-msgid ""
-"Word2vec, Returns an embedding instance generated through a pretrained "
-"word vector."
+msgid "Word2vec, Returns an embedding instance generated through a pretrained word vector."
 msgstr ""
 
 #: mindnlp.modules.embeddings:1 of
@@ -4468,7 +4217,7 @@ msgstr ""
 
 #: mindnlp.modules.encoder.cnn_encoder:1 of
 msgid "CNN encoder modules"
-msgstr ""
+msgstr "CNN编码器模块"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder:1
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder:1 of
@@ -4477,82 +4226,83 @@ msgstr ""
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder:1 of
 msgid "CNN Encoder."
-msgstr ""
+msgstr "CNN编码器。"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder:3 of
 msgid "Convolutional encoder consisting of `len(convolutions)` layers."
-msgstr ""
+msgstr "由`len（卷积）`层组成的卷积编码器。"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder:7 of
 msgid "The list of Conv Cell."
-msgstr ""
+msgstr "卷积单元的列表。"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder:9 of
 msgid "Activation to use after the convolution layers."
-msgstr ""
+msgstr "在卷积层之后使用的激活操作。"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder:11 of
 msgid ""
-"The output vector of collected features after doing convolutions and "
-"pooling. If this value is `None`, return the result of the max pooling, "
-"an output of shape."
-msgstr ""
+"The output vector of collected features after doing convolutions and pooling. If this value "
+"is `None`, return the result of the max pooling, an output of shape."
+msgstr "卷积和合并后收集的特征的输出向量。如果此值为空值，则返回最大池化的结果，即输出形状。"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder:15 of
 msgid "if `embedding` is not a Cell."
-msgstr ""
+msgstr "如果`embedding`不是一个Cell对象。"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder:16 of
 msgid "if `convs` is not a list[Cell]."
-msgstr ""
+msgstr "如果`convs`不是一个list[Cell]对象。"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder:17 of
 msgid "if `conv_layer_activation` is not a Module."
-msgstr ""
+msgstr "如果`conv_layer_activation`不是一个Module对象。"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder:18 of
 msgid "if `output_dim` is not a int."
-msgstr ""
+msgstr "如果``output_dim`不是一个int对象。"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder:19 of
 msgid "If `embedding` is None."
-msgstr ""
+msgstr "如果`embedding`为空值。"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder:20 of
 msgid "If `convs` is None."
-msgstr ""
+msgstr "如果`convs`为空值。"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder.construct:1 of
 msgid "Construct function of CNNEncoder."
-msgstr ""
+msgstr "CNN编码器的析构函数。"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder.construct:3
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:3 of
 msgid "Tokens in the source language with shape [batch, max_len]."
-msgstr ""
+msgstr "源语言中的标记，形状为[batch, max_len]。"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder.construct:5
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:7 of
 msgid ""
-"Its elements identify whether the corresponding input token is padding or"
-" not. If the value is 1, not padding token. If the value is 0, padding "
-"token. Defaults to None."
+"Its elements identify whether the corresponding input token is padding or not. If the value "
+"is 1, not padding token. If the value is 0, padding token. Defaults to None."
 msgstr ""
+"其元素标识对应的输入标记是否需填充。如果值为1，则不填充标记。如果值为0，则填充比较。默认"
+"为“无”。"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder.construct:9 of
 msgid ""
-"Tensor, If output_dim is None, the result shape is of `(batch_size, "
-"len(convs) * num_filter)` and dtype is `float`; If not, the result shape "
-"is of `(batch_size, output_dim)`."
+"Tensor, If output_dim is None, the result shape is of `(batch_size, len(convs) * "
+"num_filter)` and dtype is `float`; If not, the result shape is of `(batch_size, output_dim)`."
 msgstr ""
+"向量，如果`output_dim`为空值，则结果形状为`(batch_size, len(convs) * num_filter)`，数据类型为"
+"`float`；如果不是，则结果形状为`(batch_size, output_dim)`。"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder.get_input_dim:1 of
 msgid "Returns the dimension of input vector"
-msgstr ""
+msgstr "返回输入向量的维数"
 
 #: mindnlp.modules.encoder.cnn_encoder.CNNEncoder.get_output_dim:1 of
 msgid "Returns the dimension of the output vector"
-msgstr ""
+msgstr "返回输出向量的维数"
 
 #: ../../api/modules/encoder.rst:14
 msgid "rnn\\_encoder"
@@ -4576,10 +4326,9 @@ msgstr ""
 
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:11 of
 msgid ""
-"Tuple, a tuple contains (`output`, `hiddens_n`, `mask`).  - output "
-"(Tensor): Tensor of shape (seq_len, batch_size, num_directions * "
-"`hidden_size`). - hiddens_n (Tensor): Tensor of shape (num_directions * "
-"`num_layers`, batch_size, `hidden_size`). - mask (Tensor): Mask Tensor "
+"Tuple, a tuple contains (`output`, `hiddens_n`, `mask`).  - output (Tensor): Tensor of shape "
+"(seq_len, batch_size, num_directions * `hidden_size`). - hiddens_n (Tensor): Tensor of shape "
+"(num_directions * `num_layers`, batch_size, `hidden_size`). - mask (Tensor): Mask Tensor "
 "used in decoder."
 msgstr ""
 
@@ -4588,15 +4337,13 @@ msgid "Tuple, a tuple contains (`output`, `hiddens_n`, `mask`)."
 msgstr ""
 
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:13 of
-msgid ""
-"output (Tensor): Tensor of shape (seq_len, batch_size, num_directions * "
-"`hidden_size`)."
+msgid "output (Tensor): Tensor of shape (seq_len, batch_size, num_directions * `hidden_size`)."
 msgstr ""
 
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:14 of
 msgid ""
-"hiddens_n (Tensor): Tensor of shape (num_directions * `num_layers`, "
-"batch_size, `hidden_size`)."
+"hiddens_n (Tensor): Tensor of shape (num_directions * `num_layers`, batch_size, "
+"`hidden_size`)."
 msgstr ""
 
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:15 of
@@ -4712,224 +4459,219 @@ msgstr ""
 
 #: mindnlp.utils.download:1 of
 msgid "Download functions"
-msgstr ""
+msgstr "下载函数"
 
 #: mindnlp.utils.download.cache_file:1 mindnlp.utils.download.cached_path:1
 #: mindnlp.utils.download.get_from_cache:1 of
 msgid ""
-"If there is the file in cache_dir, return the path; if there is no such "
-"file, use the url to download."
+"If there is the file in cache_dir, return the path; if there is no such file, use the url to "
+"download."
 msgstr ""
+"如果本地缓存路径中存在该文件，直接返回对应文件路径；否则，若不存在该文件，则使用给定的url地址"
+"进行下载。"
 
 #: mindnlp.utils.download.cache_file:3 of
 msgid "The name of the required dataset file."
-msgstr ""
+msgstr "所需数据集文件的名称。"
 
 #: mindnlp.utils.download.cache_file:5 mindnlp.utils.download.cached_path:5
-#: mindnlp.utils.download.get_from_cache:5 mindnlp.utils.download.match_file:5
-#: of
+#: mindnlp.utils.download.get_from_cache:5 mindnlp.utils.download.match_file:5 of
 msgid "The path of save the file."
-msgstr ""
+msgstr "储存文件的路径。"
 
 #: mindnlp.utils.download.cache_file:7 of
 msgid "The url of the required dataset file."
-msgstr ""
+msgstr "所需数据集文件的url地址。"
 
 #: mindnlp.utils.download.cache_file:9 mindnlp.utils.download.cached_path:9
 #: mindnlp.utils.download.check_md5:5 mindnlp.utils.download.get_from_cache:7
 #: mindnlp.utils.download.http_get:7 of
 msgid "The true md5sum of download file."
-msgstr ""
+msgstr "下载文件的真实MD5值。"
 
 #: mindnlp.utils.download.cache_file:11 mindnlp.utils.download.cached_path:11
 #: mindnlp.utils.download.get_from_cache:9 of
 msgid ""
-"The name of the downloaded file.\\ (This parameter is required if the end"
-" of the link is not the downloaded file name.)"
-msgstr ""
+"The name of the downloaded file.\\ (This parameter is required if the end of the link is not "
+"the downloaded file name.)"
+msgstr "所需下载文件的名称（如果链接的末尾部分不是所需下载文件的名称，则需要输入该参数）。"
 
 #: mindnlp.utils.download.cache_file:17 mindnlp.utils.download.cached_path:17
 #: mindnlp.utils.download.get_filepath:6 of
 msgid ""
-"- str, If `path` is a folder containing a file, return "
-"`{path}\\{filename}`;   if `path` is a folder containing multiple files "
-"or a single file, return `path`."
+"- str, If `path` is a folder containing a file, return `{path}\\{filename}`;   if `path` is "
+"a folder containing multiple files or a single file, return `path`."
 msgstr ""
+"- 字符串，如果`路径`是一个包含有一个文件的文件夹，则以`路径\\文件名称`（`{path}\\{filename}`)"
+"的形式返回；如果`路径`是一个包含有多个文件的文件夹或单个文件，则返回`路径`。"
 
 #: mindnlp.utils.download.cache_file:19 mindnlp.utils.download.cached_path:19
 #: mindnlp.utils.download.get_filepath:8 of
 msgid ""
-"str, If `path` is a folder containing a file, return "
-"`{path}\\{filename}`; if `path` is a folder containing multiple files or "
-"a single file, return `path`."
+"str, If `path` is a folder containing a file, return `{path}\\{filename}`; if `path` is a "
+"folder containing multiple files or a single file, return `path`."
 msgstr ""
+"字符串，如果`路径`是一个包含有一个文件的文件夹，则以`路径\\文件名称`（`{path}\\{filename}`)的"
+"形式返回；如果`路径`是一个包含有多个文件的文件夹或单个文件，则返回`路径`。"
 
 #: mindnlp.utils.download.cache_file:22 mindnlp.utils.download.check_md5:10
 #: mindnlp.utils.download.match_file:14 of
 msgid "If `filename` is not a string."
-msgstr ""
+msgstr "如果`filename`不是一个字符串。"
 
 #: mindnlp.utils.download.cache_file:23 mindnlp.utils.download.match_file:15 of
 msgid "If `cache_dir` is not a string."
-msgstr ""
+msgstr "如果`cache_dir`不是一个字符串。"
 
-#: mindnlp.utils.download.cache_file:24
-#: mindnlp.utils.download.get_from_cache:20 of
+#: mindnlp.utils.download.cache_file:24 mindnlp.utils.download.get_from_cache:20 of
 msgid "If `url` is not a string."
-msgstr ""
+msgstr "如果`url`不是一个字符串。"
 
 #: mindnlp.utils.download.cache_file:25 mindnlp.utils.download.check_md5:11
 #: mindnlp.utils.download.match_file:16 of
 msgid "If `filename` is None."
-msgstr ""
+msgstr "如果`filename`为空值。"
 
 #: mindnlp.utils.download.cached_path:3 of
 msgid "The name or url of the required file ."
-msgstr ""
+msgstr "所需文件的名称或url地址。"
 
 #: mindnlp.utils.download.cached_path:7 of
-msgid ""
-"The additional folder to which the dataset is cached.(under the "
-"`cache_dir`)"
-msgstr ""
+msgid "The additional folder to which the dataset is cached.(under the `cache_dir`)"
+msgstr "数据集存储所在的具体文件夹（位于缓存地址`cache_dir`之下）。"
 
-#: mindnlp.utils.download.cached_path:22 mindnlp.utils.download.get_filepath:11
-#: of
+#: mindnlp.utils.download.cached_path:22 mindnlp.utils.download.get_filepath:11 of
 msgid "If `path` is not a string."
-msgstr ""
+msgstr "如果`path`不是一个字符串。"
 
-#: mindnlp.utils.download.cached_path:23 mindnlp.utils.download.get_filepath:12
-#: of
+#: mindnlp.utils.download.cached_path:23 mindnlp.utils.download.get_filepath:12 of
 msgid "If `path` is None."
-msgstr ""
+msgstr "如果`path`为空值。"
 
 #: mindnlp.utils.download.check_md5:1 of
 msgid "Check md5 of download file."
-msgstr ""
+msgstr "检查下载文件的MD5值。"
 
 #: mindnlp.utils.download.check_md5:3 of
 msgid "The fullname of download file."
-msgstr ""
+msgstr "下载文件的完整名称。"
 
 #: mindnlp.utils.download.check_md5:8 of
 msgid "bool, the md5 check result."
-msgstr ""
+msgstr "布尔值，MD5值检验的结果。"
 
 #: mindnlp.utils.download.get_cache_path:1 of
 msgid ""
-"Get the storage path of the default cache. If the environment "
-"'cache_path' is set, use the environment variable."
-msgstr ""
+"Get the storage path of the default cache. If the environment 'cache_path' is set, use the "
+"environment variable."
+msgstr "得到默认缓存的储存地址，如果环境变量`cache_path`已设置，则使用环境变量的值。"
 
-#: mindnlp.utils.download.get_cache_path:5 mindnlp.utils.download.http_get:15
-#: of
+#: mindnlp.utils.download.get_cache_path:5 mindnlp.utils.download.http_get:15 of
 msgid "str, the path of default or the environment 'cache_path'."
-msgstr ""
+msgstr "字符串，默认的路径或环境变量`cache_path`。"
 
 #: mindnlp.utils.download.get_dataset_url:1 of
 msgid "Get dataset url for download"
-msgstr ""
+msgstr "得到数据集的url地址以供下载"
 
 #: mindnlp.utils.download.get_dataset_url:3 of
 msgid "The name of the dataset to download."
-msgstr ""
+msgstr "需要下载的数据集的名称。"
 
 #: mindnlp.utils.download.get_dataset_url:6 of
 msgid "str, the url of the dataset to download."
-msgstr ""
+msgstr "字符串，需要下载的数据集的url地址。"
 
 #: mindnlp.utils.download.get_dataset_url:8 of
 msgid "If `datasetname` is not a string."
-msgstr ""
+msgstr "如果`datasetname`不是一个字符串。"
 
 #: mindnlp.utils.download.get_dataset_url:9 of
 msgid "If `datasetname` is None."
-msgstr ""
+msgstr "如果`datasetname`为空值。"
 
 #: mindnlp.utils.download.get_filepath:1 of
 msgid "Get the filepath of file."
-msgstr ""
+msgstr "得到文件对应的文件地址。"
 
 #: mindnlp.utils.download.get_filepath:3 of
 msgid "The path of the required file."
-msgstr ""
+msgstr "所需文件的地址。"
 
 #: mindnlp.utils.download.get_from_cache:3 of
 msgid "The path to download the file."
-msgstr ""
+msgstr "下载文件的地址。"
 
 #: mindnlp.utils.download.get_from_cache:15 of
-msgid ""
-"- str, The path of save the downloaded file. - str, The name of "
-"downloaded file."
-msgstr ""
+msgid "- str, The path of save the downloaded file. - str, The name of downloaded file."
+msgstr "- 字符串，储存下载所得文件的地址。 -字符串，下载所得文件的名称。"
 
 #: mindnlp.utils.download.get_from_cache:17 of
 msgid "str, The path of save the downloaded file."
-msgstr ""
+msgstr "字符串，储存下载所得文件的地址。"
 
 #: mindnlp.utils.download.get_from_cache:18 of
 msgid "str, The name of downloaded file."
-msgstr ""
+msgstr "字符串，下载所得文件的名称。"
 
 #: mindnlp.utils.download.get_from_cache:21 of
 msgid "If `cache_dir` is not a Path."
-msgstr ""
+msgstr "如果`cache_dir`不是一个路径。"
 
-#: mindnlp.utils.download.get_from_cache:22 mindnlp.utils.download.http_get:18
-#: of
+#: mindnlp.utils.download.get_from_cache:22 mindnlp.utils.download.http_get:18 of
 msgid "If `url` is None."
-msgstr ""
+msgstr "如果`url`为空值。"
 
 #: mindnlp.utils.download.http_get:1 of
 msgid "Download from given url, save to path."
-msgstr ""
+msgstr "通过给定的url地址下载，储存到地址。"
 
 #: mindnlp.utils.download.http_get:3 of
 msgid "download url"
-msgstr ""
+msgstr "下载url地址"
 
 #: mindnlp.utils.download.http_get:5 of
 msgid "download to given path (default value: '{home}\\.text')"
-msgstr ""
+msgstr "下载到给定地址（默认值：'{home}\\.text）"
 
 #: mindnlp.utils.download.http_get:9 of
 msgid ""
-"The name of the downloaded file.\\ (This para meter is required if the "
-"end of the link is not the downloaded file name.)"
-msgstr ""
+"The name of the downloaded file.\\ (This para meter is required if the end of the link is "
+"not the downloaded file name.)"
+msgstr "下载所得文件的名称（如果链接的末尾部分不是所需下载文件的名称，则需要输入该参数）。"
 
 #: mindnlp.utils.download.http_get:17 of
 msgid "If `url` is not a String."
-msgstr ""
+msgstr "如果`url`不是一个字符串。"
 
 #: mindnlp.utils.download.match_file:1 of
 msgid ""
-"If there is the file in cache_dir, return the path; otherwise, return "
-"empty string or error."
-msgstr ""
+"If there is the file in cache_dir, return the path; otherwise, return empty string or error."
+msgstr "如果`cache_dir`地址中存在该文件，返回对应路径；否则，返回一个空字符串或者报错信息。"
 
 #: mindnlp.utils.download.match_file:3 of
 msgid "The name of the required file."
-msgstr ""
+msgstr "所需文件的名称。"
 
 #: mindnlp.utils.download.match_file:8 of
 msgid ""
-"- str, If there is the file in cache_dir, return filename;   if there is "
-"no such file, return empty string '';   if there are two or more matching"
-" file, report an error."
+"- str, If there is the file in cache_dir, return filename;   if there is no such file, "
+"return empty string '';   if there are two or more matching file, report an error."
 msgstr ""
+"- 字符串，如果`cache_dir`地址中存在该文件，则返回文件名称；如果没有对应文件存在，返回空字符"
+"串；如果存在两个或多个可匹配的文件，返回报错信息。"
 
 #: mindnlp.utils.download.match_file:10 of
 msgid ""
-"str, If there is the file in cache_dir, return filename; if there is no "
-"such file, return empty string ''; if there are two or more matching "
-"file, report an error."
+"str, If there is the file in cache_dir, return filename; if there is no such file, return "
+"empty string ''; if there are two or more matching file, report an error."
 msgstr ""
+"字符串，如果`cache_dir`地址中存在该文件，则返回文件名称；如果没有对应文件存在，返回空字符串；"
+"如果存在两个或多个可匹配的文件，返回报错信息。"
 
 #: mindnlp.utils.download.match_file:17 of
 msgid "If `cache_dir` is None."
-msgstr ""
+msgstr "如果`cache_dir`为空值。"
 
 #: mindnlp.utils:1 of
 msgid "Common utils"
@@ -4954,4 +4696,3 @@ msgstr ""
 #: ../../api/workflow.rst:36
 msgid "training\\_pipeline"
 msgstr ""
-
