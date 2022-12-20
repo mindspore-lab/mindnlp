@@ -2433,28 +2433,28 @@ msgstr ""
 msgid ""
 "a function transforms specific language column in IWSLT2017 dataset into "
 "tensors"
-msgstr ""
+msgstr "将IWSLT2017数据集中的指定列转换为张量"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017_Process:3
 msgid "IWSLT2017 dataset"
-msgstr ""
+msgstr "IWSLT2017 数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017_Process:5
 msgid "The language column name in IWSLT2017"
-msgstr ""
+msgstr "IWSLT2017数据集中需要预处理的列名。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017_Process:7
 msgid "Tokenizer you what to used"
-msgstr ""
+msgstr "选用的分词器。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017_Process:9
 msgid ""
 "The vocab you use, defaults to None. If None, a new vocab will be created."
-msgstr ""
+msgstr "你想使用的词表对象，默认为空。如果为空，一个新的词表对象将会被创建。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017_Process:12
@@ -2466,17 +2466,17 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017_Process:14
 msgid "MapDataset, dataset after process."
-msgstr ""
+msgstr "MapDataset，预处理后返回的数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017_Process:15
 msgid "Vocab, new vocab created from dataset if 'vocab' is None."
-msgstr ""
+msgstr "Vocab，当 `vocab` 为空时创建的新的词表对象。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017_Process:17
 msgid "If `language` is not string."
-msgstr ""
+msgstr "如果 `language` 不是string。"
 
 #: ../../api/dataset/machine_translation.rst:22
 msgid "multi30k"
@@ -2539,12 +2539,12 @@ msgstr "如果 `language_pair` 不是('de', 'en')或('en', 'de')。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: of mindnlp.dataset.machine_translation.multi30k.Multi30k_Process:1
 msgid "the process of the Multi30k dataset"
-msgstr ""
+msgstr "Multi30k数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: of mindnlp.dataset.machine_translation.multi30k.Multi30k_Process:3
 msgid "Multi30k dataset."
-msgstr ""
+msgstr "Multi30k数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: of mindnlp.dataset.machine_translation.multi30k.Multi30k_Process:5
@@ -2571,7 +2571,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewpolarity.py:docstring
 #: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:9
 msgid "vocabulary object, used to store the mapping of token and index."
-msgstr ""
+msgstr "词表对象，用于存储分词和索引的映射。默认为空。如果为空，一个新的词表对象将会被创建。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: of mindnlp.dataset.machine_translation.multi30k.Multi30k_Process:7
@@ -2580,7 +2580,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/conll2000chunking.py:docstring
 #: mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking_Process:7
 msgid "The number of rows each batch is created with. Default: 64."
-msgstr ""
+msgstr "指定每个批处理数据包含的数据条目。默认值：64。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: of mindnlp.dataset.machine_translation.multi30k.Multi30k_Process:9
@@ -2588,10 +2588,8 @@ msgstr ""
 #: mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking_Process:9
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/agnews.py:docstring
 #: mindnlp.dataset.text_classification.agnews.AG_NEWS_Process:14
-#, fuzzy
-#| msgid "The dimension of the pretrained vector. Default: 300."
 msgid "The max length of the sentence. Default: 500."
-msgstr "预训练词向量的维度.默认值：300."
+msgstr "句子的最大长度。默认值：500。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: of mindnlp.dataset.machine_translation.multi30k.Multi30k_Process:11
@@ -2606,13 +2604,16 @@ msgid ""
 "whether to discard the batch and not pass it to the next operation. Default: "
 "False."
 msgstr ""
+"当最后一批数据包含的数据条目小于batch_size时，"
+"是否丢弃该批次，而不将其传递到下一个操作。默认值："
+"False，不丢弃。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: of mindnlp.dataset.machine_translation.multi30k.Multi30k_Process:15
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/conll2000chunking.py:docstring
 #: mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking_Process:18
 msgid "- **dataset** (MapDataset) - dataset after transforms."
-msgstr ""
+msgstr "- **dataset** (MapDataset) - 预处理操作后返回的数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: of mindnlp.dataset.machine_translation.multi30k.Multi30k_Process:17
@@ -2639,7 +2640,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewpolarity.py:docstring
 #: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:14
 msgid "**dataset** (MapDataset) - dataset after transforms."
-msgstr ""
+msgstr "**dataset** (MapDataset) - 预处理操作后返回的数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: of mindnlp.dataset.machine_translation.multi30k.Multi30k_Process:19
@@ -2666,7 +2667,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewpolarity.py:docstring
 #: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:17
 msgid "If `input_column` is not a string."
-msgstr ""
+msgstr "如果 `input_column` 不是string。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/__init__.py:docstring
 #: of mindnlp.dataset.machine_translation:1
@@ -2716,89 +2717,89 @@ msgstr "要返回的数据集分块。默认：('train','dev')。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:1
 msgid "the process of the squad1 dataset"
-msgstr ""
+msgstr "squad1数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:3
 msgid "Squad1 dataset."
-msgstr ""
+msgstr "Squad1数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:5
 msgid "Tokenizer you choose to tokenize the text dataset."
-msgstr ""
+msgstr "对数据集进行分词操作的分词器。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:7
 msgid ""
 "Vocabulary object of words, used to store the mapping of the token and index."
-msgstr ""
+msgstr "词表对象，用于存储分词和索引的映射。默认为空。如果为空，一个新的词表对象将会被创建。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:9
 msgid ""
 "Vocabulary object of chars, used to store the mapping of the token and index."
-msgstr ""
+msgstr "字符词表对象，用于存储字符和索引的映射。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:11
 msgid "Max length of the context. Default: 768."
-msgstr ""
+msgstr "context的最大长度。默认：768。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:13
 msgid "Max length of the question. Default: 64."
-msgstr ""
+msgstr "question的最大长度。默认：64。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:15
 msgid "Max length of the char. Default: 48."
-msgstr ""
+msgstr "字符的最大长度。默认：48。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:23
 msgid "- MapDataset, Squad1 Dataset after process."
-msgstr ""
+msgstr "- MapDataset，预处理操作后返回的Squad1数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:25
 msgid "MapDataset, Squad1 Dataset after process."
-msgstr ""
+msgstr "MapDataset，预处理操作后返回的Squad1数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:27
 msgid "If `word_vocab` is not of type text.Vocab."
-msgstr ""
+msgstr "如果 `word_vocab` 不是text.Vocab类型。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:28
 msgid "If `char_vocab` is not of type text.Vocab."
-msgstr ""
+msgstr "如果 `char_vocab` 不是text.Vocab类型。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:29
 msgid "If `max_context_len` is not of type int."
-msgstr ""
+msgstr "如果 `max_context_len` 不是int类型。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:30
 msgid "If `max_question_len` is not of type int."
-msgstr ""
+msgstr "如果 `max_question_len` 不是int类型。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:31
 msgid "If `max_char_len` is not of type int."
-msgstr ""
+msgstr "如果 `max_char_len` 不是int类型。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:32
 msgid "If `batch_size` is not of type int."
-msgstr ""
+msgstr "如果 `batch_size` 不是int类型。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:33
 msgid "If `drop_remainder` is not of type bool."
-msgstr ""
+msgstr "如果 `drop_remainder` 不是bool类型。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.Squad1:1
@@ -2897,7 +2898,7 @@ msgid ""
 "A list consisting of the upper boundaries of the buckets. Must be strictly "
 "increasing. Default: None."
 msgstr ""
-"由桶的上边界组成的列表。必须严格递增。默认值：None"
+"由桶的上边界组成的列表。必须严格递增。默认值：None。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/conll2000chunking.py:docstring
 #: of mindnlp.dataset.sequence_tagging.conll2000chunking.Conll2000chunking:1
@@ -2956,7 +2957,7 @@ msgstr "agnews"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/agnews.py:docstring
 #: of mindnlp.dataset.text_classification.agnews:1
 msgid "AG_NEWS load function"
-msgstr ""
+msgstr "AG_NEWS数据集加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/agnews.py:docstring
 #: of mindnlp.dataset.text_classification.agnews.AG_NEWS:1
@@ -2966,12 +2967,12 @@ msgstr "加载AG_NEWS数据集"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/agnews.py:docstring
 #: of mindnlp.dataset.text_classification.agnews.AG_NEWS_Process:1
 msgid "the process of the AG_News dataset"
-msgstr ""
+msgstr "AG_News数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/agnews.py:docstring
 #: of mindnlp.dataset.text_classification.agnews.AG_NEWS_Process:3
 msgid "AG_News dataset."
-msgstr ""
+msgstr "AG_News数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/agnews.py:docstring
 #: of mindnlp.dataset.text_classification.agnews.AG_NEWS_Process:7
@@ -2994,19 +2995,17 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewpolarity.py:docstring
 #: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:7
 msgid "tokenizer you choose to tokenize the text dataset."
-msgstr ""
+msgstr "对数据集进行分词操作的分词器。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/agnews.py:docstring
 #: of mindnlp.dataset.text_classification.agnews.AG_NEWS_Process:12
-#, fuzzy
-#| msgid "The name of the pretrained vector. Default: \"1M\"."
 msgid "The number of rows each batch is created with. Default: 512."
-msgstr "预训练词向量的名字.默认值：\"1M\"."
+msgstr "指定每个批处理数据包含的数据条目。默认：512。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/agnews.py:docstring
 #: of mindnlp.dataset.text_classification.agnews.AG_NEWS_Process:16
 msgid "the column needed to be transpormed of the agnews dataset."
-msgstr ""
+msgstr "AG_News数据集中需要预处理的列名。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/agnews.py:docstring
 #: of mindnlp.dataset.text_classification.agnews.AG_NEWS_Process:22
@@ -3068,7 +3067,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewpolarity.py:docstring
 #: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:15
 msgid "**Vocab** (Vocab) - vocab created from dataset"
-msgstr ""
+msgstr "**Vocab** (Vocab) - 当 `vocab` 为空时创建的新的词表对象。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/agnews.py:docstring
 #: of mindnlp.dataset.text_classification.agnews.Agnews:1
@@ -3093,19 +3092,19 @@ msgstr "加载AmazonReviewFull数据集"
 #: of
 #: mindnlp.dataset.text_classification.amazonreviewfull.AmazonReviewFull_Process:1
 msgid "the process of the AmazonReviewFull dataset"
-msgstr ""
+msgstr "AmazonReviewFull数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/amazonreviewfull.py:docstring
 #: of
 #: mindnlp.dataset.text_classification.amazonreviewfull.AmazonReviewFull_Process:3
 msgid "AmazonReviewFull dataset."
-msgstr ""
+msgstr "AmazonReviewFull数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/amazonreviewfull.py:docstring
 #: of
 #: mindnlp.dataset.text_classification.amazonreviewfull.AmazonReviewFull_Process:5
 msgid "the column needed to be transpormed of the AmazonReviewFull dataset."
-msgstr ""
+msgstr "AmazonReviewFull数据集中需要预处理的列名。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/amazonreviewfull.py:docstring
 #: of mindnlp.dataset.text_classification.amazonreviewfull.Amazonreviewfull:1
@@ -3131,20 +3130,20 @@ msgstr "加载AmazonReviewPolarity数据集"
 #: of
 #: mindnlp.dataset.text_classification.amazonreviewpolarity.AmazonReviewPolarity_Process:1
 msgid "the process of the AmazonReviewPolarity dataset"
-msgstr ""
+msgstr "AmazonReviewPolarity数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/amazonreviewpolarity.py:docstring
 #: of
 #: mindnlp.dataset.text_classification.amazonreviewpolarity.AmazonReviewPolarity_Process:3
 msgid "AmazonReviewPolarity dataset."
-msgstr ""
+msgstr "AmazonReviewPolarity数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/amazonreviewpolarity.py:docstring
 #: of
 #: mindnlp.dataset.text_classification.amazonreviewpolarity.AmazonReviewPolarity_Process:5
 msgid ""
 "the column needed to be transpormed of the AmazonReviewPolarity dataset."
-msgstr ""
+msgstr "AmazonReviewPolarity数据集中需要预处理的列名。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/amazonreviewpolarity.py:docstring
 #: of
@@ -3169,17 +3168,17 @@ msgstr "加载CoLA数据集"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/cola.py:docstring
 #: of mindnlp.dataset.text_classification.cola.CoLA_Process:1
 msgid "the process of the CoLA dataset"
-msgstr ""
+msgstr "CoLA数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/cola.py:docstring
 #: of mindnlp.dataset.text_classification.cola.CoLA_Process:3
 msgid "CoLA dataset."
-msgstr ""
+msgstr "CoLA数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/cola.py:docstring
 #: of mindnlp.dataset.text_classification.cola.CoLA_Process:5
 msgid "the column needed to be transpormed of the CoLA dataset."
-msgstr ""
+msgstr "CoLA数据集中需要预处理的列名。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/cola.py:docstring
 #: of mindnlp.dataset.text_classification.cola.Cola:1
@@ -3203,17 +3202,17 @@ msgstr "加载DBpedia数据集"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/dbpedia.py:docstring
 #: of mindnlp.dataset.text_classification.dbpedia.DBpedia_Process:1
 msgid "the process of the DBpedia dataset"
-msgstr ""
+msgstr "DBpedia数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/dbpedia.py:docstring
 #: of mindnlp.dataset.text_classification.dbpedia.DBpedia_Process:3
 msgid "DBpedia dataset."
-msgstr ""
+msgstr "DBpedia数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/dbpedia.py:docstring
 #: of mindnlp.dataset.text_classification.dbpedia.DBpedia_Process:5
 msgid "the column needed to be transpormed of the DBpedia dataset."
-msgstr ""
+msgstr "DBpedia数据集中需要预处理的列名。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/dbpedia.py:docstring
 #: of mindnlp.dataset.text_classification.dbpedia.Dbpedia:1
@@ -3237,33 +3236,34 @@ msgstr "加载IMDB数据集"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/imdb.py:docstring
 #: of mindnlp.dataset.text_classification.imdb.IMDB_Process:1
 msgid "the process of the IMDB dataset"
-msgstr ""
+msgstr "IMDB数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/imdb.py:docstring
 #: of mindnlp.dataset.text_classification.imdb.IMDB_Process:3
 msgid "IMDB dataset."
-msgstr ""
+msgstr "IMDB数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/imdb.py:docstring
 #: of mindnlp.dataset.text_classification.imdb.IMDB_Process:9
 msgid "size of the batch."
-msgstr ""
+msgstr "指定每个批处理数据包含的数据条目。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/imdb.py:docstring
 #: of mindnlp.dataset.text_classification.imdb.IMDB_Process:11
 msgid "max length of the sentence."
-msgstr ""
+msgstr "句子的最大长度。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/imdb.py:docstring
 #: of mindnlp.dataset.text_classification.imdb.IMDB_Process:13
 msgid "A list consisting of the upper boundaries of the buckets."
-msgstr ""
+msgstr "由桶的上边界组成的列表。必须严格递增。默认值：None。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/imdb.py:docstring
 #: of mindnlp.dataset.text_classification.imdb.IMDB_Process:15
 msgid ""
 "If True, will drop the last batch for each bucket if it is not a full batch"
 msgstr ""
+"如果为True，当最后一批数据包含的数据条目小于batch_size时，丢弃该批次。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/imdb.py:docstring
 #: of mindnlp.dataset.text_classification.imdb.Imdb:1
@@ -3294,7 +3294,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mnli.py:docstring
 #: of mindnlp.dataset.text_classification.mnli.MNLI_Process:1
 msgid "the process of the MNLI dataset"
-msgstr ""
+msgstr "MNLI数据集的数据预处理函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mnli.py:docstring
 #: of mindnlp.dataset.text_classification.mnli.MNLI_Process:3
@@ -3304,7 +3304,7 @@ msgstr "MNLI数据集"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mnli.py:docstring
 #: of mindnlp.dataset.text_classification.mnli.MNLI_Process:5
 msgid "the column or columns needed to be transpormed of the MNLI dataset"
-msgstr ""
+msgstr "MNLI数据集中需要预处理的列名。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mnli.py:docstring
 #: of mindnlp.dataset.text_classification.mnli.MNLI_Process:7
@@ -3321,7 +3321,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/wnli.py:docstring
 #: mindnlp.dataset.text_classification.wnli.WNLI_Process:7
 msgid "tokenizer you choose to tokenize the text dataset"
-msgstr ""
+msgstr "对数据集进行分词操作的分词器。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mnli.py:docstring
 #: of mindnlp.dataset.text_classification.mnli.MNLI_Process:9
@@ -3338,7 +3338,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/wnli.py:docstring
 #: mindnlp.dataset.text_classification.wnli.WNLI_Process:9
 msgid "vocabulary object, used to store the mapping of token and index"
-msgstr ""
+msgstr "词表对象，用于存储分词和索引的映射。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mnli.py:docstring
 #: of mindnlp.dataset.text_classification.mnli.MNLI_Process:12
@@ -3374,7 +3374,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/wnli.py:docstring
 #: mindnlp.dataset.text_classification.wnli.WNLI_Process:14
 msgid "**dataset** (MapDataset) - dataset after transforms"
-msgstr ""
+msgstr "**dataset** (MapDataset) - 预处理后返回的数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mnli.py:docstring
 #: of mindnlp.dataset.text_classification.mnli.MNLI_Process:17
@@ -3391,7 +3391,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/wnli.py:docstring
 #: mindnlp.dataset.text_classification.wnli.WNLI_Process:17
 msgid "If `column` is not a string or Tuple[str]"
-msgstr ""
+msgstr "如果 `column` 不是string或者Tuple[str]。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mnli.py:docstring
 #: of mindnlp.dataset.text_classification.mnli.Mnli:1
@@ -3415,17 +3415,17 @@ msgstr "加载MRPC数据集"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mrpc.py:docstring
 #: of mindnlp.dataset.text_classification.mrpc.MRPC_Process:1
 msgid "the process of the MRPC dataset"
-msgstr ""
+msgstr "MRPC数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mrpc.py:docstring
 #: of mindnlp.dataset.text_classification.mrpc.MRPC_Process:3
 msgid "MRPC dataset."
-msgstr ""
+msgstr "MRPC数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mrpc.py:docstring
 #: of mindnlp.dataset.text_classification.mrpc.MRPC_Process:5
 msgid "the column or columns needed to be transpormed of the MRPC dataset"
-msgstr ""
+msgstr "MRPC数据集中需要预处理的列名。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mrpc.py:docstring
 #: of mindnlp.dataset.text_classification.mrpc.Mrpc:1
@@ -3449,17 +3449,17 @@ msgstr "加载QNLI数据集"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/qnli.py:docstring
 #: of mindnlp.dataset.text_classification.qnli.QNLI_Process:1
 msgid "the process of the QNLI dataset"
-msgstr ""
+msgstr "QNLI数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/qnli.py:docstring
 #: of mindnlp.dataset.text_classification.qnli.QNLI_Process:3
 msgid "QNLI dataset."
-msgstr ""
+msgstr "QNLI数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/qnli.py:docstring
 #: of mindnlp.dataset.text_classification.qnli.QNLI_Process:5
 msgid "the column or columns needed to be transpormed of the QNLI dataset"
-msgstr ""
+msgstr "QNLI数据集中需要预处理的列名。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/qnli.py:docstring
 #: of mindnlp.dataset.text_classification.qnli.Qnli:1
@@ -3473,7 +3473,7 @@ msgstr "qqp"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/qqp.py:docstring
 #: of mindnlp.dataset.text_classification.qqp:1
 msgid "QQP load function"
-msgstr ""
+msgstr "QQP数据集加载函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/qqp.py:docstring
 #: of mindnlp.dataset.text_classification.qqp.QQP:1
@@ -3483,17 +3483,17 @@ msgstr "加载QQP数据集"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/qqp.py:docstring
 #: of mindnlp.dataset.text_classification.qqp.QQP_Process:1
 msgid "the process of the QQP dataset"
-msgstr ""
+msgstr "QQP数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/qqp.py:docstring
 #: of mindnlp.dataset.text_classification.qqp.QQP_Process:3
 msgid "QQP dataset."
-msgstr ""
+msgstr "QQP数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/qqp.py:docstring
 #: of mindnlp.dataset.text_classification.qqp.QQP_Process:5
 msgid "the column or columns needed to be transpormed of the QQP dataset"
-msgstr ""
+msgstr "QQP数据集中需要预处理的列名。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/qqp.py:docstring
 #: of mindnlp.dataset.text_classification.qqp.Qqp:1
@@ -3520,12 +3520,12 @@ msgstr "加载WNLI数据集"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/rte.py:docstring
 #: of mindnlp.dataset.text_classification.rte.RTE_Process:1
 msgid "the process of the RTE dataset"
-msgstr ""
+msgstr "RTE数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/rte.py:docstring
 #: of mindnlp.dataset.text_classification.rte.RTE_Process:5
 msgid "the column or columns needed to be transpormed of the RTE dataset"
-msgstr ""
+msgstr "RTE数据集中需要进行预处理的列名。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/rte.py:docstring
 #: of mindnlp.dataset.text_classification.rte.Rte:1
@@ -3568,17 +3568,17 @@ msgstr "加载SST2数据集"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/sst2.py:docstring
 #: of mindnlp.dataset.text_classification.sst2.SST2_Process:1
 msgid "the process of the SST2 dataset"
-msgstr ""
+msgstr "SST2数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/sst2.py:docstring
 #: of mindnlp.dataset.text_classification.sst2.SST2_Process:3
 msgid "SST2 dataset."
-msgstr ""
+msgstr "SST2数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/sst2.py:docstring
 #: of mindnlp.dataset.text_classification.sst2.SST2_Process:5
 msgid "the column needed to be transpormed of the sst2 dataset."
-msgstr ""
+msgstr "SST2数据集中需要预处理的列名。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/sst2.py:docstring
 #: of mindnlp.dataset.text_classification.sst2.Sst2:1
@@ -3602,17 +3602,17 @@ msgstr "加载STSB数据集"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/stsb.py:docstring
 #: of mindnlp.dataset.text_classification.stsb.STSB_Process:1
 msgid "the process of the STSB dataset"
-msgstr ""
+msgstr "STSB数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/stsb.py:docstring
 #: of mindnlp.dataset.text_classification.stsb.STSB_Process:3
 msgid "STSB dataset."
-msgstr ""
+msgstr "STSB数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/stsb.py:docstring
 #: of mindnlp.dataset.text_classification.stsb.STSB_Process:5
 msgid "the column or columns needed to be transpormed of the STSB dataset"
-msgstr ""
+msgstr "STSB数据集中需要预处理的列名。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/stsb.py:docstring
 #: of mindnlp.dataset.text_classification.stsb.Stsb:1
@@ -3631,17 +3631,17 @@ msgstr "WNLI数据集"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/wnli.py:docstring
 #: of mindnlp.dataset.text_classification.wnli.WNLI_Process:1
 msgid "the process of the WNLI dataset"
-msgstr ""
+msgstr "WNLI数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/wnli.py:docstring
 #: of mindnlp.dataset.text_classification.wnli.WNLI_Process:3
 msgid "WNLI dataset."
-msgstr ""
+msgstr "WNLI数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/wnli.py:docstring
 #: of mindnlp.dataset.text_classification.wnli.WNLI_Process:5
 msgid "the column or columns needed to be transpormed of the WNLI dataset"
-msgstr ""
+msgstr "WNLI数据集中需要预处理的列名。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/wnli.py:docstring
 #: of mindnlp.dataset.text_classification.wnli.Wnli:1
@@ -3674,17 +3674,17 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yahooanswers.py:docstring
 #: of mindnlp.dataset.text_classification.yahooanswers.YahooAnswers_Process:1
 msgid "the process of the YahooAnswers dataset"
-msgstr ""
+msgstr "YahooAnswers数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yahooanswers.py:docstring
 #: of mindnlp.dataset.text_classification.yahooanswers.YahooAnswers_Process:3
 msgid "YahooAnswers dataset."
-msgstr ""
+msgstr "YahooAnswers数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yahooanswers.py:docstring
 #: of mindnlp.dataset.text_classification.yahooanswers.YahooAnswers_Process:5
 msgid "the column needed to be transpormed of the YahooAnswers dataset."
-msgstr ""
+msgstr "YahooAnswers数据集中需要预处理的列名。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yahooanswers.py:docstring
 #: of mindnlp.dataset.text_classification.yahooanswers.Yahooanswers:1
@@ -3709,19 +3709,19 @@ msgstr "加载YelpReviewFull数据集"
 #: of
 #: mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull_Process:1
 msgid "the process of the YelpReviewFull dataset"
-msgstr ""
+msgstr "YelpReviewFull数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewfull.py:docstring
 #: of
 #: mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull_Process:3
 msgid "YelpReviewFull dataset."
-msgstr ""
+msgstr "YelpReviewFull数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewfull.py:docstring
 #: of
 #: mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull_Process:5
 msgid "the column needed to be transpormed of the YelpReviewFull dataset."
-msgstr ""
+msgstr "YelpReviewFull数据集中需要预处理的列名。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewfull.py:docstring
 #: of mindnlp.dataset.text_classification.yelpreviewfull.Yelpreviewfull:1
@@ -3747,19 +3747,19 @@ msgstr "加载YelpReviewPolarity数据集"
 #: of
 #: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:1
 msgid "the process of the YelpReviewPolarity dataset"
-msgstr ""
+msgstr "YelpReviewPolarity数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewpolarity.py:docstring
 #: of
 #: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:3
 msgid "YelpReviewPolarity dataset."
-msgstr ""
+msgstr "YelpReviewPolarity数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewpolarity.py:docstring
 #: of
 #: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:5
 msgid "the column needed to be transpormed of the YelpReviewPolarity dataset."
-msgstr ""
+msgstr "YelpReviewPolarity数据集中需要预处理的列名。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewpolarity.py:docstring
 #: of
@@ -5461,7 +5461,7 @@ msgstr ""
 
 #: ../../api/modules/attentions.rst:2
 msgid "Attentions"
-msgstr "注意力机制"
+msgstr ""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions:1
