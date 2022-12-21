@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-UDPOS dataset
+UDPOS load function
 """
 # pylint: disable=C0103
 
