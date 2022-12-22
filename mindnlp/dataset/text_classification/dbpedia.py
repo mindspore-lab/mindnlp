@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-DBpedia dataset
+DBpedia load function
 """
 # pylint: disable=C0103
 

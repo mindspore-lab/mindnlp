@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-YahooAnswers dataset
+YahooAnswers load function
 """
 # pylint: disable=C0103
 

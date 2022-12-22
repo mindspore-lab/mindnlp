@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-QNLI dataset
+QNLI load function
 """
 # pylint: disable=C0103
 

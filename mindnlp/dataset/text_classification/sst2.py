@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-SST2 dataset
+SST2 load function
 """
 # pylint: disable=C0103
 

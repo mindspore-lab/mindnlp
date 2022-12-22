@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-MNLI dataset
+MNLI load function
 """
 # pylint: disable=C0103
 

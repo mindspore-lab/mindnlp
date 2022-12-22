@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-AmazonReviewFull dataset
+AmazonReviewFull load function
 """
 # pylint: disable=C0103
 
