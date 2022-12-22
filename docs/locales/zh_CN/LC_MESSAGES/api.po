@@ -399,8 +399,8 @@ msgstr "解码器模块的基类"
 #: mindnlp.modules.embeddings.glove_embedding.Glove:1
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/word2vec_embedding.py:docstring
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec:1
-msgid "Create vocab and Embedding from a given pre-trained vector file."
-msgstr ""
+msgid "Embedding layer."
+msgstr "embedding层."
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/abc/modules/embedding.py:docstring
 #: of mindnlp.abc.modules.embedding.TokenEmbedding:3
@@ -411,7 +411,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/word2vec_embedding.py:docstring
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec:3
 msgid "Passins into Vocab for initialization."
-msgstr ""
+msgstr "传入vocab用于初始化."
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/abc/modules/embedding.py:docstring
 #: of mindnlp.abc.modules.embedding.TokenEmbedding:5
@@ -422,7 +422,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/abc/modules/embedding.py:docstring
 #: of mindnlp.abc.modules.embedding.TokenEmbedding:7
 msgid "Whether this parameter needs to be gradient to update."
-msgstr ""
+msgstr "参数是否需要梯度下降来更新."
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/abc/modules/embedding.py:docstring
 #: of mindnlp.abc.modules.embedding.TokenEmbedding:9
@@ -6006,8 +6006,8 @@ msgstr "Tensor, 返回embedding运算结果."
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:1
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/word2vec_embedding.py:docstring
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:1
-msgid "Creates Embedding instance from given 2-dimensional FloatTensor."
-msgstr ""
+msgid "Creates Embedding instance from given pre-trained word vector."
+msgstr "从预训练词向量创建embedding."
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/fasttext_embedding.py:docstring
 #: of mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:3
@@ -6074,10 +6074,6 @@ msgstr ""
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:16
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/word2vec_embedding.py:docstring
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:18
-#, fuzzy
-#| msgid ""
-#| "requires_grad (bool): Whether this parameter needs to be gradient to update."
-#| "Default: True."
 msgid ""
 "requires_grad (bool): Whether this parameter needs to be gradient to update."
 msgstr "requires_grad (bool): 参数是否需要梯度下降来更新.默认值: True."
