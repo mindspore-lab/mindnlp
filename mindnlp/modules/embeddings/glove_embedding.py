@@ -35,7 +35,7 @@ logging.getLogger().setLevel(logging.INFO)
 
 class Glove(TokenEmbedding):
     r"""
-    Create vocab and Embedding from a given pre-trained vector file.
+    Embedding layer.
 
     Args:
         vocab (Vocab): Passins into Vocab for initialization.
@@ -76,7 +76,7 @@ class Glove(TokenEmbedding):
     def from_pretrained(cls, name='6B', dims=300, root=DEFAULT_ROOT,
                         special_tokens=("<pad>", "<unk>"), special_first=True, **kwargs):
         r"""
-        Creates Embedding instance from given 2-dimensional FloatTensor.
+        Creates Embedding instance from given pre-trained word vector.
 
         Args:
             name (str): The name of the pretrained vector. Default: '6B'.
