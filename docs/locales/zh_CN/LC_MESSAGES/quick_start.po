@@ -26,6 +26,43 @@ msgstr "数据集和数据变换"
 msgid "First Model"
 msgstr "第一个模型"
 
+#: ../../quick_start/first_model.rst:4
+msgid ""
+"Sentiment classification is a classic task in natural language "
+"processing. It is a typical classification problem to mine and "
+"analyze people's sentiments expressed in the text, which is positive "
+"or negative. The following uses MindNLP to implement an RNN-based "
+"sentimental classification model."
+msgstr ""
+"情感分类是自然语言处理中的经典任务，目标在于对给定文本中的情感色彩进行"
+"挖掘、分析，是典型的分类问题。本节使用MindNLP实现一个基于RNN网络的情感分类模型。"
+
+#: ../../quick_start/first_model.rst:9
+msgid ""
+"According to the task, the base module :py:class:`~mindnlp.abc.Seq2vecModel` "
+"can be used to build the model. The function of module "
+":py:class:`~mindnlp.abc.Seq2vecModel` is to extract semantic feature of "
+"the input sequential and calculate to the result vector. It consists of "
+"two modules, ``encoder`` and ``head``, where ``encoder`` mapping the input "
+"sentence into semantic vector and ``head`` performing further calculation "
+"on ``encoder`` output to get the final result."
+msgstr ""
+"根据任务的模型架构，使用 :py:class:`~mindnlp.abc.Seq2vecModel` 进行模型构建。模块 "
+":py:class:`~mindnlp.abc.Seq2vecModel` 的功能是提取输入序列数据的语义特征并计算得到"
+"结果向量。这一模块由 ``encoder`` 和 ``head`` 两部分组成，其中 ``encoder`` 将输入"
+"句子映射为语义向量，而 ``head`` 对 ``encoder`` 的输出进行进一步计算得到最终的结果。"
+
+#: ../../quick_start/first_model.rst:34
+msgid ""
+"Two modules ``encoder`` and ``head`` are initialized separately, passing as "
+"arguments into model. We use :py:class:`~mindnlp.modules.RNNEncoder` "
+"provided by MindNLP as the model's ``encoder``, and use customized "
+"modules as the model's ``head``."
+msgstr ""
+"分别将 ``encoder`` 和 ``head`` 两个模块分别初始化，并作为参数传入模型。"
+"我们使用MindNLP提供的 :py:class:`~mindnlp.modules.RNNEncoder` 作为"
+"模型的 ``encoder`` ，并使用自定义的模块作为模型的 ``head`` 。"
+
 #: ../../quick_start/modules.rst:2
 msgid "Modules"
 msgstr "组件"

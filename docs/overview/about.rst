@@ -19,7 +19,7 @@ and developers to construct and train models more conveniently and rapidly.
 - **Easy-to-use engine**
 
   + MindNLP simplified complicated training process in MindSpore.
-    It supports Trainer and Evaluator interfaces to train and
+    It supports ``Trainer`` and ``Evaluator`` interfaces to train and
     evaluate models easily.
 
 * GitHub: https://github.com/mindspore-lab/mindnlp
