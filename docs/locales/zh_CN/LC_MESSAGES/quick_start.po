@@ -3,19 +3,20 @@
 # This file is distributed under the same license as the MindNLP package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2022.
 #
-#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: MindNLP \n"
+"Project-Id-Version: MindNLP\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-12-06 18:04+0800\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
+"POT-Creation-Date: 2022-12-23 22:40+0800\n"
+"PO-Revision-Date: 2022-12-23 22:45+0800\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: zh_CN\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.10.3\n"
+"X-Generator: Poedit 3.2.2\n"
 
 #: ../../quick_start/dataset_and_transforms.rst:2
 msgid "Dataset and transforms"
@@ -33,3 +34,196 @@ msgstr "组件"
 msgid "Train and Eval"
 msgstr "训练与评估"
 
+#: ../../quick_start/train_and_eval.rst:4
+msgid ""
+"We use the task of `sentiment analysis <https://mindnlpdocs-traineval."
+"readthedocs.io/en/latest/examples/sentiment_analysis.html>`_ to give a "
+"detailed introduction. And we employ :py:class:`~mindnlp.engine.trainer."
+"Trainer` for a fast training and evaluation."
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:11
+msgid "Load and Process Data"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:14
+msgid "Load Data"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:16
+msgid ""
+"We can call the function ``load()`` from :py:class:`~mindnlp.dataset` to "
+"load the IMDB dataset. And then the method will return the training set and "
+"the testing set of the IMDB dataset."
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:20
+msgid "The code of loading data is as follows:"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:29
+msgid "Process and Split Data"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:31
+msgid ""
+"First we obtain the embeddings and the vocabulary, by calling the function "
+"``from_pretrained()`` from :py:class:`~mindnlp.modules.embeddings."
+"glove_embedding.Glove`:"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:41
+msgid ""
+"And then we initialize the tokenizer by instantiating the class :py:class:"
+"`~mindnlp.dataset.transforms.tokenizers.BasicTokenizer`:"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:50
+msgid ""
+"Next, we apply the method ``process()`` to get the processed training set, "
+"by passing the obtained training set, tokenizer, vocabulary and so on into "
+"this method:"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:61
+msgid ""
+"Finally, we employ the method ``split()`` to split the processed training "
+"set, thus getting a new training set and a validation set:"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:69
+msgid "Define and Train Model"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:72
+msgid "Define and Initialize Network"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:74
+msgid ""
+"We introduce the pre-defined network layers from MindSpore and MindNLP to "
+"construct our network."
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:77
+msgid ""
+"Use ``mindspore.nn.LSTM``, ``mindspore.nn.Dense``, ``mindspore.nn.Sigmoid``, "
+"``mindspore.nn.Dropout`` of MindSpore, and :py:class:`~mindnlp.abc."
+"Seq2vecModel`, :py:class:`~mindnlp.modules.encoder.rnn_encoder.RNNEncoder` "
+"of MindNLP to construct our model. And apply ``mindspore.common.initializer."
+"Uniform`` and ``mindspore.common.initializer.HeUniform`` of MindSpore to "
+"initialize the weight and bias of the network we construct."
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:87
+msgid "The code of defining and initializing the network is as follows:"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:145
+msgid "Define Loss Function and Optimizer"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:147
+msgid ""
+"A loss function is needed when we train the model. We use ``mindspore.nn."
+"BCELoss`` provided by MindSpore to define a loss function:"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:155
+msgid ""
+"After that, define the optimizer required for running the model by calling "
+"``mindspore.nn.Adam`` and passing the trainable parameters of the model into "
+"it:"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:164
+msgid "Define Callbacks"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:166
+msgid ""
+"Defining callbacks plays an important role in training models with MindNLP. "
+"It helps to add some extra operations to the training process."
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:169
+msgid ""
+"For example, we can add :py:class:`~mindnlp.engine.callbacks."
+"best_model_callback.BestModelCallback` for saving and loading the best "
+"model. Or we can use :py:class:`~mindnlp.engine.callbacks."
+"checkpoint_callback.CheckpointCallback` for saving the checkpoint. There are "
+"also other callbacks for early stop and timing."
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:176
+msgid ""
+"When customizing the callbacks we need, we could first initialize the "
+"corresponding classes of callbacks, and then declare a callback list of the "
+"callbacks we initialized before. Just like:"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:193
+msgid "Define Metrics"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:195
+msgid ""
+"It is necessary to evaluate the model using one or more metrics. We choose :"
+"py:class:`~mindnlp.engine.metrics.accuracy.Accuracy` to be the metric of the "
+"model:"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:206
+#, fuzzy
+#| msgid "Train and Eval"
+msgid "Train and Evaluate Model"
+msgstr "训练与评估"
+
+#: ../../quick_start/train_and_eval.rst:208
+msgid ""
+"After defining the network, the loss function, the optimizer, the callbacks "
+"and the metrics, we employ :py:class:`~mindnlp.engine.trainer.Trainer` to "
+"train and evaluate the model defined above."
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:212
+msgid ""
+"More specifically, when we train the model, we should pass these parameters "
+"into :py:class:`~mindnlp.engine.trainer.Trainer`:"
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:215
+msgid "``network``: the network to be trained."
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:216
+msgid "``train_dataset``: the dataset for training the model."
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:217
+msgid "``eval_dataset``: the dataset for evaluating the model."
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:218
+msgid "``metrics``: the metrics used for model evaluation."
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:219
+msgid "``epochs``: the total number of training iterations."
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:220
+msgid "``loss_fn``: the loss function."
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:221
+msgid "``optimizer``: the optimizer for updating the trainable parameters."
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:222
+msgid "``callbacks``: the additional operations executed when training."
+msgstr ""
+
+#: ../../quick_start/train_and_eval.rst:224
+msgid "The example code of training and evaluating the model is as follows:"
+msgstr ""

@@ -3,25 +3,71 @@
 # This file is distributed under the same license as the MindNLP package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2022.
 #
-#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: MindNLP \n"
+"Project-Id-Version: MindNLP\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-12-06 18:04+0800\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
+"POT-Creation-Date: 2022-12-23 22:40+0800\n"
+"PO-Revision-Date: 2022-12-23 22:45+0800\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: zh_CN\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.10.3\n"
+"X-Generator: Poedit 3.2.2\n"
 
 #: ../../overview/about.rst:2
 msgid "About"
 msgstr "关于"
 
+#: ../../overview/about.rst:4
+msgid ""
+"MindNLP is an open source NLP library based on MindSpore. It supports a "
+"platform for solving natural language processing tasks, containing many "
+"common approaches in NLP. It can help researchers and developers to "
+"construct and train models more conveniently and rapidly."
+msgstr ""
+
+#: ../../overview/about.rst:9
+msgid "**Comprehensive data processing**"
+msgstr ""
+
+#: ../../overview/about.rst:11
+msgid ""
+"Several classical NLP datasets are packaged into friendly module for easy "
+"use, such as Multi30k, SQuAD, CoNLL, etc."
+msgstr ""
+
+#: ../../overview/about.rst:14
+msgid "**Friendly NLP model toolset**"
+msgstr ""
+
+#: ../../overview/about.rst:16
+msgid ""
+"MindNLP provides various configurable components. It is friendly to "
+"customize models using MindNLP."
+msgstr ""
+
+#: ../../overview/about.rst:19
+msgid "**Easy-to-use engine**"
+msgstr ""
+
+#: ../../overview/about.rst:21
+msgid ""
+"MindNLP simplified complicated training process in MindSpore. It supports "
+"Trainer and Evaluator interfaces to train and evaluate models easily."
+msgstr ""
+
+#: ../../overview/about.rst:25
+msgid "GitHub: https://github.com/mindspore-lab/mindnlp"
+msgstr ""
+
+#: ../../overview/about.rst:26
+msgid "GitHub Issue feedback: https://github.com/mindspore-lab/mindnlp/issues"
+msgstr ""
+
 #: ../../overview/prerequisites.rst:2
 msgid "Prerequisites"
 msgstr "预备知识"
-

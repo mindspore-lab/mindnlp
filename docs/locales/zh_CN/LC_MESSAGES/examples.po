@@ -3,21 +3,179 @@
 # This file is distributed under the same license as the MindNLP package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2022.
 #
-#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: MindNLP \n"
+"Project-Id-Version: MindNLP\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-12-06 18:04+0800\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
+"POT-Creation-Date: 2022-12-23 22:40+0800\n"
+"PO-Revision-Date: 2022-12-23 22:44+0800\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: zh_CN\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.10.3\n"
+"X-Generator: Poedit 3.2.2\n"
+
+#: ../../examples/fasttext.rst:2
+msgid "Fasttext"
+msgstr ""
+
+#: ../../examples/fasttext.rst:4
+msgid ""
+"In this paper, we will train a fasttext model that can complete the task of "
+"text classification by using the pre-trained glove word vector."
+msgstr ""
+
+#: ../../examples/fasttext.rst:8
+msgid "Step"
+msgstr ""
+
+#: ../../examples/fasttext.rst:10
+msgid "There are several steps."
+msgstr ""
+
+#: ../../examples/fasttext.rst:12
+msgid "1.Define Model"
+msgstr ""
+
+#: ../../examples/fasttext.rst:14
+msgid "2.Define Hyperparameters"
+msgstr ""
+
+#: ../../examples/fasttext.rst:16
+msgid "3.Data Preprocessing"
+msgstr ""
+
+#: ../../examples/fasttext.rst:18
+msgid "4.Instantiate Model"
+msgstr ""
+
+#: ../../examples/fasttext.rst:20
+msgid "5.Training Process"
+msgstr ""
+
+#: ../../examples/fasttext.rst:23
+msgid "(1)Define Model"
+msgstr ""
+
+#: ../../examples/fasttext.rst:70
+msgid "(2)Define Hyperparameters"
+msgstr ""
+
+#: ../../examples/fasttext.rst:72 ../../examples/sequence_tagging.rst:51
+msgid ""
+"The following are some of the required hyperparameters in the model training "
+"process."
+msgstr ""
+
+#: ../../examples/fasttext.rst:86
+msgid "(3)Data Preprocessing"
+msgstr ""
+
+#: ../../examples/fasttext.rst:88
+msgid ""
+"The agnews dataset will be used in this article and downloaded automatically "
+"through the mindnlp API. In the preprocessing, the data is cleaned and then "
+"sorted into buckets after lookup."
+msgstr ""
+
+#: ../../examples/fasttext.rst:92
+msgid "Load dataset:"
+msgstr ""
+
+#: ../../examples/fasttext.rst:100
+msgid "Initializes the vocab and tokenizer for preprocessing:"
+msgstr ""
+
+#: ../../examples/fasttext.rst:110
+msgid ""
+"The loaded dataset is preprocessed and divided into training and validation:"
+msgstr ""
+
+#: ../../examples/fasttext.rst:122
+msgid "(4)Instantiate Model"
+msgstr ""
+
+#: ../../examples/fasttext.rst:130
+msgid "(5)Training Process"
+msgstr ""
+
+#: ../../examples/fasttext.rst:132
+msgid "Set the loss, optimizer, metric."
+msgstr ""
+
+#: ../../examples/fasttext.rst:140
+msgid "Get started with mindnlp’s built-in trainer."
+msgstr ""
 
 #: ../../examples/sentiment_analysis.rst:2
 msgid "Sentiment Analysis"
 msgstr "情感分析"
 
+#: ../../examples/sequence_tagging.rst:2
+msgid "Sequence Tagging"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:4
+msgid ""
+"Sequence Tagging refers to the process of tagging each Token in the sequence "
+"given an input sequence. Sequence tagging problems are usually used for "
+"information extraction from text, including Word Segmentation, Position "
+"Tagging, Named Entity Recognition, NER, etc. The following is a demo that "
+"uses the CoNLL2000Chunking dataset and the Bi-LSTM+CRF model to train the "
+"named entity recognition task as an example:"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:12
+msgid "Define Model"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:49
+msgid "Define Hyperparameters"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:60
+msgid "Data Preprocessing"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:62
+msgid ""
+"The dataset was downloaded and preprocessed by calling the interface of "
+"dataset in mindnlp."
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:65
+msgid "Load datasets:"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:73
+msgid "Initializes the vocab for preprocessing:"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:82
+msgid "Process datasets:"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:92
+msgid "Instantiate Model"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:106
+msgid "Define Optimizer"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:116
+msgid "Define Train Step"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:127
+msgid "Training Process"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:129
+msgid ""
+"Now that we have completed all the preparations, we can begin to train the "
+"model."
+msgstr ""
