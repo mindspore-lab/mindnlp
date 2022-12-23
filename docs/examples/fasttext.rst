@@ -1,11 +1,11 @@
 Fasttext
---------
+========
 
 In this paper, we will train a fasttext model that can complete the task
 of text classification by using the pre-trained glove word vector.
 
 Step
-~~~~
+----
 
 There are several steps.
 
@@ -19,8 +19,8 @@ There are several steps.
 
 5.Training Process
 
-(1)Define Model
-~~~~~~~~~~~~~~~
+Define Model
+---------------
 
 .. code:: python
 
@@ -66,8 +66,8 @@ There are several steps.
 
            return classifier
 
-(2)Define Hyperparameters
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Define Hyperparameters
+----------------------
 
 The following are some of the required hyperparameters in the model
 training process.
@@ -82,8 +82,8 @@ training process.
    max_len = 467
    drop = 0.0
 
-(3)Data Preprocessing
-~~~~~~~~~~~~~~~~~~~~~
+Data Preprocessing
+----------------------
 
 The agnews dataset will be used in this article and downloaded
 automatically through the mindnlp API. In the preprocessing, the data is
@@ -118,16 +118,16 @@ validation:
                            bucket_boundaries=bucket_boundaries, max_len=max_len, drop_remainder=True)
    ag_news_train, ag_news_valid = ag_news_train.split([0.7, 0.3])
 
-(4)Instantiate Model
-~~~~~~~~~~~~~~~~~~~~
+Instantiate Model
+----------------------
 
 .. code:: python
 
    # net
    net = FasttextModel(vocab_size, embedding_dims, num_class)
 
-(5)Training Process
-~~~~~~~~~~~~~~~~~~~
+Training Process
+----------------------
 
 Set the loss, optimizer, metric.
 
