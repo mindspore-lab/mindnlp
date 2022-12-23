@@ -33,6 +33,7 @@ What is MindNLP
    :caption: Examples
 
    examples/sentiment_analysis
+   examples/fasttext
    examples/sequence_tagging
 
 .. toctree::
