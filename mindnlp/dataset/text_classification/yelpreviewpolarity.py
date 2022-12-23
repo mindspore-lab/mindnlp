@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-YelpReviewPolarity dataset
+YelpReviewPolarity load function
 """
 # pylint: disable=C0103
 

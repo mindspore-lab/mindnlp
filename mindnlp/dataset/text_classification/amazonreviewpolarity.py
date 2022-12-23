@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-AmazonReviewPolarity dataset
+AmazonReviewPolarity load function
 """
 # pylint: disable=C0103
 

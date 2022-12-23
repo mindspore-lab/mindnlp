@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-CoLA dataset
+CoLA load function
 """
 # pylint: disable=C0103
 

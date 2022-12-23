@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-STSB dataset
+STSB load function
 """
 # pylint: disable=C0103
 

@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-WNLI dataset
+WNLI load function
 """
 # pylint: disable=C0103
 

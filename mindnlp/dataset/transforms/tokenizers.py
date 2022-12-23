@@ -36,9 +36,6 @@ class BasicTokenizer(TextTensorOperation, PyTensorOperation):
     """
     Tokenize the input UTF-8 encoded string by specific rules.
 
-    Note:
-        `BasicTokenizer` is not supported on Windows platform yet.
-
     Args:
         lower_case (bool, optional): Whether to perform lowercase processing on the text. If True, will fold the
             text to lower case and strip accented characters. If False, will only perform normalization on the

@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-SogouNews dataset
+SogouNews load function
 """
 # pylint: disable=C0103
 

@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-IMDB dataset
+IMDB load function
 """
 # pylint: disable=C0103
 

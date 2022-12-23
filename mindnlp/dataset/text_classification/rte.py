@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-RTE dataset
+RTE load function
 """
 # pylint: disable=C0103
 
