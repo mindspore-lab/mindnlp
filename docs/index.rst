@@ -34,6 +34,7 @@ What is MindNLP
 
    examples/sentiment_analysis
    examples/fasttext
+   examples/sequence_tagging
 
 .. toctree::
    :maxdepth: 1
