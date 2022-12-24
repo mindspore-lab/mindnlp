@@ -39,7 +39,7 @@ The master branch works with **MindSpore master**.
 
 ## Quick Links
 
-- [Website](https://mindnlp.cqu.ai/en/latest/)
+- [Documentation](https://mindnlp.cqu.ai/en/latest/)
 - [Examples](https://github.com/mindspore-ecosystem/mindnlp/tree/master/examples)
 - ...
 
@@ -47,14 +47,15 @@ The master branch works with **MindSpore master**.
 
 ### Dependency
 
-- mindspore >= ...
-- ...
+- mindspore >= 1.8.1
 
 ### Install from source
 
 To install MindNLP from source, please run:
 
-`pip install git+https://github.com/mindspore-ecosystem/mindnlp.git`
+```bash
+pip install git+https://github.com/mindspore-ecosystem/mindnlp.git
+```
 
 ## Get Started
 
@@ -169,11 +170,11 @@ trainer.run(tgt_columns="label", jit=False)
 print("end train")
 ```
 
-## Tutorials
+<!-- ## Tutorials
 
-- (list of more tutorials...)
+- (list of more tutorials...) -->
 
-## Notes
+<!-- ## Notes -->
 
 ### License
 
@@ -181,7 +182,7 @@ This project is released under the [Apache 2.0 license](LICENSE).
 
 ### Feedbacks and Contact
 
-The dynamic version is still under development, if you find any issue or have an idea on new features, please don't hesitate to contact us via [Gitee Issues](https://gitee.com/mindspore/text/issues).
+The dynamic version is still under development, if you find any issue or have an idea on new features, please don't hesitate to contact us via [Github Issues](https://github.com/mindspore-lab/mindnlp/issues).
 
 ### Acknowledgement
 

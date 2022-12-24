@@ -45,4 +45,5 @@ What is MindNLP
    api/dataset
    api/engine
    api/modules
+   api/models
    api/utils
