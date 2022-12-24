@@ -36,19 +36,21 @@ msgstr "训练与评估"
 
 #: ../../quick_start/train_and_eval.rst:4
 msgid ""
-"We use the task of `sentiment analysis <https://mindnlpdocs-traineval."
-"readthedocs.io/en/latest/examples/sentiment_analysis.html>`_ to give a "
+"We use the task of sentiment analysis to give a "
 "detailed introduction. And we employ :py:class:`~mindnlp.engine.trainer."
 "Trainer` for a fast training and evaluation."
 msgstr ""
+"我们根据情感分析任务来进行"
+"详细的介绍，使用 :py:class:`~mindnlp.engine.trainer.Trainer` "
+"来进行快速训练和评估。"
 
 #: ../../quick_start/train_and_eval.rst:11
 msgid "Load and Process Data"
-msgstr ""
+msgstr "加载和处理数据"
 
 #: ../../quick_start/train_and_eval.rst:14
 msgid "Load Data"
-msgstr ""
+msgstr "加载数据"
 
 #: ../../quick_start/train_and_eval.rst:16
 msgid ""
@@ -56,14 +58,17 @@ msgid ""
 "load the IMDB dataset. And then the method will return the training set and "
 "the testing set of the IMDB dataset."
 msgstr ""
+"我们可以调用来自 :py:class:`~mindnlp.dataset` 模块的函数 ``load()`` 来"
+"加载IMDB数据集。该函数会返回IMDB数据集的训练集和"
+"测试集。"
 
 #: ../../quick_start/train_and_eval.rst:20
 msgid "The code of loading data is as follows:"
-msgstr ""
+msgstr "加载数据的代码如下所示："
 
 #: ../../quick_start/train_and_eval.rst:29
 msgid "Process and Split Data"
-msgstr ""
+msgstr "处理和划分数据"
 
 #: ../../quick_start/train_and_eval.rst:31
 msgid ""
@@ -71,12 +76,17 @@ msgid ""
 "``from_pretrained()`` from :py:class:`~mindnlp.modules.embeddings."
 "glove_embedding.Glove`:"
 msgstr ""
+"首先我们通过调用来自 :py:class:`~mindnlp.modules.embeddings.glove_embedding.Glove` 的"
+"函数 ``from_pretrained()`` ，获取嵌入和词汇表："
+""
 
 #: ../../quick_start/train_and_eval.rst:41
 msgid ""
 "And then we initialize the tokenizer by instantiating the class :py:class:"
 "`~mindnlp.dataset.transforms.tokenizers.BasicTokenizer`:"
 msgstr ""
+"然后我们通过实例化类 :py:class:`~mindnlp.dataset.transforms.tokenizers.BasicTokenizer` "
+"来初始化分词器："
 
 #: ../../quick_start/train_and_eval.rst:50
 msgid ""
@@ -84,26 +94,33 @@ msgid ""
 "by passing the obtained training set, tokenizer, vocabulary and so on into "
 "this method:"
 msgstr ""
+"接着，我们将获取到的训练集、分词器和词汇表等传入方法 ``process()`` ，"
+"应用该方法获取处理过的训练集："
+""
 
 #: ../../quick_start/train_and_eval.rst:61
 msgid ""
 "Finally, we employ the method ``split()`` to split the processed training "
 "set, thus getting a new training set and a validation set:"
 msgstr ""
+"最后，我们使用方法 ``split()`` 来划分处理后的训练集，"
+"从而获取新的训练集和验证集："
 
 #: ../../quick_start/train_and_eval.rst:69
 msgid "Define and Train Model"
-msgstr ""
+msgstr "定义和训练模型"
 
 #: ../../quick_start/train_and_eval.rst:72
 msgid "Define and Initialize Network"
-msgstr ""
+msgstr "定义和初始化网络"
 
 #: ../../quick_start/train_and_eval.rst:74
 msgid ""
 "We introduce the pre-defined network layers from MindSpore and MindNLP to "
 "construct our network."
 msgstr ""
+"我们引入了MindSpore和MindNLP预定义好的网络层来"
+"构建我们的网络。"
 
 #: ../../quick_start/train_and_eval.rst:77
 msgid ""
@@ -114,20 +131,28 @@ msgid ""
 "Uniform`` and ``mindspore.common.initializer.HeUniform`` of MindSpore to "
 "initialize the weight and bias of the network we construct."
 msgstr ""
+"使用MindSpore的 ``mindspore.nn.LSTM`` ， ``mindspore.nn.Dense`` ， ``mindspore.nn.Sigmoid`` ，"
+" ``mindspore.nn.Dropout`` ，和MindNLP的 :py:class:`~mindnlp.abc.Seq2vecModel`，"
+" :py:class:`~mindnlp.modules.encoder.rnn_encoder.RNNEncoder` "
+"来构建我们的模型。并应用MindSpore的 ``mindspore.common.initializer.Uniform`` "
+"和 ``mindspore.common.initializer.HeUniform`` 来"
+"初始化我们构建的网络的权重和偏差。"
 
 #: ../../quick_start/train_and_eval.rst:87
 msgid "The code of defining and initializing the network is as follows:"
-msgstr ""
+msgstr "定义和初始化网络的代码如下所示："
 
 #: ../../quick_start/train_and_eval.rst:145
 msgid "Define Loss Function and Optimizer"
-msgstr ""
+msgstr "定义损失函数和优化器"
 
 #: ../../quick_start/train_and_eval.rst:147
 msgid ""
 "A loss function is needed when we train the model. We use ``mindspore.nn."
 "BCELoss`` provided by MindSpore to define a loss function:"
 msgstr ""
+"我们训练模型时需要损失函数，我们使用MindSpore提供的 ``mindspore.nn.BCELoss`` "
+"来定义一个损失函数："
 
 #: ../../quick_start/train_and_eval.rst:155
 msgid ""
@@ -135,16 +160,21 @@ msgid ""
 "``mindspore.nn.Adam`` and passing the trainable parameters of the model into "
 "it:"
 msgstr ""
+"然后，调用 ``mindspore.nn.Adam`` ，并传入模型的可训练参数，"
+"从而定义运行模型所需要的优化器："
+""
 
 #: ../../quick_start/train_and_eval.rst:164
 msgid "Define Callbacks"
-msgstr ""
+msgstr "定义回调函数"
 
 #: ../../quick_start/train_and_eval.rst:166
 msgid ""
 "Defining callbacks plays an important role in training models with MindNLP. "
 "It helps to add some extra operations to the training process."
 msgstr ""
+"借助MindNLP进行模型训练时，定义回调函数非常重要。"
+"它帮助在训练过程中添加一些额外的操作。"
 
 #: ../../quick_start/train_and_eval.rst:169
 msgid ""
@@ -154,6 +184,11 @@ msgid ""
 "checkpoint_callback.CheckpointCallback` for saving the checkpoint. There are "
 "also other callbacks for early stop and timing."
 msgstr ""
+"例如，我们可以添加 :py:class:`~mindnlp.engine.callbacks.best_model_callback.BestModelCallback` "
+"用于保存和加载最好的模型。"
+"或者我们能够使用 :py:class:`~mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback` "
+"来保存checkpoint。"
+"除此之外，还有能用于早停和计时的回调函数。"
 
 #: ../../quick_start/train_and_eval.rst:176
 msgid ""
@@ -161,10 +196,13 @@ msgid ""
 "corresponding classes of callbacks, and then declare a callback list of the "
 "callbacks we initialized before. Just like:"
 msgstr ""
+"当定义我们需要的回调函数时，我们首先需要初始化回调函数对应的类，"
+"然后声明一个由我们事先初始化的回调函数组成的列表，"
+"正如："
 
 #: ../../quick_start/train_and_eval.rst:193
 msgid "Define Metrics"
-msgstr ""
+msgstr "定义评价指标"
 
 #: ../../quick_start/train_and_eval.rst:195
 msgid ""
@@ -172,12 +210,15 @@ msgid ""
 "py:class:`~mindnlp.engine.metrics.accuracy.Accuracy` to be the metric of the "
 "model:"
 msgstr ""
+"使用一个或多个评价指标来评估模型是有必要的。我们选择"
+" :py:class:`~mindnlp.engine.metrics.accuracy.Accuracy` 作为模型的评价指标："
+""
 
 #: ../../quick_start/train_and_eval.rst:206
 #, fuzzy
 #| msgid "Train and Eval"
 msgid "Train and Evaluate Model"
-msgstr "训练与评估"
+msgstr "训练与评估模型"
 
 #: ../../quick_start/train_and_eval.rst:208
 msgid ""
@@ -185,45 +226,50 @@ msgid ""
 "and the metrics, we employ :py:class:`~mindnlp.engine.trainer.Trainer` to "
 "train and evaluate the model defined above."
 msgstr ""
+"定义好网络、损失函数、优化器、回调函数和评价指标后，"
+"我们应用 :py:class:`~mindnlp.engine.trainer.Trainer` 来"
+"训练和评估前文定义好的模型。"
 
 #: ../../quick_start/train_and_eval.rst:212
 msgid ""
 "More specifically, when we train the model, we should pass these parameters "
 "into :py:class:`~mindnlp.engine.trainer.Trainer`:"
 msgstr ""
+"具体地说，当我们训练模型时，我们应该将这些参数传入"
+" :py:class:`~mindnlp.engine.trainer.Trainer` ："
 
 #: ../../quick_start/train_and_eval.rst:215
 msgid "``network``: the network to be trained."
-msgstr ""
+msgstr "``network``：训练的网络。"
 
 #: ../../quick_start/train_and_eval.rst:216
 msgid "``train_dataset``: the dataset for training the model."
-msgstr ""
+msgstr "``train_dataset``：用于训练模型的数据集。"
 
 #: ../../quick_start/train_and_eval.rst:217
 msgid "``eval_dataset``: the dataset for evaluating the model."
-msgstr ""
+msgstr "``eval_dataset``：用于评估模型的数据集。"
 
 #: ../../quick_start/train_and_eval.rst:218
 msgid "``metrics``: the metrics used for model evaluation."
-msgstr ""
+msgstr "``metrics``：用于评估模型的评价指标。"
 
 #: ../../quick_start/train_and_eval.rst:219
 msgid "``epochs``: the total number of training iterations."
-msgstr ""
+msgstr "``epochs``：训练数据的总迭代次数。"
 
 #: ../../quick_start/train_and_eval.rst:220
 msgid "``loss_fn``: the loss function."
-msgstr ""
+msgstr "``loss_fn``：损失函数。"
 
 #: ../../quick_start/train_and_eval.rst:221
 msgid "``optimizer``: the optimizer for updating the trainable parameters."
-msgstr ""
+msgstr "``optimizer``：用于更新训练参数的优化器。"
 
 #: ../../quick_start/train_and_eval.rst:222
 msgid "``callbacks``: the additional operations executed when training."
-msgstr ""
+msgstr "``callbacks``：训练时执行的额外操作。"
 
 #: ../../quick_start/train_and_eval.rst:224
 msgid "The example code of training and evaluating the model is as follows:"
-msgstr ""
+msgstr "训练和评估模型的示例代码："
