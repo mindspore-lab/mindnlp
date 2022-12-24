@@ -68,7 +68,7 @@ msgstr ""
 msgid ""
 "The following are some of the required hyperparameters in the model training "
 "process."
-msgstr ""
+msgstr "以下是模型训练过程中需要的一些超参数。"
 
 #: ../../examples/fasttext.rst:86
 msgid "(3)Data Preprocessing"
@@ -116,7 +116,7 @@ msgstr "情感分析"
 
 #: ../../examples/sequence_tagging.rst:2
 msgid "Sequence Tagging"
-msgstr ""
+msgstr "序列标注"
 
 #: ../../examples/sequence_tagging.rst:4
 msgid ""
@@ -127,55 +127,58 @@ msgid ""
 "uses the CoNLL2000Chunking dataset and the Bi-LSTM+CRF model to train the "
 "named entity recognition task as an example:"
 msgstr ""
+"序列标注指给定输入序列，给序列中每个Token进行标注标签的过程。"
+"序列标注问题通常用于从文本中进行信息抽取，包括分词、词性标注、命名实体识别等。"
+"下面是使用CoNLL2000Chunking数据集和Bi-LSTM+CRF模型进行命名实体识别任务训练的示例："
 
 #: ../../examples/sequence_tagging.rst:12
 msgid "Define Model"
-msgstr ""
+msgstr "定义模型"
 
 #: ../../examples/sequence_tagging.rst:49
 msgid "Define Hyperparameters"
-msgstr ""
+msgstr "定义超参数"
 
 #: ../../examples/sequence_tagging.rst:60
 msgid "Data Preprocessing"
-msgstr ""
+msgstr "数据预处理"
 
 #: ../../examples/sequence_tagging.rst:62
 msgid ""
 "The dataset was downloaded and preprocessed by calling the interface of "
 "dataset in mindnlp."
-msgstr ""
+msgstr "通过调用mindnlp中dataset的接口下载并预处理数据集。"
 
 #: ../../examples/sequence_tagging.rst:65
 msgid "Load datasets:"
-msgstr ""
+msgstr "加载数据集："
 
 #: ../../examples/sequence_tagging.rst:73
 msgid "Initializes the vocab for preprocessing:"
-msgstr ""
+msgstr "初始化词表以进行预处理："
 
 #: ../../examples/sequence_tagging.rst:82
 msgid "Process datasets:"
-msgstr ""
+msgstr "处理数据集："
 
 #: ../../examples/sequence_tagging.rst:92
 msgid "Instantiate Model"
-msgstr ""
+msgstr "实例化模型"
 
 #: ../../examples/sequence_tagging.rst:106
 msgid "Define Optimizer"
-msgstr ""
+msgstr "定义优化器"
 
 #: ../../examples/sequence_tagging.rst:116
 msgid "Define Train Step"
-msgstr ""
+msgstr "定义训练步骤"
 
 #: ../../examples/sequence_tagging.rst:127
 msgid "Training Process"
-msgstr ""
+msgstr "训练过程"
 
 #: ../../examples/sequence_tagging.rst:129
 msgid ""
 "Now that we have completed all the preparations, we can begin to train the "
 "model."
-msgstr ""
+msgstr "现在我们已经完成了所有的准备工作，可以开始训练模型了。"
