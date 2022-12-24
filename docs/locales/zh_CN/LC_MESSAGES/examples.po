@@ -20,49 +20,49 @@ msgstr ""
 
 #: ../../examples/fasttext.rst:2
 msgid "Fasttext"
-msgstr ""
+msgstr "Fasttext"
 
 #: ../../examples/fasttext.rst:4
 msgid ""
 "In this paper, we will train a fasttext model that can complete the task of "
 "text classification by using the pre-trained glove word vector."
-msgstr ""
+msgstr "本文中，我们将通过使用glove预训练词向量来训练一个能完成文本分类任务的fasttext模型."
 
 #: ../../examples/fasttext.rst:8
 msgid "Step"
-msgstr ""
+msgstr "步骤"
 
 #: ../../examples/fasttext.rst:10
 msgid "There are several steps."
-msgstr ""
+msgstr "接下来是所需的一些步骤."
 
 #: ../../examples/fasttext.rst:12
 msgid "1.Define Model"
-msgstr ""
+msgstr "1.定义模型"
 
 #: ../../examples/fasttext.rst:14
 msgid "2.Define Hyperparameters"
-msgstr ""
+msgstr "2.定义超参数"
 
 #: ../../examples/fasttext.rst:16
 msgid "3.Data Preprocessing"
-msgstr ""
+msgstr "3.数据预处理"
 
 #: ../../examples/fasttext.rst:18
 msgid "4.Instantiate Model"
-msgstr ""
+msgstr "4.实例化模型"
 
 #: ../../examples/fasttext.rst:20
 msgid "5.Training Process"
-msgstr ""
+msgstr "5.训练过程"
 
 #: ../../examples/fasttext.rst:23
 msgid "(1)Define Model"
-msgstr ""
+msgstr "(1)定义模型"
 
 #: ../../examples/fasttext.rst:70
 msgid "(2)Define Hyperparameters"
-msgstr ""
+msgstr "(2)定义超参数"
 
 #: ../../examples/fasttext.rst:72 ../../examples/sequence_tagging.rst:51
 msgid ""
@@ -72,43 +72,43 @@ msgstr "以下是模型训练过程中需要的一些超参数。"
 
 #: ../../examples/fasttext.rst:86
 msgid "(3)Data Preprocessing"
-msgstr ""
+msgstr "(3)数据预处理"
 
 #: ../../examples/fasttext.rst:88
 msgid ""
 "The agnews dataset will be used in this article and downloaded automatically "
 "through the mindnlp API. In the preprocessing, the data is cleaned and then "
 "sorted into buckets after lookup."
-msgstr ""
+msgstr "在本文中使用agnews数据集，并通过mindnlp的API自动下载.在数据预处理中，数据被清洗后，经过lookup操作再分桶."
 
 #: ../../examples/fasttext.rst:92
 msgid "Load dataset:"
-msgstr ""
+msgstr "加载数据集:"
 
 #: ../../examples/fasttext.rst:100
 msgid "Initializes the vocab and tokenizer for preprocessing:"
-msgstr ""
+msgstr "初始化用于数据预处理的vocab和tokenizer:"
 
 #: ../../examples/fasttext.rst:110
 msgid ""
 "The loaded dataset is preprocessed and divided into training and validation:"
-msgstr ""
+msgstr "加载的数据集经过预处理后被分成训练集和验证集."
 
 #: ../../examples/fasttext.rst:122
 msgid "(4)Instantiate Model"
-msgstr ""
+msgstr "(4)实例化模型"
 
 #: ../../examples/fasttext.rst:130
 msgid "(5)Training Process"
-msgstr ""
+msgstr "(5)训练过程"
 
 #: ../../examples/fasttext.rst:132
 msgid "Set the loss, optimizer, metric."
-msgstr ""
+msgstr "设置loss,optimizer,metric."
 
 #: ../../examples/fasttext.rst:140
 msgid "Get started with mindnlp’s built-in trainer."
-msgstr ""
+msgstr "以mindnlp的trainer开始训练."
 
 #: ../../examples/sentiment_analysis.rst:2
 msgid "Sentiment Analysis"
