@@ -1,8 +1,7 @@
 Train and Eval
 ===================
 
-We use the task of
-`sentiment analysis <https://mindnlpdocs-traineval.readthedocs.io/en/latest/examples/sentiment_analysis.html>`_
+We use the task of sentiment analysis
 to give a detailed introduction. And we employ
 :py:class:`~mindnlp.engine.trainer.Trainer`
 for a fast training and evaluation.
