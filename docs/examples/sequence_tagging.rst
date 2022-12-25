@@ -1,15 +1,62 @@
 Sequence Tagging
-=================
+================
+
+`GitHub源码 <https://github.com/mindspore-lab/mindnlp/blob/master/examples/sequence_tagging.py>`__
 
 Sequence Tagging refers to the process of tagging each Token in the
-sequence given an input sequence. Sequence tagging problems are usually
+sequence given an input sequence.Sequence tagging problems are usually
 used for information extraction from text, including Word Segmentation,
-Position Tagging, Named Entity Recognition, NER, etc. The following is a
-demo that uses the CoNLL2000Chunking dataset and the Bi-LSTM+CRF model
-to train the named entity recognition task as an example:
+POS Tagging, Named Entity Recognition(NER),Chunking, etc.
+
+**Take Chunking task as an example:**
+
+Text chunking consists of dividing a text in syntactically correlated
+parts of words. For example, the sentence **He reckons the current
+account deficit will narrow to only # 1.8 billion in September .** can
+be divided as follows:
+
+   **[NP He ] [VP reckons ] [NP the current account deficit ] [VP will
+   narrow ] [PP to ] [NP only # 1.8 billion ] [PP in ] [NP September ].
+   (NP: noun phrase; VP: verb phrase; PP: prepositional phrase)**
+
+The goal of this task is to come forward with machine learning methods
+which after a training phase can recognize the chunk segmentation of the
+test data as well as possible.
+
+**CoNLL2000Chunking:**
+
+The chunking tags in the CoNLL2000Chunking dataset are based on the IOB
+(Inside, Outside, Beginning) tagging scheme, which is commonly used for
+chunking tasks.In the IOB scheme, each word in a sentence is labeled with
+a chunk tag that indicates whether the word is part of a chunk, and if so,
+whether it is the beginning, inside, or outside of the chunk.
+
+.. hint::
+
+   The CoNLL2000Chunking dataset includes a set of predefined chunk types,
+   such as noun phrases (NP), verb phrases (VP), and prepositional phrases
+   (PP). The chunk tags in the dataset are formed by combining the chunk
+   type with the IOB tag, using the format “I-TYPE” for inside words,
+   “B-TYPE” for beginning words, and “O” for outside words. For example,
+   the chunk tag “B-NP” indicates the beginning of a noun phrase, while the
+   chunk tag “I-VP” indicates an inside word in a verb phrase.
+
+**Example:**
+
+   ========= ==== ====== ==== ====== ==== ==== ===== ====
+   Sentence  They refuse to   permit us   to   enter .
+   Chunk Tag B-NP B-VP   B-PP B-VP   B-NP B-PP B-VP  O
+   ========= ==== ====== ==== ====== ==== ==== ===== ====
+
+The following is an example of Chunking task training using the chunk
+tag of the CoNLL2000Chunking dataset and the Bi-LSTM+CRF model:
 
 Define Model
 ------------
+
+First, inherit the ``Seq2vecModel`` in ``mindnlp.abc`` to define the ``Head``
+of the model, and then use the ``CRF`` in ``mindnlp.modules`` to complete
+the definition of the ``BiLSTM_CRF`` model.
 
 .. code:: python
 
@@ -60,7 +107,7 @@ Data Preprocessing
 ------------------
 
 The dataset was downloaded and preprocessed by calling the interface of
-dataset in mindnlp.
+dataset in ``mindnlp.dataset`` .
 
 Load datasets:
 
