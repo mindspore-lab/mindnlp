@@ -27,10 +27,12 @@ What is MindNLP
    quick_start/dataset_and_transforms
    quick_start/train_and_eval
    quick_start/modules
+   quick_start/use_metrics
 
 .. toctree::
    :maxdepth: 1
    :caption: Examples
+   :titlesonly:
 
    examples/sentiment_analysis
    examples/fasttext
