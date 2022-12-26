@@ -26,18 +26,27 @@ msgstr "数据集和数据变换"
 msgid "First Model"
 msgstr "第一个模型"
 
-#: ../../quick_start/first_model.rst:4
-msgid ""
-"Sentiment classification is a classic task in natural language processing. "
-"It is a typical classification problem to mine and analyze people's "
-"sentiments expressed in the text, which is positive or negative. The "
-"following uses MindNLP to implement an RNN-based sentimental classification "
-"model."
-msgstr ""
-"情感分类是自然语言处理中的经典任务，目标在于对给定文本中的情感色彩进行挖掘、"
-"分析，是典型的分类问题。本节使用MindNLP实现一个基于RNN网络的情感分类模型。"
+#: ../../quick_start/first_model.rst:6
+msgid "Overview"
+msgstr "概述"
 
-#: ../../quick_start/first_model.rst:9
+#: ../../quick_start/first_model.rst:8
+msgid ""
+"Sentiment classification is a classic task in natural language "
+"processing. It is a typical classification problem to mine and "
+"analyze people's sentiments expressed in the text, which is positive "
+"or negative. The following uses MindNLP to implement an RNN-based "
+"sentimental classification model to achieve the following effects:"
+msgstr ""
+"情感分类是自然语言处理中的经典任务，目标在于对给定文本中的情感色彩进行"
+"挖掘、分析，是典型的分类问题。本节使用MindNLP实现一个基于RNN网络的情感分类"
+"模型，实现如下的效果："
+
+#: ../../../quick_start/first_model.rst:26
+msgid "Model Building"
+msgstr "模型构建"
+
+#: ../../quick_start/first_model.rst:28
 msgid ""
 "According to the task, the base module :py:class:`~mindnlp.abc.Seq2vecModel` "
 "can be used to build the model. The function of module :py:class:`~mindnlp."
@@ -53,7 +62,11 @@ msgstr ""
 "``encoder`` 将输入句子映射为语义向量，而 ``head`` 对 ``encoder`` 的输出进行进"
 "一步计算得到最终的结果。"
 
-#: ../../quick_start/first_model.rst:35
+#: ../../../quick_start/first_model.rst:54
+msgid "Model Instantiation"
+msgstr "模型实例化"
+
+#: ../../quick_start/first_model.rst:58
 msgid ""
 "Two modules ``encoder`` and ``head`` are initialized separately, passing as "
 "arguments into model. We use :py:class:`~mindnlp.modules.RNNEncoder` "
