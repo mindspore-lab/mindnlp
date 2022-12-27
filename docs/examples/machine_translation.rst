@@ -1,6 +1,8 @@
 Machine Translation
 ===================
 
+`GitHub <https://github.com/mindspore-lab/mindnlp/blob/master/examples/machine_translation.py>`__
+
 Machine translation is the translation of one language (a sentence or a
 paragraph or a text) into another language. The following is a demo of
 training machine translation using the Multi30k dataset and the Seq2Seq

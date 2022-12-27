@@ -1,7 +1,7 @@
 Question & Answer
 =================
 
-`GitHub源码 <https://github.com/mindspore-lab/mindnlp/blob/master/examples/question_answer.py>`__
+`GitHub <https://github.com/mindspore-lab/mindnlp/blob/master/examples/question_answer.py>`__
 
 This section introduces a Question-Answering(QA) task in machine reading
 comprehension(MRC), also called answer extraction: Given a passage of

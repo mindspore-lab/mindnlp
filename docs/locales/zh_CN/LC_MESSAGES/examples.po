@@ -179,7 +179,7 @@ msgstr "问答任务"
 
 #: ../../examples/question_answer.rst:4
 msgid ""
-"`GitHub源码 <https://github.com/mindspore-lab/mindnlp/blob/master/examples/"
+"`GitHub <https://github.com/mindspore-lab/mindnlp/blob/master/examples/"
 "question_answer.py>`__"
 msgstr ""
 
@@ -368,6 +368,8 @@ msgid ""
 "A loss function is needed when we train the model. We use "
 "``CrossEntropyLoss`` provided by MindSpore to define a loss function:"
 msgstr ""
+"训练模型时需要损失函数，我们使用MindSpore提供"
+"的 ``CrossEntropyLoss`` 来定义一个损失函数类，并实例化："
 
 #: ../../examples/question_answer.rst:411
 msgid "Then define the optimizer:"

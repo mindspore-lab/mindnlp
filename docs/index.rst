@@ -15,6 +15,7 @@ What is MindNLP
 .. toctree::
    :maxdepth: 1
    :caption: Overview
+   :titlesonly:
 
    overview/about
    overview/prerequisites
@@ -22,6 +23,7 @@ What is MindNLP
 .. toctree::
    :maxdepth: 1
    :caption: Quick Start
+   :titlesonly:
 
    quick_start/first_model
    quick_start/dataset_and_transforms
