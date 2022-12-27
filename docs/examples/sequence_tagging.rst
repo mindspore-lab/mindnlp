@@ -1,7 +1,7 @@
 Sequence Tagging
 ================
 
-`GitHub源码 <https://github.com/mindspore-lab/mindnlp/blob/master/examples/sequence_tagging.py>`__
+`GitHub <https://github.com/mindspore-lab/mindnlp/blob/master/examples/sequence_tagging.py>`__
 
 Sequence Tagging refers to the process of tagging each Token in the
 sequence given an input sequence.Sequence tagging problems are usually
