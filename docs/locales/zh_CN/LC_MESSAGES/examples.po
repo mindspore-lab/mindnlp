@@ -123,7 +123,7 @@ msgstr "以mindnlp的trainer开始训练."
 
 #: ../../examples/machine_translation.rst:2
 msgid "Machine Translation"
-msgstr ""
+msgstr "机器翻译"
 
 #: ../../examples/machine_translation.rst:4
 msgid ""
@@ -131,7 +131,9 @@ msgid ""
 "paragraph or a text) into another language. The following is a demo of "
 "training machine translation using the Multi30k dataset and the Seq2Seq "
 "model."
-msgstr ""
+msgstr "机器翻译就是将一种语言（一句话或者一段"
+"话或者一篇文章）翻译成另外一种语言。下面是一个"
+"使用Multi30k数据集和Seq2Seq模型训练机器翻译的demo："
 
 #: ../../examples/machine_translation.rst:10
 msgid "Defin Model"
@@ -144,7 +146,9 @@ msgid ""
 "the previous sequence and the other is to use the understood content to "
 "generate a new sequence. As for the sequences the model used can be RNN, "
 "LSTM, GRU, other sequence models, etc."
-msgstr ""
+msgstr "机器翻译是一种典型的Seq2Seq模型，是从一个序列生成另外一个序列。它"
+"涉及两个过程：一个是理解前一个序列，另一个是用理解到的内容来生成新的序列。"
+"至于序列所采用的模型可以是RNN，LSTM，GRU，其它序列模型等。"
 
 #: ../../examples/machine_translation.rst:52
 msgid ""
@@ -163,7 +167,7 @@ msgstr "初始化词表以进行预处理："
 
 #: ../../examples/machine_translation.rst:119
 msgid "Define Optimizer, Loss, Callbacks, Metrics"
-msgstr ""
+msgstr "定义优化器，损失函数，回调函数，指标："
 
 #: ../../examples/machine_translation.rst:141
 msgid "Define Trainer"
