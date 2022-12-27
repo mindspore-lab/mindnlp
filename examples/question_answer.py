@@ -17,15 +17,12 @@ BiDAF model
 """
 
 import math
-import json
 import mindspore
-import numpy as np
 import mindspore.nn as nn
-import mindspore.dataset as ds
 import mindspore.context as context
 from mindspore import ops
-from mindspore import Tensor
 from mindspore import Parameter
+from mindspore.dataset import text
 from mindspore.common.initializer import Uniform, HeUniform, initializer
 
 from mindnlp.abc import Seq2vecModel
@@ -64,7 +61,7 @@ class Encoder(nn.Cell):
             )
 
         # 2. Word Embedding Layer
-        self.word_emb = Glove(word_vocab, Tensor(word_embeddings))
+        self.word_emb = word_embeddings
 
         # highway network
         self.highway_linear0 = nn.Dense(hidden_size * 2, hidden_size * 2,
@@ -270,16 +267,16 @@ class BiDAF(Seq2vecModel):
 squad_train, squad_dev = load('squad1')
 print(squad_train.get_col_names())
 
-# load vocab
-with open('.data/char_vocab.json', mode='r', encoding='utf-8') as json_file:
-    char_dict = json.load(json_file)
-    char_vocab = ds.text.Vocab.from_dict(char_dict)
-with open('.data/word_vocab.json', mode='r', encoding='utf-8') as json_file:
-    word_dict = json.load(json_file)
-    word_vocab = ds.text.Vocab.from_dict(word_dict)
-
-# load word embedding
-word_embeddings = np.load(".data/embeddings.npy")
+# load vocab and embedding
+word_embeddings, word_vocab = Glove.from_pretrained('6B', 100, special_tokens=["<unk>", "<pad>"])
+char_dic = {"<unk>": 0, "<pad>": 1, "e": 2, "t": 3, "a": 4, "i": 5, "n": 6,\
+                    "o": 7, "s": 8, "r": 9, "h": 10, "l": 11, "d": 12, "c": 13, "u": 14,\
+                    "m": 15, "f": 16, "p": 17, "g": 18, "w": 19, "y": 20, "b": 21, ",": 22,\
+                    "v": 23, ".": 24, "k": 25, "1": 26, "0": 27, "x": 28, "2": 29, "\"": 30, \
+                    "-": 31, "j": 32, "9": 33, "'": 34, ")": 35, "(": 36, "?": 37, "z": 38,\
+                    "5": 39, "8": 40, "q": 41, "3": 42, "4": 43, "7": 44, "6": 45, ";": 46,\
+                    ":": 47, "\u2013": 48, "%": 49, "/": 50, "]": 51, "[": 52}
+char_vocab = text.Vocab.from_dict(char_dic)
 tokenizer = BasicTokenizer(True)
 
 # process dataset
@@ -296,7 +293,6 @@ hidden_size = 100
 dropout = 0.2
 lr = 0.5
 epoch = 6
-exp_decay_rate = 0.999
 
 # net
 encoder = Encoder(char_vocab_size, char_vocab, char_dim, char_channel_size, char_channel_width, word_vocab,
@@ -318,7 +314,7 @@ loss = Loss()
 optimizer = nn.Adadelta(net.trainable_params(), learning_rate=lr)
 
 # trainer
-trainer = Trainer(network=net, train_dataset=squad_train, loss_fn=loss, optimizer=optimizer)
+trainer = Trainer(network=net, train_dataset=squad_train, epochs=epoch, loss_fn=loss, optimizer=optimizer)
 trainer.run(tgt_columns=["s_idx", "e_idx"], jit=True)
   
 print("Done!")
