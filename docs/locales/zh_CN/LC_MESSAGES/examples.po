@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: MindNLP\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-12-23 22:40+0800\n"
-"PO-Revision-Date: 2022-12-23 22:44+0800\n"
+"POT-Creation-Date: 2022-12-27 10:57+0800\n"
+"PO-Revision-Date: 2022-12-27 10:58+0800\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -26,7 +26,9 @@ msgstr "Fasttext"
 msgid ""
 "In this paper, we will train a fasttext model that can complete the task of "
 "text classification by using the pre-trained glove word vector."
-msgstr "本文中，我们将通过使用glove预训练词向量来训练一个能完成文本分类任务的fasttext模型."
+msgstr ""
+"本文中，我们将通过使用glove预训练词向量来训练一个能完成文本分类任务的fasttext"
+"模型."
 
 #: ../../examples/fasttext.rst:8
 msgid "Step"
@@ -56,30 +58,36 @@ msgstr "4.实例化模型"
 msgid "5.Training Process"
 msgstr "5.训练过程"
 
-#: ../../examples/fasttext.rst:23
-msgid "(1)Define Model"
-msgstr "(1)定义模型"
+#: ../../examples/fasttext.rst:23 ../../examples/question_answer.rst:123
+#: ../../examples/sequence_tagging.rst:55
+msgid "Define Model"
+msgstr "定义模型"
 
-#: ../../examples/fasttext.rst:70
-msgid "(2)Define Hyperparameters"
-msgstr "(2)定义超参数"
+#: ../../examples/fasttext.rst:70 ../../examples/machine_translation.rst:35
+#: ../../examples/sequence_tagging.rst:96
+msgid "Define Hyperparameters"
+msgstr "定义超参数"
 
-#: ../../examples/fasttext.rst:72 ../../examples/sequence_tagging.rst:51
+#: ../../examples/fasttext.rst:72 ../../examples/machine_translation.rst:37
+#: ../../examples/sequence_tagging.rst:98
 msgid ""
 "The following are some of the required hyperparameters in the model training "
 "process."
 msgstr "以下是模型训练过程中需要的一些超参数。"
 
-#: ../../examples/fasttext.rst:86
-msgid "(3)Data Preprocessing"
-msgstr "(3)数据预处理"
+#: ../../examples/fasttext.rst:86 ../../examples/machine_translation.rst:50
+#: ../../examples/sequence_tagging.rst:107
+msgid "Data Preprocessing"
+msgstr "数据预处理"
 
 #: ../../examples/fasttext.rst:88
 msgid ""
 "The agnews dataset will be used in this article and downloaded automatically "
 "through the mindnlp API. In the preprocessing, the data is cleaned and then "
 "sorted into buckets after lookup."
-msgstr "在本文中使用agnews数据集，并通过mindnlp的API自动下载.在数据预处理中，数据被清洗后，经过lookup操作再分桶."
+msgstr ""
+"在本文中使用agnews数据集，并通过mindnlp的API自动下载.在数据预处理中，数据被清"
+"洗后，经过lookup操作再分桶."
 
 #: ../../examples/fasttext.rst:92
 msgid "Load dataset:"
@@ -94,13 +102,16 @@ msgid ""
 "The loaded dataset is preprocessed and divided into training and validation:"
 msgstr "加载的数据集经过预处理后被分成训练集和验证集."
 
-#: ../../examples/fasttext.rst:122
-msgid "(4)Instantiate Model"
-msgstr "(4)实例化模型"
+#: ../../examples/fasttext.rst:122 ../../examples/machine_translation.rst:85
+#: ../../examples/question_answer.rst:367
+#: ../../examples/sequence_tagging.rst:139
+msgid "Instantiate Model"
+msgstr "实例化模型"
 
-#: ../../examples/fasttext.rst:130
-msgid "(5)Training Process"
-msgstr "(5)训练过程"
+#: ../../examples/fasttext.rst:130 ../../examples/machine_translation.rst:151
+#: ../../examples/sequence_tagging.rst:174
+msgid "Training Process"
+msgstr "训练过程"
 
 #: ../../examples/fasttext.rst:132
 msgid "Set the loss, optimizer, metric."
@@ -110,9 +121,244 @@ msgstr "设置loss,optimizer,metric."
 msgid "Get started with mindnlp’s built-in trainer."
 msgstr "以mindnlp的trainer开始训练."
 
-#: ../../examples/sentiment_analysis.rst:2
-msgid "Sentiment Analysis"
-msgstr "情感分析"
+#: ../../examples/machine_translation.rst:2
+msgid "Machine Translation"
+msgstr ""
+
+#: ../../examples/machine_translation.rst:4
+msgid ""
+"Machine translation is the translation of one language (a sentence or a "
+"paragraph or a text) into another language. The following is a demo of "
+"training machine translation using the Multi30k dataset and the Seq2Seq "
+"model."
+msgstr ""
+
+#: ../../examples/machine_translation.rst:10
+msgid "Defin Model"
+msgstr "定义模型"
+
+#: ../../examples/machine_translation.rst:12
+msgid ""
+"Machine translation is a typical Seq2Seq model that generates another "
+"sequence from one sequence. It involves two processes: one is to understand "
+"the previous sequence and the other is to use the understood content to "
+"generate a new sequence. As for the sequences the model used can be RNN, "
+"LSTM, GRU, other sequence models, etc."
+msgstr ""
+
+#: ../../examples/machine_translation.rst:52
+msgid ""
+"The dataset was downloaded and preprocessed by calling the interface of "
+"dataset in mindnlp."
+msgstr "通过调用mindnlp中dataset的接口下载并预处理数据集。"
+
+#: ../../examples/machine_translation.rst:55
+#: ../../examples/sequence_tagging.rst:112
+msgid "Load datasets:"
+msgstr "加载数据集："
+
+#: ../../examples/machine_translation.rst:63
+msgid "Initialize the vocab and process the data set:"
+msgstr "初始化词表以进行预处理："
+
+#: ../../examples/machine_translation.rst:119
+msgid "Define Optimizer, Loss, Callbacks, Metrics"
+msgstr ""
+
+#: ../../examples/machine_translation.rst:141
+msgid "Define Trainer"
+msgstr "定义训练步骤"
+
+#: ../../examples/question_answer.rst:2
+msgid "Question & Answer"
+msgstr ""
+
+#: ../../examples/question_answer.rst:4
+msgid ""
+"`GitHub源码 <https://github.com/mindspore-lab/mindnlp/blob/master/examples/"
+"question_answer.py>`__"
+msgstr ""
+
+#: ../../examples/question_answer.rst:6
+msgid ""
+"This section introduces a Question-Answering(QA) task in machine reading "
+"comprehension(MRC), also called answer extraction: Given a passage of text "
+"and a question, the machine is required to find a continuous segment from "
+"the text as the answer according to the question. The following is a demo "
+"that uses the SQuAD dataset and the Bi-Directional Attention Flow model to "
+"train the QA task as an example:"
+msgstr ""
+
+#: ../../examples/question_answer.rst:15
+msgid "This tutorial recommends using a GPU for experiments."
+msgstr ""
+
+#: ../../examples/question_answer.rst:17
+msgid "**SQuAD Dataset**"
+msgstr ""
+
+#: ../../examples/question_answer.rst:19
+msgid ""
+"The SQuAD data set is very famous. It is a data set launched by Stanford "
+"University in 2016, which is a reading comprehension data set. Given an "
+"article, prepare the corresponding questions and need the algorithm to give "
+"the answer to the question. All articles in this dataset are from Wikipedia."
+msgstr ""
+
+#: ../../examples/question_answer.rst:25
+msgid "Here is a example item in training set:"
+msgstr ""
+
+#: ../../examples/question_answer.rst:28
+msgid "column"
+msgstr ""
+
+#: ../../examples/question_answer.rst:28
+msgid "data"
+msgstr ""
+
+#: ../../examples/question_answer.rst:30
+msgid "id"
+msgstr ""
+
+#: ../../examples/question_answer.rst:30
+msgid "5733be284776f41900661182"
+msgstr ""
+
+#: ../../examples/question_answer.rst:32
+msgid "context"
+msgstr ""
+
+#: ../../examples/question_answer.rst:32
+msgid ""
+"Architecturally, the school has a Catholic character. Atop the Main "
+"Building's gold dome is a golden statue of the Virgin Mary. Immediately in "
+"front of the Main Building and facing it, is a copper statue of Christ with "
+"arms upraised with the legend \"Venite Ad Me Omnes\". Next to the Main "
+"Building is the Basilica of the Sacred Heart. Immediately behind the "
+"basilica is the Grotto, a Marian place of prayer and reflection. It is a "
+"replica of the grotto at Lourdes, France where the Virgin Mary reputedly "
+"appeared to Saint Bernadette Soubirous in 1858. At the end of the main drive "
+"(and in a direct line that connects through 3 statues and the Gold Dome), is "
+"a simple, modern stone statue of Mary."
+msgstr ""
+
+#: ../../examples/question_answer.rst:46
+msgid "question"
+msgstr ""
+
+#: ../../examples/question_answer.rst:46
+msgid "To whom did the Virgin Mary allegedly appear in 1858 in Lourdes France?"
+msgstr ""
+
+#: ../../examples/question_answer.rst:49
+msgid "answer"
+msgstr ""
+
+#: ../../examples/question_answer.rst:49
+msgid "Saint Bernadette Soubirous"
+msgstr ""
+
+#: ../../examples/question_answer.rst:51
+msgid "answer_start"
+msgstr ""
+
+#: ../../examples/question_answer.rst:51
+msgid "515"
+msgstr ""
+
+#: ../../examples/question_answer.rst:55
+msgid ""
+"This in a raw data in training set. The answer_start indicates the beginning "
+"char position of the answer in the context. After the data processing, two "
+"columns, s_idx and e_idx will be added as label columns which indicate the "
+"beginning and ending word position of the answer. The following is a demo "
+"that uses the SQuAD dataset and BiDAF model to train the QA task as an "
+"example. When given context and question, s_idx and e_idx will be predicted."
+msgstr ""
+
+#: ../../examples/question_answer.rst:64
+msgid "Procedure of this task"
+msgstr ""
+
+#: ../../examples/question_answer.rst:67
+msgid "Load Dataset"
+msgstr "加载数据集:"
+
+#: ../../examples/question_answer.rst:69
+msgid ""
+"MindNLP provides APIs to load and process various common datasets such as "
+"SQuAD, IMDB, Multi30K, AG_News, etc."
+msgstr ""
+
+#: ../../examples/question_answer.rst:72
+msgid ""
+"Call the function ``load()`` from ``dataset`` to load the SQuAD dataset. "
+"Then the training set and development set of the SQuAD dataset will be "
+"returned."
+msgstr ""
+
+#: ../../examples/question_answer.rst:76
+msgid "The code of loading dataset:"
+msgstr ""
+
+#: ../../examples/question_answer.rst:84
+msgid "Process Data"
+msgstr "处理数据集："
+
+#: ../../examples/question_answer.rst:86
+msgid ""
+"First obtain the embeddings and the vocabulary of words, by calling the "
+"function ``from_pretrained()`` from ``Glove``. And since there is no "
+"ready_made vocabulary of chars, you can define one by yourself:"
+msgstr ""
+
+#: ../../examples/question_answer.rst:104
+msgid "Then initialize the tokenizer:"
+msgstr ""
+
+#: ../../examples/question_answer.rst:112
+msgid ""
+"Next, we apply the function ``process()`` to get the processed training set:"
+msgstr ""
+
+#: ../../examples/question_answer.rst:125
+msgid ""
+"The code of defining the Bi-Directional Attention Flow(BiDAF) model by using "
+"MindNLP:"
+msgstr ""
+
+#: ../../examples/question_answer.rst:369
+msgid "First we should define some hyperparameters:"
+msgstr "定义超参数"
+
+#: ../../examples/question_answer.rst:382
+msgid "Then instantiate model using the following code:"
+msgstr ""
+
+#: ../../examples/question_answer.rst:392
+msgid "Define Loss and Optimizer"
+msgstr "定义优化器"
+
+#: ../../examples/question_answer.rst:394
+msgid ""
+"A loss function is needed when we train the model. We use "
+"``CrossEntropyLoss`` provided by MindSpore to define a loss function:"
+msgstr ""
+
+#: ../../examples/question_answer.rst:411
+msgid "Then define the optimizer:"
+msgstr "定义优化器"
+
+#: ../../examples/question_answer.rst:418
+msgid "Train Model"
+msgstr "定义模型"
+
+#: ../../examples/question_answer.rst:420
+msgid ""
+"After defining the network, the loss function, and the optimizer, we employ :"
+"py:class:`~mindnlp.engine.trainer.Trainer` to train the model."
+msgstr ""
 
 #: ../../examples/sequence_tagging.rst:2
 msgid "Sequence Tagging"
@@ -120,65 +366,181 @@ msgstr "序列标注"
 
 #: ../../examples/sequence_tagging.rst:4
 msgid ""
-"Sequence Tagging refers to the process of tagging each Token in the sequence "
-"given an input sequence. Sequence tagging problems are usually used for "
-"information extraction from text, including Word Segmentation, Position "
-"Tagging, Named Entity Recognition, NER, etc. The following is a demo that "
-"uses the CoNLL2000Chunking dataset and the Bi-LSTM+CRF model to train the "
-"named entity recognition task as an example:"
+"`GitHub源码 <https://github.com/mindspore-lab/mindnlp/blob/master/examples/"
+"sequence_tagging.py>`__"
 msgstr ""
-"序列标注指给定输入序列，给序列中每个Token进行标注标签的过程。"
-"序列标注问题通常用于从文本中进行信息抽取，包括分词、词性标注、命名实体识别等。"
-"下面是使用CoNLL2000Chunking数据集和Bi-LSTM+CRF模型进行命名实体识别任务训练的示例："
 
-#: ../../examples/sequence_tagging.rst:12
-msgid "Define Model"
-msgstr "定义模型"
+#: ../../examples/sequence_tagging.rst:6
+msgid ""
+"Sequence Tagging refers to the process of tagging each Token in the sequence "
+"given an input sequence.Sequence tagging problems are usually used for "
+"information extraction from text, including Word Segmentation, POS Tagging, "
+"Named Entity Recognition(NER),Chunking, etc."
+msgstr ""
+"序列标注指给定输入序列，给序列中每个Token进行标注标签的过程。序列标注问题通常"
+"用于从文本中进行信息抽取，包括分词、词性标注、命名实体识别等。下面是使用"
+"CoNLL2000Chunking数据集和Bi-LSTM+CRF模型进行命名实体识别任务训练的示例："
 
-#: ../../examples/sequence_tagging.rst:49
-msgid "Define Hyperparameters"
-msgstr "定义超参数"
+#: ../../examples/sequence_tagging.rst:11
+msgid "**Take Chunking task as an example:**"
+msgstr ""
 
-#: ../../examples/sequence_tagging.rst:60
-msgid "Data Preprocessing"
-msgstr "数据预处理"
+#: ../../examples/sequence_tagging.rst:13
+msgid ""
+"Text chunking consists of dividing a text in syntactically correlated parts "
+"of words. For example, the sentence **He reckons the current account deficit "
+"will narrow to only # 1.8 billion in September .** can be divided as follows:"
+msgstr ""
 
-#: ../../examples/sequence_tagging.rst:62
+#: ../../examples/sequence_tagging.rst:18
+msgid ""
+"**[NP He ] [VP reckons ] [NP the current account deficit ] [VP will narrow ] "
+"[PP to ] [NP only # 1.8 billion ] [PP in ] [NP September ]. (NP: noun "
+"phrase; VP: verb phrase; PP: prepositional phrase)**"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:22
+msgid ""
+"The goal of this task is to come forward with machine learning methods which "
+"after a training phase can recognize the chunk segmentation of the test data "
+"as well as possible."
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:26
+msgid "**CoNLL2000Chunking:**"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:28
+msgid ""
+"The chunking tags in the CoNLL2000Chunking dataset are based on the IOB "
+"(Inside, Outside, Beginning) tagging scheme, which is commonly used for "
+"chunking tasks.In the IOB scheme, each word in a sentence is labeled with a "
+"chunk tag that indicates whether the word is part of a chunk, and if so, "
+"whether it is the beginning, inside, or outside of the chunk."
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:36
+msgid ""
+"The CoNLL2000Chunking dataset includes a set of predefined chunk types, such "
+"as noun phrases (NP), verb phrases (VP), and prepositional phrases (PP). The "
+"chunk tags in the dataset are formed by combining the chunk type with the "
+"IOB tag, using the format “I-TYPE” for inside words, “B-TYPE” for beginning "
+"words, and “O” for outside words. For example, the chunk tag “B-NP” "
+"indicates the beginning of a noun phrase, while the chunk tag “I-VP” "
+"indicates an inside word in a verb phrase."
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:44
+msgid "**Example:**"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:47
+msgid "Sentence"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:47
+msgid "They"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:47
+msgid "refuse"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:47
+msgid "to"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:47
+msgid "permit"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:47
+msgid "us"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:47
+msgid "enter"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:47
+msgid "."
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:48
+msgid "Chunk Tag"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:48
+msgid "B-NP"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:48
+msgid "B-VP"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:48
+msgid "B-PP"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:48
+msgid "O"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:51
+msgid ""
+"The following is an example of Chunking task training using the chunk tag of "
+"the CoNLL2000Chunking dataset and the Bi-LSTM+CRF model:"
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:57
+msgid ""
+"First, inherit the ``Seq2vecModel`` in ``mindnlp.abc`` to define the "
+"``Head`` of the model, and then use the ``CRF`` in ``mindnlp.modules`` to "
+"complete the definition of the ``BiLSTM_CRF`` model."
+msgstr ""
+
+#: ../../examples/sequence_tagging.rst:109
 msgid ""
 "The dataset was downloaded and preprocessed by calling the interface of "
-"dataset in mindnlp."
+"dataset in ``mindnlp.dataset`` ."
 msgstr "通过调用mindnlp中dataset的接口下载并预处理数据集。"
 
-#: ../../examples/sequence_tagging.rst:65
-msgid "Load datasets:"
-msgstr "加载数据集："
-
-#: ../../examples/sequence_tagging.rst:73
+#: ../../examples/sequence_tagging.rst:120
 msgid "Initializes the vocab for preprocessing:"
 msgstr "初始化词表以进行预处理："
 
-#: ../../examples/sequence_tagging.rst:82
+#: ../../examples/sequence_tagging.rst:129
 msgid "Process datasets:"
 msgstr "处理数据集："
 
-#: ../../examples/sequence_tagging.rst:92
-msgid "Instantiate Model"
-msgstr "实例化模型"
-
-#: ../../examples/sequence_tagging.rst:106
+#: ../../examples/sequence_tagging.rst:153
 msgid "Define Optimizer"
 msgstr "定义优化器"
 
-#: ../../examples/sequence_tagging.rst:116
+#: ../../examples/sequence_tagging.rst:163
 msgid "Define Train Step"
 msgstr "定义训练步骤"
 
-#: ../../examples/sequence_tagging.rst:127
-msgid "Training Process"
-msgstr "训练过程"
-
-#: ../../examples/sequence_tagging.rst:129
+#: ../../examples/sequence_tagging.rst:176
 msgid ""
 "Now that we have completed all the preparations, we can begin to train the "
 "model."
 msgstr "现在我们已经完成了所有的准备工作，可以开始训练模型了。"
+
+#~ msgid "(1)Define Model"
+#~ msgstr "(1)定义模型"
+
+#~ msgid "(2)Define Hyperparameters"
+#~ msgstr "(2)定义超参数"
+
+#~ msgid "(3)Data Preprocessing"
+#~ msgstr "(3)数据预处理"
+
+#~ msgid "(4)Instantiate Model"
+#~ msgstr "(4)实例化模型"
+
+#~ msgid "(5)Training Process"
+#~ msgstr "(5)训练过程"
+
+#~ msgid "Sentiment Analysis"
+#~ msgstr "情感分析"
