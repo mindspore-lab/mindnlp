@@ -1,10 +1,27 @@
 First Model
 ===================
 
+Overview
+-------------------
+
 Sentiment classification is a classic task in natural language processing.
 It is a typical classification problem to mine and analyze people's sentiments
 expressed in the text, which is positive or negative. The following uses
-MindNLP to implement an RNN-based sentimental classification model.
+MindNLP to implement an RNN-based sentimental classification model to achieve
+the following effects:
+
+::
+
+    Input: This film is terrible
+    Correct label: Negative
+    Forecast label: Negative
+
+    Input: This film is great
+    Correct label: Positive
+    Forecast label: Positive
+
+Model Building
+-------------------
 
 According to the task, the base module :py:class:`~mindnlp.abc.Seq2vecModel`
 can be used to build the model. The function of module
@@ -31,6 +48,9 @@ on ``encoder`` output to get the final result.
             _, (hidden, _), _ = self.encoder(text)
             output = self.head(hidden)
             return output
+
+Model Instantiation
+-------------------
 
 Two modules ``encoder`` and ``head`` are initialized separately, passing
 as arguments into model. We use :py:class:`~mindnlp.modules.RNNEncoder`
