@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: MindNLP\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-12-23 22:40+0800\n"
-"PO-Revision-Date: 2022-12-23 22:45+0800\n"
+"POT-Creation-Date: 2022-12-27 10:57+0800\n"
+"PO-Revision-Date: 2022-12-27 10:59+0800\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -29,9 +29,9 @@ msgid ""
 "common approaches in NLP. It can help researchers and developers to "
 "construct and train models more conveniently and rapidly."
 msgstr ""
-"MindNLP是基于MindSpore的一个自然语言处理（NLP）开源库，其中包含了许多"
-"自然语言处理的常用方法，提供了一个易用的NLP平台，旨在帮助研究人员和开发者"
-"更高效地构建和训练模型。"
+"MindNLP是基于MindSpore的一个自然语言处理（NLP）开源库，其中包含了许多自然语言"
+"处理的常用方法，提供了一个易用的NLP平台，旨在帮助研究人员和开发者更高效地构建"
+"和训练模型。"
 
 #: ../../overview/about.rst:9
 msgid "**Comprehensive data processing**"
@@ -42,8 +42,8 @@ msgid ""
 "Several classical NLP datasets are packaged into friendly module for easy "
 "use, such as Multi30k, SQuAD, CoNLL, etc."
 msgstr ""
-"提供丰富的NLP数据处理模块，可灵活高效地完成数据预处理，包括"
-"Multi30k、SQuAD、CoNLL等经典数据集。"
+"提供丰富的NLP数据处理模块，可灵活高效地完成数据预处理，包括Multi30k、SQuAD、"
+"CoNLL等经典数据集。"
 
 #: ../../overview/about.rst:14
 msgid "**Friendly NLP model toolset**"
@@ -53,7 +53,8 @@ msgstr "**用户友好的NLP模型工具集**"
 msgid ""
 "MindNLP provides various configurable components. It is friendly to "
 "customize models using MindNLP."
-msgstr "提供多种可配置神经网络组件，易于用户自定义模型，可大幅提升NLP任务建模的效率。"
+msgstr ""
+"提供多种可配置神经网络组件，易于用户自定义模型，可大幅提升NLP任务建模的效率。"
 
 #: ../../overview/about.rst:19
 msgid "**Easy-to-use engine**"
@@ -78,3 +79,11 @@ msgstr "GitHub Issue反馈: https://github.com/mindspore-lab/mindnlp/issues"
 #: ../../overview/prerequisites.rst:2
 msgid "Prerequisites"
 msgstr "预备知识"
+
+#: ../../overview/prerequisites.rst:5
+msgid "Install MindNLP"
+msgstr ""
+
+#: ../../overview/prerequisites.rst:12
+msgid "Install from source code"
+msgstr ""
