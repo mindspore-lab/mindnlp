@@ -302,10 +302,8 @@ msgid "The example code of training and evaluating the model is as follows:"
 msgstr "训练和评估模型的示例代码："
 
 #: ../../quick_start/use_metrics.rst:2
-#, fuzzy
-#| msgid "Define Metrics"
 msgid "Use Metrics"
-msgstr "定义评价指标"
+msgstr "使用Metrics评估模型"
 
 #: ../../quick_start/use_metrics.rst:4
 msgid ""
@@ -322,6 +320,18 @@ msgid ""
 "metrics.rouge.RougeL`, :py:class:`~mindnlp.engine.metrics.rouge.RougeN`, :py:"
 "class:`~mindnlp.engine.metrics.spearman.SpearmanCorrelation`."
 msgstr ""
+"MindNLP中有很多 :py:class:`~mindnlp.abc.Metric` 可以用于模型"
+"评估： :py:class:`~mindnlp.engine.metrics.accuracy.Accuracy` ， :py:class:"
+"`~mindnlp.engine.metrics.bleu.BleuScore`， :py:class:`~mindnlp.engine.metrics."
+"confusion_matrix.ConfusionMatrix`， :py:class:`~mindnlp.engine.metrics."
+"distinct.Distinct`， :py:class:`~mindnlp.engine.metrics.em_score.EmScore`， :"
+"py:class:`~mindnlp.engine.metrics.f1.F1Score`， :py:class:`~mindnlp.engine."
+"metrics.matthews.MatthewsCorrelation`， :py:class:`~mindnlp.engine.metrics."
+"pearson.PearsonCorrelation`， :py:class:`~mindnlp.engine.metrics.perplexity."
+"Perplexity`， :py:class:`~mindnlp.engine.metrics.precision.Precision`， :py:"
+"class:`~mindnlp.engine.metrics.recall.Recall`， :py:class:`~mindnlp.engine."
+"metrics.rouge.RougeL`， :py:class:`~mindnlp.engine.metrics.rouge.RougeN`， :py:"
+"class:`~mindnlp.engine.metrics.spearman.SpearmanCorrelation`。"
 
 #: ../../quick_start/use_metrics.rst:22
 msgid ""
@@ -329,6 +339,9 @@ msgid ""
 "classes and passing the instantiated objects into :py:class:`~mindnlp.engine."
 "trainer.Trainer` as one of its parameters."
 msgstr ""
+"我们可以直接使用这些预定义好的评价指标，通过实例化一些相关类，"
+"并将实例化后的对象送入 :py:class:`~mindnlp.engine."
+"trainer.Trainer` 作为其参数之一。"
 
 #: ../../quick_start/use_metrics.rst:27
 msgid ""
@@ -336,18 +349,21 @@ msgid ""
 "an example, the code of using metrics for model training and evaluation is "
 "as follows:"
 msgstr ""
+"以 :py:class:`~mindnlp.engine.metrics.accuracy.Accuracy` 的使用为例，"
+"使用评价指标，进行模型训练和评估的代码"
+"如下所示："
 
 #: ../../quick_start/use_metrics.rst:47
-#, fuzzy
-#| msgid "Define Metrics"
 msgid "Define a New Metric"
-msgstr "定义评价指标"
+msgstr "定义新的评价指标"
 
 #: ../../quick_start/use_metrics.rst:49
 msgid ""
 "If the metric we need is not provided by MindNLP, it is still simple and "
 "easy for us to define our own metric."
 msgstr ""
+"如果MindNLP没有提供我们需要的评价指标，我们也可以轻松定义自己的评价指标。"
+""
 
 #: ../../quick_start/use_metrics.rst:52
 msgid ""
@@ -356,29 +372,35 @@ msgid ""
 "it is also necessary to extend :py:class:`~mindnlp.abc.Metric` and rewrite "
 "the functions of it:"
 msgstr ""
+"MindNLP定义的所有评价指标类都继承自基类"
+" :py:class:`~mindnlp.abc.Metric` 。定义我们自己的评价指标类时，"
+"也需要继承 :py:class:`~mindnlp.abc.Metric` ，并重写该类的"
+"函数："
 
 #: ../../quick_start/use_metrics.rst:59
 msgid "``__init__()``: initializes the metric."
-msgstr ""
+msgstr "``__init__()``：初始化评价指标。"
 
 #: ../../quick_start/use_metrics.rst:60
 msgid "``clear()``: clears the internal evaluation results."
-msgstr ""
+msgstr "``clear()``：清空中间评估结果。"
 
 #: ../../quick_start/use_metrics.rst:61
 msgid "``eval()``: computes and returns the value of the metric."
-msgstr ""
+msgstr "``eval()``：计算并返回评价指标值。"
 
 #: ../../quick_start/use_metrics.rst:62
 msgid "``update(*inputs)``: updates the local variables."
-msgstr ""
+msgstr "``update(*inputs)``：更新局部变量。"
 
 #: ../../quick_start/use_metrics.rst:63
 msgid "``get_metric_name()``: returns the name of the metric."
-msgstr ""
+msgstr "``get_metric_name()``：返回评价指标名称。"
 
 #: ../../quick_start/use_metrics.rst:65
 msgid ""
 "After finishing those operations, the steps to train and evaluate models "
 "using self-defined metrics are the same as mentioned above."
 msgstr ""
+"完成上述操作后，要使用自定义的评价指标来训练和评估模型，"
+"后续操作与前文一致。"
