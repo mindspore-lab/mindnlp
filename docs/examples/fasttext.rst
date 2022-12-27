@@ -1,26 +1,50 @@
 Fasttext
 ========
 
+`GitHub <https://github.com/mindspore-lab/mindnlp/blob/master/examples/fasttext.py>`__
+
+
+Text classification is a task that classifies a sentence or paragraph
+into a specific category. Text classification is the most basic task in
+NLP, which is involved in many scenarios, such as dialogue robot, search
+recommendation, emotion recognition, content understanding, enterprise
+risk control, quality detection and other directions.
+
+Here is a piece of data from the agnews dataset:
+
+.. container:: highlight-text notranslate
+
+   .. container:: highlight
+
+      .. raw:: html
+
+         <pre><span></span>"3","Fears for T N pension after talks","Unions representing workers at Turner   Newall say they are 'disappointed' after talks with stricken parent firm Federal Mogul."
+         </pre>
+
+Here, “3” represents the category to which the text belongs.“Fears for T
+N pension after talks” is the headline of a news article. “Unions
+representing workers at Turner Newall say they are ‘disappointed’ after
+talks with stricken parent firm Federal Mogul.” is the content of the
+article.
+
+AGNews:
+-------
+
+.. hint::
+
+    The AGNews dataset is a collection of news articles collected from more
+    than 2,000 news sources by ComeToMyHead, an academic news search engine.
+    The data set included 120,000 training samples and 7,600 test samples.
+    Each sample is a short text with four categories of labels. In the
+    agnews dataset, all articles will be divided into four categories.The
+    dataset used in this article will be downloaded automatically through
+    mindnlp.
+
 In this paper, we will train a fasttext model that can complete the task
-of text classification by using the pre-trained glove word vector.
-
-Step
-----
-
-There are several steps.
-
-1.Define Model
-
-2.Define Hyperparameters
-
-3.Data Preprocessing
-
-4.Instantiate Model
-
-5.Training Process
+of text classification by using this dataset.
 
 Define Model
----------------
+------------
 
 .. code:: python
 
@@ -83,7 +107,7 @@ training process.
    drop = 0.0
 
 Data Preprocessing
-----------------------
+------------------
 
 The agnews dataset will be used in this article and downloaded
 automatically through the mindnlp API. In the preprocessing, the data is
@@ -119,7 +143,7 @@ validation:
    ag_news_train, ag_news_valid = ag_news_train.split([0.7, 0.3])
 
 Instantiate Model
-----------------------
+-----------------
 
 .. code:: python
 
@@ -127,7 +151,7 @@ Instantiate Model
    net = FasttextModel(vocab_size, embedding_dims, num_class)
 
 Training Process
-----------------------
+----------------
 
 Set the loss, optimizer, metric.
 
