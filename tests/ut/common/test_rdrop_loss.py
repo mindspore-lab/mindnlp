@@ -19,17 +19,16 @@ import unittest
 import pytest
 import numpy as np
 import mindspore
+from ddt import ddt, data
 from mindspore import Tensor
 from mindnlp.common.loss import RDropLoss
 from mindnlp import ms_jit
 
+@ddt
 class TestRDropLoss(unittest.TestCase):
     r"""
     Test RDropLoss
     """
-
-    def setUp(self):
-        self.input = None
 
     def test_loss_inputs_shape_error(self):
         r"""
@@ -52,32 +51,21 @@ class TestRDropLoss(unittest.TestCase):
         loss = r_drop_loss(temp_p, temp_q)
         assert loss.shape == ()
 
-    def test_loss(self):
+    @data(True, False)
+    def test_loss(self, jit):
         r"""
         Test RDropLoss loss
         """
-
-        r_drop_loss = RDropLoss()
-        temp_p = Tensor(np.array([1., 0., 1.]), mindspore.float32)
-        temp_q = Tensor(np.array([0.2, 0.3, 1.1]), mindspore.float32)
-        loss = r_drop_loss(temp_p, temp_q)
-
-        assert np.allclose(loss.asnumpy(), np.array([0.10013707]))
-
-    def test_loss_graph(self):
-        r"""
-        Test RDropLoss loss in graph mode
-        """
-
         r_drop_loss = RDropLoss()
         temp_p = Tensor(np.array([1., 0., 1.]), mindspore.float32)
         temp_q = Tensor(np.array([0.2, 0.3, 1.1]), mindspore.float32)
 
-        @ms_jit
-        def loss_graph(temp_p, temp_q):
+        def forward(temp_p, temp_q):
             loss = r_drop_loss(temp_p, temp_q)
             return loss
 
-        loss = loss_graph(temp_p, temp_q)
+        if jit:
+            forward = ms_jit(forward)
+        loss = forward(temp_p, temp_q)
 
         assert np.allclose(loss.asnumpy(), np.array([0.10013707]))

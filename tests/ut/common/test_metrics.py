@@ -29,10 +29,6 @@ class TestPerplexity(unittest.TestCase):
     Test perplexity
     """
 
-    def setUp(self):
-        self.input = None
-
-
     def test_perplexity_tensor(self):
         """
         Test perplexity

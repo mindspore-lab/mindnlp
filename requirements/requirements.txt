@@ -2,3 +2,4 @@ mindspore>=1.8.1
 requests
 tqdm
 gensim
+ddt

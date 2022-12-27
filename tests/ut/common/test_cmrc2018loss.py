@@ -18,45 +18,22 @@
 import unittest
 import numpy as np
 import mindspore
+from ddt import ddt, data
 from mindspore import Tensor
 from mindnlp.common.loss import CMRC2018Loss
 from mindnlp import ms_jit
 
+@ddt
 class TestCMRC2018Loss(unittest.TestCase):
     r"""
     Test CMRC2018Loss
     """
 
-    def setUp(self):
-        self.input = None
-
-    def test_loss(self):
+    @data(True, False)
+    def test_loss(self, jit):
         r"""
         Test CMRC2018Loss loss
         """
-
-        cmrc_loss = CMRC2018Loss()
-        tensor_a = Tensor(np.array([1, 2, 1]), mindspore.int32)
-        tensor_b = Tensor(np.array([2, 1, 2]), mindspore.int32)
-        my_context_len = Tensor(np.array([2., 1., 2.]), mindspore.float32)
-        tensor_c = Tensor(np.array([
-            [0.1, 0.2, 0.1],
-            [0.1, 0.2, 0.1],
-            [0.1, 0.2, 0.1]
-        ]), mindspore.float32)
-        tensor_d = Tensor(np.array([
-            [0.2, 0.1, 0.2],
-            [0.2, 0.1, 0.2],
-            [0.2, 0.1, 0.2]
-        ]), mindspore.float32)
-        loss = cmrc_loss(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)
-        assert loss.shape == ()
-
-    def test_loss_graph(self):
-        r"""
-        Test CMRC2018Loss loss in graph mode
-        """
-
         tensor_a = Tensor(np.array([1, 2, 1]), mindspore.int32)
         tensor_b = Tensor(np.array([2, 1, 2]), mindspore.int32)
         my_context_len = Tensor(np.array([2., 1., 2.]), mindspore.float32)
@@ -73,10 +50,12 @@ class TestCMRC2018Loss(unittest.TestCase):
 
         cmrc_loss = CMRC2018Loss()
 
-        @ms_jit
-        def loss_graph(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d):
+        def forward(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d):
             loss = cmrc_loss(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)
             return loss
 
-        loss = loss_graph(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)
+        if jit:
+            forward = ms_jit(forward)
+
+        loss = forward(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)
         assert loss.shape == ()
