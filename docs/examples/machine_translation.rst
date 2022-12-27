@@ -6,8 +6,8 @@ paragraph or a text) into another language. The following is a demo of
 training machine translation using the Multi30k dataset and the Seq2Seq
 model.
 
-Defin Model
------------
+Define Model
+------------
 
 Machine translation is a typical Seq2Seq model that generates another
 sequence from one sequence. It involves two processes: one is to
