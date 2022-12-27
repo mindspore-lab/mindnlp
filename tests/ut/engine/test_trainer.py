@@ -14,10 +14,11 @@
 # ============================================================================
 """Test Trainer run function"""
 # pylint: disable=C0103
+# pylint: disable=W0621
 
 import unittest
 import numpy as np
-
+from ddt import ddt, data
 from mindspore import nn
 import mindspore.dataset as ds
 
@@ -60,6 +61,7 @@ class MyModel2(nn.Cell):
         label = label + label + length
         return output
 
+@ddt
 class TestTrainerRun(unittest.TestCase):
     r"""
     Test Trainer Run
@@ -94,17 +96,15 @@ class TestTrainerRun(unittest.TestCase):
                                     metrics=self.metric, epochs=2, optimizer=self.optimizer,
                                     loss_fn=self.loss_fn)
 
-    def test_pure_trainer(self):
-        """test_pure_trainer_pynative"""
+    @data(True, False)
+    def test_pure_trainer(self, jit):
+        """test_pure_trainer"""
         # 6. trainer run
-        self.pure_trainer.run(tgt_columns='label')
+        self.pure_trainer.run(tgt_columns='label', jit=jit)
 
-    def test_pure_trainer_jit(self):
-        """test_pure_trainer_graph"""
-        self.pure_trainer.run(tgt_columns='label', jit=True)
-
-    def test_trainer_timer(self):
-        """test_trainer_timer_pynative"""
+    @data(True, False)
+    def test_trainer_timer(self, jit):
+        """test_trainer_timer"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         train_dataset = train_dataset.batch(4)
@@ -112,21 +112,11 @@ class TestTrainerRun(unittest.TestCase):
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
                           epochs=2, optimizer=self.optimizer, loss_fn=self.loss_fn,
                           callbacks=self.timer_callback_epochs)
-        trainer.run(tgt_columns='label')
+        trainer.run(tgt_columns='label', jit=jit)
 
-    def test_trainer_timer_jit(self):
-        """test_trainer_timer_graph"""
-        train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
-        eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
-        train_dataset = train_dataset.batch(4)
-        eval_dataset = eval_dataset.batch(4)
-        trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
-                          epochs=2, optimizer=self.optimizer, loss_fn=self.loss_fn,
-                          callbacks=self.timer_callback_epochs)
-        trainer.run(tgt_columns='label', jit=True)
-
-    def test_trainer_earlystop(self):
-        """test_trainer_earlystop_pynative"""
+    @data(True, False)
+    def test_trainer_earlystop(self, jit):
+        """test_trainer_earlystop"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         train_dataset = train_dataset.batch(4)
@@ -134,21 +124,11 @@ class TestTrainerRun(unittest.TestCase):
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
                           epochs=6, optimizer=self.optimizer, loss_fn=self.loss_fn,
                           callbacks=self.earlystop_callback)
-        trainer.run(tgt_columns='label')
+        trainer.run(tgt_columns='label', jit=jit)
 
-    def test_trainer_earlystop_jit(self):
-        """test_trainer_earlystop_graph"""
-        train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
-        eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
-        train_dataset = train_dataset.batch(4)
-        eval_dataset = eval_dataset.batch(4)
-        trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
-                          epochs=6, optimizer=self.optimizer, loss_fn=self.loss_fn,
-                          callbacks=self.earlystop_callback)
-        trainer.run(tgt_columns='label', jit=True)
-
-    def test_trainer_bestmodel(self):
-        """test_trainer_bestmodel_pynative"""
+    @data(True, False)
+    def test_trainer_bestmodel(self, jit):
+        """test_trainer_bestmodel"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         train_dataset = train_dataset.batch(4)
@@ -156,21 +136,11 @@ class TestTrainerRun(unittest.TestCase):
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
                           epochs=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
                           callbacks=self.bestmodel_callback)
-        trainer.run(tgt_columns='label')
+        trainer.run(tgt_columns='label', jit=jit)
 
-    def test_trainer_bestmodel_jit(self):
-        """test_trainer_bestmodel_graph"""
-        train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
-        eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
-        train_dataset = train_dataset.batch(4)
-        eval_dataset = eval_dataset.batch(4)
-        trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
-                          epochs=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
-                          callbacks=self.bestmodel_callback)
-        trainer.run(tgt_columns='label', jit=True)
-
-    def test_trainer_checkpoint(self):
-        """test_trainer_checkpoint_pynative"""
+    @data(True, False)
+    def test_trainer_checkpoint(self, jit):
+        """test_trainer_checkpoint"""
         train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
         train_dataset = train_dataset.batch(4)
@@ -178,18 +148,7 @@ class TestTrainerRun(unittest.TestCase):
         trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
                           epochs=7, optimizer=self.optimizer, loss_fn=self.loss_fn,
                           callbacks=self.checkpoint_callback)
-        trainer.run(tgt_columns='label')
-
-    def test_trainer_checkpoint_jit(self):
-        """test_trainer_checkpoint_graph"""
-        train_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
-        eval_dataset = ds.GeneratorDataset(self.dataset_generator, ["data", "label", "length"], shuffle=False)
-        train_dataset = train_dataset.batch(4)
-        eval_dataset = eval_dataset.batch(4)
-        trainer = Trainer(network=self.net, train_dataset=train_dataset, eval_dataset=eval_dataset, metrics=self.metric,
-                          epochs=7, optimizer=self.optimizer, loss_fn=self.loss_fn,
-                          callbacks=self.checkpoint_callback)
-        trainer.run(tgt_columns='label', jit=True)
+        trainer.run(tgt_columns='label', jit=jit)
 
     def test_different_model(self):
         """test_different_model"""
