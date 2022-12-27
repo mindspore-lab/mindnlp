@@ -34,9 +34,10 @@ What is MindNLP
    :caption: Examples
    :titlesonly:
 
-   examples/sentiment_analysis
    examples/fasttext
    examples/sequence_tagging
+   examples/machine_translation
+   examples/question_answer
 
 .. toctree::
    :maxdepth: 1
