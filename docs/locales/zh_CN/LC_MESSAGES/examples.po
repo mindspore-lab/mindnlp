@@ -175,7 +175,7 @@ msgstr "定义训练步骤"
 
 #: ../../examples/question_answer.rst:2
 msgid "Question & Answer"
-msgstr ""
+msgstr "问答任务"
 
 #: ../../examples/question_answer.rst:4
 msgid ""
@@ -192,14 +192,18 @@ msgid ""
 "that uses the SQuAD dataset and the Bi-Directional Attention Flow model to "
 "train the QA task as an example:"
 msgstr ""
+"本节介绍机器阅读理解（MRC）中的问答（QA）任务，也"
+"称为答案抽取：给定一段文本和一个问题，要求机器根据"
+"这个问题根据问题从文字中找出一段连续的片段作为答案。下面是"
+"使用SQuAD数据集和BiDAF双向注意流模型进行问答任务训练的示例："
 
 #: ../../examples/question_answer.rst:15
 msgid "This tutorial recommends using a GPU for experiments."
-msgstr ""
+msgstr "本教程推荐使用GPU进行实验"
 
 #: ../../examples/question_answer.rst:17
 msgid "**SQuAD Dataset**"
-msgstr ""
+msgstr "**SQuAD数据集**"
 
 #: ../../examples/question_answer.rst:19
 msgid ""
@@ -208,18 +212,21 @@ msgid ""
 "article, prepare the corresponding questions and need the algorithm to give "
 "the answer to the question. All articles in this dataset are from Wikipedia."
 msgstr ""
+"SQuAD数据集是斯坦福大学2016年推出的阅读理解数据集。给定"
+"一篇文章，准备相应的问题，需要算法给出问题的答案。该数据"
+"集中的所有文章均来自维基百科。"
 
 #: ../../examples/question_answer.rst:25
 msgid "Here is a example item in training set:"
-msgstr ""
+msgstr "以下是该数据集中的一条训练集数据："
 
 #: ../../examples/question_answer.rst:28
 msgid "column"
-msgstr ""
+msgstr "列名"
 
 #: ../../examples/question_answer.rst:28
 msgid "data"
-msgstr ""
+msgstr "数据"
 
 #: ../../examples/question_answer.rst:30
 msgid "id"
@@ -280,10 +287,14 @@ msgid ""
 "that uses the SQuAD dataset and BiDAF model to train the QA task as an "
 "example. When given context and question, s_idx and e_idx will be predicted."
 msgstr ""
+"这是训练集中的原始数据。answer_start代表context中答案的起始字符所在的位置。数据预"
+"处理后，将添加s_idx和e_idx两列作为标签列，表示答案的第一个单词和最后一个单词所在的"
+"位置。下面以使用SQuAD数据集和BiDAF模型训练问答任务为例进行演示。当给定context和question"
+"时，将预测出s_idx和e_idx。"
 
 #: ../../examples/question_answer.rst:64
 msgid "Procedure of this task"
-msgstr ""
+msgstr "训练步骤"
 
 #: ../../examples/question_answer.rst:67
 msgid "Load Dataset"
@@ -294,6 +305,8 @@ msgid ""
 "MindNLP provides APIs to load and process various common datasets such as "
 "SQuAD, IMDB, Multi30K, AG_News, etc."
 msgstr ""
+"MindNLP 提供API来加载和处理各种常见的数据集，如"
+"SQuAD、IMDB、Multi30K、AG_News等。"
 
 #: ../../examples/question_answer.rst:72
 msgid ""
@@ -301,10 +314,12 @@ msgid ""
 "Then the training set and development set of the SQuAD dataset will be "
 "returned."
 msgstr ""
+"调用来自 ``dataset`` 模块的 ``load()`` 函数加载SQuAD数据集。该函数"
+"会返回SQuAD数据集的训练集和开发集。"
 
 #: ../../examples/question_answer.rst:76
 msgid "The code of loading dataset:"
-msgstr ""
+msgstr "加载数据集的代码如下所示："
 
 #: ../../examples/question_answer.rst:84
 msgid "Process Data"
@@ -316,33 +331,37 @@ msgid ""
 "function ``from_pretrained()`` from ``Glove``. And since there is no "
 "ready_made vocabulary of chars, you can define one by yourself:"
 msgstr ""
+"首先通过调用来自 ``Glove`` 的 ``from_pretrained()`` 函数获取embedding和"
+"单词级词汇表。由于没有现成的字符级的词汇表，你可以自己定义一个："
 
 #: ../../examples/question_answer.rst:104
 msgid "Then initialize the tokenizer:"
-msgstr ""
+msgstr "初始化分词器："
 
 #: ../../examples/question_answer.rst:112
 msgid ""
 "Next, we apply the function ``process()`` to get the processed training set:"
 msgstr ""
+"接下来，调用 ``process()`` 函数对训练集进行处理："
 
 #: ../../examples/question_answer.rst:125
 msgid ""
 "The code of defining the Bi-Directional Attention Flow(BiDAF) model by using "
 "MindNLP:"
 msgstr ""
+"使用MindNLP定义双向注意力流（BiDAF）模型的代码如下所示："
 
 #: ../../examples/question_answer.rst:369
 msgid "First we should define some hyperparameters:"
-msgstr "定义超参数"
+msgstr "定义超参数："
 
 #: ../../examples/question_answer.rst:382
 msgid "Then instantiate model using the following code:"
-msgstr ""
+msgstr "实例化模型："
 
 #: ../../examples/question_answer.rst:392
 msgid "Define Loss and Optimizer"
-msgstr "定义优化器"
+msgstr "定义损失函数和优化器"
 
 #: ../../examples/question_answer.rst:394
 msgid ""
@@ -363,6 +382,8 @@ msgid ""
 "After defining the network, the loss function, and the optimizer, we employ :"
 "py:class:`~mindnlp.engine.trainer.Trainer` to train the model."
 msgstr ""
+"定义好网络、损失函数、优化器后，我们使用 :py:class:`~mindnlp.engine.trainer.Trainer` 来"
+"训练模型"
 
 #: ../../examples/sequence_tagging.rst:2
 msgid "Sequence Tagging"
