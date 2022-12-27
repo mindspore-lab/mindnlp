@@ -391,7 +391,7 @@ msgstr "序列标注"
 
 #: ../../examples/sequence_tagging.rst:4
 msgid ""
-"`GitHub源码 <https://github.com/mindspore-lab/mindnlp/blob/master/examples/"
+"`GitHub <https://github.com/mindspore-lab/mindnlp/blob/master/examples/"
 "sequence_tagging.py>`__"
 msgstr ""
 
@@ -402,13 +402,13 @@ msgid ""
 "information extraction from text, including Word Segmentation, POS Tagging, "
 "Named Entity Recognition(NER),Chunking, etc."
 msgstr ""
-"序列标注指给定输入序列，给序列中每个Token进行标注标签的过程。序列标注问题通常"
-"用于从文本中进行信息抽取，包括分词、词性标注、命名实体识别等。下面是使用"
-"CoNLL2000Chunking数据集和Bi-LSTM+CRF模型进行命名实体识别任务训练的示例："
+"序列标注是指给定一个输入序列，对序列中的每个Token进行标注的过程。"
+"序列标注问题通常用于从文本中提取信息，包括分词 (Word Segmentation)、"
+"词性标注 (POS Tagging)、命名实体识别 (NER)、组块分析 (Chunking) 等。"
 
 #: ../../examples/sequence_tagging.rst:11
 msgid "**Take Chunking task as an example:**"
-msgstr ""
+msgstr "**以组块分析 (Chunking) 任务为例：**"
 
 #: ../../examples/sequence_tagging.rst:13
 msgid ""
@@ -416,6 +416,9 @@ msgid ""
 "of words. For example, the sentence **He reckons the current account deficit "
 "will narrow to only # 1.8 billion in September .** can be divided as follows:"
 msgstr ""
+"文本分块包括将文本划分为句法相关的词的一部分。"
+"例如，句子：**He reckons the current account deficit will narrow to only # 1.8 "
+"billion in September .** 可以被分块为："
 
 #: ../../examples/sequence_tagging.rst:18
 msgid ""
@@ -423,6 +426,9 @@ msgid ""
 "[PP to ] [NP only # 1.8 billion ] [PP in ] [NP September ]. (NP: noun "
 "phrase; VP: verb phrase; PP: prepositional phrase)**"
 msgstr ""
+"**[NP He ] [VP reckons ] [NP the current account deficit ] [VP will narrow ] "
+"[PP to ] [NP only # 1.8 billion ] [PP in ] [NP September ]. (NP：名词短语；"
+"VP：动词短语；PP：介词短语)**"
 
 #: ../../examples/sequence_tagging.rst:22
 msgid ""
@@ -430,6 +436,7 @@ msgid ""
 "after a training phase can recognize the chunk segmentation of the test data "
 "as well as possible."
 msgstr ""
+"该任务的目标是提出机器学习方法，在训练阶段后可以尽可能好地识别测试数据的块分割。"
 
 #: ../../examples/sequence_tagging.rst:26
 msgid "**CoNLL2000Chunking:**"
@@ -443,6 +450,9 @@ msgid ""
 "chunk tag that indicates whether the word is part of a chunk, and if so, "
 "whether it is the beginning, inside, or outside of the chunk."
 msgstr ""
+"CoNLL2000Chunking 数据集中的分块标签基于分块任务常用的 "
+"IOB(Inside, Outside, Beginning) 标签方案。句子中的每个单词都标有一个块标签，"
+"该标签指示该单词是否是块的一部分，以及它是开头部分、中间部分还是块外部分。"
 
 #: ../../examples/sequence_tagging.rst:36
 msgid ""
@@ -454,10 +464,14 @@ msgid ""
 "indicates the beginning of a noun phrase, while the chunk tag “I-VP” "
 "indicates an inside word in a verb phrase."
 msgstr ""
+"CoNLL2000Chunking 数据集包括一组预定义的块类型，例如名词短语 (NP)、动词短语 (VP) "
+"和介词短语 (PP)。数据集中的块标签由块类型和IOB标签组合而成，内部词使用“I-TYPE”格式，"
+"起始词使用“B-TYPE”格式，外部词使用“O”格式。例如，块标签“B-NP”表示名词短语的开头，"
+"而块标签“I-VP”表示动词短语的内部词。"
 
 #: ../../examples/sequence_tagging.rst:44
 msgid "**Example:**"
-msgstr ""
+msgstr "**示例：**"
 
 #: ../../examples/sequence_tagging.rst:47
 msgid "Sentence"
@@ -516,6 +530,8 @@ msgid ""
 "The following is an example of Chunking task training using the chunk tag of "
 "the CoNLL2000Chunking dataset and the Bi-LSTM+CRF model:"
 msgstr ""
+"下面是使用CoNLL2000Chunking数据集的块标签 (chunk tag) "
+"和Bi-LSTM+CRF模型进行组块分析 (Chunking) 任务训练的例子："
 
 #: ../../examples/sequence_tagging.rst:57
 msgid ""
@@ -523,12 +539,14 @@ msgid ""
 "``Head`` of the model, and then use the ``CRF`` in ``mindnlp.modules`` to "
 "complete the definition of the ``BiLSTM_CRF`` model."
 msgstr ""
+"首先继承 ``mindnlp.abc`` 中的 ``Seq2vecModel`` 定义模型的 ``Head``，"
+"然后使用 ``mindnlp.modules`` 中的 ``CRF`` 完成 ``BiLSTM_CRF`` 模型的定义。"
 
 #: ../../examples/sequence_tagging.rst:109
 msgid ""
 "The dataset was downloaded and preprocessed by calling the interface of "
 "dataset in ``mindnlp.dataset`` ."
-msgstr "通过调用mindnlp中dataset的接口下载并预处理数据集。"
+msgstr "通过调用 ``mindnlp.dataset`` 中 dataset 的接口下载并预处理数据集。"
 
 #: ../../examples/sequence_tagging.rst:120
 msgid "Initializes the vocab for preprocessing:"
