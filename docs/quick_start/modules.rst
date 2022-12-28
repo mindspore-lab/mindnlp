@@ -9,6 +9,47 @@ We will introduce the three function in the following three sections.
 Embedding
 -------------------
 
+embedding is essentially a word embedding technique,
+which can represent a character or word as a low-dimensional vector.
+mindnlp provides a quick and easy way to construct embeddings through
+pre-trained glove,fasttext,word2vec word vectors.
+You can also create your own custom embeddings.
+
+Next we demonstrate how to quickly construct an embedding
+using glove word vectors via MindNLP.
+
+.. code:: python
+
+    import numpy as np
+    from mindspore import Tensor
+    from mindspore.dataset.text.utils import Vocab
+    from mindnlp.modules.embeddings.glove_embedding import Glove
+
+    # Define your own vocab
+    vocab = Vocab.from_list(['default', 'one', 'two', 'three'])
+
+    # Define your own embedding table
+    init_embed = Tensor(np.zeros((4, 4)).astype(np.float32))
+
+    # Create your own embedding object
+    glove_embed = Glove(vocab, init_embed)
+
+    # You can also use pre-trained word vectors
+    glove_embed_pretrained, _ = Glove.from_pretrained()
+
+After creating the embedding, we will use it for lookup next:
+
+.. code:: python
+
+    # The index to query for
+    ids = Tensor([1, 2, 3])
+
+    # Computed by the built embedding
+    output = glove_embed(ids)
+
+You can get more information about the embedding API from
+:doc:`MindNLP.modules.embeddings <../api/modules/embeddings>`.
+
 Encoder-Decoder
 -------------------
 
