@@ -1,5 +1,5 @@
-Fasttext
-========
+Text Classification
+===================
 
 `GitHub <https://github.com/mindspore-lab/mindnlp/blob/master/examples/fasttext.py>`__
 

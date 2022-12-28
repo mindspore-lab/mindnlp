@@ -101,22 +101,27 @@ msgid ""
 "easy way to construct embeddings through pre-trained glove,fasttext,word2vec "
 "word vectors. You can also create your own custom embeddings."
 msgstr ""
+"embedding本质上是一种词嵌入技术,能够将一个单词或短语表示为低维向量."
+"mindnlp提供了一个快速通过预训练glove,fasttext,word2vec词向量简单构造embedding的方法."
+"你也可以创建自己的embedding."
 
 #: ../../quick_start/modules.rst:18
 msgid ""
 "Next we demonstrate how to quickly construct an embedding using glove word "
 "vectors via MindNLP."
-msgstr ""
+msgstr "下面将演示如何使用glove预训练词向量来通过MindNLP快速构造embedding."
 
 #: ../../quick_start/modules.rst:40
 msgid "After creating the embedding, we will use it for lookup next:"
-msgstr ""
+msgstr "在创建embedding后,我们将使用它进行lookup:"
 
 #: ../../quick_start/modules.rst:50
 msgid ""
 "You can get more information about the embedding API from :doc:`MindNLP."
 "modules.embeddings <../api/modules/embeddings>`."
-msgstr ""
+msgstr "你可以从 :doc:`MindNLP."
+"modules.embeddings <../api/modules/embeddings>`."
+"得到更多有关embedding API的信息."
 
 #: ../../quick_start/modules.rst:54
 msgid "Encoder-Decoder"
