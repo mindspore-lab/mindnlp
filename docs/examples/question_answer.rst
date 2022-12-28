@@ -406,7 +406,6 @@ A loss function is needed when we train the model. We use
            return loss
 
    loss = Loss()
-   optimizer = nn.Adadelta(net.trainable_params(), learning_rate=lr)
 
 Then define the optimizer:
 
