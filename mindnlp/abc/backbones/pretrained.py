@@ -120,6 +120,8 @@ class PretrainedModel(nn.Cell):
         Params:
             pretrained_model_name_or_path:
         """
+
+        # Todo: load huggingface checkpoint
         config = kwargs.pop("config", None)
         # load config
         if not isinstance(config, PretrainedConfig):
