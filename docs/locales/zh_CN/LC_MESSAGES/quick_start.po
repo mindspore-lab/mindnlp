@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: MindNLP\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-12-27 10:57+0800\n"
-"PO-Revision-Date: 2022-12-27 10:58+0800\n"
+"POT-Creation-Date: 2022-12-28 17:42+0800\n"
+"PO-Revision-Date: 2022-12-28 17:46+0800\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -26,27 +26,27 @@ msgstr "数据集和数据变换"
 msgid "First Model"
 msgstr "第一个模型"
 
-#: ../../quick_start/first_model.rst:6
+#: ../../quick_start/first_model.rst:5
 msgid "Overview"
 msgstr "概述"
 
-#: ../../quick_start/first_model.rst:8
+#: ../../quick_start/first_model.rst:7
 msgid ""
-"Sentiment classification is a classic task in natural language "
-"processing. It is a typical classification problem to mine and "
-"analyze people's sentiments expressed in the text, which is positive "
-"or negative. The following uses MindNLP to implement an RNN-based "
-"sentimental classification model to achieve the following effects:"
+"Sentiment classification is a classic task in natural language processing. "
+"It is a typical classification problem to mine and analyze people's "
+"sentiments expressed in the text, which is positive or negative. The "
+"following uses MindNLP to implement an RNN-based sentimental classification "
+"model to achieve the following effects:"
 msgstr ""
-"情感分类是自然语言处理中的经典任务，目标在于对给定文本中的情感色彩进行"
-"挖掘、分析，是典型的分类问题。本节使用MindNLP实现一个基于RNN网络的情感分类"
-"模型，实现如下的效果："
+"情感分类是自然语言处理中的经典任务，目标在于对给定文本中的情感色彩进行挖掘、"
+"分析，是典型的分类问题。本节使用MindNLP实现一个基于RNN网络的情感分类模型，实"
+"现如下的效果："
 
-#: ../../../quick_start/first_model.rst:26
+#: ../../quick_start/first_model.rst:24
 msgid "Model Building"
 msgstr "模型构建"
 
-#: ../../quick_start/first_model.rst:28
+#: ../../quick_start/first_model.rst:26
 msgid ""
 "According to the task, the base module :py:class:`~mindnlp.abc.Seq2vecModel` "
 "can be used to build the model. The function of module :py:class:`~mindnlp."
@@ -62,11 +62,11 @@ msgstr ""
 "``encoder`` 将输入句子映射为语义向量，而 ``head`` 对 ``encoder`` 的输出进行进"
 "一步计算得到最终的结果。"
 
-#: ../../../quick_start/first_model.rst:54
+#: ../../quick_start/first_model.rst:53
 msgid "Model Instantiation"
 msgstr "模型实例化"
 
-#: ../../quick_start/first_model.rst:58
+#: ../../quick_start/first_model.rst:55
 msgid ""
 "Two modules ``encoder`` and ``head`` are initialized separately, passing as "
 "arguments into model. We use :py:class:`~mindnlp.modules.RNNEncoder` "
@@ -80,6 +80,108 @@ msgstr ""
 #: ../../quick_start/modules.rst:2
 msgid "Modules"
 msgstr "组件"
+
+#: ../../quick_start/modules.rst:4
+msgid ""
+":py:class:`~mindnlp.modules` is used to build neural network models, which "
+"can be used with `MindSpore`. :py:class:`~mindnlp.modules` can be classified "
+"into three functional modules: `Embedding`, `Encoder-Decoder` and "
+"`Attention`. We will introduce the three function in the following three "
+"sections."
+msgstr ""
+
+#: ../../quick_start/modules.rst:10
+msgid "Embedding"
+msgstr ""
+
+#: ../../quick_start/modules.rst:12
+msgid ""
+"embedding is essentially a word embedding technique, which can represent a "
+"character or word as a low-dimensional vector. mindnlp provides a quick and "
+"easy way to construct embeddings through pre-trained glove,fasttext,word2vec "
+"word vectors. You can also create your own custom embeddings."
+msgstr ""
+
+#: ../../quick_start/modules.rst:18
+msgid ""
+"Next we demonstrate how to quickly construct an embedding using glove word "
+"vectors via MindNLP."
+msgstr ""
+
+#: ../../quick_start/modules.rst:40
+msgid "After creating the embedding, we will use it for lookup next:"
+msgstr ""
+
+#: ../../quick_start/modules.rst:50
+msgid ""
+"You can get more information about the embedding API from :doc:`MindNLP."
+"modules.embeddings <../api/modules/embeddings>`."
+msgstr ""
+
+#: ../../quick_start/modules.rst:54
+msgid "Encoder-Decoder"
+msgstr ""
+
+#: ../../quick_start/modules.rst:56
+msgid ""
+"Encoder-Decoder is a model framework, which is a general term for a class of "
+"algorithms. Various algorithms can be used in this framework to solve "
+"different tasks. Encoder converts the input sequence into a sentiment "
+"vector, and decoder generates the target translation based on the output of "
+"the encoder."
+msgstr ""
+
+#: ../../quick_start/modules.rst:61
+msgid ""
+"We can use encoder and decoder provided by MindNLP to construct model as the "
+"following example of a machine translation model. More information about "
+"this model are shown in :doc:`Machine Translation Example <../examples/"
+"Machine Translation>` ."
+msgstr ""
+
+#: ../../quick_start/modules.rst:112
+msgid ""
+"The Encoder-Decoder modules included in MindNLP are shown in the following "
+"table. You can click on the name to see the detailed API, or learn about "
+"them through :doc:`MindNLP.modules.encoder <../api/modules/encoder>` and :"
+"doc:`MindNLP.modules.decoder <../api/modules/decoder>` ."
+msgstr ""
+
+#: ../../quick_start/modules.rst:118
+msgid "Name"
+msgstr ""
+
+#: ../../quick_start/modules.rst:118
+msgid "Introduction"
+msgstr ""
+
+#: ../../quick_start/modules.rst:120
+msgid "``CNNEncoder``"
+msgstr ""
+
+#: ../../quick_start/modules.rst:120
+msgid "Convolutional encoder consisting of len(convolutions) layers"
+msgstr ""
+
+#: ../../quick_start/modules.rst:121
+msgid "``RNNEncoder``"
+msgstr ""
+
+#: ../../quick_start/modules.rst:121
+msgid "Stacked Elman RNN Encoder"
+msgstr ""
+
+#: ../../quick_start/modules.rst:122
+msgid "``RNNDecoder``"
+msgstr ""
+
+#: ../../quick_start/modules.rst:122
+msgid "Stacked Elman RNN Decoder"
+msgstr ""
+
+#: ../../quick_start/modules.rst:126
+msgid "Attention"
+msgstr ""
 
 #: ../../quick_start/train_and_eval.rst:2
 msgid "Train and Eval"
@@ -333,9 +435,9 @@ msgid ""
 "metrics.rouge.RougeL`, :py:class:`~mindnlp.engine.metrics.rouge.RougeN`, :py:"
 "class:`~mindnlp.engine.metrics.spearman.SpearmanCorrelation`."
 msgstr ""
-"MindNLP中有很多 :py:class:`~mindnlp.abc.Metric` 可以用于模型"
-"评估： :py:class:`~mindnlp.engine.metrics.accuracy.Accuracy` ， :py:class:"
-"`~mindnlp.engine.metrics.bleu.BleuScore`， :py:class:`~mindnlp.engine.metrics."
+"MindNLP中有很多 :py:class:`~mindnlp.abc.Metric` 可以用于模型评估： :py:class:"
+"`~mindnlp.engine.metrics.accuracy.Accuracy` ， :py:class:`~mindnlp.engine."
+"metrics.bleu.BleuScore`， :py:class:`~mindnlp.engine.metrics."
 "confusion_matrix.ConfusionMatrix`， :py:class:`~mindnlp.engine.metrics."
 "distinct.Distinct`， :py:class:`~mindnlp.engine.metrics.em_score.EmScore`， :"
 "py:class:`~mindnlp.engine.metrics.f1.F1Score`， :py:class:`~mindnlp.engine."
@@ -343,8 +445,8 @@ msgstr ""
 "pearson.PearsonCorrelation`， :py:class:`~mindnlp.engine.metrics.perplexity."
 "Perplexity`， :py:class:`~mindnlp.engine.metrics.precision.Precision`， :py:"
 "class:`~mindnlp.engine.metrics.recall.Recall`， :py:class:`~mindnlp.engine."
-"metrics.rouge.RougeL`， :py:class:`~mindnlp.engine.metrics.rouge.RougeN`， :py:"
-"class:`~mindnlp.engine.metrics.spearman.SpearmanCorrelation`。"
+"metrics.rouge.RougeL`， :py:class:`~mindnlp.engine.metrics.rouge.RougeN`， :"
+"py:class:`~mindnlp.engine.metrics.spearman.SpearmanCorrelation`。"
 
 #: ../../quick_start/use_metrics.rst:22
 msgid ""
@@ -352,9 +454,8 @@ msgid ""
 "classes and passing the instantiated objects into :py:class:`~mindnlp.engine."
 "trainer.Trainer` as one of its parameters."
 msgstr ""
-"我们可以直接使用这些预定义好的评价指标，通过实例化一些相关类，"
-"并将实例化后的对象送入 :py:class:`~mindnlp.engine."
-"trainer.Trainer` 作为其参数之一。"
+"我们可以直接使用这些预定义好的评价指标，通过实例化一些相关类，并将实例化后的"
+"对象送入 :py:class:`~mindnlp.engine.trainer.Trainer` 作为其参数之一。"
 
 #: ../../quick_start/use_metrics.rst:27
 msgid ""
@@ -362,9 +463,8 @@ msgid ""
 "an example, the code of using metrics for model training and evaluation is "
 "as follows:"
 msgstr ""
-"以 :py:class:`~mindnlp.engine.metrics.accuracy.Accuracy` 的使用为例，"
-"使用评价指标，进行模型训练和评估的代码"
-"如下所示："
+"以 :py:class:`~mindnlp.engine.metrics.accuracy.Accuracy` 的使用为例，使用评价"
+"指标，进行模型训练和评估的代码如下所示："
 
 #: ../../quick_start/use_metrics.rst:47
 msgid "Define a New Metric"
@@ -376,7 +476,6 @@ msgid ""
 "easy for us to define our own metric."
 msgstr ""
 "如果MindNLP没有提供我们需要的评价指标，我们也可以轻松定义自己的评价指标。"
-""
 
 #: ../../quick_start/use_metrics.rst:52
 msgid ""
@@ -385,10 +484,9 @@ msgid ""
 "it is also necessary to extend :py:class:`~mindnlp.abc.Metric` and rewrite "
 "the functions of it:"
 msgstr ""
-"MindNLP定义的所有评价指标类都继承自基类"
-" :py:class:`~mindnlp.abc.Metric` 。定义我们自己的评价指标类时，"
-"也需要继承 :py:class:`~mindnlp.abc.Metric` ，并重写该类的"
-"函数："
+"MindNLP定义的所有评价指标类都继承自基类 :py:class:`~mindnlp.abc.Metric` 。定"
+"义我们自己的评价指标类时，也需要继承 :py:class:`~mindnlp.abc.Metric` ，并重写"
+"该类的函数："
 
 #: ../../quick_start/use_metrics.rst:59
 msgid "``__init__()``: initializes the metric."
@@ -415,5 +513,4 @@ msgid ""
 "After finishing those operations, the steps to train and evaluate models "
 "using self-defined metrics are the same as mentioned above."
 msgstr ""
-"完成上述操作后，要使用自定义的评价指标来训练和评估模型，"
-"后续操作与前文一致。"
+"完成上述操作后，要使用自定义的评价指标来训练和评估模型，后续操作与前文一致。"
