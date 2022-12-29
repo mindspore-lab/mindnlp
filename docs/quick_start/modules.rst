@@ -61,7 +61,7 @@ generates the target translation based on the output of the encoder.
 We can use encoder and decoder provided by MindNLP to construct model as
 the following example of a machine translation model. More information
 about this model are shown in
-:doc:`Machine Translation Example <../examples/Machine Translation>` .
+:doc:`Machine Translation Example <../examples/machine_translation>` .
 
 .. code-block::
 
@@ -114,13 +114,18 @@ table. You can click on the name to see the detailed API, or learn about
 them through :doc:`MindNLP.modules.encoder <../api/modules/encoder>` and
 :doc:`MindNLP.modules.decoder <../api/modules/decoder>` .
 
-==============  ============================================================
-Name            Introduction
-==============  ============================================================
-``CNNEncoder``  Convolutional encoder consisting of len(convolutions) layers
-``RNNEncoder``  Stacked Elman RNN Encoder
-``RNNDecoder``  Stacked Elman RNN Decoder
-==============  ============================================================
+========================================================  =====================
+Name                                                      Introduction
+========================================================  =====================
+:class:`~mindnlp.modules.encoder.cnn_encoder.CNNEncoder`  Convolutional encoder
+                                                          consisting of
+                                                          len(convolutions)
+                                                          layers
+:class:`~mindnlp.modules.encoder.rnn_encoder.RNNEncoder`  Stacked Elman RNN
+                                                          Encoder
+:class:`~mindnlp.modules.decoder.rnn_decoder.RNNDecoder`  Stacked Elman RNN
+                                                          Decoder
+========================================================  =====================
 
 Attention
 -------------------

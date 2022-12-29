@@ -89,6 +89,9 @@ msgid ""
 "`Attention`. We will introduce the three function in the following three "
 "sections."
 msgstr ""
+":py:class:`~mindnlp.modules` 用于构建神经网络模型，可以和 `MindSpore` 一起使用。 "
+":py:class:`~mindnlp.modules` 具有三大功能模块：`Embedding`, `Encoder-Decoder` "
+"和 `Attention` 。下面我们会分三节分别介绍这三大功能。"
 
 #: ../../quick_start/modules.rst:10
 msgid "Embedding"
@@ -135,14 +138,19 @@ msgid ""
 "vector, and decoder generates the target translation based on the output of "
 "the encoder."
 msgstr ""
+"Encoder-Decoder是一个模型架构，是一类算法统称。在这个框架下可以使用不同的算法"
+"来解决不同的人物。Encoder将输入序列转化为语义向量，Decoder根据Encoder的输出"
+"生成目标译文。"
 
 #: ../../quick_start/modules.rst:61
 msgid ""
 "We can use encoder and decoder provided by MindNLP to construct model as the "
 "following example of a machine translation model. More information about "
 "this model are shown in :doc:`Machine Translation Example <../examples/"
-"Machine Translation>` ."
+"machine_translation>` ."
 msgstr ""
+"我们可以使用MindNLP中提供的的Encoder、Decoder模块来构建网络，如下面机器翻译模型的"
+"示例所示。关于此模型的更多信息可查看 :doc:`机器翻译 <../examples/machine_translation>` 。"
 
 #: ../../quick_start/modules.rst:112
 msgid ""
@@ -151,40 +159,43 @@ msgid ""
 "them through :doc:`MindNLP.modules.encoder <../api/modules/encoder>` and :"
 "doc:`MindNLP.modules.decoder <../api/modules/decoder>` ."
 msgstr ""
+"MindNLP中包含的Encoder-Decoder模块如下表所示。您可以点击具体的名称查看详细的API，"
+"也可以通过 :doc:`MindNLP.modules.encoder <../api/modules/encoder>` 和 "
+":doc:`MindNLP.modules.decoder <../api/modules/decoder>` 进行了解。"
 
 #: ../../quick_start/modules.rst:118
 msgid "Name"
-msgstr ""
+msgstr "名称"
 
 #: ../../quick_start/modules.rst:118
 msgid "Introduction"
-msgstr ""
+msgstr "介绍"
 
 #: ../../quick_start/modules.rst:120
-msgid "``CNNEncoder``"
+msgid ":py:class:`~mindnlp.modules.encoder.cnn_encoder.CNNEncoder`"
 msgstr ""
 
 #: ../../quick_start/modules.rst:120
 msgid "Convolutional encoder consisting of len(convolutions) layers"
+msgstr "由传入参数convolutions组成的卷积编码器"
+
+#: ../../quick_start/modules.rst:124
+msgid ":py:class:`~mindnlp.modules.encoder.rnn_encoder.RNNEncoder`"
 msgstr ""
 
-#: ../../quick_start/modules.rst:121
-msgid "``RNNEncoder``"
-msgstr ""
-
-#: ../../quick_start/modules.rst:121
+#: ../../quick_start/modules.rst:124
 msgid "Stacked Elman RNN Encoder"
-msgstr ""
+msgstr "循环神经网络（RNN）编码器"
 
-#: ../../quick_start/modules.rst:122
-msgid "``RNNDecoder``"
-msgstr ""
-
-#: ../../quick_start/modules.rst:122
-msgid "Stacked Elman RNN Decoder"
+#: ../../quick_start/modules.rst:126
+msgid ":py:class:`~mindnlp.modules.decoder.rnn_decoder.RNNDecoder`"
 msgstr ""
 
 #: ../../quick_start/modules.rst:126
+msgid "Stacked Elman RNN Decoder"
+msgstr "循环神经网络（RNN）解码器"
+
+#: ../../quick_start/modules.rst:130
 msgid "Attention"
 msgstr ""
 
