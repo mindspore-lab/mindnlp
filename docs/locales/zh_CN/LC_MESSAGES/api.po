@@ -334,6 +334,9 @@ msgid ""
 "managers which will be entered and exited when passing into the Model. You can "
 "use this mechanism to do some custom operations."
 msgstr ""
+"用于构建回调类的抽象基类。"
+"回调函数是上下文管理器，在传递到模型时将进入和退出。"
+"您可以使用此机制来执行一些自定义操作。”
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/abc/callback.py:docstring
 #: of mindnlp.abc.callback.Callback:5
@@ -342,6 +345,9 @@ msgid ""
 "To create a custom callback, subclass Callback and override the method "
 "associated with the stage of interest."
 msgstr ""
+"回调函数可以在step或epoch前后执行一些操作。"
+"要创建自定义回调，"
+"请子类化 Callback 并覆盖与相关阶段关联的方法。"
 
 #: ../../api/abc.rst:20
 msgid "Metric"

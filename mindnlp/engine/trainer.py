@@ -198,6 +198,7 @@ class Trainer:
                     self.callback_manager.train_step_begin(run_context)
                     loss = self.train_fn(inputs, tgts)
                     loss_total += loss
+                    run_context.loss = loss_total/self.cur_step_nums
                     progress.set_postfix(loss=loss_total/self.cur_step_nums)
                     progress.update(1)
                     # step end
