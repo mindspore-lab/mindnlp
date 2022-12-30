@@ -30,8 +30,7 @@ from mindspore.common.initializer import Uniform, HeUniform
 
 from mindnlp.abc import Seq2vecModel
 from mindnlp.modules import RNNEncoder
-from mindnlp.common.metrics import Accuracy
-from mindnlp.engine.trainer import Trainer
+from mindnlp.engine import Trainer, Accuracy
 from mindnlp.dataset import load
 from mindnlp.modules import Glove
 

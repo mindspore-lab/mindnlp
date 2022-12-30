@@ -36,9 +36,10 @@ class Evaluator:
             while evaluating. Default:None.
         callbacks (Optional[list[Callback], Callback]): List of callback objects which should be executed
             while training. Default: None.
+        jit (bool): Whether use Just-In-Time compile.
     """
 
-    def __init__(self, network, eval_dataset=None, metrics=None, callbacks=None):
+    def __init__(self, network, eval_dataset=None, metrics=None, callbacks=None, jit=False):
         self.network = network
         self.callbacks = callbacks
         self.earlystop = False
@@ -48,6 +49,16 @@ class Evaluator:
         self.total = eval_dataset.get_dataset_size()
 
         self.callback_manager = CallbackManager(callbacks=self.callbacks)
+        self.eval_func = self._prepare_eval_func(network, jit)
+
+    def _prepare_eval_func(self, network, jit):
+        def _run_step(inputs):
+            """Core process of each step."""
+            outputs = network(*inputs)
+            return outputs
+        if jit:
+            return ms_jit(_run_step)
+        return _run_step
 
     def _check_metric_type(self, metrics):
         """Check metrics type."""
@@ -86,41 +97,30 @@ class Evaluator:
             raise RuntimeError("The dataset object had been used in other model by model.train(...), "
                                "please create a new dataset.")
 
-    def run(self, tgt_columns=None, jit=False):
+    def run(self, tgt_columns=None):
         """
         Evaluating function entry.
 
         Args:
             tgt_columns (Optional[list[str], str]): Target label column names for loss function.
-            jit (bool): Whether use Just-In-Time compile.
 
         """
         args_dict = vars(self)
         run_context = RunContext(args_dict)
         self.callback_manager.evaluate_begin(run_context)
         self.clear_metrics()
-        _ = self._run(tgt_columns, jit)
+        _ = self._run(tgt_columns)
         self.callback_manager.evaluate_end(run_context)
         self.earlystop = getattr(run_context, 'earlystop', False)
 
-    def _run(self, tgt_columns=None, jit=False):
+    def _run(self, tgt_columns=None):
         """Evaluating process for non-data sinking mode. The data would be passed to network directly."""
-        net = self.network
-
-        def _run_step(inputs):
-            """Core process of each step."""
-            outputs = net(*inputs)
-            return outputs
-
-        if jit:
-            _run_step = ms_jit(_run_step)
-
-        net.set_train(False)
+        self.network.set_train(False)
         with tqdm(total=self.total) as progress:
             progress.set_description('Evaluate')
             for data in self.eval_dataset.create_dict_iterator():
                 inputs, tgts = self._data_process(data, tgt_columns)
-                outputs = _run_step(inputs)
+                outputs = self.eval_func(inputs)
                 self._update_metrics(outputs, *tgts)
                 progress.update(1)
 

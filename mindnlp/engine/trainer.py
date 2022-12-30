@@ -19,7 +19,6 @@ Trainer for training.
 """
 from inspect import signature
 from tqdm import tqdm
-from mindspore import ops
 from mindspore import log, mutable
 from mindspore.ops import value_and_grad
 from mindnlp import ms_jit
@@ -48,7 +47,7 @@ class Trainer:
             to None and implement calculation of loss in `network`,
             then a tuple (data1, data2, data3, ...) with all data returned from dataset will be
             passed to the `network`.
-        metrcis (Optional[list[Metrics], Metrics]): List of metrics objects which should be used
+        metrics (Optional[list[Metrics], Metrics]): List of metrics objects which should be used
             while evaluating. Default:None.
         epochs (int): Total number of iterations on the data. Default: 10.
         optimizer (Cell): Optimizer for updating the weights. If `optimizer` is None, the `network` needs to
@@ -57,55 +56,82 @@ class Trainer:
             and parallel if needed. Default: None.
         callbacks (Optional[list[Callback], Callback]): List of callback objects which should be executed
             while training. Default: None.
+        jit (bool): Whether use Just-In-Time compile.
 
     """
 
     def __init__(self, network=None, train_dataset=None, eval_dataset=None, metrics=None, epochs=10,
-                 loss_fn=None, optimizer=None, callbacks=None):
+                 loss_fn=None, optimizer=None, callbacks=None, jit=False):
         self.network = network
         self.train_dataset = train_dataset
-        self.eval_dataset = eval_dataset
-        self.metrics = metrics
         self.epochs = epochs
-        self.loss_fn = loss_fn
-        self.optimizer = optimizer
-        self.callbacks = callbacks
+
         self.cur_epoch_nums = 0
         self.cur_step_nums = 0
         self.earlystop = False
-        self.grad_fn = None
         if callbacks:
-            self._prepare_callbacks(callbacks)
-        self._prepare_eval()
-        self.callback_manager = CallbackManager(callbacks=self.callbacks)
+            callbacks = self._prepare_callbacks(callbacks)
+        self._prepare_eval(eval_dataset, metrics, callbacks, jit)
+
+        self.callback_manager = CallbackManager(callbacks)
+        self.train_fn = self._prepare_train_func(network, loss_fn, optimizer, jit)
+
+    def _prepare_train_func(self, network, loss_fn, optimizer, jit):
+        # forward function
+        def forward_fn(inputs, labels):
+            logits_list = ()
+            logits = network(*inputs)
+            if isinstance(logits, tuple):
+                logits_list += logits
+            else:
+                logits_list += (logits,)
+
+            loss = loss_fn(*logits_list, *labels)
+            return_list = (loss,) + logits_list
+            return return_list
+
+        def forward_without_loss_fn(inputs, labels):
+            loss_and_logits = network(*inputs, *labels)
+            return loss_and_logits
+
+        if loss_fn is None:
+            grad_fn = value_and_grad(forward_without_loss_fn, None, optimizer.parameters, has_aux=True)
+        else:
+            grad_fn = value_and_grad(forward_fn, None, optimizer.parameters, has_aux=True)
+
+        def _run_step(inputs, labels):
+            """Core process of each step, including the forward propagation process and back propagation of data."""
+            (loss, _), grads = grad_fn(inputs, labels)
+            optimizer(grads)
+            return loss
+        if jit:
+            return ms_jit(_run_step)
+        return _run_step
 
     def _prepare_callbacks(self, callbacks):
-        self.callbacks = []
         if isinstance(callbacks, Callback):
-            self.callbacks.append(callbacks)
-        elif isinstance(callbacks, list):
+            return [callbacks]
+        if isinstance(callbacks, list):
             if all(isinstance(cb, Callback) for cb in callbacks) is True:
-                self.callbacks = callbacks
-            else:
-                obj = [not isinstance(cb, Callback) for cb in callbacks][0]
-                raise TypeError(f"Expect sub-classes of Callback. Got {type(obj)}")
-        else:
-            raise TypeError(f"Expect callbacks to be list or Callback. Got {type(callbacks)}.")
+                return callbacks
+            obj = [not isinstance(cb, Callback) for cb in callbacks][0]
+            raise TypeError(f"Expect sub-classes of Callback. Got {type(obj)}")
+        raise TypeError(f"Expect callbacks to be list or Callback. Got {type(callbacks)}.")
 
-    def _check_callbacks_type(self):
-        for callback in self.callbacks:
+    def _check_callbacks_type(self, callbacks):
+        for callback in callbacks:
             if isinstance(callback, EarlyStopCallback):
                 raise ValueError("EarlyStopCallback is not effective when eval_dataset is None.")
             if isinstance(callback, BestModelCallback):
                 raise ValueError("BestModelCallback is not effective when eval_dataset is None.")
 
-    def _prepare_eval(self):
-        if self.eval_dataset is not None and self.metrics is not None:
-            self.evaluator = Evaluator(network=self.network, eval_dataset=self.eval_dataset, metrics=self.metrics,
-                                        callbacks=self.callbacks)
-        elif self.eval_dataset is None and self.metrics is None:
-            if self.callbacks:
-                self._check_callbacks_type()
+    def _prepare_eval(self, eval_dataset, metrics, callbacks, jit):
+        if eval_dataset is not None and metrics is not None:
+            self.evaluator = Evaluator(network=self.network, eval_dataset=eval_dataset, metrics=metrics,
+                                        callbacks=callbacks, jit=jit)
+        elif eval_dataset is None and metrics is None:
+            if callbacks:
+                self._check_callbacks_type(callbacks)
             self.evaluator = None
         else:
             raise ValueError("For evaluation in training process, both eval dataset and metrics should be not None.")
@@ -130,69 +156,30 @@ class Trainer:
             raise RuntimeError("The dataset object had been used in other model by model.train(...), "
                                "please create a new dataset.")
 
-    def run(self, tgt_columns=None, jit=False):
+    def run(self, tgt_columns=None):
         """
         Training process entry.
 
         Args:
             tgt_columns (Optional[list[str], str]): Target label column names for loss function.
-            jit (bool): Whether use Just-In-Time compile.
 
         """
 
         args_dict = vars(self)
         run_context = RunContext(args_dict)
         self.callback_manager.train_begin(run_context)
-        self._run(run_context, tgt_columns, jit)
+        self._run(run_context, tgt_columns)
         self.callback_manager.train_end(run_context)
 
-    def _run(self, run_context, tgt_columns=None, jit=False):
+    def _run(self, run_context, tgt_columns=None):
         """
         Training process for non-data sinking mode. The data would be passed to network directly.
         """
-        # forward function
-        net = self.network
-
-        loss_fn = self.loss_fn
-        optimizer = self.optimizer
-        def forward_fn(inputs, labels):
-            logits_list = ()
-            logits = net(*inputs)
-            if isinstance(logits, tuple):
-                logits_list += logits
-            else:
-                logits_list += (logits,)
-
-            loss = loss_fn(*logits_list, *labels)
-            return_list = (loss,) + logits_list
-            return return_list
-
-        def forward_without_loss_fn(inputs, labels):
-            loss_and_logits = net(*inputs, *labels)
-            return loss_and_logits
-
-        if self.loss_fn is None:
-            grad_fn = value_and_grad(forward_without_loss_fn, None, optimizer.parameters, has_aux=True)
-        else:
-            grad_fn = value_and_grad(forward_fn, None, optimizer.parameters, has_aux=True)
-
-        def _run_step(inputs, labels):
-            """Core process of each step, including the forward propagation process and back propagation of data."""
-            (loss, *_), grads = grad_fn(inputs, labels)
-            optimizer(grads)
-            return loss
-
-        @ms_jit
-        def _run_step_graph(inputs, labels):
-            """Core process of each step, including the forward propagation process and back propagation of data."""
-            (loss, _), grads = grad_fn(inputs, labels)
-            loss = ops.depend(loss, optimizer(grads))
-            return loss
 
         total = self.train_dataset.get_dataset_size()
         # train epoch begin
         for epoch in range(0, self.epochs):
-            net.set_train()
+            self.network.set_train()
             self.cur_epoch_nums = epoch + 1
             self.cur_step_nums = 0
             run_context.cur_epoch_nums = self.cur_epoch_nums
@@ -209,10 +196,7 @@ class Trainer:
                     run_context.cur_step_nums += 1
                     self.cur_step_nums += 1
                     self.callback_manager.train_step_begin(run_context)
-                    if jit:
-                        loss = _run_step_graph(inputs, tgts)
-                    else:
-                        loss = _run_step(inputs, tgts)
+                    loss = self.train_fn(inputs, tgts)
                     loss_total += loss
                     progress.set_postfix(loss=loss_total/self.cur_step_nums)
                     progress.update(1)
@@ -223,7 +207,7 @@ class Trainer:
             self.callback_manager.train_epoch_end(run_context)
             # do epoch evaluation
             if self.evaluator is not None:
-                self._do_eval_epoch(run_context, tgt_columns, jit)
+                self._do_eval_epoch(run_context, tgt_columns)
 
     def _run_ds_sink(self, train_dataset, eval_dataset, list_callback,
                      cb_params, print_steps, eval_steps):
@@ -242,11 +226,11 @@ class Trainer:
         """Evaluate the model after n steps."""
         raise NotImplementedError
 
-    def _do_eval_epoch(self, run_context, tgt_columns=None, jit=False):
+    def _do_eval_epoch(self, run_context, tgt_columns=None):
         """Evaluate the model after an epoch."""
         self.callback_manager.evaluate_begin(run_context)
         self.evaluator.clear_metrics()
-        metrics_result, metrics_names, metrics_values = self.evaluator._run(tgt_columns, jit)
+        metrics_result, metrics_names, metrics_values = self.evaluator._run(tgt_columns)
         setattr(run_context, "metrics_values", metrics_values)
         setattr(run_context, "metrics_result", metrics_result)
         setattr(run_context, "metrics_names", metrics_names)

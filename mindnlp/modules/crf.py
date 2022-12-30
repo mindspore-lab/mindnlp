@@ -62,9 +62,9 @@ class CRF(nn.Cell):
     """
 
     def __init__(self, num_tags: int, batch_first: bool = False, reduction: str = 'sum') -> None:
+        super().__init__()
         if num_tags <= 0:
             raise ValueError(f'invalid number of tags: {num_tags}')
-        super().__init__()
         if reduction not in ('none', 'sum', 'mean', 'token_mean'):
             raise ValueError(f'invalid reduction: {reduction}')
         self.num_tags = num_tags

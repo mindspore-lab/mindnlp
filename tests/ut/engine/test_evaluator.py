@@ -14,10 +14,11 @@
 # ============================================================================
 """Test Evaluator with Callback function"""
 # pylint: disable=C0103
+# pylint: disable=W0621
 
 import unittest
 import numpy as np
-
+from ddt import ddt, data
 from mindspore import nn
 import mindspore.dataset as ds
 
@@ -46,25 +47,23 @@ class MyModel(nn.Cell):
         output = self.fc(data)
         return output
 
+@ddt
 class TestEvaluatorRun(unittest.TestCase):
     r"""
     Test Evaluator Run
     """
     def setUp(self):
         self.input = None
-        net = MyModel()
+        self.net = MyModel()
         dataset_generator = MyDataset()
-        metric = Accuracy()
-        callbacks = [TimerCallback()]
+        self.metric = Accuracy()
+        self.callbacks = [TimerCallback()]
         eval_dataset = ds.GeneratorDataset(dataset_generator, ["data", "label"], shuffle=False)
-        eval_dataset = eval_dataset.batch(10)
-        self.evaluator = Evaluator(network=net, eval_dataset=eval_dataset, metrics=metric,
-                                   callbacks=callbacks)
+        self.eval_dataset = eval_dataset.batch(10)
 
-    def test_evaluator_run(self):
+    @data(True, False)
+    def test_evaluator_run(self, jit):
         """test evaluator run pynative"""
-        self.evaluator.run(tgt_columns='label')
-
-    def test_evaluator_run_jit(self):
-        """test evaluator run graph"""
-        self.evaluator.run(tgt_columns='label', jit=False)
+        evaluator = Evaluator(network=self.net, eval_dataset=self.eval_dataset, metrics=self.metric,
+                              callbacks=self.callbacks, jit=jit)
+        evaluator.run(tgt_columns='label')
