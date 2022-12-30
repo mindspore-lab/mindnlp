@@ -115,6 +115,6 @@ class CNNEncoder(EncoderBase):
             maxpool_out += (self.pool(out).squeeze(axis=2),)
         result = ops.concat(maxpool_out, axis=1)
 
-        if self.projection_layer:
+        if self.projection_layer is not None:
             result = self.projection_layer(result)
         return result
