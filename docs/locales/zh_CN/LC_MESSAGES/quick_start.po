@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: MindNLP\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-12-28 17:42+0800\n"
-"PO-Revision-Date: 2022-12-28 17:46+0800\n"
+"POT-Creation-Date: 2023-01-03 11:13+0800\n"
+"PO-Revision-Date: 2023-01-03 11:15+0800\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -89,9 +89,9 @@ msgid ""
 "`Attention`. We will introduce the three function in the following three "
 "sections."
 msgstr ""
-":py:class:`~mindnlp.modules` 用于构建神经网络模型，可以和 `MindSpore` 一起使用。 "
-":py:class:`~mindnlp.modules` 具有三大功能模块：`Embedding`, `Encoder-Decoder` "
-"和 `Attention` 。下面我们会分三节分别介绍这三大功能。"
+":py:class:`~mindnlp.modules` 用于构建神经网络模型，可以和 `MindSpore` 一起使"
+"用。 :py:class:`~mindnlp.modules` 具有三大功能模块：`Embedding`, `Encoder-"
+"Decoder` 和 `Attention` 。下面我们会分三节分别介绍这三大功能。"
 
 #: ../../quick_start/modules.rst:10
 msgid "Embedding"
@@ -104,9 +104,9 @@ msgid ""
 "easy way to construct embeddings through pre-trained glove,fasttext,word2vec "
 "word vectors. You can also create your own custom embeddings."
 msgstr ""
-"embedding本质上是一种词嵌入技术,能够将一个单词或短语表示为低维向量."
-"mindnlp提供了一个快速通过预训练glove,fasttext,word2vec词向量简单构造embedding的方法."
-"你也可以创建自己的embedding."
+"embedding本质上是一种词嵌入技术,能够将一个单词或短语表示为低维向量.mindnlp提"
+"供了一个快速通过预训练glove,fasttext,word2vec词向量简单构造embedding的方法.你"
+"也可以创建自己的embedding."
 
 #: ../../quick_start/modules.rst:18
 msgid ""
@@ -122,9 +122,9 @@ msgstr "在创建embedding后,我们将使用它进行lookup:"
 msgid ""
 "You can get more information about the embedding API from :doc:`MindNLP."
 "modules.embeddings <../api/modules/embeddings>`."
-msgstr "你可以从 :doc:`MindNLP."
-"modules.embeddings <../api/modules/embeddings>`."
-"得到更多有关embedding API的信息."
+msgstr ""
+"你可以从 :doc:`MindNLP.modules.embeddings <../api/modules/embeddings>`.得到更"
+"多有关embedding API的信息."
 
 #: ../../quick_start/modules.rst:54
 msgid "Encoder-Decoder"
@@ -139,8 +139,8 @@ msgid ""
 "the encoder."
 msgstr ""
 "Encoder-Decoder是一个模型架构，是一类算法统称。在这个框架下可以使用不同的算法"
-"来解决不同的人物。Encoder将输入序列转化为语义向量，Decoder根据Encoder的输出"
-"生成目标译文。"
+"来解决不同的人物。Encoder将输入序列转化为语义向量，Decoder根据Encoder的输出生"
+"成目标译文。"
 
 #: ../../quick_start/modules.rst:61
 msgid ""
@@ -149,8 +149,9 @@ msgid ""
 "this model are shown in :doc:`Machine Translation Example <../examples/"
 "machine_translation>` ."
 msgstr ""
-"我们可以使用MindNLP中提供的的Encoder、Decoder模块来构建网络，如下面机器翻译模型的"
-"示例所示。关于此模型的更多信息可查看 :doc:`机器翻译 <../examples/machine_translation>` 。"
+"我们可以使用MindNLP中提供的的Encoder、Decoder模块来构建网络，如下面机器翻译模"
+"型的示例所示。关于此模型的更多信息可查看 :doc:`机器翻译 <../examples/"
+"machine_translation>` 。"
 
 #: ../../quick_start/modules.rst:112
 msgid ""
@@ -159,9 +160,9 @@ msgid ""
 "them through :doc:`MindNLP.modules.encoder <../api/modules/encoder>` and :"
 "doc:`MindNLP.modules.decoder <../api/modules/decoder>` ."
 msgstr ""
-"MindNLP中包含的Encoder-Decoder模块如下表所示。您可以点击具体的名称查看详细的API，"
-"也可以通过 :doc:`MindNLP.modules.encoder <../api/modules/encoder>` 和 "
-":doc:`MindNLP.modules.decoder <../api/modules/decoder>` 进行了解。"
+"MindNLP中包含的Encoder-Decoder模块如下表所示。您可以点击具体的名称查看详细的"
+"API，也可以通过 :doc:`MindNLP.modules.encoder <../api/modules/encoder>` 和 :"
+"doc:`MindNLP.modules.decoder <../api/modules/decoder>` 进行了解。"
 
 #: ../../quick_start/modules.rst:118
 msgid "Name"
@@ -172,7 +173,7 @@ msgid "Introduction"
 msgstr "介绍"
 
 #: ../../quick_start/modules.rst:120
-msgid ":py:class:`~mindnlp.modules.encoder.cnn_encoder.CNNEncoder`"
+msgid ":class:`~mindnlp.modules.encoder.cnn_encoder.CNNEncoder`"
 msgstr ""
 
 #: ../../quick_start/modules.rst:120
@@ -180,7 +181,7 @@ msgid "Convolutional encoder consisting of len(convolutions) layers"
 msgstr "由传入参数convolutions组成的卷积编码器"
 
 #: ../../quick_start/modules.rst:124
-msgid ":py:class:`~mindnlp.modules.encoder.rnn_encoder.RNNEncoder`"
+msgid ":class:`~mindnlp.modules.encoder.rnn_encoder.RNNEncoder`"
 msgstr ""
 
 #: ../../quick_start/modules.rst:124
@@ -188,14 +189,14 @@ msgid "Stacked Elman RNN Encoder"
 msgstr "循环神经网络（RNN）编码器"
 
 #: ../../quick_start/modules.rst:126
-msgid ":py:class:`~mindnlp.modules.decoder.rnn_decoder.RNNDecoder`"
+msgid ":class:`~mindnlp.modules.decoder.rnn_decoder.RNNDecoder`"
 msgstr ""
 
 #: ../../quick_start/modules.rst:126
 msgid "Stacked Elman RNN Decoder"
 msgstr "循环神经网络（RNN）解码器"
 
-#: ../../quick_start/modules.rst:130
+#: ../../quick_start/modules.rst:131
 msgid "Attention"
 msgstr ""
 
@@ -431,6 +432,93 @@ msgstr "``callbacks``：训练时执行的额外操作。"
 #: ../../quick_start/train_and_eval.rst:223
 msgid "The example code of training and evaluating the model is as follows:"
 msgstr "训练和评估模型的示例代码："
+
+#: ../../quick_start/use_callback.rst:2
+msgid "Use callback"
+msgstr "定义回调函数"
+
+#: ../../quick_start/use_callback.rst:4
+msgid ""
+"Callback is a module closely related to Trainer. Using callback in Trainer "
+"can realize timing, early stop, saving checkpoint and other operations "
+"required in model training. At the same time, MindNLP also supports custom "
+"callback function."
+msgstr ""
+
+#: ../../quick_start/use_callback.rst:11
+msgid "Use Callback in Engine"
+msgstr ""
+
+#: ../../quick_start/use_callback.rst:12
+msgid ""
+"Callback needs to be used on the premise that trainer or evaluator has been "
+"defined. MindNLP supports passing in two types of parameters to the enigne: "
+"Callback and Callback List. Engine will automatically execute the operations "
+"specified by these callbacks."
+msgstr ""
+
+#: ../../quick_start/use_callback.rst:17
+msgid "The code of using engine is as follows:"
+msgstr "加载数据的代码如下所示："
+
+#: ../../quick_start/use_callback.rst:70
+msgid "Callbacks in MindNLP"
+msgstr ""
+
+#: ../../quick_start/use_callback.rst:71
+msgid ""
+"MindNLP provides many common callbacks, such as ``TimerCallback``, "
+"``EarlyStopCallback``, ``BestModelCallback`` and so on. For specific "
+"Callback, please refer to :py:class:`~mindnlp.engine.callbacks`"
+msgstr ""
+
+#: ../../quick_start/use_callback.rst:88
+msgid "Custom Callback"
+msgstr ""
+
+#: ../../quick_start/use_callback.rst:89
+msgid ""
+"Here we take a simple Callback as an example, its function is to print the "
+"average training loss of each Epoch."
+msgstr ""
+
+#: ../../quick_start/use_callback.rst:93
+msgid "Create Callback"
+msgstr "定义回调函数"
+
+#: ../../quick_start/use_callback.rst:94
+msgid ""
+"To customize Callback, we need to implement a class that inherits from "
+"Callback. Here we define MyCallBack, which inherits from :py:class:`~mindnlp."
+"abc.callback`."
+msgstr ""
+
+#: ../../quick_start/use_callback.rst:99
+msgid "Specifies the phase of calling the Callback"
+msgstr ""
+
+#: ../../quick_start/use_callback.rst:100
+msgid ""
+"All class methods in Callback will be called at a specific stage during "
+"Trainer's training. For example, train_begin() will be called at the "
+"beginning of training, and epoch_end() will be called at the end of each "
+"epoch. For specific class methods, see the ``Callback`` documentation. Here, "
+"MyCallBack calls epoch_end() at the end of each epoch, output the loss of "
+"the current epoch."
+msgstr ""
+
+#: ../../quick_start/use_callback.rst:109
+msgid "Access the internal information of Engine"
+msgstr ""
+
+#: ../../quick_start/use_callback.rst:110
+msgid ""
+"All methods in Callback contain parameter ``run_context`` that can access "
+"the internal information of the Engine, such as current numbers of steps, "
+"current numbers of epochs, loss value, etc. Here, MyCallBack needs to get "
+"the current number of epochs of the Trainer and the average loss value after "
+"each epoch."
+msgstr ""
 
 #: ../../quick_start/use_metrics.rst:2
 msgid "Use Metrics"
