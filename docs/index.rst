@@ -30,6 +30,7 @@ What is MindNLP
    quick_start/train_and_eval
    quick_start/modules
    quick_start/use_metrics
+   quick_start/use_callback
 
 .. toctree::
    :maxdepth: 1
