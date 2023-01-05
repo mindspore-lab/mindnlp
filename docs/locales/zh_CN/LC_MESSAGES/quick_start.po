@@ -435,7 +435,7 @@ msgstr "训练和评估模型的示例代码："
 
 #: ../../quick_start/use_callback.rst:2
 msgid "Use callback"
-msgstr "定义回调函数"
+msgstr "使用Callback自定义训练过程"
 
 #: ../../quick_start/use_callback.rst:4
 msgid ""
@@ -444,10 +444,13 @@ msgid ""
 "required in model training. At the same time, MindNLP also supports custom "
 "callback function."
 msgstr ""
+"Callback是与训练器紧密相关的模块，在Trainer中使用回调函数能够实现计时、早停、"
+"保存checkpoint等在模型训练过程中所需要的额外操作。"
+"同时，MindNLP还支持自定义callabck。"
 
 #: ../../quick_start/use_callback.rst:11
 msgid "Use Callback in Engine"
-msgstr ""
+msgstr "在Engine中使用Callback"
 
 #: ../../quick_start/use_callback.rst:12
 msgid ""
@@ -456,14 +459,18 @@ msgid ""
 "Callback and Callback List. Engine will automatically execute the operations "
 "specified by these callbacks."
 msgstr ""
+"Callback需要在已经定义训练器Trainer或评测器Evaluator的前提下使用。"
+"MindNLP同时支持向Engine传入两种类型的callback参数："
+"Callback类型和list[Callback]类型。Engine会自动执行"
+"所传入的callback对应的功能。"
 
 #: ../../quick_start/use_callback.rst:17
 msgid "The code of using engine is as follows:"
-msgstr "加载数据的代码如下所示："
+msgstr "在Engine中使用Callback的代码如下所示："
 
 #: ../../quick_start/use_callback.rst:70
 msgid "Callbacks in MindNLP"
-msgstr ""
+msgstr "MindNLP中的Callback"
 
 #: ../../quick_start/use_callback.rst:71
 msgid ""
@@ -471,20 +478,24 @@ msgid ""
 "``EarlyStopCallback``, ``BestModelCallback`` and so on. For specific "
 "Callback, please refer to :py:class:`~mindnlp.engine.callbacks`"
 msgstr ""
+"MindNLP提供几种常见的Callback，包括TimerCallback，EarlyStopCallback，"
+"BestModelCallback等。以上callback的详细内容，可以参考mindnlp.engine.callbacks。"
 
 #: ../../quick_start/use_callback.rst:88
 msgid "Custom Callback"
-msgstr ""
+msgstr "自定义Callback"
 
 #: ../../quick_start/use_callback.rst:89
 msgid ""
 "Here we take a simple Callback as an example, its function is to print the "
 "average training loss of each Epoch."
 msgstr ""
+"这里我们用一个简单的Callback作为例子，"
+"它的功能是在模型训练中每个Epoch结束时，打印出当前的loss均值。"
 
 #: ../../quick_start/use_callback.rst:93
 msgid "Create Callback"
-msgstr "定义回调函数"
+msgstr "创建回调函数"
 
 #: ../../quick_start/use_callback.rst:94
 msgid ""
@@ -492,10 +503,12 @@ msgid ""
 "Callback. Here we define MyCallBack, which inherits from :py:class:`~mindnlp."
 "abc.callback`."
 msgstr ""
+"若要自定义Callback，我们需要在继承Callback基类的基础上实现一个类。"
+"这里我们定义这个类为MyCallback，继承自mindnlp.abc.callback。"
 
 #: ../../quick_start/use_callback.rst:99
 msgid "Specifies the phase of calling the Callback"
-msgstr ""
+msgstr "指定Callback调用的阶段"
 
 #: ../../quick_start/use_callback.rst:100
 msgid ""
@@ -506,10 +519,14 @@ msgid ""
 "MyCallBack calls epoch_end() at the end of each epoch, output the loss of "
 "the current epoch."
 msgstr ""
+"Callback中所有的类方法都会在Trainer的训练中在特定的阶段调用。"
+"如train_begin()会在训练开始时被调用，epoch_end()会在每个epoch结束时调用。"
+"具体有哪些类方法，参见Callback文档。这里，MyCallback在每个epoch结束时调用"
+"epoch_end()，输出当前epoch结束时的loss均值。"
 
 #: ../../quick_start/use_callback.rst:109
 msgid "Access the internal information of Engine"
-msgstr ""
+msgstr "访问Engine内部信息"
 
 #: ../../quick_start/use_callback.rst:110
 msgid ""
@@ -519,6 +536,9 @@ msgid ""
 "the current number of epochs of the Trainer and the average loss value after "
 "each epoch."
 msgstr ""
+"Callback中所有的类方法都包含run_context参数用来访问Engine内部训练信息。"
+"如当前训练的step数目，当前训练的epoch数目，loss值等。这里，MyCallback"
+"需要获得Trainer当前的epoch数目和每个epoch结束后的loss均值。"
 
 #: ../../quick_start/use_metrics.rst:2
 msgid "Use Metrics"
