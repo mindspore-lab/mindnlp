@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: MindNLP\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-01-03 11:13+0800\n"
-"PO-Revision-Date: 2023-01-03 11:15+0800\n"
+"POT-Creation-Date: 2023-01-07 20:33+0800\n"
+"PO-Revision-Date: 2023-01-07 20:35+0800\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -21,6 +21,372 @@ msgstr ""
 #: ../../quick_start/dataset_and_transforms.rst:2
 msgid "Dataset and transforms"
 msgstr "数据集和数据变换"
+
+#: ../../quick_start/dataset_and_transforms.rst:5
+msgid "Dataset"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:7
+msgid ""
+"In mindnlp, there are download interfaces for some datasets, which can be "
+"used to download datasets directly. Based on the following classifications, "
+"the datasets currently included are:"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:11
+msgid "Machine Translation"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:13
+msgid "​\\ ``IWSLT2016``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:14
+msgid "​\\ ``IWSLT2017``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:15
+msgid "​\\ ``Multi30k``\\ ​​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:17
+msgid "Question Answer"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:19
+msgid "​\\ ``SQuAD1``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:20
+msgid "​\\ ``SQuAD2``\\ ​​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:22
+msgid "Sequence Tagging"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:24
+msgid "​\\ ``CoNLL2000Chunking``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:25
+msgid "​\\ ``UDPOS``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:27
+msgid "Text Classification"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:29
+msgid "​\\ ``AG_NEWS``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:30
+msgid "​\\ ``AmazonReviewFull``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:31
+msgid "​\\ ``AmazonReviewPolarity``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:32
+msgid "​\\ ``CoLA``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:33
+msgid "​\\ ``DBpedia``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:34
+msgid "​\\ ``IMDB``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:35
+msgid "​\\ ``MNLI``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:36
+msgid "​\\ ``MRPC``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:37
+msgid "​\\ ``QNLI``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:38
+msgid "​\\ ``QQP``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:39
+msgid "​\\ ``RTE``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:40
+msgid "​\\ ``SogouNews``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:41
+msgid "​\\ ``SST2``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:42
+msgid "​\\ ``STSB``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:43
+msgid "​\\ ``WNLI``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:44
+msgid "​\\ ``YahooAnswers``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:45
+msgid "​\\ ``YelpReviewFull``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:46
+msgid "​\\ ``YelpReviewPolarity``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:48
+msgid "Text Generation"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:50
+msgid "​\\ ``LCSTS``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:51
+msgid "​\\ ``PennTreebank``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:52
+msgid "​\\ ``WikiText2``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:53
+msgid "​\\ ``WikiText103``\\ ​"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:56
+msgid "Dataset Loading"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:58
+msgid ""
+"There are two ways to load a dataset. The first is to call the corresponding "
+"interface, and the second is to call a unified interface."
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:62
+msgid "Method 1: Load by corresponding interface"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:64
+msgid ""
+"The corresponding interface can be found under ``mindnlp.dataset`` . Here, "
+"the ``Multi30k`` dataset is used as an example:"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:71
+#: ../../quick_start/dataset_and_transforms.rst:209
+msgid ""
+"Parameter list and returns can be known through the annotation, or the "
+"corresponding docs on mindnlp `website <https://mindnlp.cqu.ai/en/latest/api/"
+"dataset/machine_translation.html#module-mindnlp.dataset.machine_translation."
+"multi30k>`__:"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:75
+#: ../../quick_start/dataset_and_transforms.rst:213
+msgid "Parameters:"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:77
+msgid ""
+"**root** (*str*) - Directory where the datasets are saved. Default:'~/."
+"mindnlp'"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:79
+msgid ""
+"**split** (*str|Tuple[str]*) - Split or splits to be returned. Default:"
+"('train', 'valid', 'test')."
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:81
+msgid ""
+"**language_pair** (*Tuple[str]*) - Tuple containing src and tgt language. "
+"Default: ('de', 'en')."
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:83
+msgid ""
+"**proxies** (*dict*) - a dict to identify proxies,for example: {“https”: "
+"“https://127.0.0.1:7890”}."
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:86
+#: ../../quick_start/dataset_and_transforms.rst:226
+msgid "Returns:"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:88
+msgid ""
+"**datasets_list** (list) -A list of loaded datasets. If only one type of "
+"dataset is specified,such as 'trian', this dataset is returned instead of a "
+"list of datasets."
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:92
+msgid "For convenience, we use default parameters except for the first one:"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:98
+msgid ""
+"Doubtlessly, if you just want to pick the train dataset, you only need to "
+"modify the parameters below:"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:106
+msgid "Method 2: Load by unified interface"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:108
+msgid ""
+"Also, we can load dataset by a unified interface - ``load()`` . The first "
+"parameter is a string to specify a dataset:"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:116
+msgid ""
+"The other parameter can be added sequentially according to the interface:"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:124
+msgid "Customizing Dataset"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:126
+msgid ""
+"If you want to use customizd dataset, more information about customizing "
+"dataset could be found on mindspore `website <https://www.mindspore.cn/"
+"tutorials/zh-CN/r1.9/beginner/dataset."
+"html#%E8%87%AA%E5%AE%9A%E4%B9%89%E6%95%B0%E6%8D%AE%E9%9B%86>`__."
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:131
+msgid "Dataset Iteration"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:133
+msgid ""
+"There are usually multiple columns in a dataset, and you can query the "
+"column names using the ``get_col_names()`` interface:"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:144
+msgid ""
+"After the dataset is loaded, the data is obtained iteratively and then sent "
+"to the neural network for training. We can use ``create_tuple_iterator()`` "
+"or ``create_dict_iterator()`` ​ interface to create an iterater for data "
+"access. Combining the column names interface above:"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:163
+msgid "Data Transforms"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:166
+msgid "Common Operation"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:168
+msgid ""
+"The most important operation in data transformation processing is the "
+"``map`` operation. ``map`` can add a data transform to a specified column in "
+"a dataset, make it apply to each element of the column data, and then return "
+"the dataset after transformation. ``BasicTokenizer()`` is used here for word "
+"segmentation of two columns of the dataset, and ``from_dataset`` is used to "
+"generate the vocab:"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:189
+msgid "Data Preprocessing in mindnlp"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:191
+msgid ""
+"There are different processes for different data sets in different domains. "
+"In mindnlp, specific processing functions are provided to help us process "
+"data quickly. Similarly, two ways can be used to process data. Using the "
+"``Multi30k`` dataset as an example:"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:197
+msgid "Method 1: Process by corresponding interface"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:199
+msgid ""
+"The corresponding interface can be found under ``mindnlp.dataset`` , the "
+"name of which begins with dataset's name, the underline and ``Process`` "
+"following. The ``vocab`` in the code was generated above:"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:215
+msgid "**dataset** ( *GeneratorDataset* ) - Multi30k dataset."
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:216
+msgid ""
+"**vocab** ( *Vocab* ) - vocabulary object, used to store the mapping of "
+"token and index."
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:218
+msgid ""
+"**batch_size** ( *int* ) - The number of rows each batch is created with. "
+"Default: 64."
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:220
+msgid "**max_len** ( *int* ) - The max length of the sentence. Default: 500."
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:222
+msgid ""
+"**drop_remainder**  ( *bool* ) - When the last batch of data contains a data "
+"entry smaller than batch_size, whether to discard the batch and not pass it "
+"to the next operation. Default: False."
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:228
+msgid "**dataset** (MapDataset) - dataset after transforms."
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:231
+msgid "Method 2: Process by unified interface"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:238
+msgid ""
+"For complete code, please check out the the github `repository <https://"
+"github.com/mindspore-lab/mindnlp/blob/master/examples/machine_translation."
+"py>`__"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:242
+msgid "Customizing Preprocess"
+msgstr ""
+
+#: ../../quick_start/dataset_and_transforms.rst:244
+msgid ""
+"If you want to preprocess dataset by yourself, please refer to more "
+"operations on mindspore `website <https://www.mindspore.cn/tutorials/zh-CN/"
+"r1.9/beginner/transforms.html>`__."
+msgstr ""
 
 #: ../../quick_start/first_model.rst:2
 msgid "First Model"
@@ -200,6 +566,35 @@ msgstr "循环神经网络（RNN）解码器"
 msgid "Attention"
 msgstr ""
 
+#: ../../quick_start/modules.rst:133
+msgid ""
+"Attention is a simulation of the attention mechanism of the human brain. "
+"When people see something, they tend to focus on important information and "
+"ignore other information. Attention in natural language processing is to "
+"assign attention weights to text, and the essence of Attention is to change "
+"from focusing on all to focusing. In MindNLP, we provide various modules for "
+"attention mechanisms, so you can use them quickly."
+msgstr ""
+
+#: ../../quick_start/modules.rst:140
+msgid ""
+"Next we will demonstrate how to build a multi-headed attention module via "
+"MindNLP."
+msgstr ""
+
+#: ../../quick_start/modules.rst:183
+msgid ""
+"Of course, you can also use the most basic scaled dot-product attention "
+"attention to build the module:"
+msgstr ""
+
+#: ../../quick_start/modules.rst:200
+msgid ""
+"Currently mindnlp has implemented 8 attention mechanisms. You can get more "
+"information about the attention API from :doc:`MindNLP.modules.attentions "
+"<../api/modules/attentions>` ."
+msgstr ""
+
 #: ../../quick_start/train_and_eval.rst:2
 msgid "Train and Eval"
 msgstr "训练与评估"
@@ -375,10 +770,8 @@ msgstr ""
 "engine.metrics.accuracy.Accuracy` 作为模型的评价指标："
 
 #: ../../quick_start/train_and_eval.rst:205
-#, fuzzy
-#| msgid "Train and Eval"
 msgid "Train and Evaluate Model"
-msgstr "训练与评估模型"
+msgstr ""
 
 #: ../../quick_start/train_and_eval.rst:207
 msgid ""
@@ -445,8 +838,8 @@ msgid ""
 "callback function."
 msgstr ""
 "Callback是与训练器紧密相关的模块，在Trainer中使用回调函数能够实现计时、早停、"
-"保存checkpoint等在模型训练过程中所需要的额外操作。"
-"同时，MindNLP还支持自定义callabck。"
+"保存checkpoint等在模型训练过程中所需要的额外操作。同时，MindNLP还支持自定义"
+"callabck。"
 
 #: ../../quick_start/use_callback.rst:11
 msgid "Use Callback in Engine"
@@ -459,10 +852,9 @@ msgid ""
 "Callback and Callback List. Engine will automatically execute the operations "
 "specified by these callbacks."
 msgstr ""
-"Callback需要在已经定义训练器Trainer或评测器Evaluator的前提下使用。"
-"MindNLP同时支持向Engine传入两种类型的callback参数："
-"Callback类型和list[Callback]类型。Engine会自动执行"
-"所传入的callback对应的功能。"
+"Callback需要在已经定义训练器Trainer或评测器Evaluator的前提下使用。MindNLP同时"
+"支持向Engine传入两种类型的callback参数：Callback类型和list[Callback]类型。"
+"Engine会自动执行所传入的callback对应的功能。"
 
 #: ../../quick_start/use_callback.rst:17
 msgid "The code of using engine is as follows:"
@@ -479,7 +871,8 @@ msgid ""
 "Callback, please refer to :py:class:`~mindnlp.engine.callbacks`"
 msgstr ""
 "MindNLP提供几种常见的Callback，包括TimerCallback，EarlyStopCallback，"
-"BestModelCallback等。以上callback的详细内容，可以参考mindnlp.engine.callbacks。"
+"BestModelCallback等。以上callback的详细内容，可以参考mindnlp.engine."
+"callbacks。"
 
 #: ../../quick_start/use_callback.rst:88
 msgid "Custom Callback"
@@ -490,8 +883,8 @@ msgid ""
 "Here we take a simple Callback as an example, its function is to print the "
 "average training loss of each Epoch."
 msgstr ""
-"这里我们用一个简单的Callback作为例子，"
-"它的功能是在模型训练中每个Epoch结束时，打印出当前的loss均值。"
+"这里我们用一个简单的Callback作为例子，它的功能是在模型训练中每个Epoch结束时，"
+"打印出当前的loss均值。"
 
 #: ../../quick_start/use_callback.rst:93
 msgid "Create Callback"
@@ -503,8 +896,8 @@ msgid ""
 "Callback. Here we define MyCallBack, which inherits from :py:class:`~mindnlp."
 "abc.callback`."
 msgstr ""
-"若要自定义Callback，我们需要在继承Callback基类的基础上实现一个类。"
-"这里我们定义这个类为MyCallback，继承自mindnlp.abc.callback。"
+"若要自定义Callback，我们需要在继承Callback基类的基础上实现一个类。这里我们定"
+"义这个类为MyCallback，继承自mindnlp.abc.callback。"
 
 #: ../../quick_start/use_callback.rst:99
 msgid "Specifies the phase of calling the Callback"
@@ -519,10 +912,10 @@ msgid ""
 "MyCallBack calls epoch_end() at the end of each epoch, output the loss of "
 "the current epoch."
 msgstr ""
-"Callback中所有的类方法都会在Trainer的训练中在特定的阶段调用。"
-"如train_begin()会在训练开始时被调用，epoch_end()会在每个epoch结束时调用。"
-"具体有哪些类方法，参见Callback文档。这里，MyCallback在每个epoch结束时调用"
-"epoch_end()，输出当前epoch结束时的loss均值。"
+"Callback中所有的类方法都会在Trainer的训练中在特定的阶段调用。如train_begin()"
+"会在训练开始时被调用，epoch_end()会在每个epoch结束时调用。具体有哪些类方法，"
+"参见Callback文档。这里，MyCallback在每个epoch结束时调用epoch_end()，输出当前"
+"epoch结束时的loss均值。"
 
 #: ../../quick_start/use_callback.rst:109
 msgid "Access the internal information of Engine"
@@ -536,9 +929,9 @@ msgid ""
 "the current number of epochs of the Trainer and the average loss value after "
 "each epoch."
 msgstr ""
-"Callback中所有的类方法都包含run_context参数用来访问Engine内部训练信息。"
-"如当前训练的step数目，当前训练的epoch数目，loss值等。这里，MyCallback"
-"需要获得Trainer当前的epoch数目和每个epoch结束后的loss均值。"
+"Callback中所有的类方法都包含run_context参数用来访问Engine内部训练信息。如当前"
+"训练的step数目，当前训练的epoch数目，loss值等。这里，MyCallback需要获得"
+"Trainer当前的epoch数目和每个epoch结束后的loss均值。"
 
 #: ../../quick_start/use_metrics.rst:2
 msgid "Use Metrics"
