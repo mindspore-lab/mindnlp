@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: MindNLP\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2023-01-07 20:33+0800\n"
-"PO-Revision-Date: 2023-01-07 20:35+0800\n"
+"PO-Revision-Date: 2023-01-07 23:13+0800\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -24,7 +24,7 @@ msgstr "数据集和数据变换"
 
 #: ../../quick_start/dataset_and_transforms.rst:5
 msgid "Dataset"
-msgstr ""
+msgstr "数据集"
 
 #: ../../quick_start/dataset_and_transforms.rst:7
 msgid ""
@@ -32,10 +32,12 @@ msgid ""
 "used to download datasets directly. Based on the following classifications, "
 "the datasets currently included are:"
 msgstr ""
+"在mindnlp中，内置了一些数据集的调用接口，可以直接下载使用。按照以下分类，目前"
+"包含的数据集有："
 
 #: ../../quick_start/dataset_and_transforms.rst:11
 msgid "Machine Translation"
-msgstr ""
+msgstr "机器翻译"
 
 #: ../../quick_start/dataset_and_transforms.rst:13
 msgid "​\\ ``IWSLT2016``\\ ​"
@@ -51,7 +53,7 @@ msgstr ""
 
 #: ../../quick_start/dataset_and_transforms.rst:17
 msgid "Question Answer"
-msgstr ""
+msgstr "问答任务"
 
 #: ../../quick_start/dataset_and_transforms.rst:19
 msgid "​\\ ``SQuAD1``\\ ​"
@@ -63,7 +65,7 @@ msgstr ""
 
 #: ../../quick_start/dataset_and_transforms.rst:22
 msgid "Sequence Tagging"
-msgstr ""
+msgstr "序列标注"
 
 #: ../../quick_start/dataset_and_transforms.rst:24
 msgid "​\\ ``CoNLL2000Chunking``\\ ​"
@@ -75,7 +77,7 @@ msgstr ""
 
 #: ../../quick_start/dataset_and_transforms.rst:27
 msgid "Text Classification"
-msgstr ""
+msgstr "文本分类"
 
 #: ../../quick_start/dataset_and_transforms.rst:29
 msgid "​\\ ``AG_NEWS``\\ ​"
@@ -151,7 +153,7 @@ msgstr ""
 
 #: ../../quick_start/dataset_and_transforms.rst:48
 msgid "Text Generation"
-msgstr ""
+msgstr "文本生成"
 
 #: ../../quick_start/dataset_and_transforms.rst:50
 msgid "​\\ ``LCSTS``\\ ​"
@@ -171,23 +173,27 @@ msgstr ""
 
 #: ../../quick_start/dataset_and_transforms.rst:56
 msgid "Dataset Loading"
-msgstr ""
+msgstr "数据集加载"
 
 #: ../../quick_start/dataset_and_transforms.rst:58
 msgid ""
 "There are two ways to load a dataset. The first is to call the corresponding "
 "interface, and the second is to call a unified interface."
 msgstr ""
+"加载数据集的方法有两种，第一种是通过对应接口调用，第二种则是通过一个统一的接"
+"口进行调用。"
 
 #: ../../quick_start/dataset_and_transforms.rst:62
 msgid "Method 1: Load by corresponding interface"
-msgstr ""
+msgstr "方法1：通过对应接口加载"
 
 #: ../../quick_start/dataset_and_transforms.rst:64
 msgid ""
 "The corresponding interface can be found under ``mindnlp.dataset`` . Here, "
 "the ``Multi30k`` dataset is used as an example:"
 msgstr ""
+"可以在 ``mindnlp.dataset`` 下找到对应的数据集接口，并进行调用，这里以 "
+"``Multi30k`` 数据集为例："
 
 #: ../../quick_start/dataset_and_transforms.rst:71
 #: ../../quick_start/dataset_and_transforms.rst:209
@@ -197,40 +203,49 @@ msgid ""
 "dataset/machine_translation.html#module-mindnlp.dataset.machine_translation."
 "multi30k>`__:"
 msgstr ""
+"通过注释或者网站对应的接口 `文档 <https://mindnlp.cqu.ai/zh_CN/latest/api/"
+"dataset/machine_translation.html#module-mindnlp.dataset.machine_translation."
+"multi30k>`__ 查看参数列表以及返回值等信息："
 
 #: ../../quick_start/dataset_and_transforms.rst:75
 #: ../../quick_start/dataset_and_transforms.rst:213
 msgid "Parameters:"
-msgstr ""
+msgstr "参数："
 
 #: ../../quick_start/dataset_and_transforms.rst:77
 msgid ""
 "**root** (*str*) - Directory where the datasets are saved. Default:'~/."
 "mindnlp'"
-msgstr ""
+msgstr "**root** (*str*) - 存放数据集的目录。默认：\"~/.mindnlp\"。"
 
 #: ../../quick_start/dataset_and_transforms.rst:79
 msgid ""
 "**split** (*str|Tuple[str]*) - Split or splits to be returned. Default:"
 "('train', 'valid', 'test')."
 msgstr ""
+"**split** (*str|Tuple[str]*) - 要返回的数据集分块。默认：('train', 'valid', "
+"'test')."
 
 #: ../../quick_start/dataset_and_transforms.rst:81
 msgid ""
 "**language_pair** (*Tuple[str]*) - Tuple containing src and tgt language. "
 "Default: ('de', 'en')."
 msgstr ""
+"**language_pair** (*Tuple[str]*) - 包含源语言和目标语言的元组。默认：('de', "
+"'en')."
 
 #: ../../quick_start/dataset_and_transforms.rst:83
 msgid ""
 "**proxies** (*dict*) - a dict to identify proxies,for example: {“https”: "
 "“https://127.0.0.1:7890”}."
 msgstr ""
+"**proxies** (*dict*) - 定义代理的字典，例如：{\"https\": "
+"\"https://127.0.0.1:7890\"}."
 
 #: ../../quick_start/dataset_and_transforms.rst:86
 #: ../../quick_start/dataset_and_transforms.rst:226
 msgid "Returns:"
-msgstr ""
+msgstr "返回："
 
 #: ../../quick_start/dataset_and_transforms.rst:88
 msgid ""
@@ -238,35 +253,39 @@ msgid ""
 "dataset is specified,such as 'trian', this dataset is returned instead of a "
 "list of datasets."
 msgstr ""
+"**datasets_list** (list) - 加载完成的数据集分块列表。如果只加载了一个数据集分"
+"块， 如：'trian'，那么就只返回这个数据集分块，而不是一个列表。"
 
 #: ../../quick_start/dataset_and_transforms.rst:92
 msgid "For convenience, we use default parameters except for the first one:"
-msgstr ""
+msgstr "方便起见，除了第一个参数，其他使用默认参数："
 
 #: ../../quick_start/dataset_and_transforms.rst:98
 msgid ""
 "Doubtlessly, if you just want to pick the train dataset, you only need to "
 "modify the parameters below:"
-msgstr ""
+msgstr "当然，如果想只取训练集，只需要修改参数："
 
 #: ../../quick_start/dataset_and_transforms.rst:106
 msgid "Method 2: Load by unified interface"
-msgstr ""
+msgstr "方法2：通过统一接口加载"
 
 #: ../../quick_start/dataset_and_transforms.rst:108
 msgid ""
 "Also, we can load dataset by a unified interface - ``load()`` . The first "
 "parameter is a string to specify a dataset:"
 msgstr ""
+"通过一个统一的 ``load`` 接口进行加载，第一个参数为数据集的名称字符串，用以指"
+"定数据集："
 
 #: ../../quick_start/dataset_and_transforms.rst:116
 msgid ""
 "The other parameter can be added sequentially according to the interface:"
-msgstr ""
+msgstr "其他参数可以通过查询接口继续添加，如："
 
 #: ../../quick_start/dataset_and_transforms.rst:124
 msgid "Customizing Dataset"
-msgstr ""
+msgstr "自定义数据集"
 
 #: ../../quick_start/dataset_and_transforms.rst:126
 msgid ""
@@ -275,16 +294,19 @@ msgid ""
 "tutorials/zh-CN/r1.9/beginner/dataset."
 "html#%E8%87%AA%E5%AE%9A%E4%B9%89%E6%95%B0%E6%8D%AE%E9%9B%86>`__."
 msgstr ""
+"如果想要自定义数据集，请查看mindspore官网上的 `数据集自定义教程 <https://www."
+"mindspore.cn/tutorials/zh-CN/r1.9/beginner/dataset."
+"html#%E8%87%AA%E5%AE%9A%E4%B9%89%E6%95%B0%E6%8D%AE%E9%9B%86>`__ 。"
 
 #: ../../quick_start/dataset_and_transforms.rst:131
 msgid "Dataset Iteration"
-msgstr ""
+msgstr "数据集迭代"
 
 #: ../../quick_start/dataset_and_transforms.rst:133
 msgid ""
 "There are usually multiple columns in a dataset, and you can query the "
 "column names using the ``get_col_names()`` interface:"
-msgstr ""
+msgstr "数据集中一般有多列，可以使用 ``get_col_names()`` 接口查看列名："
 
 #: ../../quick_start/dataset_and_transforms.rst:144
 msgid ""
@@ -293,14 +315,17 @@ msgid ""
 "or ``create_dict_iterator()`` ​ interface to create an iterater for data "
 "access. Combining the column names interface above:"
 msgstr ""
+"数据集加载后，一般以迭代方式获取数据，然后送入神经网络中进行训练。我们可以用 "
+"``create_tuple_iterator`` 或 ``create_dict_iterator`` 接口创建数据迭代器，迭"
+"代访问数据。结合上面的列名接口："
 
 #: ../../quick_start/dataset_and_transforms.rst:163
 msgid "Data Transforms"
-msgstr ""
+msgstr "数据集变换处理"
 
 #: ../../quick_start/dataset_and_transforms.rst:166
 msgid "Common Operation"
-msgstr ""
+msgstr "数据集常用操作"
 
 #: ../../quick_start/dataset_and_transforms.rst:168
 msgid ""
@@ -311,10 +336,14 @@ msgid ""
 "segmentation of two columns of the dataset, and ``from_dataset`` is used to "
 "generate the vocab:"
 msgstr ""
+"数据集变换处理中最重要的操作是 ``map`` 操作，可以针对数据集指定列（column）添"
+"加数据变换（Transforms），将数据变换应用于该列数据的每个元素，并返回包含变换"
+"后元素的新数据集。这里使用 ``BasicTokenizer`` 对数据集的两列进行分词，并使用 "
+"``from_dataset`` 生成词表："
 
 #: ../../quick_start/dataset_and_transforms.rst:189
 msgid "Data Preprocessing in mindnlp"
-msgstr ""
+msgstr "mindnlp中的数据预处理"
 
 #: ../../quick_start/dataset_and_transforms.rst:191
 msgid ""
@@ -323,10 +352,13 @@ msgid ""
 "data quickly. Similarly, two ways can be used to process data. Using the "
 "``Multi30k`` dataset as an example:"
 msgstr ""
+"对于不同领域中的不同数据集，有不同的处理流程，mindnlp提供了数据集的特定处理函"
+"数帮助我们快速处理数据。和前面的加载方法一样，这里同样有两种方法调用该处理函"
+"数。以 ``Multi30k`` 数据集为例："
 
 #: ../../quick_start/dataset_and_transforms.rst:197
 msgid "Method 1: Process by corresponding interface"
-msgstr ""
+msgstr "方法1：通过对应接口处理"
 
 #: ../../quick_start/dataset_and_transforms.rst:199
 msgid ""
@@ -334,26 +366,31 @@ msgid ""
 "name of which begins with dataset's name, the underline and ``Process`` "
 "following. The ``vocab`` in the code was generated above:"
 msgstr ""
+"可以在 ``mindnlp.dataset`` 下找到对应数据集接口，名称为数据集名称加下划线以"
+"及 ``Process`` ，其中的 ``vocab`` 为如上生成的词表："
 
 #: ../../quick_start/dataset_and_transforms.rst:215
 msgid "**dataset** ( *GeneratorDataset* ) - Multi30k dataset."
-msgstr ""
+msgstr "**dataset** (*GeneratorDataset*) - Multi30k数据集。"
 
 #: ../../quick_start/dataset_and_transforms.rst:216
 msgid ""
 "**vocab** ( *Vocab* ) - vocabulary object, used to store the mapping of "
 "token and index."
 msgstr ""
+"**vocab** (*Vocab*) - 词表对象，用于存储分词和索引的映射。默认为空。如果为"
+"空，一个新的词表对象将会被创建。"
 
 #: ../../quick_start/dataset_and_transforms.rst:218
 msgid ""
 "**batch_size** ( *int* ) - The number of rows each batch is created with. "
 "Default: 64."
 msgstr ""
+"**batch_size** (*int*) - 指定每个批处理数据包含的数据条目。默认值：64。"
 
 #: ../../quick_start/dataset_and_transforms.rst:220
 msgid "**max_len** ( *int* ) - The max length of the sentence. Default: 500."
-msgstr ""
+msgstr "**max_len** (*int*) - 句子的最大长度。默认值：500。"
 
 #: ../../quick_start/dataset_and_transforms.rst:222
 msgid ""
@@ -361,14 +398,16 @@ msgid ""
 "entry smaller than batch_size, whether to discard the batch and not pass it "
 "to the next operation. Default: False."
 msgstr ""
+"**drop_remainder** (*bool*) - 当最后一批数据包含的数据条目小于batch_size时，"
+"是否丢弃该批次，而不将其传递到下一个操作。默认值：False，不丢弃。"
 
 #: ../../quick_start/dataset_and_transforms.rst:228
 msgid "**dataset** (MapDataset) - dataset after transforms."
-msgstr ""
+msgstr "**dataset** (MapDataset) - 预处理操作后返回的数据集。"
 
 #: ../../quick_start/dataset_and_transforms.rst:231
 msgid "Method 2: Process by unified interface"
-msgstr ""
+msgstr "方法2：通过统一接口"
 
 #: ../../quick_start/dataset_and_transforms.rst:238
 msgid ""
@@ -376,10 +415,12 @@ msgid ""
 "github.com/mindspore-lab/mindnlp/blob/master/examples/machine_translation."
 "py>`__"
 msgstr ""
+"完整代码请查看github仓库 `示例 <https://github.com/mindspore-lab/mindnlp/"
+"blob/master/examples/machine_translation.py>`__ "
 
 #: ../../quick_start/dataset_and_transforms.rst:242
 msgid "Customizing Preprocess"
-msgstr ""
+msgstr "自定义的预处理"
 
 #: ../../quick_start/dataset_and_transforms.rst:244
 msgid ""
@@ -387,6 +428,8 @@ msgid ""
 "operations on mindspore `website <https://www.mindspore.cn/tutorials/zh-CN/"
 "r1.9/beginner/transforms.html>`__."
 msgstr ""
+"如果想自行处理数据集，更多的操作请看mindspore官网 `教学 <https://www."
+"mindspore.cn/tutorials/zh-CN/r1.9/beginner/transforms.html>`__ "
 
 #: ../../quick_start/first_model.rst:2
 msgid "First Model"
@@ -771,7 +814,7 @@ msgstr ""
 
 #: ../../quick_start/train_and_eval.rst:205
 msgid "Train and Evaluate Model"
-msgstr ""
+msgstr "训练与评估模型"
 
 #: ../../quick_start/train_and_eval.rst:207
 msgid ""
