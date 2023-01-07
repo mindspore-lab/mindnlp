@@ -129,3 +129,74 @@ Name                                                      Introduction
 
 Attention
 -------------------
+
+Attention is a simulation of the attention mechanism of the human brain.
+When people see something, they tend to focus on important information
+and ignore other information. Attention in natural language processing
+is to assign attention weights to text, and the essence of Attention is
+to change from focusing on all to focusing. In MindNLP, we provide
+various modules for attention mechanisms, so you can use them quickly.
+
+Next we will demonstrate how to build a multi-headed attention
+module via MindNLP.
+
+.. code:: python
+
+    import mindspore
+    import mindspore.numpy as np
+    from mindspore import ops
+    from mindspore import Tensor
+    from mindspore.text.modules.attentions import MutiHeadAttention
+    # initialize random number seeds
+    standard_normal = ops.StandardNormal(seed=0)
+
+    # query is [batch_size, seq_len_q, hidden_size]
+    q = standard_normal((2, 32, 512))
+
+    # key is [batch_size, seq_len_k, hidden_size]
+    k = standard_normal((2, 20, 512))
+
+    # value is [batch_size, seq_len_k, hidden_size]
+    v = standard_normal((2, 20, 512))
+
+    # now query shape is (2, 32 ,512)->(2, 8, 32, 64)
+    # and key shape is (2, 20 ,512)->(2, 8, 20, 64)
+    # query * key.transpose(-1, -2):
+    # (2, 8, 32, 64) * (2, 8, 64, 20) ->(2, 8, 32, 20)
+    # equal with mask shape that is [batch_size, seq_len_q, seq_len_k]
+    mask_shape = (2, 32, 20)
+    mask = Tensor(np.ones(mask_shape), mindspore.bool_)
+
+    # use additive attention
+    net = MutiHeadAttention(heads=8, attention_mode="add")
+    # you can also use cosine attention via multi-head attention
+    net = MutiHeadAttention(heads=8, attention_mode="cos")
+    # you can also use dot-product attention via multi-head attention
+    # default dot-product attention mode
+    net = MutiHeadAttention(heads=8)
+
+    # x is the output of multi-head attention
+    # attn is the attention score
+    x, attn = net(query, key, value, mask)
+
+
+Of course, you can also use the most basic scaled dot-product attention
+attention to build the module:
+
+.. code:: python
+
+    import mindspore
+    from mindspore import Tensor
+    from mindspore.text.modules.attentions import ScaledDotAttention
+    model = ScaledDotAttention(dropout=0.9)
+    # You can customize the query, key, vlaue vector
+    q = Tensor(np.ones((2, 32, 512)), mindspore.float32)
+    k = Tensor(np.ones((2, 20, 512)), mindspore.float32)
+    v = Tensor(np.ones((2, 20, 400)), mindspore.float32)
+    output, att = model(q, k, v)
+    # output shape is (2, 1024, 512)
+    # att shape is (2, 1024, 32)
+
+Currently mindnlp has implemented 8 attention mechanisms.
+You can get more information about the attention API from
+:doc:`MindNLP.modules.attentions <../api/modules/attentions>` .
