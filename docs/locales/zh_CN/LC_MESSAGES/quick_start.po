@@ -618,18 +618,27 @@ msgid ""
 "from focusing on all to focusing. In MindNLP, we provide various modules for "
 "attention mechanisms, so you can use them quickly."
 msgstr ""
+"注意力是对人脑注意力机制的模拟。"
+"当人们看到一些东西时，他们往往会把注意力集中在重要的信息和"
+"忽略其他信息。在自然语言处理中，注意力是为了"
+"对文本分配模型注意力的权重，而注意力的本质是"
+"就是要从关注所有变为更好地关注局部。在MindNLP中，我们提供各种模块用于"
+"注意力机制，可以让您更快的使用它"
 
 #: ../../quick_start/modules.rst:140
 msgid ""
 "Next we will demonstrate how to build a multi-headed attention module via "
 "MindNLP."
 msgstr ""
+"接下来我们将演示如何通过MindNLP"
+"建立一个多头的注意力模块"
 
 #: ../../quick_start/modules.rst:183
 msgid ""
 "Of course, you can also use the most basic scaled dot-product attention "
 "attention to build the module:"
 msgstr ""
+"当然，你也可以使用最基本的缩放点积注意机制来构建模块："
 
 #: ../../quick_start/modules.rst:200
 msgid ""
@@ -637,6 +646,9 @@ msgid ""
 "information about the attention API from :doc:`MindNLP.modules.attentions "
 "<../api/modules/attentions>` ."
 msgstr ""
+"目前，MindNlp已经实现了8种注意力机制。"
+"关于注意力机制更详细的实现和信息您可以查看我们的文档"
+" :doc:`MindNLP.modules.attentions <../api/modules/attentions>` ."
 
 #: ../../quick_start/train_and_eval.rst:2
 msgid "Train and Eval"
