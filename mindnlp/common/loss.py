@@ -13,12 +13,17 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=arguments-differ
+# pylint: disable=C0412
 """Losses"""
 
 import numpy as np
 import mindspore
 from mindspore import nn, ops, Tensor
-from mindnlp.common.functional import softmax, kl_div
+from mindnlp.utils import less_min_pynative_first
+if less_min_pynative_first:
+    from mindnlp.common.functional import softmax, kl_div
+else:
+    from mindspore.ops import softmax, kl_div
 
 __all__ = ['RDropLoss',
            'CMRC2018Loss']

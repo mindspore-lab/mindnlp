@@ -13,17 +13,15 @@
 # limitations under the License.
 # ============================================================================
 """
-text
+MindNLP library.
 """
 
-from packaging import version
-import mindspore
-from mindspore import context
-if version.parse(mindspore.__version__) < version.parse('2.0.0'):
+from mindnlp.utils import less_min_pynative_first
+if less_min_pynative_first:
+    from mindspore import context
     from mindspore import ms_function as ms_jit
+    context.set_context(mode=context.PYNATIVE_MODE)
 else:
     from mindspore import jit as ms_jit
-
-context.set_context(mode=context.PYNATIVE_MODE)
 
 __all__ = ['ms_jit']
