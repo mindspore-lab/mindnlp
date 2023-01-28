@@ -160,10 +160,19 @@ class RNNDecoder(DecoderBase):
             encoder_padding_mask = encoder_out[2]  # [batch, src_len]
 
             if self.is_lstm:
-                prev_hiddens = [encoder_hiddens[0][i] for i in range(self.num_layers)]
-                prev_cells = [encoder_hiddens[1][i] for i in range(self.num_layers)]
+                prev_hiddens = []
+                prev_cells = []
+                for i in range(self.num_layers):
+                    prev_hiddens.append(encoder_hiddens[0][i])
+                    prev_cells.append(encoder_hiddens[1][i])
+                # prev_hiddens = [encoder_hiddens[0][i] for i in range(self.num_layers)]
+                # prev_cells = [encoder_hiddens[1][i] for i in range(self.num_layers)]
             else:
-                prev_hiddens = [encoder_hiddens[i] for i in range(self.num_layers)]
+                prev_hiddens = []
+                for i in range(self.num_layers):
+                    prev_hiddens.append(encoder_hiddens[i])
+
+                # prev_hiddens = [encoder_hiddens[i] for i in range(self.num_layers)]
                 prev_cells = None
             input_feed = ops.zeros((batch_size, self.hidden_size), embed_token.dtype)
         else:
@@ -172,8 +181,13 @@ class RNNDecoder(DecoderBase):
             encoder_padding_mask = mnp.empty(0)
 
             zero_state = ops.zeros((batch_size, self.hidden_size), embed_token.dtype)
-            prev_hiddens = [zero_state for _ in range(self.num_layers)]
-            prev_cells = [zero_state for _ in range(self.num_layers)]
+            prev_hiddens = []
+            prev_cells = []
+            for _ in range(self.num_layers):
+                prev_hiddens.append(zero_state)
+                prev_cells.append(zero_state)
+            # prev_hiddens = [zero_state for _ in range(self.num_layers)]
+            # prev_cells = [zero_state for _ in range(self.num_layers)]
             input_feed = None
 
         outs = []
