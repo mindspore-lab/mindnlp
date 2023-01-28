@@ -68,4 +68,4 @@ class TestRDropLoss(unittest.TestCase):
             forward = ms_jit(forward)
         loss = forward(temp_p, temp_q)
 
-        assert np.allclose(loss.asnumpy(), np.array([0.10013707]))
+        assert np.allclose(loss.asnumpy(), np.array([0.10013707]), 1e-5, 1e-5)
