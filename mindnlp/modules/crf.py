@@ -16,7 +16,7 @@
 
 import mindspore
 import mindspore.numpy as mnp
-from mindspore import nn
+from mindspore import nn, ops, Tensor
 from mindspore import Parameter
 from mindspore.common.initializer import initializer, Uniform
 
@@ -131,7 +131,7 @@ class CRF(nn.Cell):
             batch_size, max_length = emissions.shape[:2]
             emissions = emissions.swapaxes(0, 1)
         else:
-            batch_size, max_length = emissions.shape[:2]
+            max_length, batch_size = emissions.shape[:2]
 
         if seq_length is None:
             seq_length = mnp.full((batch_size,), max_length, mindspore.int64)
@@ -153,7 +153,9 @@ class CRF(nn.Cell):
         score = self.start_transitions[tags[0]]
         score += emissions[0, mnp.arange(batch_size), tags[0]]
 
-        for i in range(1, seq_length):
+        i = Tensor(1, mindspore.int32)
+        while i < seq_length:
+        # for i in range(1, seq_length):
             # Transition score to next tag, only added if next timestep is valid (mask == 1)
             # shape: (batch_size,)
             score += self.transitions[tags[i - 1], tags[i]] * mask[i]
@@ -161,6 +163,7 @@ class CRF(nn.Cell):
             # Emission score for next tag, only added if next timestep is valid (mask == 1)
             # shape: (batch_size,)
             score += emissions[i, mnp.arange(batch_size), tags[i]] * mask[i]
+            i += 1
 
         # End transition score
         # shape: (batch_size,)
@@ -182,7 +185,9 @@ class CRF(nn.Cell):
         # shape: (batch_size, num_tags)
         score = self.start_transitions + emissions[0]
 
-        for i in range(1, seq_length):
+        i = Tensor(1, mindspore.int32)
+        while i < seq_length:
+        # for i in range(1, seq_length):
             # Broadcast score for every possible next tag
             # shape: (batch_size, num_tags, 1)
             broadcast_score = score.expand_dims(2)
@@ -207,6 +212,7 @@ class CRF(nn.Cell):
             # Set score to the next score if this timestep is valid (mask == 1)
             # shape: (batch_size, num_tags)
             score = mnp.where(mask[i].expand_dims(1), next_score, score)
+            i += 1
 
         # End transition score
         # shape: (batch_size, num_tags)
@@ -235,7 +241,10 @@ class CRF(nn.Cell):
 
         # Viterbi algorithm recursive case: we compute the score of the best tag sequence
         # for every possible next tag
-        for i in range(1, seq_length):
+        i = Tensor(1, mindspore.int32)
+        history = ops.zeros(emissions.shape, mindspore.int32)
+        while i < seq_length:
+        # for i in range(1, seq_length):
             # Broadcast viterbi score for every possible next tag
             # shape: (batch_size, num_tags, 1)
             broadcast_score = score.expand_dims(2)
@@ -258,7 +267,8 @@ class CRF(nn.Cell):
             # and save the index that produces the next score
             # shape: (batch_size, num_tags)
             score = mnp.where(mask[i].expand_dims(1), next_score, score)
-            history += (indices,)
+            history[i - 1] = indices
+            i += 1
 
         # End transition score
         # shape: (batch_size, num_tags)
