@@ -140,8 +140,8 @@ class F1Score(Metric):
             RuntimeError: If the number of samples is 0.
 
         """
-        f1_s = (2 * self._true_positives / (self._actual_positives + self._positives + \
-            self.epsilon))
+        f1_s = 2 * self._true_positives / (self._actual_positives + self._positives + \
+            self.epsilon)
         return f1_s
 
     def get_metric_name(self):

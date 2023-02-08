@@ -116,7 +116,7 @@ class Precision(Metric):
             - **prec** (numpy.ndarray) - The computed result.
 
         """
-        prec = (self.true_positives / (self.positives + self.epsilon))
+        prec = self.true_positives / (self.positives + self.epsilon)
         return prec
 
     def get_metric_name(self):

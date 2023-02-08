@@ -16,6 +16,7 @@
 Test CRF
 """
 # pylint: disable=W0640
+# pylint: disable=W0212
 
 import itertools
 import unittest
@@ -148,7 +149,7 @@ class TestForward(unittest.TestCase):
 
         if jit:
             forward = ms_jit(forward)
-        
+
         llh_no_mask, llh_mask = forward(emissions, tags)
 
         assert np.allclose(llh_no_mask.asnumpy(), llh_mask.asnumpy(),rtol=1e-3,atol=1e-3)
@@ -279,9 +280,10 @@ class TestForward(unittest.TestCase):
 
 @ddt
 class TestDecode(unittest.TestCase):
-
+    """test crf decoding."""
     @data(True, False)
     def test_works_with_mask(self, jit):
+        """test works with mask."""
         crf = make_crf()
         seq_length, batch_size = 3, 2
         # shape: (seq_length, batch_size, num_tags)
@@ -295,7 +297,7 @@ class TestDecode(unittest.TestCase):
 
         if jit:
             forward = ms_jit(forward)
-        
+
         score, history = forward(emissions, seq_length)
         best_tags = crf.post_decode(score, history, seq_length)
         # shape: (batch_size, seq_length, num_tags)
@@ -316,6 +318,7 @@ class TestDecode(unittest.TestCase):
             assert tuple(best_tag) == manual_best_tag
 
     def test_works_without_mask(self):
+        """test works without mask."""
         crf = make_crf()
         # shape: (seq_length, batch_size, num_tags)
         emissions = make_emissions(crf)
@@ -328,6 +331,7 @@ class TestDecode(unittest.TestCase):
         assert (best_tags_no_mask[0] == best_tags_mask[0]).all()
 
     def test_batched_decode(self):
+        """test batched decode."""
         crf = make_crf()
         batch_size, seq_length = 2, 3
 
@@ -349,6 +353,7 @@ class TestDecode(unittest.TestCase):
         assert (non_batched == batched).all()
 
     def test_batch_first(self):
+        """test batch first."""
         crf = make_crf()
         # shape: (seq_length, batch_size, num_tags)
         emissions = make_emissions(crf)
@@ -368,15 +373,19 @@ class TestDecode(unittest.TestCase):
         assert (best_tags[0] == best_tags_bf[0]).all()
 
     def test_emissions_has_bad_number_of_dimension(self):
+        """test emission has bad number of dimension."""
         emissions = Tensor(np.random.randn(1, 2), mindspore.float32)
         crf = make_crf()
 
         with pytest.raises(ValueError) as excinfo:
             crf(emissions)
+            print(excinfo)
 
     def test_emissions_last_dimension_not_equal_to_number_of_tags(self):
+        """test emission last dimension not equal to number of tags."""
         emissions = Tensor(np.random.randn(1, 2, 3), mindspore.float32)
         crf = make_crf(10)
 
         with pytest.raises(ValueError) as excinfo:
             crf(emissions)
+            print(excinfo)

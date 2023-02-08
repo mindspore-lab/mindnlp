@@ -120,8 +120,8 @@ def auto_black_list(network, black_list=None):
         network.cell_list = list(network.cells())
 
 # For Loss Scaler
-_ascend_target = (context.get_context("device_target") == "Ascend")
-_gpu_target = (context.get_context("device_target") == "GPU")
+_ascend_target = context.get_context("device_target") == "Ascend"
+_gpu_target = context.get_context("device_target") == "GPU"
 _reciprocal = ops.Reciprocal()
 
 _gpu_float_status = ops.FloatStatus()

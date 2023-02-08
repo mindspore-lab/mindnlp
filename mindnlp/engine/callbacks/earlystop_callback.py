@@ -63,6 +63,6 @@ class EarlyStopCallback(Callback):
         """
         if self.best_metrics_values == {}:
             return True
-        values_larger = (metrics_values > self.best_metrics_values)
+        values_larger = metrics_values > self.best_metrics_values
         better_or_not = values_larger & self.larger_better
         return better_or_not

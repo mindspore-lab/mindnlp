@@ -90,7 +90,7 @@ class BestModelCallback(Callback):
         """
         if self.best_metrics_values == []:
             return True
-        values_larger = (metrics_values > self.best_metrics_values)
+        values_larger = metrics_values > self.best_metrics_values
         is_better = values_larger & self.larger_better
         return is_better
 
