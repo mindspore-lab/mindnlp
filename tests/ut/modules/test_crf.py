@@ -25,7 +25,7 @@ import pytest
 import mindspore
 import numpy as np
 from ddt import ddt, data
-from mindspore import ops
+from mindspore import ops, Tensor
 from mindnlp import ms_jit
 from mindnlp.modules import CRF
 from mindnlp.modules.crf import sequence_mask
@@ -51,8 +51,8 @@ def compute_score(crf, emission, tag):
         score += crf.transitions[cur_tag, next_tag]
 
     # Add emission score
-    for emit, tag_i in zip(emission, tag):
-        score += emit[tag_i]
+    for i in range(emission.shape[0]):
+        score += emission[i][tag[i]]
 
     return score
 
@@ -313,7 +313,6 @@ class TestDecode(unittest.TestCase):
                 itertools.product(range(crf.num_tags), repeat=seq_len),
                 key=lambda t: compute_score(crf, emission, t))
 
-            print(best_tag)
             assert tuple(best_tag) == manual_best_tag
 
     def test_works_without_mask(self):
@@ -340,7 +339,7 @@ class TestDecode(unittest.TestCase):
         non_batched = []
         for i in range(batch_size):
             # shape: (seq_length, 1, num_tags)
-            emissions_ = emissions[:, i, :].unsqueeze(1)
+            emissions_ = emissions[:, i, :].expand_dims(1)
             # shape: (seq_length, 1)
             result = crf(emissions_)
             assert len(result) == 2
@@ -369,14 +368,14 @@ class TestDecode(unittest.TestCase):
         assert (best_tags[0] == best_tags_bf[0]).all()
 
     def test_emissions_has_bad_number_of_dimension(self):
-        emissions = ops.randn(1, 2)
+        emissions = Tensor(np.random.randn(1, 2), mindspore.float32)
         crf = make_crf()
 
         with pytest.raises(ValueError) as excinfo:
             crf(emissions)
 
     def test_emissions_last_dimension_not_equal_to_number_of_tags(self):
-        emissions = ops.randn(1, 2, 3)
+        emissions = Tensor(np.random.randn(1, 2, 3), mindspore.float32)
         crf = make_crf(10)
 
         with pytest.raises(ValueError) as excinfo:
