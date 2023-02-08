@@ -19,6 +19,7 @@ import mindspore.numpy as mnp
 from mindspore import nn, ops, Tensor
 from mindspore import Parameter
 from mindspore.common.initializer import initializer, Uniform
+from mindnlp.utils import less_min_pynative_first
 
 def sequence_mask(seq_length, max_length, batch_first=False):
     """generate mask matrix by seq_length"""
@@ -283,6 +284,10 @@ class CRF(nn.Cell):
         seq_ends = seq_length - 1
         # shape: (batch_size,)
         best_tags_list = []
+
+        if less_min_pynative_first:
+            history = history.split(0, history.shape[0])
+            history = [hist.squeeze() for hist in history]
 
         for idx in range(batch_size):
             # Find the tag which maximizes the score at the last timestep; this is our best tag
