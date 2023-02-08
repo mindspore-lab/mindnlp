@@ -115,7 +115,7 @@ class Recall(Metric):
             - **rec** (numpy.ndarray) - The computed result.
 
         """
-        rec = (self.true_positives / (self.actual_positives + self.epsilon))
+        rec = self.true_positives / (self.actual_positives + self.epsilon)
         return rec
 
     def get_metric_name(self):

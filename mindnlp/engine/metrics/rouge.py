@@ -97,7 +97,7 @@ class RougeN(Metric):
 
         """
         if self.ref_count == 0:
-            RuntimeError(f'ROUGE-N can not be calculated, because the number of references is {0}')
+            raise RuntimeError(f'ROUGE-N can not be calculated, because the number of references is {0}')
 
         rougen_score = self.overlap_count / self.ref_count
 

@@ -261,7 +261,7 @@ def rouge_n(cand_list, ref_list, n_size=1):
         overlap_count += len(overlap_ngrams)
 
     if ref_count == 0:
-        RuntimeError(f'ROUGE-N can not be calculated, because the number of references is {0}')
+        raise RuntimeError(f'ROUGE-N can not be calculated, because the number of references is {0}')
 
     rougen_score = overlap_count / ref_count
 
@@ -491,7 +491,7 @@ def precision(preds, labels):
 
     epsilon = sys.float_info.min
 
-    prec = (true_positives / (positives + epsilon))
+    prec = true_positives / (positives + epsilon)
     return prec
 
 def recall(preds, labels):
@@ -552,7 +552,7 @@ def recall(preds, labels):
 
     epsilon = sys.float_info.min
 
-    rec = (true_positives / (actual_positives + epsilon))
+    rec = true_positives / (actual_positives + epsilon)
     return rec
 
 def f1_score(preds, labels):
@@ -617,7 +617,7 @@ def f1_score(preds, labels):
 
     epsilon = sys.float_info.min
 
-    f1_s = (2 * true_positives / (actual_positives + positives + epsilon))
+    f1_s = 2 * true_positives / (actual_positives + positives + epsilon)
     return f1_s
 
 def matthews_correlation(preds, labels):
