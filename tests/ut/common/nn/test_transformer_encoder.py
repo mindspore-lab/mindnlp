@@ -39,7 +39,7 @@ class TestTransformerEncoder(unittest.TestCase):
         x = ops.arange(0, 16).reshape(2, 2, 4).astype(mindspore.float32)
         src_mask = mindspore.Tensor([[0, 1], [0, 0]]).astype(mindspore.bool_)
 
-        result = model(x, mask=src_mask)
+        result = model(x, src_mask=src_mask)
 
         ref_output = mindspore.Tensor([[[2.420306205749512, 0.017629241570830, -0.607857942581177, -0.085519507527351],
                                     [2.420306205749512, 0.017629241570830, -0.607857942581177, -0.085519507527351]],
