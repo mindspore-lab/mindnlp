@@ -28,6 +28,9 @@ else:
 __all__ = ['RDropLoss',
            'CMRC2018Loss']
 
+def _inner_log_softmax(inputs, axis):
+    """inner implementation of log_softmax, since the LogSoftmaxGrad op do not support inputs > 2d"""
+    return inputs - ops.logsumexp(inputs, axis, True)
 
 def sequence_mask(lengths, maxlen):
     """generate mask matrix by seq_length"""
@@ -87,10 +90,10 @@ class RDropLoss(nn.Cell):
             0.100136
         """
 
-        p_loss = kl_div(ops.log_softmax(p, axis=-1),
+        p_loss = kl_div(_inner_log_softmax(p, axis=-1),
                         softmax(q, axis=-1),
                         reduction=self.reduction)
-        q_loss = kl_div(ops.log_softmax(q, axis=-1),
+        q_loss = kl_div(_inner_log_softmax(q, axis=-1),
                         softmax(p, axis=-1),
                         reduction=self.reduction)
 
