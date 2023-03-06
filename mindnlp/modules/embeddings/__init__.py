@@ -19,3 +19,5 @@ Embedding class
 from .fasttext_embedding import Fasttext
 from .glove_embedding import Glove
 from .word2vec_embedding import Word2vec
+
+__all__ = ["Fasttext", "Glove", "Word2vec"]

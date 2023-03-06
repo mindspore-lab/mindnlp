@@ -19,8 +19,8 @@ import os
 import shutil
 import unittest
 import pytest
+from mindnlp import load_dataset
 from mindnlp.dataset import IWSLT2016
-from mindnlp.dataset import load
 
 
 class TestIWSLT2016(unittest.TestCase):
@@ -59,7 +59,7 @@ class TestIWSLT2016(unittest.TestCase):
     @pytest.mark.local
     def test_iwslt2016_by_register(self):
         """test iwslt2016 by register"""
-        _ = load('iwslt2016',
+        _ = load_dataset('iwslt2016',
                  root=self.root,
                  split=('train', 'valid', 'test'),
                  language_pair=('de', 'en')

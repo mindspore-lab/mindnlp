@@ -20,7 +20,8 @@ import os
 import shutil
 import unittest
 import pytest
-from mindnlp.dataset import SQuAD2, load
+from mindnlp import load_dataset
+from mindnlp.dataset import SQuAD2
 
 
 class TestSQuAD2(unittest.TestCase):
@@ -56,7 +57,7 @@ class TestSQuAD2(unittest.TestCase):
     @pytest.mark.dataset
     def test_squad2_by_register(self):
         """test squad2 by register"""
-        _ = load('squad2',
+        _ = load_dataset('squad2',
                  root=self.root,
                  split=('dev')
                  )

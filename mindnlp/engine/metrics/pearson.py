@@ -19,7 +19,7 @@ import math
 import numpy as np
 
 from mindnlp.abc import Metric
-from mindnlp.common.metrics import _convert_data_type
+from mindnlp.scoring.metrics import _convert_data_type
 
 
 class PearsonCorrelation(Metric):

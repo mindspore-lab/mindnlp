@@ -66,7 +66,7 @@ Initialize the vocab and process the data set:
 
 .. code:: python
 
-    from mindnlp.dataset.transforms import BasicTokenizer
+    from mindnlp.transforms import BasicTokenizer
     from mindspore.dataset import text
     from mindnlp.dataset import process
 

@@ -23,7 +23,7 @@ from mindspore import ops
 from mindspore import context
 from mindspore import Tensor
 
-from mindnlp.modules.attentions import BinaryAttention
+from mindnlp.modules import BinaryAttention
 
 
 class TestBinaryAttention(unittest.TestCase):

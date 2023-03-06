@@ -16,7 +16,7 @@
 
 
 from mindnlp.abc import Metric
-from mindnlp.common.metrics import _compute_exact, _metric_max_over_ground_truths, _check_value_type
+from mindnlp.scoring.metrics import _compute_exact, _metric_max_over_ground_truths, _check_value_type
 
 
 class EmScore(Metric):

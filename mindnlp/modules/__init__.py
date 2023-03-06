@@ -14,10 +14,31 @@
 # ============================================================================
 """modules init"""
 
-from .attentions import ScaledDotAttention, SelfAttention, \
+from mindnlp.utils import less_min_pynative_first
+from mindnlp._legacy.nn import transformer
+from mindnlp.modules import encoder, decoder, embeddings, loss, attentions, crf
+from mindnlp.modules.attentions import ScaledDotAttention, SelfAttention, \
     BinaryAttention, AdditiveAttention, CosineAttention, LocationAwareAttention, \
     LinearAttention
-from .encoder import RNNEncoder, CNNEncoder
-from .decoder import RNNDecoder
-from .embeddings import Fasttext, Word2vec, Glove
-from .crf import CRF
+from mindnlp.modules.encoder import RNNEncoder, CNNEncoder
+from mindnlp.modules.decoder import RNNDecoder
+from mindnlp.modules.embeddings import Fasttext, Word2vec, Glove
+from mindnlp.modules.crf import CRF
+from mindnlp.modules.loss import RDropLoss, CMRC2018Loss
+
+if less_min_pynative_first:
+    from mindnlp._legacy.nn.transformer import Transformer, TransformerDecoder, TransformerEncoder, \
+        TransformerEncoderLayer, TransformerDecoderLayer, MultiheadAttention
+else:
+    from mindspore.nn import Transformer, TransformerDecoder, TransformerEncoder, \
+        TransformerEncoderLayer, TransformerDecoderLayer, MultiheadAttention
+
+__all__ = []
+
+__all__.extend(transformer.__all__)
+__all__.extend(encoder.__all__)
+__all__.extend(decoder.__all__)
+__all__.extend(embeddings.__all__)
+__all__.extend(attentions.__all__)
+__all__.extend(crf.__all__)
+__all__.extend(loss.__all__)

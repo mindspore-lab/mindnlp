@@ -20,7 +20,7 @@ import numpy as np
 import mindspore
 from ddt import ddt, data
 from mindspore import Tensor
-from mindnlp.common.loss import CMRC2018Loss
+from mindnlp.modules import CMRC2018Loss
 from mindnlp import ms_jit
 
 @ddt

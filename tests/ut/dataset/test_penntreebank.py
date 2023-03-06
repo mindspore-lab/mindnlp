@@ -20,9 +20,8 @@ import os
 import shutil
 import unittest
 import pytest
+from mindnlp import load_dataset
 from mindnlp.dataset import PennTreebank
-from mindnlp.dataset import load
-
 
 class TestPennTreebank(unittest.TestCase):
     r"""
@@ -61,7 +60,7 @@ class TestPennTreebank(unittest.TestCase):
     @pytest.mark.dataset
     def test_penn_treebank_by_register(self):
         """test penn treebank by register"""
-        _ = load('PennTreebank',
+        _ = load_dataset('PennTreebank',
                  root=self.root,
                  split=('train', 'valid', 'test')
                  )

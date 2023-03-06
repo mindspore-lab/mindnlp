@@ -126,7 +126,7 @@ Initializes the vocab and tokenizer for preprocessing:
 .. code:: python
 
    from mindnlp.modules import Glove
-   from mindnlp.dataset.transforms import BasicTokenizer
+   from mindnlp.transforms import BasicTokenizer
 
    tokenizer = BasicTokenizer(True)
    embedding, vocab = Glove.from_pretrained('6B', 100)

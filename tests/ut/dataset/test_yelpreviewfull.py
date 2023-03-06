@@ -21,8 +21,9 @@ import unittest
 import pytest
 import mindspore as ms
 from mindnlp.dataset import YelpReviewFull, YelpReviewFull_Process
-from mindnlp.dataset import load, process
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp import load_dataset, process
+
+from mindnlp.transforms import BasicTokenizer
 
 
 class TestYelpReviewFull(unittest.TestCase):
@@ -61,7 +62,7 @@ class TestYelpReviewFull(unittest.TestCase):
     @pytest.mark.local
     def test_yelpreviewfull_by_register(self):
         """test yelpreviewfull by register"""
-        _ = load(
+        _ = load_dataset(
             "YelpReviewFull",
             root=self.root,
             split=("train", "test"),

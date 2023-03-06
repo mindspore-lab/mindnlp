@@ -16,7 +16,7 @@
 
 
 from mindnlp.abc import Metric
-from mindnlp.common.metrics import _check_value_type, _get_ngrams, _lcs
+from mindnlp.scoring.metrics import _check_value_type, _get_ngrams, _lcs
 
 
 class RougeN(Metric):

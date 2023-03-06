@@ -21,8 +21,9 @@ import unittest
 import pytest
 import mindspore as ms
 from mindnlp.dataset import CoLA, CoLA_Process
-from mindnlp.dataset import load, process
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp import load_dataset, process
+
+from mindnlp.transforms import BasicTokenizer
 
 
 class TestCoLA(unittest.TestCase):
@@ -63,7 +64,7 @@ class TestCoLA(unittest.TestCase):
     @pytest.mark.dataset
     def test_cola_by_register(self):
         """test cola by register"""
-        _ = load(
+        _ = load_dataset(
             "CoLA",
             root=self.root,
             split=("train", "dev", "test"),

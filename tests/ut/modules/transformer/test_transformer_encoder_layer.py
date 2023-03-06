@@ -6,7 +6,7 @@ from ddt import ddt, data, unpack
 import mindspore
 from mindspore import Tensor
 from mindnlp import ms_jit, less_min_pynative_first
-from mindnlp.common.nn import TransformerEncoderLayer
+from mindnlp.modules import TransformerEncoderLayer
 
 @ddt
 class TestTransformerEncoderLayer(unittest.TestCase):

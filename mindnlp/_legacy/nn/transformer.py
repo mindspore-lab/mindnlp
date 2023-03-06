@@ -7,8 +7,8 @@ import mindspore
 from mindspore import nn, ops, Parameter, Tensor
 from mindspore.common.initializer import initializer, XavierUniform, HeUniform, Uniform, \
     _calculate_fan_in_and_fan_out
-from ..initializer import XavierNormal
-from ..functional import multi_head_attention_forward, relu, gelu
+from mindnlp._legacy.initializer import XavierNormal
+from mindnlp._legacy.functional import multi_head_attention_forward, relu, gelu
 
 
 class Linear(nn.Dense):

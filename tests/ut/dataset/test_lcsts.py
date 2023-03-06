@@ -20,7 +20,8 @@ import os
 import shutil
 import unittest
 import pytest
-from mindnlp.dataset import LCSTS, load
+from mindnlp import load_dataset
+from mindnlp.dataset import LCSTS
 
 
 class TestLCSTS(unittest.TestCase):
@@ -56,7 +57,7 @@ class TestLCSTS(unittest.TestCase):
     @pytest.mark.dataset
     def test_lcsts_by_register(self):
         """test lcsts by register"""
-        _ = load('lcsts',
+        _ = load_dataset('lcsts',
                  root=self.root,
                  split='dev'
                  )

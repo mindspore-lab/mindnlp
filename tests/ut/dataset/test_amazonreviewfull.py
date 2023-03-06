@@ -21,8 +21,9 @@ import unittest
 import pytest
 import mindspore as ms
 from mindnlp.dataset import AmazonReviewFull, AmazonReviewFull_Process
-from mindnlp.dataset import load, process
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp import load_dataset, process
+
+from mindnlp.transforms import BasicTokenizer
 
 
 class TestAmazonReviewFull(unittest.TestCase):
@@ -61,7 +62,7 @@ class TestAmazonReviewFull(unittest.TestCase):
     @pytest.mark.local
     def test_amazonreviewfull_by_register(self):
         """test amazonreviewfull by register"""
-        _ = load(
+        _ = load_dataset(
             "AmazonReviewFull",
             root=self.root,
             split="test"

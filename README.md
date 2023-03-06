@@ -103,7 +103,7 @@ imdb_train, imdb_test = load('imdb', shuffle=True)
 Initializes the vocab and tokenizer for preprocessing:
 ```python
 from mindnlp.modules import Glove
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp.transforms import BasicTokenizer
 
 embedding, vocab = Glove.from_pretrained('6B', 100, special_tokens=["<unk>", "<pad>"], dropout=drop)
 tokenizer = BasicTokenizer(True)

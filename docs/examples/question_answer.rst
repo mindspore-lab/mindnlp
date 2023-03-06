@@ -105,7 +105,7 @@ Then initialize the tokenizer:
 
 .. code:: python
 
-   from mindnlp.dataset.transforms import BasicTokenizer
+   from mindnlp.transforms import BasicTokenizer
 
    tokenizer = BasicTokenizer(True)
 

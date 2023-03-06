@@ -21,8 +21,9 @@ import unittest
 import pytest
 import mindspore as ms
 from mindnlp.dataset import MNLI, MNLI_Process
-from mindnlp.dataset import load, process
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp import load_dataset, process
+
+from mindnlp.transforms import BasicTokenizer
 
 
 class TestMNLI(unittest.TestCase):
@@ -65,7 +66,7 @@ class TestMNLI(unittest.TestCase):
     @pytest.mark.local
     def test_mnli_by_register(self):
         """test mnli by register"""
-        _ = load(
+        _ = load_dataset(
             "MNLI",
             root=self.root,
             split=("dev_matched", "dev_mismatched"),

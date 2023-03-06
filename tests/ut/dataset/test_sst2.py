@@ -21,8 +21,9 @@ import unittest
 import pytest
 import mindspore as ms
 from mindnlp.dataset import SST2, SST2_Process
-from mindnlp.dataset import load, process
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp import load_dataset, process
+
+from mindnlp.transforms import BasicTokenizer
 
 class TestSST2(unittest.TestCase):
     r"""
@@ -62,7 +63,7 @@ class TestSST2(unittest.TestCase):
     @pytest.mark.dataset
     def test_agnews_by_register(self):
         """test agnews by register"""
-        _ = load(
+        _ = load_dataset(
             "SST2",
             root=self.root,
             split=("train", "dev", "test"),

@@ -21,8 +21,9 @@ import unittest
 import pytest
 import mindspore as ms
 from mindnlp.dataset import RTE, RTE_Process
-from mindnlp.dataset import load, process
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp import load_dataset, process
+
+from mindnlp.transforms import BasicTokenizer
 
 
 class TestRTE(unittest.TestCase):
@@ -63,7 +64,7 @@ class TestRTE(unittest.TestCase):
     @pytest.mark.dataset
     def test_rte_by_register(self):
         """test rte by register"""
-        _ = load(
+        _ = load_dataset(
             "RTE",
             root=self.root,
             split=("train", "dev", "test"),

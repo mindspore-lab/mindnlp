@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Self Attention"""
+"""Test Linear Attention"""
 
 import unittest
 import numpy as np
@@ -21,14 +21,15 @@ import numpy as np
 import mindspore
 
 from mindspore import ops
-from mindspore import context
 from mindspore import Tensor
+from mindspore import context
 
-from mindnlp.modules.attentions import SelfAttention
+from mindnlp.modules import LinearAttention
 
-class TestSelfAttention(unittest.TestCase):
+
+class TestLinearAttention(unittest.TestCase):
     r"""
-    Test module Self Attention
+    Test module Linear Attention
     """
 
     def setUp(self):
@@ -37,61 +38,37 @@ class TestSelfAttention(unittest.TestCase):
         """
         self.input = None
 
-    def test_self_attention_pynative(self):
+    def test_linear_attention_pynative(self):
         """
-        unit test for self attention with pynative mode.
+        unit test for linear attention with pynative mode.
         """
         context.set_context(mode=context.PYNATIVE_MODE)
         standard_normal = ops.StandardNormal(seed=114514)
         query = standard_normal((2, 32, 512))
         key = standard_normal((2, 20, 512))
-        value = standard_normal((2, 20, 512))
+        value = standard_normal((2, 20, 500))
+        net = LinearAttention(query_dim=32, key_dim=20, hidden_dim=512)
         mask_shape = (2, 32, 20)
         mask = Tensor(np.ones(mask_shape), mindspore.bool_)
-
-        # use dot-product attention default dot-product
-        net = SelfAttention()
         output, attn = net(query, key, value, mask)
-        assert output.shape == (2, 32, 512)
+
+        assert output.shape == (2, 32, 500)
         assert attn.shape == (2, 32, 20)
 
-        # use cosine attention
-        net = SelfAttention(attention_mode="cosine")
-        output, attn = net(query, key, value, mask)
-        assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 32, 20)
-
-        # use additive attention
-        net = SelfAttention(attention_mode="add")
-        output, attn = net(query, key, value, mask)
-        assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 32, 20)
-
-    def test_self_attention_graph(self):
+    def test_linear_attention_graph(self):
         """
-        unit test for self attention whit graph mode.
+        unit test for linear attention whit graph mode.
         """
+
+        context.set_context(mode=context.GRAPH_MODE)
         standard_normal = ops.StandardNormal(seed=114514)
         query = standard_normal((2, 32, 512))
         key = standard_normal((2, 20, 512))
-        value = standard_normal((2, 20, 512))
+        value = standard_normal((2, 20, 500))
+        net = LinearAttention(query_dim=32, key_dim=20, hidden_dim=512)
         mask_shape = (2, 32, 20)
         mask = Tensor(np.ones(mask_shape), mindspore.bool_)
-
-        # use dot-product attention default dot-product
-        net = SelfAttention()
         output, attn = net(query, key, value, mask)
-        assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 32, 20)
 
-        # use cosine attention
-        net = SelfAttention(attention_mode="cosine")
-        output, attn = net(query, key, value, mask)
-        assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 32, 20)
-
-        # use additive attention
-        net = SelfAttention(attention_mode="add")
-        output, attn = net(query, key, value, mask)
-        assert output.shape == (2, 32, 512)
+        assert output.shape == (2, 32, 500)
         assert attn.shape == (2, 32, 20)

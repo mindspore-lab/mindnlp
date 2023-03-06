@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Cosine Attention"""
+"""Test Additive Attention"""
 
 import unittest
 import numpy as np
@@ -24,12 +24,12 @@ from mindspore import ops
 from mindspore import Tensor
 from mindspore import context
 
-from mindnlp.modules.attentions import CosineAttention
+from mindnlp.modules import AdditiveAttention
 
 
-class TestCosineAttention(unittest.TestCase):
+class TestAdditiveAttention(unittest.TestCase):
     r"""
-    Test module Cosine Attention
+    Test module Additive Attention
     """
 
     def setUp(self):
@@ -38,26 +38,26 @@ class TestCosineAttention(unittest.TestCase):
         """
         self.input = None
 
-    def test_cosine_attention_pynative(self):
+    def test_additive_attention_pynative(self):
         """
-        unit test for cosine attention with pynative mode.
+        unit test for additive attention with pynative mode.
         """
         context.set_context(mode=context.PYNATIVE_MODE)
         standard_normal = ops.StandardNormal(seed=114514)
         query = standard_normal((2, 32, 512))
         key = standard_normal((2, 20, 512))
-        value = standard_normal((2, 20, 500))
+        value = standard_normal((2, 20, 512))
         mask_shape = (2, 32, 20)
         mask = Tensor(np.ones(mask_shape), mindspore.bool_)
-        net = CosineAttention()
+        net = AdditiveAttention(hidden_dims=512)
         output, attn = net(query, key, value, mask=mask)
 
-        assert output.shape == (2, 32, 500)
+        assert output.shape == (2, 32, 512)
         assert attn.shape == (2, 32, 20)
 
-    def test_cosine_attention_graph(self):
+    def test_additive_attention_graph(self):
         """
-        unit test for cosine attention whit graph mode.
+        unit test for additive attention whit graph mode.
         """
 
         context.set_context(mode=context.GRAPH_MODE)
@@ -67,7 +67,7 @@ class TestCosineAttention(unittest.TestCase):
         value = standard_normal((2, 20, 512))
         mask_shape = (2, 32, 20)
         mask = Tensor(np.ones(mask_shape), mindspore.bool_)
-        net = CosineAttention()
+        net = AdditiveAttention(hidden_dims=512)
         output, attn = net(query, key, value, mask=mask)
 
         assert output.shape == (2, 32, 512)

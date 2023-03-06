@@ -18,7 +18,7 @@
 import numpy as np
 
 from mindnlp.abc import Metric
-from mindnlp.common.metrics import _check_value_type, _convert_data_type
+from mindnlp.scoring.metrics import _check_value_type, _convert_data_type
 
 
 class ConfusionMatrix(Metric):

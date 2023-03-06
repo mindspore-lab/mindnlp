@@ -19,8 +19,8 @@ import os
 import shutil
 import unittest
 import pytest
+from mindnlp import load_dataset
 from mindnlp.dataset import IMDB
-from mindnlp.dataset import load
 
 
 class TestIMDB(unittest.TestCase):
@@ -57,7 +57,7 @@ class TestIMDB(unittest.TestCase):
     @pytest.mark.dataset
     def test_imdb_by_register(self):
         """test imdb by register"""
-        _ = load(
+        _ = load_dataset(
             "IMDB",
             root=self.root,
             split=("train", "test"),

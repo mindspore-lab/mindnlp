@@ -18,7 +18,7 @@ Test Download
 
 import unittest
 import os
-from mindnlp.utils.download import get_cache_path, check_md5, get_dataset_url, get_filepath, match_file
+from mindnlp.utils.download import get_cache_path, check_md5, get_filepath, match_file
 
 class TestGetCachePath(unittest.TestCase):
     r"""
@@ -45,18 +45,6 @@ class TestCheckMd5(unittest.TestCase):
         check_md5_result = check_md5(filename)
         assert check_md5_result
 
-class TestGetDatasetUrl(unittest.TestCase):
-    r"""
-    Test get_dataset_url
-    """
-
-    def setUp(self):
-        self.input = None
-
-    def test_get_dataset_url(self):
-        name = 'aclImdb_v1'
-        url = get_dataset_url(name)
-        assert url == 'https://mindspore-website.obs.myhuaweicloud.com/notebook/datasets/aclImdb_v1.tar.gz'
 
 class TestGetFilePath(unittest.TestCase):
     r"""

@@ -18,3 +18,5 @@ Encoder class
 
 from .rnn_encoder import RNNEncoder
 from .cnn_encoder import CNNEncoder
+
+__all__ = ["RNNEncoder", "CNNEncoder"]
