@@ -154,7 +154,7 @@ Training Process
 
 .. code:: python
 
-    trainer.run(tgt_columns="de", jit=True)
+    trainer.run(tgt_columns="de")
     print("end train")
 
 

@@ -2785,12 +2785,12 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/conll2000chunking.py:docstring
 #: of mindnlp.dataset.sequence_tagging.conll2000chunking:1
 msgid "CoNLL2000Chunking load function"
-msgstr ""
+msgstr "CoNLL2000Chunking数据集加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/conll2000chunking.py:docstring
 #: of mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking:1
 msgid "Load the CoNLL2000Chunking dataset"
-msgstr ""
+msgstr "加载CoNLL2000Chunking数据集"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/conll2000chunking.py:docstring
 #: of mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking:6
@@ -2853,10 +2853,14 @@ msgstr "udpos"
 msgid "UDPOS dataset"
 msgstr "UDPOS数据集"
 
+#: mindnlp/dataset/sequence_tagging/udpos.py
+msgid "UDPOS load function"
+msgstr "加载UDPOS数据集"
+
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/udpos.py:docstring
 #: of mindnlp.dataset.sequence_tagging.udpos.UDPOS:1
 msgid "Load the UDPOS dataset"
-msgstr ""
+msgstr "加载UDPOS数据集"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/udpos.py:docstring
 #: of mindnlp.dataset.sequence_tagging.udpos.UDPOS:6
@@ -2883,7 +2887,7 @@ msgstr "UDPOS数据源"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/__init__.py:docstring
 #: of mindnlp.dataset.sequence_tagging:1
 msgid "SequenceTagging dataset init"
-msgstr ""
+msgstr "序列标注数据集初始化"
 
 #: ../../api/dataset/text_classification.rst:2
 msgid "Text Classification"
@@ -3022,6 +3026,10 @@ msgstr "amazonreviewfull"
 msgid "AmazonReviewFull dataset"
 msgstr "AmazonReviewFull数据集"
 
+#： mindnlp/dataset/text_classification/amazonreviewfull.py
+msgid "AmazonReviewFull load function"
+msgstr "AmazonReviewFull数据集加载函数"
+
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/amazonreviewfull.py:docstring
 #: of mindnlp.dataset.text_classification.amazonreviewfull.AmazonReviewFull:1
 msgid "Load the AmazonReviewFull dataset"
@@ -3058,6 +3066,10 @@ msgstr "amazonreviewpolarity"
 #: of mindnlp.dataset.text_classification.amazonreviewpolarity:1
 msgid "AmazonReviewPolarity dataset"
 msgstr "AmazonReviewPolarity数据集"
+
+#: mindnlp/dataset/text_classification/amazonreviewpolarity.py
+msgid "AmazonReviewPolarity load function"
+msgstr "AmazonReviewPolarity数据集加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/amazonreviewpolarity.py:docstring
 #: of
@@ -3131,6 +3143,10 @@ msgstr "dbpedia"
 #: of mindnlp.dataset.text_classification.dbpedia:1
 msgid "DBpedia dataset"
 msgstr "DBpedia数据集"
+
+#： mindnlp/dataset/text_classification/dbpedia.py
+msgid "DBpedia load function"
+msgstr "DBpedia数据集加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/dbpedia.py:docstring
 #: of mindnlp.dataset.text_classification.dbpedia.DBpedia:1
@@ -3215,6 +3231,10 @@ msgstr "mnli"
 #: of mindnlp.dataset.text_classification.mnli:1
 msgid "MNLI dataset"
 msgstr "MNLI数据集"
+
+# mindnlp/dataset/text_classification/mnli.py
+msgid "MNLI load function"
+msgstr "MNLI数据集加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mnli.py:docstring
 #: of mindnlp.dataset.text_classification.mnli.MNLI:1
@@ -3342,7 +3362,7 @@ msgstr "mrpc"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mrpc.py:docstring
 #: of mindnlp.dataset.text_classification.mrpc:1
 msgid "MRPC load function"
-msgstr ""
+msgstr "MRPC数据集加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mrpc.py:docstring
 #: of mindnlp.dataset.text_classification.mrpc.MRPC:1
@@ -3377,6 +3397,10 @@ msgstr "qnli"
 #: of mindnlp.dataset.text_classification.qnli:1
 msgid "QNLI dataset"
 msgstr "QNLI数据集"
+
+# mindnlp/dataset/text_classification/qnli.py
+msgid "QNLI load function"
+msgstr "QNLI数据集加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/qnli.py:docstring
 #: of mindnlp.dataset.text_classification.qnli.QNLI:1
@@ -3444,6 +3468,14 @@ msgstr "rte"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/rte.py:docstring
 #: of mindnlp.dataset.text_classification.rte:1
 #: mindnlp.dataset.text_classification.rte.RTE_Process:3
+msgid "RTE load function"
+msgstr "RTE数据集加载函数"
+
+# mindnlp/dataset/text_classification/rte.py
+msgid "Load the RTE dataset"
+msgstr "加载RTE数据集"
+
+# mindnlp/dataset/text_classification/rte.py
 msgid "RTE dataset"
 msgstr "RTE数据集"
 
@@ -3497,6 +3529,10 @@ msgstr "sst2"
 msgid "SST2 dataset"
 msgstr "SST2数据集"
 
+# mindnlp/dataset/text_classification/sst2.py
+msgid "SST2 load function"
+msgstr "SST2加载函数"
+
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/sst2.py:docstring
 #: of mindnlp.dataset.text_classification.sst2.SST2:1
 msgid "Load the SST2 dataset"
@@ -3530,6 +3566,10 @@ msgstr "stsb"
 #: of mindnlp.dataset.text_classification.stsb:1
 msgid "STSB dataset"
 msgstr "STSB数据集"
+
+# mindnlp/dataset/text_classification/stsb.py
+msgid "STSB load function"
+msgstr "STSB数据集加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/stsb.py:docstring
 #: of mindnlp.dataset.text_classification.stsb.STSB:1
@@ -3565,6 +3605,10 @@ msgstr "wnli"
 msgid "WNLI dataset"
 msgstr "WNLI数据集"
 
+# mindnlp/dataset/text_classification/wnli.py
+msgid "WNLI load function"
+msgstr "WNLI数据集加载函数"
+
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/wnli.py:docstring
 #: of mindnlp.dataset.text_classification.wnli.WNLI_Process:1
 msgid "the process of the WNLI dataset"
@@ -3593,6 +3637,11 @@ msgstr "yahooanswers"
 #: of mindnlp.dataset.text_classification.yahooanswers:1
 msgid "YahooAnswers dataset"
 msgstr "YahooAnswers数据集"
+
+
+# mindnlp/dataset/text_classification/yahooanswers.py
+msgid "YahooAnswers load function"
+msgstr "YahooAnswers数据集加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yahooanswers.py:docstring
 #: of mindnlp.dataset.text_classification.yahooanswers.YahooAnswers:1
@@ -3637,6 +3686,10 @@ msgstr "yelpreviewfull"
 msgid "YelpReviewFull dataset"
 msgstr "YelpReviewFull数据集"
 
+# mindnlp/dataset/text_classification/yelpreviewfull.py
+msgid "YelpReviewFull load function"
+msgstr "YelpReviewFull数据集加载函数"
+
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewfull.py:docstring
 #: of mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull:1
 msgid "Load the YelpReviewFull dataset"
@@ -3671,6 +3724,10 @@ msgstr "yelpreviewpolarity"
 msgid "YelpReviewPolarity dataset"
 msgstr "YelpReviewPolarity数据集"
 
+# mindnlp/dataset/text_classification/yelpreviewpolarity.py
+msgid "YelpReviewPolarity load function"
+msgstr "YelpReviewPolarity数据集加载函数"
+
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewpolarity.py:docstring
 #: of mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity:1
 msgid "Load the YelpReviewPolarity dataset"
@@ -3702,11 +3759,11 @@ msgstr "YelpReviewPolarity数据源"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/__init__.py:docstring
 #: of mindnlp.dataset.text_classification:1
 msgid "TextClassification dataset init"
-msgstr ""
+msgstr "文本分类初始化"
 
 #: ../../api/dataset/text_generation.rst:2
 msgid "Text Generation"
-msgstr ""
+msgstr "文本生成"
 
 #: ../../api/dataset/text_generation.rst:6
 msgid "lcsts"
