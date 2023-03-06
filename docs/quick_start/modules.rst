@@ -146,7 +146,7 @@ module via MindNLP.
     import mindspore.numpy as np
     from mindspore import ops
     from mindspore import Tensor
-    from mindspore.text.modules.attentions import MutiHeadAttention
+
     # initialize random number seeds
     standard_normal = ops.StandardNormal(seed=0)
 
@@ -168,9 +168,9 @@ module via MindNLP.
     mask = Tensor(np.ones(mask_shape), mindspore.bool_)
 
     # use additive attention
-    net = MutiHeadAttention(heads=8, attention_mode="add")
+
     # you can also use cosine attention via multi-head attention
-    net = MutiHeadAttention(heads=8, attention_mode="cos")
+
     # you can also use dot-product attention via multi-head attention
     # default dot-product attention mode
     net = MutiHeadAttention(heads=8)
