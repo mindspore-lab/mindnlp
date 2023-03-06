@@ -23,9 +23,9 @@ from typing import Union, Tuple
 import mindspore
 from mindspore.dataset import GeneratorDataset, text, transforms
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load, process
+from mindnlp.dataset.register import load_dataset, process
 from mindnlp.dataset.utils import make_bucket_2cloums
-from mindnlp.dataset.transforms.seq_process import TruncateSequence
+from mindnlp.transforms.seq_process import TruncateSequence
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import ungz
 
@@ -81,7 +81,7 @@ class Conll2000chunking:
         return len(self._words)
 
 
-@load.register
+@load_dataset.register
 def CoNLL2000Chunking(
     root: str = DEFAULT_ROOT,
     split: Union[Tuple[str], str] = ("train", "test"),

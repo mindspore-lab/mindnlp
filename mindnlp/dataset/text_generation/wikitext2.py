@@ -22,7 +22,7 @@ import re
 from typing import Union, Tuple
 from mindspore.dataset import TextFileDataset
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.register import load_dataset
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import unzip
 
@@ -31,7 +31,7 @@ URL = "https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-2-v1.zip"
 MD5 = "542ccefacc6c27f945fb54453812b3cd"
 
 
-@load.register
+@load_dataset.register
 def WikiText2(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train', 'valid', 'test'), proxies=None):
     r"""
     Load the WikiText2 dataset

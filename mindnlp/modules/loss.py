@@ -21,12 +21,10 @@ import mindspore
 from mindspore import nn, ops, Tensor
 from mindnlp.utils import less_min_pynative_first
 if less_min_pynative_first:
-    from mindnlp.common.functional import softmax, kl_div
+    from mindnlp._legacy.functional import softmax, kl_div
 else:
     from mindspore.ops import softmax, kl_div
 
-__all__ = ['RDropLoss',
-           'CMRC2018Loss']
 
 def _inner_log_softmax(inputs, axis):
     """inner implementation of log_softmax, since the LogSoftmaxGrad op do not support inputs > 2d"""
@@ -181,3 +179,9 @@ class CMRC2018Loss(nn.Cell):
             loss = loss / batch_size
 
         return loss / 2
+
+
+__all__ = [
+    'RDropLoss',
+    'CMRC2018Loss'
+]

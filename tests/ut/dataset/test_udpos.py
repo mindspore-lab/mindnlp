@@ -20,7 +20,7 @@ import shutil
 import unittest
 import pytest
 from mindnlp.dataset import UDPOS
-from mindnlp.dataset import load
+from mindnlp.dataset import load_dataset
 
 
 class TestUDPOS(unittest.TestCase):
@@ -61,7 +61,7 @@ class TestUDPOS(unittest.TestCase):
     @pytest.mark.dataset
     def test_udpos_by_register(self):
         """test udpos by register"""
-        _ = load(
+        _ = load_dataset(
             "UDPOS",
             root=self.root,
             split=("train", "dev", "test"),

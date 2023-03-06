@@ -20,10 +20,10 @@ IWSLT2017 load function
 import os
 from typing import Union, Tuple
 from mindspore.dataset import IWSLT2017Dataset
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp.transforms import BasicTokenizer
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.process import common_process
-from mindnlp.dataset.register import load, process
+from mindnlp.dataset.register import load_dataset, process
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import untar
 
@@ -45,7 +45,7 @@ SUPPORTED_DATASETS = {
 }
 
 
-@load.register
+@load_dataset.register
 def IWSLT2017(root: str = DEFAULT_ROOT,
               split: Union[Tuple[str], str] = ("train", "valid", "test"),
               language_pair=("de", "en"), proxies=None):

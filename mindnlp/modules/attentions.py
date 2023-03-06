@@ -523,3 +523,13 @@ class LocationAwareAttention(nn.Cell):
             attn = self.softmax(scores)
         context = ops.matmul(ops.expand_dims(attn, 1), value)
         return context, attn
+
+__all__ = [
+    "ScaledDotAttention",
+    "SelfAttention",
+    "BinaryAttention",
+    "AdditiveAttention",
+    "CosineAttention",
+    "LocationAwareAttention",
+    "LinearAttention"
+]

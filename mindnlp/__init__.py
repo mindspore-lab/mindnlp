@@ -16,6 +16,7 @@
 MindNLP library.
 """
 
+from mindnlp.dataset import load_dataset, process
 from mindnlp.utils import less_min_pynative_first
 if less_min_pynative_first:
     from mindspore import context
@@ -24,4 +25,5 @@ if less_min_pynative_first:
 else:
     from mindspore import jit as ms_jit
 
-__all__ = ['ms_jit']
+
+__all__ = ['ms_jit', 'load_dataset', 'process']

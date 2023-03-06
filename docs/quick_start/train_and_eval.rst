@@ -42,7 +42,7 @@ And then we initialize the tokenizer by instantiating the class
 
 .. code-block:: python
 
-    from mindnlp.dataset.transforms import BasicTokenizer
+    from mindnlp.transforms import BasicTokenizer
 
     tokenizer = BasicTokenizer(True)
 

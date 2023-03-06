@@ -21,7 +21,7 @@ import numpy as np
 import mindspore
 from ddt import ddt, data
 from mindspore import Tensor
-from mindnlp.common.loss import RDropLoss
+from mindnlp.modules import RDropLoss
 from mindnlp import ms_jit
 
 @ddt

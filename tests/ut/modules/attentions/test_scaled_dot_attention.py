@@ -20,9 +20,7 @@ import numpy as np
 import mindspore
 from mindspore import Tensor
 from mindspore import context
-
-from mindnlp.modules.attentions import ScaledDotAttention
-
+from mindnlp.modules import ScaledDotAttention
 
 
 class TestScaledDotAttention(unittest.TestCase):

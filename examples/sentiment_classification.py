@@ -25,9 +25,10 @@ from mindspore.common.initializer import Uniform, HeUniform
 
 from mindnlp.abc import Seq2vecModel
 from mindnlp.engine import Trainer, Accuracy
-from mindnlp.dataset import load, process
+from mindnlp import load_dataset, process
+
 from mindnlp.modules import Glove, RNNEncoder
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp.transforms import BasicTokenizer
 
 # Hyper-parameters
 hidden_size = 256

@@ -21,11 +21,10 @@ import os
 import re
 import tarfile
 from typing import Union, Tuple
-import mindspore
 from mindspore.dataset import GeneratorDataset, text, transforms
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.transforms import TruncateSequence
-from mindnlp.dataset.register import load, process
+from mindnlp.transforms import TruncateSequence
+from mindnlp.dataset.register import load_dataset, process
 from mindnlp.dataset.utils import make_bucket
 from mindnlp.configs import DEFAULT_ROOT
 
@@ -67,7 +66,7 @@ class Imdb:
         return len(self._label)
 
 
-@load.register
+@load_dataset.register
 def IMDB(
     root: str = DEFAULT_ROOT,
     split: Union[Tuple[str], str] = ("train", "test"),
@@ -157,10 +156,8 @@ def IMDB_Process(dataset, tokenizer, vocab, batch_size=64, max_len=500, \
     pad_value = vocab.tokens_to_ids('<pad>')
 
     lookup_op = text.Lookup(vocab, unknown_token='<unk>')
-    type_cast_op = transforms.TypeCast(mindspore.float32)
-
     dataset = dataset.map([tokenizer, lookup_op], 'text')
-    dataset = dataset.map([type_cast_op], 'label')
+
     if bucket_boundaries is not None:
         if not isinstance(bucket_boundaries, list):
             raise ValueError(f"'bucket_boundaries' must be a list of int, but get {type(bucket_boundaries)}")

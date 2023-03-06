@@ -21,7 +21,7 @@ import os
 from typing import Union, Tuple
 from mindspore.dataset import PennTreebankDataset
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.register import load_dataset
 from mindnlp.configs import DEFAULT_ROOT
 
 URL = {
@@ -37,7 +37,7 @@ MD5 = {
 }
 
 
-@load.register
+@load_dataset.register
 def PennTreebank(root: str = DEFAULT_ROOT,
                  split: Union[Tuple[str], str] = ('train', 'valid', 'test'), proxies=None):
     r"""

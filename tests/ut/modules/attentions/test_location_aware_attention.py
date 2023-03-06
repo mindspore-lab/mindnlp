@@ -22,7 +22,7 @@ import numpy as np
 import mindspore
 
 from mindspore import Tensor, context
-from mindnlp.modules.attentions import LocationAwareAttention
+from mindnlp.modules import LocationAwareAttention
 
 class TestLocationAwareAttention(unittest.TestCase):
     r"""

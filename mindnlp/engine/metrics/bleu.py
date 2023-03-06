@@ -19,7 +19,7 @@ from collections import Counter
 import numpy as np
 
 from mindnlp.abc import Metric
-from mindnlp.common.metrics import _check_value_type, _count_ngram
+from mindnlp.scoring.metrics import _check_value_type, _count_ngram
 
 class BleuScore(Metric):
     r"""

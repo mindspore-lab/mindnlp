@@ -8,7 +8,7 @@ import mindspore
 from mindspore import Tensor
 from mindnlp import ms_jit
 from mindnlp.utils import less_min_pynative_first
-from mindnlp.common.nn import MultiheadAttention
+from mindnlp.modules import MultiheadAttention
 
 @ddt
 class TestMultiHeadAttention(unittest.TestCase):

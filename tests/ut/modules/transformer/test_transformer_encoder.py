@@ -8,7 +8,7 @@ from ddt import ddt, data
 import mindspore
 from mindspore import ops
 from mindnlp import less_min_pynative_first
-from mindnlp.common.nn import TransformerEncoder, TransformerEncoderLayer
+from mindnlp.modules import TransformerEncoder, TransformerEncoderLayer
 
 @ddt
 class TestTransformerEncoder(unittest.TestCase):

@@ -25,8 +25,9 @@ from mindnlp.engine.metrics import Accuracy
 from mindnlp.engine.callbacks.timer_callback import TimerCallback
 from mindnlp.engine.callbacks.earlystop_callback import EarlyStopCallback
 from mindnlp.engine.callbacks.best_model_callback import BestModelCallback
-from mindnlp.dataset import load, process
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp import load_dataset, process
+
+from mindnlp.transforms import BasicTokenizer
 
 # ms.set_context(device_target="GPU") # set GPU
 

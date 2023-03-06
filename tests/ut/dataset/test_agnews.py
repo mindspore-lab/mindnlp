@@ -21,7 +21,8 @@ import unittest
 import pytest
 import mindspore as ms
 from mindnlp.dataset import AG_NEWS, AG_NEWS_Process
-from mindnlp.dataset import load, process
+from mindnlp import load_dataset, process
+
 
 
 class TestAGNEWS(unittest.TestCase):
@@ -58,7 +59,7 @@ class TestAGNEWS(unittest.TestCase):
     @pytest.mark.dataset
     def test_agnews_by_register(self):
         """test agnews by register"""
-        _ = load('AG_NEWS', root=self.root, split='test')
+        _ = load_dataset('AG_NEWS', root=self.root, split='test')
 
     @pytest.mark.dataset
     def test_agnews_process(self):

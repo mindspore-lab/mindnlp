@@ -175,7 +175,7 @@ vocab:
 
 .. code:: python
 
-   from mindnlp.dataset.transforms import BasicTokenizer
+   from mindnlp.transforms import BasicTokenizer
 
    tokenizer = BasicTokenizer(True)
    dataset_train= dataset_train.map([tokenizer], 'en')

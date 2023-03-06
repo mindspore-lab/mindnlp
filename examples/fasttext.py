@@ -24,8 +24,9 @@ from mindspore.dataset.text.utils import Vocab
 from mindnlp.engine.trainer import Trainer
 from mindnlp.engine.metrics import Accuracy
 from mindnlp.modules.embeddings import Glove
-from mindnlp.dataset import load, process
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp import load_dataset, process
+
+from mindnlp.transforms import BasicTokenizer
 
 
 class FasttextModel(nn.Cell):

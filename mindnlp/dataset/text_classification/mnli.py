@@ -22,8 +22,8 @@ from typing import Union, Tuple
 from mindspore.dataset import GeneratorDataset, text
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.process import common_process
-from mindnlp.dataset.register import load, process
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp.dataset.register import load_dataset, process
+from mindnlp.transforms import BasicTokenizer
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import unzip
 
@@ -68,7 +68,7 @@ class Mnli:
         return len(self._label)
 
 
-@load.register
+@load_dataset.register
 def MNLI(
     root: str = DEFAULT_ROOT,
     split: Union[Tuple[str], str] = ("train", "dev_matched", "dev_mismatched"),

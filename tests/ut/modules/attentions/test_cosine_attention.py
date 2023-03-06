@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Linear Attention"""
+"""Test Cosine Attention"""
 
 import unittest
 import numpy as np
@@ -24,12 +24,12 @@ from mindspore import ops
 from mindspore import Tensor
 from mindspore import context
 
-from mindnlp.modules.attentions import LinearAttention
+from mindnlp.modules import CosineAttention
 
 
-class TestLinearAttention(unittest.TestCase):
+class TestCosineAttention(unittest.TestCase):
     r"""
-    Test module Linear Attention
+    Test module Cosine Attention
     """
 
     def setUp(self):
@@ -38,37 +38,37 @@ class TestLinearAttention(unittest.TestCase):
         """
         self.input = None
 
-    def test_linear_attention_pynative(self):
+    def test_cosine_attention_pynative(self):
         """
-        unit test for linear attention with pynative mode.
+        unit test for cosine attention with pynative mode.
         """
         context.set_context(mode=context.PYNATIVE_MODE)
         standard_normal = ops.StandardNormal(seed=114514)
         query = standard_normal((2, 32, 512))
         key = standard_normal((2, 20, 512))
         value = standard_normal((2, 20, 500))
-        net = LinearAttention(query_dim=32, key_dim=20, hidden_dim=512)
         mask_shape = (2, 32, 20)
         mask = Tensor(np.ones(mask_shape), mindspore.bool_)
-        output, attn = net(query, key, value, mask)
+        net = CosineAttention()
+        output, attn = net(query, key, value, mask=mask)
 
         assert output.shape == (2, 32, 500)
         assert attn.shape == (2, 32, 20)
 
-    def test_linear_attention_graph(self):
+    def test_cosine_attention_graph(self):
         """
-        unit test for linear attention whit graph mode.
+        unit test for cosine attention whit graph mode.
         """
 
         context.set_context(mode=context.GRAPH_MODE)
         standard_normal = ops.StandardNormal(seed=114514)
         query = standard_normal((2, 32, 512))
         key = standard_normal((2, 20, 512))
-        value = standard_normal((2, 20, 500))
-        net = LinearAttention(query_dim=32, key_dim=20, hidden_dim=512)
+        value = standard_normal((2, 20, 512))
         mask_shape = (2, 32, 20)
         mask = Tensor(np.ones(mask_shape), mindspore.bool_)
-        output, attn = net(query, key, value, mask)
+        net = CosineAttention()
+        output, attn = net(query, key, value, mask=mask)
 
-        assert output.shape == (2, 32, 500)
+        assert output.shape == (2, 32, 512)
         assert attn.shape == (2, 32, 20)

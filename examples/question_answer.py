@@ -27,9 +27,9 @@ from mindspore.common.initializer import Uniform, HeUniform, initializer
 
 from mindnlp.abc import Seq2vecModel
 from mindnlp.engine.trainer import Trainer
-from mindnlp.dataset.register import load, process
+from mindnlp.dataset.register import load_dataset, process
 from mindnlp.modules.embeddings import Word2vec, Glove
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp.transforms import BasicTokenizer
 
 # mindspore.set_context(mode=context.PYNATIVE_MODE ,max_call_depth=10000)
 # mindspore.set_context(mode=context.GRAPH_MODE ,max_call_depth=10000, enable_graph_kernel=True)

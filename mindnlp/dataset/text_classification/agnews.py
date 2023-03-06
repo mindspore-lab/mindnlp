@@ -23,11 +23,10 @@ import csv
 from typing import Union, Tuple
 import mindspore
 from mindspore.dataset import GeneratorDataset, text, transforms
-from mindnlp.dataset.transforms import TruncateSequence
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp.transforms import TruncateSequence, BasicTokenizer
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.utils import make_bucket
-from mindnlp.dataset.register import load, process
+from mindnlp.dataset.register import load_dataset, process
 from mindnlp.configs import DEFAULT_ROOT
 
 
@@ -74,7 +73,7 @@ class Agnews:
         return len(self._text)
 
 
-@load.register
+@load_dataset.register
 def AG_NEWS(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", "test"), proxies=None, shuffle=False):
     r"""
     Load the AG_NEWS dataset

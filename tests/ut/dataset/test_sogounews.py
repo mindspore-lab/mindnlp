@@ -19,8 +19,8 @@ import os
 import shutil
 import unittest
 import pytest
+from mindnlp import load_dataset
 from mindnlp.dataset import SogouNews
-from mindnlp.dataset import load
 
 
 class TestSogouNews(unittest.TestCase):
@@ -59,7 +59,7 @@ class TestSogouNews(unittest.TestCase):
     @pytest.mark.local
     def test_sogounews_by_register(self):
         """test sogounews by register"""
-        _ = load(
+        _ = load_dataset(
             "SogouNews",
             root=self.root,
             split=("train", "test"),
