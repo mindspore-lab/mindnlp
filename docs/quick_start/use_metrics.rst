@@ -41,7 +41,7 @@ evaluation is as follows:
                         metrics=metric, epochs=epochs, loss_fn=loss_fn, optimizer=optimizer,
                         callbacks=callbacks)
 
-    trainer.run(tgt_columns="label", jit=False)
+    trainer.run(tgt_columns="label")
 
 Define a New Metric
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
