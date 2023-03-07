@@ -9,6 +9,7 @@ Modules
    modules/encoder
    modules/decoder
    modules/attentions
+   modules/loss
 
 
 
