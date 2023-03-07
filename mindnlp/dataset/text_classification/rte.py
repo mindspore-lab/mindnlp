@@ -77,7 +77,7 @@ def RTE(
     root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", "dev", "test"), proxies=None
 ):
     r"""
-    Load the WNLI dataset
+    Load the RTE dataset
 
     Args:
         root (str): Directory where the datasets are saved.
