@@ -21,6 +21,7 @@ import os
 import re
 import tarfile
 from typing import Union, Tuple
+import mindspore as ms
 from mindspore.dataset import GeneratorDataset, text, transforms
 from mindnlp.utils.download import cache_file
 from mindnlp.transforms import TruncateSequence
@@ -56,7 +57,7 @@ class Imdb:
             while tf is not None:
                 if bool(pattern.match(tf.name)):
                     self._text.append(str(tarf.extractfile(tf).read()))
-                    self._label.append([self.label_map[label]])
+                    self._label.append(self.label_map[label])
                 tf = tarf.next()
 
     def __getitem__(self, index):
@@ -156,7 +157,9 @@ def IMDB_Process(dataset, tokenizer, vocab, batch_size=64, max_len=500, \
     pad_value = vocab.tokens_to_ids('<pad>')
 
     lookup_op = text.Lookup(vocab, unknown_token='<unk>')
+    type_cast_op = transforms.TypeCast(ms.int32)
     dataset = dataset.map([tokenizer, lookup_op], 'text')
+    dataset = dataset.map(type_cast_op, 'label')
 
     if bucket_boundaries is not None:
         if not isinstance(bucket_boundaries, list):
