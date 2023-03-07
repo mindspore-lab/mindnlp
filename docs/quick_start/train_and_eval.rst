@@ -35,14 +35,14 @@ First we obtain the embeddings and the vocabulary, by calling the function
 
     from mindnlp.modules import Glove
 
-    embedding, vocab = Glove.from_pretrained('6B', 100, special_tokens=["<unk>", "<pad>"], dropout=drop)
+    embedding, vocab = Glove.from_pretrained('6B', 100, special_tokens=["<unk>", "<pad>"], dropout=0.5)
 
 And then we initialize the tokenizer by instantiating the class
 :py:class:`~mindnlp.dataset.transforms.tokenizers.BasicTokenizer`:
 
 .. code-block:: python
 
-    from mindnlp.transforms import BasicTokenizer
+    from mindnlp.dataset.transforms import BasicTokenizer
 
     tokenizer = BasicTokenizer(True)
 
@@ -86,6 +86,8 @@ to initialize the weight and bias of the network we construct.
 The code of defining and initializing the network is as follows:
 
 .. code-block:: python
+
+    import math
 
     from mindspore import nn
     from mindspore import ops
@@ -157,7 +159,7 @@ into it:
 
 .. code-block:: python
 
-    optimizer = nn.Adam(net.trainable_params(), learning_rate=lr)
+    optimizer = nn.Adam(net.trainable_params(), learning_rate=0.001)
 
 Define Callbacks
 ------------------------------------
@@ -229,4 +231,4 @@ The example code of training and evaluating the model is as follows:
     trainer = Trainer(network=net, train_dataset=imdb_train, eval_dataset=imdb_valid, metrics=metric,
                         epochs=5, loss_fn=loss, optimizer=optimizer, callbacks=callbacks)
 
-    trainer.run(tgt_columns="label", jit=False)
+    trainer.run(tgt_columns="label")
