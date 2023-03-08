@@ -67,6 +67,7 @@ class LongformerEmbeddings(nn.Cell):
             self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=mindspore.int64  # delete device
         )
         return position_ids.unsqueeze(0).expand(input_shape)
+    #
 
 
 
