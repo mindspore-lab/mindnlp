@@ -1,7 +1,7 @@
-Amp
-====
+Loss
+=====
 
-.. automodule:: mindnlp.common.amp
+.. automodule:: mindnlp.modules.loss
    :members:
    :undoc-members:
    :show-inheritance:

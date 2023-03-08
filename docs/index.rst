@@ -47,9 +47,10 @@ What is MindNLP
    :caption: API Reference
 
    api/abc
-   api/common
    api/dataset
    api/engine
    api/modules
    api/models
+   api/scoring
+   api/transforms
    api/utils
