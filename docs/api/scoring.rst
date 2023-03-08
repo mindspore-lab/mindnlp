@@ -1,7 +1,7 @@
-Metrics
+Scoring
 ========
 
-.. automodule:: mindnlp.common.metrics
+.. automodule:: mindnlp.scoring.metrics
    :members:
    :undoc-members:
    :show-inheritance:

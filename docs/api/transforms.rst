@@ -4,7 +4,7 @@ Transforms
 seq\_process
 --------------------------------------------------
 
-.. automodule:: mindnlp.dataset.transforms.seq_process
+.. automodule:: mindnlp.transforms.seq_process
    :members:
    :undoc-members:
    :show-inheritance:
@@ -12,7 +12,7 @@ seq\_process
 tokenizers
 --------------------------------------------------
 
-.. automodule:: mindnlp.dataset.transforms.tokenizers
+.. automodule:: mindnlp.transforms.tokenizers
    :members:
    :undoc-members:
    :show-inheritance:
