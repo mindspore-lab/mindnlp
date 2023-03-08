@@ -111,7 +111,7 @@ class BertSelfAttention(nn.Cell):
     """
     Self attention layer for BERT.
     """
-    def __init__(self,  config):
+    def __init__(self, config):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0:
             raise ValueError(
