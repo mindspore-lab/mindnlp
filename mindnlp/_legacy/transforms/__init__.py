@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,24 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=C0413
-# pylint: disable=C0412
-# pylint: disable=C0411
 
-"""
-dataset processing transforms
-"""
+"""dataset transforms for legacy mindspore"""
 
-from mindnlp.utils import less_min_pynative_first
-
-if less_min_pynative_first:
-    from mindnlp._legacy.transforms import Truncate, AddToken
-else:
-    from mindspore.dataset.text import Truncate, AddToken
-
-from mindspore.dataset.text import Lookup
-from mindnlp.transforms.tokenizers import BasicTokenizer
+from mindnlp._legacy.transforms.truncate import Truncate
+from mindnlp._legacy.transforms.addtoken import AddToken
 
 __all__ = [
-    'Truncate', 'AddToken', 'Lookup', 'BasicTokenizer',
+    'Truncate', 'AddToken'
 ]
