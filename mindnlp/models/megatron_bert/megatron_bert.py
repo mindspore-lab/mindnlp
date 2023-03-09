@@ -15,7 +15,6 @@
 # limitations under the License.
 """ MindSpore MegatronBERT model."""
 
-
 import math
 import os
 import warnings
@@ -25,7 +24,6 @@ from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindspore import nn, ops, Tensor
 
 import mindspore
-
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -39,6 +37,7 @@ from ...modeling_outputs import (
     SequenceClassifierOutput,
     TokenClassifierOutput,
 )
+
 from ...modeling_utils import PreTrainedModel
 from ...pytorch_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
 from ...utils import (
@@ -92,8 +91,8 @@ def load_tf_weights_in_megatron_bert(model, config, tf_checkpoint_path):
         # adam_v and adam_m are variables used in AdamWeightDecayOptimizer to calculated m and v
         # which are not required for using pretrained model
         if any(
-            n in ["adam_v", "adam_m", "AdamWeightDecayOptimizer", "AdamWeightDecayOptimizer_1", "global_step"]
-            for n in name
+                n in ["adam_v", "adam_m", "AdamWeightDecayOptimizer", "AdamWeightDecayOptimizer_1", "global_step"]
+                for n in name
         ):
             logger.info(f"Skipping {'/'.join(name)}")
             continue
@@ -130,6 +129,7 @@ def load_tf_weights_in_megatron_bert(model, config, tf_checkpoint_path):
         pointer.data = Tensor.from_numpy(array)
     return model
 
+
 class MegatronBertEmbeddings(nn.Cell):
     """Construct the embeddings from word, position and token_type embeddings."""
 
@@ -151,12 +151,12 @@ class MegatronBertEmbeddings(nn.Cell):
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
 
     def forward(
-        self,
-        input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        inputs_embeds: Optional[Tensor(dtype=mindspore.int64)] = None,
-        past_key_values_length: int = 0,
+            self,
+            input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            inputs_embeds: Optional[Tensor(dtype=mindspore.int64)] = None,
+            past_key_values_length: int = 0,
     ) -> Tensor:
         if input_ids is not None:
             input_shape = input_ids.size()
@@ -166,7 +166,7 @@ class MegatronBertEmbeddings(nn.Cell):
         seq_length = input_shape[1]
 
         if position_ids is None:
-            position_ids = self.position_ids[:, past_key_values_length : seq_length + past_key_values_length]
+            position_ids = self.position_ids[:, past_key_values_length: seq_length + past_key_values_length]
 
         if token_type_ids is None:
             token_type_ids = ops.zeros(input_shape, dtype=Tensor.long, device=self.position_ids.device)
@@ -184,6 +184,7 @@ class MegatronBertEmbeddings(nn.Cell):
         # embeddings = self.LayerNorm(embeddings)
         embeddings = self.dropout(embeddings)
         return embeddings
+
 
 # Copied from transformers.models.bert.modeling_bert.BertSelfAttention with Bert->MegatronBert
 class MegatronBertSelfAttention(nn.Cell):
@@ -219,14 +220,14 @@ class MegatronBertSelfAttention(nn.Cell):
         return x.permute(0, 2, 1, 3)
 
     def forward(
-        self,
-        hidden_states: Tensor,
-        attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        encoder_hidden_states: Optional[Tensor(dtype=mindspore.float32)] = None,
-        encoder_attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        past_key_value: Optional[Tuple[Tuple[Tensor(dtype=mindspore.float32)]]] = None,
-        output_attentions: Optional[bool] = False,
+            self,
+            hidden_states: Tensor,
+            attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            encoder_hidden_states: Optional[Tensor(dtype=mindspore.float32)] = None,
+            encoder_attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            past_key_value: Optional[Tuple[Tuple[Tensor(dtype=mindspore.float32)]]] = None,
+            output_attentions: Optional[bool] = False,
     ) -> Tuple[Tensor]:
         mixed_query_layer = self.query(hidden_states)
 
@@ -361,14 +362,14 @@ class MegatronBertAttention(nn.Cell):
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def forward(
-        self,
-        hidden_states: Tensor,
-        attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        encoder_hidden_states: Optional[Tensor(dtype=mindspore.float32)] = None,
-        encoder_attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        past_key_value: Optional[Tuple[Tuple[Tensor(dtype=mindspore.float32)]]] = None,
-        output_attentions: Optional[bool] = False,
+            self,
+            hidden_states: Tensor,
+            attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            encoder_hidden_states: Optional[Tensor(dtype=mindspore.float32)] = None,
+            encoder_attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            past_key_value: Optional[Tuple[Tuple[Tensor(dtype=mindspore.float32)]]] = None,
+            output_attentions: Optional[bool] = False,
     ) -> Tuple[Tensor]:
         ln_outputs = self.ln(hidden_states)
         self_outputs = self.self(
@@ -432,14 +433,14 @@ class MegatronBertLayer(nn.Cell):
         self.output = MegatronBertOutput(config)
 
     def forward(
-        self,
-        hidden_states: Tensor,
-        attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        encoder_hidden_states: Optional[Tensor(dtype=mindspore.float32)] = None,
-        encoder_attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        past_key_value: Optional[Tuple[Tuple[Tensor(dtype=mindspore.float32)]]] = None,
-        output_attentions: Optional[bool] = False,
+            self,
+            hidden_states: Tensor,
+            attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            encoder_hidden_states: Optional[Tensor(dtype=mindspore.float32)] = None,
+            encoder_attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            past_key_value: Optional[Tuple[Tuple[Tensor(dtype=mindspore.float32)]]] = None,
+            output_attentions: Optional[bool] = False,
     ) -> Tuple[Tensor]:
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
@@ -515,17 +516,17 @@ class MegatronBertEncoder(nn.Cell):
         self.gradient_checkpointing = False
 
     def forward(
-        self,
-        hidden_states: Tensor,
-        attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        encoder_hidden_states: Optional[Tensor(dtype=mindspore.float32)] = None,
-        encoder_attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        past_key_values: Optional[Tuple[Tuple[Tensor(dtype=mindspore.float32)]]] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = False,
-        output_hidden_states: Optional[bool] = False,
-        return_dict: Optional[bool] = True,
+            self,
+            hidden_states: Tensor,
+            attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            encoder_hidden_states: Optional[Tensor(dtype=mindspore.float32)] = None,
+            encoder_attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            past_key_values: Optional[Tuple[Tuple[Tensor(dtype=mindspore.float32)]]] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = False,
+            output_hidden_states: Optional[bool] = False,
+            return_dict: Optional[bool] = True,
     ) -> Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]:
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
@@ -552,7 +553,8 @@ class MegatronBertEncoder(nn.Cell):
                         return module(*inputs, past_key_value, output_attentions)
 
                     return custom_forward
-
+                #  Goto else branch, so I comment this line of code
+                '''
                 layer_outputs = torch.utils.checkpoint.checkpoint(
                     create_custom_forward(layer_module),
                     hidden_states,
@@ -561,6 +563,7 @@ class MegatronBertEncoder(nn.Cell):
                     encoder_hidden_states,
                     encoder_attention_mask,
                 )
+                '''
             else:
                 layer_outputs = layer_module(
                     hidden_states,
@@ -880,20 +883,20 @@ class MegatronBertModel(MegatronBertPreTrainedModel):
         config_class=_CONFIG_FOR_DOC,
     )
     def forward(
-        self,
-        input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        inputs_embeds: Optional[Tensor(dtype=mindspore.float32)] = None,
-        encoder_hidden_states: Optional[Tensor(dtype=mindspore.float32)] = None,
-        encoder_attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        past_key_values: Optional[Tuple[Tuple[Tensor]]] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            inputs_embeds: Optional[Tensor(dtype=mindspore.float32)] = None,
+            encoder_hidden_states: Optional[Tensor(dtype=mindspore.float32)] = None,
+            encoder_attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            past_key_values: Optional[Tuple[Tuple[Tensor]]] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPoolingAndCrossAttentions]:
         r"""
         encoder_hidden_states  (`Tensor(dtype=mindspore.float32)` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
@@ -1031,18 +1034,18 @@ class MegatronBertForPreTraining(MegatronBertPreTrainedModel):
     @add_start_docstrings_to_model_forward(MEGATRON_BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
     @replace_return_docstrings(output_type=MegatronBertForPreTrainingOutput, config_class=_CONFIG_FOR_DOC)
     def forward(
-        self,
-        input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        inputs_embeds: Optional[Tensor(dtype=mindspore.float32)] = None,
-        labels: Optional[Tensor(dtype=mindspore.int64)] = None,
-        next_sentence_label: Optional[Tensor(dtype=mindspore.int64)] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            inputs_embeds: Optional[Tensor(dtype=mindspore.float32)] = None,
+            labels: Optional[Tensor(dtype=mindspore.int64)] = None,
+            next_sentence_label: Optional[Tensor(dtype=mindspore.int64)] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MegatronBertForPreTrainingOutput]:
         r"""
         labels (`Tensor(dtype=mindspore.int64)` of shape `(batch_size, sequence_length)`, *optional*):
@@ -1117,7 +1120,6 @@ class MegatronBertForPreTraining(MegatronBertPreTrainedModel):
     MEGATRON_BERT_START_DOCSTRING,
 )
 class MegatronBertForCausalLM(MegatronBertPreTrainedModel):
-
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
     _keys_to_ignore_on_load_missing = [r"position_ids", r"cls.predictions.decoder"]
 
@@ -1142,21 +1144,21 @@ class MegatronBertForCausalLM(MegatronBertPreTrainedModel):
     @add_start_docstrings_to_model_forward(MEGATRON_BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
     @replace_return_docstrings(output_type=CausalLMOutputWithCrossAttentions, config_class=_CONFIG_FOR_DOC)
     def forward(
-        self,
-        input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        inputs_embeds: Optional[Tensor(dtype=mindspore.float32)] = None,
-        encoder_hidden_states: Optional[Tensor(dtype=mindspore.float32)] = None,
-        encoder_attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        labels: Optional[Tensor(dtype=mindspore.int64)] = None,
-        past_key_values: Optional[Tuple[Tuple[Tensor]]] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            inputs_embeds: Optional[Tensor(dtype=mindspore.float32)] = None,
+            encoder_hidden_states: Optional[Tensor(dtype=mindspore.float32)] = None,
+            encoder_attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            labels: Optional[Tensor(dtype=mindspore.int64)] = None,
+            past_key_values: Optional[Tuple[Tuple[Tensor]]] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithCrossAttentions]:
         r"""
         encoder_hidden_states  (`Tensor(dtype=mindspore.float32)` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
@@ -1263,7 +1265,6 @@ class MegatronBertForCausalLM(MegatronBertPreTrainedModel):
 
 @add_start_docstrings("""MegatronBert Model with a `language modeling` head on top.""", MEGATRON_BERT_START_DOCSTRING)
 class MegatronBertForMaskedLM(MegatronBertPreTrainedModel):
-
     _keys_to_ignore_on_load_unexpected = [r"pooler", r"seq_relationship"]
     _keys_to_ignore_on_load_missing = [r"position_ids", r"predictions.decoder"]
 
@@ -1295,19 +1296,19 @@ class MegatronBertForMaskedLM(MegatronBertPreTrainedModel):
         config_class=_CONFIG_FOR_DOC,
     )
     def forward(
-        self,
-        input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        inputs_embeds: Optional[Tensor(dtype=mindspore.float32)] = None,
-        encoder_hidden_states: Optional[Tensor(dtype=mindspore.float32)] = None,
-        encoder_attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        labels: Optional[Tensor(dtype=mindspore.int64)] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            inputs_embeds: Optional[Tensor(dtype=mindspore.float32)] = None,
+            encoder_hidden_states: Optional[Tensor(dtype=mindspore.float32)] = None,
+            encoder_attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            labels: Optional[Tensor(dtype=mindspore.int64)] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MaskedLMOutput]:
         r"""
         labels (`Tensor(dtype=mindspore.int64)` of shape `(batch_size, sequence_length)`, *optional*):
@@ -1372,7 +1373,6 @@ class MegatronBertForMaskedLM(MegatronBertPreTrainedModel):
     MEGATRON_BERT_START_DOCSTRING,
 )
 class MegatronBertForNextSentencePrediction(MegatronBertPreTrainedModel):
-
     _keys_to_ignore_on_load_unexpected = [r"predictions"]
 
     def __init__(self, config):
@@ -1387,18 +1387,18 @@ class MegatronBertForNextSentencePrediction(MegatronBertPreTrainedModel):
     @add_start_docstrings_to_model_forward(MEGATRON_BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
     @replace_return_docstrings(output_type=NextSentencePredictorOutput, config_class=_CONFIG_FOR_DOC)
     def forward(
-        self,
-        input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        inputs_embeds: Optional[Tensor(dtype=mindspore.float32)] = None,
-        labels: Optional[Tensor(dtype=mindspore.int64)] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-        **kwargs
+            self,
+            input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            inputs_embeds: Optional[Tensor(dtype=mindspore.float32)] = None,
+            labels: Optional[Tensor(dtype=mindspore.int64)] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+            **kwargs
     ) -> Union[Tuple, NextSentencePredictorOutput]:
         r"""
         labels (`Tensor(dtype=mindspore.int64)` of shape `(batch_size,)`, *optional*):
@@ -1497,17 +1497,17 @@ class MegatronBertForSequenceClassification(MegatronBertPreTrainedModel):
         config_class=_CONFIG_FOR_DOC,
     )
     def forward(
-        self,
-        input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        inputs_embeds: Optional[Tensor(dtype=mindspore.float32)] = None,
-        labels: Optional[Tensor(dtype=mindspore.int64)] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            inputs_embeds: Optional[Tensor(dtype=mindspore.float32)] = None,
+            labels: Optional[Tensor(dtype=mindspore.int64)] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutput]:
         r"""
         labels (`Tensor(dtype=mindspore.int64)` of shape `(batch_size,)`, *optional*):
@@ -1595,17 +1595,17 @@ class MegatronBertForMultipleChoice(MegatronBertPreTrainedModel):
         config_class=_CONFIG_FOR_DOC,
     )
     def forward(
-        self,
-        input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        inputs_embeds: Optional[Tensor(dtype=mindspore.float32)] = None,
-        labels: Optional[Tensor(dtype=mindspore.int64)] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            inputs_embeds: Optional[Tensor(dtype=mindspore.float32)] = None,
+            labels: Optional[Tensor(dtype=mindspore.int64)] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, MultipleChoiceModelOutput]:
         r"""
         labels (`Tensor(dtype=mindspore.int64)` of shape `(batch_size,)`, *optional*):
@@ -1669,7 +1669,6 @@ class MegatronBertForMultipleChoice(MegatronBertPreTrainedModel):
     MEGATRON_BERT_START_DOCSTRING,
 )
 class MegatronBertForTokenClassification(MegatronBertPreTrainedModel):
-
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
     def __init__(self, config):
@@ -1690,17 +1689,17 @@ class MegatronBertForTokenClassification(MegatronBertPreTrainedModel):
         config_class=_CONFIG_FOR_DOC,
     )
     def forward(
-        self,
-        input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        inputs_embeds: Optional[Tensor(dtype=mindspore.float32)] = None,
-        labels: Optional[Tensor(dtype=mindspore.int64)] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            inputs_embeds: Optional[Tensor(dtype=mindspore.float32)] = None,
+            labels: Optional[Tensor(dtype=mindspore.int64)] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, TokenClassifierOutput]:
         r"""
         labels (`Tensor(dtype=mindspore.int64)` of shape `(batch_size, sequence_length)`, *optional*):
@@ -1750,7 +1749,6 @@ class MegatronBertForTokenClassification(MegatronBertPreTrainedModel):
     MEGATRON_BERT_START_DOCSTRING,
 )
 class MegatronBertForQuestionAnswering(MegatronBertPreTrainedModel):
-
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
     def __init__(self, config):
@@ -1770,18 +1768,18 @@ class MegatronBertForQuestionAnswering(MegatronBertPreTrainedModel):
         config_class=_CONFIG_FOR_DOC,
     )
     def forward(
-        self,
-        input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
-        head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
-        inputs_embeds: Optional[Tensor(dtype=mindspore.float32)] = None,
-        start_positions: Optional[Tensor(dtype=mindspore.int64)] = None,
-        end_positions: Optional[Tensor(dtype=mindspore.int64)] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            input_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            attention_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            token_type_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            position_ids: Optional[Tensor(dtype=mindspore.int64)] = None,
+            head_mask: Optional[Tensor(dtype=mindspore.float32)] = None,
+            inputs_embeds: Optional[Tensor(dtype=mindspore.float32)] = None,
+            start_positions: Optional[Tensor(dtype=mindspore.int64)] = None,
+            end_positions: Optional[Tensor(dtype=mindspore.int64)] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
         r"""
         start_positions (`Tensor(dtype=mindspore.int64)` of shape `(batch_size,)`, *optional*):
