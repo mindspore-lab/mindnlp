@@ -16,7 +16,7 @@
 """dataset transforms for legacy mindspore"""
 
 from mindnlp._legacy.transforms.truncate import Truncate
-from mindnlp._legacy.transforms.addtoken import AddToken
+from mindnlp._legacy.transforms.add_token import AddToken
 
 __all__ = [
     'Truncate', 'AddToken'

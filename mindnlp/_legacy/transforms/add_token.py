@@ -29,18 +29,10 @@ class AddToken(PyTensorOperation):
     Raises:
         TypeError: If `token` is not of type str.
 
-    Supported Platforms:
-        ``CPU``
-
-
-    Supported Platforms:
-        ``CPU``
-
     Examples:
 
     """
 
-    # @check_decode
     def __init__(self, token, begin=True):
         super().__init__()
         self.token = token
