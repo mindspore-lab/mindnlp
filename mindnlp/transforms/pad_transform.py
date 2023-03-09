@@ -12,36 +12,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-
-# pylint: disable=import-outside-toplevel
-# pylint: disable=c-extension-no-member
-# pylint: disable=invalid-name
-# pylint: disable=too-many-boolean-expressions
-"""
-Transforms to process sequence
-"""
+"""AddToken transform"""
 import numpy as np
 from mindspore.dataset.transforms.transforms import PyTensorOperation
 from mindspore.dataset.text.transforms import Implementation
 
 
-class Truncate(PyTensorOperation):
+class PadTransform(PyTensorOperation):
     """
-    Truncate the input sequence.
+    Pad tensor to a fixed length with given padding value.
 
     Args:
-        max_seq_length (int): Maximum length required.
+        max_length (int): Maximum length to pad to.
+        pad_value (int): Value to pad the tensor with.
+        return_length (bool): Whether return auxiliary sequence length.
 
     Raises:
-        TypeError: If `max_length` is not of type int.
+        TypeError: If `token` is not of type str.
+
+    Supported Platforms:
+        ``CPU``
 
     Examples:
 
     """
 
-    def __init__(self, max_seq_length):
+    # @check_decode
+    def __init__(self, max_length: int, pad_value:int, return_length:bool = False):
         super().__init__()
-        self.max_seq_length = max_seq_length
+        self.max_length = max_length
+        self.pad_value = pad_value
+        self.return_length = return_length
         self.implementation = Implementation.PY
 
     def __call__(self, text_input):
@@ -50,7 +51,7 @@ class Truncate(PyTensorOperation):
         """
         if not isinstance(text_input, np.ndarray):
             raise TypeError(
-                f"Input should be a text line in 1-D NumPy format, got {type(text_input)}.")
+                f"Input should be a text line in 1-D ndarray contains string, got {type(text_input)}.")
         return super().__call__(text_input)
 
     def execute_py(self, text_input):
@@ -63,4 +64,14 @@ class Truncate(PyTensorOperation):
         """
         Execute method.
         """
-        return text_input[:self.max_seq_length]
+        text_input = text_input[:self.max_length]
+        text_length = len(text_input)
+
+        pad_value = np.array([self.pad_value] * (self.max_length - text_length), text_input.dtype)
+        text_output = np.concatenate([text_input, pad_value], 0)
+
+        if self.return_length:
+            length = np.array(text_length)
+            return text_output, length
+
+        return text_output

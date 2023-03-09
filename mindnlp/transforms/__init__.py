@@ -29,7 +29,8 @@ else:
 
 from mindspore.dataset.text import Lookup
 from mindnlp.transforms.tokenizers import BasicTokenizer
+from mindnlp.transforms.pad_transform import PadTransform
 
 __all__ = [
-    'Truncate', 'AddToken', 'Lookup', 'BasicTokenizer',
+    'Truncate', 'AddToken', 'Lookup', 'PadTransform', 'BasicTokenizer',
 ]
