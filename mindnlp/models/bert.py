@@ -153,7 +153,7 @@ class BertSelfAttention(nn.Cell):
 
         # Take the dot product between "query" snd "key" to get the raw attention scores.
         attention_scores = self.matmul(query_layer, key_layer.swapaxes(-1, -2))
-        attention_scores = attention_scores / ops(Tensor(self.attention_head_size, mstype.float32))
+        attention_scores = attention_scores / ops.sqrt(Tensor(self.attention_head_size, mstype.float32))
         # Apply the attention mask is (precommputed for all layers in BertModel forward() function)
         if attention_mask is not None:
             attention_scores = attention_scores + attention_mask
