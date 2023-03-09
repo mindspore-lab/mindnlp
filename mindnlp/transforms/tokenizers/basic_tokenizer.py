@@ -1,10 +1,10 @@
-# Copyright 2018 The Google AI Language Team Authors.
+# Copyright 2022 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,7 +17,7 @@
 # pylint: disable=invalid-name
 # pylint: disable=too-many-boolean-expressions
 """
-Transforms to avoid Windows platform problems
+BasicTokenizer
 """
 
 from __future__ import absolute_import
@@ -30,7 +30,6 @@ import numpy as np
 import mindspore._c_dataengine as cde
 from mindspore.dataset.transforms.transforms import PyTensorOperation
 from mindspore.dataset.text.transforms import TextTensorOperation, Implementation
-
 
 class BasicTokenizer(TextTensorOperation, PyTensorOperation):
     """

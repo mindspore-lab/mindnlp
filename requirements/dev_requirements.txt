@@ -6,3 +6,4 @@ pytest
 gensim
 ddt
 datasets
+tokenizers
