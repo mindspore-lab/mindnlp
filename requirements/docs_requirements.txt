@@ -8,4 +8,5 @@ requests
 tqdm
 gensim
 datasets
+tokenizers
 git+https://github.com/mindspore-ecosystem/mindnlp
