@@ -35,13 +35,13 @@ msgid ""
 "is involved in many scenarios, such as dialogue robot, search "
 "recommendation, emotion recognition, content understanding, enterprise risk "
 "control, quality detection and other directions."
-msgstr "文本分类是指将一个句子或段落归为特定类别,在自然语言处理中是最基础的任务,涉及到如对话机器人,搜索"
+msgstr "文本分类是指将一个句子或段落归为特定类别，在自然语言处理中是最基础的任务，涉及到如对话机器人、搜索"
 "推荐、情感识别、内容理解、企业风险"
-"控制、质量检测等诸多方向."
+"控制、质量检测等诸多方向。"
 
 #: ../../examples/fasttext.rst:13
 msgid "Here is a piece of data from the agnews dataset:"
-msgstr "下面是agnews数据集的其中一条数据:"
+msgstr "下面是agnews数据集的其中一条数据："
 
 #: ../../examples/fasttext.rst:24
 msgid ""
@@ -49,10 +49,10 @@ msgid ""
 "pension after talks” is the headline of a news article. “Unions representing "
 "workers at Turner Newall say they are ‘disappointed’ after talks with "
 "stricken parent firm Federal Mogul.” is the content of the article."
-msgstr "在这里,"3"表示文本所属的类别.“Fears for T N "
-"pension after talks”是新闻的标题.“Unions representing "
+msgstr "在这里，“3”表示文本所属的类别。”Fears for T N "
+"pension after talks“是新闻的标题。“Unions representing "
 "workers at Turner Newall say they are ‘disappointed’ after talks with "
-"stricken parent firm Federal Mogul.”是文章的内容."
+"stricken parent firm Federal Mogul”是文章的内容。"
 
 #: ../../examples/fasttext.rst:31
 msgid "AGNews:"
@@ -66,17 +66,17 @@ msgid ""
 "a short text with four categories of labels. In the agnews dataset, all "
 "articles will be divided into four categories.The dataset used in this "
 "article will be downloaded automatically through mindnlp."
-msgstr "AGNews数据集是学术新闻搜索引擎ComeToMyHead从2000多个新闻源收集的新闻文章的集合.
-该数据集包括120,000个训练样本和7,600个测试样本.每个样本都是带有四类标签的短文本.在agnews数据集中,
-所有文章被分为四个类别,该数据集可以通过mindnlp自动下载."
+msgstr "AGNews数据集是学术新闻搜索引擎ComeToMyHead从2000多个新闻源收集的新闻文章的集合。
+该数据集包括120000个训练样本和7600个测试样本。每个样本都是带有四类标签的短文本。在agnews数据集中，
+所有文章被分为四个类别，该数据集可以通过mindnlp自动下载。"
 
 #: ../../examples/fasttext.rst:43
 msgid ""
 "In this paper, we will train a fasttext model that can complete the task of "
 "text classification by using this dataset."
 msgstr ""
-"本文中,我们将通过使用glove预训练词向量来训练一个能完成文本分类任务的fasttext"
-"模型."
+"本文中，我们将通过使用glove预训练词向量来训练一个能完成文本分类任务的fasttext"
+"模型。"
 
 #: ../../examples/fasttext.rst:47 ../../examples/machine_translation.rst:12
 #: ../../examples/question_answer.rst:123
@@ -107,21 +107,21 @@ msgid ""
 "through the mindnlp API. In the preprocessing, the data is cleaned and then "
 "sorted into buckets after lookup."
 msgstr ""
-"在本文中使用agnews数据集，并通过mindnlp的API自动下载.在数据预处理中，数据被清"
-"洗后，经过lookup操作再分桶."
+"在本文中使用agnews数据集，并通过mindnlp的API自动下载。在数据预处理中，数据被清"
+"洗后，经过lookup操作再分桶。"
 
 #: ../../examples/fasttext.rst:116
 msgid "Load dataset:"
-msgstr "加载数据集:"
+msgstr "加载数据集："
 
 #: ../../examples/fasttext.rst:124
 msgid "Initializes the vocab and tokenizer for preprocessing:"
-msgstr "初始化用于数据预处理的vocab和tokenizer:"
+msgstr "初始化用于数据预处理的vocab和tokenizer："
 
 #: ../../examples/fasttext.rst:134
 msgid ""
 "The loaded dataset is preprocessed and divided into training and validation:"
-msgstr "加载的数据集经过预处理后被分成训练集和验证集."
+msgstr "加载的数据集经过预处理后被分成训练集和验证集。"
 
 #: ../../examples/fasttext.rst:146 ../../examples/machine_translation.rst:87
 #: ../../examples/question_answer.rst:367
@@ -136,11 +136,11 @@ msgstr "训练过程"
 
 #: ../../examples/fasttext.rst:156
 msgid "Set the loss, optimizer, metric."
-msgstr "设置loss,optimizer,metric."
+msgstr "设置loss，optimizer，metric。"
 
 #: ../../examples/fasttext.rst:164
 msgid "Get started with mindnlp’s built-in trainer."
-msgstr "以mindnlp的trainer开始训练."
+msgstr "以mindnlp的trainer开始训练。"
 
 #: ../../examples/machine_translation.rst:2
 msgid "Machine Translation"

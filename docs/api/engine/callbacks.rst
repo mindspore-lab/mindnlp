@@ -41,9 +41,3 @@ timer\_callback
    :members:
    :undoc-members:
    :show-inheritance:
-
-
-.. automodule:: mindnlp.engine.callbacks
-   :members:
-   :undoc-members:
-   :show-inheritance:
