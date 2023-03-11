@@ -21,8 +21,9 @@ import unittest
 import pytest
 import mindspore as ms
 from mindnlp.dataset import QQP, QQP_Process
-from mindnlp.dataset import load, process
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp import load_dataset, process
+
+from mindnlp.transforms import BasicTokenizer
 
 
 class TestQQP(unittest.TestCase):
@@ -52,7 +53,7 @@ class TestQQP(unittest.TestCase):
     @pytest.mark.local
     def test_qqp_by_register(self):
         """test qqp by register"""
-        _ = load("QQP", root=self.root)
+        _ = load_dataset("QQP", root=self.root)
 
     @pytest.mark.dataset
     @pytest.mark.local

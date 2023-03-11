@@ -370,98 +370,6 @@ class BinaryAttention(nn.Cell):
         attended_y = _weighted_sum(x_batch, y_x_attn, y_mask)
         return attended_x, attended_y
 
-class MutiHeadAttention(nn.Cell):
-    r"""
-    Muti-head attention is from the paper “attention is all you need”
-    where heads == 1 Muti-head attention is normal self-attention
-
-    Args:
-        head (int): The number of head. Default: 8.
-        d_model (int): The `query`, `key` and `value` vectors dimensions.
-            Default: 512.
-        dropout (float): The keep rate, greater than 0 and less equal than 1.
-            Default: 0.9.
-        bias (bool): whether to use a bias vector. Default: True.
-        attention_mode (str): attention mode. Default: "dot".
-
-    Examples:
-        >>> import mindspore
-        >>> import mindspore.numpy as np
-        >>> from mindspore import ops
-        >>> from mindspore import Tensor
-        >>> from mindspore.text.modules.attentions import MutiHeadAttention
-        >>> standard_normal = ops.StandardNormal(seed=0)
-        >>> # query is [batch_size, seq_len_q, hidden_size]
-        >>> q = standard_normal((2, 32, 512))
-        >>> # key is [batch_size, seq_len_k, hidden_size]
-        >>> k = standard_normal((2, 20, 512))
-        >>> # value is [batch_size, seq_len_k, hidden_size]
-        >>> v = standard_normal((2, 20, 512))
-        >>> # query shape is (2, 32 ,512)->(2, 8, 32, 64) and key shape is (2, 20 ,512)->(2, 8, 20, 64)
-        >>> # query * key.transpose(-1, -2): (2, 8, 32, 64) * (2, 8, 64, 20) ->(2, 8, 32, 20)
-        >>> # equal with mask shape
-        >>> # [batch_size, seq_len_q, seq_len_k]
-        >>> mask_shape = (2, 32, 20)
-        >>> mask = Tensor(np.ones(mask_shape), mindspore.bool_)
-        >>> # use additive attention
-        >>> net = MutiHeadAttention(heads=8, attention_mode="add")
-        >>> x, attn = net(query, key, value, mask)
-        >>> print(x.shape, attn.shape)
-        (2, 32, 512) (2, 8, 32, 20)
-    """
-
-    def __init__(self, heads=8, d_model=512, dropout=0.9, bias=False, attention_mode="dot"):
-        super().__init__()
-        if d_model % heads != 0:
-            raise ValueError(f"'d_model' must be divisible when divided by 'heads'. "
-                             f"Your d_model dimension is {d_model} and heads is {heads}.")
-        self.d_k = d_model // heads
-        self.d_model = d_model
-        self.heads = heads
-        self.linear_query = nn.Dense(d_model, d_model, has_bias=bias)
-        self.linear_key = nn.Dense(d_model, d_model, has_bias=bias)
-        self.linear_value = nn.Dense(d_model, d_model, has_bias=bias)
-        self.linear_out = nn.Dense(d_model, d_model, has_bias=bias)
-        # default attention mode dot product
-        # attention_mode can be switch to other attention modes
-        if "add" in attention_mode.lower():
-            self.attention_mode = AdditiveAttention(hidden_dims=int(self.d_model / self.heads), dropout=dropout)
-        elif "cos" in attention_mode.lower():
-            self.attention_mode = CosineAttention(dropout=dropout)
-        else:
-            self.attention_mode = ScaledDotAttention(dropout=dropout)
-
-
-    def construct(self, query, key, value, mask: Optional[mindspore.Tensor] = None):
-        """Get muti-head attention output and attention weights.
-
-        Args:
-            query (mindspore.Tensor): The query vector.
-                Usually is [batch_size, seq_len, d_model]
-            key (mindspore.Tensor): The key vector. Usually is
-                [batch_size, seq_len, d_model]
-            value (mindspore.Tensor): The value vector.
-                [batch_size, seq_len, d_model]
-            mask Optional[mindspore.Tensor[bool]]: The mask vector.
-                [batch_size, seq_len, seq_len]
-
-        Returns:
-            - **output** (mindspore.Tensor) - The output of muti-head attention.
-            - **attn** (mindspore.Tensor) - The last layer of attention weights.
-        """
-        num_batch = query.shape[0]
-        if mask is not None:
-            mask = ops.expand_dims(mask, 1)
-        # [batch_size,32,512]->[batch_size,8,32,64]
-        query = self.linear_query(query).view(num_batch, -1, self.heads, self.d_k).swapaxes(1, 2)
-        key = self.linear_key(key).view(num_batch, -1, self.heads, self.d_k).swapaxes(1, 2)
-        value = self.linear_value(value).view(num_batch, -1, self.heads, self.d_k).swapaxes(1, 2)
-        output, self_attn = self.attention_mode(query, key, value, mask)
-        output = output.swapaxes(1, 2)
-        # concat head
-        output = output.view(num_batch, -1, self.heads * self.d_k)
-        return self.linear_out(output), self_attn
-
 class SelfAttention(nn.Cell):
     r"""
     Self attention is from the paper “attention is all you need”
@@ -615,3 +523,13 @@ class LocationAwareAttention(nn.Cell):
             attn = self.softmax(scores)
         context = ops.matmul(ops.expand_dims(attn, 1), value)
         return context, attn
+
+__all__ = [
+    "ScaledDotAttention",
+    "SelfAttention",
+    "BinaryAttention",
+    "AdditiveAttention",
+    "CosineAttention",
+    "LocationAwareAttention",
+    "LinearAttention"
+]

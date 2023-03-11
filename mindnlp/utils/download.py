@@ -19,7 +19,6 @@ Download functions
 import os
 import shutil
 import hashlib
-import json
 import re
 from pathlib import Path
 from urllib.parse import urlparse
@@ -163,37 +162,6 @@ def check_md5(filename: str, md5sum=None):
     return True
 
 
-def get_dataset_url(datasetname: str):
-    r"""
-    Get dataset url for download
-
-    Args:
-        datasetname (str): The name of the dataset to download.
-
-    Returns:
-        str, the url of the dataset to download.
-
-    Raises:
-        TypeError: If `datasetname` is not a string.
-        RuntimeError: If `datasetname` is None.
-
-    Examples:
-        >>> name = 'aclImdb_v1'
-        >>> url = get_dataset_url(name)
-        >>> print(url)
-        'https://mindspore-website.obs.myhuaweicloud.com/notebook/datasets/aclImdb_v1.tar.gz'
-
-    """
-    default_dataset_json = "./mindnlp/configs/dataset_url.json"
-    with open(default_dataset_json, "r", encoding="utf-8") as json_file:
-        json_dict = json.load(json_file)
-
-    url = json_dict.get(datasetname, None)
-    if url:
-        return url
-    raise KeyError(f"There is no {datasetname}.")
-
-
 def get_filepath(path: str):
     r"""
     Get the filepath of file.
@@ -265,8 +233,7 @@ def cache_file(
     """
     if cache_dir is None:
         cache_dir = get_cache_path()
-    if url is None:
-        url = get_dataset_url(filename)
+
     path, filename = cached_path(
         filename_or_url=url,
         cache_dir=cache_dir,

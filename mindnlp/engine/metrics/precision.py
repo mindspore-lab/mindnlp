@@ -19,7 +19,7 @@ import sys
 import numpy as np
 
 from mindnlp.abc import Metric
-from mindnlp.common.metrics import _check_onehot_data, _check_shape, _convert_data_type
+from mindnlp.scoring.metrics import _check_onehot_data, _check_shape, _convert_data_type
 
 
 class Precision(Metric):

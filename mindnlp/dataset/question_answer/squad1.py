@@ -27,8 +27,8 @@ import mindspore.dataset as ds
 from mindspore.dataset import GeneratorDataset, text, transforms
 
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load, process
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp.dataset.register import load_dataset, process
+from mindnlp.transforms import BasicTokenizer
 from mindnlp.configs import DEFAULT_ROOT
 
 URL = {
@@ -85,7 +85,7 @@ class Squad1():
         return len(self._anwsers)
 
 
-@load.register
+@load_dataset.register
 def SQuAD1(
     root: str = DEFAULT_ROOT,
     split: Union[Tuple[str], str] = ('train', 'dev'),

@@ -18,7 +18,7 @@ Test transforms
 import unittest
 import numpy as np
 from mindspore.dataset import GeneratorDataset
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp.transforms import BasicTokenizer
 
 class TestBasicTokenizer(unittest.TestCase):
     """

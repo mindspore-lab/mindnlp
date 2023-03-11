@@ -21,8 +21,9 @@ import unittest
 import pytest
 import mindspore as ms
 from mindnlp.dataset import WNLI, WNLI_Process
-from mindnlp.dataset import load, process
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp import load_dataset, process
+
+from mindnlp.transforms import BasicTokenizer
 
 
 class TestWNLI(unittest.TestCase):
@@ -63,7 +64,7 @@ class TestWNLI(unittest.TestCase):
     @pytest.mark.dataset
     def test_wnli_by_register(self):
         """test wnli by register"""
-        _ = load(
+        _ = load_dataset(
             "WNLI",
             root=self.root,
             split=("train", "dev", "test"),

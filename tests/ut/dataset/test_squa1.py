@@ -22,7 +22,8 @@ import unittest
 import pytest
 import mindspore as ms
 from mindspore.dataset import text
-from mindnlp.dataset import SQuAD1, SQuAD1_Process, load, process
+from mindnlp import load_dataset, process
+from mindnlp.dataset import SQuAD1, SQuAD1_Process
 
 char_dic = {"<unk>": 0, "<pad>": 1, "e": 2, "t": 3, "a": 4, "i": 5, "n": 6,\
                     "o": 7, "s": 8, "r": 9, "h": 10, "l": 11, "d": 12, "c": 13, "u": 14,\
@@ -66,7 +67,7 @@ class TestSQuAD1(unittest.TestCase):
     @pytest.mark.dataset
     def test_squad1_by_register(self):
         """test squad1 by register"""
-        _ = load('squad1',
+        _ = load_dataset('squad1',
                  root=self.root,
                  split=('dev')
                  )

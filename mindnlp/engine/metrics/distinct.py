@@ -16,7 +16,7 @@
 
 
 from mindnlp.abc import Metric
-from mindnlp.common.metrics import _check_value_type
+from mindnlp.scoring.metrics import _check_value_type
 
 
 class Distinct(Metric):

@@ -21,9 +21,9 @@ import os
 import csv
 from typing import Union, Tuple
 from mindspore.dataset import GeneratorDataset, text
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp.transforms import BasicTokenizer
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load, process
+from mindnlp.dataset.register import load_dataset, process
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import untar
 
@@ -56,7 +56,7 @@ class Amazonreviewpolarity:
         return len(self._label)
 
 
-@load.register
+@load_dataset.register
 def AmazonReviewPolarity(
     root: str = DEFAULT_ROOT,
     split: Union[Tuple[str], str] = ("train", "test"),

@@ -22,8 +22,9 @@ import pytest
 import mindspore
 from mindspore.dataset import text
 from mindnlp.dataset import Multi30k, Multi30k_Process
-from mindnlp.dataset import load, process
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp import load_dataset, process
+
+from mindnlp.transforms import BasicTokenizer
 
 
 class TestMulti30k(unittest.TestCase):
@@ -70,7 +71,7 @@ class TestMulti30k(unittest.TestCase):
     @pytest.mark.dataset
     def test_multi30k_by_register(self):
         """test multi30k by register"""
-        _ = load('multi30k',
+        _ = load_dataset('multi30k',
                  root=self.root,
                  split=('train', 'valid', 'test'),
                  language_pair=('de', 'en')

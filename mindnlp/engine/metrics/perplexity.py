@@ -17,7 +17,7 @@
 import numpy as np
 from mindspore import Tensor
 from mindnlp.abc import Metric
-from mindnlp.common.metrics import _check_value_type, _convert_data_type, _check_onehot_data
+from mindnlp.scoring.metrics import _check_value_type, _convert_data_type, _check_onehot_data
 
 
 class Perplexity(Metric):

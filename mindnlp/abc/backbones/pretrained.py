@@ -30,6 +30,10 @@ class PretrainedConfig:
         self.num_labels = kwargs.pop('num_labels', 2)
         self.output_attentions = kwargs.pop('output_attentions', False)
         self.output_hidden_states = kwargs.pop('output_hidden_states', False)
+        self.is_decoder = kwargs.pop("is_decoder", False)
+        self.pad_token_id = kwargs.pop("pad_token_id", False)
+        self.eos_token_id = kwargs.pop("eos_token_id", False)
+        self.is_encoder_decoder = kwargs.pop("is_encoder_decoder", False)
 
     @classmethod
     def from_json(cls, file_path):

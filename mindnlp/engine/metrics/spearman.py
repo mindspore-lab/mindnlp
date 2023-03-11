@@ -18,7 +18,7 @@
 import numpy as np
 
 from mindnlp.abc import Metric
-from mindnlp.common.metrics import _convert_data_type, _get_rank
+from mindnlp.scoring.metrics import _convert_data_type, _get_rank
 
 
 class SpearmanCorrelation(Metric):

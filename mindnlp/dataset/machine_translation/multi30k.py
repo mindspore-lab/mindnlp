@@ -24,7 +24,7 @@ from typing import Union, Tuple
 from mindspore.dataset import TextFileDataset, transforms
 from mindspore.dataset import text
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load, process
+from mindnlp.dataset.register import load_dataset, process
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import untar
 
@@ -41,7 +41,7 @@ MD5 = {
 }
 
 
-@load.register
+@load_dataset.register
 def Multi30k(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train', 'valid', 'test'),
              language_pair: Tuple[str] = ('de', 'en'), proxies=None):
     r"""
