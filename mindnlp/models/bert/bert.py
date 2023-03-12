@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ from mindspore import nn
 from mindspore import ops
 from mindspore import Parameter, Tensor
 from mindspore.common.initializer import initializer, TruncatedNormal
+from mindnlp._legacy.nn import Dropout
 
 activation_map = {
     'relu': nn.ReLU(),
@@ -34,47 +35,6 @@ class Matmul(nn.Cell):
     def construct(self, a, b):
         return ops.matmul(a, b)
 
-class PretrainedConfig:
-    """
-    Pretrained Config.
-    """
-    def __init__(self, **kwargs):
-        self.finetuning_task = kwargs.pop('finetuning_task', None)
-        self.num_labels = kwargs.pop('num_labels', 2)
-        self.output_attentions = kwargs.pop('output_attentions', False)
-        self.output_hidden_states = kwargs.pop('output_hidden_states', False)
-
-class BertConfig(PretrainedConfig):
-    """
-    Configuration for BERT-base
-    """
-    def __init__(self,
-                 vocab_size=30522,
-                 hidden_size=768,
-                 num_hidden_layers=12,
-                 num_attention_heads=12,
-                 intermediate_size=3072,
-                 hidden_act="gelu",
-                 hidden_dropout_prob=0.1,
-                 attention_probs_dropout_prob=0.1,
-                 max_position_embeddings=512,
-                 type_vocab_size=2,
-                 initializer_range=0.02,
-                 layer_norm_eps=1e-12,
-                 **kwargs):
-        super().__init__(**kwargs)
-        self.vocab_size = vocab_size
-        self.hidden_size = hidden_size
-        self.num_hidden_layers = num_hidden_layers
-        self.num_attention_heads = num_attention_heads
-        self.hidden_act = hidden_act
-        self.intermediate_size = intermediate_size
-        self.hidden_dropout_prob = hidden_dropout_prob
-        self.attention_probs_dropout_prob = attention_probs_dropout_prob
-        self.max_position_embeddings = max_position_embeddings
-        self.type_vocab_size = type_vocab_size
-        self.initializer_range = initializer_range
-        self.layer_norm_eps = layer_norm_eps
 
 class BertEmbeddings(nn.Cell):
     """
@@ -89,7 +49,7 @@ class BertEmbeddings(nn.Cell):
         self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size, \
             embedding_table=TruncatedNormal(config.initializer_range))
         self.layer_norm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
-        self.dropout = nn.Dropout(1 - config.hidden_dropout_prob)
+        self.dropout = Dropout(config.hidden_dropout_prob)
 
     def construct(self, input_ids, token_type_ids=None, position_ids=None):
         seq_len = input_ids.shape[1]
@@ -131,7 +91,7 @@ class BertSelfAttention(nn.Cell):
         self.value = nn.Dense(config.hidden_size, self.all_head_size, \
             weight_init=TruncatedNormal(config.initializer_range))
 
-        self.dropout = nn.Dropout(1 - config.attention_probs_dropout_prob)
+        self.dropout = Dropout(config.attention_probs_dropout_prob)
         self.softmax = nn.Softmax(-1)
         self.matmul = Matmul()
 
@@ -185,7 +145,7 @@ class BertSelfOutput(nn.Cell):
         self.dense = nn.Dense(config.hidden_size, config.hidden_size, \
             weight_init=TruncatedNormal(config.initializer_range))
         self.layer_norm = nn.LayerNorm((config.hidden_size,), epsilon=1e-12)
-        self.dropout = nn.Dropout(1 - config.hidden_dropout_prob)
+        self.dropout = Dropout(config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
@@ -232,7 +192,7 @@ class BertOutput(nn.Cell):
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size, \
             weight_init=TruncatedNormal(config.initializer_range))
         self.layer_norm = nn.LayerNorm((config.hidden_size,), epsilon=1e-12)
-        self.dropout = nn.Dropout(1 - config.hidden_dropout_prob)
+        self.dropout = Dropout(config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
@@ -441,3 +401,8 @@ class BertForPretraining(nn.Cell):
         # ic(outputs) # [shape(batch_size, 128, 256), shape(batch_size, 256)]
 
         return outputs
+
+__all__ = [
+    'BertEmbeddings', 'BertAttention', 'BertEncoder', 'BertIntermediate', 'BertLayer',
+    'BertModel', 'BertForPretraining', 'BertLMPredictionHead'
+]
