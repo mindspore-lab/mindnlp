@@ -14,13 +14,7 @@
 # ============================================================================
 """MindNLP Model Utils"""
 
-import mindspore
-
-from typing import Optional, Tuple, Union, Callable
-from activations import get_activation, ACT2CLS
-from mindspore import nn, ops, Parameter, Tensor, dtype_to_nptype
-from .configuration_utils import PretrainedConfig
-
+from mindspore import nn
 
 try:
     from mindspore.nn import Identity
