@@ -23,7 +23,7 @@ import csv
 from typing import Union, Tuple
 import mindspore
 from mindspore.dataset import GeneratorDataset, text, transforms
-from mindnlp.transforms import TruncateSequence, BasicTokenizer
+from mindnlp.transforms import Truncate, BasicTokenizer
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.utils import make_bucket
 from mindnlp.dataset.register import load_dataset, process
@@ -193,7 +193,7 @@ def AG_NEWS_Process(dataset, vocab=None, tokenizer=BasicTokenizer(), bucket_boun
         if not isinstance(bucket_boundaries, list):
             raise ValueError(f"'bucket_boundaries' must be a list of int, but get {type(bucket_boundaries)}")
 
-        trancate_op = TruncateSequence(max_len)
+        trancate_op = Truncate(max_len)
         dataset = dataset.map([trancate_op], 'text')
         if bucket_boundaries[-1] < max_len + 1:
             bucket_boundaries.append(max_len + 1)

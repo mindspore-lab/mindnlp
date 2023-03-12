@@ -94,6 +94,6 @@ trainer = Trainer(network=net, train_dataset=ag_news_train, eval_dataset=ag_news
                   epochs=5, loss_fn=loss, optimizer=optimizer)
 
 print("start train")
-trainer.run(tgt_columns="label", jit=False)
+trainer.run(tgt_columns="label")
 # trainer.run()
 print("end train")
