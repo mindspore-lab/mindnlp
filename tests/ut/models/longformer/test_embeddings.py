@@ -15,10 +15,10 @@
 # ============================================================================
 """Test Longformer"""
 import unittest
+import numpy as np
+from mindspore import Tensor
 from mindnlp.models.longformer.longformer import LongformerEmbeddings
 from mindnlp.models.longformer.longformer_config import LongformerConfig
-from mindspore import Tensor
-import numpy as np
 class TestModelingBert(unittest.TestCase):
     r"""
     Test model bert
