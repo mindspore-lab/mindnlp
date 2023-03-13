@@ -44,7 +44,7 @@ class MachineTranslation(Seq2seqModel):
         return output.swapaxes(1,2)
 
 # load datasets
-multi30k_train, multi30k_valid, multi30k_test = load('multi30k')
+multi30k_train, multi30k_valid, multi30k_test = load_dataset('multi30k')
 
 # process datasets
 tokenizer = BasicTokenizer(True)
@@ -108,5 +108,5 @@ metric = Accuracy()
 # define trainer
 trainer = Trainer(network=net, train_dataset=multi30k_train, eval_dataset=multi30k_valid, metrics=metric,
                   epochs=10, loss_fn=loss_fn, optimizer=optimizer)
-trainer.run(tgt_columns="de", jit=False)
+trainer.run(tgt_columns="de")
 print("end train")
