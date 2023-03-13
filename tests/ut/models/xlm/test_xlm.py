@@ -15,8 +15,8 @@
 """
 Test XLM
 """
-import numpy as np
 import unittest
+import numpy as np
 import mindspore
 from mindnlp.models.xlm import xlm_config
 from mindnlp.models import xlm
@@ -37,9 +37,7 @@ class TestXlm(unittest.TestCase):
         """
         Test xlm_XLMPredLayer
         """
-        xlm_XLMPredLayer = xlm.XLMPredLayer(self.xlm_config)
-
+        xlm_predlayer = xlm.XLMPredLayer(self.xlm_config)
         input_ids = mindspore.Tensor(np.random.randint(0, 1000, (2, 2048)),mindspore.float32)
-
-        output = xlm_XLMPredLayer(input_ids)
-
+        output = xlm_predlayer(input_ids)
+        assert(output[0].shape == (2,22))
