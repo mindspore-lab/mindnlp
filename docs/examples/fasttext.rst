@@ -157,6 +157,8 @@ Set the loss, optimizer, metric.
 
 .. code:: python
 
+   from mindnlp.engine.metrics import Accuracy
+
    loss = nn.NLLLoss(reduction='mean')
    optimizer = nn.Adam(net.trainable_params(), learning_rate=lr)
    metric = Accuracy()
@@ -172,6 +174,6 @@ Get started with mindnlp’s built-in trainer.
                      epochs=5, loss_fn=loss, optimizer=optimizer)
 
    print("start train")
-   trainer.run(tgt_columns="label", jit=False)
+   trainer.run(tgt_columns="label")
    # trainer.run()
    print("end train")

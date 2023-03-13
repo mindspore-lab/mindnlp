@@ -18,7 +18,8 @@
 from .transformer import Transformer, TransformerDecoder, TransformerEncoder, \
     TransformerEncoderLayer, TransformerDecoderLayer, MultiheadAttention
 
+from .dropout import Dropout
 __all__ = [
     'Transformer', 'TransformerEncoder', 'TransformerDecoder',
     'TransformerEncoderLayer', 'TransformerDecoderLayer',
-    'MultiheadAttention']
+    'MultiheadAttention', 'Dropout']

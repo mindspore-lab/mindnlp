@@ -5,3 +5,5 @@ pylint
 pytest
 gensim
 ddt
+datasets
+tokenizers
