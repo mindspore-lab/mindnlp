@@ -117,7 +117,9 @@ setup(
     install_requires=[
         'tqdm',
         'requests',
-        'gensim'
+        'gensim',
+        'datasets',
+        'tokenizers'
     ],
     classifiers=[
         'License :: OSI Approved :: Apache Software License'

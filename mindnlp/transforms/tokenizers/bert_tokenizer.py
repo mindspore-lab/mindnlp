@@ -18,10 +18,10 @@ BertTokenizer
 
 import numpy as np
 from mindspore.dataset.transforms.transforms import PyTensorOperation
-from mindspore.dataset.text.transforms import TextTensorOperation, Implementation
+from mindspore.dataset.text.transforms import Implementation
 from tokenizers.implementations import BertWordPieceTokenizer
 
-class BertTokenizer(TextTensorOperation, PyTensorOperation):
+class BertTokenizer(PyTensorOperation):
     """
     Tokenizer used for Bert text process.
 
@@ -54,8 +54,7 @@ class BertTokenizer(TextTensorOperation, PyTensorOperation):
     # @check_decode
     def __init__(self, vocab, lower_case:bool = True):
         super().__init__()
-        self.vocab = vocab.vocab()
-        self.lower_case = lower_case
+        self.tokenizer = BertWordPieceTokenizer(vocab=vocab.vocab(), lowercase=lower_case)
         self.implementation = Implementation.PY
 
     def __call__(self, text_input):
@@ -80,10 +79,8 @@ class BertTokenizer(TextTensorOperation, PyTensorOperation):
         Execute method.
         """
         text = self._convert_to_unicode(text_input)
-        bert_tokenizer = BertWordPieceTokenizer(vocab=self.vocab, lowercase=self.lower_case)
-        output = bert_tokenizer.encode(text)
-        tokens = output.tokens
-        return np.array(tokens)
+        output = self.tokenizer.encode(text)
+        return np.array(output.tokens)
 
     def _convert_to_unicode(self, text_input):
         """Converts `text` to Unicode (if it's not already), assuming utf-8 input."""
@@ -96,6 +93,3 @@ class BertTokenizer(TextTensorOperation, PyTensorOperation):
                 text_input = np.char.decode(text_input, "utf-8")
             return str(text_input)
         raise ValueError(f"Unsupported string type: {type(text_input)}, {text_input.dtype}")
-
-    def parse(self):
-        pass

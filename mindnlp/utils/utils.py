@@ -18,6 +18,8 @@ import mindspore
 from mindspore import nn, ops, Parameter
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp._legacy.functional import addmm
+
 
 class Conv1D(nn.Cell):
     """
@@ -32,11 +34,11 @@ class Conv1D(nn.Cell):
         super().__init__()
         self.n_out = n_out
         self.gamma = Parameter(initializer(Normal(sigma=0.02), (n_in, n_out), mindspore.float32))
-        self.beta = Parameter(ops.zeros(n_out))
+        self.beta = Parameter(ops.zeros(n_out, mindspore.float32))
 
     def construct(self, x):
         size_out = x.shape[:-1] + (self.n_out,)
-        x = ops.addmm(self.beta, x.view(-1, x.shape[-1]), self.gamma)
+        x = addmm(self.beta, x.view(-1, x.shape[-1]), self.gamma)
         x = x.view(size_out)
         return x
 

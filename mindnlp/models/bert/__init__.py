@@ -1,4 +1,4 @@
-# Copyright 2021 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,10 +13,12 @@
 # limitations under the License.
 # ============================================================================
 """
-Models init
+Bert Model.
 """
-from mindnlp.models import bert
-from mindnlp.models.bert import *
+from mindnlp.models.bert import bert, bert_config
+from mindnlp.models.bert.bert import *
+from mindnlp.models.bert.bert_config import *
 
 __all__ = []
 __all__.extend(bert.__all__)
+__all__.extend(bert_config.__all__)
