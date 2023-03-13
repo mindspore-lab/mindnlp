@@ -214,4 +214,3 @@ class XLMConfig(PretrainedConfig):
             self.n_words = kwargs["n_words"]
 
         super().__init__(pad_token_id=pad_token_id, bos_token_id=bos_token_id, **kwargs)
-

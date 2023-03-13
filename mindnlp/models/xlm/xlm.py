@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import mindspore.ops as ops
+from mindspore import ops
 from mindspore import nn
 from ...utils import logging
 
@@ -33,7 +33,6 @@ class XLMPredLayer(nn.Cell):
         if config.asm is False:
             self.proj = nn.Dense(dim, config.n_words, has_bias=True)
         ## else :TO DO nn.AdaptiveLogSoftmaxWithLoss
-        
 
     def construct(self, x, y=None):
         """Compute the loss, and optionally the scores."""
@@ -42,7 +41,9 @@ class XLMPredLayer(nn.Cell):
             scores = self.proj(x)
             outputs = (scores,) + outputs
             if y is not None:
-                loss = ops.cross_entropy(scores.view(-1, self.n_words), y.view(-1), reduction="mean")
+                loss = ops.cross_entropy(scores.view(-1, self.n_words),
+                                        y.view(-1),
+                                        reduction="mean")
                 outputs = (loss,) + outputs
         else:
             scores = self.proj.log_prob(x)
@@ -52,5 +53,3 @@ class XLMPredLayer(nn.Cell):
                 outputs = (loss,) + outputs
 
         return outputs
-
-
