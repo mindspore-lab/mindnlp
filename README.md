@@ -4,17 +4,17 @@
     <a href="https://mindnlp.cqu.ai/en/latest/">
         <img alt="docs" src="https://img.shields.io/badge/docs-latest-blue">
     </a>
-    <a href="https://github.com/mindspore-ecosystem/mindnlp/blob/master/LICENSE">
-        <img alt="GitHub" src="https://img.shields.io/github/license/mindspore-ecosystem/mindnlp.svg">
+    <a href="https://github.com/mindspore-lab/mindnlp/blob/master/LICENSE">
+        <img alt="GitHub" src="https://img.shields.io/github/license/mindspore-lab/mindnlp.svg">
     </a>
-    <a href="https://github.com/mindspore-ecosystem/mindnlp/pulls">
+    <a href="https://github.com/mindspore-lab/mindnlp/pulls">
         <img alt="PRs Welcome" src="https://img.shields.io/badge/PRs-welcome-pink.svg">
     </a>
-    <a href="https://github.com/mindspore-ecosystem/mindnlp/issues">
-        <img alt="open issues" src="https://img.shields.io/github/issues/mindspore-ecosystem/mindnlp">
+    <a href="https://github.com/mindspore-lab/mindnlp/issues">
+        <img alt="open issues" src="https://img.shields.io/github/issues/mindspore-lab/mindnlp">
     </a>
-    <a href="https://github.com/mindspore-ecosystem/mindnlp/actions">
-        <img alt="ci" src="https://github.com/mindspore-ecosystem/mindnlp/actions/workflows/ut_test.yaml/badge.svg">
+    <a href="https://github.com/mindspore-lab/mindnlp/actions">
+        <img alt="ci" src="https://github.com/mindspore-lab/mindnlp/actions/workflows/ci_pipeline.yaml/badge.svg">
     </a>
 </p>
 

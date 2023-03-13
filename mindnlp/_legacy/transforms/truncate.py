@@ -1,10 +1,10 @@
-# Copyright 2018 The Google AI Language Team Authors.
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+
 # pylint: disable=import-outside-toplevel
 # pylint: disable=c-extension-no-member
 # pylint: disable=invalid-name
@@ -24,31 +25,23 @@ from mindspore.dataset.transforms.transforms import PyTensorOperation
 from mindspore.dataset.text.transforms import Implementation
 
 
-class TruncateSequence(PyTensorOperation):
+class Truncate(PyTensorOperation):
     """
     Truncate the input sequence.
 
     Args:
-        max_length (int): Maximum length required.
+        max_seq_length (int): Maximum length required.
 
     Raises:
         TypeError: If `max_length` is not of type int.
-
-    Supported Platforms:
-        ``CPU``
-
-
-    Supported Platforms:
-        ``CPU``
 
     Examples:
 
     """
 
-    # @check_decode
-    def __init__(self, max_len):
+    def __init__(self, max_seq_length):
         super().__init__()
-        self.max_len = max_len
+        self.max_seq_length = max_seq_length
         self.implementation = Implementation.PY
 
     def __call__(self, text_input):
@@ -70,4 +63,4 @@ class TruncateSequence(PyTensorOperation):
         """
         Execute method.
         """
-        return text_input[:self.max_len]
+        return text_input[:self.max_seq_length]

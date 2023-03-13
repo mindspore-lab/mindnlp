@@ -5,24 +5,24 @@ Embeddings
 fasttext\_embedding
 -----------------------------------------------------
 
-.. automodule:: mindnlp.modules.embeddings.fasttext_embedding
-   :members:
+.. autoclass:: mindnlp.modules.embeddings.fasttext_embedding
+   :members: construct, from_pretrained, load, save
    :undoc-members:
    :show-inheritance:
 
 glove\_embedding
 --------------------------------------------------
 
-.. automodule:: mindnlp.modules.embeddings.glove_embedding
-   :members:
+.. autoclass:: mindnlp.modules.embeddings.glove_embedding
+   :members: construct, from_pretrained, load, save
    :undoc-members:
    :show-inheritance:
 
 word2vec\_embedding
 -----------------------------------------------------
 
-.. automodule:: mindnlp.modules.embeddings.word2vec_embedding
-   :members:
+.. autoclass:: mindnlp.modules.embeddings.word2vec_embedding
+   :members: construct, from_pretrained, load, save
    :undoc-members:
    :show-inheritance:
 
