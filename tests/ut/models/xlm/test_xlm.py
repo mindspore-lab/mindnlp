@@ -40,4 +40,4 @@ class TestXlm(unittest.TestCase):
         xlm_predlayer = xlm.XLMPredLayer(self.xlm_config)
         input_ids = mindspore.Tensor(np.random.randint(0, 1000, (2, 2048)),mindspore.float32)
         output = xlm_predlayer(input_ids)
-        assert(output[0].shape == (2,22))
+        assert output[0].shape == (2,22)
