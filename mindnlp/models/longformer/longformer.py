@@ -82,7 +82,7 @@ _
     Returns: torch.Tensor
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
-    mask = input_ids.ne(padding_idx).int()
+    mask = mindspore.ops.not_equal(input_ids, padding_idx).astype(mindspore.int32)
     incremental_indices = mindspore.ops.cumsum(mask, axis=1, dtype=mask.dtype) * mask
     return incremental_indices.long() + padding_idx
 
