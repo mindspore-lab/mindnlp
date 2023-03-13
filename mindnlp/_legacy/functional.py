@@ -20,9 +20,14 @@
 import builtins
 from math import pi
 import mindspore
+import numpy
+from mindspore.ops.operations.array_ops import Tril
 from mindspore import ops, Tensor
 from mindspore.common import dtype as mstype
 from mindspore.ops._primitive_cache import _get_cache_prim
+from packaging import version
+
+MS_COMPATIBLE_VERSION = '1.10.1'
 
 cast_ = ops.Cast()
 scalar_to_tensor_ = ops.ScalarToTensor()
@@ -40,6 +45,33 @@ def kl_div(inputs, target, reduction='none', log_target=False):
     if reduction == 'mean':
         return kl_div_loss.mean()
     return kl_div_loss
+
+def where(condition, a, b):
+    """inner where"""
+    if version.parse(mindspore.__version__) <= version.parse(MS_COMPATIBLE_VERSION):
+        dtype = a.dtype
+        condition = condition.asnumpy()
+        a = a.asnumpy()
+        b = b.asnumpy()
+        return Tensor(numpy.where(condition, a, b), dtype)
+    return ops.where(condition, a, b)
+
+def split(x, size, axis=0):
+    """inner split"""
+    if version.parse(mindspore.__version__) <= version.parse(MS_COMPATIBLE_VERSION):
+        num = int(x.shape[axis] / size)
+        return ops.split(x, axis, num)
+    return ops.split(x, split_size_or_sections=size, axis=axis)
+
+def addmm(x, mat1, mat2, *, beta=1, alpha=1):
+    """inner addmm"""
+    _matmul_op = _get_cache_prim(ops.MatMul)()
+    return beta * x + alpha * (_matmul_op(mat1, mat2))
+
+def tril(input_x, diagonal=0):
+    """inner tril"""
+    _tril_op = _get_cache_prim(Tril)(diagonal)
+    return _tril_op(input_x)
 
 def softmax(inputs, axis=-1):
     """inner softmax"""

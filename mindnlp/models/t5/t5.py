@@ -24,11 +24,11 @@ from mindspore import nn
 from mindspore import ops
 from mindspore import Parameter, Tensor
 # from mindnlp.abc.backbones.pretrained import PretrainedModel
-from mindnlp.utils.activations import ACT2FN
-from mindnlp.utils import logging
 
 from mindnlp._legacy.nn import Dropout
 from mindnlp._legacy.functional import arange
+from ..utils.activations import ACT2FN
+from ..utils import logging
 
 from .t5_config import T5Config
 
