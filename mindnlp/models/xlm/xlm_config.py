@@ -15,11 +15,6 @@
 # pylint: disable=too-many-instance-attributes
 """ XLM configuration"""
 from ...abc.backbones import PretrainedConfig
-from ...utils import logging
-
-
-logger = logging.getLogger(__name__)
-
 
 class XLMConfig(PretrainedConfig):
     """
