@@ -21,7 +21,6 @@ from typing import Union, Optional
 from mindspore.train.serialization import load_checkpoint, load_param_into_net
 from mindspore import nn
 
-
 class PretrainedConfig:
     """
     Abstract class for Pretrained models config.
@@ -32,10 +31,9 @@ class PretrainedConfig:
         self.output_attentions = kwargs.pop('output_attentions', False)
         self.output_hidden_states = kwargs.pop('output_hidden_states', False)
         self.is_decoder = kwargs.pop("is_decoder", False)
-        self.pad_token_id = kwargs.pop("pad_token_id", None)
+        self.pad_token_id = kwargs.pop("pad_token_id", False)
         self.eos_token_id = kwargs.pop("eos_token_id", False)
         self.is_encoder_decoder = kwargs.pop("is_encoder_decoder", False)
-        self.add_cross_attention = kwargs.pop("add_cross_attention", False)
 
     @classmethod
     def from_json(cls, file_path):
