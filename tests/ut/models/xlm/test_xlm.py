@@ -13,8 +13,33 @@
 # limitations under the License.
 # ============================================================================
 """
-XLM Models init
+Test XLM
 """
+import numpy as np
+import unittest
+import mindspore
+from mindnlp.models.xlm import xlm_config
+from mindnlp.models import xlm
 
-from .xlm_config import *
-from .xlm import *
+class TestXlm(unittest.TestCase):
+    """
+    Test XLM Models
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up config
+        """
+        cls.xlm_config = xlm_config.XLMConfig(n_words=22)
+
+    def test_xlm_predlayer(self):
+        """
+        Test xlm_XLMPredLayer
+        """
+        xlm_XLMPredLayer = xlm.XLMPredLayer(self.xlm_config)
+
+        input_ids = mindspore.Tensor(np.random.randint(0, 1000, (2, 2048)),mindspore.float32)
+
+        output = xlm_XLMPredLayer(input_ids)
+
