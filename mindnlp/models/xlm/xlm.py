@@ -20,7 +20,7 @@ from mindspore import ops
 from mindspore import nn
 from ...utils import logging
 
-logger = logging.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 class XLMPredLayer(nn.Cell):
     """
