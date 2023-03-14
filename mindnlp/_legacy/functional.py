@@ -15,6 +15,7 @@
 # pylint: disable=C0103
 # pylint: disable=E1120
 # pylint: disable=E1123
+# pylint: disable=ungrouped-imports
 
 """Custom functional api for legacy mindspore"""
 import builtins
