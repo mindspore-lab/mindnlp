@@ -14,9 +14,90 @@
 # ============================================================================
 """"Class for Metric EmScore"""
 
-
+import string
+import re
 from mindnlp.abc import Metric
-from mindnlp.scoring.metrics import _compute_exact, _metric_max_over_ground_truths, _check_value_type
+from .utils import _check_value_type
+
+def _compute_exact(y_pred, y_true):
+    def _normalize_answer(txt):
+        """Lowers text and removes punctuation, articles and extra whitespace."""
+
+        def remove_articles(text):
+            regex = re.compile(r"\b(a|an|the)\b", re.UNICODE)
+            return re.sub(regex, " ", text)
+
+        def white_space_fix(text):
+            return " ".join(text.split())
+
+        def remove_punc(text):
+            exclude = set(string.punctuation)
+            return "".join(ch for ch in text if ch not in exclude)
+
+        def lower(text):
+            return text.lower()
+
+        return white_space_fix(remove_articles(remove_punc(lower(txt))))
+
+    return int(_normalize_answer(y_pred) == _normalize_answer(y_true))
+
+def _metric_max_over_ground_truths(metric_fn, pred, example):
+    scores_for_ground_truths = []
+    for y_eg in example:
+        score = metric_fn(pred, y_eg)
+        scores_for_ground_truths.append(score)
+    return round(max(scores_for_ground_truths), 2)
+
+def em_score_fn(preds, examples):
+    r"""
+    Calculates the exact match (EM) score. This metric measures the percentage of
+    predictions that match any one of the ground truth exactly.
+
+    Args:
+        preds (Union[str, list]): Predicted value.
+        examples (list): Ground truth.
+
+    Returns:
+        - **exact_match** (float) - The computed result.
+
+    Raises:
+        RuntimeError: If `preds` and `examples` have different lengths.
+
+    Example:
+        >>> import numpy as np
+        >>> import mindspore
+        >>> from mindspore import Tensor
+        >>> from mindnlp.common.metrics import em_score
+        >>> preds = "this is the best span"
+        >>> examples = ["this is a good span", "something irrelevant"]
+        >>> exact_match = em_score(preds, examples)
+        >>> print(exact_match)
+        0.0
+
+    """
+    _check_value_type("preds", preds, [str, list])
+    _check_value_type("examples", examples, [list])
+
+    if not isinstance(preds, list):
+        preds = [preds]
+        examples = [examples]
+
+    if len(preds) != len(examples):
+        raise RuntimeError(f'`preds` and `examples` should have the same length, but got `examples`'
+                           f' length {len(preds)}, `labels` length {len(examples)})')
+
+    count = len(preds)
+    exact_match = 0
+
+    for pred, example in zip(preds, examples):
+        exact_match += _metric_max_over_ground_truths(
+            _compute_exact, pred, example
+        )
+
+    total_em = int(exact_match)
+
+    exact_match = total_em / count if count > 0 else 0
+    return exact_match
 
 
 class EmScore(Metric):
@@ -111,3 +192,5 @@ class EmScore(Metric):
         Returns the name of the metric.
         """
         return self._name
+
+__all__ = ['em_score_fn', 'EmScore']
