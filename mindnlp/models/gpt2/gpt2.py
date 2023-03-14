@@ -24,10 +24,10 @@ from mindspore import nn, ops, Parameter, Tensor, dtype_to_nptype
 from mindnlp._legacy.functional import tril, split, where, arange
 from mindnlp._legacy.nn import Dropout
 from mindnlp.models.gpt2.config_gpt2 import GPT2Config
-from ...utils import logging
-from ...utils.activations import ACT2FN
+from ..utils import logging
+from ..utils.activations import ACT2FN
 from ...utils.modeling_utils import SequenceSummary
-from ...utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
+from ..utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
 
 logger = logging.get_logger(__name__)
 
@@ -674,12 +674,21 @@ class GPT2DoubleHeadsModel(nn.Cell):
         self.multiple_choice_head = SequenceSummary(config)
 
     def get_output_embeddings(self):
+        """
+        Returns the embeddings of the obtained output
+        """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
+        """
+        Define the embeddings of the output
+        """
         self.lm_head = new_embeddings
 
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, **kwargs):
+        """
+        prepare_inputs
+        """
         token_type_ids = kwargs.get("token_type_ids", None)
         # only last token for inputs_ids if past is defined in kwargs
         if past_key_values:
