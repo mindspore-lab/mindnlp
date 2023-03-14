@@ -28,8 +28,7 @@ class TestMobileBert(unittest.TestCase):
     Test TinyBert Models
     """
 
-    @classmethod
-    def setUpClass(self):
+    def setUp(self):
         """
         Set up config
         """
