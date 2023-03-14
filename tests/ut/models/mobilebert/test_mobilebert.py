@@ -40,18 +40,18 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertEmbeddings
         """
 
-        bert_embeddings = MobileBertEmbeddings(MobileBertConfig())
+        mobilebert_embeddings = MobileBertEmbeddings(MobileBertConfig())
         input_ids = Tensor(np.random.randint(0, 1000, (2, 128)))
-        output = bert_embeddings(input_ids)
+        output = mobilebert_embeddings(input_ids)
         assert output.shape == (2,128,512)
 
     def test_mobilebert_selfattention(self):
         """
         Test MobileBertEmbeddings
         """
-        bert_selfattention=MobileBertSelfAttention(MobileBertConfig())
+        mobilebert_selfattention=MobileBertSelfAttention(MobileBertConfig())
         query_tensor=Tensor(np.random.randint(0, 1000, (2,8, 128)),dtype=mindspore.float32)
         key_tensor=Tensor(np.random.randint(0, 1000, (2,8, 128)),dtype=mindspore.float32)
         value_tensor=Tensor(np.random.randint(0, 1000, (2,8, 512)),dtype=mindspore.float32)
-        output = bert_selfattention(query_tensor,key_tensor,value_tensor)
+        output = mobilebert_selfattention(query_tensor,key_tensor,value_tensor)
         assert output[0].shape == (2,8,128)
