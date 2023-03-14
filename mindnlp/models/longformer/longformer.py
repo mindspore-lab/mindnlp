@@ -23,7 +23,7 @@
 # pylint:
 import mindspore
 from mindspore import nn
-
+from ..._legacy import functional
 activation_map = {
     'relu': nn.ReLU(),
     'gelu': nn.GELU(False),
@@ -83,7 +83,7 @@ _
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = mindspore.ops.not_equal(input_ids, padding_idx).astype(mindspore.int32)
-    incremental_indices = mindspore.ops.cumsum(mask, axis=1, dtype=mask.dtype) * mask
+    incremental_indices = functional.cumsum(mask, axis=1, dtype=mask.dtype) * mask
     return incremental_indices.long() + padding_idx
 
 
