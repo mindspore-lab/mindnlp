@@ -97,9 +97,9 @@ class MobileBertEmbeddings(nn.Cell):
             # dimensional output.
             inputs_embeds = ops.concat(
                 [
-                    ops.pad(inputs_embeds[:, 1:], (0, 0, 0, 1, 0, 0)),
+                    ops.pad(inputs_embeds[:, 1:], ([0, 0, 0, 1, 0, 0])),
                     inputs_embeds,
-                    ops.pad(inputs_embeds[:, :-1], (0, 0, 1, 0, 0, 0)),
+                    ops.pad(inputs_embeds[:, :-1], ([0, 0, 1, 0, 0, 0])),
                 ],
                 axis=2
             )
