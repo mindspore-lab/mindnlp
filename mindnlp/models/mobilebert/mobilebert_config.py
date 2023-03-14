@@ -1,20 +1,27 @@
+# Copyright 2022 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+"""
+MobileBERT model configuration
+"""
 
-
-""" MobileBERT model configuration"""
-
-class PretrainedConfig:
-    """
-    Pretrained Config.
-    """
-    def __init__(self, **kwargs):
-        self.finetuning_task = kwargs.pop('finetuning_task', None)
-        self.num_labels = kwargs.pop('num_labels', 2)
-        self.output_attentions = kwargs.pop('output_attentions', False)
-        self.output_hidden_states = kwargs.pop('output_hidden_states', False)
-
+from mindnlp.abc.backbones.pretrained import PretrainedConfig
 
 class MobileBertConfig(PretrainedConfig):
-
+    """
+    MobileBertConfig
+    """
     def __init__(
         self,
         vocab_size=30522,

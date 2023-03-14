@@ -1,22 +1,43 @@
+# Copyright 2022 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+# pylint: disable=C0103
+# pylint: disable=C0301
+"""
+MobileBert model
+"""
+
 import math
 from typing import Optional, Tuple
 
+import mindspore
 import mindspore.numpy as mnp
 from mindspore import Parameter, Tensor
 from mindspore import nn
 from mindspore import ops
 from mindspore.common.initializer import TruncatedNormal
 from mindnlp._legacy.nn import Dropout
-import mindspore
 
 
 class NoNorm(nn.Cell):
-    def __init__(self, feat_size, eps=None):
+    """NoNorm"""
+    def __init__(self, feat_size):
         super().__init__()
         self.bias = Parameter(ops.zeros(feat_size))
         self.weight = Parameter(ops.ones(feat_size))
 
-    def forward(self, input_tensor: Tensor) -> Tensor:
+    def construct(self, input_tensor: Tensor) -> Tensor:
         return input_tensor * self.weight + self.bias
 
 NORM2FN = {"layer_norm": nn.LayerNorm, "no_norm": NoNorm}
@@ -95,6 +116,7 @@ class MobileBertEmbeddings(nn.Cell):
         return embeddings
 
 class MobileBertSelfAttention(nn.Cell):
+    """MobileBertSelfAttention"""
     def __init__(self, config):
         super().__init__()
         self.num_attention_heads = config.num_attention_heads
@@ -109,6 +131,7 @@ class MobileBertSelfAttention(nn.Cell):
         self.dropout = Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x):
+        """transpose_for_scores"""
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
