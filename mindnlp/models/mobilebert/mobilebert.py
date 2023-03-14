@@ -95,13 +95,13 @@ class MobileBertEmbeddings(nn.Cell):
             # the embedding layer, we reduce the embedding dimension to 128 in MobileBERT.
             # Then, we apply a 1D convolution with kernel size 3 on the raw token embedding to produce a 512
             # dimensional output.
-            inputs_embeds = ops.cat(
+            inputs_embeds = ops.concat(
                 [
                     ops.pad(inputs_embeds[:, 1:], [0, 0, 0, 1, 0, 0], value=None),
                     inputs_embeds,
                     ops.pad(inputs_embeds[:, :-1], [0, 0, 1, 0, 0, 0], value=None),
                 ],
-                axis=2,
+                axis=2
             )
         if self.trigram_input or self.embedding_size != self.hidden_size:
             inputs_embeds = self.embedding_transformation(inputs_embeds)
