@@ -33,9 +33,13 @@ class PretrainedConfig:
         self.output_hidden_states = kwargs.pop('output_hidden_states', False)
         self.is_decoder = kwargs.pop("is_decoder", False)
         self.pad_token_id = kwargs.pop("pad_token_id", None)
-        self.eos_token_id = kwargs.pop("eos_token_id", False)
+        self.eos_token_id = kwargs.pop("eos_token_id", None)
         self.is_encoder_decoder = kwargs.pop("is_encoder_decoder", False)
         self.add_cross_attention = kwargs.pop("add_cross_attention", False)
+        self.tie_word_embeddings = kwargs.pop(
+            "tie_word_embeddings", True
+        )  # Whether input and output word embeddings should be tied for all MLM, LM and Seq2Seq models.
+        self.decoder_start_token_id = kwargs.pop("decoder_start_token_id", None)
 
     @classmethod
     def from_json(cls, file_path):
