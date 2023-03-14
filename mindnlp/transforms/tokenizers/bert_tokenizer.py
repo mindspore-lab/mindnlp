@@ -52,9 +52,10 @@ class BertTokenizer(PyTensorOperation):
     """
 
     # @check_decode
-    def __init__(self, vocab, lower_case:bool = True):
+    def __init__(self, vocab, lower_case:bool = True, return_token = False):
         super().__init__()
         self.tokenizer = BertWordPieceTokenizer(vocab=vocab.vocab(), lowercase=lower_case)
+        self.return_token = return_token
         self.implementation = Implementation.PY
 
     def __call__(self, text_input):
@@ -80,7 +81,9 @@ class BertTokenizer(PyTensorOperation):
         """
         text = self._convert_to_unicode(text_input)
         output = self.tokenizer.encode(text)
-        return np.array(output.tokens)
+        if self.return_token is True:
+            return np.array(output.tokens)
+        return np.array(output.ids)
 
     def _convert_to_unicode(self, text_input):
         """Converts `text` to Unicode (if it's not already), assuming utf-8 input."""
