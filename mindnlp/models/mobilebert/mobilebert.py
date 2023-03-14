@@ -83,7 +83,7 @@ class MobileBertEmbeddings(nn.Cell):
             position_ids = position_ids.expand_dims(0).expand_as(input_ids)
 
         if token_type_ids is None:
-            token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
+            token_type_ids = ops.zeros(input_shape, mindspore.int64)
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
 
@@ -134,7 +134,7 @@ class MobileBertSelfAttention(nn.Cell):
         """transpose_for_scores"""
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(new_x_shape)
-        return x.permute(0, 2, 1, 3)
+        return x.transpose(0, 2, 1, 3)
 
     def construct(
         self,
@@ -168,7 +168,7 @@ class MobileBertSelfAttention(nn.Cell):
         if head_mask is not None:
             attention_probs = attention_probs * head_mask
         context_layer = ops.matmul(attention_probs, value_layer)
-        context_layer = context_layer.permute(0, 2, 1, 3)
+        context_layer = context_layer.transpose(0, 2, 1, 3)
         new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(new_context_layer_shape)
         outputs = (context_layer, attention_probs) if output_attentions else (context_layer,)
