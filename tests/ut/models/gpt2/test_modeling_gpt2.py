@@ -99,6 +99,23 @@ class TestModelingGPT2(unittest.TestCase):
         assert transformer_outputs[0][0].shape == (2, 12, 512, 64)
         assert transformer_outputs[0][1].shape == (2, 12, 512, 64)
 
+    def test_gpt2_double_heads_model(self):
+        r"""
+        Test model GPT2 Model with pynative mode
+        """
+        config = config_gpt2.GPT2Config()
+        model = gpt2.GPT2DoubleHeadsModel(config)
+
+        input_ids = Tensor(np.random.randint(0, 10, (2, 512)))
+
+        logits, mc_logits, past_key_values =model(input_ids)
+
+        assert logits.shape == (2, 512, 50257)
+        assert mc_logits.shape == 2
+        assert past_key_values[0][0].shape == (2, 12, 512, 64)
+        assert past_key_values[0][1].shape == (2, 12, 512, 64)
+
+
     def test_gpt2_for_sequence_classification(self):
         r"""
         Test GPT2 For Sequence Classification
@@ -112,3 +129,15 @@ class TestModelingGPT2(unittest.TestCase):
         assert pooled_logits.shape == (1, 2)
         assert transformer_outputs[0][0].shape == (1, 12, 512, 64)
         assert transformer_outputs[0][1].shape == (1, 12, 512, 64)
+
+    def test_gpt2_for_token_classification(self):
+        r"""
+        Test model GPT2 Model with pynative mode
+        """
+        config = config_gpt2.GPT2Config()
+        model = gpt2.GPT2ForTokenClassification(config)
+
+        input_ids = Tensor(np.random.randint(0, 10, (2, 512)))
+
+        logits = model(input_ids)
+        assert logits[0].shape == (2, 512, 2)
