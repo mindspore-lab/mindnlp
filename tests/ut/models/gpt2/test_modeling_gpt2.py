@@ -112,7 +112,7 @@ class TestModelingGPT2(unittest.TestCase):
         logits, mc_logits, past_key_values = model(input_ids)
 
         assert logits.shape == (2, 512, 50257)
-        assert mc_logits.shape == 2
+        assert mc_logits.shape == (2,)
         assert past_key_values[0][0].shape == (2, 12, 512, 64)
         assert past_key_values[0][1].shape == (2, 12, 512, 64)
 
