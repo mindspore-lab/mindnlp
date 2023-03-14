@@ -20,7 +20,6 @@ from mindnlp.utils.activations import get_activation
 from mindspore import nn, ops, Tensor
 from typing import Optional
 
-
 try:
     from mindspore.nn import Identity
 except ImportError:
@@ -39,6 +38,7 @@ class SequenceSummary(nn.Cell):
     """
     GPT2DoubleHeadsModel class that self.multiple_choice_head
     """
+
     def __init__(self, config):
         super().__init__()
 

@@ -746,7 +746,6 @@ class GPT2DoubleHeadsModel(nn.Cell):
             output = (mc_loss,) + output
         return ((lm_loss,) + output) if lm_loss is not None else output
 
-
     @staticmethod
     def _reorder_cache(past, beam_idx):
         return tuple(
@@ -863,7 +862,6 @@ class GPT2ForTokenClassification(GPT2PreTrainedModel):
             classifier_dropout = 0.1
         self.dropout = nn.Dropout(p=classifier_dropout)
         self.classifier = nn.Dense(config.hidden_size, config.num_labels)
-
 
     def construct(self, input_ids=None, past_key_values=None, attention_mask=None, token_type_ids=None,
                   position_ids=None, head_mask=None, inputs_embeds=None, labels=None, use_cache=None,

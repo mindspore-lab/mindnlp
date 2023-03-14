@@ -37,11 +37,11 @@ ACT2CLS = {
     'gelu': (nn.GELU, {"approximate=": False}),
     'gelu_new': nn.GELU,
     'gelu_approximate': (nn.GELU, {"approximate=": True}),
-    "swish": nn.SiLU, # MindSpore的SiLU激活函数是Swish函数
-    "gelu_10": nn.GELU, # MindSpore的GELU激活函数不支持设置最大值和最小值
+    "swish": nn.SiLU,  # MindSpore的SiLU激活函数是Swish函数
+    "gelu_10": nn.GELU,  # MindSpore的GELU激活函数不支持设置最大值和最小值
     "gelu_fast": nn.FastGelu,
-    "gelu_python": nn.GELU, # MindSpore的GELU激活函数不支持选择是否使用Python实现
-    "linear": nn.ReLU, # MindSpore没有Linear激活函数，使用ReLU代替
+    "gelu_python": nn.GELU,  # MindSpore的GELU激活函数不支持选择是否使用Python实现
+    "linear": nn.ReLU,  # MindSpore没有Linear激活函数，使用ReLU代替
     "mish": nn.Mish,
     "quick_gelu": nn.FastGelu,
     "relu": nn.ReLU,
@@ -51,6 +51,7 @@ ACT2CLS = {
     "tanh": nn.Tanh,
 }
 ACT2FN = ClassInstantier(ACT2CLS)
+
 
 def get_activation(activation_string):
     """

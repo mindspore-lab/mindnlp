@@ -27,6 +27,7 @@ class TestModelingGPT2(unittest.TestCase):
     r"""
     Test GPT2
     """
+
     def setUp(self):
         """
         Set up.
@@ -108,13 +109,12 @@ class TestModelingGPT2(unittest.TestCase):
 
         input_ids = Tensor(np.random.randint(0, 10, (2, 512)))
 
-        logits, mc_logits, past_key_values =model(input_ids)
+        logits, mc_logits, past_key_values = model(input_ids)
 
         assert logits.shape == (2, 512, 50257)
         assert mc_logits.shape == 2
         assert past_key_values[0][0].shape == (2, 12, 512, 64)
         assert past_key_values[0][1].shape == (2, 12, 512, 64)
-
 
     def test_gpt2_for_sequence_classification(self):
         r"""
