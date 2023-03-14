@@ -23,11 +23,12 @@ import numpy as np
 from mindspore import nn
 from mindspore import ops
 from mindspore import Parameter, Tensor
-# from mindnlp.abc.backbones.pretrained import PretrainedModel
+from mindnlp.abc.backbones.pretrained import PretrainedModel
 
 from mindnlp._legacy.nn import Dropout
 from mindnlp._legacy.functional import arange
 from ..utils.activations import ACT2FN
+from ..utils.mixin import CellUtilMixin
 from ..utils import logging
 
 from .t5_config import T5Config
@@ -498,8 +499,60 @@ class T5Block(nn.Cell):
         # (self-attention weights), (cross-attention position bias),(cross-attention weights)
 
 
-# class T5PreTrainedModel(PretrainedModel):
-#     ...
+class T5PreTrainedModel(PretrainedModel, CellUtilMixin):
+    """
+    An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
+    models.
+    """
+    config_class = T5Config
+    base_model_prefix = "transformer"
+    is_parallelizable = True
+    supports_gradient_checkpointing = True
+    _no_split_modules = ["T5Block"]
+    _keep_in_fp32_modules = ["wo"]
+
+    # TODO
+    def get_input_embeddings(self):
+        pass
+
+    #TODO
+    def get_position_embeddings(self):
+        pass
+
+    #TODO
+    def init_model_weights(self):
+        pass
+
+    #TODO
+    def resize_position_embeddings(self):
+        pass
+
+    #TODO
+    def save(self):
+        pass
+
+    #TODO
+    def set_input_embeddings(self):
+        pass
+
+    def _shift_right(self, input_ids):
+        decoder_start_token_id = self.config.decoder_start_token_id
+        pad_token_id = self.config.pad_token_id
+
+        assert decoder_start_token_id is not None, (
+            "self.model.config.decoder_start_token_id has to be defined. In T5 it is usually set to the pad_token_id."
+            " See T5 docs for more information"
+        )
+
+        # shift inputs to the right
+        shifted_input_ids = ops.zeros(input_ids.shape, mindspore.float32)
+        shifted_input_ids[..., 1:] = input_ids[..., :-1].copy()
+        shifted_input_ids[..., 0] = decoder_start_token_id
+
+        assert pad_token_id is not None, "self.model.config.pad_token_id has to be defined."
+        # replace possible -100 values in labels by `pad_token_id`
+        shifted_input_ids = ops.masked_fill(shifted_input_ids, shifted_input_ids == -100, pad_token_id)
+        return shifted_input_ids
 
 
 # class T5Stack(T5PreTrainedModel):
@@ -509,6 +562,8 @@ class T5Block(nn.Cell):
 # class T5Model(T5PreTrainedModel):
 #     ...
 
+# class T5ForConditionalGeneration(T5PreTrainedModel):
+#     ...
 
 # class T5EncoderModel(T5PreTrainedModel):
 #     ...
