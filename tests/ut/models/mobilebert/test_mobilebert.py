@@ -21,7 +21,7 @@ import mindspore
 from mindspore import Tensor
 import numpy as np
 
-from mindnlp.models.mobilebert import MobileBertEmbeddings,MobileBertSelfAttention,MobileBertConfig
+from mindnlp.models.mobilebert import MobileBertSelfAttention,MobileBertConfig
 
 class TestMobileBert(unittest.TestCase):
     """
@@ -34,16 +34,6 @@ class TestMobileBert(unittest.TestCase):
         """
 
         self.input=None
-
-    def test_mobilebert_embedding(self):
-        """
-        Test MobileBertEmbeddings
-        """
-
-        mobilebert_embeddings = MobileBertEmbeddings(MobileBertConfig())
-        input_ids = Tensor(np.random.randint(0, 1000, (2, 128)))
-        output = mobilebert_embeddings(input_ids)
-        assert output.shape == (2,128,512)
 
     def test_mobilebert_selfattention(self):
         """

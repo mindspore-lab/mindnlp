@@ -21,12 +21,12 @@ MobileBert model
 import math
 from typing import Optional, Tuple
 
-import mindspore
-import mindspore.numpy as mnp
+# import mindspore
+# import mindspore.numpy as mnp
 from mindspore import Parameter, Tensor
 from mindspore import nn
 from mindspore import ops
-from mindspore.common.initializer import TruncatedNormal
+# from mindspore.common.initializer import TruncatedNormal
 from mindnlp._legacy.nn import Dropout
 
 
@@ -41,79 +41,6 @@ class NoNorm(nn.Cell):
         return input_tensor * self.weight + self.bias
 
 NORM2FN = {"layer_norm": nn.LayerNorm, "no_norm": NoNorm}
-
-
-class MobileBertEmbeddings(nn.Cell):
-    """Construct the embeddings from word, position and token_type embeddings."""
-
-    def __init__(self, config):
-        super().__init__()
-        self.trigram_input = config.trigram_input
-        self.embedding_size = config.embedding_size
-        self.hidden_size = config.hidden_size
-
-        self.word_embeddings = nn.Embedding(config.vocab_size, config.embedding_size, embedding_table=TruncatedNormal(config.initializer_range))
-        self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
-        self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
-
-        embed_dim_multiplier = 3 if self.trigram_input else 1
-        embedded_input_size = self.embedding_size * embed_dim_multiplier
-        self.embedding_transformation = nn.Dense(embedded_input_size, config.hidden_size)
-
-        self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
-        self.dropout = Dropout(config.hidden_dropout_prob)
-
-
-    def construct(
-            self,
-            input_ids: Optional[Tensor] = None,
-            token_type_ids: Optional[Tensor] = None,
-            position_ids: Optional[Tensor] = None,
-            inputs_embeds: Optional[Tensor] = None,
-    ) -> Tensor:
-        if input_ids is not None:
-            input_shape = input_ids.shape
-        else:
-            input_shape = inputs_embeds.size()[:-1]
-
-        seq_length = input_shape[1]
-
-        if position_ids is None:
-            position_ids = mnp.arange(seq_length)
-            position_ids = position_ids.expand_dims(0).expand_as(input_ids)
-
-        if token_type_ids is None:
-            token_type_ids = ops.zeros(input_shape, mindspore.int64)
-        if inputs_embeds is None:
-            inputs_embeds = self.word_embeddings(input_ids)
-
-        if self.trigram_input:
-            # From the paper MobileBERT: a Compact Task-Agnostic BERT for Resource-Limited
-            # Devices (https://arxiv.org/abs/2004.02984)
-            #
-            # The embedding table in BERT models accounts for a substantial proportion of model size. To compress
-            # the embedding layer, we reduce the embedding dimension to 128 in MobileBERT.
-            # Then, we apply a 1D convolution with kernel size 3 on the raw token embedding to produce a 512
-            # dimensional output.
-            inputs_embeds = ops.concat(
-                [
-                    ops.pad(inputs_embeds[:, 1:], ([0, 0, 0, 1, 0, 0])),
-                    inputs_embeds,
-                    ops.pad(inputs_embeds[:, :-1], ([0, 0, 1, 0, 0, 0])),
-                ],
-                axis=2
-            )
-        if self.trigram_input or self.embedding_size != self.hidden_size:
-            inputs_embeds = self.embedding_transformation(inputs_embeds)
-
-        # Add positional embeddings and token type embeddings, then layer
-        # normalize and perform dropout.
-        position_embeddings = self.position_embeddings(position_ids)
-        token_type_embeddings = self.token_type_embeddings(token_type_ids)
-        embeddings = inputs_embeds + position_embeddings + token_type_embeddings
-        embeddings = self.LayerNorm(embeddings)
-        embeddings = self.dropout(embeddings)
-        return embeddings
 
 class MobileBertSelfAttention(nn.Cell):
     """MobileBertSelfAttention"""
