@@ -14,9 +14,160 @@
 # ============================================================================
 """"Classes for Metrics RougeN and RougeL"""
 
-
+import numpy as np
 from mindnlp.abc import Metric
-from mindnlp.scoring.metrics import _check_value_type, _get_ngrams, _lcs
+from .utils import _check_value_type
+
+
+def _get_ngrams(words, n_size=1):
+    """
+    Calculates n-gram for multiple sentences.
+    """
+    ngram_set = set()
+    max_start = len(words) - n_size
+    for i in range(max_start + 1):
+        ngram_set.add(tuple(words[i:i + n_size]))
+    return ngram_set
+
+def _lcs(strg, sub):
+    """
+    Calculates the length of longest common subsequence of strg and sub.
+
+    Args:
+        strg (list): The string to be calculated, usually longer the sub string.
+        sub (list): The sub string to be calculated.
+
+    Returns:
+        - **length** (float) - The length of the longest common subsequence
+                                of string and sub.
+    """
+    if len(strg) < len(sub):
+        sub, strg = strg, sub
+    lengths = np.zeros((len(strg) + 1, len(sub) + 1))
+    for j in range(1, len(sub) + 1):
+        for i in range(1, len(strg) + 1):
+            if strg[i - 1] == sub[j - 1]:
+                lengths[i][j] = lengths[i - 1][j - 1] + 1
+            else:
+                lengths[i][j] = max(lengths[i - 1][j], lengths[i][j - 1])
+
+    length = lengths[len(strg)][len(sub)]
+    return length
+
+
+def rouge_n_fn(cand_list, ref_list, n_size=1):
+    r"""
+    Calculates the ROUGE-N score. ROUGE (Recall-Oriented Understudy for Gisting Evaluation) is
+    a set of metrics used for evaluating automatic summarization and machine translation
+    models. ROUGE-N refers to the overlap of n-grams between candidates and reference
+    summaries.
+
+    Args:
+        cand_list (list): A list of tokenized candidate sentences.
+        ref_list (list): A list of lists of tokenized true sentences.
+        n_size (int): N_gram value. Default: 1.
+
+    Returns:
+        - **rougen_score** (float) - The computed result.
+
+    Raises:
+        RuntimeError: If the reference size is 0.
+
+    Example:
+        >>> from mindnlp.common.metrics import rouge_n
+        >>> cand_list = ["the", "cat", "was", "found", "under", "the", "bed"]
+        >>> ref_list = [["the", "cat", "was", "under", "the", "bed"]]
+        >>> rougen_score = rouge_n(cand_list, ref_list, 2)
+        >>> print(rougen_score)
+        0.8
+
+    """
+    cand_list = _check_value_type("cand_list", cand_list, list)
+    ref_list = _check_value_type("ref_list", ref_list, list)
+    n_size = _check_value_type("n_size", n_size, [int])
+
+    overlap_count = 0
+    ref_count = 0
+
+    cand_ngrams = _get_ngrams(cand_list, n_size)
+    for reference in ref_list:
+        ref_ngrams = _get_ngrams(reference, n_size)
+        ref_count += len(ref_ngrams)
+
+        # Gets the overlapping ngrams between evaluated and reference
+        overlap_ngrams = cand_ngrams.intersection(ref_ngrams)
+        overlap_count += len(overlap_ngrams)
+
+    if ref_count == 0:
+        raise RuntimeError(f'ROUGE-N can not be calculated, because the number of references is {0}')
+
+    rougen_score = overlap_count / ref_count
+
+    return rougen_score
+
+def rouge_l_fn(cand_list, ref_list, beta=1.2):
+    r"""
+    Calculates the ROUGE-L score. ROUGE (Recall-Oriented Understudy for Gisting Evaluation) is
+    a set of metrics used for evaluating automatic summarization and machine translation
+    models. ROUGE-L is calculated based on Longest Common Subsequence (LCS). The function
+    is shown as follows:
+
+    .. math::
+
+        R_{l c s}=\frac{L C S(X, Y)}{m}
+
+        p_{l c s}=\frac{L C S(X, Y)}{n}
+
+        F_{l c s}=\frac{\left(1+\beta^{2}\right) R_{l c s} P_{l c s}}{R_{l c s}+\beta^{2} P_{l c s}}
+
+    where `X` is the candidate sentence, `Y` is the reference sentence. `m` and `n` represent
+    the length of `X` and `Y` respectively. `LCS` means the longest common subsequence.
+
+    Args:
+        cand_list (list): A list of tokenized candidate sentence.
+        ref_list (list): A list of lists of tokenized true sentences.
+        beta (float): A hyperparameter to decide the weight of recall. Defaults: 1.2.
+
+    Returns:
+        - **rougel_score** (float) - The computed result.
+
+    Example:
+        >>> from mindnlp.common.metrics import rouge_l
+        >>> cand_list = ["The","cat","The","cat","on","the","mat"]
+        >>> ref_list = [["The","cat","is","on","the","mat"],
+                        ["There","is","a","cat","on","the","mat"]]
+        >>> rougel_score = rouge_l(cand_list, ref_list)
+        >>> print(rougel_score)
+        0.7800511508951408
+
+    """
+    cand_list = _check_value_type("cand_list", cand_list, list)
+    ref_list = _check_value_type("ref_list", ref_list, list)
+    beta = _check_value_type("beta", beta, [float])
+
+    inst_scores = []
+
+    precs, recalls = [], []
+    for ref in ref_list:
+        basic_lcs = _lcs(cand_list, ref)
+        prec = basic_lcs / len(cand_list) if cand_list is not None else 0.
+        rec = basic_lcs / len(ref) if ref is not None else 0.
+        precs.append(prec)
+        recalls.append(rec)
+
+    prec_max = max(precs)
+    rec_max = max(recalls)
+
+    if prec_max != 0 and rec_max != 0:
+        score = ((1 + beta**2) * prec_max * rec_max) / \
+                float(rec_max + beta**2 * prec_max)
+    else:
+        score = 0.0
+    inst_scores.append(score)
+
+    rougel_score = 1. * sum(inst_scores) / len(inst_scores)
+
+    return rougel_score
 
 
 class RougeN(Metric):
@@ -211,3 +362,5 @@ class RougeL(Metric):
         Returns the name of the metric.
         """
         return self._name
+
+__all__ = ['rouge_n_fn', 'rouge_l_fn', 'RougeL', 'RougeN']
