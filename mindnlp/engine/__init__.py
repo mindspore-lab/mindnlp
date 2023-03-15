@@ -19,4 +19,3 @@ Engine of text.
 from .trainer import Trainer
 from .evaluator import Evaluator
 from .callbacks import *
-from .metrics import *

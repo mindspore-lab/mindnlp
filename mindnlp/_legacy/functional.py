@@ -17,10 +17,20 @@
 # pylint: disable=E1123
 
 """Custom functional api for legacy mindspore"""
+import builtins
 from math import pi
 import mindspore
+import numpy
+from mindspore.ops.operations.array_ops import Tril
 from mindspore import ops, Tensor
+from mindspore.common import dtype as mstype
 from mindspore.ops._primitive_cache import _get_cache_prim
+from packaging import version
+
+MS_COMPATIBLE_VERSION = '1.10.1'
+
+cast_ = ops.Cast()
+scalar_to_tensor_ = ops.ScalarToTensor()
 
 def kl_div(inputs, target, reduction='none', log_target=False):
     """KLDiv function."""
@@ -35,6 +45,33 @@ def kl_div(inputs, target, reduction='none', log_target=False):
     if reduction == 'mean':
         return kl_div_loss.mean()
     return kl_div_loss
+
+def where(condition, a, b):
+    """inner where"""
+    if version.parse(mindspore.__version__) <= version.parse(MS_COMPATIBLE_VERSION):
+        dtype = a.dtype
+        condition = condition.asnumpy()
+        a = a.asnumpy()
+        b = b.asnumpy()
+        return Tensor(numpy.where(condition, a, b), dtype)
+    return ops.where(condition, a, b)
+
+def split(x, size, axis=0):
+    """inner split"""
+    if version.parse(mindspore.__version__) <= version.parse(MS_COMPATIBLE_VERSION):
+        num = int(x.shape[axis] / size)
+        return ops.split(x, axis, num)
+    return ops.split(x, split_size_or_sections=size, axis=axis)
+
+def addmm(x, mat1, mat2, *, beta=1, alpha=1):
+    """inner addmm"""
+    _matmul_op = _get_cache_prim(ops.MatMul)()
+    return beta * x + alpha * (_matmul_op(mat1, mat2))
+
+def tril(input_x, diagonal=0):
+    """inner tril"""
+    _tril_op = _get_cache_prim(Tril)(diagonal)
+    return _tril_op(input_x)
 
 def softmax(inputs, axis=-1):
     """inner softmax"""
@@ -503,3 +540,105 @@ def multi_head_attention_forward(
         attn_output = attn_output.squeeze(1)
         attn_output_weights = attn_output_weights.squeeze(0)
     return attn_output, attn_output_weights
+
+def _cast_type(x, to_type):
+    """cast input to the specified type or cast input to tensor"""
+    if isinstance(x, Tensor):
+        x = cast_(x, to_type)
+    else:
+        x = scalar_to_tensor_(x, to_type)
+    return x
+
+def _get_type(x):
+    """get the dtype of input"""
+    if isinstance(x, Tensor):
+        return x.dtype
+    return type(x)
+
+def _get_max_type(start, end, step):
+    """get max input type with `level`"""
+    valid_dtypes = [mstype.int32, mstype.float32, mstype.int64, mstype.float64]
+    arg_map = [start, end, step]
+    arg_type_map = [str(_get_type(i)) for i in arg_map]
+    for arg_value in arg_map:
+        if not (isinstance(arg_value, (float, int))
+                or (isinstance(arg_value, Tensor) and arg_value.dtype in valid_dtypes)):
+            raise TypeError(
+                f"For arange, the input type must be int or float or a TensorScalar in {valid_dtypes},"
+                f" but got {_get_type(arg_value)}")
+
+    type_map = {'Float64': '3', 'Float32': '2', "<class 'float'>": '2', 'Int64': '1', "<class 'int'>": '1',
+                'Int32': '0'}
+    type_map_reverse = {'3': mstype.float64, '2': mstype.float32, '1': mstype.int64, '0': mstype.int32}
+    type_level = [type_map.get(i) for i in arg_type_map]
+    max_level = builtins.max(type_level)
+    return type_map_reverse.get(max_level)
+
+def arange(start=0, end=None, step=1, *, dtype=None):
+    r"""
+    Creates a sequence of numbers that begins at `start` and extends by increments of
+    `step` up to but not including `end`.
+
+    Args:
+        start (Union[float, int, Tensor], optional): The first number in the sequence.
+            If Tensor, the shape must be (). Default: 0.
+        end (Union[float, int, Tensor], optional): Upper or lower limit of the sequence, exclusive.
+            If Tensor, the shape must be ().
+            Default: None. If None, it defaults to the value of `start`, and 0 is used as the starting value.
+        step (Union[float, int, Tensor], optional): Number that increments `start`.
+            If Tensor, the shape must be (). Default: 1.
+
+    Keyword Args:
+        dtype (mindspore.dtype, optional): The required data type of returned Tensor. Default: None.
+            If the value is not specified or is None, the type with the highest precision in the
+            `start`, `end`, and `step` parameters is inferred.
+
+    Returns:
+        A 1-D Tensor, with the same type as the inputs.
+
+    Raises:
+        TypeError: If `start`, `end` or `step` is not an int or a float or a TensorScalar(Special Tensor with shape ())
+                   in valid dtypes.
+        ValueError: If `step` = 0.
+        ValueError: If `start` >= `end` when `step` > 0.
+        ValueError: If `start` <= `end` when `step` < 0.
+
+    Supported Platforms:
+        ``Ascend`` ``GPU`` ``CPU``
+
+    Examples:
+        >>> import mindspore as ms
+        >>> from mindspore import Tensor, ops
+        >>> output = ops.arange(1, 6)
+        >>> print(output)
+        [1 2 3 4 5]
+        >>> print(output.dtype)
+        Int64
+        >>> output = ops.arange(0, 3, 1.2)
+        >>> print(output)
+        [0.  1.2 2.4]
+        >>> print(output.dtype)
+        Float32
+        >>> output = ops.arange(7, 1, -2)
+        >>> print(output)
+        [7 5 3]
+        >>> print(output.dtype)
+        Int64
+        >>> output = ops.arange(ms.Tensor(12.0, dtype=ms.float64), 2, ms.Tensor(-1.0, dtype=ms.float32))
+        >>> print(output)
+        [12. 11. 10.  9.  8.  7.  6.  5.  4.  3.]
+        >>> print(output.dtype)
+        Float64
+    """
+    if end is None:
+        start, end = 0, start
+    max_type = _get_max_type(start, end, step)
+    start = _cast_type(start, max_type)
+    end = _cast_type(end, max_type)
+    step = _cast_type(step, max_type)
+
+    _range = _get_cache_prim(ops.Range)()
+    data = _range(start, end, step)
+    if dtype is not None:
+        data = cast_(data, dtype)
+    return data
