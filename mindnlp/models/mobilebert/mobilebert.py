@@ -13,7 +13,6 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=C0103
-# pylint: disable=C0301
 """
 MobileBert model
 """
@@ -21,21 +20,23 @@ MobileBert model
 import math
 from typing import Optional, Tuple
 
-# import mindspore
+import mindspore
 # import mindspore.numpy as mnp
 from mindspore import Parameter, Tensor
 from mindspore import nn
 from mindspore import ops
 # from mindspore.common.initializer import TruncatedNormal
 from mindnlp._legacy.nn import Dropout
+from ..utils.utils import find_pruneable_heads_and_indices,prune_conv1d_layer
+from ..utils.activations import ACT2FN
 
 
 class NoNorm(nn.Cell):
     """NoNorm"""
     def __init__(self, feat_size):
         super().__init__()
-        self.bias = Parameter(ops.zeros(feat_size))
-        self.weight = Parameter(ops.ones(feat_size))
+        self.bias = Parameter(ops.zeros(feat_size, mindspore.float32))
+        self.weight = Parameter(ops.ones(feat_size, mindspore.float32))
 
     def construct(self, input_tensor: Tensor) -> Tensor:
         return input_tensor * self.weight + self.bias
@@ -100,3 +101,100 @@ class MobileBertSelfAttention(nn.Cell):
         context_layer = context_layer.view(new_context_layer_shape)
         outputs = (context_layer, attention_probs) if output_attentions else (context_layer,)
         return outputs
+
+class MobileBertSelfOutput(nn.Cell):
+    """MobileBertSelfOutput"""
+    def __init__(self, config):
+        super().__init__()
+        self.use_bottleneck = config.use_bottleneck
+        self.dense = nn.Dense(config.true_hidden_size, config.true_hidden_size)
+        self.LayerNorm = NORM2FN[config.normalization_type](config.true_hidden_size)
+        if not self.use_bottleneck:
+            self.dropout = Dropout(config.hidden_dropout_prob)
+
+    def construct(self, hidden_states: Tensor, residual_tensor: Tensor) -> Tensor:
+        layer_outputs = self.dense(hidden_states)
+        if not self.use_bottleneck:
+            layer_outputs = self.dropout(layer_outputs)
+        layer_outputs = self.LayerNorm(layer_outputs + residual_tensor)
+        return layer_outputs
+
+class MobileBertAttention(nn.Cell):
+    """MobileBertAttention"""
+    def __init__(self, config):
+        super().__init__()
+        self.self = MobileBertSelfAttention(config)
+        self.output = MobileBertSelfOutput(config)
+        self.pruned_heads = set()
+
+    def prune_heads(self, heads):
+        """prune_heads"""
+        if len(heads) == 0:
+            return
+        heads, index = find_pruneable_heads_and_indices(
+            heads, self.self.num_attention_heads, self.self.attention_head_size, self.pruned_heads
+        )
+
+        # Prune linear layers
+        self.self.query = prune_conv1d_layer(self.self.query, index)
+        self.self.key = prune_conv1d_layer(self.self.key, index)
+        self.self.value = prune_conv1d_layer(self.self.value, index)
+        self.output.dense = prune_conv1d_layer(self.output.dense, index, axis=1)
+
+        # Update hyper params and store pruned heads
+        self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
+        self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
+        self.pruned_heads = self.pruned_heads.union(heads)
+
+    def construct(
+        self,
+        query_tensor: Tensor,
+        key_tensor: Tensor,
+        value_tensor: Tensor,
+        layer_input: Tensor,
+        attention_mask: Optional[Tensor] = None,
+        head_mask: Optional[Tensor] = None,
+        output_attentions: Optional[bool] = None,
+    ) -> Tuple[Tensor]:
+        self_outputs = self.self(
+            query_tensor,
+            key_tensor,
+            value_tensor,
+            attention_mask,
+            head_mask,
+            output_attentions,
+        )
+        # Run a linear projection of `hidden_size` then add a residual
+        # with `layer_input`.
+        attention_output = self.output(self_outputs[0], layer_input)
+        outputs = (attention_output,) + self_outputs[1:]  # add attentions if we output them
+        return outputs
+
+class MobileBertIntermediate(nn.Cell):
+    """MobileBertIntermediate"""
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Dense(config.true_hidden_size, config.intermediate_size)
+        if isinstance(config.hidden_act, str):
+            self.intermediate_act_fn = ACT2FN[config.hidden_act]
+        else:
+            self.intermediate_act_fn = config.hidden_act
+
+    def construct(self, hidden_states: Tensor) -> Tensor:
+        hidden_states = self.dense(hidden_states)
+        hidden_states = self.intermediate_act_fn(hidden_states)
+        return hidden_states
+
+class OutputBottleneck(nn.Cell):
+    """OutputBottleneck"""
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Dense(config.true_hidden_size, config.hidden_size)
+        self.LayerNorm = NORM2FN[config.normalization_type](config.hidden_size)
+        self.dropout = Dropout(config.hidden_dropout_prob)
+
+    def construct(self, hidden_states: Tensor, residual_tensor: Tensor) -> Tensor:
+        layer_outputs = self.dense(hidden_states)
+        layer_outputs = self.dropout(layer_outputs)
+        layer_outputs = self.LayerNorm(layer_outputs + residual_tensor)
+        return layer_outputs
