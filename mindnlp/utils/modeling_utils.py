@@ -13,11 +13,12 @@
 # limitations under the License.
 # ============================================================================
 """MindNLP Model Utils"""
-# pylint: disable=W0613
+# pylint: disable=C0412
+
+from typing import Optional
 
 import mindspore
 
-from typing import Optional
 from mindspore import nn, ops, Tensor
 from mindnlp.utils.activations import get_activation
 
@@ -28,7 +29,7 @@ except ImportError:
     class Identity(nn.Cell):
         r"""A placeholder identity operator that is argument-insensitive."""
 
-        def __init__(self, *args, **kwargs):
+        def __init__(self):
             super().__init__()
 
         def construct(self, hidden_states):
