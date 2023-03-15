@@ -21,7 +21,8 @@ import mindspore
 from mindspore import Tensor
 import numpy as np
 
-from mindnlp.models.mobilebert import MobileBertSelfAttention,MobileBertConfig
+from mindnlp.models.mobilebert import MobileBertSelfAttention,MobileBertSelfOutput,\
+    MobileBertAttention,MobileBertIntermediate,OutputBottleneck,MobileBertConfig
 
 class TestMobileBert(unittest.TestCase):
     """
@@ -39,9 +40,51 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertEmbeddings
         """
-        mobilebert_selfattention=MobileBertSelfAttention(MobileBertConfig())
+        model=MobileBertSelfAttention(MobileBertConfig())
         query_tensor=Tensor(np.random.randint(0, 1000, (2,8, 128)),dtype=mindspore.float32)
         key_tensor=Tensor(np.random.randint(0, 1000, (2,8, 128)),dtype=mindspore.float32)
         value_tensor=Tensor(np.random.randint(0, 1000, (2,8, 512)),dtype=mindspore.float32)
-        output = mobilebert_selfattention(query_tensor,key_tensor,value_tensor)
+        output = model(query_tensor,key_tensor,value_tensor)
         assert output[0].shape == (2,8,128)
+
+    def test_mobilebert_selfoutput(self):
+        """
+        Test MobileBertSelfOutput
+        """
+        model = MobileBertSelfOutput(MobileBertConfig())
+        hidden_states = Tensor(np.random.randint(0, 1000, (2, 128)),dtype=mindspore.float32)
+        residual_tensor = Tensor(np.random.randint(0, 1000, (2, 128)))
+        output = model(hidden_states, residual_tensor)
+        assert output.shape == (2,128)
+
+
+    def test_mobilebert_attention(self):
+        """
+        Test MobileBertAttention
+        """
+        model = MobileBertAttention(MobileBertConfig())
+        query_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 128)), dtype=mindspore.float32)
+        key_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 128)), dtype=mindspore.float32)
+        value_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 512)), dtype=mindspore.float32)
+        layer_input= Tensor(np.random.randint(0, 1000, (2,8, 128)),dtype=mindspore.float32)
+        output = model(query_tensor,key_tensor,value_tensor,layer_input)
+        assert output[0].shape == (2,8,128)
+
+    def test_mobilebert_intermediate(self):
+        """
+        Test MobileBertIntermediate
+        """
+        model = MobileBertIntermediate(MobileBertConfig())
+        hidden_states = Tensor(np.random.randint(0, 1000, (512, 128)), dtype=mindspore.float32)
+        output = model(hidden_states)
+        assert output.shape == (512,512)
+
+    def test_mobilebert_outputbottleneck(self):
+        """
+        Test OutputBottleneck
+        """
+        model = OutputBottleneck(MobileBertConfig())
+        hidden_states = Tensor(np.random.randint(0, 1000, (512, 128)), dtype=mindspore.float32)
+        residual_tensor =Tensor(np.random.randint(0, 1000, (512, 512)), dtype=mindspore.float32)
+        output = model(hidden_states,residual_tensor)
+        assert output.shape == (512,512)
