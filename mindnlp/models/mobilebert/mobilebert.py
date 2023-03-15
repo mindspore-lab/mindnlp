@@ -20,7 +20,7 @@ MobileBert model
 import math
 from typing import Optional, Tuple
 
-# import mindspore
+import mindspore
 # import mindspore.numpy as mnp
 from mindspore import Parameter, Tensor
 from mindspore import nn
@@ -35,8 +35,8 @@ class NoNorm(nn.Cell):
     """NoNorm"""
     def __init__(self, feat_size):
         super().__init__()
-        self.bias = Parameter(ops.zeros((1,feat_size))[0])
-        self.weight = Parameter(ops.ones((1,feat_size))[0])
+        self.bias = Parameter(ops.zeros(feat_size, mindspore.float32))
+        self.weight = Parameter(ops.ones(feat_size, mindspore.float32))
 
     def construct(self, input_tensor: Tensor) -> Tensor:
         return input_tensor * self.weight + self.bias
