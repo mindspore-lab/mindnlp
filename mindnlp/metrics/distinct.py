@@ -16,7 +16,43 @@
 
 
 from mindnlp.abc import Metric
-from mindnlp.scoring.metrics import _check_value_type
+from .utils import _check_value_type
+
+def distinct_fn(cand_list, n_size=2):
+    """
+    Calculates the Distinct-N. Distinct-N is a metric that measures the diversity of
+    a sentence. It focuses on the number of distinct n-gram of a sentence. The larger
+    the number of distinct n-grams, the higher the diversity of the text. The function
+    is shown as follows:
+
+    Args:
+        cand_list (list): A list of tokenized candidate sentence.
+        n_size (int): N_gram value. Defaults: 2.
+
+    Returns:
+        - **distinct_score** (float) - The computed result.
+
+    Example:
+        >>> from mindnlp.common.metrics import distinct
+        >>> cand_list = ["The", "cat", "The", "cat", "on", "the", "mat"]
+        >>> distinct_score = distinct(cand_list)
+        >>> print(distinct_score)
+        0.8333333333333334
+
+    """
+    cand_list = _check_value_type("cand_list", cand_list, list)
+    n_size = _check_value_type("n_size", n_size, [int])
+
+    diff_ngram = set()
+    count = 0.0
+
+    for i in range(0, len(cand_list) - n_size + 1):
+        ngram = ' '.join(cand_list[i:(i + n_size)])
+        count += 1
+        diff_ngram.add(ngram)
+
+    distinct_score = len(diff_ngram) / count
+    return distinct_score
 
 
 class Distinct(Metric):
@@ -93,3 +129,5 @@ class Distinct(Metric):
         Returns the name of the metric.
         """
         return self._name
+
+__all__ = ['distinct_fn', 'Distinct']

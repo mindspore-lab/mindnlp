@@ -19,7 +19,7 @@ from collections import Counter
 import numpy as np
 
 from mindnlp.abc import Metric
-from mindnlp.scoring.metrics import _check_value_type, _count_ngram
+from .utils import _check_value_type
 
 class BleuScore(Metric):
     r"""
@@ -129,11 +129,11 @@ class BleuScore(Metric):
             ref_len_list = [len(ref) for ref in references]
             ref_len_diff = [abs(len(candidate) - x) for x in ref_len_list]
             self.bp_r += ref_len_list[ref_len_diff.index(min(ref_len_diff))]
-            candidate_counter = _count_ngram(candidate, self.n_size)
+            candidate_counter = count_ngram(candidate, self.n_size)
             reference_counter = Counter()
 
             for ref in references:
-                reference_counter |= _count_ngram(ref, self.n_size)
+                reference_counter |= count_ngram(ref, self.n_size)
 
             ngram_counter_clip = candidate_counter & reference_counter
 
@@ -172,3 +172,119 @@ class BleuScore(Metric):
         Returns the name of the metric.
         """
         return self._name
+
+def count_ngram(input_list, n_gram):
+    """count ngram"""
+    ngram_counter = Counter()
+
+    for i in range(1, n_gram + 1):
+        for j in range(len(input_list) - i + 1):
+            ngram_key = tuple(input_list[j:(i + j)])
+            ngram_counter[ngram_key] += 1
+
+    return ngram_counter
+
+
+def bleu_fn(cand, ref_list, n_size=4, weights=None):
+    r"""
+    Calculates the BLEU score. BLEU (bilingual evaluation understudy) is a metric
+    for evaluating the quality of text translated by machine. It uses a modified form
+    of precision to compare a candidate translation against multiple reference translations.
+    The function is shown as follows:
+
+    .. math::
+
+        BP & =
+        \begin{cases}
+        1,  & \text{if }c>r \\
+        e_{1-r/c}, & \text{if }c\leq r
+        \end{cases}
+
+        BLEU & = BP\exp(\sum_{n=1}^N w_{n} \log{p_{n}})
+
+    where `c` is the length of candidate sentence, and `r` is the length of reference sentence.
+
+    Args:
+        cand (list): A list of tokenized candidate sentences.
+        ref_list (list): A list of lists of tokenized true sentences.
+        n_size (int): N_gram value ranges from 1 to 4. Default: 4.
+        weights (Union[list, None]): Weights of precision of each gram. Defaults to None.
+
+    Returns:
+        - **bleu_score** (float) - The computed result.
+
+    Raises:
+        ValueError: If the value range of `n_size` is not from 1 to 4.
+        ValueError: If the lengths of `cand` and `ref_list` are not equal.
+        ValueError: If the lengths of `weights` is not equal to `n_size`.
+
+    Example:
+        >>> from mindnlp.common.metrics import bleu
+        >>> cand = [["The", "cat", "The", "cat", "on", "the", "mat"]]
+        >>> ref_list = [[["The", "cat", "is", "on", "the", "mat"],
+                        ["There", "is", "a", "cat", "on", "the", "mat"]]]
+        >>> bleu_score = bleu(cand, ref_list)
+        >>> print(bleu_score)
+        0.46713797772820015
+
+    """
+    n_size = _check_value_type("n_size", n_size, [int])
+    if n_size > 4 or n_size < 1:
+        raise ValueError(f'`n_size` should range from 1 to 4, but got {n_size}')
+
+    cand = _check_value_type("cand", cand, list)
+    ref_list = _check_value_type("ref_list", ref_list, list)
+
+    if len(cand) != len(ref_list):
+        raise ValueError(f'`cand` and `ref_list` should be equal in length, but got {len(cand)}'
+                         f', {len(ref_list)}')
+
+    numerator = np.zeros(n_size)
+    denominator = np.zeros(n_size)
+    precision_scores = np.zeros(n_size)
+    bp_c = 0.0
+    bp_r = 0.0
+    cand_len = 0
+    ref_len = 0
+
+    for (candidate, references) in zip(cand, ref_list):
+        bp_c += len(candidate)
+        ref_len_list = [len(ref) for ref in references]
+        ref_len_diff = [abs(len(candidate) - x) for x in ref_len_list]
+        bp_r += ref_len_list[ref_len_diff.index(min(ref_len_diff))]
+        candidate_counter = count_ngram(candidate, n_size)
+        reference_counter = Counter()
+
+        for ref in references:
+            reference_counter |= count_ngram(ref, n_size)
+
+        ngram_counter_clip = candidate_counter & reference_counter
+
+        for counter_clip in ngram_counter_clip:
+            numerator[len(counter_clip) - 1] += ngram_counter_clip[counter_clip]
+
+        for counter in candidate_counter:
+            denominator[len(counter) - 1] += candidate_counter[counter]
+
+    cand_len = np.array(bp_c)
+    ref_len = np.array(bp_r)
+
+    if min(numerator) == 0.0:
+        return np.array(0.0)
+
+    precision_scores = numerator / denominator
+
+    if weights is None:
+        weights = [1 / n_size for _ in range(n_size)]
+
+    if n_size != len(weights):
+        raise ValueError("The length of `weights` should be equal to `n_size`")
+
+    log_precision_scores = weights * np.log(precision_scores)
+    geometric_mean = np.exp(np.sum(log_precision_scores))
+    brevity_penalty = np.array(1.0) if bp_c > bp_r else np.exp(1 - (ref_len / cand_len))
+    bleu_score = brevity_penalty * geometric_mean
+
+    return bleu_score
+
+__all__ = ['bleu_fn', 'count_ngram', 'BleuScore']

@@ -19,7 +19,68 @@ import sys
 import numpy as np
 
 from mindnlp.abc import Metric
-from mindnlp.scoring.metrics import _check_onehot_data, _check_shape, _convert_data_type
+from .utils import _check_onehot_data, _check_shape, _convert_data_type
+
+def recall_fn(preds, labels):
+    r"""
+    Calculates the recall. Recall is also referred to as the true positive rate or
+    sensitivity. The function is shown as follows:
+
+    .. math::
+
+        \text{Recall} =\frac{\text{TP}} {\text{TP} + \text{FN}}
+
+    where `TP` is the number of true posistive cases, `FN` is the number of false negative cases.
+
+    Args:
+        preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
+            floating numbers in range :math:`[0, 1]` and the shape of `preds` is
+            :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number
+            of cases and :math:`C` is the number of categories.
+        labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` must be in
+            one-hot format that shape is :math:`(N, C)`, or can be transformed to
+            one-hot format that shape is :math:`(N,)`.
+
+    Returns:
+        - **rec** (np.ndarray) - The computed result.
+
+    Raises:
+        ValueError: If `preds` doesn't have the same classes number as `labels`.
+
+    Example:
+        >>> import numpy as np
+        >>> import mindspore
+        >>> from mindspore import Tensor
+        >>> from mindnlp.common.metrics import recall
+        >>> preds = Tensor(np.array([[0.2, 0.5], [0.3, 0.1], [0.9, 0.6]]), mindspore.float32)
+        >>> labels = Tensor(np.array([1, 0, 1]), mindspore.int32)
+        >>> rec = recall(preds, labels)
+        >>> print(rec)
+        [1. 0.5]
+
+    """
+    y_pred = _convert_data_type(preds)
+    y_true = _convert_data_type(labels)
+
+    if y_pred.ndim == y_true.ndim and _check_onehot_data(y_true):
+        y_true = y_true.argmax(axis=1)
+    _check_shape(y_pred, y_true)
+
+    class_num = y_pred.shape[1]
+    if y_true.max() + 1 > class_num:
+        raise ValueError(f'`preds` should have the same classes number as `labels`, but got `preds`'
+                         f' classes {class_num}, true value classes {y_true.max() + 1}.')
+    y_true = np.eye(class_num)[y_true.reshape(-1)]
+    indices = y_pred.argmax(axis=1).reshape(-1)
+    y_pred = np.eye(class_num)[indices]
+
+    actual_positives = y_true.sum(axis=0)
+    true_positives = (y_true * y_pred).sum(axis=0)
+
+    epsilon = sys.float_info.min
+
+    rec = true_positives / (actual_positives + epsilon)
+    return rec
 
 
 class Recall(Metric):
@@ -123,3 +184,5 @@ class Recall(Metric):
         Returns the name of the metric.
         """
         return self._name
+
+__all__ = ['recall_fn', 'Recall']
