@@ -79,10 +79,10 @@ class SequenceSummary(nn.Cell):
             output = hidden_states.mean(dim=1)
         elif self.summary_type == "cls_index":
             if cls_index is None:
-                cls_index = ops.full_like(
-                    hidden_states[..., :1, :],
+                cls_index = ops.fill(
+                    mindspore.int64,
+                    hidden_states[..., :1, :].shape,
                     hidden_states.shape[-2] - 1,
-                    dtype=mindspore.int64,
                 )
             else:
                 cls_index = cls_index.unsqueeze(-1).unsqueeze(-1)
