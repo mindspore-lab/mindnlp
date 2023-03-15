@@ -35,8 +35,8 @@ class NoNorm(nn.Cell):
     """NoNorm"""
     def __init__(self, feat_size):
         super().__init__()
-        self.bias = Parameter(ops.zeros(feat_size))
-        self.weight = Parameter(ops.ones(feat_size))
+        self.bias = Parameter(ops.zeros((1,feat_size))[0])
+        self.weight = Parameter(ops.ones((1,feat_size))[0])
 
     def construct(self, input_tensor: Tensor) -> Tensor:
         return input_tensor * self.weight + self.bias
