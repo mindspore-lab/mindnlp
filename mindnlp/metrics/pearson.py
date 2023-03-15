@@ -19,7 +19,76 @@ import math
 import numpy as np
 
 from mindnlp.abc import Metric
-from mindnlp.scoring.metrics import _convert_data_type
+from .utils import _convert_data_type
+
+
+def pearson_correlation_fn(preds, labels):
+    r"""
+    Calculates the Pearson correlation coefficient (PCC). PCC is a measure of linear
+    correlation between two sets of data. It is the ratio between the covariance of
+    two variables and the product of their standard deviations; thus, it is essentially
+    a normalized measurement of the covariance, such that the result always has a value
+    between −1 and 1.
+
+    Args:
+        preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
+            floating numbers and the shape of `preds` is :math:`(N, 1)`.
+        labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` is a list of
+            floating numbers and the shape of `preds` is :math:`(N, 1)`.
+
+    Returns:
+        - **p_c_c** (float) - The computed result.
+
+    Raises:
+        RuntimeError: If `preds` and `labels` have different lengths.
+
+    Example:
+        >>> import numpy as np
+        >>> import mindspore
+        >>> from mindspore import Tensor
+        >>> from mindnlp.common.metrics import pearson_correlation
+        >>> preds = Tensor(np.array([[0.1], [1.0], [2.4], [0.9]]), mindspore.float32)
+        >>> labels = Tensor(np.array([[0.0], [1.0], [2.9], [1.0]]), mindspore.float32)
+        >>> p_c_c = pearson_correlation(preds, labels)
+        >>> print(p_c_c)
+        0.9985229081857804
+
+    """
+    def _pearson_correlation(y_pred, y_true):
+        n_pred = len(y_pred)
+
+        # simple sums
+        sum1 = sum(float(y_pred[i]) for i in range(n_pred))
+        sum2 = sum(float(y_true[i]) for i in range(n_pred))
+
+        # sum up the squares
+        sum1_pow = sum(pow(v, 2.0) for v in y_pred)
+        sum2_pow = sum(pow(v, 2.0) for v in y_true)
+
+        # sum up the products
+        p_sum = sum(y_pred[i] * y_true[i] for i in range(n_pred))
+
+        numerator = p_sum - (sum1 * sum2 / n_pred)
+        denominator = math.sqrt(
+            (sum1_pow - pow(sum1, 2) / n_pred) * (sum2_pow - pow(sum2, 2) / n_pred))
+
+        if denominator == 0:
+            return 0.0
+
+        return numerator / denominator
+
+    preds = _convert_data_type(preds)
+    labels = _convert_data_type(labels)
+
+    preds = np.squeeze(preds.reshape(-1, 1)).tolist()
+    labels = np.squeeze(labels.reshape(-1, 1)).tolist()
+
+    if len(preds) != len(labels):
+        raise RuntimeError(f'`preds` and `labels` should have the same length, but got `preds` '
+                           f'length {len(preds)}, `labels` length {len(labels)})')
+
+    p_c_c = _pearson_correlation(preds, labels)
+    return p_c_c
 
 
 class PearsonCorrelation(Metric):
@@ -134,3 +203,5 @@ class PearsonCorrelation(Metric):
         Returns the name of the metric.
         """
         return self._name
+
+__all__ = ['pearson_correlation_fn', 'PearsonCorrelation']

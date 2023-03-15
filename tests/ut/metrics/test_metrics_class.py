@@ -19,10 +19,10 @@ import unittest
 import numpy as np
 import mindspore
 from mindspore import Tensor
-from mindnlp.engine.metrics import (Perplexity, BleuScore, RougeN, RougeL, Distinct, Accuracy,
-                                    Precision, Recall, F1Score, ConfusionMatrix,
-                                    MatthewsCorrelation, PearsonCorrelation,
-                                    SpearmanCorrelation, EmScore)
+from mindnlp.metrics import (Perplexity, BleuScore, RougeN, RougeL, Distinct, Accuracy,
+                             Precision, Recall, F1Score, ConfusionMatrix,
+                             MatthewsCorrelation, PearsonCorrelation,
+                             SpearmanCorrelation, EmScore)
 
 
 class TestClassPerplexity(unittest.TestCase):

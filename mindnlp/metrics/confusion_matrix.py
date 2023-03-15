@@ -18,7 +18,60 @@
 import numpy as np
 
 from mindnlp.abc import Metric
-from mindnlp.scoring.metrics import _check_value_type, _convert_data_type
+from .utils import _check_value_type, _convert_data_type
+
+def confusion_matrix_fn(preds, labels, class_num=2):
+    r"""
+    Calculates the confusion matrix. Confusion matrix is commonly used to evaluate
+    the performance of classification models, including binary classification and
+    multiple classification.
+
+    Args:
+        preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of
+            floating numbers and the shape of `preds` is :math:`(N, C)` or :math:`(N,)`.
+        labels (Union[Tensor, list, np.ndarray]): Ground truth. The shape of `labels` is
+            :math:`(N,)`.
+        class_num (int): Number of classes in the dataset. Default: 2.
+
+    Returns:
+        - **conf_mat** (np.ndarray) - The computed result.
+
+    Raises:
+        ValueError: If `preds` and `labels` do not have valid dimensions.
+
+    Example:
+        >>> import numpy as np
+        >>> import mindspore
+        >>> from mindspore import Tensor
+        >>> from mindnlp.common.metrics import confusion_matrix
+        >>> preds = Tensor(np.array([1, 0, 1, 0]))
+        >>> labels = Tensor(np.array([1, 0, 0, 1]))
+        >>> conf_mat = confusion_matrix(preds, labels)
+        >>> print(conf_mat)
+        [[1. 1.]
+         [1. 1.]]
+
+    """
+    class_num = _check_value_type("class_num", class_num, [int])
+
+    preds = _convert_data_type(preds)
+    labels = _convert_data_type(labels)
+
+    if preds.ndim not in (labels.ndim, labels.ndim + 1):
+        raise ValueError(f'`preds` and `labels` should have the same dimensions, or the dimension '
+                         f'of `preds` equals the dimension of true value add 1, but got `preds` '
+                         f'ndim: {preds.ndim}, `labels` ndim: {labels.ndim}.')
+
+    if preds.ndim == labels.ndim + 1:
+        preds = np.argmax(preds, axis=1)
+
+    trans = (labels.reshape(-1) * class_num + preds.reshape(-1)).astype(int)
+    bincount = np.bincount(trans, minlength=class_num ** 2)
+    conf_mat = bincount.reshape(class_num, class_num)
+
+    conf_mat = conf_mat.astype(float)
+
+    return conf_mat
 
 
 class ConfusionMatrix(Metric):
@@ -114,3 +167,6 @@ class ConfusionMatrix(Metric):
         Returns the name of the metric.
         """
         return self._name
+
+
+__all__ = ['confusion_matrix_fn', 'ConfusionMatrix']
