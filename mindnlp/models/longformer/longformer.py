@@ -84,7 +84,7 @@ _
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = mindspore.ops.not_equal(input_ids, padding_idx).astype(mindspore.int32)
     incremental_indices = functional.cumsum(mask, axis=1, dtype=mask.dtype) * mask
-    return incremental_indices.long() + padding_idx
+    return incremental_indices.astype(mindspore.int32) + padding_idx
 
 
 class LongformerEmbeddings(nn.Cell):
@@ -109,7 +109,7 @@ class LongformerEmbeddings(nn.Cell):
             config.max_position_embeddings, config.hidden_size, padding_idx=self.padding_idx
         )
 
-    def forward(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
+    def construct(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
         """forward"""
         if position_ids is None:
             if input_ids is not None:

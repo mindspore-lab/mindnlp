@@ -38,5 +38,5 @@ class TestModelingBert(unittest.TestCase):
         ms_model.set_train(False)
         tensor = np.random.randint(1, 10, (2, 2))
         ms_input_ids = Tensor.from_numpy(tensor)
-        ms_outputs = ms_model.forward(ms_input_ids)
+        ms_outputs = ms_model(ms_input_ids)
         assert (2, 2, 768) == ms_outputs.shape
