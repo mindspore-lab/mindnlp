@@ -12,16 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint:disable=W0212
 """Test T5"""
 import unittest
 import numpy as np
 
 import mindspore
-
+from mindspore import ops
 from mindspore import Tensor
 
-from mindnlp.models.t5 import T5Config, T5LayerNorm, T5DenseActDense, T5DenseGatedActDense
-from mindnlp.models.t5 import T5LayerFF, T5Attention, T5LayerSelfAttention, T5LayerCrossAttention, T5Block
+from mindnlp.models.t5 import (T5Config,
+                               T5LayerNorm,
+                               T5DenseActDense,
+                               T5DenseGatedActDense,
+                               T5LayerFF,
+                               T5Attention,
+                               T5LayerSelfAttention,
+                               T5LayerCrossAttention,
+                               T5Block,
+                               T5PreTrainedModel)
 class TestModelingT5(unittest.TestCase):
     r"""
     Test T5
@@ -131,3 +140,15 @@ class TestModelingT5(unittest.TestCase):
         outputs = model(input_ids)
         assert outputs[0].shape == (4, 64, 512)
         assert outputs[1].shape == (1, 8, 64, 64)
+
+    def test_t5_pretrainedmodel(self):
+        r"""
+        Test T5PreTrainedModel._shift_right
+        """
+        decoder_start_token_id = 0
+        config = T5Config(decoder_start_token_id = decoder_start_token_id)
+        model = T5PreTrainedModel(config)
+        input_ids = Tensor([[1, 2, 3, -100, -100, -100], [1, 2, 3, -100, -100, -100]])
+
+        outputs = model._shift_right(input_ids)
+        assert ops.all(outputs == Tensor([[0, 1, 2, 3, 0, 0], [0, 1, 2, 3, 0, 0]]))
