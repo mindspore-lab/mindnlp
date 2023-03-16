@@ -22,7 +22,7 @@ from mindnlp.modules.attentions import ScaledDotAttention, SelfAttention, \
     LinearAttention
 from mindnlp.modules.encoder import RNNEncoder, CNNEncoder
 from mindnlp.modules.decoder import RNNDecoder
-from mindnlp.modules.embeddings import Fasttext, Word2vec, Glove
+from mindnlp.modules.embeddings import Fasttext, Glove
 from mindnlp.modules.crf import CRF
 from mindnlp.modules.loss import RDropLoss, CMRC2018Loss
 
