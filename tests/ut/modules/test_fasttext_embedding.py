@@ -16,7 +16,6 @@
 
 import unittest
 from mindspore import Tensor
-from mindspore.dataset.text import Vocab
 from mindnlp.modules.embeddings.fasttext_embedding import Fasttext
 
 
@@ -42,8 +41,7 @@ class TestFasttext(unittest.TestCase):
                              [0.4, 0.5, 0.6],
                              [0.7, 0.8, 0.9]])
 
-        init_vocab = Vocab.from_list(['i', 'am', 'human'])
-        embed = Fasttext(vocab=init_vocab, init_embed=init_embed)
+        embed = Fasttext(init_embed=init_embed)
         f_res = embed(wordlist_input)
 
         assert f_res.shape == (2, 3)

@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2021 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,10 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-Embedding class
+vocab init
 """
 
-from .fasttext_embedding import Fasttext
-from .glove_embedding import Glove
-
-__all__ = ["Fasttext", "Glove"]
+from .vocab import Vocab
