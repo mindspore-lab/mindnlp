@@ -18,7 +18,6 @@
 # pylint: disable=too-many-locals
 # pylint: disable=too-few-public-methods
 # pylint: disable=too-many-arguments
-# pylint: disable=line-too-long
 # pylint: disable=invalid-name
 import mindspore
 from mindspore import nn
