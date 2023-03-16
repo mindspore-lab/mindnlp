@@ -22,7 +22,7 @@ import pytest
 import mindspore as ms
 from mindspore.dataset import text
 from mindnlp.dataset import CoNLL2000Chunking, CoNLL2000Chunking_Process
-from mindnlp.dataset import load, process
+from mindnlp import load_dataset, process
 
 
 class TestCoNLL2000Chunking(unittest.TestCase):
@@ -59,7 +59,7 @@ class TestCoNLL2000Chunking(unittest.TestCase):
     @pytest.mark.dataset
     def test_conll2000chunking_by_register(self):
         """test conll2000chunking by register"""
-        _ = load(
+        _ = load_dataset(
             "CoNLL2000Chunking",
             root=self.root,
             split=("train", "test"),

@@ -20,7 +20,8 @@ import os
 import shutil
 import unittest
 import pytest
-from mindnlp.dataset import WikiText103, load
+from mindnlp import load_dataset
+from mindnlp.dataset import WikiText103
 
 
 class TestWikiText103(unittest.TestCase):
@@ -62,7 +63,7 @@ class TestWikiText103(unittest.TestCase):
     @pytest.mark.local
     def test_wikitext103_by_register(self):
         """test wikitext103 by register"""
-        _ = load('WikiText103',
+        _ = load_dataset('WikiText103',
                  root=self.root,
                  split=('valid', 'test')
                  )

@@ -21,7 +21,7 @@ import os
 from typing import Union, Tuple
 from mindspore.dataset import GeneratorDataset
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.register import load_dataset
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import unzip
 
@@ -71,7 +71,7 @@ class Udpos:
         return len(self._words)
 
 
-@load.register
+@load_dataset.register
 def UDPOS(
     root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", "dev", "test"), proxies=None
 ):

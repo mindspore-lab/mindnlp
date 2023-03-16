@@ -21,8 +21,9 @@ import unittest
 import pytest
 import mindspore as ms
 from mindnlp.dataset import MRPC, MRPC_Process
-from mindnlp.dataset import load, process
-from mindnlp.dataset.transforms import BasicTokenizer
+from mindnlp import load_dataset, process
+
+from mindnlp.transforms import BasicTokenizer
 
 
 class TestMRPC(unittest.TestCase):
@@ -58,7 +59,7 @@ class TestMRPC(unittest.TestCase):
     @pytest.mark.dataset
     def test_mrpc_by_register(self):
         """test mrpc by register"""
-        _ = load('MRPC', root=self.root, split=('train', 'test'),)
+        _ = load_dataset('MRPC', root=self.root, split=('train', 'test'),)
 
     @pytest.mark.dataset
     def test_mrpc_process(self):

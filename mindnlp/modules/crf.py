@@ -305,3 +305,5 @@ class CRF(nn.Cell):
             best_tags_list.append(best_tags)
 
         return best_tags_list
+
+__all__ = ["CRF"]

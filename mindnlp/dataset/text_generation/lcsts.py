@@ -22,7 +22,7 @@ import json
 from typing import Union, Tuple
 from mindspore.dataset import GeneratorDataset
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.register import load_dataset
 from mindnlp.configs import DEFAULT_ROOT
 
 URL = {
@@ -62,7 +62,7 @@ class Lcsts:
     def __len__(self):
         return len(self._source)
 
-@load.register
+@load_dataset.register
 def LCSTS(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train', 'dev'), proxies=None):
     r"""
     Load the LCSTS dataset

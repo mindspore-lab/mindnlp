@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: MindNLP\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2022-12-14 01:12+0800\n"
-"PO-Revision-Date: 2022-12-20 20:06+0800\n"
+"PO-Revision-Date: 2023-03-08 19:45+0800\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: zh_CN\n"
@@ -54,10 +54,10 @@ msgstr "seq2seq模型的基类"
 #: mindnlp.common.metrics.confusion_matrix:0 mindnlp.common.metrics.distinct:0
 #: mindnlp.common.metrics.em_score:0 mindnlp.common.metrics.f1_score:0
 #: mindnlp.common.metrics.matthews_correlation:0
-#: mindnlp.common.metrics.pearson_correlation:0
-#: mindnlp.common.metrics.perplexity:0 mindnlp.common.metrics.precision:0
-#: mindnlp.common.metrics.recall:0 mindnlp.common.metrics.rouge_l:0
-#: mindnlp.common.metrics.rouge_n:0 mindnlp.common.metrics.spearman_correlation:0
+#: mindnlp.common.metrics.pearson_correlation:0 mindnlp.common.metrics.perplexity:0
+#: mindnlp.common.metrics.precision:0 mindnlp.common.metrics.recall:0
+#: mindnlp.common.metrics.rouge_l:0 mindnlp.common.metrics.rouge_n:0
+#: mindnlp.common.metrics.spearman_correlation:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
@@ -170,8 +170,7 @@ msgstr "seq2seq模型的基类"
 #: mindnlp.engine.metrics.accuracy.Accuracy:0
 #: mindnlp.engine.metrics.accuracy.Accuracy.update:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
-#: mindnlp.engine.metrics.bleu.BleuScore:0
-#: mindnlp.engine.metrics.bleu.BleuScore.update:0
+#: mindnlp.engine.metrics.bleu.BleuScore:0 mindnlp.engine.metrics.bleu.BleuScore.update:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/confusion_matrix.py:docstring
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix:0
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.update:0
@@ -196,13 +195,10 @@ msgstr "seq2seq模型的基类"
 #: mindnlp.engine.metrics.precision.Precision:0
 #: mindnlp.engine.metrics.precision.Precision.update:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/recall.py:docstring
-#: mindnlp.engine.metrics.recall.Recall:0
-#: mindnlp.engine.metrics.recall.Recall.update:0
+#: mindnlp.engine.metrics.recall.Recall:0 mindnlp.engine.metrics.recall.Recall.update:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
-#: mindnlp.engine.metrics.rouge.RougeL:0
-#: mindnlp.engine.metrics.rouge.RougeL.update:0
-#: mindnlp.engine.metrics.rouge.RougeN:0
-#: mindnlp.engine.metrics.rouge.RougeN.update:0
+#: mindnlp.engine.metrics.rouge.RougeL:0 mindnlp.engine.metrics.rouge.RougeL.update:0
+#: mindnlp.engine.metrics.rouge.RougeN:0 mindnlp.engine.metrics.rouge.RougeN.update:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation:0
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.update:0
@@ -215,15 +211,12 @@ msgstr "seq2seq模型的基类"
 #: mindnlp.models.bert.BertForPretraining.construct:0
 #: mindnlp.models.bert.BertIntermediate.construct:0
 #: mindnlp.models.bert.BertLMPredictionHead.construct:0
-#: mindnlp.models.bert.BertLayer.construct:0
-#: mindnlp.models.bert.BertModel.construct:0
-#: mindnlp.models.bert.BertOutput.construct:0
-#: mindnlp.models.bert.BertPooler.construct:0
+#: mindnlp.models.bert.BertLayer.construct:0 mindnlp.models.bert.BertModel.construct:0
+#: mindnlp.models.bert.BertOutput.construct:0 mindnlp.models.bert.BertPooler.construct:0
 #: mindnlp.models.bert.BertPreTrainingHeads.construct:0
 #: mindnlp.models.bert.BertPredictionHeadTransform.construct:0
 #: mindnlp.models.bert.BertSelfAttention.construct:0
-#: mindnlp.models.bert.BertSelfOutput.construct:0
-#: mindnlp.models.bert.Matmul.construct:0
+#: mindnlp.models.bert.BertSelfOutput.construct:0 mindnlp.models.bert.Matmul.construct:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: mindnlp.modules.attentions.AdditiveAttention:0
 #: mindnlp.modules.attentions.AdditiveAttention.construct:0
@@ -307,11 +300,10 @@ msgstr "处理编码器输出的模块"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/abc/backbones/seq2vec.py:docstring
 #: of mindnlp.abc.backbones.seq2vec.Seq2vecModel:7
 msgid ""
-"The drop out rate, greater than 0 and less equal than 1. If None, not dropping "
-"out input units. Drfault: None."
+"The drop out rate, greater than 0 and less equal than 1. If None, not dropping out "
+"input units. Drfault: None."
 msgstr ""
-"输入神经元丢弃概率，数值范围在0到1之间。如果值为None，则不丢弃输入神经元。默认"
-"值：None"
+"输入神经元丢弃概率，数值范围在0到1之间。如果值为None，则不丢弃输入神经元。默认值：None"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/abc/backbones/pretrained.py:docstring
 #: of mindnlp.abc.backbones.pretrained.PretrainedModel:1
@@ -330,24 +322,20 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/abc/callback.py:docstring
 #: of mindnlp.abc.callback.Callback:1
 msgid ""
-"Abstract base class used to build a callback class. Callbacks are context "
-"managers which will be entered and exited when passing into the Model. You can "
-"use this mechanism to do some custom operations."
-msgstr ""
-"用于构建回调类的抽象基类。"
-"回调函数是上下文管理器，在传递到模型时将进入和退出。"
-"您可以使用此机制来执行一些自定义操作。”
+"Abstract base class used to build a callback class. Callbacks are context managers "
+"which will be entered and exited when passing into the Model. You can use this "
+"mechanism to do some custom operations."
+msgstr "用于构建回调类的抽象基类。回调函数是上下文管理器，在传递到模型时将进入和退出。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/abc/callback.py:docstring
 #: of mindnlp.abc.callback.Callback:5
 msgid ""
-"Callback function can perform some operations before and after step or epoch. "
-"To create a custom callback, subclass Callback and override the method "
-"associated with the stage of interest."
+"Callback function can perform some operations before and after step or epoch. To "
+"create a custom callback, subclass Callback and override the method associated with "
+"the stage of interest."
 msgstr ""
-"回调函数可以在step或epoch前后执行一些操作。"
-"要创建自定义回调，"
-"请子类化 Callback 并覆盖与相关阶段关联的方法。"
+"回调函数可以在step或epoch前后执行一些操作。要创建自定义回调，请子类化 Callback 并覆盖与"
+"相关阶段关联的方法。"
 
 #: ../../api/abc.rst:20
 msgid "Metric"
@@ -356,19 +344,19 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/abc/metric.py:docstring
 #: of mindnlp.abc.metric.Metric:1
 msgid ""
-"Base class of all metrics. Never use this class directly, but instantiate one "
-"of its subclasses instead."
+"Base class of all metrics. Never use this class directly, but instantiate one of its "
+"subclasses instead."
 msgstr "所有metrics的基类。不能直接使用这个类，而是实例化它的一个子类。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/abc/metric.py:docstring
 #: of mindnlp.abc.metric.Metric:4
 msgid ""
-"Functions `update` will accumulate intermediate results in the evaluation "
-"process, `eval` will evaluate the final result, and `clear` will reinitialize "
-"the intermediate results. Function `get_metric_name` will provide class name."
+"Functions `update` will accumulate intermediate results in the evaluation process, "
+"`eval` will evaluate the final result, and `clear` will reinitialize the intermediate "
+"results. Function `get_metric_name` will provide class name."
 msgstr ""
-"函数`update`会在评估过程中累积中间结果，`eval`会评估最终结果，`clear`会重新初始"
-"化中间结果。函数`get_metric_name`会提供类名。"
+"函数 `update` 会在评估过程中累积中间结果， `eval` 会评估最终结果， `clear` 会重新初始化"
+"中间结果。函数 `get_metric_name` 会提供类名。"
 
 #: ../../api/abc.rst:26 ../../api/modules.rst:2
 msgid "Modules"
@@ -421,9 +409,8 @@ msgstr "传入vocab用于初始化."
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/abc/modules/embedding.py:docstring
 #: of mindnlp.abc.modules.embedding.TokenEmbedding:5
-msgid ""
-"Passing into Vocab and Tensor,use these values to initialize Embedding directly."
-msgstr ""
+msgid "Passing into Vocab and Tensor,use these values to initialize Embedding directly."
+msgstr "传递到Vocab和Tensor，使用这些值直接初始化Embedding。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/abc/modules/embedding.py:docstring
 #: of mindnlp.abc.modules.embedding.TokenEmbedding:7
@@ -433,7 +420,7 @@ msgstr "参数是否需要梯度下降来更新."
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/abc/modules/embedding.py:docstring
 #: of mindnlp.abc.modules.embedding.TokenEmbedding:9
 msgid "Dropout of the output of Embedding."
-msgstr ""
+msgstr "Embedding层的Dropout丢弃率。"
 
 #: ../../api/common.rst:2
 msgid "Common"
@@ -467,16 +454,14 @@ msgid "adjust scale value."
 msgstr ""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/amp.py:docstring
-#: of mindnlp.common.amp.DynamicLossScaler.scale:1
-#: mindnlp.common.amp.LossScaler.scale:1 mindnlp.common.amp.NoLossScaler.scale:1
-#: mindnlp.common.amp.StaticLossScaler.scale:1
+#: of mindnlp.common.amp.DynamicLossScaler.scale:1 mindnlp.common.amp.LossScaler.scale:1
+#: mindnlp.common.amp.NoLossScaler.scale:1 mindnlp.common.amp.StaticLossScaler.scale:1
 msgid "scale inputs tensor."
 msgstr ""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/amp.py:docstring
 #: of mindnlp.common.amp.DynamicLossScaler.unscale:1
-#: mindnlp.common.amp.LossScaler.unscale:1
-#: mindnlp.common.amp.NoLossScaler.unscale:1
+#: mindnlp.common.amp.LossScaler.unscale:1 mindnlp.common.amp.NoLossScaler.unscale:1
 #: mindnlp.common.amp.StaticLossScaler.unscale:1
 msgid "unscale inputs tensor."
 msgstr ""
@@ -591,10 +576,10 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/models/bert.py:docstring
 #: mindnlp.models.bert.BertAttention:1 mindnlp.models.bert.BertEmbeddings:1
 #: mindnlp.models.bert.BertEncoder:1 mindnlp.models.bert.BertForPretraining:1
-#: mindnlp.models.bert.BertIntermediate:1
-#: mindnlp.models.bert.BertLMPredictionHead:1 mindnlp.models.bert.BertLayer:1
-#: mindnlp.models.bert.BertModel:1 mindnlp.models.bert.BertOutput:1
-#: mindnlp.models.bert.BertPooler:1 mindnlp.models.bert.BertPreTrainingHeads:1
+#: mindnlp.models.bert.BertIntermediate:1 mindnlp.models.bert.BertLMPredictionHead:1
+#: mindnlp.models.bert.BertLayer:1 mindnlp.models.bert.BertModel:1
+#: mindnlp.models.bert.BertOutput:1 mindnlp.models.bert.BertPooler:1
+#: mindnlp.models.bert.BertPreTrainingHeads:1
 #: mindnlp.models.bert.BertPredictionHeadTransform:1
 #: mindnlp.models.bert.BertSelfAttention:1 mindnlp.models.bert.BertSelfOutput:1
 #: mindnlp.models.bert.Matmul:1
@@ -618,8 +603,8 @@ msgstr "用于计算CMRC2018中文问答任务"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/loss.py:docstring
 #: of mindnlp.common.loss.CMRC2018Loss:3
 msgid ""
-"Indicate how to average the loss, the candicates are \"mean\" and \"sum\". "
-"Default: \"mean\"."
+"Indicate how to average the loss, the candicates are \"mean\" and \"sum\". Default: "
+"\"mean\"."
 msgstr "计算loss的方式，候选有 `mean` 和 `sum`. 默认：`mean`"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/loss.py:docstring
@@ -652,10 +637,10 @@ msgstr ""
 #: mindnlp.common.metrics.confusion_matrix:0 mindnlp.common.metrics.distinct:0
 #: mindnlp.common.metrics.em_score:0 mindnlp.common.metrics.f1_score:0
 #: mindnlp.common.metrics.matthews_correlation:0
-#: mindnlp.common.metrics.pearson_correlation:0
-#: mindnlp.common.metrics.perplexity:0 mindnlp.common.metrics.precision:0
-#: mindnlp.common.metrics.recall:0 mindnlp.common.metrics.rouge_l:0
-#: mindnlp.common.metrics.rouge_n:0 mindnlp.common.metrics.spearman_correlation:0
+#: mindnlp.common.metrics.pearson_correlation:0 mindnlp.common.metrics.perplexity:0
+#: mindnlp.common.metrics.precision:0 mindnlp.common.metrics.recall:0
+#: mindnlp.common.metrics.rouge_l:0 mindnlp.common.metrics.rouge_n:0
+#: mindnlp.common.metrics.spearman_correlation:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
@@ -756,8 +741,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/recall.py:docstring
 #: mindnlp.engine.metrics.recall.Recall.eval:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
-#: mindnlp.engine.metrics.rouge.RougeL.eval:0
-#: mindnlp.engine.metrics.rouge.RougeN.eval:0
+#: mindnlp.engine.metrics.rouge.RougeL.eval:0 mindnlp.engine.metrics.rouge.RougeN.eval:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.eval:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/models/bert.py:docstring
@@ -767,15 +751,12 @@ msgstr ""
 #: mindnlp.models.bert.BertForPretraining.construct:0
 #: mindnlp.models.bert.BertIntermediate.construct:0
 #: mindnlp.models.bert.BertLMPredictionHead.construct:0
-#: mindnlp.models.bert.BertLayer.construct:0
-#: mindnlp.models.bert.BertModel.construct:0
-#: mindnlp.models.bert.BertOutput.construct:0
-#: mindnlp.models.bert.BertPooler.construct:0
+#: mindnlp.models.bert.BertLayer.construct:0 mindnlp.models.bert.BertModel.construct:0
+#: mindnlp.models.bert.BertOutput.construct:0 mindnlp.models.bert.BertPooler.construct:0
 #: mindnlp.models.bert.BertPreTrainingHeads.construct:0
 #: mindnlp.models.bert.BertPredictionHeadTransform.construct:0
 #: mindnlp.models.bert.BertSelfAttention.construct:0
-#: mindnlp.models.bert.BertSelfOutput.construct:0
-#: mindnlp.models.bert.Matmul.construct:0
+#: mindnlp.models.bert.BertSelfOutput.construct:0 mindnlp.models.bert.Matmul.construct:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: mindnlp.modules.attentions.AdditiveAttention.construct:0
 #: mindnlp.modules.attentions.BinaryAttention.construct:0
@@ -897,8 +878,7 @@ msgstr "Tensor, 计算后的 CMRC2018Loss"
 #: mindnlp.engine.metrics.accuracy.Accuracy.eval:0
 #: mindnlp.engine.metrics.accuracy.Accuracy.update:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
-#: mindnlp.engine.metrics.bleu.BleuScore:0
-#: mindnlp.engine.metrics.bleu.BleuScore.update:0
+#: mindnlp.engine.metrics.bleu.BleuScore:0 mindnlp.engine.metrics.bleu.BleuScore.update:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/confusion_matrix.py:docstring
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.update:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/distinct.py:docstring
@@ -906,8 +886,7 @@ msgstr "Tensor, 计算后的 CMRC2018Loss"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/em_score.py:docstring
 #: mindnlp.engine.metrics.em_score.EmScore.update:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/f1.py:docstring
-#: mindnlp.engine.metrics.f1.F1Score.eval:0
-#: mindnlp.engine.metrics.f1.F1Score.update:0
+#: mindnlp.engine.metrics.f1.F1Score.eval:0 mindnlp.engine.metrics.f1.F1Score.update:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/matthews.py:docstring
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation.update:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/pearson.py:docstring
@@ -950,10 +929,9 @@ msgstr "计算方式 `reduction` 没有选择 `sum` 或 `mean`"
 #: mindnlp.common.metrics.confusion_matrix:21 mindnlp.common.metrics.distinct:16
 #: mindnlp.common.metrics.em_score:16 mindnlp.common.metrics.f1_score:29
 #: mindnlp.common.metrics.matthews_correlation:29
-#: mindnlp.common.metrics.pearson_correlation:21
-#: mindnlp.common.metrics.precision:29 mindnlp.common.metrics.recall:27
-#: mindnlp.common.metrics.rouge_l:29 mindnlp.common.metrics.rouge_n:20
-#: mindnlp.common.metrics.spearman_correlation:22
+#: mindnlp.common.metrics.pearson_correlation:21 mindnlp.common.metrics.precision:29
+#: mindnlp.common.metrics.recall:27 mindnlp.common.metrics.rouge_l:29
+#: mindnlp.common.metrics.rouge_n:20 mindnlp.common.metrics.spearman_correlation:22
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: mindnlp.engine.metrics.accuracy.Accuracy:16
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
@@ -984,8 +962,8 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/loss.py:docstring
 #: of mindnlp.common.loss.RDropLoss:1
 msgid ""
-"R-Drop Loss implementation For more information about R-drop please refer to "
-"this paper: https://arxiv.org/abs/2106.14448"
+"R-Drop Loss implementation For more information about R-drop please refer to this "
+"paper: https://arxiv.org/abs/2106.14448"
 msgstr ""
 "R-Drop Loss 的实现。更多关于R-drop的信息请参考这篇文章：https://arxiv.org/"
 "abs/2106.14448"
@@ -993,25 +971,23 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/loss.py:docstring
 #: of mindnlp.common.loss.RDropLoss:4
 msgid ""
-"Original implementation please refer to this code: https://github.com/dropreg/R-"
-"Drop"
+"Original implementation please refer to this code: https://github.com/dropreg/R-Drop"
 msgstr "原始实现请参考这里的代码：https://github.com/dropreg/R-Drop"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/loss.py:docstring
 #: of mindnlp.common.loss.RDropLoss:6
 msgid ""
-"Indicate how to average the loss, the candicates are \"none\", \"batchmean\","
-"\"mean\",\"sum\". Default: \"none\".  - \"mean\": The reduced mean loss is "
-"returned. - \"batchmean\": The sum loss divided by batch size is returned. - "
-"\"sum\": The reduced sum loss is returned. - \"none\": No reduction will be "
-"applied."
+"Indicate how to average the loss, the candicates are \"none\", \"batchmean\",\"mean\","
+"\"sum\". Default: \"none\".  - \"mean\": The reduced mean loss is returned. - "
+"\"batchmean\": The sum loss divided by batch size is returned. - \"sum\": The reduced "
+"sum loss is returned. - \"none\": No reduction will be applied."
 msgstr ""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/loss.py:docstring
 #: of mindnlp.common.loss.RDropLoss:6
 msgid ""
-"Indicate how to average the loss, the candicates are \"none\", \"batchmean\","
-"\"mean\",\"sum\". Default: \"none\"."
+"Indicate how to average the loss, the candicates are \"none\", \"batchmean\",\"mean\","
+"\"sum\". Default: \"none\"."
 msgstr "计算loss的方式，候选有 `none`, `batchmean`, `mean`, `sum`。默认: `none`"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/loss.py:docstring
@@ -1052,8 +1028,8 @@ msgstr "训练样本的第二次前向向量"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/loss.py:docstring
 #: of mindnlp.common.loss.RDropLoss.construct:7
 msgid ""
-"The Tensor containing the binary mask to index with, it's data type is bool. "
-"Default: None."
+"The Tensor containing the binary mask to index with, it's data type is bool. Default: "
+"None."
 msgstr "包含要索引的二进制掩码的张量Tensor，其数据类型为 `bool`。默认: `None`"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/loss.py:docstring
@@ -1064,8 +1040,7 @@ msgstr "Tensor， p和q的rdrop loss"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/loss.py:docstring
 #: of mindnlp.common.loss.RDropLoss.construct:13
 msgid "if 'reduction' in 'RDropLoss' is not 'sum', 'mean' 'batchmean', or 'none'."
-msgstr ""
-"计算方式 `reduction` 不是 `sum` , `mean` , `batchmean` 或 `none` 的其中一个。"
+msgstr "计算方式 `reduction` 不是 `sum` , `mean` , `batchmean` 或 `none` 的其中一个。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/loss.py:docstring
 #: of mindnlp.common.loss.RDropLoss.construct:16
@@ -1178,9 +1153,9 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: mindnlp.utils.download.cache_file:28 mindnlp.utils.download.cached_path:26
 #: mindnlp.utils.download.check_md5:14 mindnlp.utils.download.get_cache_path:8
-#: mindnlp.utils.download.get_dataset_url:12
-#: mindnlp.utils.download.get_filepath:15 mindnlp.utils.download.get_from_cache:25
-#: mindnlp.utils.download.http_get:21 mindnlp.utils.download.match_file:20
+#: mindnlp.utils.download.get_dataset_url:12 mindnlp.utils.download.get_filepath:15
+#: mindnlp.utils.download.get_from_cache:25 mindnlp.utils.download.http_get:21
+#: mindnlp.utils.download.match_file:20
 msgid "Examples"
 msgstr ""
 
@@ -1212,35 +1187,34 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: mindnlp.engine.metrics.accuracy.Accuracy:8
 msgid ""
-"where `ACC` is accuracy, `TP` is the number of true posistive cases, `TN` is "
-"the number of true negative cases, `FP` is the number of false posistive cases, "
-"`FN` is the number of false negative cases."
+"where `ACC` is accuracy, `TP` is the number of true posistive cases, `TN` is the "
+"number of true negative cases, `FP` is the number of false posistive cases, `FN` is "
+"the number of false negative cases."
 msgstr ""
-"其中`ACC`是准确率accuracy，`TP`是正确预测的正样本数量，`TN`是正确预测的负样本数"
-"量，`FP`是错误预测的正样本数量，`FN`是错误预测的负样本数量。"
+"其中 `ACC` 是准确率accuracy， `TP` 是正确预测的正样本数量， `TN` 是正确预测的负样本数"
+"量， `FP` 是错误预测的正样本数量， `FN` 是错误预测的负样本数量。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.accuracy:12 mindnlp.common.metrics.f1_score:12
 #: mindnlp.common.metrics.perplexity:11 mindnlp.common.metrics.precision:12
 #: mindnlp.common.metrics.recall:10
 msgid ""
-"Predicted value. `preds` is a list of floating numbers in range :math:`[0, 1]` "
-"and the shape of `preds` is :math:`(N, C)` in most cases (not strictly), where :"
-"math:`N` is the number of cases and :math:`C` is the number of categories."
+"Predicted value. `preds` is a list of floating numbers in range :math:`[0, 1]` and the "
+"shape of `preds` is :math:`(N, C)` in most cases (not strictly), where :math:`N` is "
+"the number of cases and :math:`C` is the number of categories."
 msgstr ""
-"预测值。范围在`[0，1]`中的浮点数列表，在大多数情况下（不严格要求），shape是`(N, "
-"C)`，其中`N`是样本数，`C`是类别数。"
+"预测值。范围在[0，1]中的浮点数列表，在大多数情况下（不严格要求），shape是 `(N, C)` ，其"
+"中 `N` 是样本数， `C` 是类别数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.accuracy:17 mindnlp.common.metrics.f1_score:17
-#: mindnlp.common.metrics.matthews_correlation:19
-#: mindnlp.common.metrics.perplexity:16 mindnlp.common.metrics.precision:17
-#: mindnlp.common.metrics.recall:15
+#: mindnlp.common.metrics.matthews_correlation:19 mindnlp.common.metrics.perplexity:16
+#: mindnlp.common.metrics.precision:17 mindnlp.common.metrics.recall:15
 msgid ""
-"Ground truth. `labels` must be in one-hot format that shape is :math:`(N, C)`, "
-"or can be transformed to one-hot format that shape is :math:`(N,)`."
+"Ground truth. `labels` must be in one-hot format that shape is :math:`(N, C)`, or can "
+"be transformed to one-hot format that shape is :math:`(N,)`."
 msgstr ""
-"真实值。必须是one-hot编码格式，shape为`(N, C)`，或能够转换为one-hot格式，shape为"
+"真实值。必须是one-hot编码格式，shape为 `(N, C)`，或能够转换为one-hot格式，shape为 "
 "`(N,)`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
@@ -1271,14 +1245,13 @@ msgstr "如果样本数为0。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: mindnlp.engine.metrics.bleu.BleuScore:1
 msgid ""
-"Calculates the BLEU score. BLEU (bilingual evaluation understudy) is a metric "
-"for evaluating the quality of text translated by machine. It uses a modified "
-"form of precision to compare a candidate translation against multiple reference "
-"translations. The function is shown as follows:"
+"Calculates the BLEU score. BLEU (bilingual evaluation understudy) is a metric for "
+"evaluating the quality of text translated by machine. It uses a modified form of "
+"precision to compare a candidate translation against multiple reference translations. "
+"The function is shown as follows:"
 msgstr ""
-"计算BLEU分数。BLEU (bilingual evaluation understudy)是一种用于评价机器翻译文本质"
-"量的指标。它使用一种精确度precision的修正形式来比较候选翻译与多个参考翻译。函数"
-"如下所示："
+"计算BLEU分数。BLEU (bilingual evaluation understudy)是一种用于评价机器翻译文本质量的指"
+"标。它使用一种精确度precision的修正形式来比较候选翻译与多个参考翻译。函数如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.bleu:6
@@ -1299,9 +1272,9 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: mindnlp.engine.metrics.bleu.BleuScore:16
 msgid ""
-"where `c` is the length of candidate sentence, and `r` is the length of "
-"reference sentence."
-msgstr "其中`c`是候选句子的长度，`r`是参考句子的长度。"
+"where `c` is the length of candidate sentence, and `r` is the length of reference "
+"sentence."
+msgstr "其中 `c` 是候选句子的长度， `r` 是参考句子的长度。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.bleu:18 mindnlp.common.metrics.rouge_n:6
@@ -1347,45 +1320,45 @@ msgstr "**bleu_score** (float) - 计算得到的结果。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: mindnlp.engine.metrics.bleu.BleuScore:25
 msgid "If the value range of `n_size` is not from 1 to 4."
-msgstr "如果`n_size`的值范围不是从1到4。"
+msgstr "如果 `n_size` 的值范围不是从1到4。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.bleu:32
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: mindnlp.engine.metrics.bleu.BleuScore.update:9
 msgid "If the lengths of `cand` and `ref_list` are not equal."
-msgstr "如果`cand`和`ref_list`的长度不相等"
+msgstr "如果 `cand` 和 `ref_list` 的长度不相等"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.bleu:33
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: mindnlp.engine.metrics.bleu.BleuScore:26
 msgid "If the lengths of `weights` is not equal to `n_size`."
-msgstr "如果`weights`的长度不等于`n_size`。"
+msgstr "如果 `weights` 的长度不等于 `n_size` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.confusion_matrix:1
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/confusion_matrix.py:docstring
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix:1
 msgid ""
-"Calculates the confusion matrix. Confusion matrix is commonly used to evaluate "
-"the performance of classification models, including binary classification and "
-"multiple classification."
+"Calculates the confusion matrix. Confusion matrix is commonly used to evaluate the "
+"performance of classification models, including binary classification and multiple "
+"classification."
 msgstr ""
-"计算混淆矩阵confusion matrix。混淆矩阵confusion matrix被广泛用于评价分类模型的性"
-"能，包括二分类和多分类。"
+"计算混淆矩阵confusion matrix。混淆矩阵confusion matrix被广泛用于评价分类模型的性能，包"
+"括二分类和多分类。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.confusion_matrix:5
 msgid ""
-"Predicted value. `preds` is a list of floating numbers and the shape of `preds` "
-"is :math:`(N, C)` or :math:`(N,)`."
-msgstr "预测值。一个浮点数列表，其shape为`(N, C)`或`(N,)`。"
+"Predicted value. `preds` is a list of floating numbers and the shape of `preds` is :"
+"math:`(N, C)` or :math:`(N,)`."
+msgstr "预测值。一个浮点数列表，其shape为 `(N, C)` 或 `(N,)`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.confusion_matrix:8
 msgid "Ground truth. The shape of `labels` is :math:`(N,)`."
-msgstr "真实值。shape为`(N,)`。"
+msgstr "真实值。shape为 `(N,)`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.confusion_matrix:11
@@ -1413,20 +1386,20 @@ msgstr "**conf_mat** (np.ndarray) - 计算得到的结果。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/confusion_matrix.py:docstring
 #: mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.update:11
 msgid "If `preds` and `labels` do not have valid dimensions."
-msgstr "如果`preds`和`labels`没有有效的维度。"
+msgstr "如果 `preds` 和 `labels` 没有有效的维度。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.distinct:1
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/distinct.py:docstring
 #: mindnlp.engine.metrics.distinct.Distinct:1
 msgid ""
-"Calculates the Distinct-N. Distinct-N is a metric that measures the diversity "
-"of a sentence. It focuses on the number of distinct n-gram of a sentence. The "
-"larger the number of distinct n-grams, the higher the diversity of the text. "
-"The function is shown as follows:"
+"Calculates the Distinct-N. Distinct-N is a metric that measures the diversity of a "
+"sentence. It focuses on the number of distinct n-gram of a sentence. The larger the "
+"number of distinct n-grams, the higher the diversity of the text. The function is "
+"shown as follows:"
 msgstr ""
-"计算Distinct-N。Distinct-N是一种测量句子多样性的指标。它关注一个句子中不同n-gram"
-"的数量。不同n-gram的数量越多，文本的多样性越高。函数如下所示："
+"计算Distinct-N。Distinct-N是一种测量句子多样性的指标。它关注一个句子中不同n-gram的数"
+"量。不同n-gram的数量越多，文本的多样性越高。函数如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.distinct:6 mindnlp.common.metrics.rouge_l:17
@@ -1486,19 +1459,18 @@ msgstr "**exact_match** (float) - 计算得到的结果。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/em_score.py:docstring
 #: mindnlp.engine.metrics.em_score.EmScore.update:9
 msgid "If `preds` and `examples` have different lengths."
-msgstr "如果`preds`和`examples`长度不同。"
+msgstr "如果 `preds` 和 `examples` 长度不同。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.f1_score:1
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/f1.py:docstring
 #: mindnlp.engine.metrics.f1.F1Score:1
 msgid ""
-"Calculates the F1 score. Fbeta score is a weighted mean of precision and "
-"recall, and F1 score is a special case of Fbeta when beta is 1. The function is "
-"shown as follows:"
+"Calculates the F1 score. Fbeta score is a weighted mean of precision and recall, and "
+"F1 score is a special case of Fbeta when beta is 1. The function is shown as follows:"
 msgstr ""
-"计算F1分数。Fbeta分数是precision和recall的加权平均，F1分数是Fbeta的一种特殊情"
-"况，此时beta为1。函数如下所示："
+"计算F1分数。Fbeta分数是precision和recall的加权平均，F1分数是Fbeta的一种特殊情况，此时"
+"beta为1。函数如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.f1_score:5
@@ -1512,10 +1484,10 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/f1.py:docstring
 #: mindnlp.engine.metrics.f1.F1Score:9
 msgid ""
-"where `TP` is the number of true posistive cases, `FN` is the number of false "
-"negative cases, `FP` is the number of false positive cases."
+"where `TP` is the number of true posistive cases, `FN` is the number of false negative "
+"cases, `FP` is the number of false positive cases."
 msgstr ""
-"其中`TP`是正确预测的正样本数量，`FN`是错误预测的负样本数量，`FP`是错误预测的正样"
+"其中 `TP` 是正确预测的正样本数量， `FN` 是错误预测的负样本数量， `FP` 是错误预测的正样"
 "本数量。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
@@ -1538,30 +1510,28 @@ msgstr "**f1_s** (np.ndarray) - 计算得到的结果。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/recall.py:docstring
 #: mindnlp.engine.metrics.recall.Recall.update:14
 msgid "If `preds` doesn't have the same classes number as `labels`."
-msgstr "如果`preds`和`labels`没有相同数量的类。"
+msgstr "如果 `preds` 和 `labels` 没有相同数量的类。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.matthews_correlation:1
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/matthews.py:docstring
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation:1
 msgid ""
-"Calculates the Matthews correlation coefficient (MCC). MCC is in essence a "
-"correlation coefficient between the observed and predicted binary "
-"classifications; it returns a value between −1 and +1. A coefficient of +1 "
-"represents a perfect prediction, 0 no better than random prediction and −1 "
-"indicates total disagreement between prediction and observation. The function "
-"is shown as follows:"
+"Calculates the Matthews correlation coefficient (MCC). MCC is in essence a correlation "
+"coefficient between the observed and predicted binary classifications; it returns a "
+"value between −1 and +1. A coefficient of +1 represents a perfect prediction, 0 no "
+"better than random prediction and −1 indicates total disagreement between prediction "
+"and observation. The function is shown as follows:"
 msgstr ""
-"计算Matthews相关系数(MCC)。MCC本质上是观测的和预测的二分类之间的相关系数；它返回"
-"了一个介于-1和+1之间的值。系数+1表示一次完美的预测，0不比随机预测好，−1表示预测"
-"值和观测值完全不同。函数如下所示："
+"计算Matthews相关系数(MCC)。MCC本质上是观测的和预测的二分类之间的相关系数；它返回了一个"
+"介于-1和+1之间的值。系数+1表示一次完美的预测，0不比随机预测好，−1表示预测值和观测值完全"
+"不同。函数如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.matthews_correlation:7
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/matthews.py:docstring
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation:7
-msgid ""
-"MCC=\\frac{TP \\times TN-FP \\times FN}{\\sqrt{(TP+FP)(TP+FN)(TN+FP)(TN+FN)}}"
+msgid "MCC=\\frac{TP \\times TN-FP \\times FN}{\\sqrt{(TP+FP)(TP+FN)(TN+FP)(TN+FN)}}"
 msgstr ""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
@@ -1569,22 +1539,22 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/matthews.py:docstring
 #: mindnlp.engine.metrics.matthews.MatthewsCorrelation:11
 msgid ""
-"where `TP` is the number of true posistive cases, `TN` is the number of true "
-"negative cases, `FN` is the number of false negative cases, `FP` is the number "
-"of false positive cases."
+"where `TP` is the number of true posistive cases, `TN` is the number of true negative "
+"cases, `FN` is the number of false negative cases, `FP` is the number of false "
+"positive cases."
 msgstr ""
-"其中`TP`是正确预测的正样本数，`TN`是正确预测的负样本数，`FN`是错误预测的负样本"
-"数，`FP`是错误预测的正样本数。"
+"其中 `TP` 是正确预测的正样本数， `TN` 是正确预测的负样本数， `FN` 是错误预测的负样本"
+"数， `FP` 是错误预测的正样本数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.matthews_correlation:14
 msgid ""
-"Predicted value. `preds` is a list of floating numbers and the shape of `preds` "
-"is :math:`(N, C)` in most cases (not strictly), where :math:`N` is the number "
-"of cases and :math:`C` is the number of categories."
+"Predicted value. `preds` is a list of floating numbers and the shape of `preds` is :"
+"math:`(N, C)` in most cases (not strictly), where :math:`N` is the number of cases "
+"and :math:`C` is the number of categories."
 msgstr ""
-"预测值。浮点数列表，大多数情况下（不严格要求），shape是`(N, C)`，其中`N`是样本"
-"数，`C`是类别数。"
+"预测值。浮点数列表，大多数情况下（不严格要求），shape是 `(N, C)` ，其中 `N` 是样本数， "
+"`C` 是类别数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.matthews_correlation:24
@@ -1605,31 +1575,30 @@ msgstr "**m_c_c** (float) - 计算得到的结果。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/pearson.py:docstring
 #: mindnlp.engine.metrics.pearson.PearsonCorrelation:1
 msgid ""
-"Calculates the Pearson correlation coefficient (PCC). PCC is a measure of "
-"linear correlation between two sets of data. It is the ratio between the "
-"covariance of two variables and the product of their standard deviations; thus, "
-"it is essentially a normalized measurement of the covariance, such that the "
-"result always has a value between −1 and 1."
+"Calculates the Pearson correlation coefficient (PCC). PCC is a measure of linear "
+"correlation between two sets of data. It is the ratio between the covariance of two "
+"variables and the product of their standard deviations; thus, it is essentially a "
+"normalized measurement of the covariance, such that the result always has a value "
+"between −1 and 1."
 msgstr ""
-"计算Pearson相关系数(PCC)。PCC是两组数据之间线性相关系数的测量方式。它是两个变量"
-"之间的协方差之比，他们标准差的乘积；因此，它本质上是协方差的归一化测量，结果值总"
-"在−1和1之间。"
+"计算Pearson相关系数(PCC)。PCC是两组数据之间线性相关系数的测量方式。它是两个变量之间的协"
+"方差之比，他们标准差的乘积；因此，它本质上是协方差的归一化测量，结果值总在−1和1之间。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.pearson_correlation:7
 #: mindnlp.common.metrics.spearman_correlation:8
 msgid ""
-"Predicted value. `preds` is a list of floating numbers and the shape of `preds` "
-"is :math:`(N, 1)`."
-msgstr "预测值。浮点数列表，shape为`(N, 1)`。"
+"Predicted value. `preds` is a list of floating numbers and the shape of `preds` is :"
+"math:`(N, 1)`."
+msgstr "预测值。浮点数列表，shape为 `(N, 1)` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.pearson_correlation:10
 #: mindnlp.common.metrics.spearman_correlation:11
 msgid ""
-"Ground truth. `labels` is a list of floating numbers and the shape of `preds` "
-"is :math:`(N, 1)`."
-msgstr "真实值。浮点数列表，shape是`(N, 1)`。"
+"Ground truth. `labels` is a list of floating numbers and the shape of `preds` is :math:"
+"`(N, 1)`."
+msgstr "真实值。浮点数列表，shape是 `(N, 1)` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.pearson_correlation:14
@@ -1646,8 +1615,7 @@ msgid "**p_c_c** (float) - The computed result."
 msgstr "**p_c_c** (float) - 计算得到的结果。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
-#: of mindnlp.common.metrics.pearson_correlation:18
-#: mindnlp.common.metrics.perplexity:29
+#: of mindnlp.common.metrics.pearson_correlation:18 mindnlp.common.metrics.perplexity:29
 #: mindnlp.common.metrics.spearman_correlation:19
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/pearson.py:docstring
 #: mindnlp.engine.metrics.pearson.PearsonCorrelation.update:11
@@ -1656,44 +1624,42 @@ msgstr "**p_c_c** (float) - 计算得到的结果。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.update:11
 msgid "If `preds` and `labels` have different lengths."
-msgstr "如果`preds`和`labels`长度不同。"
+msgstr "如果 `preds` 和 `labels` 长度不同。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.perplexity:1
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/perplexity.py:docstring
 #: mindnlp.engine.metrics.perplexity.Perplexity:1
 msgid ""
-"Calculates the perplexity. Perplexity is a measure of how well a probabilibity "
-"model predicts a sample. A low perplexity indicates the model is good at "
-"predicting the sample. The function is shown as follows:"
+"Calculates the perplexity. Perplexity is a measure of how well a probabilibity model "
+"predicts a sample. A low perplexity indicates the model is good at predicting the "
+"sample. The function is shown as follows:"
 msgstr ""
-"计算perplexity。Perplexity衡量概率模型预测样本的能力。低的perplexity说明模型善于"
-"预测样本。函数如下所示："
+"计算perplexity。Perplexity衡量概率模型预测样本的能力。低的perplexity说明模型善于预测样"
+"本。函数如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.perplexity:5
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/perplexity.py:docstring
 #: mindnlp.engine.metrics.perplexity.Perplexity:5
 msgid ""
-"PP(W)=P(w_{1}w_{2}...w_{N})^{-\\frac{1}{N}}=\\sqrt[N]{\\frac{1}{P(w_{1}w_{2}..."
-"w_{N})}}"
+"PP(W)=P(w_{1}w_{2}...w_{N})^{-\\frac{1}{N}}=\\sqrt[N]{\\frac{1}{P(w_{1}w_{2}...w_{N})}}"
 msgstr ""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.perplexity:9
 msgid "where :math:`w` represents words in corpus."
-msgstr "其中`w`表示语料库中的词。"
+msgstr "其中 `w` 表示语料库中的词。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.perplexity:20
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/perplexity.py:docstring
 #: mindnlp.engine.metrics.perplexity.Perplexity:11
 msgid ""
-"Index of an invalid label to be ignored when counting. If set to `None`, it "
-"means there's no invalid label. Default: None."
+"Index of an invalid label to be ignored when counting. If set to `None`, it means "
+"there's no invalid label. Default: None."
 msgstr ""
-"计数时要忽略的无效标签的索引。如果设置为`None`，它意味着没有无效标签。默认："
-"None。"
+"计数时要忽略的无效标签的索引。如果设置为 `None` ，它意味着没有无效标签。默认：None。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.perplexity:25
@@ -1714,7 +1680,7 @@ msgstr "**ppl** (float) - 计算得到的结果。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/perplexity.py:docstring
 #: mindnlp.engine.metrics.perplexity.Perplexity.update:15
 msgid "If `pred` and `label` have different shapes."
-msgstr "如果`pred`和`label`有不同的shape。"
+msgstr "如果 `pred` 和 `label` 有不同的shape。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.perplexity:31
@@ -1726,13 +1692,12 @@ msgstr "如果样本数为0。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.precision:1
 msgid ""
-"Calculates the precision. Precision (also known as positive predictive value) "
-"is the actual positive proportion in the predicted positive sample. It can only "
-"be used to evaluate the precision score of binary tasks. The function is shown "
-"as follows:"
+"Calculates the precision. Precision (also known as positive predictive value) is the "
+"actual positive proportion in the predicted positive sample. It can only be used to "
+"evaluate the precision score of binary tasks. The function is shown as follows:"
 msgstr ""
-"计算精确度precision。精确度precision（也称为正预测值）是预测的正样本中的实际正样"
-"本比例。它只被用来评价二分类任务的精确度precision分数。函数如下所示："
+"计算精确度precision。精确度precision（也称为正预测值）是预测的正样本中的实际正样本比"
+"例。它只被用来评价二分类任务的精确度precision分数。函数如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.precision:6
@@ -1748,7 +1713,7 @@ msgstr ""
 msgid ""
 "where `TP` is the number of true posistive cases, `FP` is the number of false "
 "posistive cases."
-msgstr "其中`TP`是正确预测的正样本数，`FP`是错误预测的正样本数。"
+msgstr "其中 `TP` 是正确预测的正样本数， `FP` 是错误预测的正样本数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.precision:22
@@ -1781,9 +1746,9 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/recall.py:docstring
 #: mindnlp.engine.metrics.recall.Recall:8
 msgid ""
-"where `TP` is the number of true posistive cases, `FN` is the number of false "
-"negative cases."
-msgstr "其中`TP`是正确预测的正样本数，`FN`是错误预测的负样本数。"
+"where `TP` is the number of true posistive cases, `FN` is the number of false negative "
+"cases."
+msgstr "其中 `TP` 是正确预测的正样本数， `FN` 是错误预测的负样本数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.recall:20
@@ -1802,12 +1767,11 @@ msgstr "**rec** (np.ndarray) - 计算得到的结果。"
 msgid ""
 "Calculates the ROUGE-L score. ROUGE (Recall-Oriented Understudy for Gisting "
 "Evaluation) is a set of metrics used for evaluating automatic summarization and "
-"machine translation models. ROUGE-L is calculated based on Longest Common "
-"Subsequence (LCS). The function is shown as follows:"
+"machine translation models. ROUGE-L is calculated based on Longest Common Subsequence "
+"(LCS). The function is shown as follows:"
 msgstr ""
-"计算ROUGE-L分数。ROUGE (Recall-Oriented Understudy for Gisting Evaluation)是一组"
-"用于评估自动摘要和机器翻译模型的指标。ROUGE-L基于最长公共子序列(LCS)计算。函数如"
-"下所示："
+"计算ROUGE-L分数。ROUGE (Recall-Oriented Understudy for Gisting Evaluation)是一组用于评"
+"估自动摘要和机器翻译模型的指标。ROUGE-L基于最长公共子序列(LCS)计算。函数如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.rouge_l:6
@@ -1818,8 +1782,8 @@ msgid ""
 "\n"
 "p_{l c s}=\\frac{L C S(X, Y)}{n}\n"
 "\n"
-"F_{l c s}=\\frac{\\left(1+\\beta^{2}\\right) R_{l c s} P_{l c s}}{R_{l c s}+"
-"\\beta^{2} P_{l c s}}"
+"F_{l c s}=\\frac{\\left(1+\\beta^{2}\\right) R_{l c s} P_{l c s}}{R_{l c s}+\\beta^{2} "
+"P_{l c s}}"
 msgstr ""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
@@ -1828,11 +1792,11 @@ msgstr ""
 #: mindnlp.engine.metrics.rouge.RougeL:14
 msgid ""
 "where `X` is the candidate sentence, `Y` is the reference sentence. `m` and `n` "
-"represent the length of `X` and `Y` respectively. `LCS` means the longest "
-"common subsequence."
+"represent the length of `X` and `Y` respectively. `LCS` means the longest common "
+"subsequence."
 msgstr ""
-"其中`X`是候选句子，`Y`是参考句子。`m`和`n`分别表示`X`和`Y`的长度。`LCS`意味着最"
-"长公共子序列。"
+"其中 `X` 是候选句子， `Y` 是参考句子。 `m` 和 `n` 分别表示 `X` 和 `Y` 的长度。 `LCS` 意"
+"味着最长公共子序列。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.rouge_l:21
@@ -1863,9 +1827,8 @@ msgid ""
 "machine translation models. ROUGE-N refers to the overlap of n-grams between "
 "candidates and reference summaries."
 msgstr ""
-"计算ROUGE-N分数。ROUGE(Recall-Oriented Understudy for Gisting Evaluation)是一组"
-"用于评估自动摘要和机器翻译模型的指标。ROUGE-N指的是候选句子和参考摘要之间的n-"
-"gram重叠。"
+"计算ROUGE-N分数。ROUGE(Recall-Oriented Understudy for Gisting Evaluation)是一组用于评估"
+"自动摘要和机器翻译模型的指标。ROUGE-N指的是候选句子和参考摘要之间的n-gram重叠。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.rouge_n:10
@@ -1900,17 +1863,17 @@ msgstr "如果参考句子的长度为0。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation:1
 msgid ""
-"Calculates the Spearman's rank correlation coefficient (SRCC). It is a "
-"nonparametric measure of rank correlation (statistical dependence between the "
-"rankings of two variables). It assesses how well the relationship between two "
-"variables can be described using a monotonic function. If there are no repeated "
-"data values, a perfect Spearman correlation of +1 or −1 occurs when each of the "
-"variables is a perfect monotone function of the other."
+"Calculates the Spearman's rank correlation coefficient (SRCC). It is a nonparametric "
+"measure of rank correlation (statistical dependence between the rankings of two "
+"variables). It assesses how well the relationship between two variables can be "
+"described using a monotonic function. If there are no repeated data values, a perfect "
+"Spearman correlation of +1 or −1 occurs when each of the variables is a perfect "
+"monotone function of the other."
 msgstr ""
-"计算斯皮尔曼秩相关系数（Spearman's rank correlation coefficient，SRCC）。它是一"
-"种非参数的秩相关性（两个变量的秩之间的统计相关性）度量。它使用单调函数，评估了模"
-"型描述两个变量之间的关系的能力。如果不存在重复的数值，当每一个变量都是另一个变量"
-"的一个完美的单调函数时，此时的斯皮尔曼相关系数是完美的，为+1或−1。"
+"计算斯皮尔曼秩相关系数（Spearman's rank correlation coefficient，SRCC）。它是一种非参数"
+"的秩相关性（两个变量的秩之间的统计相关性）度量。它使用单调函数，评估了模型描述两个变量"
+"之间的关系的能力。如果不存在重复的数值，当每一个变量都是另一个变量的一个完美的单调函数"
+"时，此时的斯皮尔曼相关系数是完美的，为+1或−1。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/common/metrics.py:docstring
 #: of mindnlp.common.metrics.spearman_correlation:15
@@ -2016,8 +1979,8 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:21
 msgid ""
-"**valid/test sets**: [\"dev2010\", \"tst2010\", \"tst2011\", \"tst2012\", "
-"\"tst2013\", \"tst2014\"]"
+"**valid/test sets**: [\"dev2010\", \"tst2010\", \"tst2011\", \"tst2012\", \"tst2013\", "
+"\"tst2014\"]"
 msgstr ""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
@@ -2122,8 +2085,7 @@ msgstr "定义测试集的字符串。默认：\"tst2014\""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: mindnlp.utils.download.cache_file:14 mindnlp.utils.download.cached_path:14
 #: mindnlp.utils.download.get_from_cache:12 mindnlp.utils.download.http_get:12
-msgid ""
-"a dict to identify proxies,for example: {\"https\": \"https://127.0.0.1:7890\"}."
+msgid "a dict to identify proxies,for example: {\"https\": \"https://127.0.0.1:7890\"}."
 msgstr "定义代理的字典，例如：{\"https\": \"https://127.0.0.1:7890\"}"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
@@ -2185,12 +2147,11 @@ msgstr "定义代理的字典，例如：{\"https\": \"https://127.0.0.1:7890\"}
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_generation/wikitext2.py:docstring
 #: mindnlp.dataset.text_generation.wikitext2.WikiText2:11
 msgid ""
-"- **datasets_list** (list) -A list of loaded datasets.   If only one type of "
-"dataset is specified,such as 'trian',   this dataset is returned instead of a "
-"list of datasets."
+"- **datasets_list** (list) -A list of loaded datasets.   If only one type of dataset "
+"is specified,such as 'trian',   this dataset is returned instead of a list of datasets."
 msgstr ""
-"- **datasets_list** (list) -加载完成的数据集分块列表。如果只加载了一个数据集分"
-"块， 如：'trian'，那么就只返回这个数据集分块，而不是一个列表。"
+"- **datasets_list** (list) -加载完成的数据集分块列表。如果只加载了一个数据集分块， "
+"如：'trian'，那么就只返回这个数据集分块，而不是一个列表。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:39
@@ -2251,12 +2212,11 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_generation/wikitext2.py:docstring
 #: mindnlp.dataset.text_generation.wikitext2.WikiText2:13
 msgid ""
-"**datasets_list** (list) -A list of loaded datasets. If only one type of "
-"dataset is specified,such as 'trian', this dataset is returned instead of a "
-"list of datasets."
+"**datasets_list** (list) -A list of loaded datasets. If only one type of dataset is "
+"specified,such as 'trian', this dataset is returned instead of a list of datasets."
 msgstr ""
-"**datasets_list** (list) -加载完成的数据集分块列表。如果只加载了一个数据集分"
-"块， 如：'trian'，那么就只返回这个数据集分块，而不是一个列表。"
+"**datasets_list** (list) -加载完成的数据集分块列表。如果只加载了一个数据集分块， "
+"如：'trian'，那么就只返回这个数据集分块，而不是一个列表。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2016.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2016.IWSLT2016:43
@@ -2369,8 +2329,7 @@ msgstr ""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
 #: of mindnlp.dataset.machine_translation.iwslt2017.IWSLT2017_Process:1
-msgid ""
-"a function transforms specific language column in IWSLT2017 dataset into tensors"
+msgid "a function transforms specific language column in IWSLT2017 dataset into tensors"
 msgstr "将IWSLT2017数据集中的指定列转换为张量"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/iwslt2017.py:docstring
@@ -2509,8 +2468,7 @@ msgstr "Multi30k数据集。"
 #: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:9
 msgid "vocabulary object, used to store the mapping of token and index."
 msgstr ""
-"词表对象，用于存储分词和索引的映射。默认为空。如果为空，一个新的词表对象将会被创"
-"建。"
+"词表对象，用于存储分词和索引的映射。默认为空。如果为空，一个新的词表对象将会被创建。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: of mindnlp.dataset.machine_translation.multi30k.Multi30k_Process:7
@@ -2539,12 +2497,11 @@ msgstr "句子的最大长度。默认值：500。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/agnews.py:docstring
 #: mindnlp.dataset.text_classification.agnews.AG_NEWS_Process:18
 msgid ""
-"When the last batch of data contains a data entry smaller than batch_size, "
-"whether to discard the batch and not pass it to the next operation. Default: "
-"False."
+"When the last batch of data contains a data entry smaller than batch_size, whether to "
+"discard the batch and not pass it to the next operation. Default: False."
 msgstr ""
-"当最后一批数据包含的数据条目小于batch_size时，是否丢弃该批次，而不将其传递到下一"
-"个操作。默认值：False，不丢弃。"
+"当最后一批数据包含的数据条目小于batch_size时，是否丢弃该批次，而不将其传递到下一个操"
+"作。默认值：False，不丢弃。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/machine_translation/multi30k.py:docstring
 #: of mindnlp.dataset.machine_translation.multi30k.Multi30k_Process:15
@@ -2669,16 +2626,13 @@ msgstr "对数据集进行分词操作的分词器。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:7
-msgid ""
-"Vocabulary object of words, used to store the mapping of the token and index."
+msgid "Vocabulary object of words, used to store the mapping of the token and index."
 msgstr ""
-"词表对象，用于存储分词和索引的映射。默认为空。如果为空，一个新的词表对象将会被创"
-"建。"
+"词表对象，用于存储分词和索引的映射。默认为空。如果为空，一个新的词表对象将会被创建。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
 #: of mindnlp.dataset.question_answer.squad1.SQuAD1_Process:9
-msgid ""
-"Vocabulary object of chars, used to store the mapping of the token and index."
+msgid "Vocabulary object of chars, used to store the mapping of the token and index."
 msgstr "字符词表对象，用于存储字符和索引的映射。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/question_answer/squad1.py:docstring
@@ -2785,12 +2739,12 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/conll2000chunking.py:docstring
 #: of mindnlp.dataset.sequence_tagging.conll2000chunking:1
 msgid "CoNLL2000Chunking load function"
-msgstr ""
+msgstr "CoNLL2000Chunking数据集加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/conll2000chunking.py:docstring
 #: of mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking:1
 msgid "Load the CoNLL2000Chunking dataset"
-msgstr ""
+msgstr "加载CoNLL2000Chunking数据集"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/conll2000chunking.py:docstring
 #: of mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking:6
@@ -2818,25 +2772,22 @@ msgid "Split or splits to be returned. Default:('train', 'test')."
 msgstr ""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/conll2000chunking.py:docstring
-#: of
-#: mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking_Process:1
+#: of mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking_Process:1
 msgid "the process of the CoNLL2000Chunking dataset"
 msgstr "CoNLL2000Chunking数据集的处理函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/conll2000chunking.py:docstring
-#: of
-#: mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking_Process:3
+#: of mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking_Process:3
 msgid "CoNLL2000Chunking dataset."
 msgstr "CoNLL2000Chunking数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/conll2000chunking.py:docstring
-#: of
-#: mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking_Process:11
+#: of mindnlp.dataset.sequence_tagging.conll2000chunking.CoNLL2000Chunking_Process:11
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/agnews.py:docstring
 #: mindnlp.dataset.text_classification.agnews.AG_NEWS_Process:9
 msgid ""
-"A list consisting of the upper boundaries of the buckets. Must be strictly "
-"increasing. Default: None."
+"A list consisting of the upper boundaries of the buckets. Must be strictly increasing. "
+"Default: None."
 msgstr "由桶的上边界组成的列表。必须严格递增。默认值：None。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/conll2000chunking.py:docstring
@@ -2853,10 +2804,14 @@ msgstr "udpos"
 msgid "UDPOS dataset"
 msgstr "UDPOS数据集"
 
+#: mindnlp/dataset/sequence_tagging/udpos.py
+msgid "UDPOS load function"
+msgstr "加载UDPOS数据集"
+
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/udpos.py:docstring
 #: of mindnlp.dataset.sequence_tagging.udpos.UDPOS:1
 msgid "Load the UDPOS dataset"
-msgstr ""
+msgstr "加载UDPOS数据集"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/udpos.py:docstring
 #: of mindnlp.dataset.sequence_tagging.udpos.UDPOS:6
@@ -2883,7 +2838,7 @@ msgstr "UDPOS数据源"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/sequence_tagging/__init__.py:docstring
 #: of mindnlp.dataset.sequence_tagging:1
 msgid "SequenceTagging dataset init"
-msgstr ""
+msgstr "序列标注数据集初始化"
 
 #: ../../api/dataset/text_classification.rst:2
 msgid "Text Classification"
@@ -2967,8 +2922,8 @@ msgstr "AG_News数据集中需要预处理的列名。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewpolarity.py:docstring
 #: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:12
 msgid ""
-"- **dataset** (MapDataset) - dataset after transforms. - **Vocab** (Vocab) - "
-"vocab created from dataset"
+"- **dataset** (MapDataset) - dataset after transforms. - **Vocab** (Vocab) - vocab "
+"created from dataset"
 msgstr ""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/agnews.py:docstring
@@ -3022,26 +2977,27 @@ msgstr "amazonreviewfull"
 msgid "AmazonReviewFull dataset"
 msgstr "AmazonReviewFull数据集"
 
+# ： mindnlp/dataset/text_classification/amazonreviewfull.py
+msgid "AmazonReviewFull load function"
+msgstr "AmazonReviewFull数据集加载函数"
+
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/amazonreviewfull.py:docstring
 #: of mindnlp.dataset.text_classification.amazonreviewfull.AmazonReviewFull:1
 msgid "Load the AmazonReviewFull dataset"
 msgstr "加载AmazonReviewFull数据集"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/amazonreviewfull.py:docstring
-#: of
-#: mindnlp.dataset.text_classification.amazonreviewfull.AmazonReviewFull_Process:1
+#: of mindnlp.dataset.text_classification.amazonreviewfull.AmazonReviewFull_Process:1
 msgid "the process of the AmazonReviewFull dataset"
 msgstr "AmazonReviewFull数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/amazonreviewfull.py:docstring
-#: of
-#: mindnlp.dataset.text_classification.amazonreviewfull.AmazonReviewFull_Process:3
+#: of mindnlp.dataset.text_classification.amazonreviewfull.AmazonReviewFull_Process:3
 msgid "AmazonReviewFull dataset."
 msgstr "AmazonReviewFull数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/amazonreviewfull.py:docstring
-#: of
-#: mindnlp.dataset.text_classification.amazonreviewfull.AmazonReviewFull_Process:5
+#: of mindnlp.dataset.text_classification.amazonreviewfull.AmazonReviewFull_Process:5
 msgid "the column needed to be transpormed of the AmazonReviewFull dataset."
 msgstr "AmazonReviewFull数据集中需要预处理的列名。"
 
@@ -3059,9 +3015,12 @@ msgstr "amazonreviewpolarity"
 msgid "AmazonReviewPolarity dataset"
 msgstr "AmazonReviewPolarity数据集"
 
+#: mindnlp/dataset/text_classification/amazonreviewpolarity.py
+msgid "AmazonReviewPolarity load function"
+msgstr "AmazonReviewPolarity数据集加载函数"
+
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/amazonreviewpolarity.py:docstring
-#: of
-#: mindnlp.dataset.text_classification.amazonreviewpolarity.AmazonReviewPolarity:1
+#: of mindnlp.dataset.text_classification.amazonreviewpolarity.AmazonReviewPolarity:1
 msgid "Load the AmazonReviewPolarity datase"
 msgstr "加载AmazonReviewPolarity数据集"
 
@@ -3084,8 +3043,7 @@ msgid "the column needed to be transpormed of the AmazonReviewPolarity dataset."
 msgstr "AmazonReviewPolarity数据集中需要预处理的列名。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/amazonreviewpolarity.py:docstring
-#: of
-#: mindnlp.dataset.text_classification.amazonreviewpolarity.Amazonreviewpolarity:1
+#: of mindnlp.dataset.text_classification.amazonreviewpolarity.Amazonreviewpolarity:1
 msgid "AmazonReviewPolarity dataset source"
 msgstr "AmazonReviewPolarity数据源"
 
@@ -3131,6 +3089,10 @@ msgstr "dbpedia"
 #: of mindnlp.dataset.text_classification.dbpedia:1
 msgid "DBpedia dataset"
 msgstr "DBpedia数据集"
+
+# ： mindnlp/dataset/text_classification/dbpedia.py
+msgid "DBpedia load function"
+msgstr "DBpedia数据集加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/dbpedia.py:docstring
 #: of mindnlp.dataset.text_classification.dbpedia.DBpedia:1
@@ -3198,8 +3160,7 @@ msgstr "由桶的上边界组成的列表。必须严格递增。默认值：Non
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/imdb.py:docstring
 #: of mindnlp.dataset.text_classification.imdb.IMDB_Process:15
-msgid ""
-"If True, will drop the last batch for each bucket if it is not a full batch"
+msgid "If True, will drop the last batch for each bucket if it is not a full batch"
 msgstr "如果为True，当最后一批数据包含的数据条目小于batch_size时，丢弃该批次。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/imdb.py:docstring
@@ -3215,6 +3176,10 @@ msgstr "mnli"
 #: of mindnlp.dataset.text_classification.mnli:1
 msgid "MNLI dataset"
 msgstr "MNLI数据集"
+
+# mindnlp/dataset/text_classification/mnli.py
+msgid "MNLI load function"
+msgstr "MNLI数据集加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mnli.py:docstring
 #: of mindnlp.dataset.text_classification.mnli.MNLI:1
@@ -3292,8 +3257,8 @@ msgstr "词表对象，用于存储分词和索引的映射。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/wnli.py:docstring
 #: mindnlp.dataset.text_classification.wnli.WNLI_Process:12
 msgid ""
-"- **dataset** (MapDataset) - dataset after transforms - **Vocab** (Vocab) - "
-"vocab created from dataset"
+"- **dataset** (MapDataset) - dataset after transforms - **Vocab** (Vocab) - vocab "
+"created from dataset"
 msgstr ""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mnli.py:docstring
@@ -3342,7 +3307,7 @@ msgstr "mrpc"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mrpc.py:docstring
 #: of mindnlp.dataset.text_classification.mrpc:1
 msgid "MRPC load function"
-msgstr ""
+msgstr "MRPC数据集加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/mrpc.py:docstring
 #: of mindnlp.dataset.text_classification.mrpc.MRPC:1
@@ -3377,6 +3342,10 @@ msgstr "qnli"
 #: of mindnlp.dataset.text_classification.qnli:1
 msgid "QNLI dataset"
 msgstr "QNLI数据集"
+
+# mindnlp/dataset/text_classification/qnli.py
+msgid "QNLI load function"
+msgstr "QNLI数据集加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/qnli.py:docstring
 #: of mindnlp.dataset.text_classification.qnli.QNLI:1
@@ -3444,6 +3413,14 @@ msgstr "rte"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/rte.py:docstring
 #: of mindnlp.dataset.text_classification.rte:1
 #: mindnlp.dataset.text_classification.rte.RTE_Process:3
+msgid "RTE load function"
+msgstr "RTE数据集加载函数"
+
+# mindnlp/dataset/text_classification/rte.py
+msgid "Load the RTE dataset"
+msgstr "加载RTE数据集"
+
+# mindnlp/dataset/text_classification/rte.py
 msgid "RTE dataset"
 msgstr "RTE数据集"
 
@@ -3497,6 +3474,10 @@ msgstr "sst2"
 msgid "SST2 dataset"
 msgstr "SST2数据集"
 
+# mindnlp/dataset/text_classification/sst2.py
+msgid "SST2 load function"
+msgstr "SST2加载函数"
+
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/sst2.py:docstring
 #: of mindnlp.dataset.text_classification.sst2.SST2:1
 msgid "Load the SST2 dataset"
@@ -3530,6 +3511,10 @@ msgstr "stsb"
 #: of mindnlp.dataset.text_classification.stsb:1
 msgid "STSB dataset"
 msgstr "STSB数据集"
+
+# mindnlp/dataset/text_classification/stsb.py
+msgid "STSB load function"
+msgstr "STSB数据集加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/stsb.py:docstring
 #: of mindnlp.dataset.text_classification.stsb.STSB:1
@@ -3565,6 +3550,10 @@ msgstr "wnli"
 msgid "WNLI dataset"
 msgstr "WNLI数据集"
 
+# mindnlp/dataset/text_classification/wnli.py
+msgid "WNLI load function"
+msgstr "WNLI数据集加载函数"
+
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/wnli.py:docstring
 #: of mindnlp.dataset.text_classification.wnli.WNLI_Process:1
 msgid "the process of the WNLI dataset"
@@ -3593,6 +3582,10 @@ msgstr "yahooanswers"
 #: of mindnlp.dataset.text_classification.yahooanswers:1
 msgid "YahooAnswers dataset"
 msgstr "YahooAnswers数据集"
+
+# mindnlp/dataset/text_classification/yahooanswers.py
+msgid "YahooAnswers load function"
+msgstr "YahooAnswers数据集加载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yahooanswers.py:docstring
 #: of mindnlp.dataset.text_classification.yahooanswers.YahooAnswers:1
@@ -3637,6 +3630,10 @@ msgstr "yelpreviewfull"
 msgid "YelpReviewFull dataset"
 msgstr "YelpReviewFull数据集"
 
+# mindnlp/dataset/text_classification/yelpreviewfull.py
+msgid "YelpReviewFull load function"
+msgstr "YelpReviewFull数据集加载函数"
+
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewfull.py:docstring
 #: of mindnlp.dataset.text_classification.yelpreviewfull.YelpReviewFull:1
 msgid "Load the YelpReviewFull dataset"
@@ -3671,26 +3668,27 @@ msgstr "yelpreviewpolarity"
 msgid "YelpReviewPolarity dataset"
 msgstr "YelpReviewPolarity数据集"
 
+# mindnlp/dataset/text_classification/yelpreviewpolarity.py
+msgid "YelpReviewPolarity load function"
+msgstr "YelpReviewPolarity数据集加载函数"
+
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewpolarity.py:docstring
 #: of mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity:1
 msgid "Load the YelpReviewPolarity dataset"
 msgstr "加载YelpReviewPolarity数据集"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewpolarity.py:docstring
-#: of
-#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:1
+#: of mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:1
 msgid "the process of the YelpReviewPolarity dataset"
 msgstr "YelpReviewPolarity数据集的数据预处理函数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewpolarity.py:docstring
-#: of
-#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:3
+#: of mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:3
 msgid "YelpReviewPolarity dataset."
 msgstr "YelpReviewPolarity数据集。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/yelpreviewpolarity.py:docstring
-#: of
-#: mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:5
+#: of mindnlp.dataset.text_classification.yelpreviewpolarity.YelpReviewPolarity_Process:5
 msgid "the column needed to be transpormed of the YelpReviewPolarity dataset."
 msgstr "YelpReviewPolarity数据集中需要预处理的列名。"
 
@@ -3702,7 +3700,7 @@ msgstr "YelpReviewPolarity数据源"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_classification/__init__.py:docstring
 #: of mindnlp.dataset.text_classification:1
 msgid "TextClassification dataset init"
-msgstr ""
+msgstr "文本分类初始化"
 
 #: ../../api/dataset/text_generation.rst:2
 msgid "Text Generation"
@@ -3817,11 +3815,10 @@ msgstr "基类：:py:class:`~mindnlp.abc.callback.Callback`"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/best_model_callback.py:docstring
 #: of mindnlp.engine.callbacks.best_model_callback.BestModelCallback:1
 msgid ""
-"Save the model with the best `metrics` value and reload the model at the end of "
-"the training. The best model can only be loaded at the end of the training."
+"Save the model with the best `metrics` value and reload the model at the end of the "
+"training. The best model can only be loaded at the end of the training."
 msgstr ""
-"保存具有最佳评测指标值的模型，并在训练结束时重新加载模型。最佳模型只在训练结束时"
-"加载。"
+"保存具有最佳评测指标值的模型，并在训练结束时重新加载模型。最佳模型只在训练结束时加载。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/best_model_callback.py:docstring
 #: of mindnlp.engine.callbacks.best_model_callback.BestModelCallback:4
@@ -3844,8 +3841,7 @@ msgid "Whether save the model on exception."
 msgstr "在遇到异常时，是否保存当前的模型参数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/best_model_callback.py:docstring
-#: of
-#: mindnlp.engine.callbacks.best_model_callback.BestModelCallback.evaluate_end:1
+#: of mindnlp.engine.callbacks.best_model_callback.BestModelCallback.evaluate_end:1
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
 #: mindnlp.engine.callbacks.callback_manager._transfer.<locals>.wrapper:1
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/earlystop_callback.py:docstring
@@ -3854,8 +3850,7 @@ msgid "Called after evaluating."
 msgstr "在评测结束后调用。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/best_model_callback.py:docstring
-#: of
-#: mindnlp.engine.callbacks.best_model_callback.BestModelCallback.evaluate_end:3
+#: of mindnlp.engine.callbacks.best_model_callback.BestModelCallback.evaluate_end:3
 #: mindnlp.engine.callbacks.best_model_callback.BestModelCallback.train_end:3
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/checkpoint_callback.py:docstring
 #: mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback.train_begin:3
@@ -3912,8 +3907,7 @@ msgstr "回调函数管理器"
 #: mindnlp.engine.evaluator.Evaluator:13
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: mindnlp.engine.trainer.Trainer:31
-msgid ""
-"List of callback objects which should be executed while training. Default: None."
+msgid "List of callback objects which should be executed while training. Default: None."
 msgstr "在模型训练过程中应当执行的回调函数方法列表。默认值：无。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/callback_manager.py:docstring
@@ -4037,12 +4031,12 @@ msgstr "用于保存checkpoint的回调函数。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/checkpoint_callback.py:docstring
 #: of mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback:1
 msgid ""
-"Save checkpoint of the model. save the current Trainer state at the end of each "
-"epoch, which can be used to resume previous operations. Continue training a "
-"sample code using the most recent epoch"
+"Save checkpoint of the model. save the current Trainer state at the end of each epoch, "
+"which can be used to resume previous operations. Continue training a sample code using "
+"the most recent epoch"
 msgstr ""
-"保存模型的checkpoint。在每个 epoch 结束时保存当前的 Trainer 状态，可用于恢复之前"
-"的操作。使用最近epoch继续训练示例代码。"
+"保存模型的checkpoint。在每个 epoch 结束时保存当前的 Trainer 状态，可用于恢复之前的操"
+"作。使用最近epoch继续训练示例代码。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/checkpoint_callback.py:docstring
 #: of mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback:5
@@ -4062,14 +4056,12 @@ msgid "Save checkpoint files at most. Default:5."
 msgstr "存checkpoint的最大数量。默认：5。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/checkpoint_callback.py:docstring
-#: of
-#: mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback.train_begin:1
+#: of mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback.train_begin:1
 msgid "Notice the file saved path of checkpoints at the beginning of training."
 msgstr "训练开始时checkpoint文件保存路径。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/checkpoint_callback.py:docstring
-#: of
-#: mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback.train_epoch_end:1
+#: of mindnlp.engine.callbacks.checkpoint_callback.CheckpointCallback.train_epoch_end:1
 msgid "Save checkpoint every n epochs at the end of the epoch."
 msgstr "每n个epoch存一个checkpoint。"
 
@@ -4116,11 +4108,10 @@ msgstr "打印训练过程中的相关事件信息，如训练时长、评估时
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: of mindnlp.engine.callbacks.timer_callback.TimerCallback:4
 msgid ""
-"When to print time information.Default:-1.  - -1: print once at the end of each "
-"epoch. - positive number n: print once n steps."
+"When to print time information.Default:-1.  - -1: print once at the end of each epoch. "
+"- positive number n: print once n steps."
 msgstr ""
-"何时打印时间信息。默认值：-1。 -1：在每个epoch结束时打印一次。 正数 n：打印一次 "
-"n 步。"
+"何时打印时间信息。默认值：-1。 -1：在每个epoch结束时打印一次。 正数 n：打印一次 n 步。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/callbacks/timer_callback.py:docstring
 #: of mindnlp.engine.callbacks.timer_callback.TimerCallback:4
@@ -4205,8 +4196,7 @@ msgstr "每个batch的样本数量。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/evaluator.py:docstring
 #: of mindnlp.engine.evaluator.Evaluator:10
-msgid ""
-"List of metric objects which should be used while evaluating. Default:None."
+msgid "List of metric objects which should be used while evaluating. Default:None."
 msgstr "模型评估时应使用的metric对象列表。 默认值：无。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/evaluator.py:docstring
@@ -4403,19 +4393,18 @@ msgstr "更新局部变量。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy.update:3
 msgid ""
-"Input `preds` and `labels`.  - preds (Union[Tensor, list, numpy.ndarray]): "
-"Predicted value. `preds` is a list   of floating numbers in range :math:`[0, "
-"1]` and the shape of `preds` is   :math:`(N, C)` in most cases (not strictly), "
-"where :math:`N` is the number   of cases and :math:`C` is the number of "
-"categories. - labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. "
-"`labels` must   be in one-hot format that shape is :math:`(N, C)`, or can be "
-"transformed to   one-hot format that shape is :math:`(N,)`."
+"Input `preds` and `labels`.  - preds (Union[Tensor, list, numpy.ndarray]): Predicted "
+"value. `preds` is a list   of floating numbers in range :math:`[0, 1]` and the shape "
+"of `preds` is   :math:`(N, C)` in most cases (not strictly), where :math:`N` is the "
+"number   of cases and :math:`C` is the number of categories. - labels (Union[Tensor, "
+"list, numpy.ndarray]): Ground truth value. `labels` must   be in one-hot format that "
+"shape is :math:`(N, C)`, or can be transformed to   one-hot format that shape is :math:"
+"`(N,)`."
 msgstr ""
-"输入`preds`和`labels`。 - preds (Union[Tensor, list, numpy.ndarray]): 预测值。范"
-"围在`[0, 1]`的浮点数列表，大多数情况下（不严格要求），shape是`(N, C)`，其中`N`是"
-"样本数， ` C ` 是类别数， - labels (Union[Tensor, list, numpy.ndarray]): 真实"
-"值。必须是one-hot格式，shape为 ` (N, C) ` ，或能够转换为one-hot格式，shape为"
-"`(N,)`。"
+"输入 `preds` 和 `labels`。 - preds (Union[Tensor, list, numpy.ndarray]): 预测值。范围在"
+"[0, 1]的浮点数列表，大多数情况下（不严格要求），shape是 `(N, C)` ，其中 `N` 是样本数， "
+"`C` 是类别数， - labels (Union[Tensor, list, numpy.ndarray]): 真实值。必须是one-hot格"
+"式，shape为 `(N, C)` ，或能够转换为one-hot格式，shape为 `(N,)` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy.update:3
@@ -4436,7 +4425,7 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.update:3
 msgid "Input `preds` and `labels`."
-msgstr "输入`preds`和`labels`。"
+msgstr "输入 `preds` 和 `labels` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy.update:5
@@ -4445,13 +4434,13 @@ msgstr "输入`preds`和`labels`。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/precision.py:docstring
 #: mindnlp.engine.metrics.precision.Precision.update:6
 msgid ""
-"preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list "
-"of floating numbers in range :math:`[0, 1]` and the shape of `preds` is :math:"
-"`(N, C)` in most cases (not strictly), where :math:`N` is the number of cases "
-"and :math:`C` is the number of categories."
+"preds (Union[Tensor, list, numpy.ndarray]): Predicted value. `preds` is a list of "
+"floating numbers in range :math:`[0, 1]` and the shape of `preds` is :math:`(N, C)` in "
+"most cases (not strictly), where :math:`N` is the number of cases and :math:`C` is the "
+"number of categories."
 msgstr ""
-"preds (Union[Tensor, list, numpy.ndarray]): 预测值。范围在`[0, 1]`的浮点数列表，"
-"大多数情况下（不严格要求），shape是`(N, C)`，其中`N`是样本数，`C`是类别数。"
+"preds (Union[Tensor, list, numpy.ndarray]): 预测值。范围在[0, 1]的浮点数列表，大多数情"
+"况下（不严格要求），shape是 `(N, C)` ，其中 `N` 是样本数， `C` 是类别数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy.update:9
@@ -4460,25 +4449,24 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/precision.py:docstring
 #: mindnlp.engine.metrics.precision.Precision.update:10
 msgid ""
-"labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must "
-"be in one-hot format that shape is :math:`(N, C)`, or can be transformed to one-"
-"hot format that shape is :math:`(N,)`."
+"labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. `labels` must be in "
+"one-hot format that shape is :math:`(N, C)`, or can be transformed to one-hot format "
+"that shape is :math:`(N,)`."
 msgstr ""
-"labels (Union[Tensor, list, numpy.ndarray]): 真实值。必须是one-hot格式，shape为"
-"`(N, C)`，或能够转换为one-hot格式，shape为`(N,)`。"
+"labels (Union[Tensor, list, numpy.ndarray]): 真实值。必须是one-hot格式，shape为 `(N, "
+"C)` ，或能够转换为one-hot格式，shape为 `(N,)` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy.update:13
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/perplexity.py:docstring
 #: mindnlp.engine.metrics.perplexity.Perplexity.update:13
 msgid "If the number of `inputs` is not 2."
-msgstr "如果`inputs`数量不为2。"
+msgstr "如果 `inputs` 数量不为2。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/accuracy.py:docstring
 #: of mindnlp.engine.metrics.accuracy.Accuracy.update:14
 msgid ""
-"class numbers of last input predicted data and current predicted data     not "
-"match."
+"class numbers of last input predicted data and current predicted data     not match."
 msgstr "上一个输入的预测值的类的数量与当前预测值不匹配。"
 
 #: ../../api/engine/metrics.rst:14
@@ -4498,17 +4486,16 @@ msgstr "计算并返回BLEU分数。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: of mindnlp.engine.metrics.bleu.BleuScore.update:3
 msgid ""
-"Input `cand` and `ref_list`.  - cand (list): A list of tokenized candidate "
-"sentences. - ref_list (list): A list of lists of tokenized ground truth "
-"sentences."
+"Input `cand` and `ref_list`.  - cand (list): A list of tokenized candidate sentences. "
+"- ref_list (list): A list of lists of tokenized ground truth sentences."
 msgstr ""
-"输入`cand`和`ref_list`。  - cand (list): 分词后的候选句子列表。 - ref_list "
-"(list): 分词后的真实句子列表。"
+"输入 `cand` 和 `ref_list` 。  - cand (list): 分词后的候选句子列表。 - ref_list (list): "
+"分词后的真实句子列表。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: of mindnlp.engine.metrics.bleu.BleuScore.update:3
 msgid "Input `cand` and `ref_list`."
-msgstr "输入`cand`和`ref_list`。"
+msgstr "输入 `cand` 和 `ref_list` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/bleu.py:docstring
 #: of mindnlp.engine.metrics.bleu.BleuScore.update:5
@@ -4563,14 +4550,14 @@ msgstr "计算并返回混淆矩阵。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/confusion_matrix.py:docstring
 #: of mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.update:3
 msgid ""
-"Input `preds` and `labels`.  - preds (Union[Tensor, list, np.ndarray]): "
-"Predicted value. `preds` is a list of   floating numbers and the shape of "
-"`preds` is :math:`(N, C)` or :math:`(N,)`. - labels (Union[Tensor, list, np."
-"ndarray]): Ground truth. The shape of `labels` is   :math:`(N,)`."
+"Input `preds` and `labels`.  - preds (Union[Tensor, list, np.ndarray]): Predicted "
+"value. `preds` is a list of   floating numbers and the shape of `preds` is :math:`(N, "
+"C)` or :math:`(N,)`. - labels (Union[Tensor, list, np.ndarray]): Ground truth. The "
+"shape of `labels` is   :math:`(N,)`."
 msgstr ""
-"输入`preds`和`labels`。  - preds (Union[Tensor, list, np.ndarray]): 预测值。浮点"
-"数列表，shape是`(N, C)`或`(N,)`。 - labels (Union[Tensor, list, np.ndarray]): 真"
-"实值。shape是`(N,)`。"
+"输入 `preds` 和 `labels` 。  - preds (Union[Tensor, list, np.ndarray]): 预测值。浮点数"
+"列表，shape是 `(N, C)` 或 `(N,)` 。 - labels (Union[Tensor, list, np.ndarray]): 真实"
+"值。shape是 `(N,)` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/confusion_matrix.py:docstring
 #: of mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.update:5
@@ -4578,15 +4565,15 @@ msgid ""
 "preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of "
 "floating numbers and the shape of `preds` is :math:`(N, C)` or :math:`(N,)`."
 msgstr ""
-"preds (Union[Tensor, list, np.ndarray]): 预测值。浮点数列表，shape是`(N, C)`或"
-"`(N,)`。"
+"preds (Union[Tensor, list, np.ndarray]): 预测值。浮点数列表，shape是 `(N, C)` 或 "
+"`(N,)` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/confusion_matrix.py:docstring
 #: of mindnlp.engine.metrics.confusion_matrix.ConfusionMatrix.update:7
 msgid ""
-"labels (Union[Tensor, list, np.ndarray]): Ground truth. The shape of `labels` "
-"is :math:`(N,)`."
-msgstr "labels (Union[Tensor, list, np.ndarray]): 真实值。shape是`(N,)`。"
+"labels (Union[Tensor, list, np.ndarray]): Ground truth. The shape of `labels` is :math:"
+"`(N,)`."
+msgstr "labels (Union[Tensor, list, np.ndarray]): 真实值。shape是 `(N,)` 。"
 
 #: ../../api/engine/metrics.rst:30
 msgid "distinct"
@@ -4604,14 +4591,13 @@ msgstr "计算并返回Distinct-N。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/distinct.py:docstring
 #: of mindnlp.engine.metrics.distinct.Distinct.update:3
-msgid ""
-"Input `cand_list`.  - cand_list (list): A list of tokenized candidate sentence."
-msgstr "输入`cand_list`。  - cand_list (list): 分词后的候选句子列表。"
+msgid "Input `cand_list`.  - cand_list (list): A list of tokenized candidate sentence."
+msgstr "输入 `cand_list` 。  - cand_list (list): 分词后的候选句子列表。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/distinct.py:docstring
 #: of mindnlp.engine.metrics.distinct.Distinct.update:3
 msgid "Input `cand_list`."
-msgstr "输入`cand_list`。"
+msgstr "输入 `cand_list` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/distinct.py:docstring
 #: of mindnlp.engine.metrics.distinct.Distinct.update:5
@@ -4654,16 +4640,16 @@ msgstr "返回: - **exact_match** (float) - 计算得到的结果。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/em_score.py:docstring
 #: of mindnlp.engine.metrics.em_score.EmScore.update:3
 msgid ""
-"Input `preds` and `examples`.  - preds (Union[str, list]): Predicted value. - "
-"examples (list): Ground truth."
+"Input `preds` and `examples`.  - preds (Union[str, list]): Predicted value. - examples "
+"(list): Ground truth."
 msgstr ""
-"输入`preds`和`examples`。  - preds (Union[str, list]): 预测值。- examples "
-"(list): 真实值。"
+"输入 `preds` 和 `examples` 。  - preds (Union[str, list]): 预测值。- examples (list): "
+"真实值。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/em_score.py:docstring
 #: of mindnlp.engine.metrics.em_score.EmScore.update:3
 msgid "Input `preds` and `examples`."
-msgstr "输入`preds`和`examples`。"
+msgstr "输入 `preds` 和 `examples` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/em_score.py:docstring
 #: of mindnlp.engine.metrics.em_score.EmScore.update:5
@@ -4704,18 +4690,17 @@ msgstr "**f1_s** (numpy.ndarray) - 计算得到的结果。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/recall.py:docstring
 #: mindnlp.engine.metrics.recall.Recall.update:3
 msgid ""
-"Input `preds` and `labels`.  - preds (Union[Tensor, list, np.ndarray]): "
-"Predicted value. `preds` is a list of   floating numbers in range :math:`[0, "
-"1]` and the shape of `preds` is   :math:`(N, C)` in most cases (not strictly), "
-"where :math:`N` is the number   of cases and :math:`C` is the number of "
-"categories. - labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` "
-"must be in   one-hot format that shape is :math:`(N, C)`, or can be transformed "
-"to   one-hot format that shape is :math:`(N,)`."
+"Input `preds` and `labels`.  - preds (Union[Tensor, list, np.ndarray]): Predicted "
+"value. `preds` is a list of   floating numbers in range :math:`[0, 1]` and the shape "
+"of `preds` is   :math:`(N, C)` in most cases (not strictly), where :math:`N` is the "
+"number   of cases and :math:`C` is the number of categories. - labels (Union[Tensor, "
+"list, np.ndarray]): Ground truth. `labels` must be in   one-hot format that shape is :"
+"math:`(N, C)`, or can be transformed to   one-hot format that shape is :math:`(N,)`."
 msgstr ""
-"输入`preds`和`labels`。  - preds (Union[Tensor, list, np.ndarray]): 预测值。范围"
-"在`[0, 1]`的浮点数列表，大多数情况下（不严格要求），shape是`(N, C)`，其中`N`是样"
-"本数，`C`是类别数。 - labels (Union[Tensor, list, np.ndarray]): 真实值。必须是"
-"one-hot格式，shape为`(N, C)`，或能够转换为one-hot格式，shape为`(N,)`。"
+"输入 `preds` 和 `labels` 。  - preds (Union[Tensor, list, np.ndarray]): 预测值。范围在"
+"[0, 1]的浮点数列表，大多数情况下（不严格要求），shape是 `(N, C)` ，其中 `N` 是样本数， "
+"`C` 是类别数。 - labels (Union[Tensor, list, np.ndarray]): 真实值。必须是one-hot格式，"
+"shape为 `(N, C)` ，或能够转换为one-hot格式，shape为 `(N,)` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/f1.py:docstring
 #: of mindnlp.engine.metrics.f1.F1Score.update:5
@@ -4725,12 +4710,12 @@ msgstr ""
 #: mindnlp.engine.metrics.recall.Recall.update:5
 msgid ""
 "preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of "
-"floating numbers in range :math:`[0, 1]` and the shape of `preds` is :math:`(N, "
-"C)` in most cases (not strictly), where :math:`N` is the number of cases and :"
-"math:`C` is the number of categories."
+"floating numbers in range :math:`[0, 1]` and the shape of `preds` is :math:`(N, C)` in "
+"most cases (not strictly), where :math:`N` is the number of cases and :math:`C` is the "
+"number of categories."
 msgstr ""
-"preds (Union[Tensor, list, np.ndarray]): 预测值。范围在`[0, 1]`的浮点数列表，在"
-"大多数情况下（不严格要求），shape是`(N, C)`，其中`N`是样本数，`C`是类别数。"
+"preds (Union[Tensor, list, np.ndarray]): 预测值。范围在 `[0, 1]` 的浮点数列表，在大多数"
+"情况下（不严格要求），shape是 `(N, C)` ，其中 `N` 是样本数， `C` 是类别数。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/f1.py:docstring
 #: of mindnlp.engine.metrics.f1.F1Score.update:9
@@ -4739,18 +4724,17 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/recall.py:docstring
 #: mindnlp.engine.metrics.recall.Recall.update:9
 msgid ""
-"labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` must be in one-"
-"hot format that shape is :math:`(N, C)`, or can be transformed to one-hot "
-"format that shape is :math:`(N,)`."
+"labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` must be in one-hot "
+"format that shape is :math:`(N, C)`, or can be transformed to one-hot format that "
+"shape is :math:`(N,)`."
 msgstr ""
-"labels (Union[Tensor, list, np.ndarray]): 真实值。必须是one-hot格式，shape为"
-"`(N, C)`，或能够转换为one-hot格式，shape为`(N,)`。"
+"labels (Union[Tensor, list, np.ndarray]): 真实值。必须是one-hot格式，shape为 `(N, "
+"C)` ，或能够转换为one-hot格式，shape为 `(N,)`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/f1.py:docstring
 #: of mindnlp.engine.metrics.f1.F1Score.update:14
 msgid ""
-"class numbers of last input predicted data and current     predicted data not "
-"match."
+"class numbers of last input predicted data and current     predicted data not match."
 msgstr "上一输入预测值的类的数量与当前预测值不匹配。"
 
 #: ../../api/engine/metrics.rst:54
@@ -4770,18 +4754,18 @@ msgstr "计算并返回MCC。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/matthews.py:docstring
 #: of mindnlp.engine.metrics.matthews.MatthewsCorrelation.update:3
 msgid ""
-"Input `preds` and `labels`.  - preds (Union[Tensor, list, numpy.ndarray]): "
-"Predicted value. `preds` is a list of   floating numbers in range :math:`[0, "
-"1]` and the shape of `preds` is   :math:`(N, C)` in most cases (not strictly), "
-"where :math:`N` is the number of   cases and :math:`C` is the number of "
-"categories. - labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. "
-"`labels` must be in   one-hot format that shape is :math:`(N, C)`, or can be "
-"transformed to one-hot   format that shape is :math:`(N,)`."
+"Input `preds` and `labels`.  - preds (Union[Tensor, list, numpy.ndarray]): Predicted "
+"value. `preds` is a list of   floating numbers in range :math:`[0, 1]` and the shape "
+"of `preds` is   :math:`(N, C)` in most cases (not strictly), where :math:`N` is the "
+"number of   cases and :math:`C` is the number of categories. - labels (Union[Tensor, "
+"list, numpy.ndarray]): Ground truth value. `labels` must be in   one-hot format that "
+"shape is :math:`(N, C)`, or can be transformed to one-hot   format that shape is :math:"
+"`(N,)`."
 msgstr ""
-"输入`preds` and `labels`。  - preds (Union[Tensor, list, numpy.ndarray]): 预测"
-"值。范围在`[0, 1]`的浮点数列表，大多数情况下（不严格要求），shape是`(N, C)`，其"
-"中`N`是样本数，`C`是类别数。 - labels (Union[Tensor, list, numpy.ndarray]): 真实"
-"值。必须是one-hot格式，shape为`(N, C)`，或能够转换为one-hot格式，shape为`(N,)`。"
+"输入 `preds` and `labels` 。  - preds (Union[Tensor, list, numpy.ndarray]): 预测值。范"
+"围在`[0, 1]`的浮点数列表，大多数情况下（不严格要求），shape是 `(N, C)` ，其中 `N` 是样"
+"本数， `C` 是类别数。 - labels (Union[Tensor, list, numpy.ndarray]): 真实值。必须是one-"
+"hot格式，shape为 `(N, C)` ，或能够转换为one-hot格式，shape为 `(N,)` 。"
 
 #: ../../api/engine/metrics.rst:62
 msgid "pearson"
@@ -4802,15 +4786,14 @@ msgstr "计算并返回PCC。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.update:3
 msgid ""
-"Input `preds` and `labels`.  - preds (Union[Tensor, list, np.ndarray]): "
-"Predicted value. `preds` is a list of   floating numbers and the shape of "
-"`preds` is :math:`(N, 1)`. - labels (Union[Tensor, list, np.ndarray]): Ground "
-"truth. `labels` is a list of   floating numbers and the shape of `preds` is :"
-"math:`(N, 1)`."
+"Input `preds` and `labels`.  - preds (Union[Tensor, list, np.ndarray]): Predicted "
+"value. `preds` is a list of   floating numbers and the shape of `preds` is :math:`(N, "
+"1)`. - labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` is a list of   "
+"floating numbers and the shape of `preds` is :math:`(N, 1)`."
 msgstr ""
-"输入`preds`和`labels`。  - preds (Union[Tensor, list, np.ndarray]): 预测值。浮点"
-"数列表，shape为`(N, 1)`。 - labels (Union[Tensor, list, np.ndarray]): 真实值。浮"
-"点数列表，shape为`(N, 1)`。"
+"输入 `preds` 和 `labels` 。  - preds (Union[Tensor, list, np.ndarray]): 预测值。浮点数"
+"列表，shape为 `(N, 1)` 。 - labels (Union[Tensor, list, np.ndarray]): 真实值。浮点数列"
+"表，shape为 `(N, 1)` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/pearson.py:docstring
 #: of mindnlp.engine.metrics.pearson.PearsonCorrelation.update:5
@@ -4819,18 +4802,17 @@ msgstr ""
 msgid ""
 "preds (Union[Tensor, list, np.ndarray]): Predicted value. `preds` is a list of "
 "floating numbers and the shape of `preds` is :math:`(N, 1)`."
-msgstr ""
-"preds (Union[Tensor, list, np.ndarray]): 预测值。浮点数列表，shape是`(N, 1)`。"
+msgstr "preds (Union[Tensor, list, np.ndarray]): 预测值。浮点数列表，shape是 `(N, 1)` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/pearson.py:docstring
 #: of mindnlp.engine.metrics.pearson.PearsonCorrelation.update:7
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/spearman.py:docstring
 #: mindnlp.engine.metrics.spearman.SpearmanCorrelation.update:7
 msgid ""
-"labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` is a list of "
-"floating numbers and the shape of `preds` is :math:`(N, 1)`."
+"labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` is a list of floating "
+"numbers and the shape of `preds` is :math:`(N, 1)`."
 msgstr ""
-"labels (Union[Tensor, list, np.ndarray]): 真实值。浮点数列表，shape是`(N, 1)`。"
+"labels (Union[Tensor, list, np.ndarray]): 真实值。浮点数列表，shape是 `(N, 1)` 。"
 
 #: ../../api/engine/metrics.rst:70
 msgid "perplexity"
@@ -4844,7 +4826,7 @@ msgstr "评价指标Perplexity类"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/perplexity.py:docstring
 #: of mindnlp.engine.metrics.perplexity.Perplexity:9
 msgid "Where :math:`w` represents words in corpus."
-msgstr "其中`w`表示语料库中的词。"
+msgstr "其中 `w` 表示语料库中的词。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/perplexity.py:docstring
 #: of mindnlp.engine.metrics.perplexity.Perplexity.eval:1
@@ -4859,18 +4841,17 @@ msgstr "返回metric名称。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/perplexity.py:docstring
 #: of mindnlp.engine.metrics.perplexity.Perplexity.update:3
 msgid ""
-"Input `preds` and `labels`.  - preds (Union[Tensor, list, np.ndarray]): "
-"Predicted value. `preds` is a list   of floating numbers in range :math:`[0, "
-"1]` and the shape of `preds` is   :math:`(N, C)` in most cases (not strictly), "
-"where :math:`N` is the   number of cases and :math:`C` is the number of "
-"categories. - labels (Union[Tensor, list, np.ndarray]): Ground truth. `labels` "
-"must be in   one-hot format that shape is :math:`(N, C)`, or can be transformed "
-"to   one-hot format that shape is :math:`(N,)`."
+"Input `preds` and `labels`.  - preds (Union[Tensor, list, np.ndarray]): Predicted "
+"value. `preds` is a list   of floating numbers in range :math:`[0, 1]` and the shape "
+"of `preds` is   :math:`(N, C)` in most cases (not strictly), where :math:`N` is the   "
+"number of cases and :math:`C` is the number of categories. - labels (Union[Tensor, "
+"list, np.ndarray]): Ground truth. `labels` must be in   one-hot format that shape is :"
+"math:`(N, C)`, or can be transformed to   one-hot format that shape is :math:`(N,)`."
 msgstr ""
-"输入`preds` and `labels`。  - preds (Union[Tensor, list, np.ndarray]): 预测值。"
-"范围在`[0, 1]`的浮点数列表，大多数情况下（不严格要求），shape是`(N, C)`，其中`N`"
-"是样本数，`C`是类别数。 - labels (Union[Tensor, list, np.ndarray]): 真实值。必须"
-"是one-hot格式，shape为`(N, C)`，或能够转换为one-hot格式，shape为`(N,)`。"
+"输入 `preds` and `labels` 。  - preds (Union[Tensor, list, np.ndarray]): 预测值。范围在"
+"[0, 1]的浮点数列表，大多数情况下（不严格要求），shape是 `(N, C)` ，其中 `N` 是样本数， "
+"`C` 是类别数。 - labels (Union[Tensor, list, np.ndarray]): 真实值。必须是one-hot格式，"
+"shape为 `(N, C)` ，或能够转换为one-hot格式，shape为 `(N,)` 。"
 
 #: ../../api/engine/metrics.rst:78
 msgid "precision"
@@ -4884,13 +4865,12 @@ msgstr "评价指标Precision类。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/precision.py:docstring
 #: of mindnlp.engine.metrics.precision.Precision:1
 msgid ""
-"Calculates precision. Precision (also known as positive predictive value) is "
-"the actual positive proportion in the predicted positive sample. It can only be "
-"used to evaluate the precision score of binary tasks. The function is shown as "
-"follows:"
+"Calculates precision. Precision (also known as positive predictive value) is the "
+"actual positive proportion in the predicted positive sample. It can only be used to "
+"evaluate the precision score of binary tasks. The function is shown as follows:"
 msgstr ""
-"计算精确度precision。精确度precision（也称为正预测值）是预测的正样本中的实际正样"
-"本比例。它只被用来评价二分类任务的精确度precision分数。函数如下所示："
+"计算精确度precision。精确度precision（也称为正预测值）是预测的正样本中的实际正样本比"
+"例。它只被用来评价二分类任务的精确度precision分数。函数如下所示："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/precision.py:docstring
 #: of mindnlp.engine.metrics.precision.Precision.eval:1
@@ -4910,26 +4890,25 @@ msgstr "**prec** (numpy.ndarray) - 计算得到的结果。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/precision.py:docstring
 #: of mindnlp.engine.metrics.precision.Precision.update:1
 msgid ""
-"Updates local variables. If the index of the maximum of the predicted value "
-"matches the label, the predicted result is correct."
+"Updates local variables. If the index of the maximum of the predicted value matches "
+"the label, the predicted result is correct."
 msgstr "更新局部变量。如果预测值的最大值的索引与标签匹配，则预测结果是正确的。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/precision.py:docstring
 #: of mindnlp.engine.metrics.precision.Precision.update:4
 msgid ""
-"Input `preds` and `labels`.  - preds (Union[Tensor, list, numpy.ndarray]): "
-"Predicted value. `preds` is a list   of floating numbers in range :math:`[0, "
-"1]` and the shape of `preds` is   :math:`(N, C)` in most cases (not strictly), "
-"where :math:`N` is   the number of cases and :math:`C` is the number of "
-"categories. - labels (Union[Tensor, list, numpy.ndarray]): Ground truth value. "
-"`labels` must   be in one-hot format that shape is :math:`(N, C)`, or can be "
-"transformed   to one-hot format that shape is :math:`(N,)`."
+"Input `preds` and `labels`.  - preds (Union[Tensor, list, numpy.ndarray]): Predicted "
+"value. `preds` is a list   of floating numbers in range :math:`[0, 1]` and the shape "
+"of `preds` is   :math:`(N, C)` in most cases (not strictly), where :math:`N` is   the "
+"number of cases and :math:`C` is the number of categories. - labels (Union[Tensor, "
+"list, numpy.ndarray]): Ground truth value. `labels` must   be in one-hot format that "
+"shape is :math:`(N, C)`, or can be transformed   to one-hot format that shape is :math:"
+"`(N,)`."
 msgstr ""
-"输入`preds`和`labels`。  - preds (Union[Tensor, list, numpy.ndarray]): 预测值。"
-"范围在:math:`[0, 1]`的浮点数列表，大多数情况下（不严格要求），shape是`(N, C)`，"
-"其中`N`是样本数，`C`是类别数。 - labels (Union[Tensor, list, numpy.ndarray]): 真"
-"实值。必须是one-hot格式，shape为`(N, C)`，或能够转换为one-hot格式，shape为"
-"`(N,)`。"
+"输入 `preds` 和 `labels` 。  - preds (Union[Tensor, list, numpy.ndarray]): 预测值。范围"
+"在[0, 1]的浮点数列表，大多数情况下（不严格要求），shape是 `(N, C)` ，其中 `N` 是样本"
+"数， `C` 是类别数。 - labels (Union[Tensor, list, numpy.ndarray]): 真实值。必须是one-"
+"hot格式，shape为 `(N, C)` ，或能够转换为one-hot格式，shape为 `(N,)` 。"
 
 #: ../../api/engine/metrics.rst:86
 msgid "recall"
@@ -4972,24 +4951,22 @@ msgstr "计算并返回Rouge-L分数。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: of mindnlp.engine.metrics.rouge.RougeL.update:3
 msgid ""
-"Input `cand_list` and `ref_list`. cand_list (list): A list of tokenized "
-"candidate sentence. ref_list (list): A list of lists of tokenized ground truth "
-"sentences."
+"Input `cand_list` and `ref_list`. cand_list (list): A list of tokenized candidate "
+"sentence. ref_list (list): A list of lists of tokenized ground truth sentences."
 msgstr ""
-"输入`cand_list`和`ref_list`。 cand_list (list): 分词后的候选句子列表。 ref_list "
+"输入 `cand_list` 和 `ref_list` 。 cand_list (list): 分词后的候选句子列表。 ref_list "
 "(list): 分词后的真实句子列表。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: of mindnlp.engine.metrics.rouge.RougeN:1
 msgid ""
-"Calculates the ROUGE-N. ROUGE (Recall-Oriented Understudy for Gisting "
-"Evaluation) is a set of metrics used for evaluating automatic summarization and "
-"machine translation models. ROUGE-N refers to the overlap of n-grams between "
-"candidates and reference summaries."
+"Calculates the ROUGE-N. ROUGE (Recall-Oriented Understudy for Gisting Evaluation) is a "
+"set of metrics used for evaluating automatic summarization and machine translation "
+"models. ROUGE-N refers to the overlap of n-grams between candidates and reference "
+"summaries."
 msgstr ""
-"计算ROUGE-N分数。ROUGE(Recall-Oriented Understudy for Gisting Evaluation)是一组"
-"用于评估自动摘要和机器翻译模型的指标。ROUGE-N指的是候选句子和参考摘要之间的n-"
-"gram重叠。"
+"计算ROUGE-N分数。ROUGE(Recall-Oriented Understudy for Gisting Evaluation)是一组用于评估"
+"自动摘要和机器翻译模型的指标。ROUGE-N指的是候选句子和参考摘要之间的n-gram重叠。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: of mindnlp.engine.metrics.rouge.RougeN.eval:1
@@ -4999,17 +4976,16 @@ msgstr "计算并返回Rouge-N分数。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: of mindnlp.engine.metrics.rouge.RougeN.update:3
 msgid ""
-"Input `cand_list` and `ref_list`.  - cand_list (list): A list of tokenized "
-"candidate sentence. - ref_list (list): A list of lists of tokenized ground "
-"truth sentences."
+"Input `cand_list` and `ref_list`.  - cand_list (list): A list of tokenized candidate "
+"sentence. - ref_list (list): A list of lists of tokenized ground truth sentences."
 msgstr ""
-"输入`cand_list`和`ref_list`。  - cand_list (list): 分词后的候选句子列表。 - "
+"输入 `cand_list` 和 `ref_list` 。  - cand_list (list): 分词后的候选句子列表。 - "
 "ref_list (list): 分词后的真实句子列表。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/metrics/rouge.py:docstring
 #: of mindnlp.engine.metrics.rouge.RougeN.update:3
 msgid "Input `cand_list` and `ref_list`."
-msgstr "输入`cand_list`和`ref_list`。"
+msgstr "输入 `cand_list` 和 `ref_list` 。"
 
 #: ../../api/engine/metrics.rst:102
 msgid "spearman"
@@ -5047,37 +5023,34 @@ msgstr "用于训练的模型网络。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: of mindnlp.engine.trainer.Trainer:6
 msgid ""
-"A training dataset iterator. If `loss_fn` is defined, the data and label will "
-"be passed to the `network` and the `loss_fn` respectively, so a tuple (data, "
-"label) should be returned from dataset. If there is multiple data or labels, "
-"set `loss_fn` to None and implement calculation of loss in `network`, then a "
-"tuple (data1, data2, data3, ...) with all data returned from dataset will be "
-"passed to the `network`."
+"A training dataset iterator. If `loss_fn` is defined, the data and label will be "
+"passed to the `network` and the `loss_fn` respectively, so a tuple (data, label) "
+"should be returned from dataset. If there is multiple data or labels, set `loss_fn` to "
+"None and implement calculation of loss in `network`, then a tuple (data1, data2, "
+"data3, ...) with all data returned from dataset will be passed to the `network`."
 msgstr ""
-"训练数据集迭代器。如果定义了 `loss_fn`，数据和标签将分别传递给 `network` 和 "
-"`loss_fn`，所以应该从数据集中返回一个元组（数据，标签）。如果有多个数据或标签，"
-"将`loss_fn`设置为None，并在`network`中实现loss的计算，然后将一个元组（data1，"
-"data2，data3，...）从数据集返回的所有数据传递给` 网络`。"
+"训练数据集迭代器。如果定义了 `loss_fn`，数据和标签将分别传递给 `network` 和 `loss_fn`，"
+"所以应该从数据集中返回一个元组（数据，标签）。如果有多个数据或标签，将 `loss_fn` 设置为"
+"None，并在 `network` 中实现loss的计算，然后将一个元组（data1，data2，data3，...）从数据"
+"集返回的所有数据传递给 `network` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: of mindnlp.engine.trainer.Trainer:13
 msgid ""
-"A evaluating dataset iterator. If `loss_fn` is defined, the data and label will "
-"be passed to the `network` and the `loss_fn` respectively, so a tuple (data, "
-"label) should be returned from dataset. If there is multiple data or labels, "
-"set `loss_fn` to None and implement calculation of loss in `network`, then a "
-"tuple (data1, data2, data3, ...) with all data returned from dataset will be "
-"passed to the `network`."
+"A evaluating dataset iterator. If `loss_fn` is defined, the data and label will be "
+"passed to the `network` and the `loss_fn` respectively, so a tuple (data, label) "
+"should be returned from dataset. If there is multiple data or labels, set `loss_fn` to "
+"None and implement calculation of loss in `network`, then a tuple (data1, data2, "
+"data3, ...) with all data returned from dataset will be passed to the `network`."
 msgstr ""
-"测试数据集迭代器。如果定义了 `loss_fn`，数据和标签将分别传递给 `network` 和 "
-"`loss_fn`，所以应该从数据集中返回一个元组（数据，标签）。如果有多个数据或标签，"
-"将`loss_fn`设置为None，并在`network`中实现loss的计算，然后将一个元组（data1，"
-"data2，data3，...）从数据集返回的所有数据传递给` 网络`。"
+"测试数据集迭代器。如果定义了 `loss_fn`，数据和标签将分别传递给 `network` 和 `loss_fn`，"
+"所以应该从数据集中返回一个元组（数据，标签）。如果有多个数据或标签，将 `loss_fn` 设置为"
+"None，并在 `network` 中实现loss的计算，然后将一个元组（data1，data2，data3，...）从数据"
+"集返回的所有数据传递给 `network`。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: of mindnlp.engine.trainer.Trainer:20
-msgid ""
-"List of metrics objects which should be used while evaluating. Default:None."
+msgid "List of metrics objects which should be used while evaluating. Default:None."
 msgstr "评估时应使用的评测指标对象列表。 默认值：无。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
@@ -5088,20 +5061,20 @@ msgstr "数据的总迭代次数。 默认值：10。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: of mindnlp.engine.trainer.Trainer:25
 msgid ""
-"Optimizer for updating the weights. If `optimizer` is None, the `network` needs "
-"to do backpropagation and update weights. Default value: None."
+"Optimizer for updating the weights. If `optimizer` is None, the `network` needs to do "
+"backpropagation and update weights. Default value: None."
 msgstr ""
-"用于更新权重的优化器。如果 optimizer 为 None，则 network 需要进行反向传播和更新"
-"权重。 默认值：无。"
+"用于更新权重的优化器。如果 optimizer 为 None，则 network 需要进行反向传播和更新权重。 "
+"默认值：无。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: of mindnlp.engine.trainer.Trainer:28
 msgid ""
-"Objective function. If `loss_fn` is None, the `network` should contain the "
-"calculation of loss and parallel if needed. Default: None."
+"Objective function. If `loss_fn` is None, the `network` should contain the calculation "
+"of loss and parallel if needed. Default: None."
 msgstr ""
-"目标函数。 如果 `loss_fn` 为 None，则 `network` 应包含损失计算和并行计算（如果需"
-"要）。 默认值：无。"
+"目标函数。 如果 `loss_fn` 为 None，则 `network` 应包含损失计算和并行计算（如果需要）。 "
+"默认值：无。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/engine/trainer.py:docstring
 #: of mindnlp.engine.trainer.Trainer.run:1
@@ -5133,15 +5106,12 @@ msgstr ""
 #: mindnlp.models.bert.BertForPretraining.construct:1
 #: mindnlp.models.bert.BertIntermediate.construct:1
 #: mindnlp.models.bert.BertLMPredictionHead.construct:1
-#: mindnlp.models.bert.BertLayer.construct:1
-#: mindnlp.models.bert.BertModel.construct:1
-#: mindnlp.models.bert.BertOutput.construct:1
-#: mindnlp.models.bert.BertPooler.construct:1
+#: mindnlp.models.bert.BertLayer.construct:1 mindnlp.models.bert.BertModel.construct:1
+#: mindnlp.models.bert.BertOutput.construct:1 mindnlp.models.bert.BertPooler.construct:1
 #: mindnlp.models.bert.BertPreTrainingHeads.construct:1
 #: mindnlp.models.bert.BertPredictionHeadTransform.construct:1
 #: mindnlp.models.bert.BertSelfAttention.construct:1
-#: mindnlp.models.bert.BertSelfOutput.construct:1
-#: mindnlp.models.bert.Matmul.construct:1
+#: mindnlp.models.bert.BertSelfOutput.construct:1 mindnlp.models.bert.Matmul.construct:1
 msgid ""
 "Defines the computation to be performed. This method must be overridden by all "
 "subclasses."
@@ -5154,18 +5124,15 @@ msgstr ""
 #: mindnlp.models.bert.BertForPretraining.construct:3
 #: mindnlp.models.bert.BertIntermediate.construct:3
 #: mindnlp.models.bert.BertLMPredictionHead.construct:3
-#: mindnlp.models.bert.BertLayer.construct:3
-#: mindnlp.models.bert.BertModel.construct:3
-#: mindnlp.models.bert.BertOutput.construct:3
-#: mindnlp.models.bert.BertPooler.construct:3
+#: mindnlp.models.bert.BertLayer.construct:3 mindnlp.models.bert.BertModel.construct:3
+#: mindnlp.models.bert.BertOutput.construct:3 mindnlp.models.bert.BertPooler.construct:3
 #: mindnlp.models.bert.BertPreTrainingHeads.construct:3
 #: mindnlp.models.bert.BertPredictionHeadTransform.construct:3
 #: mindnlp.models.bert.BertSelfAttention.construct:3
-#: mindnlp.models.bert.BertSelfOutput.construct:3
-#: mindnlp.models.bert.Matmul.construct:3
+#: mindnlp.models.bert.BertSelfOutput.construct:3 mindnlp.models.bert.Matmul.construct:3
 msgid ""
-"Note: It is not supported currently that inputs contain both tuple and non-"
-"tuple types at same time."
+"Note: It is not supported currently that inputs contain both tuple and non-tuple types "
+"at same time."
 msgstr ""
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/models/bert.py:docstring
@@ -5175,15 +5142,12 @@ msgstr ""
 #: mindnlp.models.bert.BertForPretraining.construct:5
 #: mindnlp.models.bert.BertIntermediate.construct:5
 #: mindnlp.models.bert.BertLMPredictionHead.construct:5
-#: mindnlp.models.bert.BertLayer.construct:5
-#: mindnlp.models.bert.BertModel.construct:5
-#: mindnlp.models.bert.BertOutput.construct:5
-#: mindnlp.models.bert.BertPooler.construct:5
+#: mindnlp.models.bert.BertLayer.construct:5 mindnlp.models.bert.BertModel.construct:5
+#: mindnlp.models.bert.BertOutput.construct:5 mindnlp.models.bert.BertPooler.construct:5
 #: mindnlp.models.bert.BertPreTrainingHeads.construct:5
 #: mindnlp.models.bert.BertPredictionHeadTransform.construct:5
 #: mindnlp.models.bert.BertSelfAttention.construct:5
-#: mindnlp.models.bert.BertSelfOutput.construct:5
-#: mindnlp.models.bert.Matmul.construct:5
+#: mindnlp.models.bert.BertSelfOutput.construct:5 mindnlp.models.bert.Matmul.construct:5
 msgid "Tuple of variable parameters."
 msgstr ""
 
@@ -5194,15 +5158,12 @@ msgstr ""
 #: mindnlp.models.bert.BertForPretraining.construct:7
 #: mindnlp.models.bert.BertIntermediate.construct:7
 #: mindnlp.models.bert.BertLMPredictionHead.construct:7
-#: mindnlp.models.bert.BertLayer.construct:7
-#: mindnlp.models.bert.BertModel.construct:7
-#: mindnlp.models.bert.BertOutput.construct:7
-#: mindnlp.models.bert.BertPooler.construct:7
+#: mindnlp.models.bert.BertLayer.construct:7 mindnlp.models.bert.BertModel.construct:7
+#: mindnlp.models.bert.BertOutput.construct:7 mindnlp.models.bert.BertPooler.construct:7
 #: mindnlp.models.bert.BertPreTrainingHeads.construct:7
 #: mindnlp.models.bert.BertPredictionHeadTransform.construct:7
 #: mindnlp.models.bert.BertSelfAttention.construct:7
-#: mindnlp.models.bert.BertSelfOutput.construct:7
-#: mindnlp.models.bert.Matmul.construct:7
+#: mindnlp.models.bert.BertSelfOutput.construct:7 mindnlp.models.bert.Matmul.construct:7
 msgid "Dictionary of variable keyword parameters."
 msgstr ""
 
@@ -5213,8 +5174,7 @@ msgstr ""
 #: mindnlp.models.bert.BertForPretraining.construct:10
 #: mindnlp.models.bert.BertIntermediate.construct:10
 #: mindnlp.models.bert.BertLMPredictionHead.construct:10
-#: mindnlp.models.bert.BertLayer.construct:10
-#: mindnlp.models.bert.BertModel.construct:10
+#: mindnlp.models.bert.BertLayer.construct:10 mindnlp.models.bert.BertModel.construct:10
 #: mindnlp.models.bert.BertOutput.construct:10
 #: mindnlp.models.bert.BertPooler.construct:10
 #: mindnlp.models.bert.BertPreTrainingHeads.construct:10
@@ -5240,8 +5200,7 @@ msgstr "BERT-base配置类"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/models/bert.py:docstring
 #: of mindnlp.models.bert.BertEmbeddings:1
 msgid "Embeddings for BERT, include word, position and token_type"
-msgstr ""
-"Bert编码层，包括word embeddings，position embeddings和token type embeddings"
+msgstr "Bert编码层，包括word embeddings，position embeddings和token type embeddings"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/models/bert.py:docstring
 #: of mindnlp.models.bert.BertEncoder:1
@@ -5345,11 +5304,11 @@ msgstr "注意力机制模块"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.AdditiveAttention:1
 msgid ""
-"Additive Attention Additive Attention proposed in \"Neural Machine Translation "
-"by Jointly Learning to Align and Translate\" paper"
+"Additive Attention Additive Attention proposed in \"Neural Machine Translation by "
+"Jointly Learning to Align and Translate\" paper"
 msgstr ""
-"加性注意力机制由文章《Neural Machine Translation by Jointly Learning to Align "
-"and Translate》提出"
+"加性注意力机制由文章《Neural Machine Translation by Jointly Learning to Align and "
+"Translate》提出"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.AdditiveAttention:4
@@ -5366,8 +5325,8 @@ msgstr "向量hidden state的维度大小"
 #: mindnlp.modules.attentions.CosineAttention:10
 #: mindnlp.modules.attentions.ScaledDotAttention:8
 msgid ""
-"The keep rate, greater than 0 and less equal than 1. E.g. rate=0.9, dropping "
-"out 10% of input units. Default: 0.9."
+"The keep rate, greater than 0 and less equal than 1. E.g. rate=0.9, dropping out 10% "
+"of input units. Default: 0.9."
 msgstr "保留率，数值在0和1之间的，例如0.9表示dropout率为10%，保留率为90%"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
@@ -5413,13 +5372,13 @@ msgstr "mask张量，一般为[batch size, query_size, key_size]"
 #: mindnlp.modules.attentions.LinearAttention.construct:15
 #: mindnlp.modules.attentions.ScaledDotAttention.construct:15
 msgid ""
-"- **output** (mindspore.Tensor) - The output of linear attention.   "
-"[batch_size, query_size, value_hidden_size] - **attn** (mindspore.Tensor) - The "
-"last layer of attention weights.   [batch_size, query_size, key_size]"
+"- **output** (mindspore.Tensor) - The output of linear attention.   [batch_size, "
+"query_size, value_hidden_size] - **attn** (mindspore.Tensor) - The last layer of "
+"attention weights.   [batch_size, query_size, key_size]"
 msgstr ""
 "线性注意力输出output和注意力分数attn线性注意力输出output，维度参考[batch_size, "
-"query_size, value_hidden_size]线性注意力分数attn，维度参考[batch_size, "
-"query_size, key_size]"
+"query_size, value_hidden_size]线性注意力分数attn，维度参考[batch_size, query_size, "
+"key_size]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.AdditiveAttention.construct:17
@@ -5444,11 +5403,10 @@ msgstr "线性注意力分数attn维度参考[batch_size, query_size, key_size]"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.BinaryAttention:1
 msgid ""
-"Binary Attention, For a given sequence of two vectors : x_i and y_j, the "
-"BiAttention module will compute the attention result by the following equation:"
+"Binary Attention, For a given sequence of two vectors : x_i and y_j, the BiAttention "
+"module will compute the attention result by the following equation:"
 msgstr ""
-"针对所给的2个序列所表示的向量如x_i和y_iBiAttentio模块会根据以下公式计算注意力结"
-"果公式："
+"针对所给的2个序列所表示的向量如x_i和y_iBiAttentio模块会根据以下公式计算注意力结果公式："
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.BinaryAttention:5
@@ -5456,11 +5414,11 @@ msgid ""
 "  \\begin{array}{ll} \\\\\n"
 "    e_{ij} = {x}^{\\mathrm{T}}_{i}{y}_{j} \\\\\n"
 "    {\\hat{x}}_{i} = \\sum_{j=1}^{\\mathcal{l}_{y}}{\\frac{\n"
-"        \\mathrm{exp}(e_{ij})}{\\sum_{k=1}^{\\mathcal{l}_{y}}{\\mathrm{exp}"
-"(e_{ik})}}}{y}_{j} \\\\\n"
+"        \\mathrm{exp}(e_{ij})}{\\sum_{k=1}^{\\mathcal{l}_{y}}{\\mathrm{exp}(e_{ik})}}}"
+"{y}_{j} \\\\\n"
 "    {\\hat{y}}_{j} = \\sum_{i=1}^{\\mathcal{l}_{x}}{\\frac{\n"
-"        \\mathrm{exp}(e_{ij})}{\\sum_{k=1}^{\\mathcal{l}_{x}}{\\mathrm{exp}"
-"(e_{ik})}}}{x}_{i} \\\\\n"
+"        \\mathrm{exp}(e_{ij})}{\\sum_{k=1}^{\\mathcal{l}_{x}}{\\mathrm{exp}(e_{ik})}}}"
+"{x}_{i} \\\\\n"
 "\\end{array}"
 msgstr ""
 
@@ -5492,11 +5450,11 @@ msgstr "参考shape维度 [batch_size, y_seq_len]"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.BinaryAttention.construct:12
 msgid ""
-"- **attended_x** (mindspore.Tensor) - The output of the attention_x. - "
-"**attended_y** (mindspore.Tensor) - The output of the attention_y."
+"- **attended_x** (mindspore.Tensor) - The output of the attention_x. - **attended_y** "
+"(mindspore.Tensor) - The output of the attention_y."
 msgstr ""
-"attended_x，x向量的注意力在y向量下的注意力结果attended_y，y向量的注意力在x向量下"
-"的注意力结果"
+"attended_x，x向量的注意力在y向量下的注意力结果attended_y，y向量的注意力在x向量下的注意"
+"力结果"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.BinaryAttention.construct:14
@@ -5510,8 +5468,7 @@ msgstr "attended_y，y向量的注意力在x向量下的注意力结果"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.CosineAttention:1
-msgid ""
-"Cosine Attention Cosine Attention proposed in \"Neural Turing Machines\" paper"
+msgid "Cosine Attention Cosine Attention proposed in \"Neural Turing Machines\" paper"
 msgstr "Cosine Attention由论文《Neural Turing Machines》提出"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
@@ -5563,11 +5520,10 @@ msgstr "linear attention网络前向传播"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LocationAwareAttention:1
 msgid ""
-"Location Aware Attention Location Aware Attention proposed in \"Attention-Based "
-"Models for Speech Recognition\""
+"Location Aware Attention Location Aware Attention proposed in \"Attention-Based Models "
+"for Speech Recognition\""
 msgstr ""
-"Location Aware Attention由论文《Attention-Based Models for Speech Recognition》"
-"提出"
+"Location Aware Attention由论文《Attention-Based Models for Speech Recognition》提出"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LocationAwareAttention:4
@@ -5587,15 +5543,13 @@ msgstr "Location aware attention网络前向传播"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LocationAwareAttention.construct:3
 msgid "Decoder hidden states, Shape=(batch_size, 1, decoder_dim)."
-msgstr ""
-"query向量，同时也是Decoder的hidden states，shape参考[batch_size, 1, decoder_dim]"
+msgstr "query向量，同时也是Decoder的hidden states，shape参考[batch_size, 1, decoder_dim]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LocationAwareAttention.construct:6
 msgid "Encoder outputs, Shape=(batch_size, seq_len, encoder_dim)."
 msgstr ""
-"key向量，同时也是Encoder的hidden states，shape参考[batch_size, seq_len, "
-"encoder_dim]"
+"key向量，同时也是Encoder的hidden states，shape参考[batch_size, seq_len, encoder_dim]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LocationAwareAttention.construct:9
@@ -5609,8 +5563,8 @@ msgid ""
 "decoder_dim). - **attn** (mindspore.Tensor) - Attention weight of this step, "
 "Shape=(batch_size, seq_len)."
 msgstr ""
-"context上下文向量，shape参考[batch_size, 1, decoder_dim]attn当前状态下的注意力分"
-"数，shape参考[batch_size, seq_len]"
+"context上下文向量，shape参考[batch_size, 1, decoder_dim]attn当前状态下的注意力分数，"
+"shape参考[batch_size, seq_len]"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.LocationAwareAttention.construct:15
@@ -5639,11 +5593,11 @@ msgstr "mask张量类型为mindspore.Tensor[bool]"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.MutiHeadAttention:1
 msgid ""
-"Muti-head attention is from the paper “attention is all you need” where heads "
-"== 1 Muti-head attention is normal self-attention"
+"Muti-head attention is from the paper “attention is all you need” where heads == 1 "
+"Muti-head attention is normal self-attention"
 msgstr ""
-"多头注意力机制由论文《attention is all you need》提出当head数为1时，多头注意力机"
-"制及正常的自注意力机制"
+"多头注意力机制由论文《attention is all you need》提出当head数为1时，多头注意力机制及正"
+"常的自注意力机制"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.MutiHeadAttention:4
@@ -5720,8 +5674,8 @@ msgstr "attn多头注意力的注意力分数"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.ScaledDotAttention:1
 msgid ""
-"Scaled Dot-Product Attention Scaled Dot-Product Attention proposed in "
-"\"Attention Is All You Need\""
+"Scaled Dot-Product Attention Scaled Dot-Product Attention proposed in \"Attention Is "
+"All You Need\""
 msgstr "缩放点乘注意力机制由论文《Attention Is All You Need》提出"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
@@ -5761,8 +5715,8 @@ msgstr "key向量"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
 #: of mindnlp.modules.attentions.SelfAttention.construct:13
 msgid ""
-"- **output** (mindspore.Tensor) - The output of self attention. - **attn** "
-"(mindspore.Tensor) - The last layer of attention weights"
+"- **output** (mindspore.Tensor) - The output of self attention. - **attn** (mindspore."
+"Tensor) - The last layer of attention weights"
 msgstr "output多头注意力输出attn多头注意力的注意力分数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/attentions.py:docstring
@@ -5806,20 +5760,20 @@ msgstr "循环神经网络单元的列表"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/decoder/rnn_decoder.py:docstring
 #: of mindnlp.modules.decoder.rnn_decoder.RNNDecoder:7
 msgid ""
-"If not 0, append `Dropout` layer on the inputs of each RNN layer. Default 0. "
-"The range of dropout is [0.0, 1.0)."
+"If not 0, append `Dropout` layer on the inputs of each RNN layer. Default 0. The range "
+"of dropout is [0.0, 1.0)."
 msgstr ""
-"如果值不为0，则对每一个rnn层的输入进行`Dropout`操作，值为神经元丢弃概率。默认"
-"值：0，范围为[0.0, 1.0)。"
+"如果值不为0，则对每一个rnn层的输入进行 `Dropout` 操作，值为神经元丢弃概率。默认值：0，"
+"范围为[0.0, 1.0)。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/decoder/rnn_decoder.py:docstring
 #: of mindnlp.modules.decoder.rnn_decoder.RNNDecoder:10
 msgid ""
-"If not 0, append `Dropout` layer on the outputs of each RNN layer except the "
-"last layer. Default 0. The range of dropout is [0.0, 1.0)."
+"If not 0, append `Dropout` layer on the outputs of each RNN layer except the last "
+"layer. Default 0. The range of dropout is [0.0, 1.0)."
 msgstr ""
-"如果值不为0，则对每一个rnn层的输出进行`Dropout`操作，值为神经元丢弃概率。默认"
-"值：0，范围为[0.0, 1.0)。"
+"如果值不为0，则对每一个rnn层的输出进行 `Dropout` 操作，值为神经元丢弃概率。默认值：0，"
+"范围为[0.0, 1.0)。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/decoder/rnn_decoder.py:docstring
 #: of mindnlp.modules.decoder.rnn_decoder.RNNDecoder:13
@@ -5853,13 +5807,13 @@ msgstr "编码器的输出。默认值：None。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/decoder/rnn_decoder.py:docstring
 #: of mindnlp.modules.decoder.rnn_decoder.RNNDecoder.construct:8
 msgid ""
-"Tuple, a tuple contains (`output`, `attn_scores`).  - output (Tensor): Tensor "
-"of shape (batch, `tgt_len`, `vocab_size`). - attn_scores (Tensor): Tensor of "
-"shape (batch, `tgt_len`, `src_len`)   if attention=True otherwise None."
+"Tuple, a tuple contains (`output`, `attn_scores`).  - output (Tensor): Tensor of shape "
+"(batch, `tgt_len`, `vocab_size`). - attn_scores (Tensor): Tensor of shape (batch, "
+"`tgt_len`, `src_len`)   if attention=True otherwise None."
 msgstr ""
-"Tuple类型，返回一个包含(`output`, `attn_scores`)的tuple。 - output (Tensor): "
-"shape为(batch, `tgt_len`, `vocab_size`)的Tensor。 - attn_scores (Tensor): 如果"
-"attention=True，则是shape为(batch, `tgt_len`, `src_len`)的Tensor；否则为None。"
+"Tuple类型，返回一个包含(`output`, `attn_scores`)的tuple。 - output (Tensor): shape为"
+"(batch, `tgt_len`, `vocab_size`)的Tensor。 - attn_scores (Tensor): 如果attention=True，"
+"则是shape为(batch, `tgt_len`, `src_len`)的Tensor；否则为None。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/decoder/rnn_decoder.py:docstring
 #: of mindnlp.modules.decoder.rnn_decoder.RNNDecoder.construct:8
@@ -5876,11 +5830,11 @@ msgstr "output (Tensor): shape为(batch, `tgt_len`, `vocab_size`)的Tensor。"
 #: of mindnlp.modules.decoder.rnn_decoder.RNNDecoder.construct:11
 #: mindnlp.modules.decoder.rnn_decoder.RNNDecoder.extract_features:11
 msgid ""
-"attn_scores (Tensor): Tensor of shape (batch, `tgt_len`, `src_len`) if "
-"attention=True otherwise None."
+"attn_scores (Tensor): Tensor of shape (batch, `tgt_len`, `src_len`) if attention=True "
+"otherwise None."
 msgstr ""
-"attn_scores (Tensor): 如果attention=True，则是shape为(batch, `tgt_len`, "
-"`src_len`)的Tensor；否则为None。"
+"attn_scores (Tensor): 如果attention=True，则是shape为(batch, `tgt_len`, `src_len`)的"
+"Tensor；否则为None。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/decoder/rnn_decoder.py:docstring
 #: of mindnlp.modules.decoder.rnn_decoder.RNNDecoder.extract_features:1
@@ -5890,13 +5844,12 @@ msgstr "提取编码器输出的特征"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/decoder/rnn_decoder.py:docstring
 #: of mindnlp.modules.decoder.rnn_decoder.RNNDecoder.extract_features:8
 msgid ""
-"Tuple, a tuple contains (`output`, `attn_scores`).  - output (Tensor): The "
-"extracted feature Tensor of shape (batch, `tgt_len`, `hidden_size`). - "
-"attn_scores (Tensor): Tensor of shape (batch, `tgt_len`, `src_len`)   if "
-"attention=True otherwise None."
+"Tuple, a tuple contains (`output`, `attn_scores`).  - output (Tensor): The extracted "
+"feature Tensor of shape (batch, `tgt_len`, `hidden_size`). - attn_scores (Tensor): "
+"Tensor of shape (batch, `tgt_len`, `src_len`)   if attention=True otherwise None."
 msgstr ""
-"Tuple类型，返回一个包含(`output`, `attn_scores`)的tuple。 - output (Tensor): "
-"shape为(batch, `tgt_len`, `hidden_size`)的Tensor。 - attn_scores (Tensor): 如果"
+"Tuple类型，返回一个包含(`output`, `attn_scores`)的tuple。 - output (Tensor): shape为"
+"(batch, `tgt_len`, `hidden_size`)的Tensor。 - attn_scores (Tensor): 如果"
 "attention=True，则是shape为(batch, `tgt_len`, `src_len`)的Tensor；否则为None。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/decoder/rnn_decoder.py:docstring
@@ -6054,12 +6007,12 @@ msgstr "由特殊token组成的list.默认值：(\"<pad>\", \"<unk>\")."
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/word2vec_embedding.py:docstring
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:11
 msgid ""
-"Indicates whether special participles from special_tokens will be added to the "
-"top of the dictionary. If True, add special_tokens to the beginning of the "
-"dictionary, otherwise add them to the end. Default: True."
+"Indicates whether special participles from special_tokens will be added to the top of "
+"the dictionary. If True, add special_tokens to the beginning of the dictionary, "
+"otherwise add them to the end. Default: True."
 msgstr ""
-"是否添加special_tokens中的元素到字典头部.如果为True,则添加到头部,反之添加到尾"
-"部。默认值：True."
+"是否添加special_tokens中的元素到字典头部.如果为True,则添加到头部,反之添加到尾部。默认"
+"值：True."
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/fasttext_embedding.py:docstring
 #: of mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:15
@@ -6068,11 +6021,11 @@ msgstr ""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/word2vec_embedding.py:docstring
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:17
 msgid ""
-"- requires_grad (bool): Whether this parameter needs to be gradient to update. "
-"- dropout (float): Dropout of the output of Embedding."
+"- requires_grad (bool): Whether this parameter needs to be gradient to update. - "
+"dropout (float): Dropout of the output of Embedding."
 msgstr ""
-"- requires_grad (bool): 参数是否需要梯度下降来更新.- dropout (float): Embedding"
-"层的Dropout丢弃率.默认值：0.5."
+"- requires_grad (bool): 参数是否需要梯度下降来更新.- dropout (float): Embedding层的"
+"Dropout丢弃率.默认值：0.5."
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/fasttext_embedding.py:docstring
 #: of mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:16
@@ -6080,8 +6033,7 @@ msgstr ""
 #: mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:16
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/word2vec_embedding.py:docstring
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:18
-msgid ""
-"requires_grad (bool): Whether this parameter needs to be gradient to update."
+msgid "requires_grad (bool): Whether this parameter needs to be gradient to update."
 msgstr "requires_grad (bool): 参数是否需要梯度下降来更新.默认值: True."
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/fasttext_embedding.py:docstring
@@ -6096,17 +6048,15 @@ msgstr "dropout (float): Embedding层的Dropout丢弃率.默认值：0.5."
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/fasttext_embedding.py:docstring
 #: of mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:20
 msgid ""
-"- Fasttext, Returns an embedding instance generated through a pretrained word "
-"vector. - Vocab, Vocabulary extracted from the file."
+"- Fasttext, Returns an embedding instance generated through a pretrained word vector. "
+"- Vocab, Vocabulary extracted from the file."
 msgstr ""
-"- Fasttext, 返回一个由预训练词向量生成的embedding.- Vocab, 从词向量文件中提取的"
-"词汇."
+"- Fasttext, 返回一个由预训练词向量生成的embedding.- Vocab, 从词向量文件中提取的词汇."
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/fasttext_embedding.py:docstring
 #: of mindnlp.modules.embeddings.fasttext_embedding.Fasttext.from_pretrained:22
 msgid ""
-"Fasttext, Returns an embedding instance generated through a pretrained word "
-"vector."
+"Fasttext, Returns an embedding instance generated through a pretrained word vector."
 msgstr "Fasttext, 返回一个由预训练词向量生成的embedding."
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/fasttext_embedding.py:docstring
@@ -6155,11 +6105,11 @@ msgstr "embedding参数文件所在的路径.默认值：DEFAULT_ROOT."
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/word2vec_embedding.py:docstring
 #: mindnlp.modules.embeddings.word2vec_embedding.Word2vec.load:7
 msgid ""
-"Whether to initialize the embedding as a npy file. Vocab and npy_path are valid "
-"when load_npy is True. Default: False."
+"Whether to initialize the embedding as a npy file. Vocab and npy_path are valid when "
+"load_npy is True. Default: False."
 msgstr ""
-"是否以npy文件的方式初始化embedding.当load_npy为True时,Vocab和npy_path有效。默认"
-"值：False."
+"是否以npy文件的方式初始化embedding.当load_npy为True时,Vocab和npy_path有效。默认值："
+"False."
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/fasttext_embedding.py:docstring
 #: of mindnlp.modules.embeddings.fasttext_embedding.Fasttext.load:10
@@ -6226,16 +6176,14 @@ msgstr "预训练词向量的名字.默认值：'6B'."
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/glove_embedding.py:docstring
 #: of mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:20
 msgid ""
-"- Glove, Returns an embedding instance generated through a pretrained word "
-"vector. - Vocab, Vocabulary extracted from the file."
+"- Glove, Returns an embedding instance generated through a pretrained word vector. - "
+"Vocab, Vocabulary extracted from the file."
 msgstr ""
-"- Glove, 返回一个由预训练词向量生成的embedding.- Vocab, 从词向量文件中提取的词"
-"汇."
+"- Glove, 返回一个由预训练词向量生成的embedding.- Vocab, 从词向量文件中提取的词汇."
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/glove_embedding.py:docstring
 #: of mindnlp.modules.embeddings.glove_embedding.Glove.from_pretrained:22
-msgid ""
-"Glove, Returns an embedding instance generated through a pretrained word vector."
+msgid "Glove, Returns an embedding instance generated through a pretrained word vector."
 msgstr "Glove, 返回一个由预训练词向量生成的embedding."
 
 #: ../../api/modules/embeddings.rst:22
@@ -6260,17 +6208,15 @@ msgstr "是否用gensim库加载词向量.若为True则表示使用gensim库.默
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/word2vec_embedding.py:docstring
 #: of mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:22
 msgid ""
-"- Word2vec, Returns an embedding instance generated through a pretrained word "
-"vector. - Vocab, Vocabulary extracted from the file."
+"- Word2vec, Returns an embedding instance generated through a pretrained word vector. "
+"- Vocab, Vocabulary extracted from the file."
 msgstr ""
-"- Word2vec, 返回一个由预训练词向量生成的embedding.- Vocab, 从词向量文件提取的词"
-"汇."
+"- Word2vec, 返回一个由预训练词向量生成的embedding.- Vocab, 从词向量文件提取的词汇."
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/word2vec_embedding.py:docstring
 #: of mindnlp.modules.embeddings.word2vec_embedding.Word2vec.from_pretrained:24
 msgid ""
-"Word2vec, Returns an embedding instance generated through a pretrained word "
-"vector."
+"Word2vec, Returns an embedding instance generated through a pretrained word vector."
 msgstr "Word2vec, 返回一个由预训练词向量生成的embedding."
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/embeddings/__init__.py:docstring
@@ -6306,7 +6252,7 @@ msgstr "CNN编码器。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/cnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.cnn_encoder.CNNEncoder:3
 msgid "Convolutional encoder consisting of `len(convolutions)` layers."
-msgstr "由`len（卷积）`层组成的卷积编码器。"
+msgstr "由 `len（卷积）` 层组成的卷积编码器。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/cnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.cnn_encoder.CNNEncoder:7
@@ -6321,42 +6267,40 @@ msgstr "在卷积层之后使用的激活操作。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/cnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.cnn_encoder.CNNEncoder:11
 msgid ""
-"The output vector of collected features after doing convolutions and pooling. "
-"If this value is `None`, return the result of the max pooling, an output of "
-"shape."
+"The output vector of collected features after doing convolutions and pooling. If this "
+"value is `None`, return the result of the max pooling, an output of shape."
 msgstr ""
-"卷积和合并后收集的特征的输出向量。如果此值为空值，则返回最大池化的结果，即输出形"
-"状。"
+"卷积和合并后收集的特征的输出向量。如果此值为空值，则返回最大池化的结果，即输出形状。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/cnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.cnn_encoder.CNNEncoder:15
 msgid "if `embedding` is not a Cell."
-msgstr "如果`embedding`不是一个Cell对象。"
+msgstr "如果 `embedding` 不是一个Cell对象。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/cnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.cnn_encoder.CNNEncoder:16
 msgid "if `convs` is not a list[Cell]."
-msgstr "如果`convs`不是一个list[Cell]对象。"
+msgstr "如果 `convs` 不是一个list[Cell]对象。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/cnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.cnn_encoder.CNNEncoder:17
 msgid "if `conv_layer_activation` is not a Module."
-msgstr "如果`conv_layer_activation`不是一个Module对象。"
+msgstr "如果 `conv_layer_activation` 不是一个Module对象。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/cnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.cnn_encoder.CNNEncoder:18
 msgid "if `output_dim` is not a int."
-msgstr "如果``output_dim`不是一个int对象。"
+msgstr "如果 `output_dim` 不是一个int对象。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/cnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.cnn_encoder.CNNEncoder:19
 msgid "If `embedding` is None."
-msgstr "如果`embedding`为空值。"
+msgstr "如果 `embedding` 为空值。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/cnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.cnn_encoder.CNNEncoder:20
 msgid "If `convs` is None."
-msgstr "如果`convs`为空值。"
+msgstr "如果 `convs` 为空值。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/cnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.cnn_encoder.CNNEncoder.construct:1
@@ -6375,23 +6319,21 @@ msgstr "源语言中的token，shape为[batch, max_len]。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/rnn_encoder.py:docstring
 #: mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:7
 msgid ""
-"Its elements identify whether the corresponding input token is padding or not. "
-"If the value is 1, not padding token. If the value is 0, padding token. "
-"Defaults to None."
+"Its elements identify whether the corresponding input token is padding or not. If the "
+"value is 1, not padding token. If the value is 0, padding token. Defaults to None."
 msgstr ""
-"用于判断对应的输入token是否为padding部分。若值为1，则不是padding部分；若值为0，"
-"则是padding部分。默认值：None"
+"用于判断对应的输入token是否为padding部分。若值为1，则不是padding部分；若值为0，则是"
+"padding部分。默认值：None"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/cnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.cnn_encoder.CNNEncoder.construct:9
 msgid ""
-"Tensor, If output_dim is None, the result shape is of `(batch_size, len(convs) "
-"* num_filter)` and dtype is `float`; If not, the result shape is of "
-"`(batch_size, output_dim)`."
+"Tensor, If output_dim is None, the result shape is of `(batch_size, len(convs) * "
+"num_filter)` and dtype is `float`; If not, the result shape is of `(batch_size, "
+"output_dim)`."
 msgstr ""
-"向量，如果`output_dim`为空值，则结果形状为`(batch_size, len(convs) * "
-"num_filter)`，数据类型为`float`；如果不是，则结果形状为`(batch_size, "
-"output_dim)`。"
+"向量，如果 `output_dim` 为空值，则结果形状为 `(batch_size, len(convs) * num_filter)` ，"
+"数据类型为 `float` ；如果不是，则结果形状为 `(batch_size, output_dim)` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/cnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.cnn_encoder.CNNEncoder.get_input_dim:1
@@ -6430,16 +6372,15 @@ msgstr "输入batch的序列长度，shape为[batch]。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/rnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:11
 msgid ""
-"Tuple, a tuple contains (`output`, `hiddens_n`, `mask`).  - output (Tensor): "
-"Tensor of shape (seq_len, batch_size, num_directions * `hidden_size`). - "
-"hiddens_n (Tensor): Tensor of shape (num_directions * `num_layers`, batch_size, "
-"`hidden_size`). - mask (Tensor): Mask Tensor used in decoder."
+"Tuple, a tuple contains (`output`, `hiddens_n`, `mask`).  - output (Tensor): Tensor of "
+"shape (seq_len, batch_size, num_directions * `hidden_size`). - hiddens_n (Tensor): "
+"Tensor of shape (num_directions * `num_layers`, batch_size, `hidden_size`). - mask "
+"(Tensor): Mask Tensor used in decoder."
 msgstr ""
-"Tuple类型，返回一个包含(`output`, `hiddens_n`, `mask`)的tuple。 - output "
-"(Tensor): shape为(seq_len, batch_size, num_directions * `hidden_size`)的"
-"Tensor。 - hiddens_n (Tensor): shape为(num_directions * `num_layers`, "
-"batch_size, `hidden_size`)的Tensor。 - mask (Tensor): 需要在解码器中使用的Mask "
-"Tensor。"
+"Tuple类型，返回一个包含(`output`, `hiddens_n`, `mask`)的tuple。 - output (Tensor): "
+"shape为(seq_len, batch_size, num_directions * `hidden_size`)的Tensor。 - hiddens_n "
+"(Tensor): shape为(num_directions * `num_layers`, batch_size, `hidden_size`)的Tensor。 "
+"- mask (Tensor): 需要在解码器中使用的Mask Tensor。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/rnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:11
@@ -6449,11 +6390,9 @@ msgstr "Tuple类型，返回一个包含(`output`, `hiddens_n`, `mask`)的tuple�
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/rnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:13
 msgid ""
-"output (Tensor): Tensor of shape (seq_len, batch_size, num_directions * "
-"`hidden_size`)."
+"output (Tensor): Tensor of shape (seq_len, batch_size, num_directions * `hidden_size`)."
 msgstr ""
-"output (Tensor): shape为(seq_len, batch_size, num_directions * `hidden_size`)的"
-"Tensor。"
+"output (Tensor): shape为(seq_len, batch_size, num_directions * `hidden_size`)的Tensor。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/rnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:14
@@ -6461,8 +6400,8 @@ msgid ""
 "hiddens_n (Tensor): Tensor of shape (num_directions * `num_layers`, batch_size, "
 "`hidden_size`)."
 msgstr ""
-"hiddens_n (Tensor): shape为(num_directions * `num_layers`, batch_size, "
-"`hidden_size`)的Tensor。"
+"hiddens_n (Tensor): shape为(num_directions * `num_layers`, batch_size, `hidden_size`)的"
+"Tensor。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/rnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.rnn_encoder.RNNEncoder.construct:15
@@ -6472,7 +6411,7 @@ msgstr "mask (Tensor): 需要在解码器中使用的Mask Tensor。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/rnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.rnn_encoder.RNNEncoder.reorder_encoder_out:1
 msgid "Reorder encoder output according to `new_order`."
-msgstr "根据`new_order`重新排序编码器的输出顺序"
+msgstr "根据 `new_order` 重新排序编码器的输出顺序"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/rnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.rnn_encoder.RNNEncoder.reorder_encoder_out:3
@@ -6487,7 +6426,7 @@ msgstr "预期的顺序"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/modules/encoder/rnn_encoder.py:docstring
 #: of mindnlp.modules.encoder.rnn_encoder.RNNEncoder.reorder_encoder_out:8
 msgid "Tuple, encoder_out rearranged according to new_order."
-msgstr "Tuple类型，返回根据`new_order`重新排列的编码器输出"
+msgstr "Tuple类型，返回根据 `new_order` 重新排列的编码器输出"
 
 #: ../../api/modules/encoder.rst:22
 msgid "transformer\\_encoder"
@@ -6607,11 +6546,11 @@ msgstr "下载函数"
 #: of mindnlp.utils.download.cache_file:1 mindnlp.utils.download.cached_path:1
 #: mindnlp.utils.download.get_from_cache:1
 msgid ""
-"If there is the file in cache_dir, return the path; if there is no such file, "
-"use the url to download."
+"If there is the file in cache_dir, return the path; if there is no such file, use the "
+"url to download."
 msgstr ""
-"如果本地缓存路径中存在该文件，直接返回对应文件路径；否则，若不存在该文件，则使用"
-"给定的url地址进行下载。"
+"如果本地缓存路径中存在该文件，直接返回对应文件路径；否则，若不存在该文件，则使用给定的"
+"url地址进行下载。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.cache_file:3
@@ -6640,54 +6579,52 @@ msgstr "下载文件的真实MD5值。"
 #: of mindnlp.utils.download.cache_file:11 mindnlp.utils.download.cached_path:11
 #: mindnlp.utils.download.get_from_cache:9
 msgid ""
-"The name of the downloaded file.\\ (This parameter is required if the end of "
-"the link is not the downloaded file name.)"
+"The name of the downloaded file.\\ (This parameter is required if the end of the link "
+"is not the downloaded file name.)"
 msgstr ""
-"所需下载文件的名称（如果链接的末尾部分不是所需下载文件的名称，则需要输入该参"
-"数）。"
+"所需下载文件的名称（如果链接的末尾部分不是所需下载文件的名称，则需要输入该参数）。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.cache_file:17 mindnlp.utils.download.cached_path:17
 #: mindnlp.utils.download.get_filepath:6
 msgid ""
-"- str, If `path` is a folder containing a file, return `{path}\\{filename}`;   "
-"if `path` is a folder containing multiple files or a single file, return `path`."
+"- str, If `path` is a folder containing a file, return `{path}\\{filename}`;   if "
+"`path` is a folder containing multiple files or a single file, return `path`."
 msgstr ""
-"- 字符串，如果`path`是一个包含有一个文件的文件夹，则以`{path}\\{filename}`的形式"
-"返回；如果`path`是一个包含有多个文件的文件夹或单个文件，则返回`path`。"
+"- 字符串，如果 `path` 是一个包含有一个文件的文件夹，则以`{path}\\{filename}`的形式返"
+"回；如果 `path` 是一个包含有多个文件的文件夹或单个文件，则返回 `path` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.cache_file:19 mindnlp.utils.download.cached_path:19
 #: mindnlp.utils.download.get_filepath:8
 msgid ""
-"str, If `path` is a folder containing a file, return `{path}\\{filename}`; if "
-"`path` is a folder containing multiple files or a single file, return `path`."
+"str, If `path` is a folder containing a file, return `{path}\\{filename}`; if `path` "
+"is a folder containing multiple files or a single file, return `path`."
 msgstr ""
-"字符串，如果`path`是一个包含有一个文件的文件夹，则以`{path}\\{filename}`的形式返"
-"回；如果`path`是一个包含有多个文件的文件夹或单个文件，则返回`path`。"
+"字符串，如果 `path` 是一个包含有一个文件的文件夹，则以`{path}\\{filename}`的形式返回；"
+"如果 `path` 是一个包含有多个文件的文件夹或单个文件，则返回 `path` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.cache_file:22 mindnlp.utils.download.check_md5:10
 #: mindnlp.utils.download.match_file:14
 msgid "If `filename` is not a string."
-msgstr "如果`filename`不是一个字符串。"
+msgstr "如果 `filename` 不是一个字符串。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.cache_file:23 mindnlp.utils.download.match_file:15
 msgid "If `cache_dir` is not a string."
-msgstr "如果`cache_dir`不是一个字符串。"
+msgstr "如果 `cache_dir` 不是一个字符串。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
-#: of mindnlp.utils.download.cache_file:24
-#: mindnlp.utils.download.get_from_cache:20
+#: of mindnlp.utils.download.cache_file:24 mindnlp.utils.download.get_from_cache:20
 msgid "If `url` is not a string."
-msgstr "如果`url`不是一个字符串。"
+msgstr "如果 `url` 不是一个字符串。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.cache_file:25 mindnlp.utils.download.check_md5:11
 #: mindnlp.utils.download.match_file:16
 msgid "If `filename` is None."
-msgstr "如果`filename`为空值。"
+msgstr "如果 `filename` 为空值。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.cached_path:3
@@ -6696,19 +6633,18 @@ msgstr "所需文件的名称或url地址。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.cached_path:7
-msgid ""
-"The additional folder to which the dataset is cached.(under the `cache_dir`)"
+msgid "The additional folder to which the dataset is cached.(under the `cache_dir`)"
 msgstr "数据集存储所在的具体文件夹（位于缓存地址`cache_dir`之下）。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.cached_path:22 mindnlp.utils.download.get_filepath:11
 msgid "If `path` is not a string."
-msgstr "如果`path`不是一个字符串。"
+msgstr "如果 `path` 不是一个字符串。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.cached_path:23 mindnlp.utils.download.get_filepath:12
 msgid "If `path` is None."
-msgstr "如果`path`为空值。"
+msgstr "如果 `path` 为空值。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.check_md5:1
@@ -6728,15 +6664,14 @@ msgstr "布尔值，MD5值检验的结果。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.get_cache_path:1
 msgid ""
-"Get the storage path of the default cache. If the environment 'cache_path' is "
-"set, use the environment variable."
-msgstr ""
-"得到默认缓存的储存地址，如果环境变量`cache_path`已设置，则使用环境变量的值。"
+"Get the storage path of the default cache. If the environment 'cache_path' is set, use "
+"the environment variable."
+msgstr "得到默认缓存的储存地址，如果环境变量 `cache_path` 已设置，则使用环境变量的值。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.get_cache_path:5 mindnlp.utils.download.http_get:15
 msgid "str, the path of default or the environment 'cache_path'."
-msgstr "字符串，默认的路径或环境变量`cache_path`。"
+msgstr "字符串，默认的路径或环境变量 `cache_path` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.get_dataset_url:1
@@ -6756,12 +6691,12 @@ msgstr "字符串，需要下载的数据集的url地址。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.get_dataset_url:8
 msgid "If `datasetname` is not a string."
-msgstr "如果`datasetname`不是一个字符串。"
+msgstr "如果 `datasetname` 不是一个字符串。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.get_dataset_url:9
 msgid "If `datasetname` is None."
-msgstr "如果`datasetname`为空值。"
+msgstr "如果 `datasetname` 为空值。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.get_filepath:1
@@ -6780,8 +6715,7 @@ msgstr "下载文件的地址。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.get_from_cache:15
-msgid ""
-"- str, The path of save the downloaded file. - str, The name of downloaded file."
+msgid "- str, The path of save the downloaded file. - str, The name of downloaded file."
 msgstr "- 字符串，储存下载所得文件的地址。 -字符串，下载所得文件的名称。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
@@ -6797,12 +6731,12 @@ msgstr "字符串，下载所得文件的名称。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.get_from_cache:21
 msgid "If `cache_dir` is not a Path."
-msgstr "如果`cache_dir`不是一个路径。"
+msgstr "如果 `cache_dir` 不是一个路径。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.get_from_cache:22 mindnlp.utils.download.http_get:18
 msgid "If `url` is None."
-msgstr "如果`url`为空值。"
+msgstr "如果 `url` 为空值。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.http_get:1
@@ -6822,25 +6756,23 @@ msgstr "下载到给定地址（默认值：'{home}\\.text）"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.http_get:9
 msgid ""
-"The name of the downloaded file.\\ (This para meter is required if the end of "
-"the link is not the downloaded file name.)"
+"The name of the downloaded file.\\ (This para meter is required if the end of the link "
+"is not the downloaded file name.)"
 msgstr ""
-"下载所得文件的名称（如果链接的末尾部分不是所需下载文件的名称，则需要输入该参"
-"数）。"
+"下载所得文件的名称（如果链接的末尾部分不是所需下载文件的名称，则需要输入该参数）。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.http_get:17
 msgid "If `url` is not a String."
-msgstr "如果`url`不是一个字符串。"
+msgstr "如果 `url` 不是一个字符串。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.match_file:1
 msgid ""
-"If there is the file in cache_dir, return the path; otherwise, return empty "
-"string or error."
+"If there is the file in cache_dir, return the path; otherwise, return empty string or "
+"error."
 msgstr ""
-"如果`cache_dir`地址中存在该文件，返回对应路径；否则，返回一个空字符串或者报错信"
-"息。"
+"如果 `cache_dir` 地址中存在该文件，返回对应路径；否则，返回一个空字符串或者报错信息。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.match_file:3
@@ -6850,27 +6782,25 @@ msgstr "所需文件的名称。"
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.match_file:8
 msgid ""
-"- str, If there is the file in cache_dir, return filename;   if there is no "
-"such file, return empty string '';   if there are two or more matching file, "
-"report an error."
+"- str, If there is the file in cache_dir, return filename;   if there is no such file, "
+"return empty string '';   if there are two or more matching file, report an error."
 msgstr ""
-"- 字符串，如果`cache_dir`地址中存在该文件，则返回文件名称；如果没有对应文件存"
-"在，返回空字符串；如果存在两个或多个可匹配的文件，返回报错信息。"
+"- 字符串，如果 `cache_dir` 地址中存在该文件，则返回文件名称；如果没有对应文件存在，返回"
+"空字符串；如果存在两个或多个可匹配的文件，返回报错信息。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.match_file:10
 msgid ""
-"str, If there is the file in cache_dir, return filename; if there is no such "
-"file, return empty string ''; if there are two or more matching file, report an "
-"error."
+"str, If there is the file in cache_dir, return filename; if there is no such file, "
+"return empty string ''; if there are two or more matching file, report an error."
 msgstr ""
-"字符串，如果`cache_dir`地址中存在该文件，则返回文件名称；如果没有对应文件存在，"
-"返回空字符串；如果存在两个或多个可匹配的文件，返回报错信息。"
+"字符串，如果 `cache_dir` 地址中存在该文件，则返回文件名称；如果没有对应文件存在，返回空"
+"字符串；如果存在两个或多个可匹配的文件，返回报错信息。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
 #: of mindnlp.utils.download.match_file:17
 msgid "If `cache_dir` is None."
-msgstr "如果`cache_dir`为空值。"
+msgstr "如果 `cache_dir` 为空值。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/__init__.py:docstring
 #: of mindnlp.utils:1
@@ -6897,5 +6827,56 @@ msgstr ""
 msgid "training\\_pipeline"
 msgstr ""
 
-#~ msgid "Initialize the Embedding based on the pre-trained word vectors."
-#~ msgstr "根据预训练词向量初始化Embedding."
+#: mindnlp.abc.modules.embedding.py
+msgid "Create vocab and Embedding from a given pre-trained vector file."
+msgstr "从预训练词向量创建词表和embedding。"
+
+#: mindnlp.transforms.seq_process.py
+msgid "Transforms to process sequence"
+msgstr "处理输入序列的变换函数"
+
+msgid "Truncate the input sequence."
+msgstr "对输入序列进行截断操作。"
+
+msgid "Maximum length required."
+msgstr "指定的最长长度。"
+
+msgid "If `max_length` is not of type int."
+msgstr "如果 `max_length` 不是int类型。"
+
+msgid "Supported Platforms:"
+msgstr "支持平台："
+
+msgid "Execute method."
+msgstr "执行方法。"
+
+#: mindnlp.abc.modules.tokenizers.py
+msgid "Transforms to avoid Windows platform problems"
+msgstr "可用于Windows平台的分词器"
+
+msgid "Tokenize the input UTF-8 encoded string by specific rules."
+msgstr "按照特定的规则对输入的UTF-8编码的字符串进行分词。"
+
+msgid ""
+"Whether to perform lowercase processing on the text. If "
+"True, will fold the text to lower case and strip accented characters. If False, will "
+"only perform normalization on the text, with mode specified by `normalization_form`. "
+"Default: False."
+msgstr ""
+"是否对文本进行小写处理。如果是True，将把文本处理成小写，并"
+"去除重音字符。若为False，将只对字符串进行规范化处理。默认：False。"
+
+msgid "Whether use python implementation. Default: False."
+msgstr "是否使用python实现。默认：False。"
+
+msgid "If `lower_case` is not of type bool."
+msgstr "如果 `lower_case` 不是bool类型。"
+
+msgid "If `py_transform` is not of type bool."
+msgstr "如果 `py_transform` 不是bool类型。"
+
+msgid "If dtype of input Tensor is not str."
+msgstr "如果输入Tensor的数据类型不是str类型"
+
+msgid "parse function - not yet implemented"
+msgstr "解析函数 - 目前还未实现。"

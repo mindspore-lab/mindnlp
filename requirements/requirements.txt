@@ -3,3 +3,5 @@ requests
 tqdm
 gensim
 ddt
+datasets
+tokenizers

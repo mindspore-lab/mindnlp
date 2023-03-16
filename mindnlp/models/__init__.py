@@ -15,6 +15,8 @@
 """
 Models init
 """
-from .bert import BertConfig, BertAttention, BertEmbeddings, BertEncoder, BertForPretraining, \
-    BertIntermediate, BertLayer, BertLMPredictionHead, BertModel, BertOutput, BertPooler, \
-        BertPredictionHeadTransform, BertPreTrainingHeads, BertSelfAttention, BertSelfOutput
+from mindnlp.models import bert
+from mindnlp.models.bert import *
+
+__all__ = []
+__all__.extend(bert.__all__)

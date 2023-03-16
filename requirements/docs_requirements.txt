@@ -7,4 +7,6 @@ mindspore>=1.8.1
 requests
 tqdm
 gensim
+datasets
+tokenizers
 git+https://github.com/mindspore-ecosystem/mindnlp

@@ -22,7 +22,8 @@ import pytest
 import mindspore
 from mindspore.dataset import text
 from mindnlp.dataset import IWSLT2017, IWSLT2017_Process
-from mindnlp.dataset import load, process
+from mindnlp import load_dataset, process
+
 
 
 class TestIWSLT2017(unittest.TestCase):
@@ -61,7 +62,7 @@ class TestIWSLT2017(unittest.TestCase):
     @pytest.mark.local
     def test_iwslt2017_by_register(self):
         """test iwslt2017 by register"""
-        _ = load('iwslt2017',
+        _ = load_dataset('iwslt2017',
                  root=self.root,
                  split=('train', 'valid', 'test'),
                  language_pair=('de', 'en')

@@ -21,7 +21,7 @@ import os
 from typing import Union, Tuple
 from mindspore.dataset import IWSLT2016Dataset
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load
+from mindnlp.dataset.register import load_dataset
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import untar
 
@@ -54,7 +54,7 @@ SET_NOT_EXISTS = {
 }
 
 
-@load.register
+@load_dataset.register
 def IWSLT2016(root: str = DEFAULT_ROOT,
               split: Union[Tuple[str], str] = ("train", "valid", "test"),
               language_pair=("de", "en"),
