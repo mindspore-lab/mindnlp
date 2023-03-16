@@ -27,13 +27,11 @@ from mindspore import ops, Tensor
 from mindspore.common import dtype as mstype
 from mindspore.ops._primitive_cache import _get_cache_prim
 from packaging import version
-from mindspore.ops import operations as P
 
 MS_COMPATIBLE_VERSION = '1.10.1'
 
 cast_ = ops.Cast()
 scalar_to_tensor_ = ops.ScalarToTensor()
-cumsum_ = P.CumSum()
 
 def kl_div(inputs, target, reduction='none', log_target=False):
     """KLDiv function."""
@@ -646,56 +644,3 @@ def arange(start=0, end=None, step=1, *, dtype=None):
         data = cast_(data, dtype)
     return data
 
-def cumsum(x, axis, dtype=None):
-    """
-    Computes the cumulative sum of input Tensor along `axis`.
-
-    .. math::
-
-        y_i = x_1 + x_2 + x_3 + ... + x_i
-
-    Note:
-        On Ascend, the dtype of `x` only support :int8, uint8, int32, float16 or float32 in case of static shape.
-        For the case of dynamic shape, the dtype of `x` only support int32, float16 or float32.
-
-    Args:
-        x (Tensor): The input Tensor to accumulate.
-        axis (int): Axis along which the cumulative sum is computed.
-        dtype (:class:`mindspore.dtype`, optional): The desired dtype of returned Tensor. If specified,
-            the input Tensor will be cast to `dtype` before the computation. This is useful for preventing overflows.
-            If not specified, stay the same as original Tensor. Default: None.
-
-    Returns:
-        Tensor, the shape of the output Tensor is consistent with the input Tensor's.
-
-    Raises:
-        TypeError: If `x` is not a Tensor.
-        ValueError: If the axis is out of range.
-
-    Supported Platforms:
-        ``Ascend`` ``GPU`` ``CPU``
-
-    Examples:
-        >>> import mindspore
-        >>> import numpy as np
-        >>> from mindspore import Tensor
-        >>> import mindspore.ops as ops
-        >>> x = Tensor(np.array([[3, 4, 6, 10], [1, 6, 7, 9], [4, 3, 8, 7], [1, 3, 7, 9]]).astype(np.float32))
-        >>> # case 1: along the axis 0
-        >>> y = ops.cumsum(x, 0)
-        >>> print(y)
-        [[ 3.  4.  6. 10.]
-         [ 4. 10. 13. 19.]
-         [ 8. 13. 21. 26.]
-         [ 9. 16. 28. 35.]]
-        >>> # case 2: along the axis 1
-        >>> y = ops.cumsum(x, 1)
-        >>> print(y)
-        [[ 3.  7. 13. 23.]
-         [ 1.  7. 14. 23.]
-         [ 4.  7. 15. 22.]
-         [ 1.  4. 11. 20.]]
-    """
-    if dtype is not None and x.dtype != dtype:
-        x = x.astype(dtype, copy=False)
-    return cumsum_(x, axis)

@@ -20,16 +20,8 @@
 # pylint: disable=too-many-arguments
 # pylint: disable=line-too-long
 # pylint: disable=invalid-name
-# pylint:
 import mindspore
 from mindspore import nn
-from ..._legacy import functional
-activation_map = {
-    'relu': nn.ReLU(),
-    'gelu': nn.GELU(False),
-    'gelu_approximate': nn.GELU(),
-    'swish':nn.SiLU()
-}
 
 
 def _get_question_end_index(input_ids, sep_token_id):
@@ -83,7 +75,7 @@ _
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
     mask = mindspore.ops.not_equal(input_ids, padding_idx).astype(mindspore.int32)
-    incremental_indices = functional.cumsum(mask, axis=1, dtype=mask.dtype) * mask
+    incremental_indices = mindspore.ops.cumsum(mask, axis=1, dtype=mask.dtype) * mask
     return incremental_indices.astype(mindspore.int32) + padding_idx
 
 
