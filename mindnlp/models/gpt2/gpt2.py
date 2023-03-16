@@ -26,6 +26,7 @@ from mindnlp._legacy.nn import Dropout
 from mindnlp.models.gpt2.config_gpt2 import GPT2Config
 from ..utils import logging
 from ..utils.activations import ACT2FN
+from ...utils.modeling_utils import SequenceSummary
 from ..utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
 
 logger = logging.get_logger(__name__)
@@ -659,6 +660,109 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
         )
 
 
+class GPT2DoubleHeadsModel(nn.Cell):
+    r"""
+    GPT2 Double Heads Model
+    """
+    _keys_to_ignore_on_load_missing = [r"attn.masked_bias", r"attn.bias", r"lm_head.weight"]
+
+    def __init__(self, config):
+        super().__init__(config)
+        config.num_labels = 1
+        self.transformer = GPT2Model(config)
+        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+        self.multiple_choice_head = SequenceSummary(config)
+
+    def get_output_embeddings(self):
+        """
+        Returns the embeddings of the obtained output
+        """
+        return self.lm_head
+
+    def set_output_embeddings(self, new_embeddings):
+        """
+        Define the embeddings of the output
+        """
+        self.lm_head = new_embeddings
+
+    def prepare_inputs_for_generation(self, input_ids, past_key_values=None, **kwargs):
+        """
+        prepare_inputs
+        """
+        token_type_ids = kwargs.get("token_type_ids", None)
+        # only last token for inputs_ids if past is defined in kwargs
+        if past_key_values:
+            input_ids = input_ids[:, -1].unsqueeze(-1)
+            if token_type_ids is not None:
+                token_type_ids = token_type_ids[:, -1].unsqueeze(-1)
+
+        attention_mask = kwargs.get("attention_mask", None)
+        position_ids = kwargs.get("position_ids", None)
+
+        if attention_mask is not None and position_ids is None:
+            # create position_ids on the fly for batch generation
+            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids.masked_fill_(attention_mask == 0, 1)
+            if past_key_values:
+                position_ids = position_ids[:, -1].unsqueeze(-1)
+        else:
+            position_ids = None
+
+        return {
+            "input_ids": input_ids,
+            "past_key_values": past_key_values,
+            "use_cache": kwargs.get("use_cache"),
+            "position_ids": position_ids,
+            "attention_mask": attention_mask,
+            "token_type_ids": token_type_ids,
+        }
+
+    def construct(self, input_ids, past_key_values=None, attention_mask=None, token_type_ids=None,
+                  position_ids=None, head_mask=None, inputs_embeds=None, mc_token_ids=None, labels=None, mc_labels=None,
+                  use_cache=None, output_attentions=None, output_hidden_states=None, **kwargs):
+
+        transformer_outputs = self.transformer(
+            input_ids,
+            past_key_values=past_key_values,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+        )
+
+        hidden_states = transformer_outputs[0]
+
+        lm_logits = self.lm_head(hidden_states)
+        mc_logits = self.multiple_choice_head(hidden_states, mc_token_ids).squeeze(-1)
+
+        mc_loss = None
+        if mc_labels is not None:
+            loss_fct = nn.CrossEntropyLoss()
+            mc_loss = loss_fct(mc_logits.view(-1, mc_logits.shape[-1]), mc_labels.view(-1))
+        lm_loss = None
+        if labels is not None:
+            shift_logits = lm_logits[..., :-1, :]
+            shift_labels = labels[..., 1:]
+            loss_fct = nn.CrossEntropyLoss()
+            lm_loss = loss_fct(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+
+        output = (lm_logits, mc_logits) + transformer_outputs[1:]
+        if mc_loss is not None:
+            output = (mc_loss,) + output
+        return ((lm_loss,) + output) if lm_loss is not None else output
+
+    @staticmethod
+    def _reorder_cache(past, beam_idx):
+        return tuple(
+            tuple(past_state.index_select(0, beam_idx.to(past_state.device)) for past_state in layer_past)
+            for layer_past in past
+        )
+
+
 class GPT2ForSequenceClassification(GPT2PreTrainedModel):
     r"""
     gpt2 For Sequence Classification
@@ -746,4 +850,53 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
                 loss = loss_fct(pooled_logits, labels)
 
         output = (pooled_logits,) + transformer_outputs[1:]
+        return ((loss,) + output) if loss is not None else output
+
+
+class GPT2ForTokenClassification(GPT2PreTrainedModel):
+    r"""
+    GPT2 For Token Classification
+    """
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+
+        self.transformer = GPT2Model(config)
+        if hasattr(config, "classifier_dropout") and config.classifier_dropout is not None:
+            classifier_dropout = config.classifier_dropout
+        elif hasattr(config, "hidden_dropout") and config.hidden_dropout is not None:
+            classifier_dropout = config.hidden_dropout
+        else:
+            classifier_dropout = 0.1
+        self.dropout = nn.Dropout(classifier_dropout)
+        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+
+    def construct(self, input_ids=None, past_key_values=None, attention_mask=None, token_type_ids=None,
+                  position_ids=None, head_mask=None, inputs_embeds=None, labels=None, use_cache=None,
+                  output_attentions=None, output_hidden_states=None):
+
+        transformer_outputs = self.transformer(
+            input_ids,
+            past_key_values=past_key_values,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+        )
+
+        hidden_states = transformer_outputs[0]
+        hidden_states = self.dropout(hidden_states)
+        logits = self.classifier(hidden_states)
+
+        loss = None
+        if labels is not None:
+            loss_fct = nn.CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+        output = (logits,) + transformer_outputs[2:]
         return ((loss,) + output) if loss is not None else output
