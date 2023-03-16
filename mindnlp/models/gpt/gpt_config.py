@@ -18,6 +18,9 @@ from ...abc.backbones.pretrained import PretrainedConfig
 
 
 class GPTConfig(PretrainedConfig):
+    r"""
+    GPT config
+    """
     model_type = "gpt"
     attribute_map = {
         "max_position_embeddings": "n_positions",
@@ -63,4 +66,3 @@ class GPTConfig(PretrainedConfig):
         self.summary_first_dropout = summary_first_dropout
         self.summary_proj_to_labels = summary_proj_to_labels
         super().__init__(**kwargs)
-

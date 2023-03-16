@@ -13,16 +13,15 @@
 # limitations under the License.
 # ============================================================================
 """MindNLP gpt model"""
-
-import mindspore
-import mindspore.numpy as mnp
-import mindspore.nn as nn
-import mindspore.ops as ops
-from mindnlp._legacy.nn import Dropout
-from mindspore import Tensor, Parameter
-import mindspore
 import math
 import numpy as np
+import mindspore
+from mindspore import numpy as mnp
+from mindspore import nn 
+from mindspore import ops
+from mindspore import Tensor, Parameter
+from mindnlp._legacy.functional import split
+from mindnlp._legacy.nn import Dropout
 from ..utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
 from ..utils.activations import ACT2FN
 from ..utils import logging
@@ -44,11 +43,11 @@ class GPTMLP(nn.Cell):
         self.dropout = Dropout(p=config.resid_pdrop)
 
     def construct(self, x):
-        h = self.c_fc(x)
-        h1 = self.act(h)
-        h2 = self.c_proj(h1)
-        h3 = self.dropout(h2)
-        return h3
+        hidden_states1 = self.c_fc(x)
+        hidden_states2 = self.act(hidden_states1)
+        hidden_states3 = self.c_proj(hidden_states2)
+        MLP_outputs = self.dropout(hidden_states3)
+        return MLP_outputs
 
 
 class GPTAttention(nn.Cell):
@@ -58,8 +57,7 @@ class GPTAttention(nn.Cell):
 
     def __init__(self, config, scale=False):
         super().__init__()
-        nx = config.n_embd
-        n_state = nx
+        n_state = config.n_embd
         n_positions = config.n_positions
         if n_state % config.n_head != 0:
             raise ValueError(f"Attention n_state shape: {n_state} must be divisible by config.n_head {config.n_head}")
@@ -67,13 +65,14 @@ class GPTAttention(nn.Cell):
         self.bias = Parameter(
             mnp.tril(ops.ones((n_positions, n_positions), type=mindspore.float32)).view(1, 1, n_positions, n_positions),
             requires_grad=False)
+        
         self.n_head = config.n_head
         self.split_size = n_state
         self.scale = scale
 
-        self.c_attn = Conv1D(n_state * 3, nx)
-        self.c_attn = Conv1D(n_state * 3, nx)
-        self.c_proj = Conv1D(n_state, nx)
+        self.c_attn = Conv1D(n_state * 3, n_state)
+        self.c_attn = Conv1D(n_state * 3, n_state)
+        self.c_proj = Conv1D(n_state, n_state)
         self.attn_dropout = Dropout(p=config.attn_pdrop)
         self.resid_dropout = Dropout(p=config.resid_pdrop)
         self.pruned_heads = set()
@@ -84,7 +83,11 @@ class GPTAttention(nn.Cell):
         """
         if len(heads) == 0:
             return
-        heads, index = find_pruneable_heads_and_indices(heads, self.n_head, self.split_size//self.n_head, self.pruned_heads)
+        heads, index = find_pruneable_heads_and_indices(heads, 
+                                                        self.n_head, 
+                                                        self.split_size//self.n_head, 
+                                                        self.pruned_heads
+                                                        )
         index_attn = ops.cat([index, index + self.split_size, index + (2 * self.split_size)])
         # Prune conv1d layers
         self.c_attn = prune_conv1d_layer(self.c_attn, index_attn, axis=1)
@@ -94,54 +97,53 @@ class GPTAttention(nn.Cell):
         self.n_head = self.n_head - len(heads)
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def _attn(self, q, k, v, attention_mask=None, head_mask=None, output_attentions=False):
-        w = ops.matmul(q, k)
+    def _attn(self, query, key, value, attention_mask=None, head_mask=None, output_attentions=False):
+        attn_weights = ops.matmul(query, key)
         if self.scale:
-            w = w / math.sqrt(v.shape[-1])
+            attn_weights = attn_weights / math.sqrt(value.shape[-1])
 
-        b = self.bias[:, :, : w.shape[-2], : w.shape[-1]]
-        w = w * b + -1e4 * (1 - b)
+        attn_bias = self.bias[:, :, : attn_weights.shape[-2], : attn_weights.shape[-1]]
+        attn_weights = attn_weights * attn_bias + -1e4 * (1 - attn_bias)
 
         if attention_mask is not None:
-            w = w + attention_mask
+            attn_weights = attn_weights + attention_mask
 
-        w = ops.softmax(w, axis=-1)
-        w = self.attn_dropout(w)
+        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = self.attn_dropout(attn_weights)
 
         if head_mask is not None:
-            w = w * head_mask
+            attn_weights = attn_weights * head_mask
 
-        outputs = [ops.matmul(w, v)]
+        outputs = [ops.matmul(attn_weights, value)]
         if output_attentions:
-            outputs.append(w)
+            outputs.append(attn_weights)
         return outputs
 
-    def merge_heads(self, x):
-        x = x.transpose(0, 2, 1, 3)
-        new_x_shape = x.shape[:-2] + (x.shape[-2] * x.shape[-1],)
-        return x.view(*new_x_shape)
+    def merge_heads(self, tensor):
+        tensor = tensor.transpose(0, 2, 1, 3)
+        new_tensor_shape = tensor.shape[:-2] + (tensor.shape[-2] * tensor.shape[-1],)
+        return tensor.view(*new_tensor_shape)
 
-    def split_heads(self, x, k=False):
-        new_x_shape = x.shape[:-1] + (self.n_head, x.shape[-1] // self.n_head)
-        x = x.view(*new_x_shape)
-        if k:
-            return x.transpose(0, 2, 3, 1)
-        else:
-            return x.transpose(0, 2, 1, 3)
+    def split_heads(self, tensor, tensor_transpose=False):
+        new_tensor_shape = tensor.shape[:-1] + (self.n_head, tensor.shape[-1] // self.n_head)
+        tensor = tensor.view(*new_tensor_shape)
+        if tensor_transpose:
+            return tensor.transpose(0, 2, 3, 1)
+        return tensor.transpose(0, 2, 1, 3)
 
-    def construct(self, x, attention_mask=None, head_mask=None, output_attentions=False):
-        x = self.c_attn(x)
-        query, key, value = ops.split(x, axis=2, output_num=3)
+    def construct(self, input_states, attention_mask=None, head_mask=None, output_attentions=False):
+        c_states = self.c_attn(input_states)
+        query, key, value = split(c_states, self.split_size, axis=2)
         query = self.split_heads(query)
-        key = self.split_heads(key, k=True)
+        key = self.split_heads(key, tensor_transpose=True)
         value = self.split_heads(value)
         attn_outputs = self._attn(query, key, value, attention_mask, head_mask, output_attentions)
 
-        a = attn_outputs[0]
-        a = self.merge_heads(a)
-        a = self.c_proj(a)
-        a = self.resid_dropout(a)
-        outputs = [a] + attn_outputs[1:]
+        output = attn_outputs[0]
+        output = self.merge_heads(output)
+        output = self.c_proj(output)
+        output = self.resid_dropout(output)
+        outputs = [output] + attn_outputs[1:]
         return outputs
 
 
@@ -152,26 +154,27 @@ class GPTBlock(nn.Cell):
 
     def __init__(self, config, scale=False):
         super().__init__()
-        nx = config.n_embd
+        hidden_size = config.n_embd
         self.attn = GPTAttention(config, scale)
-        self.ln_1 = nn.LayerNorm(normalized_shape=[nx], epsilon=config.layer_norm_epsilon)
-        self.mlp = GPTMLP(4 * nx, config)
-        self.ln_2 = nn.LayerNorm(normalized_shape=[nx], epsilon=config.layer_norm_epsilon)
+        self.ln_1 = nn.LayerNorm(normalized_shape=[hidden_size], epsilon=config.layer_norm_epsilon)
+        self.mlp = GPTMLP(4 * hidden_size, config)
+        self.ln_2 = nn.LayerNorm(normalized_shape=[hidden_size], epsilon=config.layer_norm_epsilon)
 
-    def construct(self, x, attention_mask=None, head_mask=None, output_attentions=False):
+    def construct(self, input_states, attention_mask=None, head_mask=None, output_attentions=False):
+        residual_1 = input_states    
         attn_outputs = self.attn(
-            x,
+            input_states,
             attention_mask=attention_mask,
             head_mask=head_mask,
             output_attentions=output_attentions,
         )
-        a = attn_outputs[0]
+        attn_output = attn_outputs[0]
+        hidden_states = self.ln_1(residual_1 + attn_output)
 
-        n = self.ln_1(x + a)
-        m = self.mlp(n)
-        h = self.ln_2(n + m)
-
-        outputs = [h] + attn_outputs[1:]
+        residual_2 = hidden_states
+        feed_forward_hidden_states = self.mlp(hidden_states)
+        output_hidden_states = self.ln_2(residual_2 + feed_forward_hidden_states)
+        outputs = [output_hidden_states] + attn_outputs[1:]
         return outputs
 
 
@@ -238,13 +241,19 @@ class GPTModel(GPTPreTrainedModel):
         self.tokens_embed = nn.Embedding(config.vocab_size, config.n_embd)
         self.positions_embed = nn.Embedding(config.n_positions, config.n_embd)
         self.drop = nn.Dropout(config.embd_pdrop)
-        self.h = nn.CellList([GPTBlock(config, scale=True) for _ in range(config.n_layer)])
+        self.block_list = nn.CellList([GPTBlock(config, scale=True) for _ in range(config.n_layer)])
         self.position_ids = Parameter(ops.arange(config.n_positions), requires_grad=False)
 
     def get_input_embeddings(self):
+        """
+        return the input embeddings layer
+        """
         return self.tokens_embed
 
     def set_input_embeddings(self, new_embeddings):
+        """
+        set the input embeddings layer
+        """
         self.tokens_embed = new_embeddings
 
     def _prune_heads(self, heads_to_prune):
@@ -308,7 +317,7 @@ class GPTModel(GPTPreTrainedModel):
 
         all_attentions = () if output_attentions else None
         all_hidden_states = () if output_hidden_states else None
-        for i, block in enumerate(self.h):
+        for i, block in enumerate(self.block_list):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
