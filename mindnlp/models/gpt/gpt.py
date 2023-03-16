@@ -28,7 +28,6 @@ from ..utils import logging
 
 logger = logging.get_logger(__name__)
 
-
 class GPTMLP(nn.Cell):
     r"""
     GPT MLP
