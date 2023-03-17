@@ -29,7 +29,7 @@ _SEQ_CLASS_EXPECTED_OUTPUT = "'LABEL_0'"
 OPT_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "facebook/opt-125m",
     "facebook/opt-350m",
-    "facebook/opt-1.3b",!
+    "facebook/opt-1.3b",
     "facebook/opt-2.7b",
     "facebook/opt-6.7b",
     "facebook/opt-13b",
