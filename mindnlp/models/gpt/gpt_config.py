@@ -66,3 +66,4 @@ class GPTConfig(PretrainedConfig):
         self.summary_first_dropout = summary_first_dropout
         self.summary_proj_to_labels = summary_proj_to_labels
         super().__init__(**kwargs)
+        

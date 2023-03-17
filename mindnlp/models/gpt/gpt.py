@@ -17,7 +17,7 @@ import math
 import numpy as np
 import mindspore
 from mindspore import numpy as mnp
-from mindspore import nn 
+from mindspore import nn
 from mindspore import ops
 from mindspore import Tensor, Parameter
 from mindnlp._legacy.functional import split
@@ -35,9 +35,9 @@ class GPTMLP(nn.Cell):
 
     def __init__(self, n_state, config):
         super().__init__()
-        nx = config.n_embd
-        self.c_fc = Conv1D(n_state, nx)
-        self.c_proj = Conv1D(nx, n_state)
+        n_embd = config.n_embd
+        self.c_fc = Conv1D(n_state, n_embd)
+        self.c_proj = Conv1D(n_embd, n_state)
         self.act = ACT2FN[config.afn]
         self.dropout = Dropout(p=config.resid_pdrop)
 
@@ -45,8 +45,8 @@ class GPTMLP(nn.Cell):
         hidden_states1 = self.c_fc(x)
         hidden_states2 = self.act(hidden_states1)
         hidden_states3 = self.c_proj(hidden_states2)
-        MLP_outputs = self.dropout(hidden_states3)
-        return MLP_outputs
+        outputs = self.dropout(hidden_states3)
+        return outputs
 
 
 class GPTAttention(nn.Cell):
@@ -61,10 +61,8 @@ class GPTAttention(nn.Cell):
         if n_state % config.n_head != 0:
             raise ValueError(f"Attention n_state shape: {n_state} must be divisible by config.n_head {config.n_head}")
 
-        self.bias = Parameter(
-            mnp.tril(ops.ones((n_positions, n_positions), type=mindspore.float32)).view(1, 1, n_positions, n_positions),
-            requires_grad=False)
-        
+        self.bias = Parameter(mnp.tril(ops.ones((n_positions, n_positions)).view(1, 1, n_positions, n_positions),
+                            requires_grad=False))
         self.n_head = config.n_head
         self.split_size = n_state
         self.scale = scale
@@ -85,8 +83,7 @@ class GPTAttention(nn.Cell):
         heads, index = find_pruneable_heads_and_indices(heads, 
                                                         self.n_head, 
                                                         self.split_size//self.n_head, 
-                                                        self.pruned_heads
-                                                        )
+                                                        self.pruned_heads)
         index_attn = ops.cat([index, index + self.split_size, index + (2 * self.split_size)])
         # Prune conv1d layers
         self.c_attn = prune_conv1d_layer(self.c_attn, index_attn, axis=1)
@@ -119,11 +116,17 @@ class GPTAttention(nn.Cell):
         return outputs
 
     def merge_heads(self, tensor):
+        """
+        Merges attn_head_size dim and num_attn_heads dim into hidden_size
+        """
         tensor = tensor.transpose(0, 2, 1, 3)
         new_tensor_shape = tensor.shape[:-2] + (tensor.shape[-2] * tensor.shape[-1],)
         return tensor.view(*new_tensor_shape)
 
     def split_heads(self, tensor, tensor_transpose=False):
+        """
+        Splits hidden_size dim into attn_head_size and num_heads
+        """
         new_tensor_shape = tensor.shape[:-1] + (self.n_head, tensor.shape[-1] // self.n_head)
         tensor = tensor.view(*new_tensor_shape)
         if tensor_transpose:
@@ -280,7 +283,7 @@ class GPTModel(GPTPreTrainedModel):
 
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
-        elif input_ids is not None:
+        if input_ids is not None:
             input_shape = input_ids.shape
             input_ids = input_ids.view(-1, input_shape[-1])
         elif inputs_embeds is not None:
