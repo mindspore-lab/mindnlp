@@ -16,11 +16,10 @@
 import math
 import numpy as np
 import mindspore
-from mindspore import numpy as mnp
 from mindspore import nn
 from mindspore import ops
 from mindspore import Tensor, Parameter
-from mindnlp._legacy.functional import split
+from mindnlp._legacy.functional import split, tril
 from mindnlp._legacy.nn import Dropout
 from ..utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
 from ..utils.activations import ACT2FN
@@ -60,9 +59,9 @@ class GPTAttention(nn.Cell):
         n_positions = config.n_positions
         if n_state % config.n_head != 0:
             raise ValueError(f"Attention n_state shape: {n_state} must be divisible by config.n_head {config.n_head}")
-
-        self.bias = Parameter(mnp.tril(ops.ones((n_positions, n_positions)).view(1, 1, n_positions, n_positions),
-                            requires_grad=False))
+        self.bias = Parameter(
+            tril(ops.ones((n_positions, n_positions), mindspore.int32).view(1, 1, n_positions, n_positions)), 
+            requires_grad=False)
         self.n_head = config.n_head
         self.split_size = n_state
         self.scale = scale
@@ -80,9 +79,7 @@ class GPTAttention(nn.Cell):
         """
         if len(heads) == 0:
             return
-        heads, index = find_pruneable_heads_and_indices(heads, 
-                                                        self.n_head, 
-                                                        self.split_size//self.n_head, 
+        heads, index = find_pruneable_heads_and_indices(heads, self.n_head, self.split_size//self.n_head, 
                                                         self.pruned_heads)
         index_attn = ops.cat([index, index + self.split_size, index + (2 * self.split_size)])
         # Prune conv1d layers
@@ -164,8 +161,7 @@ class GPTBlock(nn.Cell):
 
     def construct(self, input_states, attention_mask=None, head_mask=None, output_attentions=False):
         residual_1 = input_states    
-        attn_outputs = self.attn(
-            input_states,
+        attn_outputs = self.attn(input_states,
             attention_mask=attention_mask,
             head_mask=head_mask,
             output_attentions=output_attentions,
