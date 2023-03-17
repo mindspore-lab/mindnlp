@@ -23,7 +23,6 @@ import numpy as np
 from mindspore import nn
 from mindspore import ops
 from mindspore import Tensor
-from mindspore.dataset.text.utils import Vocab
 from mindnlp.utils import cache_file, unzip
 from mindnlp.abc.modules.embedding import TokenEmbedding
 from mindnlp.configs import DEFAULT_ROOT
@@ -38,15 +37,13 @@ class Glove(TokenEmbedding):
     Embedding layer.
 
     Args:
-        vocab (Vocab): Passins into Vocab for initialization.
         init_embed (Tensor): Passing into Tensor,use these values to initialize Embedding directly.
         requires_grad (bool): Whether this parameter needs to be gradient to update. Default: True.
         dropout (float): Dropout of the output of Embedding. Default: 0.5.
 
     Examples:
-        >>> vocab = Vocab.from_list(['default','one','two','three'])
         >>> init_embed = Tensor(np.zeros((4, 4)).astype(np.float32))
-        >>> glove_embed = Glove(vocab, init_embed)
+        >>> glove_embed = Glove(init_embed)
         >>> ids = Tensor([1, 2, 3])
         >>> output = glove_embed(ids)
 
@@ -60,11 +57,9 @@ class Glove(TokenEmbedding):
 
     dims = [50, 100, 200, 300]
 
-    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.0):
-        super().__init__(vocab, init_embed)
-
-        self._word_vocab = vocab
-        self.vocab_size = init_embed.shape[0]
+    def __init__(self, init_embed, requires_grad: bool = True, dropout=0.0):
+        super().__init__(init_embed)
+        self._embed_len = init_embed.shape[0]
         self.embed = init_embed
         self._embed_dim = init_embed.shape[1]
         self._embed_size = init_embed.shape
@@ -73,8 +68,7 @@ class Glove(TokenEmbedding):
         self.dropout_p = dropout
 
     @classmethod
-    def from_pretrained(cls, name='6B', dims=300, root=DEFAULT_ROOT,
-                        special_tokens=("<pad>", "<unk>"), special_first=True, **kwargs):
+    def from_pretrained(cls, name='6B', dims=300, root=DEFAULT_ROOT, special_first=True, **kwargs):
         r"""
         Creates Embedding instance from given pre-trained word vector.
 
@@ -82,7 +76,6 @@ class Glove(TokenEmbedding):
             name (str): The name of the pretrained vector. Default: '6B'.
             dims (int): The dimension of the pretrained vector. Default: 300.
             root (str): Default storage directory. Default: DEFAULT_ROOT.
-            special_tokens (tuple<str,str>): List of special participles. Default: ("<pad>", "<unk>").
             special_first (bool): Indicates whether special participles from special_tokens will be added to
                 the top of the dictionary. If True, add special_tokens to the beginning of the dictionary,
                 otherwise add them to the end. Default: True.
@@ -92,7 +85,6 @@ class Glove(TokenEmbedding):
 
         Returns:
             - Glove, Returns an embedding instance generated through a pretrained word vector.
-            - Vocab, Vocabulary extracted from the file.
 
         """
         if name not in cls.urls:
@@ -112,11 +104,9 @@ class Glove(TokenEmbedding):
         glove_file_path = os.path.join(cache_dir, glove_file_name)
 
         embeddings = []
-        tokens = []
         with open(glove_file_path, encoding='utf-8') as file:
             for line in file:
-                word, embedding = line.split(maxsplit=1)
-                tokens.append(word)
+                _, embedding = line.split(maxsplit=1)
                 embeddings.append(np.fromstring(embedding, dtype=np.float32, sep=' '))
 
         if special_first:
@@ -126,13 +116,12 @@ class Glove(TokenEmbedding):
             embeddings.append(np.random.rand(dims))
             embeddings.append(np.zeros((dims,), np.float32))
 
-        vocab = Vocab.from_list(tokens, list(special_tokens), special_first)
         embeddings = np.array(embeddings).astype(np.float32)
 
         requires_grad = kwargs.get('requires_grad', True)
         dropout = kwargs.get('dropout', 0.0)
 
-        return cls(vocab, Tensor(embeddings), requires_grad, dropout), vocab
+        return cls(Tensor(embeddings), requires_grad, dropout)
 
     def construct(self, ids):
         r"""
@@ -166,11 +155,9 @@ class Glove(TokenEmbedding):
         folder = os.path.join(root, 'embeddings', 'Glove', 'save', foldername)
         os.makedirs(folder, exist_ok=True)
 
-        vocab = self.get_word_vocab()
         embed = self.embed
         embed_list = embed
-        vocab_list = list(vocab.keys())
-        nums = self.vocab_size
+        nums = self._embed_len
         dims = self._embed_dim
 
         kwargs = {}
@@ -183,10 +170,9 @@ class Glove(TokenEmbedding):
         with open(os.path.join(folder, EMBED_FILENAME), 'w', encoding='utf-8') as file:
             file.write(f'{" " * 30}\n')
             for i in range(0, nums):
-                vocab_write = vocab_list[i]
                 embed_write = list(embed_list[i])
                 vec_write = ' '.join(map(str, embed_write))
-                file.write(f'{vocab_write} {vec_write}\n')
+                file.write(f'{vec_write}\n')
 
             file.seek(0)
             file.write(f'{nums} {dims}')
@@ -194,16 +180,15 @@ class Glove(TokenEmbedding):
         logging.info('Embedding has been saved to %s', folder)
 
     @classmethod
-    def load(cls, foldername=None, root=DEFAULT_ROOT, load_npy=False, vocab=None, npy_path=None):
+    def load(cls, foldername=None, root=DEFAULT_ROOT, load_npy=False, npy_path=None):
         r"""
         Load embedding from the specified location.
 
         Args:
             foldername (str): Name of the folder to load. Default: None.
             root (Path): Path of the embedding folder. Default: DEFAULT_ROOT.
-            load_npy (Bool): Whether to initialize the embedding as a npy file. Vocab and npy_path are valid
+            load_npy (Bool): Whether to initialize the embedding as a npy file. Npy_path are valid
                 when load_npy is True. Default: False.
-            vocab (Vocab): If initialized with a npy file, pass in vocab. Default: None.
             npy_path (Path): Location of the npy file. Default: None.
 
         Returns:
@@ -213,9 +198,8 @@ class Glove(TokenEmbedding):
 
         if load_npy:
             load_embed = np.load(npy_path)
-            load_vocab = vocab
 
-            return cls(load_vocab, Tensor(load_embed))
+            return cls(Tensor(load_embed))
 
         folder = os.path.join(root, 'embeddings', 'Glove', 'save', foldername)
         for name in [JSON_FILENAME, EMBED_FILENAME]:
@@ -225,16 +209,13 @@ class Glove(TokenEmbedding):
             hyper = json.load(file)
 
         embeddings = []
-        tokens = []
         with open(os.path.join(folder, EMBED_FILENAME), encoding='utf-8') as file:
             for line in islice(file, 1, None):
-                word, embedding = line.split(maxsplit=1)
-                tokens.append(word)
+                embedding = line.rstrip('\n')
                 embeddings.append(np.fromstring(embedding, dtype=np.float32, sep=' '))
 
-        vocab = Vocab.from_list(tokens)
         embeddings = np.array(embeddings).astype(np.float32)
 
         logging.info("Load embedding from %s", folder)
 
-        return cls(vocab, Tensor(embeddings), **hyper)
+        return cls(Tensor(embeddings), **hyper)

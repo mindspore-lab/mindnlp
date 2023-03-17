@@ -17,8 +17,8 @@
 import mindspore
 import numpy as np
 from mindspore import ops, nn, Parameter, Tensor, dtype_to_nptype
-from ...utils import logging
-from ..._legacy.functional import tril
+from mindnlp.models.utils import logging
+from mindnlp._legacy.functional import tril
 
 logger = logging.get_logger(__name__)
 

@@ -29,7 +29,7 @@ def test_bert_tokenizer():
               "😄", "😁", "+", "/", "-", "=", "12", "28", "40", "16", " ", "I", "[CLS]", "[SEP]",
               "[UNK]", "[PAD]", "[MASK]", "[unused1]", "[unused10]"]
     vocab = text.Vocab.from_list(vocab_list)
-    bert_tokenizer = BertTokenizer(vocab=vocab, lower_case=True)
+    bert_tokenizer = BertTokenizer(vocab=vocab, lower_case=True, return_token=True)
     test_dataset = test_dataset.map(operations=bert_tokenizer)
     dataset_after = next(test_dataset.create_tuple_iterator())[0]
 

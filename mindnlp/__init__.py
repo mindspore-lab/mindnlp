@@ -18,6 +18,7 @@ MindNLP library.
 
 from mindnlp.dataset import load_dataset, process
 from mindnlp.utils import less_min_pynative_first
+from mindnlp.workflow.workflow import Workflow
 if less_min_pynative_first:
     from mindspore import context
     from mindspore import ms_function as ms_jit
