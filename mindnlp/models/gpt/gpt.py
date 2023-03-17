@@ -59,8 +59,8 @@ class GPTAttention(nn.Cell):
         n_positions = config.n_positions
         if n_state % config.n_head != 0:
             raise ValueError(f"Attention n_state shape: {n_state} must be divisible by config.n_head {config.n_head}")
-        self.bias = Parameter(tril(ops.ones((n_positions, n_positions), mindspore.int32).view(1, 1, n_positions, n_positions)), 
-            requires_grad=False)
+        bias_tensor = tril(ops.ones((n_positions, n_positions), mindspore.int32))
+        self.bias = Parameter(bias_tensor.view(1, 1, n_positions, n_positions), requires_grad=False)
         self.n_head = config.n_head
         self.split_size = n_state
         self.scale = scale
@@ -163,7 +163,6 @@ class GPTBlock(nn.Cell):
         attn_outputs = self.attn(input_states, attention_mask, head_mask, output_attentions,)
         attn_output = attn_outputs[0]
         hidden_states = self.ln_1(residual_1 + attn_output)
-
         residual_2 = hidden_states
         feed_forward_hidden_states = self.mlp(hidden_states)
         output_hidden_states = self.ln_2(residual_2 + feed_forward_hidden_states)
