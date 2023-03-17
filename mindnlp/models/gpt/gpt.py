@@ -159,7 +159,7 @@ class GPTBlock(nn.Cell):
         self.ln_2 = nn.LayerNorm(normalized_shape=[hidden_size], epsilon=config.layer_norm_epsilon)
 
     def construct(self, input_states, attention_mask=None, head_mask=None, output_attentions=False):
-        residual_1 = input_states    
+        residual_1 = input_states 
         attn_outputs = self.attn(input_states, attention_mask, head_mask, output_attentions,)
         attn_output = attn_outputs[0]
         hidden_states = self.ln_1(residual_1 + attn_output)
