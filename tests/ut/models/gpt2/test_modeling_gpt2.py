@@ -80,7 +80,7 @@ class TestModelingGPT2(unittest.TestCase):
         model = gpt2.GPT2Model(config)
 
         input_ids = Tensor(np.random.randint(0, 10, (2, 512)))
-        
+
         hidden_states, presents = model(input_ids)
         assert hidden_states.shape == (2, 512, 768)
         assert presents[0][0].shape == (2, 12, 512, 64)
