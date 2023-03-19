@@ -38,7 +38,7 @@ jobs:
         pip install -r requirements/dev_requirements.txt
     - name: Install MindSpore
       run: |
-        python .github/gen_mindspore_url.py --os={{ matrix.os }} --python={{ matrix.python }} --username={{ secrets.MS_USERNAME }} --passwd={{ secrets.MS_PASSWD }}
+        python .github/gen_mindspore_url.py --os=${{ matrix.os }} --python=${{ matrix.python }} --username=${{ secrets.MS_USERNAME }} --passwd=${{ secrets.MS_PASSWD }}
         pip install -r download.txt
     - name: Analysing the mindnlp code with pylint
       run: |
@@ -66,7 +66,7 @@ jobs:
         pip install -r requirements/dev_requirements.txt
     - name: Install MindSpore
       run: |
-        python .github/gen_mindspore_url.py --os={{ matrix.os }} --python={{ matrix.python }} --username={{ secrets.MS_USERNAME }} --passwd={{ secrets.MS_PASSWD }}
+        python .github/gen_mindspore_url.py --os=${{ matrix.os }} --python=${{ matrix.python }} --username=${{ secrets.MS_USERNAME }} --passwd=${{ secrets.MS_PASSWD }}
         pip install -r download.txt
     - name: Test with pytest
       run: |
@@ -91,7 +91,7 @@ jobs:
         pip install -r requirements/dev_requirements.txt
     - name: Install MindSpore
       run: |
-        python .github/gen_mindspore_url.py --os={{ matrix.os }} --python={{ matrix.python }} --username={{ secrets.MS_USERNAME }} --passwd={{ secrets.MS_PASSWD }}
+        python .github/gen_mindspore_url.py --os=${{ matrix.os }} --python=${{ matrix.python }} --username=${{ secrets.MS_USERNAME }} --passwd=${{ secrets.MS_PASSWD }}
         pip install -r download.txt
     - name: Test ST with pytest
       run: |
