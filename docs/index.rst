@@ -49,8 +49,8 @@ What is MindNLP
    api/abc
    api/dataset
    api/engine
+   api/metrics
    api/modules
    api/models
-   api/scoring
    api/transforms
    api/utils
