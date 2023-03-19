@@ -3,9 +3,8 @@ recommonmark
 sphinx-markdown-tables
 sphinx_rtd_theme
 IPython
-mindspore>=1.8.1
 requests
 tqdm
 datasets
 tokenizers
-git+https://github.com/mindspore-ecosystem/mindnlp
+git+https://github.com/mindspore-lab/mindnlp
