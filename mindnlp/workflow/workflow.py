@@ -19,16 +19,18 @@ Workflow Class
 import sys
 import mindspore
 
+from mindnlp.workflow import SentimentAnalysisWork
+
 
 WORKS = {
     "sentiment_analysis": {
         "models": {
-            "bilstm": {
-                "work_class": "",
-                "work_flag": "",
+            "bert": {
+                "work_class": SentimentAnalysisWork,
+                "work_flag": "sentiment_analysis-bert",
             }
         },
-        "default": {"model": ""},
+        "default": {"model": "bert"},
     },
 }
 
@@ -42,9 +44,6 @@ class Workflow:
     """
     The Workflow is the end2end interface that could convert the raw text to model result,
     and decode the model result to work result. The main functions as follows:
-        1) Convert the raw text to work result.
-        2) Convert the model to the inference model.
-        3) Offer the usage and help message.
 
     Args:
         work (str): The work name for the Workflow, and get the work class from the name.
