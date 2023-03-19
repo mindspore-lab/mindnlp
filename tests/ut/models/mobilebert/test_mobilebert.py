@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=R0904
 """
 Test MobileBert
 """
@@ -24,7 +25,11 @@ import numpy as np
 from mindnlp.models.mobilebert import MobileBertSelfAttention, MobileBertSelfOutput,\
     MobileBertAttention, MobileBertIntermediate, OutputBottleneck, MobileBertOutput,\
     BottleneckLayer, Bottleneck, FFNOutput, FFNLayer, MobileBertLayer, MobileBertEncoder,\
-    MobileBertEmbeddings, MobileBertConfig
+    MobileBertEmbeddings, MobileBertPooler, MobileBertPredictionHeadTransform, \
+    MobileBertLMPredictionHead, MobileBertModel, MobileBertForPreTraining, MobileBertForMaskedLM,\
+    MobileBertOnlyNSPHead, MobileBertForNextSentencePrediction, MobileBertForSequenceClassification, \
+    MobileBertForQuestionAnswering, MobileBertForMultipleChoice, MobileBertForTokenClassification,\
+    MobileBertConfig
 
 class TestMobileBert(unittest.TestCase):
     """
@@ -36,7 +41,7 @@ class TestMobileBert(unittest.TestCase):
         Set up config
         """
 
-        self.input=None
+        self.input = None
 
     def test_mobilebert_embedding(self):
         """
@@ -175,3 +180,142 @@ class TestMobileBert(unittest.TestCase):
         head_mask = Tensor(np.random.randint(0, 1000, (128, 128, 128)), dtype=mindspore.float32)
         output = model(hidden_states, head_mask=head_mask)
         assert output[0].shape == (2, 128, 512)
+
+    def test_mobilebert_mobilebertpooler(self):
+        """
+        Test MobileBertPooler
+        """
+        model = MobileBertPooler(MobileBertConfig())
+        hidden_states = Tensor(np.random.randint(0, 1000, (512, 128)), dtype=mindspore.float32)
+        output = model(hidden_states)
+        assert output.shape == (512,)
+
+    def test_mobilebert_mobilebertpredictionheadtransform(self):
+        """
+        Test MobileBertPredictionHeadTransform
+        """
+        model = MobileBertPredictionHeadTransform(MobileBertConfig())
+        hidden_states = Tensor(np.random.randint(0, 1000, (256,512)), dtype=mindspore.float32)
+        output = model(hidden_states)
+        assert output.shape == (256, 512)
+
+    def test_mobilebert_mobilebertlmpredictionhead(self):
+        """
+        Test MobileBertLMPredictionHead
+        """
+        model = MobileBertLMPredictionHead(MobileBertConfig())
+        hidden_states = Tensor(np.random.randint(0, 1000, (2,256, 512)), dtype=mindspore.float32)
+        output = model(hidden_states)
+        assert output.shape == (2, 256, 30522)
+
+    def test_mobilebert_model(self):
+        """
+        Test MobileBertModel
+        """
+        model = MobileBertModel(MobileBertConfig())
+        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), dtype=mindspore.int32)
+
+        outputs = model(input_ids)
+        assert outputs[0].shape == (2, 8, 512)
+        assert outputs[1].shape == (2, 512)
+        outputs = model(input_ids, return_dict=True)
+        assert outputs[0].shape == (2, 8, 512)
+        assert outputs[1].shape == (2, 512)
+
+    def test_mobilebert_forpretraining(self):
+        """
+        Test MobileBertForPreTraining
+        """
+        model = MobileBertForPreTraining(MobileBertConfig())
+        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), dtype=mindspore.int32)
+
+        outputs = model(input_ids)
+        assert outputs[0].shape == (2, 8, 30522)
+        assert outputs[1].shape == (2, 2)
+        outputs = model(input_ids, return_dict=True)
+        assert outputs[1].shape == (2, 8, 30522)
+        assert outputs[2].shape == (2, 2)
+
+    def test_mobilebert_formaskedlm(self):
+        """
+        Test MobileBertForMaskedLM
+        """
+        model = MobileBertForMaskedLM(MobileBertConfig())
+        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), dtype=mindspore.int32)
+
+        outputs = model(input_ids)
+        assert outputs[0].shape == (2, 8, 30522)
+        outputs = model(input_ids, return_dict=True)
+        assert outputs[1].shape == (2, 8, 30522)
+
+    def test_mobilebert_onlynsphead(self):
+        """
+        Test MobileBertOnlyNSPHead
+        """
+        model = MobileBertOnlyNSPHead(MobileBertConfig())
+        pooled_output = Tensor(np.random.randint(0, 1000, (2, 512)), dtype=mindspore.float32)
+
+        outputs = model(pooled_output)
+        assert outputs.shape == (2, 2)
+
+    def test_mobilebert_fornextsentenceprediction(self):
+        """
+        Test MobileBertForNextSentencePrediction
+        """
+        model = MobileBertForNextSentencePrediction(MobileBertConfig())
+        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), dtype=mindspore.int32)
+
+        outputs = model(input_ids)
+        assert outputs[0].shape == (2, 2)
+        outputs = model(input_ids, return_dict=True)
+        assert outputs[1].shape == (2, 2)
+
+    def test_mobilebert_forsequenceclassification(self):
+        """
+        Test MobileBertForSequenceClassification
+        """
+        model = MobileBertForSequenceClassification(MobileBertConfig())
+        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), dtype=mindspore.int32)
+
+        outputs = model(input_ids)
+        assert outputs[0].shape == (2, 2)
+        outputs = model(input_ids, return_dict=True)
+        assert outputs[1].shape == (2, 2)
+
+    def test_mobilebert_forquestionanswering(self):
+        """
+        Test MobileBertForQuestionAnswering
+        """
+        model = MobileBertForQuestionAnswering(MobileBertConfig())
+        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), dtype=mindspore.int32)
+
+        outputs = model(input_ids)
+        assert outputs[0].shape == (2, 8)
+        assert outputs[1].shape == (2, 8)
+        outputs = model(input_ids, return_dict=True)
+        assert outputs[1].shape == (2, 8)
+        assert outputs[2].shape == (2, 8)
+
+    def test_mobilebert_formultiplechoice(self):
+        """
+        Test MobileBertForMultipleChoice
+        """
+        model = MobileBertForMultipleChoice(MobileBertConfig())
+        input_ids = Tensor(np.random.randint(0, 1000, (2, 8, 256)), dtype=mindspore.int32)
+
+        outputs = model(input_ids)
+        assert outputs[0].shape == (2, 8)
+        outputs = model(input_ids, return_dict=True)
+        assert outputs[1].shape == (2, 8)
+
+    def test_mobilebert_fortokenclassification(self):
+        """
+        Test MobileBertForTokenClassification
+        """
+        model = MobileBertForTokenClassification(MobileBertConfig())
+        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), dtype=mindspore.int32)
+
+        outputs = model(input_ids)
+        assert outputs[0].shape == (2, 8, 2)
+        outputs = model(input_ids, return_dict=True)
+        assert outputs[1].shape == (2, 8, 2)

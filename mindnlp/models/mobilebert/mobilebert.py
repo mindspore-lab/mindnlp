@@ -18,17 +18,22 @@ MobileBert model
 """
 
 import math
+import warnings
 from typing import Optional, Tuple
 
 import mindspore
 from mindspore import Parameter, Tensor
+import mindspore.numpy as mnp
 from mindspore import nn
 from mindspore import ops
 from mindspore.common.initializer import TruncatedNormal
+from mindspore.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
 from mindnlp._legacy.nn import Dropout
+from ..mobilebert.mobilebert_config import MobileBertConfig
 from ..utils.utils import find_pruneable_heads_and_indices,prune_conv1d_layer
 from ..utils.activations import ACT2FN
 
+MOBILEBERT_PRETRAINED_MODEL_ARCHIVE_LIST = ["google/mobilebert-uncased"]
 
 class NoNorm(nn.Cell):
     """NoNorm"""
@@ -469,3 +474,787 @@ class MobileBertEncoder(nn.Cell):
         if not return_dict:
             return tuple(v for v in [hidden_states, all_hidden_states, all_attentions] if v is not None)
         return (hidden_states, all_hidden_states, all_attentions)
+
+class MobileBertPooler(nn.Cell):
+    """MobileBertPooler"""
+    def __init__(self, config):
+        super().__init__()
+        self.do_activate = config.classifier_activation
+        if self.do_activate:
+            self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+
+    def construct(self, hidden_states: Tensor) -> Tensor:
+        # We "pool" the model by simply taking the hidden state corresponding
+        # to the first token.
+        first_token_tensor = hidden_states[:, 0]
+        if not self.do_activate:
+            return first_token_tensor
+        pooled_output = self.dense(first_token_tensor)
+        pooled_output = ops.tanh(pooled_output)
+        return pooled_output
+
+class MobileBertPredictionHeadTransform(nn.Cell):
+    """MobileBertPredictionHeadTransform"""
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        if isinstance(config.hidden_act, str):
+            self.transform_act_fn = ACT2FN[config.hidden_act]
+        else:
+            self.transform_act_fn = config.hidden_act
+        self.LayerNorm = NORM2FN["layer_norm"]([config.hidden_size])
+
+    def construct(self, hidden_states: Tensor) -> Tensor:
+        hidden_states = self.dense(hidden_states)
+        hidden_states = self.transform_act_fn(hidden_states)
+        hidden_states = self.LayerNorm(hidden_states)
+        return hidden_states
+
+class MobileBertLMPredictionHead(nn.Cell):
+    """MobileBertLMPredictionHead"""
+    def __init__(self, config):
+        super().__init__()
+        self.transform = MobileBertPredictionHeadTransform(config)
+        # The output weights are the same as the input embeddings, but there is
+        # an output-only bias for each token.
+        self.dense = nn.Dense(config.vocab_size, config.hidden_size - config.embedding_size, has_bias=False)
+        self.decoder = nn.Dense(config.embedding_size, config.vocab_size, has_bias=False)
+        self.bias = Parameter(ops.zeros(config.vocab_size))
+        # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
+        self.decoder.bias = self.bias
+
+    def construct(self, hidden_states: Tensor) -> Tensor:
+        hidden_states = self.transform(hidden_states)
+        hidden_states = hidden_states.matmul(ops.cat([self.decoder.weight.t(), self.dense.weight], axis=0))
+        hidden_states += self.decoder.bias
+        return hidden_states
+
+class MobileBertOnlyMLMHead(nn.Cell):
+    """MobileBertOnlyMLMHead"""
+    def __init__(self, config):
+        super().__init__()
+        self.predictions = MobileBertLMPredictionHead(config)
+
+    def construct(self, sequence_output: Tensor) -> Tensor:
+        prediction_scores = self.predictions(sequence_output)
+        return prediction_scores
+
+class MobileBertPreTrainingHeads(nn.Cell):
+    """MobileBertPreTrainingHeads"""
+    def __init__(self, config):
+        super().__init__()
+        self.predictions = MobileBertLMPredictionHead(config)
+        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+
+    def construct(self, sequence_output: Tensor, pooled_output: Tensor) -> Tuple[Tensor]:
+        prediction_scores = self.predictions(sequence_output)
+        seq_relationship_score = self.seq_relationship(pooled_output)
+        return prediction_scores, seq_relationship_score
+
+class MobileBertPreTrainedModel(nn.Cell):
+    """
+    An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
+    models.
+    """
+
+    config_class = MobileBertConfig
+    pretrained_model_archive_map = MOBILEBERT_PRETRAINED_MODEL_ARCHIVE_LIST
+    base_model_prefix = "mobilebert"
+    _keys_to_ignore_on_load_missing = [r"position_ids"]
+
+    def _init_weights(self, module):
+        """Initialize the weights"""
+        if isinstance(module, nn.Dense):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                module.bias.data.zero_()
+        elif isinstance(module, nn.Embedding):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx].zero_()
+        elif isinstance(module, (nn.LayerNorm, NoNorm)):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
+
+
+class MobileBertModel(MobileBertPreTrainedModel):
+    """
+    https://arxiv.org/pdf/2004.02984.pdf
+    """
+
+    def __init__(self, config, add_pooling_layer=True):
+        super().__init__(config)
+        self.config = config
+        self.embeddings = MobileBertEmbeddings(config)
+        self.encoder = MobileBertEncoder(config)
+
+        self.pooler = MobileBertPooler(config) if add_pooling_layer else None
+        self.num_hidden_layers = config.num_hidden_layers
+
+
+    def get_input_embeddings(self):
+        """get_input_embeddings"""
+        return self.embeddings.word_embeddings
+
+    def set_input_embeddings(self, value):
+        """set_input_embeddings"""
+        self.embeddings.word_embeddings = value
+
+    def _prune_heads(self, heads_to_prune):
+        """
+        Prunes heads of the model. heads_to_prune: dict of {layer_num: list of heads to prune in this layer} See base
+        class PreTrainedModel
+        """
+        for layer, heads in heads_to_prune.items():
+            self.encoder.layer[layer].attention.prune_heads(heads)
+
+    def construct(
+        self,
+        input_ids: Optional[Tensor] = None,
+        attention_mask: Optional[Tensor] = None,
+        token_type_ids: Optional[Tensor] = None,
+        position_ids: Optional[Tensor] = None,
+        head_mask: Optional[Tensor] = None,
+        inputs_embeds: Optional[Tensor] = None,
+        output_hidden_states: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Tuple:
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        if input_ids is not None and inputs_embeds is not None:
+            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
+        if input_ids is not None:
+            input_shape = input_ids.shape
+        elif inputs_embeds is not None:
+            input_shape = inputs_embeds.shape[:-1]
+        else:
+            raise ValueError("You have to specify either input_ids or inputs_embeds")
+
+
+        if attention_mask is None:
+            attention_mask = ops.ones(input_shape)
+        if token_type_ids is None:
+            token_type_ids = ops.zeros(input_shape, dtype=mindspore.int32)
+
+        # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
+        # ourselves in which case we just need to make it broadcastable to all heads.
+        extended_attention_mask = attention_mask.expand_dims(1).expand_dims(2)
+        extended_attention_mask = (1.0 - extended_attention_mask) * -10000.0
+
+        # Prepare head mask if needed
+        # 1.0 in head_mask indicate we keep the head
+        # attention_probs has shape bsz x n_heads x N x N
+        # input head_mask has shape [num_heads] or [num_hidden_layers x num_heads]
+        # and head_mask is converted to shape [num_hidden_layers x batch x num_heads x seq_length x seq_length]
+        if head_mask is not None:
+            if head_mask.ndim == 1:
+                head_mask = head_mask.expand_dims(0).expand_dims(0).expand_dims(-1).expand_dims(-1)
+                head_mask = mnp.broadcast_to(head_mask, (self.num_hidden_layers, -1, -1, -1, -1))
+            elif head_mask.ndim == 2:
+                head_mask = head_mask.expand_dims(1).expand_dims(-1).expand_dims(-1)
+        else:
+            head_mask = [None] * self.num_hidden_layers
+
+        embedding_output = self.embeddings(
+            input_ids=input_ids, position_ids=position_ids, token_type_ids=token_type_ids, inputs_embeds=inputs_embeds
+        )
+        encoder_outputs = self.encoder(
+            embedding_output,
+            attention_mask=extended_attention_mask,
+            head_mask=head_mask,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        sequence_output = encoder_outputs[0]
+        pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
+
+        if not return_dict:
+            return (sequence_output, pooled_output) + encoder_outputs[1:]
+
+        return (sequence_output,pooled_output,encoder_outputs[1],encoder_outputs[2])
+
+class MobileBertForPreTraining(MobileBertPreTrainedModel):
+    """ MobileBertForPreTraining"""
+    _keys_to_ignore_on_load_missing = [
+        "cls.predictions.decoder.weight",
+        "cls.predictions.decoder.bias",
+        "embeddings.position_ids",
+    ]
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.config = config
+        self.mobilebert = MobileBertModel(config)
+        self.cls = MobileBertPreTrainingHeads(config)
+
+
+    def get_output_embeddings(self):
+        """get_output_embeddings"""
+        return self.cls.predictions.decoder
+
+    def set_output_embeddings(self, new_embeddigs):
+        """set_output_embeddings"""
+        self.cls.predictions.decoder = new_embeddigs
+
+    def resize_token_embeddings(self, new_num_tokens: Optional[int] = None) -> nn.Embedding:
+        """resize_token_embeddings"""
+        # resize dense output embedings at first
+        self.cls.predictions.dense = self._get_resized_lm_head(
+            self.cls.predictions.dense, new_num_tokens=new_num_tokens, transposed=True
+        )
+
+        return super().resize_token_embeddings(new_num_tokens=new_num_tokens)
+
+    def construct(
+        self,
+        input_ids: Optional[Tensor] = None,
+        attention_mask: Optional[Tensor] = None,
+        token_type_ids: Optional[Tensor] = None,
+        position_ids: Optional[Tensor] = None,
+        head_mask: Optional[Tensor] = None,
+        inputs_embeds: Optional[Tensor] = None,
+        labels: Optional[Tensor] = None,
+        next_sentence_label: Optional[Tensor] = None,
+        output_attentions: Optional[Tensor] = None,
+        output_hidden_states: Optional[Tensor] = None,
+        return_dict: Optional[Tensor] = None,
+    ) -> Tuple:
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        next_sentence_label (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the next sequence prediction (classification) loss. Input should be a sequence pair
+            (see `input_ids` docstring) Indices should be in `[0, 1]`:
+
+            - 0 indicates sequence B is a continuation of sequence A,
+            - 1 indicates sequence B is a random sequence.
+
+        Returns:
+
+        Examples:
+
+        ```python
+        >>> from transformers import AutoTokenizer, MobileBertForPreTraining
+        >>> import torch
+
+        >>> tokenizer = AutoTokenizer.from_pretrained("google/mobilebert-uncased")
+        >>> model = MobileBertForPreTraining.from_pretrained("google/mobilebert-uncased")
+
+        >>> input_ids = torch.tensor(tokenizer.encode("Hello, my dog is cute", add_special_tokens=True)).unsqueeze(0)
+        >>> # Batch size 1
+        >>> outputs = model(input_ids)
+
+        >>> prediction_logits = outputs.prediction_logits
+        >>> seq_relationship_logits = outputs.seq_relationship_logits
+        ```"""
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.mobilebert(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        sequence_output, pooled_output = outputs[:2]
+        prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
+
+        total_loss = None
+        if labels is not None and next_sentence_label is not None:
+            loss_fct = CrossEntropyLoss()
+            masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_label.view(-1))
+            total_loss = masked_lm_loss + next_sentence_loss
+
+        if not return_dict:
+            output = (prediction_scores, seq_relationship_score) + outputs[2:]
+            return ((total_loss,) + output) if total_loss is not None else output
+
+        return (total_loss,prediction_scores,seq_relationship_score,outputs[2],outputs[3])
+
+class MobileBertForMaskedLM(MobileBertPreTrainedModel):
+    """MobileBertForMaskedLM"""
+    _keys_to_ignore_on_load_unexpected = [r"pooler"]
+    _keys_to_ignore_on_load_missing = [
+        "cls.predictions.decoder.weight",
+        "cls.predictions.decoder.bias",
+        "embeddings.position_ids",
+    ]
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.mobilebert = MobileBertModel(config, add_pooling_layer=False)
+        self.cls = MobileBertOnlyMLMHead(config)
+        self.config = config
+
+
+    def get_output_embeddings(self):
+        """get_output_embeddings"""
+        return self.cls.predictions.decoder
+
+    def set_output_embeddings(self, new_embeddigs):
+        """set_output_embeddings"""
+        self.cls.predictions.decoder = new_embeddigs
+
+    def resize_token_embeddings(self, new_num_tokens: Optional[int] = None) -> nn.Embedding:
+        """ resize_token_embeddings"""
+        # resize dense output embedings at first
+        self.cls.predictions.dense = self._get_resized_lm_head(
+            self.cls.predictions.dense, new_num_tokens=new_num_tokens, transposed=True
+        )
+        return super().resize_token_embeddings(new_num_tokens=new_num_tokens)
+
+    def construct(
+        self,
+        input_ids: Optional[Tensor] = None,
+        attention_mask: Optional[Tensor] = None,
+        token_type_ids: Optional[Tensor] = None,
+        position_ids: Optional[Tensor] = None,
+        head_mask: Optional[Tensor] = None,
+        inputs_embeds: Optional[Tensor] = None,
+        labels: Optional[Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Tuple:
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.mobilebert(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        sequence_output = outputs[0]
+        prediction_scores = self.cls(sequence_output)
+
+        masked_lm_loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()  # -100 index = padding token
+            masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+
+        if not return_dict:
+            output = (prediction_scores,) + outputs[2:]
+            return ((masked_lm_loss,) + output) if masked_lm_loss is not None else output
+
+        return (masked_lm_loss,prediction_scores,outputs[2],outputs[3])
+
+class MobileBertOnlyNSPHead(nn.Cell):
+    """MobileBertOnlyNSPHead"""
+    def __init__(self, config):
+        super().__init__()
+        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+
+    def construct(self, pooled_output: Tensor) -> Tensor:
+        seq_relationship_score = self.seq_relationship(pooled_output)
+        return seq_relationship_score
+
+class MobileBertForNextSentencePrediction(MobileBertPreTrainedModel):
+    """MobileBertForNextSentencePrediction"""
+    def __init__(self, config):
+        super().__init__(config)
+        self.config = config
+        self.mobilebert = MobileBertModel(config)
+        self.cls = MobileBertOnlyNSPHead(config)
+
+
+    def construct(
+        self,
+        input_ids: Optional[Tensor] = None,
+        attention_mask: Optional[Tensor] = None,
+        token_type_ids: Optional[Tensor] = None,
+        position_ids: Optional[Tensor] = None,
+        head_mask: Optional[Tensor] = None,
+        inputs_embeds: Optional[Tensor] = None,
+        labels: Optional[Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+        **kwargs,
+    ) -> Tuple:
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the next sequence prediction (classification) loss. Input should be a sequence pair
+            (see `input_ids` docstring) Indices should be in `[0, 1]`.
+
+            - 0 indicates sequence B is a continuation of sequence A,
+            - 1 indicates sequence B is a random sequence.
+
+        Returns:
+
+        Examples:
+
+        ```python
+        >>> from transformers import AutoTokenizer, MobileBertForNextSentencePrediction
+        >>> import torch
+
+        >>> tokenizer = AutoTokenizer.from_pretrained("google/mobilebert-uncased")
+        >>> model = MobileBertForNextSentencePrediction.from_pretrained("google/mobilebert-uncased")
+
+        >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
+        >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
+        >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
+
+        >>> outputs = model(**encoding, labels=torch.LongTensor([1]))
+        >>> loss = outputs.loss
+        >>> logits = outputs.logits
+        ```"""
+
+        if "next_sentence_label" in kwargs:
+            warnings.warn(
+                "The `next_sentence_label` argument is deprecated and will be removed in a future version, use"
+                " `labels` instead.",
+                FutureWarning,
+            )
+            labels = kwargs.pop("next_sentence_label")
+
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.mobilebert(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        pooled_output = outputs[1]
+        seq_relationship_score = self.cls(pooled_output)
+
+        next_sentence_loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), labels.view(-1))
+
+        if not return_dict:
+            output = (seq_relationship_score,) + outputs[2:]
+            return ((next_sentence_loss,) + output) if next_sentence_loss is not None else output
+
+        return (next_sentence_loss,seq_relationship_score,outputs[2],outputs[3])
+
+class MobileBertForSequenceClassification(MobileBertPreTrainedModel):
+    """MobileBertForSequenceClassification"""
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+        self.config = config
+
+        self.mobilebert = MobileBertModel(config)
+        classifier_dropout = (
+            config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
+        )
+        self.dropout = Dropout(classifier_dropout)
+        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+
+
+    def construct(
+        self,
+        input_ids: Optional[Tensor] = None,
+        attention_mask: Optional[Tensor] = None,
+        token_type_ids: Optional[Tensor] = None,
+        position_ids: Optional[Tensor] = None,
+        head_mask: Optional[Tensor] = None,
+        inputs_embeds: Optional[Tensor] = None,
+        labels: Optional[Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Tuple[Tensor]:
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.mobilebert(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        pooled_output = outputs[1]
+
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+
+        loss = None
+        if labels is not None:
+            if self.config.problem_type is None:
+                if self.num_labels == 1:
+                    self.config.problem_type = "regression"
+                elif self.num_labels > 1 and (labels.dtype in (mindspore.int32, mindspore.int_)):
+                    self.config.problem_type = "single_label_classification"
+                else:
+                    self.config.problem_type = "multi_label_classification"
+
+            if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
+                if self.num_labels == 1:
+                    loss = loss_fct(logits.squeeze(), labels.squeeze())
+                else:
+                    loss = loss_fct(logits, labels)
+            elif self.config.problem_type == "single_label_classification":
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            elif self.config.problem_type == "multi_label_classification":
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
+        if not return_dict:
+            output = (logits,) + outputs[2:]
+            return ((loss,) + output) if loss is not None else output
+
+        return (loss,logits,outputs[2],outputs[3])
+
+class MobileBertForQuestionAnswering(MobileBertPreTrainedModel):
+    """MobileBertForQuestionAnswering"""
+    _keys_to_ignore_on_load_unexpected = [r"pooler"]
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+        self.config = config
+        self.mobilebert = MobileBertModel(config, add_pooling_layer=False)
+        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+
+
+    def construct(
+        self,
+        input_ids: Optional[Tensor] = None,
+        attention_mask: Optional[Tensor] = None,
+        token_type_ids: Optional[Tensor] = None,
+        position_ids: Optional[Tensor] = None,
+        head_mask: Optional[Tensor] = None,
+        inputs_embeds: Optional[Tensor] = None,
+        start_positions: Optional[Tensor] = None,
+        end_positions: Optional[Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Tuple[Tensor]:
+        r"""
+        start_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the start of the labelled span for computing the token classification loss.
+            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+            are not taken into account for computing the loss.
+        end_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the end of the labelled span for computing the token classification loss.
+            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+            are not taken into account for computing the loss.
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.mobilebert(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        sequence_output = outputs[0]
+
+        logits = self.qa_outputs(sequence_output)
+        start_logits, end_logits = logits.split(1, axis=-1)
+        start_logits = start_logits.squeeze(-1)
+        end_logits = end_logits.squeeze(-1)
+
+        total_loss = None
+        if start_positions is not None and end_positions is not None:
+            # If we are on multi-GPU, split add a dimension
+            if len(start_positions.size()) > 1:
+                start_positions = start_positions.squeeze(-1)
+            if len(end_positions.size()) > 1:
+                end_positions = end_positions.squeeze(-1)
+            # sometimes the start/end positions are outside our model inputs, we ignore these terms
+            ignored_index = start_logits.size(1)
+            start_positions = start_positions.clamp(0, ignored_index)
+            end_positions = end_positions.clamp(0, ignored_index)
+
+            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
+            total_loss = (start_loss + end_loss) / 2
+
+        if not return_dict:
+            output = (start_logits, end_logits) + outputs[2:]
+            return ((total_loss,) + output) if total_loss is not None else output
+
+        return (total_loss,start_logits,end_logits,outputs[2],outputs[3])
+
+class MobileBertForMultipleChoice(MobileBertPreTrainedModel):
+    """MobileBertForMultipleChoice"""
+    def __init__(self, config):
+        super().__init__(config)
+        self.config = config
+        self.mobilebert = MobileBertModel(config)
+        classifier_dropout = (
+            config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
+        )
+        self.dropout = Dropout(classifier_dropout)
+        self.classifier = nn.Dense(config.hidden_size, 1)
+
+
+    def construct(
+        self,
+        input_ids: Optional[Tensor] = None,
+        attention_mask: Optional[Tensor] = None,
+        token_type_ids: Optional[Tensor] = None,
+        position_ids: Optional[Tensor] = None,
+        head_mask: Optional[Tensor] = None,
+        inputs_embeds: Optional[Tensor] = None,
+        labels: Optional[Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Tuple[Tensor]:
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+            `input_ids` above)
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
+
+        input_ids = input_ids.view(-1, input_ids.shape[-1]) if input_ids is not None else None
+        attention_mask = attention_mask.view(-1, attention_mask.size(-1)) if attention_mask is not None else None
+        token_type_ids = token_type_ids.view(-1, token_type_ids.size(-1)) if token_type_ids is not None else None
+        position_ids = position_ids.view(-1, position_ids.size(-1)) if position_ids is not None else None
+        inputs_embeds = (
+            inputs_embeds.view(-1, inputs_embeds.size(-2), inputs_embeds.size(-1))
+            if inputs_embeds is not None
+            else None
+        )
+
+        outputs = self.mobilebert(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        pooled_output = outputs[1]
+
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+        reshaped_logits = logits.view(-1, num_choices)
+
+        loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(reshaped_logits, labels)
+
+        if not return_dict:
+            output = (reshaped_logits,) + outputs[2:]
+            return ((loss,) + output) if loss is not None else output
+
+        return (loss,reshaped_logits,outputs[2],outputs[3])
+
+class MobileBertForTokenClassification(MobileBertPreTrainedModel):
+    """MobileBertForTokenClassification"""
+    _keys_to_ignore_on_load_unexpected = [r"pooler"]
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+        self.config = config
+        self.mobilebert = MobileBertModel(config, add_pooling_layer=False)
+        classifier_dropout = (
+            config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
+        )
+        self.dropout = Dropout(classifier_dropout)
+        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+
+    def construct(
+        self,
+        input_ids: Optional[Tensor] = None,
+        attention_mask: Optional[Tensor] = None,
+        token_type_ids: Optional[Tensor] = None,
+        position_ids: Optional[Tensor] = None,
+        head_mask: Optional[Tensor] = None,
+        inputs_embeds: Optional[Tensor] = None,
+        labels: Optional[Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Tuple[Tensor]:
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.mobilebert(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        sequence_output = outputs[0]
+
+        sequence_output = self.dropout(sequence_output)
+        logits = self.classifier(sequence_output)
+
+        loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+        if not return_dict:
+            output = (logits,) + outputs[2:]
+            return ((loss,) + output) if loss is not None else output
+
+        return (loss, logits, outputs[2], outputs[3])
