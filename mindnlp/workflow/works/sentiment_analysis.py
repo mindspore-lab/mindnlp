@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-""" 
-Sentiment Analysis Work 
+# pylint:disable=invalid-name
+"""
+Sentiment Analysis Work
 """
 
-# pylint:disable=invalid-name
 
 import os
 
