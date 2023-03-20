@@ -21,11 +21,10 @@ import math
 from typing import Optional, Tuple
 
 import mindspore
-# import mindspore.numpy as mnp
 from mindspore import Parameter, Tensor
 from mindspore import nn
 from mindspore import ops
-# from mindspore.common.initializer import TruncatedNormal
+from mindspore.common.initializer import TruncatedNormal
 from mindnlp._legacy.nn import Dropout
 from ..utils.utils import find_pruneable_heads_and_indices,prune_conv1d_layer
 from ..utils.activations import ACT2FN
@@ -42,6 +41,80 @@ class NoNorm(nn.Cell):
         return input_tensor * self.weight + self.bias
 
 NORM2FN = {"layer_norm": nn.LayerNorm, "no_norm": NoNorm}
+
+
+class MobileBertEmbeddings(nn.Cell):
+    """Construct the embeddings from word, position and token_type embeddings."""
+
+    def __init__(self, config):
+        super().__init__()
+        self.trigram_input = config.trigram_input
+        self.embedding_size = config.embedding_size
+        self.hidden_size = config.hidden_size
+
+        self.word_embeddings = nn.Embedding(config.vocab_size, config.embedding_size,
+                                            embedding_table=TruncatedNormal(config.initializer_range))
+        self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
+        self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
+
+        embed_dim_multiplier = 3 if self.trigram_input else 1
+        embedded_input_size = self.embedding_size * embed_dim_multiplier
+        self.embedding_transformation = nn.Dense(embedded_input_size, config.hidden_size)
+
+        self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.dropout = Dropout(config.hidden_dropout_prob)
+
+
+    def construct(
+            self,
+            input_ids: Optional[Tensor] = None,
+            token_type_ids: Optional[Tensor] = None,
+            position_ids: Optional[Tensor] = None,
+            inputs_embeds: Optional[Tensor] = None,
+    ) -> Tensor:
+        if input_ids is not None:
+            input_shape = input_ids.shape
+        else:
+            input_shape = inputs_embeds.size()[:-1]
+
+        seq_length = input_shape[1]
+
+        if position_ids is None:
+            position_ids = ops.arange(seq_length)
+            position_ids = position_ids.expand_dims(0).expand_as(input_ids)
+
+        if token_type_ids is None:
+            token_type_ids = ops.zeros(input_shape, mindspore.int64)
+        if inputs_embeds is None:
+            inputs_embeds = self.word_embeddings(input_ids)
+
+        if self.trigram_input:
+            # From the paper MobileBERT: a Compact Task-Agnostic BERT for Resource-Limited
+            # Devices (https://arxiv.org/abs/2004.02984)
+            #
+            # The embedding table in BERT models accounts for a substantial proportion of model size. To compress
+            # the embedding layer, we reduce the embedding dimension to 128 in MobileBERT.
+            # Then, we apply a 1D convolution with kernel size 3 on the raw token embedding to produce a 512
+            # dimensional output.
+            inputs_embeds = ops.concat(
+                [
+                    ops.pad(inputs_embeds[:, 1:], [0, 0, 0, 1, 0, 0]),
+                    inputs_embeds,
+                    ops.pad(inputs_embeds[:, :-1], [0, 0, 1, 0, 0, 0]),
+                ],
+                axis=2
+            )
+        if self.trigram_input or self.embedding_size != self.hidden_size:
+            inputs_embeds = self.embedding_transformation(inputs_embeds)
+
+        # Add positional embeddings and token type embeddings, then layer
+        # normalize and perform dropout.
+        position_embeddings = self.position_embeddings(position_ids)
+        token_type_embeddings = self.token_type_embeddings(token_type_ids)
+        embeddings = inputs_embeds + position_embeddings + token_type_embeddings
+        embeddings = self.LayerNorm(embeddings)
+        embeddings = self.dropout(embeddings)
+        return embeddings
 
 class MobileBertSelfAttention(nn.Cell):
     """MobileBertSelfAttention"""
@@ -198,3 +271,201 @@ class OutputBottleneck(nn.Cell):
         layer_outputs = self.dropout(layer_outputs)
         layer_outputs = self.LayerNorm(layer_outputs + residual_tensor)
         return layer_outputs
+
+class MobileBertOutput(nn.Cell):
+    """MobileBertOutput"""
+    def __init__(self, config):
+        super().__init__()
+        self.use_bottleneck = config.use_bottleneck
+        self.dense = nn.Dense(config.intermediate_size, config.true_hidden_size)
+        self.LayerNorm = NORM2FN[config.normalization_type](config.true_hidden_size)
+        if not self.use_bottleneck:
+            self.dropout = Dropout(config.hidden_dropout_prob)
+        else:
+            self.bottleneck = OutputBottleneck(config)
+
+    def construct(
+        self, intermediate_states: Tensor, residual_tensor_1: Tensor, residual_tensor_2: Tensor
+    ) -> Tensor:
+        layer_output = self.dense(intermediate_states)
+        if not self.use_bottleneck:
+            layer_output = self.dropout(layer_output)
+            layer_output = self.LayerNorm(layer_output + residual_tensor_1)
+        else:
+            layer_output = self.LayerNorm(layer_output + residual_tensor_1)
+            layer_output = self.bottleneck(layer_output, residual_tensor_2)
+        return layer_output
+
+class BottleneckLayer(nn.Cell):
+    """BottleneckLayer"""
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Dense(config.hidden_size, config.intra_bottleneck_size)
+        self.LayerNorm = NORM2FN[config.normalization_type](config.intra_bottleneck_size)
+
+    def construct(self, hidden_states: Tensor) -> Tensor:
+        layer_input = self.dense(hidden_states)
+        layer_input = self.LayerNorm(layer_input)
+        return layer_input
+
+class Bottleneck(nn.Cell):
+    """Bottleneck"""
+    def __init__(self, config):
+        super().__init__()
+        self.key_query_shared_bottleneck = config.key_query_shared_bottleneck
+        self.use_bottleneck_attention = config.use_bottleneck_attention
+        self.input = BottleneckLayer(config)
+        if self.key_query_shared_bottleneck:
+            self.attention = BottleneckLayer(config)
+
+    def construct(self, hidden_states: Tensor) -> Tuple[Tensor]:
+        # This method can return three different tuples of values. These different values make use of bottlenecks,
+        # which are linear layers used to project the hidden states to a lower-dimensional vector, reducing memory
+        # usage. These linear layer have weights that are learned during training.
+        #
+        # If `config.use_bottleneck_attention`, it will return the result of the bottleneck layer four times for the
+        # key, query, value, and "layer input" to be used by the attention layer.
+        # This bottleneck is used to project the hidden. This last layer input will be used as a residual tensor
+        # in the attention self output, after the attention scores have been computed.
+        #
+        # If not `config.use_bottleneck_attention` and `config.key_query_shared_bottleneck`, this will return
+        # four values, three of which have been passed through a bottleneck: the query and key, passed through the same
+        # bottleneck, and the residual layer to be applied in the attention self output, through another bottleneck.
+        #
+        # Finally, in the last case, the values for the query, key and values are the hidden states without bottleneck,
+        # and the residual layer will be this value passed through a bottleneck.
+
+        bottlenecked_hidden_states = self.input(hidden_states)
+        if self.use_bottleneck_attention:
+            return (bottlenecked_hidden_states,) * 4
+        if self.key_query_shared_bottleneck:
+            shared_attention_input = self.attention(hidden_states)
+            return (shared_attention_input, shared_attention_input, hidden_states, bottlenecked_hidden_states)
+        return (hidden_states, hidden_states, hidden_states, bottlenecked_hidden_states)
+
+class FFNOutput(nn.Cell):
+    """FFNOutput"""
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Dense(config.intermediate_size, config.true_hidden_size)
+        self.LayerNorm = NORM2FN[config.normalization_type](config.true_hidden_size)
+
+    def construct(self, hidden_states: Tensor, residual_tensor: Tensor) -> Tensor:
+        layer_outputs = self.dense(hidden_states)
+        layer_outputs = self.LayerNorm(layer_outputs + residual_tensor)
+        return layer_outputs
+
+class FFNLayer(nn.Cell):
+    """FFNLayer"""
+    def __init__(self, config):
+        super().__init__()
+        self.intermediate = MobileBertIntermediate(config)
+        self.output = FFNOutput(config)
+
+    def construct(self, hidden_states: Tensor) -> Tensor:
+        intermediate_output = self.intermediate(hidden_states)
+        layer_outputs = self.output(intermediate_output, hidden_states)
+        return layer_outputs
+
+class MobileBertLayer(nn.Cell):
+    """MobileBertLayer"""
+    def __init__(self, config):
+        super().__init__()
+        self.use_bottleneck = config.use_bottleneck
+        self.num_feedforward_networks = config.num_feedforward_networks
+
+        self.attention = MobileBertAttention(config)
+        self.intermediate = MobileBertIntermediate(config)
+        self.output = MobileBertOutput(config)
+        if self.use_bottleneck:
+            self.bottleneck = Bottleneck(config)
+        if config.num_feedforward_networks > 1:
+            self.ffn = nn.CellList([FFNLayer(config) for _ in range(config.num_feedforward_networks - 1)])
+
+    def construct(
+        self,
+        hidden_states: Tensor,
+        attention_mask: Optional[Tensor] = None,
+        head_mask: Optional[Tensor] = None,
+        output_attentions: Optional[bool] = None,
+    ) -> Tuple[Tensor]:
+        if self.use_bottleneck:
+            query_tensor, key_tensor, value_tensor, layer_input = self.bottleneck(hidden_states)
+        else:
+            query_tensor, key_tensor, value_tensor, layer_input = [hidden_states] * 4
+
+        self_attention_outputs = self.attention(
+            query_tensor,
+            key_tensor,
+            value_tensor,
+            layer_input,
+            attention_mask,
+            head_mask,
+            output_attentions=output_attentions,
+        )
+        attention_output = self_attention_outputs[0]
+        s = (attention_output,)
+        outputs = self_attention_outputs[1:]  # add self attentions if we output attention weights
+
+        if self.num_feedforward_networks != 1:
+            for _, ffn_module in enumerate(self.ffn):
+                attention_output = ffn_module(attention_output)
+                s += (attention_output,)
+
+        intermediate_output = self.intermediate(attention_output)
+        layer_output = self.output(intermediate_output, attention_output, hidden_states)
+        outputs = (
+            (layer_output,)
+            + outputs
+            + (
+                Tensor(1000),
+                query_tensor,
+                key_tensor,
+                value_tensor,
+                layer_input,
+                attention_output,
+                intermediate_output,
+            )
+            + s
+        )
+        return outputs
+
+class MobileBertEncoder(nn.Cell):
+    """MobileBertEncoder"""
+    def __init__(self, config):
+        super().__init__()
+        self.layer = nn.CellList([MobileBertLayer(config) for _ in range(config.num_hidden_layers)])
+
+    def construct(
+        self,
+        hidden_states: Tensor,
+        attention_mask: Optional[Tensor] = None,
+        head_mask: Optional[Tensor] = None,
+        output_attentions: Optional[bool] = False,
+        output_hidden_states: Optional[bool] = False,
+        return_dict: Optional[bool] = True,
+    ) -> Tuple:
+        all_hidden_states = () if output_hidden_states else None
+        all_attentions = () if output_attentions else None
+        for i, layer_module in enumerate(self.layer):
+            if output_hidden_states:
+                all_hidden_states = all_hidden_states + (hidden_states,)
+
+            layer_outputs = layer_module(
+                hidden_states,
+                attention_mask,
+                head_mask[i],
+                output_attentions,
+            )
+            hidden_states = layer_outputs[0]
+
+            if output_attentions:
+                all_attentions = all_attentions + (layer_outputs[1],)
+
+        # Add last layer
+        if output_hidden_states:
+            all_hidden_states = all_hidden_states + (hidden_states,)
+
+        if not return_dict:
+            return tuple(v for v in [hidden_states, all_hidden_states, all_attentions] if v is not None)
+        return (hidden_states, all_hidden_states, all_attentions)

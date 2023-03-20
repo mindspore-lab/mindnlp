@@ -16,8 +16,10 @@
 
 import os
 import re
+import warnings
+from typing import Union
+from collections import OrderedDict
 import mindspore._c_dataengine as cde
-from mindspore.dataset.text.validators import check_vocab, check_from_dataset, check_tokens_to_ids, check_ids_to_tokens
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import cache_file
 
@@ -27,12 +29,73 @@ class Vocab:
     Creates a vocab object which maps tokens to indices.
     """
 
-    def __init__(self):
-        self.c_vocab = None
+    def __init__(self, list_or_dict:Union[list, OrderedDict, None],
+                 special_tokens: Union[list, tuple] = ("<pad>", "<unk>"),
+                 special_first: bool = True):
+
         self._dict = None
+        self._unk_token = None
+        self._c_vocab = None
+
+        if list_or_dict is None:
+            return
+
+        self._set_unk(special_tokens)
+
+        if isinstance(list_or_dict, list):
+            self._dict = OrderedDict.fromkeys(list_or_dict)
+        elif isinstance(list_or_dict, OrderedDict):
+            self._dict = list_or_dict
+        else:
+            raise ValueError(f'Vocab only support list or OrderedDict, but get {type(list_or_dict)}')
+
+        if special_first:
+            self._dict.update((index, value) for index, value in enumerate(special_tokens))
+        else:
+            dict_len = len(self._dict)
+            for idx, tok in enumerate(special_tokens):
+                self._dict[tok] = dict_len + idx
+
+        self._c_vocab = cde.Vocab.from_dict(self._dict)
+
+    def _set_unk(self, special_tokens):
+        if '<unk>' in special_tokens:
+            self._unk_token = '<unk>'
+        else:
+            warnings.warn("Warning: can not find '<unk>' in vocab, "
+                          "please use Vocab.set_default_index() to set index of unknown token.",
+                          UserWarning)
+
+
+    def __len__(self) -> int:
+        r"""
+        Returns:
+            - int, The length of the vocab.
+        """
+        return len(self._dict)
+
+    def __contains__(self, token: str) -> bool:
+        r"""
+        Args:
+            token (str): The token for which to check the membership.
+
+        Returns:
+            - bool, Whether the token is member of vocab or not.
+        """
+        return token in self._dict
+
+    def __getitem__(self, token: str) -> int:
+        r"""
+        Args:
+            token (str): The token used to lookup the corresponding index.
+
+        Returns:
+            - int, The index corresponding to the associated token.
+        """
+    
+        return self._dict.get(token, None)
 
     @classmethod
-    @check_from_dataset
     def from_dataset(cls, dataset, columns=None, freq_range=None, top_k=None, special_tokens=None, special_first=True):
         """
         Build a Vocab from a dataset.
@@ -75,57 +138,13 @@ class Vocab:
 
         vocab = Vocab()
         # pylint: disable=protected-access
-        vocab.c_vocab = dataset._build_vocab(columns, freq_range, top_k, special_tokens, special_first)
-        vocab.vocab()
+        vocab._c_vocab = dataset._build_vocab(columns, freq_range, top_k, special_tokens, special_first)
+        vocab._set_unk(special_tokens)
+        vocab._dict = vocab._c_vocab.vocab()
+
         return vocab
 
-    @classmethod
-    def from_prepare(cls, word_prepare, special_tokens=("<pad>", "<unk>"), special_first=True):
-        r"""
-        Args:
-            word_prepare (Union[list, dict]): Dict or list used to generate vocab.
-            special_tokens (Union[str, Tuple[str]]): List of special participles. Default: ("<pad>", "<unk>").
-            special_first (bool): Indicates whether special participles from special_tokens will be added to
-                the top of the dictionary. If True, add special_tokens to the beginning of the dictionary,
-                otherwise add them to the end. Default: True.
 
-        Returns:
-            - Vocab, Returns a vocab generated from the dict or list.
-
-        Raises:
-            TypeError: If 'word_prepare' is not a list or dict.
-
-        """
-        vocab = Vocab()
-        if isinstance(word_prepare, list):
-            if special_tokens is None:
-                special_tokens = []
-            vocab.c_vocab = cde.Vocab.from_list(word_prepare, special_tokens, special_first)
-            vocab.vocab()
-        elif isinstance(word_prepare, dict):
-            vocab.c_vocab = cde.Vocab.from_dict(word_prepare)
-            vocab.vocab()
-        else:
-            raise TypeError("Input vocab must be of type list or dict.")
-        return vocab
-
-    def vocab(self):
-        """
-        Get the vocabory table in dict type.
-
-        Returns:
-            - dict, A vocabulary consisting of word and id pairs.
-
-        Examples:
-            >>> import mindspore.dataset.text as text
-            >>> vocab = text.Vocab.from_list(["word_1", "word_2", "word_3", "word_4"])
-            >>> vocabory_dict = vocab.vocab()
-        """
-        check_vocab(self.c_vocab)
-        self._dict = self.c_vocab.vocab()
-        return self._dict
-
-    @check_tokens_to_ids
     def lookup_ids(self, tokens):
         """
         Converts a token string or a sequence of tokens in a single integer id or a sequence of ids.
@@ -143,7 +162,6 @@ class Vocab:
             >>> vocab = text.Vocab.from_list(["w1", "w2", "w3"], special_tokens=["<unk>"], special_first=True)
             >>> ids = vocab.lookup_ids(["w1", "w3"])
         """
-        check_vocab(self.c_vocab)
         if isinstance(tokens, list):
             for token in tokens:
                 if not token not in self._dict:
@@ -154,7 +172,6 @@ class Vocab:
             tokens = [tokens]
         return self.c_vocab.tokens_to_ids(tokens)
 
-    @check_ids_to_tokens
     def lookup_tokens(self, ids):
         """
         Converts a single index or a sequence of indices in a token or a sequence of tokens.
@@ -176,7 +193,6 @@ class Vocab:
             >>> vocab = text.Vocab.from_list(["w1", "w2", "w3"], special_tokens=["<unk>"], special_first=True)
             >>> token = vocab.lookup_tokens(0)
         """
-        check_vocab(self.c_vocab)
         if isinstance(ids, list):
             for idx in ids:
                 if idx not in range(0, len(self._dict)):
@@ -187,41 +203,10 @@ class Vocab:
             ids = [ids]
         return self.c_vocab.ids_to_tokens(ids)
 
-    def __len__(self) -> int:
-        r"""
-        Returns:
-            - int, The length of the vocab.
-        """
-        return len(self._dict)
-
-    def __contains__(self, token: str) -> bool:
-        r"""
-        Args:
-            token (str): The token for which to check the membership.
-
-        Returns:
-            - bool, Whether the token is member of vocab or not.
-        """
-        return token in self._dict
-
-    def __getitem__(self, token: str) -> int:
-        r"""
-        Args:
-            token (str): The token used to lookup the corresponding index.
-
-        Returns:
-            - int, The index corresponding to the associated token.
-        """
-
-        return self._dict[token]
-
     def append_token(self, token):
         r"""
         Args:
             token (str): The token used to lookup the corresponding index.
-
-        Returns:
-            - dict, Returns the latest vocab.
 
         Raises:
             RuntimeError: If `token` already exists in the vocab.
@@ -229,21 +214,19 @@ class Vocab:
         """
         if isinstance(token, str):
             if token in self._dict:
-                raise RuntimeError(f"{token} already exists in the vocab.")
-            append_id = len(self._dict)
-            self._dict[token] = append_id
+                warnings.warn(f"{token} already exists in the vocab.")
+            else:
+                append_id = len(self._dict)
+                self._dict[token] = append_id
+                self.c_vocab = cde.Vocab.from_dict(self._dict)
         else:
             raise TypeError(f"{token} is not a str type.")
-        return self._dict
 
     def insert_token(self, token, index):
         r"""
         Args:
             token (str): The token used to lookup the corresponding index.
             index (int): The index corresponding to the associated token.
-
-        Returns:
-            - dict, Returns the latest vocab.
 
         Raises:
             TypeError: If 'token' is not a str.
@@ -255,24 +238,17 @@ class Vocab:
             raise TypeError(f"token {token} is not str type.")
         if not isinstance(index, int):
             raise TypeError(f"index {index} is not int type.")
-        if token in self._dict:
-            raise RuntimeError(f"{token} already exists in the vocab.")
         if index not in range(0, len(self._dict)):
             raise RuntimeError(f"index {index} is out of range [0, {len(self._dict)}]")
-
-        new_dict = {token: index}
-
-        for key, value in self._dict.items():
-            if value < index:
-                new_dict[key] = value
-            if value >= index:
-                new_dict[key] = value + 1
-
-        self._dict = new_dict
+        if token in self._dict:
+            warnings.warn(f"{token} already exists in the vocab.")
+        else:
+            self._dict.update({token: index})
+            self.c_vocab = cde.Vocab.from_dict(self._dict)
 
     @classmethod
-    def build_from_url(cls, name="glove.6B.50d", root=DEFAULT_ROOT,
-                       special_tokens=("<pad>", "<unk>"), special_first=True):
+    def from_pretrained(cls, name="glove.6B.50d", root=DEFAULT_ROOT,
+                        special_tokens=("<pad>", "<unk>"), special_first=True):
         r"""
         Args:
             name (str): The name of the pretrained vector. Default: "glove.6B.50d".
@@ -281,6 +257,7 @@ class Vocab:
             special_first (bool): Indicates whether special participles from special_tokens will be added to
                 the top of the dictionary. If True, add special_tokens to the beginning of the dictionary,
                 otherwise add them to the end. Default: True.
+
         Returns:
             - Vocab, Returns a vocab generated from the url download.
         """
@@ -296,10 +273,30 @@ class Vocab:
             for line in file:
                 tokens.append(line.rstrip("\n"))
 
-        vocab = cls.from_prepare(tokens, list(special_tokens), special_first)
+        vocab = Vocab(tokens, list(special_tokens), special_first)
 
         return vocab
 
+    def get_default_index(self):
+        r"""
+        Returns:
+            Value of default index if it is set.
+        """
+        if self._unk_token is None:
+            raise ValueError("Can not find '<unk>' in vocab.")
+        return self._dict.get(self._unk_token)
+
+    def set_default_index(self, index=None):
+        r"""
+        Args:
+            index: Value of default index. This index will be returned when OOV token is queried.
+        """
+        if self._unk_token is not None:
+            warnings.warn("default index has been set, the new setting will be automatically ignored.")
+        else:
+            self._unk_token = '<unk>'
+            self._dict['<unk>'] = index if index is not None else len(self._dict)
+            self.c_vocab = cde.Vocab.from_dict(self._dict)
 
 pretrained_aliases = {
     "glove.6B.50d": "https://huggingface.co/datasets/Aore/MindNLP_vocab/resolve/main/glove.6B.50d.vocab.txt",
