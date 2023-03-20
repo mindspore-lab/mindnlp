@@ -12,8 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""
-LUKE Model init
-"""
-from mindnlp.models.luke.luke_config import *
-from mindnlp.models.luke.luke import *
+"""Test LUKE"""
+import unittest
+
+import mindspore
+import numpy as np
+from mindspore import Tensor
+
+from mindnlp.models.luke import LukeConfig, LukeEmbeddings
+
+
+class TestModelingLUKE(unittest.TestCase):
+    r"""
+    Test LUKE
+    """
+
+    def setUp(self):
+        """
+        Set up.
+        """
+        self.input = None
+
+    def test_luke_embeddings(self):
+        r"""
+        Test LukeEmbeddings
+        """
+        config = LukeConfig()
+        model = LukeEmbeddings(config)
+        input_ids = Tensor(np.random.randn(1, 512), mindspore.int32)
+        outputs = model(input_ids)
+        assert outputs.shape == (1, 512, 768)
