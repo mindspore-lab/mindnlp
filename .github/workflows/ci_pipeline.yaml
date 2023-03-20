@@ -41,10 +41,8 @@ jobs:
       env:
         OS: ubuntu-latest
         PYTHON: 3.7
-        MS_USERNAME: ${{ secrets.MS_USERNAME }}
-        MS_PASSWD: ${{ secrets.MS_PASSWD }}
       run: |
-        python .github/gen_mindspore_url.py
+        python .github/install_mindspore.py
         pip install -r download.txt
     - name: Analysing the mindnlp code with pylint
       run: |
@@ -75,10 +73,8 @@ jobs:
       env:
         OS: ${{ matrix.os }}
         PYTHON: ${{ matrix.python }}
-        MS_USERNAME: ${{ secrets.MS_USERNAME }}
-        MS_PASSWD: ${{ secrets.MS_PASSWD }}
       run: |
-        python .github/gen_mindspore_url.py
+        python .github/install_mindspore.py
         pip install -r download.txt
     - name: Test with pytest
       run: |
@@ -106,10 +102,8 @@ jobs:
       env:
         OS: ${{ matrix.os }}
         PYTHON: ${{ matrix.python }}
-        MS_USERNAME: ${{ secrets.MS_USERNAME }}
-        MS_PASSWD: ${{ secrets.MS_PASSWD }}
       run: |
-        python .github/gen_mindspore_url.py
+        python .github/install_mindspore.py
         pip install -r download.txt
     - name: Test ST with pytest
       run: |

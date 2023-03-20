@@ -19,12 +19,7 @@
 import numpy as np
 import mindspore
 from mindspore import nn, ops, Tensor
-from mindnlp.utils import less_min_pynative_first
-if less_min_pynative_first:
-    from mindnlp._legacy.functional import softmax, kl_div
-else:
-    from mindspore.ops import softmax, kl_div
-
+from mindnlp._legacy.functional import softmax, kl_div, masked_select
 
 def _inner_log_softmax(inputs, axis):
     """inner implementation of log_softmax, since the LogSoftmaxGrad op do not support inputs > 2d"""
@@ -97,8 +92,8 @@ class RDropLoss(nn.Cell):
 
         # pad_mask is for seq-level tasks
         if pad_mask is not None:
-            p_loss = ops.masked_select(p_loss, pad_mask)
-            q_loss = ops.masked_select(q_loss, pad_mask)
+            p_loss = masked_select(p_loss, pad_mask)
+            q_loss = masked_select(q_loss, pad_mask)
 
         # You can choose whether to use function "sum" and "mean" depending on your task
         p_loss = p_loss.sum()

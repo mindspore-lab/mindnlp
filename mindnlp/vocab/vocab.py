@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint:disable=I1101
+# pylint:disable=I1101
+
 """Vocab Class"""
 
 import os
@@ -29,7 +32,7 @@ class Vocab:
     Creates a vocab object which maps tokens to indices.
     """
 
-    def __init__(self, list_or_dict:Union[list, OrderedDict, None],
+    def __init__(self, list_or_dict: Union[list, OrderedDict, None] = None,
                  special_tokens: Union[list, tuple] = ("<pad>", "<unk>"),
                  special_first: bool = True):
 
@@ -92,7 +95,7 @@ class Vocab:
         Returns:
             - int, The index corresponding to the associated token.
         """
-    
+
         return self._dict.get(token, None)
 
     @classmethod
@@ -218,7 +221,7 @@ class Vocab:
             else:
                 append_id = len(self._dict)
                 self._dict[token] = append_id
-                self.c_vocab = cde.Vocab.from_dict(self._dict)
+                self._c_vocab = cde.Vocab.from_dict(self._dict)
         else:
             raise TypeError(f"{token} is not a str type.")
 
@@ -244,7 +247,7 @@ class Vocab:
             warnings.warn(f"{token} already exists in the vocab.")
         else:
             self._dict.update({token: index})
-            self.c_vocab = cde.Vocab.from_dict(self._dict)
+            self._c_vocab = cde.Vocab.from_dict(self._dict)
 
     @classmethod
     def from_pretrained(cls, name="glove.6B.50d", root=DEFAULT_ROOT,
@@ -261,6 +264,7 @@ class Vocab:
         Returns:
             - Vocab, Returns a vocab generated from the url download.
         """
+
         tokens = []
         url = pretrained_aliases[name]
 
@@ -296,7 +300,7 @@ class Vocab:
         else:
             self._unk_token = '<unk>'
             self._dict['<unk>'] = index if index is not None else len(self._dict)
-            self.c_vocab = cde.Vocab.from_dict(self._dict)
+            self._c_vocab = cde.Vocab.from_dict(self._dict)
 
 pretrained_aliases = {
     "glove.6B.50d": "https://huggingface.co/datasets/Aore/MindNLP_vocab/resolve/main/glove.6B.50d.vocab.txt",
