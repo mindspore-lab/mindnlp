@@ -37,8 +37,14 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements/dev_requirements.txt
     - name: Install MindSpore
+      shell: bash
+      env:
+        OS: ubuntu-latest
+        PYTHON: 3.7
+        MS_USERNAME: ${{ secrets.MS_USERNAME }}
+        MS_PASSWD: ${{ secrets.MS_PASSWD }}
       run: |
-        python .github/gen_mindspore_url.py --os={{ matrix.os }} --python={{ matrix.python }} --username={{ secrets.MS_USERNAME }} --passwd={{ secrets.MS_PASSWD }}
+        python .github/gen_mindspore_url.py
         pip install -r download.txt
     - name: Analysing the mindnlp code with pylint
       run: |
@@ -65,8 +71,14 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements/dev_requirements.txt
     - name: Install MindSpore
+      shell: bash
+      env:
+        OS: ${{ matrix.os }}
+        PYTHON: ${{ matrix.python }}
+        MS_USERNAME: ${{ secrets.MS_USERNAME }}
+        MS_PASSWD: ${{ secrets.MS_PASSWD }}
       run: |
-        python .github/gen_mindspore_url.py --os={{ matrix.os }} --python={{ matrix.python }} --username={{ secrets.MS_USERNAME }} --passwd={{ secrets.MS_PASSWD }}
+        python .github/gen_mindspore_url.py
         pip install -r download.txt
     - name: Test with pytest
       run: |
@@ -90,8 +102,14 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements/dev_requirements.txt
     - name: Install MindSpore
+      shell: bash
+      env:
+        OS: ${{ matrix.os }}
+        PYTHON: ${{ matrix.python }}
+        MS_USERNAME: ${{ secrets.MS_USERNAME }}
+        MS_PASSWD: ${{ secrets.MS_PASSWD }}
       run: |
-        python .github/gen_mindspore_url.py --os={{ matrix.os }} --python={{ matrix.python }} --username={{ secrets.MS_USERNAME }} --passwd={{ secrets.MS_PASSWD }}
+        python .github/gen_mindspore_url.py
         pip install -r download.txt
     - name: Test ST with pytest
       run: |
