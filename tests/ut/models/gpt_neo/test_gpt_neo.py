@@ -39,7 +39,33 @@ class TestModelingGPTNeo(unittest.TestCase):
 
         hidden_states = Tensor(np.random.randint(0, 10, (2, 512, 2048)), mindspore.float32)
 
-        attn_output = model.forward(hidden_states = hidden_states)[0]
+        attn_output = model(hidden_states = hidden_states)[0]
 
         assert attn_output.shape == (2, 512, 2048)
-        
+
+    def test_gptneo_attention(self):
+        """
+        Test GPTNeo Attention.
+        """
+        config = gpt_neo_config.GPTNeoConfig()
+        model = gpt_neo.GPTNeoAttention(config=config)
+
+        hidden_states = Tensor(np.random.randint(0, 10, (2, 512, 2048)), mindspore.float32)
+
+        attn_output = model(hidden_states=hidden_states)[0]
+
+        assert attn_output.shape == (2, 512, 2048)
+
+    def test_gptneo_mlp(self):
+        """
+        Test GPTNeo MLP.
+        """
+        intermediate_size = 3072
+        config = gpt_neo_config.GPTNeoConfig()
+        model = gpt_neo.GPTNeoMLP(intermediate_size=intermediate_size,config=config)
+
+        hidden_states = Tensor(np.random.randint(0, 10, (2, 512, 2048)), mindspore.float32)
+
+        attn_output = model(hidden_states=hidden_states)
+
+        assert attn_output.shape == (2, 512, 2048)

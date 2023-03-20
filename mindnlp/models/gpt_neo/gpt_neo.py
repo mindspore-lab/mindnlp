@@ -19,6 +19,7 @@ import numpy as np
 from mindspore import ops, nn, Parameter, Tensor, dtype_to_nptype
 from mindnlp.models.utils import logging
 from mindnlp._legacy.functional import tril
+from mindnlp.models.utils.activations import ACT2FN
 
 logger = logging.get_logger(__name__)
 
@@ -87,7 +88,6 @@ class GPTNeoSelfAttention(nn.Cell):
         causal_mask = self.bias[:, :, key_length - query_length : key_length, :key_length]
         mask_value = Tensor(np.finfo(dtype_to_nptype(attn_weights.dtype)).min)
         # Need to be a tensor, otherwise we get error: `RuntimeError: expected scalar type float but found double`.
-        # Need to be on the same device, otherwise `RuntimeError: ..., x and y to be on the same device`
         mask_value = Tensor(mask_value, dtype=attn_weights.dtype)
         attn_weights = ops.where(causal_mask, attn_weights, mask_value)
 
@@ -107,7 +107,7 @@ class GPTNeoSelfAttention(nn.Cell):
 
         return attn_output, attn_weights
 
-    def forward(
+    def construct(
         self,
         hidden_states,
         attention_mask=None,
@@ -116,9 +116,6 @@ class GPTNeoSelfAttention(nn.Cell):
         use_cache=False,
         output_attentions=False,
     ):
-        """
-        GPTNeo self attention forward.
-        """
         query = self.q_proj(hidden_states)
         key = self.k_proj(hidden_states)
         value = self.v_proj(hidden_states)
@@ -149,4 +146,58 @@ class GPTNeoSelfAttention(nn.Cell):
             outputs += (attn_weights,)
 
         return outputs  # a, present, (attentions)
-    
+
+class GPTNeoAttention(nn.Cell):
+    """
+    GPTNEO Attention.
+    """
+    def __init__(self, config, layer_id=0):
+        super().__init__()
+        self.layer_id = layer_id
+        self.attention_layers = config.attention_layers
+        self.attention_type = self.attention_layers[layer_id]
+
+        if self.attention_type in ["global", "local"]:
+            self.attention = GPTNeoSelfAttention(config,self.attention_type)
+        else:
+            raise NotImplementedError(
+                "Only attn layer types 'global' and 'local' exist, but got `config.attention_layers`: "
+                f"{config.attention_layers}. Select attn layer types from ['global', 'local'] only."
+            )
+
+    def construct(
+        self,
+        hidden_states,
+        layer_past=None,
+        attention_mask=None,
+        head_mask=None,
+        use_cache=False,
+        output_attentions=False,
+    ):
+        return self.attention(
+            hidden_states,
+            attention_mask=attention_mask,
+            layer_past=layer_past,
+            head_mask=head_mask,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+        )
+
+class GPTNeoMLP(nn.Cell):
+    """
+    GPTNeo MLP.
+    """
+    def __init__(self, intermediate_size, config):  # in MLP: intermediate_size= 4 * hidden_size
+        super().__init__()
+        embed_dim = config.hidden_size
+        self.c_fc = nn.Dense(embed_dim, intermediate_size)
+        self.c_proj = nn.Dense(intermediate_size, embed_dim)
+        self.act = ACT2FN[config.activation_function]
+        self.dropout = nn.Dropout(p = float(config.resid_dropout))
+
+    def construct(self, hidden_states):
+        hidden_states = self.c_fc(hidden_states)
+        hidden_states = self.act(hidden_states)
+        hidden_states = self.c_proj(hidden_states)
+        hidden_states = self.dropout(hidden_states)
+        return hidden_states
