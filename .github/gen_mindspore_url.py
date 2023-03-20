@@ -1,6 +1,7 @@
 import re
 import requests
 import argparse
+import os
 
 def gen_url(os, py_version, user, passwd):
     py_version = py_version.replace('.', '')
@@ -23,7 +24,7 @@ def gen_url(os, py_version, user, passwd):
 
     pattern = re.compile(r'<a href="mindspore-(.*?).whl"')
     matches = re.findall(pattern, html)
-
+    print(html)
     whl_name = ''
     for match in matches:
         if py_version in match:
@@ -36,10 +37,8 @@ def gen_url(os, py_version, user, passwd):
         f.write(url + whl_name)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--os', type=str)
-    parser.add_argument('--python', type=str)
-    parser.add_argument('--username', type=str)
-    parser.add_argument('--passwd', type=str)
-    args = parser.parse_args()
-    gen_url(args.os, args.python, args.username, args.passwd)
+    platform = os.environ['OS']
+    python = os.environ['PYTHON']
+    username = os.environ['MS_USERNAME']
+    passwd = os.environ['MS_PASSWD']
+    gen_url(platform, python, username, passwd)
