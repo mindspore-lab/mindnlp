@@ -27,7 +27,7 @@ if less_min_pynative_first:
 else:
     from mindspore.dataset.text import Truncate, AddToken
 
-from mindspore.dataset.text import Lookup
+from mindnlp.transforms.lookup import Lookup
 from mindnlp.transforms.tokenizers import BasicTokenizer
 from mindnlp.transforms.pad_transform import PadTransform
 

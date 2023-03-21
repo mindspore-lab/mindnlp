@@ -370,7 +370,7 @@ class TinyBertPreTrainingHeads(nn.Cell):
 
 
 class TinyBertPreTrainedModel(PretrainedModel):
-    """ 
+    """
     An abstract class to handle weights initialization.
     """
 

@@ -22,6 +22,9 @@ import mindspore._c_dataengine as cde
 from mindspore.dataset.text.transforms import TextTensorOperation
 from mindspore.dataset.core.datatypes import mstype_to_detype
 from mindspore.common import dtype as mstype
+from mindspore.dataset.text import Vocab as msVocab
+from mindnlp.vocab import Vocab as nlpVocab
+
 
 class Lookup(TextTensorOperation):
     """
@@ -29,6 +32,7 @@ class Lookup(TextTensorOperation):
 
     Args:
         vocab (Vocab): A vocabulary object.
+        unk_token (str): unknow token for OOV.
         return_dtype (mindspore.dtype, optional): The data type that lookup operation maps
             string to. Default: mindspore.int32.
 
@@ -46,12 +50,18 @@ class Lookup(TextTensorOperation):
         >>> text_file_dataset = text_file_dataset.map(operations=[lookup])
     """
 
-    def __init__(self, vocab, return_dtype=mstype.int32):
+    def __init__(self, vocab, unk_token, return_dtype=mstype.int32):
         super().__init__()
-        self._vocab = vocab
-        self._unk_token = vocab._unk_token
+        if isinstance(vocab, nlpVocab):
+            self._vocab = cde.Vocab.from_dict(vocab._token_dict)
+        elif isinstance(vocab, msVocab):
+            self._vocab = vocab.c_vocab
+        else:
+            raise ValueError(f'do not support vocab type {type(vocab)}.')
+
+        self._unk_token = unk_token
         self._return_dtype = return_dtype
 
     def parse(self):
-        return cde.LookupOperation(self._vocab._c_vocab, self._unk_token, str(mstype_to_detype(self._return_dtype)))
+        return cde.LookupOperation(self._vocab, self._unk_token, str(mstype_to_detype(self._return_dtype)))
     
