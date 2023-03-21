@@ -52,7 +52,8 @@ class Work(metaclass=abc.ABCMeta):
             self._work_path = self.kwargs["work_path"]
             self._custom_model = True
         else:
-            self._work_path = os.path.join(self._home_path, "workflow", self.work, self.model)
+            self._work_path = os.path.join(
+                self._home_path, "workflow", self.work, self.model)
 
         if not self.from_hf_hub:
             pass
@@ -101,15 +102,17 @@ class Work(metaclass=abc.ABCMeta):
         Check files required by the work.
         """
         for file_id, file_name in self.resource_files_names.items():
-            path = os.path.join(self._work_path, file_name)
-            url = self.resource_files_urls[file_id][0]
-            md5 = self.resource_files_urls[file_id][1]
+            path = os.path.join(self._work_path, file_id, file_name)
+            cache_dir = os.path.join(self._work_path, file_id)
+            url = self.resource_files_urls[self.model][file_id][0]
+            md5 = self.resource_files_urls[self.model][file_id][1]
 
             downloaded = True
             if not os.path.exists(path=path):
                 downloaded = False
             if not downloaded:
-                cache_file(filename=file_name, cache_dir=path, url=url, md5sum=md5)
+                cache_file(filename=file_name, cache_dir=cache_dir,
+                           url=url, md5sum=md5)
 
     def _check_predictor_type(self):
         """

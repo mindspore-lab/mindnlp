@@ -17,6 +17,7 @@
 Sentiment Analysis Work
 """
 
+# pylint:disable=invalid-name,line-too-long
 
 import os
 
@@ -46,16 +47,16 @@ class SentimentAnalysisWork(Work):
     """
 
     resource_files_names = {
-        "model_state": "model_state.ckpt", "vocab": "vocab.txt"}
+        "model_state": "mbert_for_senta_model_state.ckpt", "vocab": "vbert_for_senta_vocab.txt"}
     resource_files_urls = {
         "bert": {
             "vocab": [
-                "",
-                ""
+                "https://download.mindspore.cn/toolkits/mindnlp/workflow/sentiment_analysis/bert_for_senta_vocab.txt",
+                "3b5b76c4aef48ecf8cb3abaafe960f09"
             ],
             "model_state": [
-                "",
-                ""
+                "https://download.mindspore.cn/toolkits/mindnlp/workflow/sentiment_analysis/bert_for_senta_model_state.ckpt",
+                "7dba7b0371d2fcbb053e28c8bdfb1050"
             ],
         }
     }
@@ -63,6 +64,7 @@ class SentimentAnalysisWork(Work):
     def __init__(self, work, model, **kwargs):
         super().__init__(model, work, **kwargs)
         self._label_map = {0: "negative", 1: "neutral", 2: "positive"}
+        self ._check_work_files()
         self._construct_tokenizer(model)
         self._construct_model(model)
         self._usage = usage
@@ -79,7 +81,7 @@ class SentimentAnalysisWork(Work):
         model_instance = BertForSentimentAnalysis(config)
 
         model_path = os.path.join(
-            self._work_path, "model_state", "model_state.ckpt")
+            self._work_path, "model_state", "bert_for_senta_model_state.ckpt")
         state_dict = mindspore.load_checkpoint(model_path)
         mindspore.load_param_into_net(model_instance, state_dict)
 
@@ -90,7 +92,8 @@ class SentimentAnalysisWork(Work):
         """
         Construct the tokenizer.
         """
-        vocab_path = os.path.join(self._work_path, "vocab", "vocab.txt")
+        vocab_path = os.path.join(
+            self._work_path, "vocab", "bert_for_senta_vocab.txt")
         vocab = text.Vocab.from_file(vocab_path)
 
         vocab_size = len(vocab.vocab())
