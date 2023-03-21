@@ -325,7 +325,7 @@ class MultiHeadAttention(nn.Cell):
         """
         # Input is (bs, qlen, dim)
         # Mask is (bs, klen) (non-causal) or (bs, klen, klen)
-        bs, qlen, dim = input.shape
+        bs, qlen, _ = input.shape #bs,qlen,dim
         if kv is None:
             klen = qlen if cache is None else cache["slen"] + qlen
         else:
