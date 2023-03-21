@@ -58,9 +58,9 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertEmbeddings
         """
         model = MobileBertSelfAttention(MobileBertConfig())
-        query_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 128)), dtype=mindspore.float32)
-        key_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 128)), dtype=mindspore.float32)
-        value_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 512)), dtype=mindspore.float32)
+        query_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 128)), mindspore.float32)
+        key_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 128)), mindspore.float32)
+        value_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 512)), mindspore.float32)
 
         output = model(query_tensor, key_tensor, value_tensor)
         assert output[0].shape == (2, 8, 128)
@@ -70,7 +70,7 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertSelfOutput
         """
         model = MobileBertSelfOutput(MobileBertConfig())
-        hidden_states = Tensor(np.random.randint(0, 1000, (2, 128)), dtype=mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, 1000, (2, 128)), mindspore.float32)
         residual_tensor = Tensor(np.random.randint(0, 1000, (2, 128)))
 
         output = model(hidden_states, residual_tensor)
@@ -82,10 +82,10 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertAttention
         """
         model = MobileBertAttention(MobileBertConfig())
-        query_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 128)), dtype=mindspore.float32)
-        key_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 128)), dtype=mindspore.float32)
-        value_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 512)), dtype=mindspore.float32)
-        layer_input = Tensor(np.random.randint(0, 1000, (2, 8, 128)), dtype=mindspore.float32)
+        query_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 128)), mindspore.float32)
+        key_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 128)), mindspore.float32)
+        value_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 512)), mindspore.float32)
+        layer_input = Tensor(np.random.randint(0, 1000, (2, 8, 128)), mindspore.float32)
 
         output = model(query_tensor, key_tensor, value_tensor, layer_input)
         assert output[0].shape == (2, 8, 128)
@@ -95,7 +95,7 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertIntermediate
         """
         model = MobileBertIntermediate(MobileBertConfig())
-        hidden_states = Tensor(np.random.randint(0, 1000, (512, 128)), dtype=mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, 1000, (512, 128)), mindspore.float32)
 
         output = model(hidden_states)
         assert output.shape == (512, 512)
@@ -105,8 +105,8 @@ class TestMobileBert(unittest.TestCase):
         Test OutputBottleneck
         """
         model = OutputBottleneck(MobileBertConfig())
-        hidden_states = Tensor(np.random.randint(0, 1000, (512, 128)), dtype=mindspore.float32)
-        residual_tensor = Tensor(np.random.randint(0, 1000, (512, 512)), dtype=mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, 1000, (512, 128)), mindspore.float32)
+        residual_tensor = Tensor(np.random.randint(0, 1000, (512, 512)), mindspore.float32)
 
         output = model(hidden_states, residual_tensor)
         assert output.shape == (512, 512)
@@ -116,9 +116,9 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertOutput
         """
         model = MobileBertOutput(MobileBertConfig())
-        intermediate_states = Tensor(np.random.randint(0, 1000, (128, 512)), dtype=mindspore.float32)
-        residual_tensor_1 = Tensor(np.random.randint(0, 1000, (128, 128)), dtype=mindspore.float32)
-        residual_tensor_2 = Tensor(np.random.randint(0, 1000, (128, 512)), dtype=mindspore.float32)
+        intermediate_states = Tensor(np.random.randint(0, 1000, (128, 512)), mindspore.float32)
+        residual_tensor_1 = Tensor(np.random.randint(0, 1000, (128, 128)), mindspore.float32)
+        residual_tensor_2 = Tensor(np.random.randint(0, 1000, (128, 512)), mindspore.float32)
 
         output = model(intermediate_states, residual_tensor_1, residual_tensor_2)
         assert output.shape == (128, 512)
@@ -128,7 +128,7 @@ class TestMobileBert(unittest.TestCase):
         Test BottleneckLayer
         """
         model = BottleneckLayer(MobileBertConfig())
-        hidden_states = Tensor(np.random.randint(0, 1000, (128, 512)), dtype=mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, 1000, (128, 512)), mindspore.float32)
 
         output = model(hidden_states)
         assert output.shape == (128, 128)
@@ -138,7 +138,7 @@ class TestMobileBert(unittest.TestCase):
         Test Bottleneck
         """
         model = Bottleneck(MobileBertConfig())
-        hidden_states = Tensor(np.random.randint(0, 1000, (128, 512)), dtype=mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, 1000, (128, 512)), mindspore.float32)
 
         output = model(hidden_states)
         assert output[0].shape == (128, 128)
@@ -151,8 +151,8 @@ class TestMobileBert(unittest.TestCase):
         Test FFNOutput
         """
         model = FFNOutput(MobileBertConfig())
-        hidden_states = Tensor(np.random.randint(0, 1000, (128, 512)), dtype=mindspore.float32)
-        residual_tensor = Tensor(np.random.randint(0, 1000, (128, 128)), dtype=mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, 1000, (128, 512)), mindspore.float32)
+        residual_tensor = Tensor(np.random.randint(0, 1000, (128, 128)), mindspore.float32)
 
         output = model(hidden_states, residual_tensor)
         assert output.shape == (128, 128)
@@ -162,7 +162,7 @@ class TestMobileBert(unittest.TestCase):
         Test FFNLayer
         """
         model = FFNLayer(MobileBertConfig())
-        hidden_states = Tensor(np.random.randint(0, 1000, (512, 128)), dtype=mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, 1000, (512, 128)), mindspore.float32)
 
         output = model(hidden_states)
         assert output.shape == (512, 128)
@@ -172,7 +172,7 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertLayer
         """
         model = MobileBertLayer(MobileBertConfig())
-        hidden_states = Tensor(np.random.randint(0, 1000, (2, 128, 512)), dtype=mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, 1000, (2, 128, 512)), mindspore.float32)
 
         output = model(hidden_states)
         assert output[0].shape == (2, 128, 512)
@@ -188,8 +188,8 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertEncoder
         """
         model = MobileBertEncoder(MobileBertConfig())
-        hidden_states = Tensor(np.random.randint(0, 1000, (2, 128, 512)), dtype=mindspore.float32)
-        head_mask = Tensor(np.random.randint(0, 1000, (128, 128, 128)), dtype=mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, 1000, (2, 128, 512)), mindspore.float32)
+        head_mask = Tensor(np.random.randint(0, 1000, (128, 128, 128)), mindspore.float32)
 
         output = model(hidden_states, head_mask=head_mask)
         assert output[0].shape == (2, 128, 512)
@@ -199,7 +199,7 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertPooler
         """
         model = MobileBertPooler(MobileBertConfig())
-        hidden_states = Tensor(np.random.randint(0, 1000, (512, 128)), dtype=mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, 1000, (512, 128)), mindspore.float32)
 
         output = model(hidden_states)
         assert output.shape == (512,)
@@ -209,7 +209,7 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertPredictionHeadTransform
         """
         model = MobileBertPredictionHeadTransform(MobileBertConfig())
-        hidden_states = Tensor(np.random.randint(0, 1000, (256, 512)), dtype=mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, 1000, (256, 512)), mindspore.float32)
         output = model(hidden_states)
         assert output.shape == (256, 512)
 
@@ -218,7 +218,7 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertLMPredictionHead
         """
         model = MobileBertLMPredictionHead(MobileBertConfig())
-        hidden_states = Tensor(np.random.randint(0, 1000, (2, 256, 512)), dtype=mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, 1000, (2, 256, 512)), mindspore.float32)
 
         output = model(hidden_states)
         assert output.shape == (2, 256, 30522)
@@ -228,7 +228,7 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertModel
         """
         model = MobileBertModel(MobileBertConfig())
-        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), dtype=mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
         assert outputs[0].shape == (2, 8, 512)
@@ -242,7 +242,7 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertForPreTraining
         """
         model = MobileBertForPreTraining(MobileBertConfig())
-        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), dtype=mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
         assert outputs[0].shape == (2, 8, 30522)
@@ -256,7 +256,7 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertForMaskedLM
         """
         model = MobileBertForMaskedLM(MobileBertConfig())
-        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), dtype=mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
         assert outputs[0].shape == (2, 8, 30522)
@@ -268,7 +268,7 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertOnlyNSPHead
         """
         model = MobileBertOnlyNSPHead(MobileBertConfig())
-        pooled_output = Tensor(np.random.randint(0, 1000, (2, 512)), dtype=mindspore.float32)
+        pooled_output = Tensor(np.random.randint(0, 1000, (2, 512)), mindspore.float32)
 
         outputs = model(pooled_output)
         assert outputs.shape == (2, 2)
@@ -278,7 +278,7 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertForNextSentencePrediction
         """
         model = MobileBertForNextSentencePrediction(MobileBertConfig())
-        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), dtype=mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
         assert outputs[0].shape == (2, 2)
@@ -290,7 +290,7 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertForSequenceClassification
         """
         model = MobileBertForSequenceClassification(MobileBertConfig())
-        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), dtype=mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
         assert outputs[0].shape == (2, 2)
@@ -302,7 +302,7 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertForQuestionAnswering
         """
         model = MobileBertForQuestionAnswering(MobileBertConfig())
-        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), dtype=mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
         assert outputs[0].shape == (2, 8)
@@ -316,7 +316,7 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertForMultipleChoice
         """
         model = MobileBertForMultipleChoice(MobileBertConfig())
-        input_ids = Tensor(np.random.randint(0, 1000, (2, 8, 256)), dtype=mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, 1000, (2, 8, 256)), mindspore.int32)
 
         outputs = model(input_ids)
         assert outputs[0].shape == (2, 8)
@@ -328,7 +328,7 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertForTokenClassification
         """
         model = MobileBertForTokenClassification(MobileBertConfig())
-        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), dtype=mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
         assert outputs[0].shape == (2, 8, 2)
