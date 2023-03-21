@@ -13,14 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # pylint: disable=too-many-instance-attributes
-
+# pylint: disable=C0103
 """
 xlm module
 """
+import os
 import math
 import itertools
 import inspect
-from typing import List,Set,Tuple,Callable, Optional,Dict
+from typing import List,Set,Tuple,Callable, Optional,Dict,Union
 import mindspore
 import numpy as np
 from mindspore import ops,nn,Parameter
@@ -215,6 +216,29 @@ class XLMPreTrainedModel(PretrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
+    # TODO
+    def get_input_embeddings(self):
+        pass
+
+    #TODO
+    def get_position_embeddings(self):
+        pass
+
+    #TODO
+    def init_model_weights(self):
+        pass
+
+    #TODO
+    def resize_position_embeddings(self,new_num_position_embeddings: int):
+        pass
+
+    #TODO
+    def save(self,save_dir: Union[str, os.PathLike]):
+        pass
+
+    #TODO
+    def set_input_embeddings(self,value: "nn.Cell"):
+        pass
 
     config_class = XLMConfig
     load_tf_weights = None
