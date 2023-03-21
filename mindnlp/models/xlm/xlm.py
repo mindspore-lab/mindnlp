@@ -20,19 +20,21 @@ xlm module
 import math
 import itertools
 import inspect
-import numpy as np
-import mindspore
 from typing import List,Set,Tuple,Callable, Optional,Dict
+import mindspore
+import numpy as np
 from mindspore import ops,nn,Parameter
-from mindspore.common.initializer import Normal
+from mindspore.common.initializer import Normal, initializer
 from ...abc.backbones.pretrained import PretrainedModel
 from .xlm_config import XLMConfig
 
-"""
-create_sinusoidal_embeddings
-"""
+
 def create_sinusoidal_embeddings(n_pos, dim, out):
-    position_enc = np.array([[pos / np.power(10000, 2 * (j // 2) / dim) for j in range(dim)] for pos in range(n_pos)])
+    """
+    create_sinusoidal_embeddings
+    """
+    position_enc = np.array(
+        [[pos / np.power(10000, 2 * (j // 2) / dim) for j in range(dim)] for pos in range(n_pos)])
     out[:, 0::2] = mindspore.Tensor.float(np.sin(position_enc[:, 0::2]))
     out[:, 1::2] = mindspore.Tensor.float(np.cos(position_enc[:, 1::2]))
     out.detach_()
@@ -54,7 +56,8 @@ def find_pruneable_heads_and_indices(
         already_pruned_heads (`Set[int]`): A set of already pruned heads.
 
     Returns:
-        `Tuple[Set[int], mindspore.Tensor]`: A tuple with the remaining heads and their corresponding indices.
+        `Tuple[Set[int], mindspore.Tensor]`: A tuple with the remaining heads
+        and their corresponding indices.
     """
     mask = mindspore.ops.ones(n_heads, head_size)
     heads = set(heads) - already_pruned_heads  # Convert to set and remove already pruned heads
@@ -63,7 +66,7 @@ def find_pruneable_heads_and_indices(
         head = head - sum(1 if h < head else 0 for h in already_pruned_heads)
         mask[head] = 0
     mask = mask.view(-1).contiguous().eq(1)
-    index: mindspore.Tensor(dtype = mindspore.int64) = mindspore.numpy(len(mask))[mask].astype(mindspore.int64)
+    index: mindspore.Tensor(dtype = mindspore.int64) = mindspore.numpy.arange(len(mask))[mask].astype(mindspore.int64)
     return heads, index
 
 
@@ -116,7 +119,9 @@ def prune_linear_layer(layer: nn.Dense, index: mindspore.int64, dim: int = 0) ->
             b = layer.bias[index].clone().detach()
     new_size = list(layer.weight.size())
     new_size[dim] = len(index)
-    new_layer = nn.Dense(new_size[1], new_size[0], has_bias=layer.bias is not None).to(layer.weight.device)
+    new_layer = nn.Dense(new_size[1],
+                         new_size[0],
+                         has_bias=layer.bias is not None).to(layer.weight.device)
     new_layer.weight.requires_grad = False
     new_layer.weight.copy_(W.contiguous())
     new_layer.weight.requires_grad = True
@@ -130,11 +135,12 @@ def apply_chunking_to_forward(
     forward_fn: Callable[..., mindspore.Tensor], chunk_size: int, chunk_dim: int, *input_tensors
 ) -> mindspore.Tensor:
     """
-    This function chunks the `input_tensors` into smaller input tensor parts of size `chunk_size` over the dimension
+    This function chunks the `input_tensors` into smaller input tensor parts
+    of size `chunk_size` over the dimension
     `chunk_dim`. It then applies a layer `forward_fn` to each chunk independently to save memory.
 
-    If the `forward_fn` is independent across the `chunk_dim` this function will yield the same result as directly
-    applying `forward_fn` to `input_tensors`.
+    If the `forward_fn` is independent across the `chunk_dim` this function will yield
+    the same result as directly applying `forward_fn` to `input_tensors`.
 
     Args:
         forward_fn (`Callable[..., torch.Tensor]`):
@@ -147,7 +153,8 @@ def apply_chunking_to_forward(
             The input tensors of `forward_fn` which will be chunked
 
     Returns:
-        `torch.Tensor`: A tensor with the same shape as the `forward_fn` would have given if applied`.
+        `torch.Tensor`: A tensor with the same shape as the `forward_fn`
+         would have given if applied`.
 
 
     Examples:
@@ -161,12 +168,14 @@ def apply_chunking_to_forward(
 
     # implement a chunked forward function
     def forward(self, hidden_states):
-        return apply_chunking_to_forward(self.forward_chunk, self.chunk_size_lm_head, self.seq_len_dim, hidden_states)
+        return apply_chunking_to_forward(self.forward_chunk, self.chunk_size_lm_head
+        , self.seq_len_dim, hidden_states)
     ```"""
 
     assert len(input_tensors) > 0, f"{input_tensors} has to be a tuple/list of tensors"
 
-    # inspect.signature exist since python 3.5 and is a python method -> no problem with backward compatibility
+    # inspect.signature exist since python 3.5 and is a python method
+    # -> no problem with backward compatibility
     num_args_in_forward_chunk_fn = len(inspect.signature(forward_fn).parameters)
     if num_args_in_forward_chunk_fn != len(input_tensors):
         raise ValueError(
@@ -228,12 +237,12 @@ class XLMPreTrainedModel(PretrainedModel):
         """Initialize the weights."""
         if isinstance(module, nn.Embedding):
             if self.config is not None and self.config.embed_init_std is not None:
-                mindspore.common.initializer(Normal(sigma=self.config.embed_init_std, mean=0), shape=module.weight.shape, dtype=mindspore.float32)
+                initializer(Normal(sigma=self.config.embed_init_std, mean=0), shape=module.weight.shape, dtype=mindspore.float32)
             if module.padding_idx is not None:
                 module.weight.data[module.padding_idx].zero_()
         if isinstance(module, nn.Dense):
             if self.config is not None and self.config.init_std is not None:
-                mindspore.common.initializer(Normal(sigma=self.config.init_std, mean=0), shape=module.weight.shape, dtype=mindspore.float32)
+                initializer(Normal(sigma=self.config.init_std, mean=0), shape=module.weight.shape, dtype=mindspore.float32)
                 if module.bias is not None:
                     mindspore.common.initializer.Constant(0.0)(module.bias)
         if isinstance(module, nn.LayerNorm):
@@ -242,6 +251,9 @@ class XLMPreTrainedModel(PretrainedModel):
 
 
 class MultiHeadAttention(nn.Cell):
+    """
+    MultiHeadAttention
+    """
     NEW_ID = itertools.count()
 
     def __init__(self, n_heads, dim, config):
@@ -338,6 +350,9 @@ class MultiHeadAttention(nn.Cell):
 
 
 class XLMModel(XLMPreTrainedModel):
+    """
+    XLMMODEL
+    """
     _keys_to_ignore_on_load_missing = [r"position_ids"]
 
     def __init__(self, config):
@@ -593,6 +608,9 @@ class XLMModel(XLMPreTrainedModel):
         return tuple(v for v in [tensor, hidden_states, attentions] if v is not None)
 
 class TransformerFFN(nn.Cell):
+    """
+    TransformerFFN
+    """
     def __init__(self, in_dim, dim_hidden, out_dim, config):
         super().__init__()
         self.dropout = config.dropout
