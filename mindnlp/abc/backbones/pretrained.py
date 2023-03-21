@@ -92,6 +92,7 @@ class PretrainedModel(nn.Cell):
         self.init_model_weights()
         self._backward_compatibility_gradient_checkpointing()
         """
+        raise NotImplementedError
 
     def init_model_weights(self):
         """

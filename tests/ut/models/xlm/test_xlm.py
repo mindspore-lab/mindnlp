@@ -66,13 +66,12 @@ class TestXlm(unittest.TestCase):
         output = xlm_transformerffn(input_ids)
         assert output.shape==(2,2048)
 
-
     def  test_xlm_xlmmodel(self):
         """
         test xlm_TransformerFFN
         """
         xlmconfig = xlm_config.XLMConfig(n_words=22)
         xlm_xlmmodel = xlm.XLMModel(xlmconfig)
-        input_ids = mindspore.Tensor(np.random.randint(0, 1000, (1, 512)),mindspore.int32)
-        output = xlm_xlmmodel(input_ids)
+        input_ids1 = mindspore.Tensor(np.random.randint(0, 1000, (1, 512)),mindspore.int32)
+        output = xlm_xlmmodel(input_ids = input_ids1)
         assert output[0].shape==(1,512,2048)

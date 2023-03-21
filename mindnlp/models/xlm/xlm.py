@@ -30,7 +30,6 @@ from mindspore.common.initializer import Normal, initializer
 from ...abc.backbones.pretrained import PretrainedModel
 from .xlm_config import XLMConfig
 
-
 def create_sinusoidal_embeddings(n_pos, dim, out):
     """
     create_sinusoidal_embeddings
@@ -41,8 +40,6 @@ def create_sinusoidal_embeddings(n_pos, dim, out):
     out[:, 1::2] = mindspore.Tensor.float(np.cos(position_enc[:, 1::2]))
     out.detach_()
     out.requires_grad = False
-
-
 
 
 def find_pruneable_heads_and_indices(
@@ -72,8 +69,6 @@ def find_pruneable_heads_and_indices(
     return heads, index
 
 
-
-
 def get_masks(slen, lengths, causal, padding_mask=None):
     """
     Generate hidden states mask, and optionally an attention mask.
@@ -97,6 +92,7 @@ def get_masks(slen, lengths, causal, padding_mask=None):
     assert causal is False or attn_mask.shape == (bs, slen, slen)
 
     return mask, attn_mask
+
 
 def prune_linear_layer(layer: nn.Dense, index: mindspore.int64, dim: int = 0) -> nn.Dense:
     """
@@ -132,6 +128,7 @@ def prune_linear_layer(layer: nn.Dense, index: mindspore.int64, dim: int = 0) ->
         new_layer.bias.copy_(b.contiguous())
         new_layer.bias.requires_grad = True
     return new_layer
+
 
 def apply_chunking_to_forward(
     forward_fn: Callable[..., mindspore.Tensor], chunk_size: int, chunk_dim: int, *input_tensors
@@ -643,6 +640,7 @@ class XLMModel(XLMPreTrainedModel):
         # tensor = tensor.transpose(0, 1)
         return tuple(v for v in [tensor, hidden_states, attentions] if v is not None)
 
+
 class TransformerFFN(nn.Cell):
     """
     TransformerFFN
@@ -669,7 +667,6 @@ class TransformerFFN(nn.Cell):
         if self.training:
             x = ops.dropout(x, p=self.dropout)
         return x
-
 
 
 class XLMPredLayer(nn.Cell):
