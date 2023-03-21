@@ -48,7 +48,9 @@ class TestXlm(unittest.TestCase):
         test xlm_multiheadattention
         """
         xlmconfig = xlm_config.XLMConfig(n_words=22)
-        xlm_multiheadattention = xlm.MultiHeadAttention(n_heads=xlmconfig.n_heads,dim = xlmconfig.emb_dim,config=xlmconfig)
+        xlm_multiheadattention = xlm.MultiHeadAttention(n_heads=xlmconfig.n_heads,
+                                                        dim = xlmconfig.emb_dim,
+                                                        config=xlmconfig)
         input_ids = mindspore.Tensor(np.random.randint(0, 1000, (2, 3,2048)),mindspore.float32)
         mask = mindspore.Tensor(np.random.randint(0, 1000, (2, 3,1,1)),mindspore.float32)
         output = xlm_multiheadattention(input = input_ids,mask = mask)
