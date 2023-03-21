@@ -220,8 +220,7 @@ class XLMPreTrainedModel(PretrainedModel):
     load_tf_weights = None
     base_model_prefix = "transformer"
 
-    def __init__(self, *inputs, **kwargs):
-        super().__init__(*inputs, **kwargs)
+
 
     @property
     def dummy_inputs(self):
@@ -237,12 +236,16 @@ class XLMPreTrainedModel(PretrainedModel):
         """Initialize the weights."""
         if isinstance(module, nn.Embedding):
             if self.config is not None and self.config.embed_init_std is not None:
-                initializer(Normal(sigma=self.config.embed_init_std, mean=0), shape=module.weight.shape, dtype=mindspore.float32)
+                initializer(Normal(sigma=self.config.embed_init_std, mean=0),
+                            shape=module.weight.shape,
+                            dtype=mindspore.float32)
             if module.padding_idx is not None:
                 module.weight.data[module.padding_idx].zero_()
         if isinstance(module, nn.Dense):
             if self.config is not None and self.config.init_std is not None:
-                initializer(Normal(sigma=self.config.init_std, mean=0), shape=module.weight.shape, dtype=mindspore.float32)
+                initializer(Normal(sigma=self.config.init_std, mean=0),
+                                   shape=module.weight.shape,
+                                   dtype=mindspore.float32)
                 if module.bias is not None:
                     mindspore.common.initializer.Constant(0.0)(module.bias)
         if isinstance(module, nn.LayerNorm):
@@ -330,7 +333,8 @@ class MultiHeadAttention(nn.Cell):
 
         scores = mindspore.ops.matmul(q, k.transpose(0,1,3,2)) / math.sqrt(dim_per_head)  # (bs, n_heads, qlen, klen)
         mask = (mask == 0).view(mask_reshape).expand_as(scores)  # (bs, n_heads, qlen, klen)
-        scores.masked_fill(mask, mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min))  # (bs, n_heads, qlen, klen)
+        scores.masked_fill(mask,mindspore.Tensor(
+                           np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min))  # (bs, n_heads, qlen, klen)
 
         weights = ops.softmax(scores.float(), axis=-1).astype(scores.dtype)  # (bs, n_heads, qlen, klen)
         if self.training:
@@ -420,7 +424,8 @@ class XLMModel(XLMPreTrainedModel):
 
         # Initialize weights and apply final processing
         self.post_init()
-        self.position_ids = Parameter(ops.BroadcastTo(shape=(1,-1))(mindspore.ops.arange(config.max_position_embeddings)))
+        self.position_ids = Parameter(ops.BroadcastTo(shape=(1,-1))
+                                     (mindspore.ops.arange(config.max_position_embeddings)))
 
     def get_input_embeddings(self):
         return self.embeddings
