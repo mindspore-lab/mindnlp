@@ -15,15 +15,15 @@
 """ MindNLP GPT Neo model."""
 
 import os
+from typing import Union
 import mindspore
 import numpy as np
-from typing import Union
+from mindspore import ops, nn, Parameter, Tensor, dtype_to_nptype
+from mindspore.common.initializer import initializer, Normal
 from mindnlp.models.utils import logging
 from mindnlp.models.utils.activations import ACT2FN
 from mindnlp.models.gpt_neo.gpt_neo_config import GPTNeoConfig
 from mindnlp.abc.backbones.pretrained import PretrainedModel
-from mindspore import ops, nn, Parameter, Tensor, dtype_to_nptype
-from mindspore.common.initializer import initializer, Normal
 
 logger = logging.get_logger(__name__)
 
@@ -105,6 +105,7 @@ class GPTNeoSelfAttention(nn.Cell):
             attn_weights = attn_weights + attention_mask
 
         attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = attn_weights.astype(value.dtype)
         attn_weights = attn_weights.astype(value.dtype)
         attn_weights = self.attn_dropout(attn_weights)
 
@@ -285,9 +286,6 @@ class GPTNeoPreTrainedModel(PretrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["GPTNeoBlock"]
 
-    def __init__(self, *inputs, **kwargs):
-        super().__init__(*inputs, **kwargs)
-
     def init_model_weights(self, module):
         """Initialize the weights."""
         if isinstance(module, (nn.Dense,)):
@@ -313,29 +311,24 @@ class GPTNeoPreTrainedModel(PretrainedModel):
         """
         Returns the model's input embeddings.
         """
-        pass
 
     def set_input_embeddings(self, value: "nn.Cell"):
         """
         Set model's input embeddings.
         """
-        pass
 
     def resize_position_embeddings(self, new_num_position_embeddings: int):
         """
         resize the model position embeddings if necessary
         """
-        pass
 
     def get_position_embeddings(self):
         """
         get the model position embeddings if necessary
         """
-        pass
 
     def save(self, save_dir: Union[str, os.PathLike]):
         "save pretrain model"
-        pass
 
     def _set_gradient_checkpointing(self, module, value=False):
         if isinstance(module, GPTNeoModel):
@@ -343,4 +336,6 @@ class GPTNeoPreTrainedModel(PretrainedModel):
 
 
 class GPTNeoModel(GPTNeoPreTrainedModel):
-    pass
+    """
+    GPTNeo Model
+    """

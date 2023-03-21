@@ -32,6 +32,40 @@ MS_COMPATIBLE_VERSION = '1.10.1'
 cast_ = ops.Cast()
 scalar_to_tensor_ = ops.ScalarToTensor()
 
+
+def masked_select(inputs, mask):
+    """
+    Returns a new 1-D Tensor which indexes the `x` tensor according to the boolean `mask`.
+    The shapes of the `mask` tensor and the `x` tensor don't need to match, but they must be broadcastable.
+
+    Args:
+        input (Tensor): The shape of tensor is :math:`(x_1, x_2, ..., x_R)`.
+        mask (Tensor[bool]): The shape of tensor is :math:`(x_1, x_2, ..., x_R)`.
+
+    Returns:
+        A 1-D Tensor, with the same type as `input`.
+
+    Raises:
+        TypeError: If `input` or `mask` is not a Tensor.
+        TypeError: If dtype of `mask` is not bool.
+
+    Supported Platforms:
+        ``Ascend`` ``GPU`` ``CPU``
+
+    Examples:
+        >>> import numpy as np
+        >>> import mindspore.ops as ops
+        >>> from mindspore import Tensor
+        >>> x = Tensor(np.array([1, 2, 3, 4]), mindspore.int64)
+        >>> mask = Tensor(np.array([1, 0, 1, 0]), mindspore.bool_)
+        >>> output = ops.masked_select(x, mask)
+        >>> print(output)
+        [1 3]
+    """
+    masked_select_ = _get_cache_prim(ops.MaskedSelect)()
+    return masked_select_(inputs, mask)
+
+
 def kl_div(inputs, target, reduction='none', log_target=False):
     """KLDiv function."""
     if log_target:

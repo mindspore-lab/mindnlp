@@ -77,3 +77,18 @@ class TestModelingGPTNeo(unittest.TestCase):
         attn_output = model(hidden_states=hidden_states)
 
         assert attn_output.shape == (2, 512, 2048)
+
+    def test_gptneo_block(self):
+        """
+        Test GPTNeo Block.
+        """
+        config = gpt_neo_config.GPTNeoConfig()
+        model = gpt_neo.GPTNeoBlock(
+            layer_id=0, config=config)
+
+        hidden_states = Tensor(np.random.randint(
+            0, 10, (2, 512, 2048)), mindspore.float32)
+
+        attn_output = model(hidden_states=hidden_states)[0]
+
+        assert attn_output.shape == (2, 512, 2048)
