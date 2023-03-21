@@ -14,6 +14,7 @@
 # limitations under the License.
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=C0103
+# pylint: disable=W0622
 """
 xlm module
 """
@@ -235,9 +236,9 @@ class XLMPreTrainedModel(PretrainedModel):
     #TODO
     def save(self,save_dir: Union[str, os.PathLike]):
         pass
-
+    
     #TODO
-    def set_input_embeddings(self,value: "nn.Cell"):
+    def set_input_embeddings(self, value: "nn.Cell"):
         pass
 
     config_class = XLMConfig
@@ -460,8 +461,8 @@ class XLMModel(XLMPreTrainedModel):
     def get_input_embeddings(self):
         return self.embeddings
 
-    def set_input_embeddings(self, new_embeddings):
-        self.embeddings = new_embeddings
+    def set_input_embeddings(self, value: "nn.Cell"):
+        self.embeddings = value
 
     def _prune_heads(self, heads_to_prune):
         """
