@@ -20,7 +20,7 @@ from typing import Optional
 import mindspore
 
 from mindspore import nn, ops, Tensor
-from mindnlp.utils.activations import get_activation
+from mindnlp.models.utils.activations import get_activation
 
 try:
     from mindspore.nn import Identity

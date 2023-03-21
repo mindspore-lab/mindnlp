@@ -30,10 +30,35 @@ class ClassInstantier(OrderedDict):
 
 
 ACT2CLS = {
+    """
+    Excitation equation matrix
+    """
     'relu': nn.ReLU,
     'gelu': (nn.GELU, {"approximate=": False}),
     'gelu_new': nn.GELU,
     'gelu_approximate': (nn.GELU, {"approximate=": True}),
-    "swish": nn.SiLU,
+    "swish": nn.SiLU,  # MindSpore的SiLU激活函数是Swish函数
+    "gelu_10": nn.GELU,  # MindSpore的GELU激活函数不支持设置最大值和最小值
+    "gelu_fast": nn.FastGelu,
+    "gelu_python": nn.GELU,  # MindSpore的GELU激活函数不支持选择是否使用Python实现
+    "linear": nn.ReLU,  # MindSpore没有Linear激活函数，使用ReLU代替
+    "mish": nn.Mish,
+    "quick_gelu": nn.FastGelu,
+    "relu": nn.ReLU,
+    "relu6": nn.ReLU6,
+    "sigmoid": nn.Sigmoid,
+    "silu": nn.SiLU,
+    "tanh": nn.Tanh,
 }
 ACT2FN = ClassInstantier(ACT2CLS)
+
+
+def get_activation(activation_string):
+    """
+    Obtained parameters required for outputting self. activation in the SequenceSummary class
+    :param activation_string:
+    :return:
+    """
+    if activation_string in ACT2FN:
+        return ACT2FN[activation_string]
+    raise KeyError(f"function {activation_string} not found in ACT2FN mapping {list(ACT2FN.keys())}")

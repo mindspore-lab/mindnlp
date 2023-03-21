@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint:disable=I1101
+# pylint:disable=W0212
 
 """
 lookup transforms
@@ -52,3 +54,4 @@ class Lookup(TextTensorOperation):
 
     def parse(self):
         return cde.LookupOperation(self._vocab._c_vocab, self._unk_token, str(mstype_to_detype(self._return_dtype)))
+    
