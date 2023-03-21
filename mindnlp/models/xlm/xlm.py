@@ -248,6 +248,9 @@ class XLMPreTrainedModel(PretrainedModel):
 
     @property
     def dummy_inputs(self):
+        """
+        dummy_inputs
+        """
         inputs_list = mindspore.Tensor([[7, 6, 0, 0, 1], [1, 2, 3, 0, 0], [0, 0, 0, 4, 5]])
         attns_list = mindspore.Tensor([[1, 1, 0, 0, 1], [1, 1, 1, 0, 0], [1, 0, 0, 1, 1]])
         if self.config.use_lang_emb and self.config.n_langs > 1:
@@ -298,6 +301,9 @@ class MultiHeadAttention(nn.Cell):
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
+        """
+        prune_heads
+        """
         attention_head_size = self.dim // self.n_heads
         if len(heads) == 0:
             return
@@ -653,6 +659,9 @@ class TransformerFFN(nn.Cell):
         return apply_chunking_to_forward(self.ff_chunk, self.chunk_size_feed_forward, self.seq_len_dim, input)
 
     def ff_chunk(self, input):
+        """
+        ff_chunk
+        """
         x = self.lin1(input)
         x = self.act(x)
         x = self.lin2(x)
