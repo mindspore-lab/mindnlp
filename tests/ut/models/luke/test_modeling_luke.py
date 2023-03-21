@@ -12,35 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Word2vec_embedding"""
-
+"""Test LUKE"""
 import unittest
+
+import mindspore
+import numpy as np
 from mindspore import Tensor
-from mindspore.dataset.text import Vocab
-from mindnlp.modules.embeddings.word2vec_embedding import Word2vec
+
+from mindnlp.models.luke import LukeConfig, LukeEmbeddings
 
 
-class TestWord2vec(unittest.TestCase):
+class TestModelingLUKE(unittest.TestCase):
     r"""
-    Test module Word2vec
+    Test LUKE
     """
 
     def setUp(self):
+        """
+        Set up.
+        """
         self.input = None
 
-    def test_word2vec_embedding(self):
+    def test_luke_embeddings(self):
         r"""
-        Unit test for word2vec embedding.
+        Test LukeEmbeddings
         """
-        wordlist = [0, 2]
-        wordlist_input = Tensor(wordlist)
-
-        init_embed = Tensor([[0.1, 0.2, 0.3],
-                             [0.4, 0.5, 0.6],
-                             [0.7, 0.8, 0.9]])
-
-        init_vocab = Vocab.from_list(['i', 'am', 'human'])
-        embed = Word2vec(vocab=init_vocab, init_embed=init_embed)
-        w_res = embed(wordlist_input)
-
-        assert w_res.shape == (2, 3)
+        config = LukeConfig()
+        model = LukeEmbeddings(config)
+        input_ids = Tensor(np.random.randn(1, 512), mindspore.int32)
+        outputs = model(input_ids)
+        assert outputs.shape == (1, 512, 768)

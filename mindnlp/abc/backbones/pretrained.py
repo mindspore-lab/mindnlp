@@ -40,6 +40,7 @@ class PretrainedConfig:
             "tie_word_embeddings", True
         )  # Whether input and output word embeddings should be tied for all MLM, LM and Seq2Seq models.
         self.decoder_start_token_id = kwargs.pop("decoder_start_token_id", None)
+        self.return_dict = kwargs.pop("return_dict", False)
 
     @classmethod
     def from_json(cls, file_path):
@@ -64,6 +65,14 @@ class PretrainedConfig:
         config = cls.from_json(config_file)
 
         return config
+
+    @property
+    def use_return_dict(self) -> bool:
+        """
+        `bool`: Whether or not return [`~utils.ModelOutput`] instead of tuples.
+        """
+        # If torchscript is set, force `return_dict=False` to avoid jit errors
+        return self.return_dict
 
 class PretrainedModel(nn.Cell):
     """

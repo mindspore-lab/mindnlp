@@ -83,3 +83,18 @@ class BertConfig():
         else:
             raise ValueError("First argument must be either a vocabulary size (int)"
                              "or the path to a pretrained model config file (str)")
+
+    @classmethod
+    def from_dict(cls, json_object):
+        """Constructs a `BertConfig` from a Python dictionary of parameters."""
+        config = BertConfig(vocab_size_or_config_json_file=-1)
+        for key, value in json_object.items():
+            config.__dict__[key] = value
+        return config
+
+    @classmethod
+    def from_json_file(cls, json_file):
+        """Constructs a `BertConfig` from a json file of parameters."""
+        with open(json_file, "r", encoding='utf-8') as reader:
+            text = reader.read()
+        return cls.from_dict(json.loads(text))

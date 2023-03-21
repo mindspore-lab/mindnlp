@@ -22,7 +22,7 @@ from mindspore.common import dtype as mstype
 from mindspore.common.initializer import XavierUniform
 from mindspore.dataset.text.utils import Vocab
 from mindnlp.engine.trainer import Trainer
-from mindnlp.engine.metrics import Accuracy
+from mindnlp.metrics import Accuracy
 from mindnlp.modules.embeddings import Glove
 from mindnlp import load_dataset, process
 
@@ -65,7 +65,7 @@ class FasttextModel(nn.Cell):
         return classifier
 
 
-ag_news_train, ag_news_test = load('ag_news', shuffle=True)
+ag_news_train, ag_news_test = load_dataset('ag_news', shuffle=True)
 
 vocab_size = 1383812
 embedding_dims = 16
