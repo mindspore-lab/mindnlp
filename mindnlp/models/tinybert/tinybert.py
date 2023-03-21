@@ -435,7 +435,7 @@ class TinyBertPreTrainedModel(PretrainedModel):
 
     def save(self, save_dir: Union[str, os.PathLike]):
         "save pretrain model"
-    
+
     #TODO
     def post_init(self):
         pass
