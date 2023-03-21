@@ -25,8 +25,8 @@ def sequence_mask(seq_length, max_length, batch_first=False):
     range_vector = ops.arange(0, max_length, 1, dtype=seq_length.dtype)
     result = range_vector < seq_length.view(seq_length.shape + (1,))
     if batch_first:
-        return result.astype(mindspore.int64)
-    return result.astype(mindspore.int64).swapaxes(0, 1)
+        return result
+    return result.swapaxes(0, 1)
 
 class CRF(nn.Cell):
     """Conditional random field.

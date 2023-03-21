@@ -18,7 +18,6 @@ import mindspore
 import numpy as np
 from mindspore import ops, nn, Parameter, Tensor, dtype_to_nptype
 from mindnlp.models.utils import logging
-from mindnlp._legacy.functional import tril
 
 logger = logging.get_logger(__name__)
 
@@ -30,7 +29,7 @@ class GPTNeoSelfAttention(nn.Cell):
         super().__init__()
 
         max_positions = config.max_position_embeddings
-        bias = tril(ops.ones((max_positions,max_positions),dtype=mindspore.int32)).view(
+        bias = ops.tril(ops.ones((max_positions,max_positions),dtype=mindspore.bool_)).view(
             1, 1, max_positions, max_positions
         )
 
@@ -38,7 +37,7 @@ class GPTNeoSelfAttention(nn.Cell):
         # window_size tokens. This is implemented by updating the causal mask such that for each token
         # all other tokens are masked except the previous window_size tokens.
         if attention_type == "local":
-            bias = ops.bitwise_xor(bias,tril(bias,-config.window_size))
+            bias = ops.bitwise_xor(bias, ops.tril(bias,-config.window_size)).astype(mindspore.bool_)
 
         self.bias = Parameter(bias,requires_grad=False)
         self.masked_bias = Parameter(Tensor(-1e9),requires_grad=False)
@@ -96,7 +95,7 @@ class GPTNeoSelfAttention(nn.Cell):
             attn_weights = attn_weights + attention_mask
 
         attn_weights = ops.softmax(attn_weights, axis=-1)
-        attn_weights = attn_weights.to(value.dtype)
+        attn_weights = attn_weights.astype(value.dtype)
         attn_weights = self.attn_dropout(attn_weights)
 
         # Mask heads if we want to
@@ -107,7 +106,7 @@ class GPTNeoSelfAttention(nn.Cell):
 
         return attn_output, attn_weights
 
-    def forward(
+    def construct(
         self,
         hidden_states,
         attention_mask=None,

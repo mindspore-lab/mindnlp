@@ -20,6 +20,8 @@ import mindspore
 from mindspore import Tensor
 from mindnlp.models.gpt_neo import gpt_neo
 from mindnlp.models.gpt_neo import gpt_neo_config
+
+
 class TestModelingGPTNeo(unittest.TestCase):
     """
     Test GPTNeo
@@ -39,7 +41,7 @@ class TestModelingGPTNeo(unittest.TestCase):
 
         hidden_states = Tensor(np.random.randint(0, 10, (2, 512, 2048)), mindspore.float32)
 
-        attn_output = model.forward(hidden_states = hidden_states)[0]
+        attn_output = model(hidden_states = hidden_states)[0]
 
         assert attn_output.shape == (2, 512, 2048)
         
