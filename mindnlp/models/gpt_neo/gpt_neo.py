@@ -118,6 +118,7 @@ class GPTNeoSelfAttention(nn.Cell):
         return attn_output, attn_weights
 
     def construct(
+    def construct(
         self,
         hidden_states,
         attention_mask=None,
