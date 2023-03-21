@@ -21,6 +21,7 @@ from typing import Union, Optional
 from mindspore.train.serialization import load_checkpoint, load_param_into_net
 from mindspore import nn
 
+
 class PretrainedConfig:
     """
     Abstract class for Pretrained models config.
@@ -30,6 +31,16 @@ class PretrainedConfig:
         self.num_labels = kwargs.pop('num_labels', 2)
         self.output_attentions = kwargs.pop('output_attentions', False)
         self.output_hidden_states = kwargs.pop('output_hidden_states', False)
+        self.is_decoder = kwargs.pop("is_decoder", False)
+        self.pad_token_id = kwargs.pop("pad_token_id", None)
+        self.eos_token_id = kwargs.pop("eos_token_id", None)
+        self.is_encoder_decoder = kwargs.pop("is_encoder_decoder", False)
+        self.add_cross_attention = kwargs.pop("add_cross_attention", False)
+        self.tie_word_embeddings = kwargs.pop(
+            "tie_word_embeddings", True
+        )  # Whether input and output word embeddings should be tied for all MLM, LM and Seq2Seq models.
+        self.decoder_start_token_id = kwargs.pop("decoder_start_token_id", None)
+        self.return_dict = kwargs.pop("return_dict", False)
 
     @classmethod
     def from_json(cls, file_path):
@@ -54,6 +65,14 @@ class PretrainedConfig:
         config = cls.from_json(config_file)
 
         return config
+
+    @property
+    def use_return_dict(self) -> bool:
+        """
+        `bool`: Whether or not return [`~utils.ModelOutput`] instead of tuples.
+        """
+        # If torchscript is set, force `return_dict=False` to avoid jit errors
+        return self.return_dict
 
 class PretrainedModel(nn.Cell):
     """

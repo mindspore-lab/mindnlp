@@ -15,3 +15,5 @@
 """
 Directly load huggingface datasets
 """
+
+from .hf_imdb import HF_IMDB, HF_IMDB_Process
