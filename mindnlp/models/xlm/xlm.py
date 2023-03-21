@@ -236,7 +236,7 @@ class XLMPreTrainedModel(PretrainedModel):
     #TODO
     def save(self,save_dir: Union[str, os.PathLike]):
         pass
-    
+
     #TODO
     def set_input_embeddings(self, value: "nn.Cell"):
         pass
