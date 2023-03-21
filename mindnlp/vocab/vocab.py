@@ -268,6 +268,8 @@ class Vocab:
         tokens = []
         url = pretrained_aliases[name]
 
+        vocab = Vocab()
+
         cache_dir = os.path.join(root, "vocabs")
         download_file_name = re.sub(r".+/", "", url)
         path, _ = cache_file(filename=download_file_name, cache_dir=cache_dir, url=url)
@@ -277,7 +279,9 @@ class Vocab:
             for line in file:
                 tokens.append(line.rstrip("\n"))
 
-        vocab = Vocab(tokens, list(special_tokens), special_first)
+        vocab._c_vocab = cde.Vocab.from_list(tokens, list(special_tokens), special_first)
+        vocab._set_unk(special_tokens)
+        vocab._dict = vocab._c_vocab.vocab()
 
         return vocab
 
@@ -303,10 +307,10 @@ class Vocab:
             self._c_vocab = cde.Vocab.from_dict(self._dict)
 
 pretrained_aliases = {
-    "glove.6B.50d": "https://huggingface.co/datasets/Aore/MindNLP_vocab/resolve/main/glove.6B.50d.vocab.txt",
-    "glove.6B.100d": "https://huggingface.co/datasets/Aore/MindNLP_vocab/resolve/main/glove.6B.100d.vocab.txt",
-    "glove.6B.200d": "https://huggingface.co/datasets/Aore/MindNLP_vocab/resolve/main/glove.6B.200d.vocab.txt",
-    "glove.6B.300d": "https://huggingface.co/datasets/Aore/MindNLP_vocab/resolve/main/glove.6B.300d.vocab.txt",
-    "fasttext": "https://huggingface.co/datasets/Aore/MindNLP_vocab/resolve/main/wiki-news-300d-1M.txt",
-    "fasttext-subword": "https://huggingface.co/datasets/Aore/MindNLP_vocab/resolve/main/wiki-news-300d-1M-subword.txt",
+    "glove.6B.50d": "https://download.mindspore.cn/toolkits/mindnlp/vocab/Glove/glove.6B.50d.txt",
+    "glove.6B.100d": "https://download.mindspore.cn/toolkits/mindnlp/vocab/Glove/glove.6B.100d.txt",
+    "glove.6B.200d": "https://download.mindspore.cn/toolkits/mindnlp/vocab/Glove/glove.6B.200d.txt",
+    "glove.6B.300d": "https://download.mindspore.cn/toolkits/mindnlp/vocab/Glove/glove.6B.300d.txt",
+    "fasttext": "https://download.mindspore.cn/toolkits/mindnlp/vocab/Fasttext/wiki-news-300d-1M.txt",
+    "fasttext-subword": "https://download.mindspore.cn/toolkits/mindnlp/vocab/Fasttext/wiki-news-300d-1M-subword.txt",
 }
