@@ -16,11 +16,14 @@
 The meta classs of work in Workflow.
 """
 
+# pylint: disable=no-member
+
 import abc
 import os
 from abc import abstractmethod
 
 from mindnlp.configs import DEFAULT_ROOT
+from mindnlp.utils import cache_file
 
 
 class Work(metaclass=abc.ABCMeta):
@@ -36,18 +39,10 @@ class Work(metaclass=abc.ABCMeta):
 
     def __init__(self, model, work, **kwargs):
         self.model = model
-        self.is_graph_model = kwargs.get("is_graph_model", False)
         self.work = work
         self.kwargs = kwargs
         self._usage = ""
-        # The PyNative model instance
         self._model = None
-        # The Graph model instance
-        self._input_spec = None
-        self._config = None
-        self._init_class = None
-        self._custom_model = False
-        self._param_updated = False
         # The root directory for storing Workflow related files, default to ~/.mindnlp.
         self._home_path = self.kwargs["home_path"] if "home_path" in self.kwargs else DEFAULT_ROOT
         self._work_flag = self.kwargs["work_flag"] if "work_flag" in self.kwargs else self.model
@@ -58,8 +53,6 @@ class Work(metaclass=abc.ABCMeta):
             self._custom_model = True
         else:
             self._work_path = os.path.join(self._home_path, "workflow", self.work, self.model)
-        if self.is_graph_model:
-            self._graph_model_name = self._get_graph_model_name()
 
         if not self.from_hf_hub:
             pass
@@ -97,12 +90,6 @@ class Work(metaclass=abc.ABCMeta):
         this function will convert the model output to raw text.
         """
 
-    @abstractmethod
-    def _construct_input_spec(self):
-        """
-        Construct the input spec for the convert PyNative model to Graph model.
-        """
-
     def _get_graph_model_name(self):
         """
         Get the graph model name.
@@ -113,6 +100,16 @@ class Work(metaclass=abc.ABCMeta):
         """
         Check files required by the work.
         """
+        for file_id, file_name in self.resource_files_names.items():
+            path = os.path.join(self._work_path, file_name)
+            url = self.resource_files_urls[file_id][0]
+            md5 = self.resource_files_urls[file_id][1]
+
+            downloaded = True
+            if not os.path.exists(path=path):
+                downloaded = False
+            if not downloaded:
+                cache_file(filename=file_name, cache_dir=path, url=url, md5sum=md5)
 
     def _check_predictor_type(self):
         """

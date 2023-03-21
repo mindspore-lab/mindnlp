@@ -15,7 +15,6 @@
 """crf module"""
 
 import mindspore
-import mindspore.numpy as mnp
 from mindspore import nn, ops, Tensor
 from mindspore import Parameter
 from mindspore.common.initializer import initializer, Uniform
@@ -23,11 +22,11 @@ from mindnlp.utils import less_min_pynative_first
 
 def sequence_mask(seq_length, max_length, batch_first=False):
     """generate mask matrix by seq_length"""
-    range_vector = mnp.arange(0, max_length, 1, seq_length.dtype)
+    range_vector = ops.arange(0, max_length, 1, dtype=seq_length.dtype)
     result = range_vector < seq_length.view(seq_length.shape + (1,))
     if batch_first:
-        return result.astype(mindspore.int64)
-    return result.astype(mindspore.int64).swapaxes(0, 1)
+        return result
+    return result.swapaxes(0, 1)
 
 class CRF(nn.Cell):
     """Conditional random field.
@@ -95,7 +94,7 @@ class CRF(nn.Cell):
             max_length, batch_size = tags.shape
 
         if seq_length is None:
-            seq_length = mnp.full((batch_size,), max_length, mindspore.int64)
+            seq_length = ops.full((batch_size,), max_length, dtype=mindspore.int64)
 
         mask = sequence_mask(seq_length, max_length)
 
@@ -135,7 +134,7 @@ class CRF(nn.Cell):
             max_length, batch_size = emissions.shape[:2]
 
         if seq_length is None:
-            seq_length = mnp.full((batch_size,), max_length, mindspore.int64)
+            seq_length = ops.full((batch_size,), max_length, dtype=mindspore.int64)
 
         mask = sequence_mask(seq_length, max_length)
 
@@ -152,7 +151,7 @@ class CRF(nn.Cell):
         # Start transition score and first emission
         # shape: (batch_size,)
         score = self.start_transitions[tags[0]]
-        score += emissions[0, mnp.arange(batch_size), tags[0]]
+        score += emissions[0, ops.arange(batch_size), tags[0]]
 
         i = Tensor(1, mindspore.int32)
         while i < seq_length:
@@ -163,12 +162,12 @@ class CRF(nn.Cell):
 
             # Emission score for next tag, only added if next timestep is valid (mask == 1)
             # shape: (batch_size,)
-            score += emissions[i, mnp.arange(batch_size), tags[i]] * mask[i]
+            score += emissions[i, ops.arange(batch_size), tags[i]] * mask[i]
             i += 1
 
         # End transition score
         # shape: (batch_size,)
-        last_tags = tags[seq_ends, mnp.arange(batch_size)]
+        last_tags = tags[seq_ends, ops.arange(batch_size)]
         # shape: (batch_size,)
         score += self.end_transitions[last_tags]
 
@@ -208,11 +207,11 @@ class CRF(nn.Cell):
             # becomes a log-sum-exp: for each sample, entry i stores the sum of scores of
             # all possible tag sequences so far, that end in tag i
             # shape: (batch_size, num_tags)
-            next_score = mnp.log(mnp.sum(mnp.exp(next_score), axis=1))
+            next_score = ops.logsumexp(next_score, axis=1)
 
             # Set score to the next score if this timestep is valid (mask == 1)
             # shape: (batch_size, num_tags)
-            score = mnp.where(mask[i].expand_dims(1), next_score, score)
+            score = ops.where(mask[i].expand_dims(1), next_score, score)
             i += 1
 
         # End transition score
@@ -221,7 +220,7 @@ class CRF(nn.Cell):
 
         # Sum (log-sum-exp) over all possible tags
         # shape: (batch_size,)
-        return mnp.log(mnp.sum(mnp.exp(score), axis=1))
+        return ops.logsumexp(score, axis=1)
 
     def _viterbi_decode(self, emissions, mask):
         # emissions: (seq_length, batch_size, num_tags)
@@ -267,7 +266,7 @@ class CRF(nn.Cell):
             # Set score to the next score if this timestep is valid (mask == 1)
             # and save the index that produces the next score
             # shape: (batch_size, num_tags)
-            score = mnp.where(mask[i].expand_dims(1), next_score, score)
+            score = ops.where(mask[i].expand_dims(1), next_score, score)
             history[i - 1] = indices
             i += 1
 
@@ -306,4 +305,4 @@ class CRF(nn.Cell):
 
         return best_tags_list
 
-__all__ = ["CRF"]
+__all__ = ["CRF", "sequence_mask"]

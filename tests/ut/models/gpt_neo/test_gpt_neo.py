@@ -12,33 +12,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Glove_embedding"""
-
+"""Test GPTNeo"""
 import unittest
+import numpy as np
+import mindspore
+
 from mindspore import Tensor
-from mindnlp.modules.embeddings.glove_embedding import Glove
+from mindnlp.models.gpt_neo import gpt_neo
+from mindnlp.models.gpt_neo import gpt_neo_config
 
 
-class TestGlove(unittest.TestCase):
-    r"""
-    Test module Glove
+class TestModelingGPTNeo(unittest.TestCase):
     """
-
+    Test GPTNeo
+    """
     def setUp(self):
+        """
+        Set up.
+        """
         self.input = None
 
-    def test_glove_embedding(self):
-        r"""
-        Unit test for glove embedding.
+    def test_gptneo_self_attention(self):
         """
-        wordlist = [0, 2]
-        wordlist_input = Tensor(wordlist)
+        Test GPTNeo Self Attention.
+        """
+        config = gpt_neo_config.GPTNeoConfig()
+        model = gpt_neo.GPTNeoSelfAttention(config=config,attention_type=config.attention_types)
 
-        init_embed = Tensor([[0.1, 0.2, 0.3],
-                             [0.4, 0.5, 0.6],
-                             [0.7, 0.8, 0.9]])
+        hidden_states = Tensor(np.random.randint(0, 10, (2, 512, 2048)), mindspore.float32)
 
-        embed = Glove(init_embed=init_embed)
-        g_res = embed(wordlist_input)
+        attn_output = model(hidden_states = hidden_states)[0]
 
-        assert g_res.shape == (2, 3)
+        assert attn_output.shape == (2, 512, 2048)
+        

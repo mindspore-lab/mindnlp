@@ -18,23 +18,25 @@ The code of using engine is as follows:
 
 .. code:: python
 
+    import numpy as np
     import mindspore.dataset as ds
 
     from mindspore import nn
 
     from mindnlp.engine.trainer import Trainer
+    from mindnlp.engine.callbacks.timer_callback import TimerCallback
     from mindnlp.engine.callbacks.earlystop_callback import EarlyStopCallback
 
     class MyDataset:
-    """Dataset"""
-    def __init__(self):
-        self.data = np.random.randn(20, 3).astype(np.float32)
-        self.label = list(np.random.choice([0, 1]).astype(np.float32) for i in range(20))
-        self.length = list(np.random.choice([0, 1]).astype(np.float32) for i in range(20))
-    def __getitem__(self, index):
-        return self.data[index], self.label[index], self.length[index]
-    def __len__(self):
-        return len(self.data)
+        """Dataset"""
+        def __init__(self):
+            self.data = np.random.randn(20, 3).astype(np.float32)
+            self.label = list(np.random.choice([0, 1]).astype(np.float32) for i in range(20))
+            self.length = list(np.random.choice([0, 1]).astype(np.float32) for i in range(20))
+        def __getitem__(self, index):
+            return self.data[index], self.label[index], self.length[index]
+        def __len__(self):
+            return len(self.data)
 
     class MyModel(nn.Cell):
         """Model"""
@@ -48,9 +50,7 @@ The code of using engine is as follows:
     # Define Dataset
     dataset_generator = MyDataset()
     train_dataset = ds.GeneratorDataset(dataset_generator, ["data", "label", "length"], shuffle=False)
-    eval_dataset = ds.GeneratorDataset(dataset_generator, ["data", "label", "length"], shuffle=False)
     train_dataset = train_dataset.batch(4)
-    eval_dataset = eval_dataset.batch(4)
     # Define Model
     net = MyModel()
     net.update_parameters_name('net.')
@@ -61,10 +61,10 @@ The code of using engine is as follows:
     # Define Callback
     timer_callback = TimerCallback(print_steps=2)
     # Define Trainer
-    trainer = Trainer(network=net, train_dataset=train_dataset, eval_dataset=eval_dataset,
+    trainer = Trainer(network=net, train_dataset=train_dataset, eval_dataset=None,
                       epochs=6, optimizer=optimizer, loss_fn=loss_fn, callbacks=timer_callback)
     # Run Trainer
-    trainer.run(tgt_columns='label', jit=True)
+    trainer.run(tgt_columns='label')
 
 Callbacks in MindNLP
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -128,6 +128,6 @@ and the average loss value after each epoch.
             logging.info('Avg loss at epoch %d, %.6f', self.epoch, avg_loss)
 
     my_callback = MyCallBack()
-    trainer = Trainer(network=net, train_dataset=train_dataset, eval_dataset=eval_dataset,
+    trainer = Trainer(network=net, train_dataset=train_dataset, eval_dataset=None,
                       epochs=6, optimizer=optimizer, loss_fn=loss_fn, callbacks=my_callback)
-    trainer.run(tgt_columns='label', jit=True)
+    trainer.run(tgt_columns='label')
