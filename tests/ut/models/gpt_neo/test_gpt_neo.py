@@ -66,7 +66,7 @@ class TestModelingGPTNeo(unittest.TestCase):
         """
         Test GPTNeo MLP.
         """
-        intermediate_size = 3072
+        intermediate_size = 8192
         config = gpt_neo_config.GPTNeoConfig()
         model = gpt_neo.GPTNeoMLP(
             intermediate_size=intermediate_size, config=config)

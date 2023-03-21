@@ -1,17 +1,17 @@
-# coding=utf-8
-# Copyright 2021 The Eleuther AI and HuggingFace Inc. team. All rights reserved.
+# Copyright 2022 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ============================================================================
 """ MindNLP GPT Neo model."""
 
 import os
@@ -19,7 +19,6 @@ import mindspore
 import numpy as np
 from typing import Union
 from mindnlp.models.utils import logging
-from mindnlp._legacy.functional import tril
 from mindnlp.models.utils.activations import ACT2FN
 from mindnlp.models.gpt_neo.gpt_neo_config import GPTNeoConfig
 from mindnlp.abc.backbones.pretrained import PretrainedModel
@@ -38,7 +37,7 @@ class GPTNeoSelfAttention(nn.Cell):
         super().__init__()
 
         max_positions = config.max_position_embeddings
-        bias = tril(ops.ones((max_positions, max_positions), dtype=mindspore.bool_)).view(
+        bias = ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.bool_)).view(
             1, 1, max_positions, max_positions
         )
 
@@ -46,7 +45,7 @@ class GPTNeoSelfAttention(nn.Cell):
         # window_size tokens. This is implemented by updating the causal mask such that for each token
         # all other tokens are masked except the previous window_size tokens.
         if attention_type == "local":
-            bias = ops.bitwise_xor(bias, tril(
+            bias = ops.bitwise_xor(bias, ops.tril(
                 bias, -config.window_size)).astype(mindspore.bool_)
 
         self.bias = Parameter(bias, requires_grad=False)
@@ -117,7 +116,6 @@ class GPTNeoSelfAttention(nn.Cell):
 
         return attn_output, attn_weights
 
-    def construct(
     def construct(
         self,
         hidden_states,
