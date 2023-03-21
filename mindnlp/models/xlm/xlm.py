@@ -238,6 +238,10 @@ class XLMPreTrainedModel(PretrainedModel):
     def set_input_embeddings(self, value: "nn.Cell"):
         pass
 
+    #TODO
+    def post_init(self):
+        pass
+
     config_class = XLMConfig
     load_tf_weights = None
     base_model_prefix = "transformer"

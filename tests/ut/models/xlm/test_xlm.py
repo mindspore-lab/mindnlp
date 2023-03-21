@@ -66,6 +66,7 @@ class TestXlm(unittest.TestCase):
         output = xlm_transformerffn(input_ids)
         assert output.shape==(2,2048)
 
+
     def  test_xlm_xlmmodel(self):
         """
         test xlm_TransformerFFN
