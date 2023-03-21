@@ -117,7 +117,6 @@ setup(
     install_requires=[
         'tqdm',
         'requests',
-        'gensim',
         'datasets',
         'tokenizers'
     ],

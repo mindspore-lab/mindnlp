@@ -1,4 +1,4 @@
-# Copyright 2021 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,21 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""
-MindNLP library.
-"""
+"""Test Transform"""
 
-from mindnlp.dataset import load_dataset, process
-from mindnlp.utils import less_min_pynative_first
-from mindnlp.workflow.workflow import Workflow
-from mindnlp.vocab import Vocab
+from mindspore.dataset.text import Vocab as msVocab
+from mindnlp import Vocab
+from mindnlp.transforms import Lookup
 
-if less_min_pynative_first:
-    from mindspore import context
-    from mindspore import ms_function as ms_jit
-    context.set_context(mode=context.PYNATIVE_MODE)
-else:
-    from mindspore import jit as ms_jit
+def test_lookup():
+    """look up."""
+    vocab = Vocab(['a', 'b', 'c'], special_tokens=['<unk>'])
+    lookup = Lookup(vocab, '<unk>')
 
+    result = lookup('a')
+    assert result == 1
 
-__all__ = ['ms_jit', 'load_dataset', 'process', 'Workflow', 'Vocab']
+def test_lookup_with_mindspore_vocab():
+    """lookup with mindspore vocab"""
+    vocab = msVocab.from_list(['a', 'b', 'c'], special_tokens=['<unk>'])
+    lookup = Lookup(vocab, '<unk>')
+
+    result = lookup('a')
+    assert result == 1
