@@ -279,7 +279,7 @@ class GPTNeoBlock(nn.Cell):
         return outputs
 
 
-class GPTNeoPreTrainedModel(PretrainedModel,CellUtilMixin):
+class GPTNeoPreTrainedModel(PretrainedModel, CellUtilMixin):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
@@ -315,7 +315,6 @@ class GPTNeoPreTrainedModel(PretrainedModel,CellUtilMixin):
                                  module.bias.shape, module.bias.dtype)
             module.weight.data = ops.fill(
                 module.weight.data.dtype, module.weight.data.shape, 1.0)
-
 
     def post_init(self):
         """
@@ -574,3 +573,272 @@ class GPTNeoModel(GPTNeoPreTrainedModel):
         #     attentions=all_self_attentions,
         # )
         return tuple(v for v in [hidden_states, presents, all_hidden_states, all_self_attentions] if v is not None)
+
+
+class GPTNeoForCausalLM(GPTNeoPreTrainedModel):
+    """
+    GPTNeo For CausalLM.
+    """
+    _keys_to_ignore_on_load_missing = [
+        r"h\.\d+\.attn\.masked_bias",
+        r"lm_head.weight",
+        r"h\.\d+\.attn\.attention\.bias",
+    ]
+    _keys_to_ignore_on_save = [r"lm_head.weight"]
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.transformer = GPTNeoModel(config)
+        self.lm_head = nn.Dense(
+            config.hidden_size, config.vocab_size, has_bias=False)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def get_output_embeddings(self):
+        """
+        return the output embedding layers.
+        """
+        return self.lm_head
+
+    def set_output_embeddings(self, new_embeddings):
+        """
+        set the output embedding layers.
+        """
+        self.lm_head = new_embeddings
+
+    def prepare_inputs_for_generation(self, input_ids, past_key_values=None, **kwargs):
+        """
+        prepare inputs for generation.
+        """
+        token_type_ids = kwargs.get("token_type_ids", None)
+        # only last token for inputs_ids if past is defined in kwargs
+        if past_key_values:
+            input_ids = input_ids[:, -1].unsqueeze(-1)
+            if token_type_ids is not None:
+                token_type_ids = token_type_ids[:, -1].unsqueeze(-1)
+
+        attention_mask = kwargs.get("attention_mask", None)
+        position_ids = kwargs.get("position_ids", None)
+        if attention_mask is not None and position_ids is None:
+            # create position_ids on the fly for batch generation
+            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids.masked_fill_(attention_mask == 0, 1)
+            if past_key_values:
+                position_ids = position_ids[:, -1].unsqueeze(-1)
+        else:
+            position_ids = None
+        return {
+            "input_ids": input_ids,
+            "past_key_values": past_key_values,
+            "use_cache": kwargs.get("use_cache"),
+            "position_ids": position_ids,
+            "attention_mask": attention_mask,
+            "token_type_ids": token_type_ids,
+        }
+
+    def construct(
+        self,
+        input_ids: Optional[Tensor] = None,
+        past_key_values: Optional[Tuple[Tensor]] = None,
+        attention_mask: Optional[Tensor] = None,
+        token_type_ids: Optional[Tensor] = None,
+        position_ids: Optional[Tensor] = None,
+        head_mask: Optional[Tensor] = None,
+        inputs_embeds: Optional[Tensor] = None,
+        labels: Optional[Tensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Tuple[Tensor]:
+        # Modeling_outputs is missed, and Tuple is temporarily used instead.
+        # Original return type: Union[Tuple[Tensor], CausalLMOutputWithCrossAttentions].
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        transformer_outputs = self.transformer(
+            input_ids,
+            past_key_values=past_key_values,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        hidden_states = transformer_outputs[0]
+
+        lm_logits = self.lm_head(hidden_states)
+
+        loss = None
+        if labels is not None:
+            # Compute loss in fp32 to match with mesh-tf version
+            # https://github.com/EleutherAI/gpt-neo/blob/89ce74164da2fb16179106f54e2269b5da8db333/models/gpt2/gpt2.py#L179
+            lm_logits = lm_logits.astype(mindspore.float32)
+
+            # Shift so that tokens < n predict n
+            shift_logits = lm_logits[..., :-1, :]
+            shift_labels = labels[..., 1:]
+            # Flatten the tokens
+            loss_fct = nn.CrossEntropyLoss()
+            loss = loss_fct(
+                shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+
+            lm_logits = lm_logits.astype(hidden_states.dtype)
+            loss = loss.astype(hidden_states.dtype)
+
+        if not return_dict:
+            output = (lm_logits,) + transformer_outputs[1:]
+            return ((loss,) + output) if loss is not None else output
+        # Temporarily use tuples as output
+        # return CausalLMOutputWithPast(
+        #     loss=loss,
+        #     logits=lm_logits,
+        #     past_key_values=transformer_outputs.past_key_values,
+        #     hidden_states=transformer_outputs.hidden_states,
+        #     attentions=transformer_outputs.attentions,
+        # )
+        return ((loss,) + output) if loss is not None else output
+
+    @staticmethod
+    def _reorder_cache(
+        past_key_values: Tuple[Tuple[Tensor]], beam_idx: Tensor
+    ) -> Tuple[Tuple[Tensor]]:
+        """
+        This function is used to re-order the `past_key_values` cache if [`~PretrainedModel.beam_search`] or
+        [`~PretrainedModel.beam_sample`] is called. This is required to match `past_key_values` with the correct
+        beam_idx at every generation step.
+        """
+        return tuple(
+            tuple(past_state.index_select(0, beam_idx)
+                  for past_state in layer_past)
+            for layer_past in past_key_values
+        )
+
+
+class GPTNeoForSequenceClassification(GPTNeoPreTrainedModel):
+    """
+    GPTNeo For Sequence Classification.
+    """
+    _keys_to_ignore_on_load_missing = [
+        r"h\.\d+\.attn\.masked_bias", r"lm_head.weight"]
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+        self.transformer = GPTNeoModel(config)
+        self.score = nn.Dense(config.hidden_size,
+                              self.num_labels, has_bias=False)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def construct(
+        self,
+        input_ids: Optional[Tensor] = None,
+        past_key_values: Optional[Tuple[Tensor]] = None,
+        attention_mask: Optional[Tensor] = None,
+        token_type_ids: Optional[Tensor] = None,
+        position_ids: Optional[Tensor] = None,
+        head_mask: Optional[Tensor] = None,
+        inputs_embeds: Optional[Tensor] = None,
+        labels: Optional[Tensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Tuple[Tensor]:
+        # Modeling_outputs is missed, and Tuple is temporarily used instead.
+        # Original return type: Union[Tuple[Tensor], SequenceClassifierOutputWithPast].
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        transformer_outputs = self.transformer(
+            input_ids,
+            past_key_values=past_key_values,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        hidden_states = transformer_outputs[0]
+        logits = self.score(hidden_states)
+
+        if input_ids is not None:
+            batch_size, _ = input_ids.shape[:2]
+        else:
+            batch_size, _ = inputs_embeds.shape[:2]
+
+        if self.config.pad_token_id is None and batch_size != 1:
+            raise ValueError(
+                "Cannot handle batch sizes > 1 if no padding token is defined.")
+        if self.config.pad_token_id is None:
+            sequence_lengths = -1
+        else:
+            if input_ids is not None:
+                sequence_lengths = (
+                    ops.ne(input_ids, self.config.pad_token_id).sum(-1) - 1)
+            else:
+                sequence_lengths = -1
+                logger.warning(
+                    "%s will not detect padding tokens in `inputs_embeds`. Results may be "
+                    "unexpected if using padding tokens in conjunction with `inputs_embeds.`",
+                    self.__class__.__name__
+                )
+
+        pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
+
+        loss = None
+        if labels is not None:
+            if self.config.problem_type is None:
+                if self.num_labels == 1:
+                    self.config.problem_type = "regression"
+                elif self.num_labels > 1 and (labels.dtype in {mindspore.int64, mindspore.int32}):
+                    self.config.problem_type = "single_label_classification"
+                else:
+                    self.config.problem_type = "multi_label_classification"
+
+            if self.config.problem_type == "regression":
+                loss_fct = nn.MSELoss()
+                if self.num_labels == 1:
+                    loss = loss_fct(pooled_logits.squeeze(), labels.squeeze())
+                else:
+                    loss = loss_fct(pooled_logits, labels)
+            elif self.config.problem_type == "single_label_classification":
+                loss_fct = nn.CrossEntropyLoss()
+                loss = loss_fct(
+                    pooled_logits.view(-1, self.num_labels), labels.view(-1))
+            elif self.config.problem_type == "multi_label_classification":
+                loss_fct = nn.BCEWithLogitsLoss()
+                loss = loss_fct(pooled_logits, labels)
+        if not return_dict:
+            output = (pooled_logits,) + transformer_outputs[1:]
+            return ((loss,) + output) if loss is not None else output
+
+        # Temporarily use tuples as output
+        # return SequenceClassifierOutputWithPast(
+        #     loss=loss,
+        #     logits=pooled_logits,
+        #     past_key_values=transformer_outputs.past_key_values,
+        #     hidden_states=transformer_outputs.hidden_states,
+        #     attentions=transformer_outputs.attentions,
+        # )
+        return ((loss,) + output) if loss is not None else output

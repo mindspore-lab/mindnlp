@@ -75,9 +75,9 @@ class TestModelingGPTNeo(unittest.TestCase):
         hidden_states = Tensor(np.random.randint(
             0, 10, (1, 128, 128)), mindspore.float32)
 
-        attn_output = model(hidden_states=hidden_states)
+        outputs = model(hidden_states=hidden_states)
 
-        assert attn_output.shape == (1, 128, 128)
+        assert outputs.shape == (1, 128, 128)
 
     def test_gptneo_block(self):
         """
@@ -90,9 +90,9 @@ class TestModelingGPTNeo(unittest.TestCase):
         hidden_states = Tensor(np.random.randint(
             0, 10, (1, 128, 128)), mindspore.float32)
 
-        attn_output = model(hidden_states=hidden_states)[0]
+        outputs = model(hidden_states=hidden_states)[0]
 
-        assert attn_output.shape == (1, 128, 128)
+        assert outputs.shape == (1, 128, 128)
 
     def test_gptneo_model(self):
         """
@@ -104,9 +104,43 @@ class TestModelingGPTNeo(unittest.TestCase):
         input_ids = Tensor(np.random.randint(
             0, 10, (1, 128, 64)))
 
-        attn_output = model(input_ids)
+        outputs = model(input_ids)
 
-        assert attn_output[0].shape == (1, 128, 64, 64)
-        for i in range(len(attn_output[1])):
-            for j in range(len(attn_output[1][i])):
-                assert attn_output[1][i][j].shape == (128, 16, 64, 4)
+        assert outputs[0].shape == (1, 128, 64, 64)
+        for i in range(len(outputs[1])):
+            for j in range(len(outputs[1][i])):
+                assert outputs[1][i][j].shape == (128, 16, 64, 4)
+
+    def test_gptneo_for_causal_lm(self):
+        """
+        Test GPTNeo For CausalLM.
+        """
+        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=128)
+        model = gpt_neo.GPTNeoForCausalLM(config=config)
+
+        input_ids = Tensor(np.random.randint(
+            0, 10, (1, 128, 128)))
+
+        outputs = model(input_ids)
+
+        assert outputs[0].shape == (1, 128, 128, 100)
+        for i in range(len(outputs[1])):
+            for j in range(len(outputs[1][i])):
+                assert outputs[1][i][j].shape == (128, 16, 128, 8)
+
+    def test_gptneo_for_sequence_classification(self):
+        """
+        Test GPTNeo For Sequence Classification.
+        """
+        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=64)
+        model = gpt_neo.GPTNeoForSequenceClassification(config=config)
+
+        input_ids = Tensor(np.random.randint(
+            0, 10, (1, 128, 64)))
+
+        outputs = model(input_ids)
+
+        assert outputs[0].shape == (1, 64, 2)
+        for i in range(len(outputs[1])):
+            for j in range(len(outputs[1][i])):
+                assert outputs[1][i][j].shape == (128, 16, 64, 4)
