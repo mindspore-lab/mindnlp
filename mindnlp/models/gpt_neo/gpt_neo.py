@@ -24,6 +24,7 @@ import numpy as np
 from mindspore import ops, nn, Parameter, Tensor, dtype_to_nptype
 from mindspore.common.initializer import initializer, Normal
 from mindnlp.models.utils import logging
+from mindnlp.models.utils.mixin import CellUtilMixin
 from mindnlp.models.utils.activations import ACT2FN
 from mindnlp.models.gpt_neo.gpt_neo_config import GPTNeoConfig
 from mindnlp.abc.backbones.pretrained import PretrainedModel
@@ -278,7 +279,7 @@ class GPTNeoBlock(nn.Cell):
         return outputs
 
 
-class GPTNeoPreTrainedModel(PretrainedModel):
+class GPTNeoPreTrainedModel(PretrainedModel,CellUtilMixin):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
@@ -317,7 +318,12 @@ class GPTNeoPreTrainedModel(PretrainedModel):
 
 
     def post_init(self):
-        pass
+        """
+        A method executed at the end of each Transformer model initialization, to execute code that needs the model's
+        modules properly initialized (such as weight initialization).
+        """
+        self.init_weights()
+        self._backward_compatibility_gradient_checkpointing()
 
     def get_input_embeddings(self) -> "nn.Cell":
         """
@@ -345,46 +351,6 @@ class GPTNeoPreTrainedModel(PretrainedModel):
     def _set_gradient_checkpointing(self, module, value=False):
         if isinstance(module, GPTNeoModel):
             module.gradient_checkpointing = value
-
-    def get_head_mask(
-        self, head_mask: Optional[Tensor], num_hidden_layers: int, is_attention_chunked: bool = False
-    ) -> Tensor:
-        """
-        Prepare the head mask if needed.
-        """
-        if head_mask is not None:
-            head_mask = self._convert_head_mask_to_5d(
-                head_mask, num_hidden_layers)
-            if is_attention_chunked is True:
-                head_mask = head_mask.unsqueeze(-1)
-        else:
-            head_mask = [None] * num_hidden_layers
-
-        return head_mask
-
-    def _convert_head_mask_to_5d(self, head_mask, num_hidden_layers):
-        """-> [num_hidden_layers x batch x num_heads x seq_length x seq_length]"""
-        if head_mask.dim() == 1:
-            head_mask = head_mask.unsqueeze(0).unsqueeze(
-                0).unsqueeze(-1).unsqueeze(-1)
-            head_mask = ops.BroadcastTo(
-                shape=(num_hidden_layers, -1, -1, -1, -1))(head_mask)
-        elif head_mask.dim() == 2:
-            # We can specify head_mask for each layer
-            head_mask = head_mask.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
-        assert head_mask.dim(
-        ) == 5, f"head_mask.dim != 5, instead {head_mask.dim()}"
-        # switch to float if need + fp16 compatibility
-        head_mask = head_mask.astype(dtype=self.dtype)
-        return head_mask
-
-    def post_init(self):
-        """
-        A method executed at the end of each Transformer model initialization, to execute code that needs the model's
-        modules properly initialized (such as weight initialization).
-        """
-        self.init_weights()
-        self._backward_compatibility_gradient_checkpointing()
 
     # TODO
     def init_weights(self):
