@@ -98,18 +98,18 @@ class TestModelingGPTNeo(unittest.TestCase):
         """
         Test GPTNeo Model.
         """
-        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=64)
+        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=128)
         model = gpt_neo.GPTNeoModel(config=config)
 
         input_ids = Tensor(np.random.randint(
-            0, 10, (1, 128, 64)))
+            0, 10, (1, 128)))
 
         outputs = model(input_ids)
 
-        assert outputs[0].shape == (1, 128, 64, 64)
+        assert outputs[0].shape == (1, 128, 128)
         for i in range(len(outputs[1])):
             for j in range(len(outputs[1][i])):
-                assert outputs[1][i][j].shape == (128, 16, 64, 4)
+                assert outputs[1][i][j].shape == (1, 16, 128, 8)
 
     def test_gptneo_for_causal_lm(self):
         """
@@ -119,28 +119,28 @@ class TestModelingGPTNeo(unittest.TestCase):
         model = gpt_neo.GPTNeoForCausalLM(config=config)
 
         input_ids = Tensor(np.random.randint(
-            0, 10, (1, 128, 128)))
+            0, 10, (1, 128)))
 
         outputs = model(input_ids)
 
-        assert outputs[0].shape == (1, 128, 128, 100)
+        assert outputs[0].shape == (1, 128, 100)
         for i in range(len(outputs[1])):
             for j in range(len(outputs[1][i])):
-                assert outputs[1][i][j].shape == (128, 16, 128, 8)
+                assert outputs[1][i][j].shape == (1, 16, 128, 8)
 
     def test_gptneo_for_sequence_classification(self):
         """
         Test GPTNeo For Sequence Classification.
         """
-        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=64)
+        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=128)
         model = gpt_neo.GPTNeoForSequenceClassification(config=config)
 
         input_ids = Tensor(np.random.randint(
-            0, 10, (1, 128, 64)))
+            0, 10, (1, 128)))
 
         outputs = model(input_ids)
 
-        assert outputs[0].shape == (1, 64, 2)
+        assert outputs[0].shape == (1, 2)
         for i in range(len(outputs[1])):
             for j in range(len(outputs[1][i])):
-                assert outputs[1][i][j].shape == (128, 16, 64, 4)
+                assert outputs[1][i][j].shape == (1, 16, 128, 8)
