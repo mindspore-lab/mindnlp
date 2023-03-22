@@ -38,7 +38,7 @@ class Seq2vecModel(BaseModel):
         if dropout is None:
             self.dropout = None
         else:
-            self.dropout = nn.Dropout(1 - dropout)
+            self.dropout = nn.Dropout(p=dropout)
 
     def construct(self, src_tokens, mask=None):
         """

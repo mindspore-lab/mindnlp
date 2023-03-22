@@ -63,7 +63,7 @@ class Fasttext(TokenEmbedding):
         self._embed_dim = init_embed.shape[1]
         self._embed_size = init_embed.shape
         self.requires_grad = requires_grad
-        self.dropout_layer = nn.Dropout(1 - dropout)
+        self.dropout_layer = nn.Dropout(p=dropout)
         self.dropout_p = dropout
 
     @classmethod

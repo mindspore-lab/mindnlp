@@ -37,7 +37,7 @@ class LukeEmbeddings(nn.Cell):
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
         self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
         self.layer_norm = nn.LayerNorm([config.hidden_size, ], epsilon=config.layer_norm_eps)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         # End copy
         self.padding_idx = config.pad_token_id
