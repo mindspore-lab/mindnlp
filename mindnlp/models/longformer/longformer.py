@@ -91,7 +91,7 @@ class LongformerEmbeddings(nn.Cell):
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
         self.LayerNorm = nn.LayerNorm(normalized_shape=(config.hidden_size,), epsilon=config.layer_norm_eps)
-        self.dropout = nn.Dropout(keep_prob=1 - config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
 
