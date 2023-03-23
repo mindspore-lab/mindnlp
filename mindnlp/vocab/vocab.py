@@ -247,8 +247,6 @@ class Vocab:
         tokens = []
         url = pretrained_aliases[name]
 
-        vocab = Vocab()
-
         cache_dir = os.path.join(root, "vocabs")
         download_file_name = re.sub(r".+/", "", url)
         path, _ = cache_file(filename=download_file_name, cache_dir=cache_dir, url=url)
@@ -258,11 +256,10 @@ class Vocab:
             for line in file:
                 tokens.append(line.rstrip("\n"))
 
-        vocab._c_vocab = cde.Vocab.from_list(tokens, list(special_tokens), special_first)
-        vocab._set_unk(special_tokens)
-        vocab._dict = vocab._c_vocab.vocab()
+        vocab = Vocab(tokens, list(special_tokens), special_first)
 
         return vocab
+
 
 
 pretrained_aliases = {
