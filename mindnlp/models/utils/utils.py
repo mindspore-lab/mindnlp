@@ -13,13 +13,32 @@
 # limitations under the License.
 # ============================================================================
 """MindNLP MindSpore Utils"""
+# pylint: disable=C0412
+
+from typing import Optional
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindspore import nn, ops, Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp._legacy.functional import addmm
+from ..utils.activations import get_activation
 
+try:
+    from mindspore.nn import Identity
+except ImportError:
+    # Older MindSpore compatibility
+    class Identity(nn.Cell):
+        r"""A placeholder identity operator that is argument-insensitive."""
+
+        def __init__(self):
+            super().__init__()
+
+        def construct(self, hidden_states):
+            """
+            Return hidden value
+            """
+            return hidden_states
 
 class Conv1D(nn.Cell):
     """
@@ -97,3 +116,61 @@ def find_pruneable_heads_and_indices(heads, n_heads, head_size, already_pruned_h
     mask = mask.view(-1).eq(1)
     index = ops.arange(len(mask), dtype=mindspore.int64)[mask]
     return heads, index
+
+class SequenceSummary(nn.Cell):
+    """
+    GPT2DoubleHeadsModel class that self.multiple_choice_head
+    """
+
+    def __init__(self, config):
+        super().__init__()
+
+        self.summary_type = getattr(config, "summary_type", "last")
+        if self.summary_type == "attn":
+            raise NotImplementedError
+
+        self.summary = Identity()
+        if hasattr(config, "summary_use_proj") and config.summary_use_proj:
+            if hasattr(config, "summary_proj_to_labels") and config.summary_proj_to_labels and config.num_labels > 0:
+                num_classes = config.num_labels
+            else:
+                num_classes = config.hidden_size
+            self.summary = nn.Dense(config.hidden_size, num_classes)
+
+        activation_string = getattr(config, "summary_activation", None)
+        self.activation = get_activation(activation_string) if activation_string else Identity()
+
+        self.first_dropout = Identity()
+        if hasattr(config, "summary_first_dropout") and config.summary_first_dropout > 0:
+            self.first_dropout = nn.Dropout(config.summary_first_dropout)
+
+        self.last_dropout = Identity()
+        if hasattr(config, "summary_last_dropout") and config.summary_last_dropout > 0:
+            self.last_dropout = nn.Dropout(config.summary_last_dropout)
+
+    def construct(self, hidden_states: Tensor, cls_index: Optional[Tensor] = None) -> Tensor:
+        if self.summary_type == "last":
+            output = hidden_states[:, -1, :]
+        elif self.summary_type == "first":
+            output = hidden_states[:, 0, :]
+        elif self.summary_type == "mean":
+            output = hidden_states.mean(dim=1)
+        elif self.summary_type == "cls_index":
+            if cls_index is None:
+                cls_index = ops.fill(
+                    mindspore.int64,
+                    hidden_states[..., :1, :].shape,
+                    hidden_states.shape[-2] - 1,
+                )
+            else:
+                cls_index = cls_index.unsqueeze(-1).unsqueeze(-1)
+                cls_index = cls_index.expand((-1,) * (cls_index.ndim - 1) + (hidden_states.shape[-1],))
+            output = hidden_states.gather_elements(-2, cls_index).squeeze(-2)  # shape (bsz, XX, hidden_size)
+        elif self.summary_type == "attn":
+            raise NotImplementedError
+
+        output = self.first_dropout(output)
+        output = self.summary(output)
+        output = self.activation(output)
+        output = self.last_dropout(output)
+        return output
