@@ -41,7 +41,7 @@ class LukeEmbeddings(nn.Cell):
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
         self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
         self.layer_norm = nn.LayerNorm([config.hidden_size, ], epsilon=config.layer_norm_eps)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         # End copy
         self.padding_idx = config.pad_token_id
@@ -111,8 +111,9 @@ class LukeEntityEmbeddings(nn.Cell):
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
         self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
 
-        self.layer_norm = nn.LayerNorm([config.hidden_size, ], epsilon=config.layer_norm_eps)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        # self.layer_norm = nn.LayerNorm([config.hidden_size, ], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size, ], epsilon=config.layer_norm_eps)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(
             self, entity_ids, position_ids, token_type_ids=None
@@ -133,7 +134,7 @@ class LukeEntityEmbeddings(nn.Cell):
         token_type_embeddings = self.token_type_embeddings(token_type_ids)
 
         embeddings = entity_embeddings + position_embeddings + token_type_embeddings
-        embeddings = self.layer_norm(embeddings)
+        embeddings = self.LayerNorm(embeddings)
         embeddings = self.dropout(embeddings)
 
         return embeddings
@@ -166,7 +167,7 @@ class LukeSelfAttention(nn.Cell):
             self.e2w_query = nn.Dense(config.hidden_size, self.all_head_size)
             self.e2e_query = nn.Dense(config.hidden_size, self.all_head_size)
 
-        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x):
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
@@ -257,13 +258,18 @@ class LukeSelfAttention(nn.Cell):
 
 
 class LukeSelfOutput(nn.Cell):
+    """
+    LukeSelfOutput
+    """
+
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.layer_norm = nn.LayerNorm([config.hidden_size, ], epsilon=config.layer_norm_eps)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        # self.layer_norm = nn.LayerNorm([config.hidden_size, ], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size, ], epsilon=config.layer_norm_eps)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def forward(self, hidden_states: Tensor, input_tensor: Tensor) -> Tensor:
+    def construct(self, hidden_states: Tensor, input_tensor: Tensor) -> Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
@@ -271,6 +277,10 @@ class LukeSelfOutput(nn.Cell):
 
 
 class LukeAttention(nn.Cell):
+    """
+    LukeAttention
+    """
+
     def __init__(self, config):
         super().__init__()
         self.self = LukeSelfAttention(config)
@@ -280,7 +290,7 @@ class LukeAttention(nn.Cell):
     def prune_heads(self, heads):
         raise NotImplementedError("LUKE does not support the pruning of attention heads")
 
-    def forward(
+    def construct(
             self,
             word_hidden_states,
             entity_hidden_states,
@@ -325,4 +335,3 @@ def create_position_ids_from_input_ids(input_ids, padding_idx):
     mask = ops.not_equal(input_ids, padding_idx).astype(mindspore.int32)
     incremental_indices = ops.cumsum(mask, -1).astype(mindspore.int32) * mask
     return incremental_indices.astype(mindspore.int64) + padding_idx
-

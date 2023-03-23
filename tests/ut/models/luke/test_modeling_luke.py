@@ -51,7 +51,7 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.LukeEmbeddings(config)
-        entity_ids = Tensor(np.random.randn(1,), mindspore.int32)
+        entity_ids = Tensor(np.random.randn(1, ), mindspore.int32)
         position_ids = Tensor(np.random.randn(1, 512), mindspore.int32)
         outputs = model(entity_ids, position_ids)
         assert outputs.shape == (1, 512, 768)
@@ -62,8 +62,31 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.LukeSelfAttention(config)
-        word_hidden_states = Tensor(np.random.randn(1, 256, 768), mindspore.float32)
-        entity_hidden_states = Tensor(np.random.randn(1, 512, 768), mindspore.float32)
+        word_hidden_states = Tensor(np.random.randn(2, 768), mindspore.float32)
+        entity_hidden_states = Tensor(np.random.randn(2, 768), mindspore.float32)
         outputs = model(word_hidden_states, entity_hidden_states)
         assert outputs[0].shape == (1, 256, 768)
+        assert outputs[1].shape == (1, 512, 768)
+
+    def test_luke_self_output(self):
+        r"""
+        Test LukeSelfOutput
+        """
+        config = luke_config.LukeConfig()
+        model = luke.LukeSelfOutput(config)
+        hidden_states = Tensor(np.random.randn(2, 768), mindspore.float32)
+        input_tensor = Tensor(np.random.randn(2, 768), mindspore.float32)
+        outputs = model(hidden_states, input_tensor)
+        assert outputs.shape == (2, 768)
+
+    def test_luke_attention(self):
+        r"""
+        Test LukeAttention
+        """
+        config = luke_config.LukeConfig()
+        model = luke.LukeAttention(config)
+        word_hidden_states = Tensor(np.random.randn(1, 384, 768), mindspore.float32)
+        entity_hidden_states = Tensor(np.random.randn(1, 512, 768), mindspore.float32)
+        outputs = model(word_hidden_states, entity_hidden_states)
+        assert outputs[0].shape == (1, 384, 768)
         assert outputs[1].shape == (1, 512, 768)
