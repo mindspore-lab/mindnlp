@@ -1,6 +1,7 @@
 # coding=utf-8
 # Copyright 2019-present, Facebook, Inc and the HuggingFace Inc. team.
-#
+# Copyright 2023 Huawei Technologies Co., Ltd
+
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,13 +23,18 @@ import os
 import math
 import itertools
 import inspect
-from typing import List,Set,Tuple,Callable, Optional,Dict,Union
+from typing import List,Set,Tuple,Callable, Optional,Union
 import mindspore
 import numpy as np
 from mindspore import ops,nn,Parameter
 from mindspore.common.initializer import Normal, initializer
+from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from mindnlp.models.utils.modeling_utils import SequenceSummary,SQuADHead
 from ...abc.backbones.pretrained import PretrainedModel
 from .xlm_config import XLMConfig
+from ..utils import logging
+
+logger = logging.get_logger(__name__)
 
 def create_sinusoidal_embeddings(n_pos, dim, out):
     """
@@ -36,8 +42,8 @@ def create_sinusoidal_embeddings(n_pos, dim, out):
     """
     position_enc = np.array(
         [[pos / np.power(10000, 2 * (j // 2) / dim) for j in range(dim)] for pos in range(n_pos)])
-    out[:, 0::2] = mindspore.Tensor.float(np.sin(position_enc[:, 0::2]))
-    out[:, 1::2] = mindspore.Tensor.float(np.cos(position_enc[:, 1::2]))
+    out[:, 0::2] = mindspore.Tensor(np.sin(position_enc[:, 0::2]),dtype = mindspore.float32)
+    out[:, 1::2] = mindspore.Tensor(np.cos(position_enc[:, 1::2]),dtype = np.float32)
     out.detach_()
     out.requires_grad = False
 
@@ -115,7 +121,7 @@ def prune_linear_layer(layer: nn.Dense, index: mindspore.int64, dim: int = 0) ->
             b = layer.bias.clone().detach()
         else:
             b = layer.bias[index].clone().detach()
-    new_size = list(layer.weight.size())
+    new_size = list(layer.weight.shape)
     new_size[dim] = len(index)
     new_layer = nn.Dense(new_size[1],
                          new_size[0],
@@ -208,6 +214,136 @@ def apply_chunking_to_forward(
 
     return forward_fn(*input_tensors)
 
+class MultiHeadAttention(nn.Cell):
+    """
+    MultiHeadAttention
+    """
+    NEW_ID = itertools.count()
+
+    def __init__(self, n_heads, dim, config):
+        super().__init__()
+        self.layer_id = next(MultiHeadAttention.NEW_ID)
+        self.dim = dim
+        self.n_heads = n_heads
+        self.dropout = config.attention_dropout
+        assert self.dim % self.n_heads == 0
+
+        self.q_lin = nn.Dense(dim, dim)
+        self.k_lin = nn.Dense(dim, dim)
+        self.v_lin = nn.Dense(dim, dim)
+        self.out_lin = nn.Dense(dim, dim)
+        self.pruned_heads = set()
+
+    def prune_heads(self, heads):
+        """
+        prune_heads
+        """
+        attention_head_size = self.dim // self.n_heads
+        if len(heads) == 0:
+            return
+        heads, index = find_pruneable_heads_and_indices(heads, self.n_heads, attention_head_size, self.pruned_heads)
+        # Prune linear layers
+        self.q_lin = prune_linear_layer(self.q_lin, index)
+        self.k_lin = prune_linear_layer(self.k_lin, index)
+        self.v_lin = prune_linear_layer(self.v_lin, index)
+        self.out_lin = prune_linear_layer(self.out_lin, index, dim=1)
+        # Update hyper params
+        self.n_heads = self.n_heads - len(heads)
+        self.dim = attention_head_size * self.n_heads
+        self.pruned_heads = self.pruned_heads.union(heads)
+
+    def construct(self, input, mask, kv=None, cache=None, head_mask=None, output_attentions=False):
+        """
+        Self-attention (if kv is None) or attention over source sentence (provided by kv).
+        """
+        # Input is (bs, qlen, dim)
+        # Mask is (bs, klen) (non-causal) or (bs, klen, klen)
+        bs, qlen, _ = input.shape #bs,qlen,dim
+        if kv is None:
+            klen = qlen if cache is None else cache["slen"] + qlen
+        else:
+            klen = kv.shape[1]
+        # assert dim == self.dim, f'Dimensions do not match: {dim} input vs {self.dim} configured'
+        n_heads = self.n_heads
+        dim_per_head = self.dim // n_heads
+        mask_reshape = (bs, 1, qlen, klen) if mask.dim() == 3 else (bs, 1, 1, klen)
+
+        def shape(x):
+            """projection"""
+            return x.view(bs, -1, self.n_heads, dim_per_head).transpose(0,2,1,3)
+
+        def unshape(x):
+            """compute context"""
+            return x.transpose(0,2,1,3).view(bs, -1, self.n_heads * dim_per_head)
+
+        q = shape(self.q_lin(input))  # (bs, n_heads, qlen, dim_per_head)
+        if kv is None:
+            k = shape(self.k_lin(input))  # (bs, n_heads, qlen, dim_per_head)
+            v = shape(self.v_lin(input))  # (bs, n_heads, qlen, dim_per_head)
+        elif cache is None or self.layer_id not in cache:
+            k = v = kv
+            k = shape(self.k_lin(k))  # (bs, n_heads, qlen, dim_per_head)
+            v = shape(self.v_lin(v))  # (bs, n_heads, qlen, dim_per_head)
+
+        if cache is not None:
+            if self.layer_id in cache:
+                if kv is None:
+                    k_, v_ = cache[self.layer_id]
+                    k = mindspore.ops.cat([k_, k], axis=2)  # (bs, n_heads, klen, dim_per_head)
+                    v = mindspore.ops.cat([v_, v], axis=2)  # (bs, n_heads, klen, dim_per_head)
+                else:
+                    k, v = cache[self.layer_id]
+            cache[self.layer_id] = (k, v)
+
+        scores = mindspore.ops.matmul(q, k.transpose(0,1,3,2)) / math.sqrt(dim_per_head)  # (bs, n_heads, qlen, klen)
+        mask = (mask == 0).view(mask_reshape).expand_as(scores)  # (bs, n_heads, qlen, klen)
+        scores.masked_fill(mask,mindspore.Tensor(
+                           np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min))  # (bs, n_heads, qlen, klen)
+
+        weights = ops.softmax(scores.float(), axis=-1).astype(scores.dtype)  # (bs, n_heads, qlen, klen)
+        if self.training:
+            weights = ops.dropout(weights, p=self.dropout)# (bs, n_heads, qlen, klen)
+
+        # Mask heads if we want to
+        if head_mask is not None:
+            weights = weights * head_mask
+
+        context = mindspore.ops.matmul(weights, v)  # (bs, n_heads, qlen, dim_per_head)
+        context = unshape(context)  # (bs, qlen, dim)
+
+        outputs = (self.out_lin(context),)
+        if output_attentions:
+            outputs = outputs + (weights,)
+        return outputs
+
+
+class TransformerFFN(nn.Cell):
+    """
+    TransformerFFN
+    """
+    def __init__(self, in_dim, dim_hidden, out_dim, config):
+        super().__init__()
+        self.dropout = config.dropout
+        self.lin1 = nn.Dense(in_dim, dim_hidden)
+        self.lin2 = nn.Dense(dim_hidden, out_dim)
+        self.act = nn.GELU() if config.gelu_activation else nn.ReLU()
+        self.chunk_size_feed_forward = config.chunk_size_feed_forward
+        self.seq_len_dim = 1
+
+    def construct(self, input):
+        return apply_chunking_to_forward(self.ff_chunk, self.chunk_size_feed_forward, self.seq_len_dim, input)
+
+    def ff_chunk(self, input):
+        """
+        ff_chunk
+        """
+        x = self.lin1(input)
+        x = self.act(x)
+        x = self.lin2(x)
+        if self.training:
+            x = ops.dropout(x, p=self.dropout)
+        return x
+
 
 class XLMPreTrainedModel(PretrainedModel):
     """
@@ -280,109 +416,6 @@ class XLMPreTrainedModel(PretrainedModel):
         if isinstance(module, nn.LayerNorm):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
-
-
-class MultiHeadAttention(nn.Cell):
-    """
-    MultiHeadAttention
-    """
-    NEW_ID = itertools.count()
-
-    def __init__(self, n_heads, dim, config):
-        super().__init__()
-        self.layer_id = next(MultiHeadAttention.NEW_ID)
-        self.dim = dim
-        self.n_heads = n_heads
-        self.dropout = config.attention_dropout
-        assert self.dim % self.n_heads == 0
-
-        self.q_lin = nn.Dense(dim, dim)
-        self.k_lin = nn.Dense(dim, dim)
-        self.v_lin = nn.Dense(dim, dim)
-        self.out_lin = nn.Dense(dim, dim)
-        self.pruned_heads = set()
-
-    def prune_heads(self, heads):
-        """
-        prune_heads
-        """
-        attention_head_size = self.dim // self.n_heads
-        if len(heads) == 0:
-            return
-        heads, index = find_pruneable_heads_and_indices(heads, self.n_heads, attention_head_size, self.pruned_heads)
-        # Prune linear layers
-        self.q_lin = prune_linear_layer(self.q_lin, index)
-        self.k_lin = prune_linear_layer(self.k_lin, index)
-        self.v_lin = prune_linear_layer(self.v_lin, index)
-        self.out_lin = prune_linear_layer(self.out_lin, index, dim=1)
-        # Update hyper params
-        self.n_heads = self.n_heads - len(heads)
-        self.dim = attention_head_size * self.n_heads
-        self.pruned_heads = self.pruned_heads.union(heads)
-
-    def construct(self, input, mask, kv=None, cache=None, head_mask=None, output_attentions=False):
-        """
-        Self-attention (if kv is None) or attention over source sentence (provided by kv).
-        """
-        # Input is (bs, qlen, dim)
-        # Mask is (bs, klen) (non-causal) or (bs, klen, klen)
-        bs, qlen, _ = input.shape #bs,qlen,dim
-        if kv is None:
-            klen = qlen if cache is None else cache["slen"] + qlen
-        else:
-            klen = kv.size(1)
-        # assert dim == self.dim, f'Dimensions do not match: {dim} input vs {self.dim} configured'
-        n_heads = self.n_heads
-        dim_per_head = self.dim // n_heads
-        mask_reshape = (bs, 1, qlen, klen) if mask.dim() == 3 else (bs, 1, 1, klen)
-
-        def shape(x):
-            """projection"""
-            return x.view(bs, -1, self.n_heads, dim_per_head).transpose(0,2,1,3)
-
-        def unshape(x):
-            """compute context"""
-            return x.transpose(0,2,1,3).view(bs, -1, self.n_heads * dim_per_head)
-
-        q = shape(self.q_lin(input))  # (bs, n_heads, qlen, dim_per_head)
-        if kv is None:
-            k = shape(self.k_lin(input))  # (bs, n_heads, qlen, dim_per_head)
-            v = shape(self.v_lin(input))  # (bs, n_heads, qlen, dim_per_head)
-        elif cache is None or self.layer_id not in cache:
-            k = v = kv
-            k = shape(self.k_lin(k))  # (bs, n_heads, qlen, dim_per_head)
-            v = shape(self.v_lin(v))  # (bs, n_heads, qlen, dim_per_head)
-
-        if cache is not None:
-            if self.layer_id in cache:
-                if kv is None:
-                    k_, v_ = cache[self.layer_id]
-                    k = mindspore.ops.cat([k_, k], axis=2)  # (bs, n_heads, klen, dim_per_head)
-                    v = mindspore.ops.cat([v_, v], axis=2)  # (bs, n_heads, klen, dim_per_head)
-                else:
-                    k, v = cache[self.layer_id]
-            cache[self.layer_id] = (k, v)
-
-        scores = mindspore.ops.matmul(q, k.transpose(0,1,3,2)) / math.sqrt(dim_per_head)  # (bs, n_heads, qlen, klen)
-        mask = (mask == 0).view(mask_reshape).expand_as(scores)  # (bs, n_heads, qlen, klen)
-        scores.masked_fill(mask,mindspore.Tensor(
-                           np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min))  # (bs, n_heads, qlen, klen)
-
-        weights = ops.softmax(scores.float(), axis=-1).astype(scores.dtype)  # (bs, n_heads, qlen, klen)
-        if self.training:
-            weights = ops.dropout(weights, p=self.dropout)# (bs, n_heads, qlen, klen)
-
-        # Mask heads if we want to
-        if head_mask is not None:
-            weights = weights * head_mask
-
-        context = mindspore.ops.matmul(weights, v)  # (bs, n_heads, qlen, dim_per_head)
-        context = unshape(context)  # (bs, qlen, dim)
-
-        outputs = (self.out_lin(context),)
-        if output_attentions:
-            outputs = outputs + (weights,)
-        return outputs
 
 
 class XLMModel(XLMPreTrainedModel):
@@ -514,18 +547,18 @@ class XLMModel(XLMPreTrainedModel):
 
     def construct(
         self,
-        input_ids: Optional[mindspore.Tensor] = None,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        langs: Optional[mindspore.Tensor] = None,
-        token_type_ids: Optional[mindspore.Tensor] = None,
-        position_ids: Optional[mindspore.Tensor] = None,
-        lengths: Optional[mindspore.Tensor] = None,
-        cache: Optional[Dict[str, mindspore.Tensor]] = None,
-        head_mask: Optional[mindspore.Tensor] = None,
-        inputs_embeds: Optional[mindspore.Tensor] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+        input_ids = None,
+        attention_mask = None,
+        langs = None,
+        token_type_ids = None,
+        position_ids = None,
+        lengths = None,
+        cache = None,
+        head_mask = None,
+        inputs_embeds = None,
+        output_attentions = None,
+        output_hidden_states = None,
+        return_dict = None,
     ) -> Tuple:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -563,12 +596,12 @@ class XLMModel(XLMPreTrainedModel):
         if position_ids is None:
             position_ids = self.position_ids[:, :slen]
         else:
-            assert position_ids.size() == (bs, slen)  # (slen, bs)
+            assert position_ids.shape == (bs, slen)  # (slen, bs)
             # position_ids = position_ids.transpose(0, 1)
 
         # langs
         if langs is not None:
-            assert langs.size() == (bs, slen)  # (slen, bs)
+            assert langs.shape == (bs, slen)  # (slen, bs)
             # langs = langs.transpose(0, 1)
 
         # Prepare head mask if needed
@@ -638,39 +671,11 @@ class XLMModel(XLMPreTrainedModel):
 
         # update cache length
         if cache is not None:
-            cache["slen"] += tensor.size(1)
+            cache["slen"] += tensor.shape[1]
 
         # move back sequence length to dimension 0
         # tensor = tensor.transpose(0, 1)
         return tuple(v for v in [tensor, hidden_states, attentions] if v is not None)
-
-
-class TransformerFFN(nn.Cell):
-    """
-    TransformerFFN
-    """
-    def __init__(self, in_dim, dim_hidden, out_dim, config):
-        super().__init__()
-        self.dropout = config.dropout
-        self.lin1 = nn.Dense(in_dim, dim_hidden)
-        self.lin2 = nn.Dense(dim_hidden, out_dim)
-        self.act = nn.GELU() if config.gelu_activation else nn.ReLU()
-        self.chunk_size_feed_forward = config.chunk_size_feed_forward
-        self.seq_len_dim = 1
-
-    def construct(self, input):
-        return apply_chunking_to_forward(self.ff_chunk, self.chunk_size_feed_forward, self.seq_len_dim, input)
-
-    def ff_chunk(self, input):
-        """
-        ff_chunk
-        """
-        x = self.lin1(input)
-        x = self.act(x)
-        x = self.lin2(x)
-        if self.training:
-            x = ops.dropout(x, p=self.dropout)
-        return x
 
 
 class XLMPredLayer(nn.Cell):
@@ -687,6 +692,9 @@ class XLMPredLayer(nn.Cell):
         if config.asm is False:
             self.proj = nn.Dense(dim, config.n_words, has_bias=True)
         ## else :TO DO nn.AdaptiveLogSoftmaxWithLoss
+
+        #TODO:def AdaptiveLogSoftmaxWithLoss():
+
 
     def construct(self, x, y=None):
         """Compute the loss, and optionally the scores."""
@@ -707,3 +715,519 @@ class XLMPredLayer(nn.Cell):
                 outputs = (loss,) + outputs
 
         return outputs
+
+
+class XLMWithLMHeadModel(XLMPreTrainedModel):
+    """
+    XLMWithLMHeadModel
+    """
+    _keys_to_ignore_on_load_missing = ["pred_layer.proj.weight"]
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.transformer = XLMModel(config)
+        self.pred_layer = XLMPredLayer(config)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def get_output_embeddings(self):
+        """
+        get_output_embeddings
+        """
+        return self.pred_layer.proj
+
+    def set_output_embeddings(self, new_embeddings):
+        """
+        set_output_embeddings
+        """
+        self.pred_layer.proj = new_embeddings
+
+    def prepare_inputs_for_generation(self, input_ids, **kwargs):
+        """
+        prepare_inputs_for_generation
+        """
+        mask_token_id = self.config.mask_token_id
+        lang_id = self.config.lang_id
+
+        effective_batch_size = input_ids.shape[0]
+        mask_token = mindspore.ops.full((effective_batch_size, 1), mask_token_id, dtype=mindspore.int64)
+        input_ids = ops.cat([input_ids, mask_token], axis=1)
+        if lang_id is not None:
+            langs = mindspore.ops.full_like(input_ids, lang_id)
+        else:
+            langs = None
+        return {"input_ids": input_ids, "langs": langs}
+
+
+    def construct(
+        self,
+        input_ids = None,
+        attention_mask = None,
+        langs = None,
+        token_type_ids = None,
+        position_ids = None,
+        lengths = None,
+        cache = None,
+        head_mask = None,
+        inputs_embeds = None,
+        labels = None,
+        output_attentions = None,
+        output_hidden_states = None,
+        return_dict = None,
+    ) -> Tuple:
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
+            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
+            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        transformer_outputs = self.transformer(
+            input_ids,
+            attention_mask=attention_mask,
+            langs=langs,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            lengths=lengths,
+            cache=cache,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        output = transformer_outputs[0]
+        outputs = self.pred_layer(output, labels)  # (loss, logits) or (logits,) depending on if labels are provided.
+
+
+        return outputs + transformer_outputs[1:]
+
+
+class XLMForSequenceClassification(XLMPreTrainedModel):
+    """
+    XLMForSequenceClassification
+    """
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+        self.config = config
+
+        self.transformer = XLMModel(config)
+        self.sequence_summary = SequenceSummary(config)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+
+    def construct(
+        self,
+        input_ids = None,
+        attention_mask = None,
+        langs = None,
+        token_type_ids = None,
+        position_ids = None,
+        lengths = None,
+        cache = None,
+        head_mask = None,
+        inputs_embeds = None,
+        labels = None,
+        output_attentions = None,
+        output_hidden_states = None,
+        return_dict = None,
+    ) -> Tuple:
+
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        transformer_outputs = self.transformer(
+            input_ids,
+            attention_mask=attention_mask,
+            langs=langs,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            lengths=lengths,
+            cache=cache,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        output = transformer_outputs[0]
+        logits = self.sequence_summary(output)
+
+        loss = None
+        if labels is not None:
+            if self.config.problem_type is None:
+                if self.num_labels == 1:
+                    self.config.problem_type = "regression"
+                elif self.num_labels > 1 and (labels.dtype == mindspore.int64
+                                             or labels.dtype == mindspore.int32):
+                    self.config.problem_type = "single_label_classification"
+                else:
+                    self.config.problem_type = "multi_label_classification"
+
+            if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
+                if self.num_labels == 1:
+                    loss = loss_fct(ops.squeeze(logits), ops.squeeze(labels))
+                else:
+                    loss = loss_fct(logits, labels)
+            elif self.config.problem_type == "single_label_classification":
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            elif self.config.problem_type == "multi_label_classification":
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
+
+        output = (logits,) + transformer_outputs[1:]
+        return ((loss,) + output) if loss is not None else output
+
+
+class XLMForQuestionAnsweringSimple(XLMPreTrainedModel):
+    """
+    XLMForQuestionAnsweringSimple
+    """
+    def __init__(self, config):
+        super().__init__(config)
+
+        self.transformer = XLMModel(config)
+        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def construct(
+        self,
+        input_ids = None,
+        attention_mask = None,
+        langs = None,
+        token_type_ids = None,
+        position_ids = None,
+        lengths = None,
+        cache = None,
+        head_mask = None,
+        inputs_embeds = None,
+        start_positions = None,
+        end_positions = None,
+        output_attentions = None,
+        output_hidden_states = None,
+        return_dict = None,
+    ) -> Tuple:
+        r"""
+        start_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the start of the labelled span for computing the token classification loss.
+            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+            are not taken into account for computing the loss.
+        end_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the end of the labelled span for computing the token classification loss.
+            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+            are not taken into account for computing the loss.
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        transformer_outputs = self.transformer(
+            input_ids,
+            attention_mask=attention_mask,
+            langs=langs,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            lengths=lengths,
+            cache=cache,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        sequence_output = transformer_outputs[0]
+
+        logits = self.qa_outputs(sequence_output)
+        start_logits, end_logits = logits.split(1, axis=-1)
+        start_logits = start_logits.squeeze(-1)
+        end_logits = end_logits.squeeze(-1)
+
+        total_loss = None
+        if start_positions is not None and end_positions is not None:
+            # If we are on multi-GPU, split add a dimension
+            if len(start_positions.shape) > 1:
+                start_positions = ops.squeeze(start_positions,axis=-1)
+            if len(end_positions.shape) > 1:
+                end_positions = ops.squeeze(end_positions,axis=-1)
+            # sometimes the start/end positions are outside our model inputs, we ignore these terms
+            ignored_index = start_logits.shape[1]
+            start_positions = start_positions.clamp(0, ignored_index)
+            end_positions = end_positions.clamp(0, ignored_index)
+
+            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
+            total_loss = (start_loss + end_loss) / 2
+
+
+        output = (start_logits, end_logits) + transformer_outputs[1:]
+        return ((total_loss,) + output) if total_loss is not None else output
+
+
+class XLMForQuestionAnswering(XLMPreTrainedModel):
+    """
+    XLMForQuestionAnswering
+    """
+    def __init__(self, config):
+        super().__init__(config)
+
+        self.transformer = XLMModel(config)
+        self.qa_outputs = SQuADHead(config)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+
+    def construct(
+        self,
+        input_ids = None,
+        attention_mask = None,
+        langs = None,
+        token_type_ids = None,
+        position_ids = None,
+        lengths = None,
+        cache = None,
+        head_mask = None,
+        inputs_embeds = None,
+        start_positions = None,
+        end_positions = None,
+        is_impossible = None,
+        cls_index = None,
+        p_mask = None,
+        output_attentions = None,
+        output_hidden_states = None,
+        return_dict = None,
+    ) -> Tuple:
+        r"""
+        start_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the start of the labelled span for computing the token classification loss.
+            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+            are not taken into account for computing the loss.
+        end_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the end of the labelled span for computing the token classification loss.
+            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+            are not taken into account for computing the loss.
+        is_impossible (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            Labels whether a question has an answer or no answer (SQuAD 2.0)
+        cls_index (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the classification token to use as input for computing plausibility of the
+            answer.
+        p_mask (`torch.FloatTensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Optional mask of tokens which can't be in answers (e.g. [CLS], [PAD], ...). 1.0 means token should be
+            masked. 0.0 mean token is not masked.
+
+        Returns:
+
+        Example:
+
+        ```python
+        >>> from transformers import AutoTokenizer, XLMForQuestionAnswering
+        >>> import torch
+
+        >>> tokenizer = AutoTokenizer.from_pretrained("xlm-mlm-en-2048")
+        >>> model = XLMForQuestionAnswering.from_pretrained("xlm-mlm-en-2048")
+
+        >>> input_ids = torch.tensor(tokenizer.encode("Hello, my dog is cute", add_special_tokens=True)).unsqueeze(
+        ...     0
+        ... )  # Batch size 1
+        >>> start_positions = torch.tensor([1])
+        >>> end_positions = torch.tensor([3])
+
+        >>> outputs = model(input_ids, start_positions=start_positions, end_positions=end_positions)
+        >>> loss = outputs.loss
+        ```"""
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        transformer_outputs = self.transformer(
+            input_ids,
+            attention_mask=attention_mask,
+            langs=langs,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            lengths=lengths,
+            cache=cache,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        output = transformer_outputs[0]
+        outputs = self.qa_outputs(
+            output,
+            start_positions=start_positions,
+            end_positions=end_positions,
+            cls_index=cls_index,
+            is_impossible=is_impossible,
+            p_mask=p_mask,
+            return_dict=return_dict,
+        )
+
+
+        return outputs + transformer_outputs[1:]
+
+
+class XLMForTokenClassification(XLMPreTrainedModel):
+    """
+    XLMForTokenClassification
+    """
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+
+        self.transformer = XLMModel(config)
+        self.dropout = nn.Dropout(config.dropout)
+        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+
+    def construct(
+        self,
+        input_ids = None,
+        attention_mask = None,
+        langs = None,
+        token_type_ids = None,
+        position_ids = None,
+        lengths = None,
+        cache = None,
+        head_mask = None,
+        inputs_embeds = None,
+        labels = None,
+        output_attentions = None,
+        output_hidden_states = None,
+        return_dict = None,
+    ) -> Tuple:
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.transformer(
+            input_ids,
+            attention_mask=attention_mask,
+            langs=langs,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            lengths=lengths,
+            cache=cache,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        sequence_output = outputs[0]
+
+        sequence_output = self.dropout(sequence_output)
+        logits = self.classifier(sequence_output)
+
+        loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+        output = (logits,) + outputs[1:]
+        return ((loss,) + output) if loss is not None else output
+
+
+class XLMForMultipleChoice(XLMPreTrainedModel):
+    """
+    XLMForMultipleChoice
+    """
+    def __init__(self, config, *inputs, **kwargs):
+        super().__init__(config, *inputs, **kwargs)
+
+        self.transformer = XLMModel(config)
+        self.sequence_summary = SequenceSummary(config)
+        self.logits_proj = nn.Dense(config.num_labels, 1)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+
+    def construct(
+        self,
+        input_ids = None,
+        attention_mask = None,
+        langs = None,
+        token_type_ids = None,
+        position_ids = None,
+        lengths = None,
+        cache = None,
+        head_mask = None,
+        inputs_embeds = None,
+        labels = None,
+        output_attentions = None,
+        output_hidden_states = None,
+        return_dict = None,
+    ) -> Tuple:
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+            `input_ids` above)
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
+
+        input_ids = input_ids.view(-1, input_ids.shape[-1]) if input_ids is not None else None
+        attention_mask = attention_mask.view(-1, attention_mask.shape[-1]) if attention_mask is not None else None
+        token_type_ids = token_type_ids.view(-1, token_type_ids.shape[-1]) if token_type_ids is not None else None
+        position_ids = position_ids.view(-1, position_ids.shape[-1]) if position_ids is not None else None
+        langs = langs.view(-1, langs.shape[-1]) if langs is not None else None
+        inputs_embeds = (
+            inputs_embeds.view(-1, inputs_embeds.shape[-2], inputs_embeds.shape[-1])
+            if inputs_embeds is not None
+            else None
+        )
+
+        if lengths is not None:
+            logger.warning(
+                "The `lengths` parameter cannot be used with the XLM multiple choice models. Please use the "
+                "attention mask instead."
+            )
+            lengths = None
+
+        transformer_outputs = self.transformer(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            langs=langs,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            lengths=lengths,
+            cache=cache,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        output = transformer_outputs[0]
+        logits = self.sequence_summary(output)
+        logits = self.logits_proj(logits)
+
+        reshaped_logits = logits.view(-1, num_choices)
+
+        loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(reshaped_logits, labels)
+
+
+        output = (reshaped_logits,) + transformer_outputs[1:]
+        return ((loss,) + output) if loss is not None else output
