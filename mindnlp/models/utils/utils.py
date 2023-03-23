@@ -299,40 +299,39 @@ class SQuADHead(nn.Cell):
 
             return (total_loss,)
 
-        else:
-            # during inference, compute the end logits based on beam search
-            _, slen, hsz = hidden_states.shape   #(bsz,slen.hsz)
-            start_log_probs = ops.softmax(start_logits,axis=-1)  # shape (bsz, slen)
+        # during inference, compute the end logits based on beam search
+        _, slen, hsz = hidden_states.shape   #(bsz,slen.hsz)
+        start_log_probs = ops.softmax(start_logits,axis=-1)  # shape (bsz, slen)
 
-            start_top_log_probs, start_top_index = ops.topk(
-                start_log_probs, self.start_n_top
-            )  # shape (bsz, start_n_top)
-            start_top_index_exp = ops.BroadcastTo(shape
-                                                  =(-1, -1, hsz))(start_top_index.unsqueeze(-1))
-                                                  # shape (bsz, start_n_top, hsz)
-            start_states = ops.gather_elements(hidden_states, -2, start_top_index_exp)  # shape (bsz, start_n_top, hsz)
-            start_states = ops.BroadcastTo(shape
-                                           =(-1, slen, -1, -1))(start_states.unsqueeze(1))
-                                                  # shape (bsz, slen, start_n_top, hsz)
+        start_top_log_probs, start_top_index = ops.topk(
+            start_log_probs, self.start_n_top
+        )  # shape (bsz, start_n_top)
+        start_top_index_exp = ops.BroadcastTo(shape
+                                              =(-1, -1, hsz))(start_top_index.unsqueeze(-1))
+                                              # shape (bsz, start_n_top, hsz)
+        start_states = ops.gather_elements(hidden_states, -2, start_top_index_exp)  # shape (bsz, start_n_top, hsz)
+        start_states = ops.BroadcastTo(shape
+                                       =(-1, slen, -1, -1))(start_states.unsqueeze(1))
+                                              # shape (bsz, slen, start_n_top, hsz)
 
-            hidden_states_expanded = hidden_states.unsqueeze(2).expand_as(
-                start_states
-            )  # shape (bsz, slen, start_n_top, hsz)
-            p_mask = p_mask.unsqueeze(-1) if p_mask is not None else None
-            end_logits = self.end_logits(hidden_states_expanded, start_states=start_states, p_mask=p_mask)
-            end_log_probs = ops.softmax(end_logits, axis=1)  # shape (bsz, slen, start_n_top)
-            end_top_log_probs, end_top_index = ops.topk(
-                end_log_probs, self.end_n_top
-            )  # shape (bsz, end_n_top, start_n_top)
-            end_top_log_probs = end_top_log_probs.view(-1, self.start_n_top * self.end_n_top)
-            end_top_index = end_top_index.view(-1, self.start_n_top * self.end_n_top)
+        hidden_states_expanded = hidden_states.unsqueeze(2).expand_as(
+            start_states
+        )  # shape (bsz, slen, start_n_top, hsz)
+        p_mask = p_mask.unsqueeze(-1) if p_mask is not None else None
+        end_logits = self.end_logits(hidden_states_expanded, start_states=start_states, p_mask=p_mask)
+        end_log_probs = ops.softmax(end_logits, axis=1)  # shape (bsz, slen, start_n_top)
+        end_top_log_probs, end_top_index = ops.topk(
+            end_log_probs, self.end_n_top
+        )  # shape (bsz, end_n_top, start_n_top)
+        end_top_log_probs = end_top_log_probs.view(-1, self.start_n_top * self.end_n_top)
+        end_top_index = end_top_index.view(-1, self.start_n_top * self.end_n_top)
 
-            start_states = ops.matmul(hidden_states,start_log_probs)
+        start_states = ops.matmul(hidden_states,start_log_probs)
 
-            # start_states = ops.einsum("blh,bl->bh", hidden_states, start_log_probs)
-            cls_logits = self.answer_class(hidden_states, start_states=start_states, cls_index=cls_index)
+        # start_states = ops.einsum("blh,bl->bh", hidden_states, start_log_probs)
+        cls_logits = self.answer_class(hidden_states, start_states=start_states, cls_index=cls_index)
 
-            return (start_top_log_probs, start_top_index, end_top_log_probs, end_top_index, cls_logits)
+        return (start_top_log_probs, start_top_index, end_top_log_probs, end_top_index, cls_logits)
 
 
 class PoolerEndLogits(nn.Cell):
