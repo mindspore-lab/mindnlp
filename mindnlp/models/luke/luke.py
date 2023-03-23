@@ -168,13 +168,13 @@ class LukeSelfAttention(nn.Cell):
 
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
-    def transpose_for_scores(self, input):
+    def transpose_for_scores(self, input_x):
         """
         transpose_for_scores
         """
-        new_input_shape = input.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
-        input = input.view(*new_input_shape)
-        return input.permute(0, 2, 1, 3)
+        new_input_x_shape = input_x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
+        input_x = input_x.view(*new_input_x_shape)
+        return input_x.permute(0, 2, 1, 3)
 
     def construct(
             self,
