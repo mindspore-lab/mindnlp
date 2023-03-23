@@ -743,7 +743,7 @@ class XLMWithLMHeadModel(XLMPreTrainedModel):
         """
         self.pred_layer.proj = new_embeddings
 
-    def prepare_inputs_for_generation(self, input_ids, **kwargs):
+    def prepare_inputs_for_generation(self, input_ids):   #TODO(self, input_ids, **kwargs)
         """
         prepare_inputs_for_generation
         """

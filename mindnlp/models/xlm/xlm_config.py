@@ -207,7 +207,7 @@ class XLMConfig(PretrainedConfig):
         self.mask_token_id = mask_token_id
         self.lang_id = lang_id
         self.hidden_size = emb_dim
-        
+
         if "n_words" in kwargs:
             self.n_words = kwargs["n_words"]
 

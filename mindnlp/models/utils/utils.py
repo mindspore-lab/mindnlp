@@ -276,8 +276,8 @@ class SQuADHead(nn.Cell):
                 try:
                     if x is not None and x.ndim > 1:
                         x = ops.squeeze(x,axis=-1)
-                except:ValueError
-
+                except ValueError:
+                    pass
 
             # during training, compute the end logits based on the ground truth of the start position
             end_logits = self.end_logits(hidden_states, start_positions=start_positions, p_mask=p_mask)
