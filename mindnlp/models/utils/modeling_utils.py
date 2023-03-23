@@ -20,7 +20,7 @@ from typing import Optional
 import mindspore
 
 from mindspore import nn, ops, Tensor
-from mindnlp.utils.activations import get_activation
+from mindnlp.models.utils.activations import get_activation
 
 try:
     from mindspore.nn import Identity
@@ -64,11 +64,11 @@ class SequenceSummary(nn.Cell):
 
         self.first_dropout = Identity()
         if hasattr(config, "summary_first_dropout") and config.summary_first_dropout > 0:
-            self.first_dropout = nn.Dropout(config.summary_first_dropout)
+            self.first_dropout = nn.Dropout(p=config.summary_first_dropout)
 
         self.last_dropout = Identity()
         if hasattr(config, "summary_last_dropout") and config.summary_last_dropout > 0:
-            self.last_dropout = nn.Dropout(config.summary_last_dropout)
+            self.last_dropout = nn.Dropout(p=config.summary_last_dropout)
 
     def construct(self, hidden_states: Tensor, cls_index: Optional[Tensor] = None) -> Tensor:
         if self.summary_type == "last":

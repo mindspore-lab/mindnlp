@@ -37,7 +37,7 @@ class TokenEmbedding(nn.Cell):
         super().__init__()
 
         self.embed = Parameter(init_embed, name='embed', requires_grad=requires_grad)
-        self.dropout_layer = nn.Dropout(1 - dropout)
+        self.dropout_layer = nn.Dropout(p=dropout)
         self._embed_size = self.embed.shape
 
     def dropout(self, words):

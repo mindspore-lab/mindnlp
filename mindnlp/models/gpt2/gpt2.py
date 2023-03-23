@@ -26,7 +26,7 @@ from mindnlp._legacy.nn import Dropout
 from mindnlp.models.gpt2.config_gpt2 import GPT2Config
 from ..utils import logging
 from ..utils.activations import ACT2FN
-from ...utils.modeling_utils import SequenceSummary
+from ..utils.modeling_utils import SequenceSummary
 from ..utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
 
 logger = logging.get_logger(__name__)
@@ -869,7 +869,7 @@ class GPT2ForTokenClassification(GPT2PreTrainedModel):
             classifier_dropout = config.hidden_dropout
         else:
             classifier_dropout = 0.1
-        self.dropout = nn.Dropout(classifier_dropout)
+        self.dropout = nn.Dropout(p=classifier_dropout)
         self.classifier = nn.Dense(config.hidden_size, config.num_labels)
 
     def construct(self, input_ids=None, past_key_values=None, attention_mask=None, token_type_ids=None,

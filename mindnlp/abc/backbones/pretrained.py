@@ -41,6 +41,7 @@ class PretrainedConfig:
         )  # Whether input and output word embeddings should be tied for all MLM, LM and Seq2Seq models.
         self.decoder_start_token_id = kwargs.pop("decoder_start_token_id", None)
         self.return_dict = kwargs.pop("return_dict", False)
+        self.chunk_size_feed_forward = kwargs.pop("chunk_size_feed_forward", 0)
 
     @classmethod
     def from_json(cls, file_path):
@@ -82,6 +83,16 @@ class PretrainedModel(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.config = config
+
+    def post_init(self):
+        """
+        A method executed at the end of each Transformer model initialization, to execute code that needs the model's
+        modules properly initialized (such as weight initialization).
+        
+        self.init_model_weights()
+        self._backward_compatibility_gradient_checkpointing()
+        """
+        raise NotImplementedError
 
     def init_model_weights(self):
         """

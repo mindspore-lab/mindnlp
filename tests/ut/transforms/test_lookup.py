@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,8 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""
-LUKE Model init
-"""
-from mindnlp.models.luke.luke_config import *
-from mindnlp.models.luke.luke import *
+"""Test Transform"""
+
+from mindspore.dataset.text import Vocab as msVocab
+from mindnlp import Vocab
+from mindnlp.transforms import Lookup
+
+def test_lookup():
+    """look up."""
+    vocab = Vocab(['a', 'b', 'c'], special_tokens=['<unk>'])
+    lookup = Lookup(vocab, '<unk>')
+
+    result = lookup('a')
+    assert result == 1
+
+def test_lookup_with_mindspore_vocab():
+    """lookup with mindspore vocab"""
+    vocab = msVocab.from_list(['a', 'b', 'c'], special_tokens=['<unk>'])
+    lookup = Lookup(vocab, '<unk>')
+
+    result = lookup('a')
+    assert result == 1

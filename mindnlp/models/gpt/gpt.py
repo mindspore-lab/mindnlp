@@ -232,7 +232,7 @@ class GPTModel(GPTPreTrainedModel):
         self.config = config
         self.tokens_embed = nn.Embedding(config.vocab_size, config.n_embd)
         self.positions_embed = nn.Embedding(config.n_positions, config.n_embd)
-        self.drop = nn.Dropout(config.embd_pdrop)
+        self.drop = nn.Dropout(p=config.embd_pdrop)
         self.block_list = nn.CellList([GPTBlock(config, scale=True) for _ in range(config.n_layer)])
         self.position_ids = Parameter(ops.arange(config.n_positions), requires_grad=False)
 
