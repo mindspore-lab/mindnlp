@@ -280,7 +280,8 @@ class SQuADHead(nn.Cell):
                     pass
 
             # during training, compute the end logits based on the ground truth of the start position
-            end_logits = self.end_logits(hidden_states, start_positions=start_positions) #TODO:(hidden_states, start_positions=start_positions, p_mask=p_mask)
+            end_logits = self.end_logits(hidden_states, start_positions=start_positions) 
+            #TODO:(hidden_states, start_positions=start_positions, p_mask=p_mask)
 
             loss_fct = CrossEntropyLoss()
             start_loss = loss_fct(start_logits, start_positions)
