@@ -20,7 +20,6 @@ import numpy as np
 import mindspore
 from mindnlp.models.xlm import xlm_config
 from mindnlp.models import xlm
-
 class TestXlm(unittest.TestCase):
     """
     Test XLM Models
@@ -31,13 +30,49 @@ class TestXlm(unittest.TestCase):
         """
         Set up config
         """
-        cls.xlm_config = xlm_config.XLMConfig(n_words=22)
+        cls.input = None
+
 
     def test_xlm_predlayer(self):
         """
         Test xlm_XLMPredLayer
         """
-        xlm_predlayer = xlm.XLMPredLayer(self.xlm_config)
+        xlmconfig = xlm_config.XLMConfig(n_words=22)
+        xlm_predlayer = xlm.XLMPredLayer(xlmconfig)
         input_ids = mindspore.Tensor(np.random.randint(0, 1000, (2, 2048)),mindspore.float32)
         output = xlm_predlayer(input_ids)
         assert output[0].shape == (2,22)
+
+    def test_xlm_multiheadattention(self):
+        """
+        test xlm_multiheadattention
+        """
+        xlmconfig = xlm_config.XLMConfig(n_words=22)
+        xlm_multiheadattention = xlm.MultiHeadAttention(n_heads=xlmconfig.n_heads,
+                                                        dim = xlmconfig.emb_dim,
+                                                        config=xlmconfig)
+        input_ids = mindspore.Tensor(np.random.randint(0, 1000, (2, 3,2048)),mindspore.float32)
+        mask = mindspore.Tensor(np.random.randint(0, 1000, (2, 3,1,1)),mindspore.float32)
+        output = xlm_multiheadattention(input = input_ids,mask = mask)
+        assert output[0].shape == (2,3,2048)
+
+    def  test_xlm_transformerffn(self):
+        """
+        test xlm_TransformerFFN
+        """
+        xlmconfig = xlm_config.XLMConfig(n_words=22)
+        xlm_transformerffn = xlm.TransformerFFN(xlmconfig.emb_dim,xlmconfig.emb_dim*4, xlmconfig.emb_dim,xlmconfig)
+        input_ids = mindspore.Tensor(np.random.randint(0, 1000, (2, 2048)),mindspore.float32)
+        output = xlm_transformerffn(input_ids)
+        assert output.shape==(2,2048)
+
+
+    def  test_xlm_xlmmodel(self):
+        """
+        test xlm_TransformerFFN
+        """
+        xlmconfig = xlm_config.XLMConfig(n_words=22)
+        xlm_xlmmodel = xlm.XLMModel(xlmconfig)
+        input_ids1 = mindspore.Tensor(np.random.randint(0, 1000, (1, 512)),mindspore.int32)
+        output = xlm_xlmmodel(input_ids = input_ids1)
+        assert output[0].shape==(1,512,2048)
