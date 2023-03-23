@@ -62,8 +62,8 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.LukeSelfAttention(config)
-        word_hidden_states = Tensor(np.random.randn(2, 768), mindspore.float32)
-        entity_hidden_states = Tensor(np.random.randn(2, 768), mindspore.float32)
+        word_hidden_states = Tensor(np.random.randn(1, 256, 768), mindspore.float32)
+        entity_hidden_states = Tensor(np.random.randn(1, 512, 768), mindspore.float32)
         outputs = model(word_hidden_states, entity_hidden_states)
         assert outputs[0].shape == (1, 256, 768)
         assert outputs[1].shape == (1, 512, 768)
