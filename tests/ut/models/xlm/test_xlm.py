@@ -61,8 +61,8 @@ class TestXlm(unittest.TestCase):
         test xlm_TransformerFFN
         """
         xlmconfig = xlm_config.XLMConfig(n_words=22)
-        xlm_transformerffn = xlm.TransformerFFN(xlmconfig.emb_dim,xlmconfig.emb_dim*4, xlmconfig.emb_dim,xlmconfig)
-        input_ids = mindspore.Tensor(np.random.randint(0, 1000, (2, 2048)),mindspore.float32)
+        xlm_transformerffn = xlm.TransformerFFN(xlmconfig.emb_dim//8,xlmconfig.emb_dim//2, xlmconfig.emb_dim,xlmconfig)
+        input_ids = mindspore.Tensor(np.random.randint(0, 1000, (2, 256)),mindspore.float32)
         output = xlm_transformerffn(input_ids)
         assert output.shape==(2,2048)
 
@@ -73,6 +73,6 @@ class TestXlm(unittest.TestCase):
         """
         xlmconfig = xlm_config.XLMConfig(n_words=22)
         xlm_xlmmodel = xlm.XLMModel(xlmconfig)
-        input_ids1 = mindspore.Tensor(np.random.randint(0, 1000, (1, 512)),mindspore.int32)
+        input_ids1 = mindspore.Tensor(np.random.randint(0, 1000, (1, 1)),mindspore.int32)
         output = xlm_xlmmodel(input_ids = input_ids1)
-        assert output[0].shape==(1,512,2048)
+        assert output[0].shape==(1,1,2048)

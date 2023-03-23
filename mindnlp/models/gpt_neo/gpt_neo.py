@@ -308,6 +308,10 @@ class GPTNeoPreTrainedModel(PretrainedModel):
             module.weight.data = ops.fill(
                 module.weight.data.dtype, module.weight.data.shape, 1.0)
 
+
+    def post_init(self):
+        pass
+
     def get_input_embeddings(self) -> "nn.Cell":
         """
         Returns the model's input embeddings.
