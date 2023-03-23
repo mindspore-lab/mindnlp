@@ -15,7 +15,6 @@
 """
 Test XLM
 """
-# pylint: disable=C0103
 import unittest
 import numpy as np
 import mindspore
@@ -67,14 +66,14 @@ class TestXlm(unittest.TestCase):
         output = xlm_transformerffn(input_ids)
         assert output.shape==(2,2048)
 
-    def  test_xlm_xlmwithLmheadmodel(self):
+    def  test_xlm_xlmwithlmheadmodel(self):
         """
         test xlm_xlmwithLmheadmodel
         """
         xlmconfig = xlm_config.XLMConfig(n_words=22)
-        xlm_xlmwithLmheadmodel = xlm.XLMWithLMHeadModel(xlmconfig)
+        xlm_xlmwithlmheadmodel = xlm.XLMWithLMHeadModel(xlmconfig)
         input_ids1 = mindspore.Tensor(np.random.randint(0, 22, (4,8)),mindspore.int32)
-        output =xlm_xlmwithLmheadmodel(input_ids=input_ids1)
+        output =xlm_xlmwithlmheadmodel(input_ids=input_ids1)
         assert output[0].shape==(4,8,22)
 
     def  test_xlm_xlmmodel(self):
