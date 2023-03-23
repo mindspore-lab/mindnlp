@@ -29,7 +29,7 @@ import numpy as np
 from mindspore import ops,nn,Parameter
 from mindspore.common.initializer import Normal, initializer
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from mindnlp.models.utils.modeling_utils import SequenceSummary,SQuADHead
+from mindnlp.models.utils.utils import SequenceSummary,SQuADHead
 from ...abc.backbones.pretrained import PretrainedModel
 from .xlm_config import XLMConfig
 from ..utils import logging

@@ -261,13 +261,14 @@ class Vocab:
         return vocab
 
 
+
 pretrained_aliases = {
-    "glove.6B.50d": "https://huggingface.co/datasets/Aore/MindNLP_vocab/resolve/main/glove.6B.50d.vocab.txt",
-    "glove.6B.100d": "https://huggingface.co/datasets/Aore/MindNLP_vocab/resolve/main/glove.6B.100d.vocab.txt",
-    "glove.6B.200d": "https://huggingface.co/datasets/Aore/MindNLP_vocab/resolve/main/glove.6B.200d.vocab.txt",
-    "glove.6B.300d": "https://huggingface.co/datasets/Aore/MindNLP_vocab/resolve/main/glove.6B.300d.vocab.txt",
-    "fasttext": "https://huggingface.co/datasets/Aore/MindNLP_vocab/resolve/main/wiki-news-300d-1M.txt",
-    "fasttext-subword": "https://huggingface.co/datasets/Aore/MindNLP_vocab/resolve/main/wiki-news-300d-1M-subword.txt",
+    "glove.6B.50d": "https://download.mindspore.cn/toolkits/mindnlp/vocab/Glove/glove.6B.50d.txt",
+    "glove.6B.100d": "https://download.mindspore.cn/toolkits/mindnlp/vocab/Glove/glove.6B.100d.txt",
+    "glove.6B.200d": "https://download.mindspore.cn/toolkits/mindnlp/vocab/Glove/glove.6B.200d.txt",
+    "glove.6B.300d": "https://download.mindspore.cn/toolkits/mindnlp/vocab/Glove/glove.6B.300d.txt",
+    "fasttext": "https://download.mindspore.cn/toolkits/mindnlp/vocab/Fasttext/wiki-news-300d-1M.txt",
+    "fasttext-subword": "https://download.mindspore.cn/toolkits/mindnlp/vocab/Fasttext/wiki-news-300d-1M-subword.txt",
 }
 
 __all__ = ['Vocab']
