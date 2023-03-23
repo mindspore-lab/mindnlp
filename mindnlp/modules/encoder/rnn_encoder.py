@@ -16,6 +16,7 @@
 # pylint: disable=abstract-method
 
 from mindnlp.abc import EncoderBase
+from mindnlp.modules.rnns import _RNNBase
 
 class RNNEncoder(EncoderBase):
     r"""
@@ -52,6 +53,9 @@ class RNNEncoder(EncoderBase):
     def __init__(self, embedding, rnn):
         super().__init__(embedding)
         self.rnn = rnn
+        self.static = False
+        if isinstance(rnn, _RNNBase):
+            self.static = True
 
     def construct(self, src_token, src_length=None, mask=None):
         """
@@ -75,7 +79,11 @@ class RNNEncoder(EncoderBase):
         src_token = src_token * mask
         embed = self.embedding(src_token)
 
-        output, hiddens_n = self.rnn(embed, seq_length=src_length)
+        if self.static:
+            output, hiddens_n = self.rnn(embed)
+        else:
+            output, hiddens_n = self.rnn(embed, seq_length=src_length)
+
         return output, hiddens_n, mask
 
     def reorder_encoder_out(self, encoder_out, new_order):
