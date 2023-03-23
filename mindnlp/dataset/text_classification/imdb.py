@@ -18,53 +18,18 @@ IMDB load function
 # pylint: disable=C0103
 
 import os
-import re
 import tarfile
 from typing import Union, Tuple
 import mindspore as ms
-from mindspore.dataset import GeneratorDataset, text, transforms
+from mindspore.dataset import IMDBDataset, transforms
 from mindnlp.utils.download import cache_file
-from mindnlp.transforms import Truncate
+from mindnlp.transforms import Truncate, Lookup, PadTransform
 from mindnlp.dataset.register import load_dataset, process
 from mindnlp.dataset.utils import make_bucket
 from mindnlp.configs import DEFAULT_ROOT
 
 URL = "http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
-
 MD5 = "7c2ac02c03563afcf9b574c7e56c153a"
-
-
-class Imdb:
-    """
-    IMDB dataset source
-    """
-    label_map = {
-        "pos": 1,
-        "neg": 0
-    }
-
-    def __init__(self, path, mode) -> None:
-        self.path = path
-        self.mode: str = mode
-        self._label, self._text = [], []
-        self._load("pos")
-        self._load("neg")
-
-    def _load(self, label):
-        pattern = re.compile(fr"aclImdb/{self.mode}/{label}/.*\.txt$")
-        with tarfile.open(self.path) as tarf:
-            tf = tarf.next()
-            while tf is not None:
-                if bool(pattern.match(tf.name)):
-                    self._text.append(str(tarf.extractfile(tf).read()))
-                    self._label.append(self.label_map[label])
-                tf = tarf.next()
-
-    def __getitem__(self, index):
-        return self._text[index], self._label[index]
-
-    def __len__(self):
-        return len(self._label)
 
 
 @load_dataset.register
@@ -99,9 +64,8 @@ def IMDB(
     """
 
     cache_dir = os.path.join(root, "datasets", "IMDB")
-    column_names = ["text", "label"]
     mode_list = []
-    datasets_list = []
+    datasets_list = ()
     cache_file(
         None,
         cache_dir=cache_dir,
@@ -111,15 +75,21 @@ def IMDB(
     )
     if isinstance(split, str):
         mode_list.append(split)
+    elif isinstance(split, tuple):
+        mode_list = list(split)
+    elif isinstance(split, list):
+        mode_list = split
     else:
-        for s in split:
-            mode_list.append(s)
+        raise ValueError("'split' only support str, tuple and list type.")
+
+    extract_path = os.path.join(cache_dir, "aclImdb")
+    if not os.path.exists(extract_path):
+        with tarfile.open(os.path.join(cache_dir, "aclImdb_v1.tar.gz"),'r') as tarf:
+            tarf.extractall(cache_dir)
+
     for mode in mode_list:
-        datasets_list.append(
-            GeneratorDataset(
-                source=Imdb(os.path.join(cache_dir,"aclImdb_v1.tar.gz"), mode),
-                column_names=column_names, shuffle=shuffle)
-        )
+        datasets_list += (IMDBDataset(extract_path, mode, shuffle=shuffle),)
+
     if len(mode_list) == 1:
         return datasets_list[0]
     return datasets_list
@@ -154,9 +124,9 @@ def IMDB_Process(dataset, tokenizer, vocab, batch_size=64, max_len=500, \
                         bucket_boundaries=[400, 500], max_len=600, drop_remainder=True)
     """
 
-    pad_value = vocab.tokens_to_ids('<pad>')
+    pad_value = vocab('<pad>')
 
-    lookup_op = text.Lookup(vocab, unknown_token='<unk>')
+    lookup_op = Lookup(vocab, unk_token='<unk>')
     type_cast_op = transforms.TypeCast(ms.int32)
     dataset = dataset.map([tokenizer, lookup_op], 'text')
     dataset = dataset.map(type_cast_op, 'label')
@@ -172,7 +142,7 @@ def IMDB_Process(dataset, tokenizer, vocab, batch_size=64, max_len=500, \
         dataset = make_bucket(dataset, 'text', pad_value, \
                               bucket_boundaries, bucket_batch_sizes, drop_remainder)
     else:
-        pad_op = transforms.PadEnd([max_len], pad_value)
+        pad_op = PadTransform(max_len, pad_value)
         dataset = dataset.map([pad_op], 'text')
         dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)
 

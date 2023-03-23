@@ -71,8 +71,8 @@ class RNNDecoder(DecoderBase):
     def __init__(self, embedding, rnns, dropout_in=0, dropout_out=0, attention=True,
                  encoder_output_units=512, mode="RNN"):
         super().__init__(embedding)
-        self.dropout_in_module = nn.Dropout(1 - dropout_in)
-        self.dropout_out_module = nn.Dropout(1 - dropout_out)
+        self.dropout_in_module = nn.Dropout(p=dropout_in)
+        self.dropout_out_module = nn.Dropout(p=dropout_out)
         self.layers = nn.CellList(rnns)
         self.num_layers = len(rnns)
         self.hidden_size = rnns[0].hidden_size

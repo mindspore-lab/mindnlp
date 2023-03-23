@@ -51,7 +51,7 @@ class ScaledDotAttention(nn.Cell):
     def __init__(self, dropout=0.9):
         super().__init__()
         self.softmax = nn.Softmax(axis=-1)
-        self.dropout = nn.Dropout(keep_prob=1-dropout)
+        self.dropout = nn.Dropout(p=dropout)
 
     def construct(self, query, key, value, mask: Optional[mindspore.Tensor] = None):
         """Scaled dot-product attention network construction.
@@ -114,7 +114,7 @@ class AdditiveAttention(nn.Cell):
         self.w_q = nn.Dense(hidden_dims, hidden_dims, has_bias=False)
         self.w_k = nn.Dense(hidden_dims, hidden_dims, has_bias=False)
         self.w_output = nn.Dense(hidden_dims, 1, has_bias=True)
-        self.dropout = nn.Dropout(keep_prob=1-dropout)
+        self.dropout = nn.Dropout(p=dropout)
         self.tanh = nn.Tanh()
         # Set bias parameter
         bias_layer = initializer(Uniform(scale=0.1), [hidden_dims], mindspore.float32)
@@ -185,7 +185,7 @@ class LinearAttention(nn.Cell):
         self.softmax = nn.Softmax(axis=-1)
         self.tanh = nn.Tanh()
         self.v_linear = nn.Dense(hidden_dim, key_dim, has_bias=False)
-        self.dropout = nn.Dropout(keep_prob=1-dropout)
+        self.dropout = nn.Dropout(p=dropout)
         #set bias parameter
         uniformreal = ops.UniformReal(seed=0)
         bias_layer = uniformreal((hidden_dim,))
@@ -252,7 +252,7 @@ class CosineAttention(nn.Cell):
     def __init__(self, dropout=0.9):
         super().__init__()
         self.softmax = nn.Softmax(axis=-1)
-        self.dropout = nn.Dropout(keep_prob=1-dropout)
+        self.dropout = nn.Dropout(p=dropout)
 
     def construct(self, query, key, value, mask: Optional[mindspore.Tensor] = None):
         """Consine attention network construction.

@@ -95,6 +95,8 @@ class TestGRU(unittest.TestCase):
         nn_rnn = nn.GRU(self.input_size, self.hidden_size, num_layers=3, batch_first=True)
         mindspore.load_param_into_net(static_rnn, nn_rnn.parameters_dict())
         inputs = Tensor(self.x, mindspore.float32)
+        static_rnn.set_train(False)
+        nn_rnn.set_train(False)
 
         output0, h0 = static_rnn(inputs)
         output1, h1 = nn_rnn(inputs)
@@ -106,6 +108,8 @@ class TestGRU(unittest.TestCase):
         static_rnn = StaticGRU(self.input_size, self.hidden_size, batch_first=True, bidirectional=True)
         nn_rnn = nn.GRU(self.input_size, self.hidden_size, batch_first=True, bidirectional=True)
         mindspore.load_param_into_net(static_rnn, nn_rnn.parameters_dict())
+        static_rnn.set_train(False)
+        nn_rnn.set_train(False)
         inputs = Tensor(self.x, mindspore.float32)
         output0, h0 = static_rnn(inputs)
         output1, h1 = nn_rnn(inputs)
