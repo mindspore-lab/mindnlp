@@ -14,6 +14,7 @@
 # ============================================================================
 """MindNLP MindSpore Utils"""
 # pylint: disable=C0412
+# pylint: disable=C0103
 
 from typing import Optional
 
@@ -191,7 +192,8 @@ class PoolerStartLogits(nn.Cell):
         self.dense = nn.Dense(config.hidden_size, 1)
 
     def construct(
-        self, hidden_states: Tensor, p_mask: Optional[Tensor] = None
+        self, hidden_states: Tensor,
+        # p_mask: Optional[Tensor] = None
     ) -> Tensor:
         """
         Args:
@@ -243,7 +245,7 @@ class SQuADHead(nn.Cell):
         cls_index: Optional[Tensor] = None,
         is_impossible: Optional[Tensor] = None,
         p_mask: Optional[Tensor] = None,
-        return_dict: bool = False,
+        # return_dict: bool = False,
     ) -> Tensor:
         """
         Args:
@@ -291,7 +293,7 @@ class SQuADHead(nn.Cell):
                 loss_fct_cls = nn.BCEWithLogitsLoss()
                 cls_loss = loss_fct_cls(cls_logits, is_impossible)
 
-                # note(zhiliny): by default multiply the loss by 0.5 
+                # note(zhiliny): by default multiply the loss by 0.5
                 # so that the scale is comparable to start_loss and end_loss
                 total_loss += cls_loss * 0.5
 
@@ -299,18 +301,18 @@ class SQuADHead(nn.Cell):
 
         else:
             # during inference, compute the end logits based on beam search
-            bsz, slen, hsz = hidden_states.shape
+            _, slen, hsz = hidden_states.shape   #(bsz,slen.hsz)
             start_log_probs = ops.softmax(start_logits,axis=-1)  # shape (bsz, slen)
 
             start_top_log_probs, start_top_index = ops.topk(
                 start_log_probs, self.start_n_top
             )  # shape (bsz, start_n_top)
             start_top_index_exp = ops.BroadcastTo(shape
-                                                  =(-1, -1, hsz))(start_top_index.unsqueeze(-1))  
+                                                  =(-1, -1, hsz))(start_top_index.unsqueeze(-1))
                                                   # shape (bsz, start_n_top, hsz)
             start_states = ops.gather_elements(hidden_states, -2, start_top_index_exp)  # shape (bsz, start_n_top, hsz)
             start_states = ops.BroadcastTo(shape
-                                           =(-1, slen, -1, -1))(start_states.unsqueeze(1))  
+                                           =(-1, slen, -1, -1))(start_states.unsqueeze(1))
                                                   # shape (bsz, slen, start_n_top, hsz)
 
             hidden_states_expanded = hidden_states.unsqueeze(2).expand_as(
@@ -355,7 +357,7 @@ class PoolerEndLogits(nn.Cell):
         hidden_states: Tensor,
         start_states: Optional[Tensor] = None,
         start_positions: Optional[Tensor] = None,
-        p_mask: Optional[Tensor] = None,
+        # p_mask: Optional[Tensor] = None,
     ) -> Tensor:
 
         assert (
