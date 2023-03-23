@@ -15,6 +15,7 @@
 """
 Test XLM
 """
+# pylint: disable=C0103
 import unittest
 import numpy as np
 import mindspore
