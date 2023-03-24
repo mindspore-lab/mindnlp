@@ -127,11 +127,11 @@ def prune_linear_layer(layer: nn.Dense, index: mindspore.int64, dim: int = 0) ->
                          new_size[0],
                          has_bias=layer.bias is not None).to(layer.weight.device)
     new_layer.weight.requires_grad = False
-    new_layer.weight.copy_(W.contiguous())
+    new_layer.weight.copy_(W)
     new_layer.weight.requires_grad = True
     if layer.bias is not None:
         new_layer.bias.requires_grad = False
-        new_layer.bias.copy_(b.contiguous())
+        new_layer.bias.copy_(b)
         new_layer.bias.requires_grad = True
     return new_layer
 
