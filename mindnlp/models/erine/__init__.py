@@ -16,6 +16,9 @@
 Erine Model.
 """
 
-from mindnlp.models.erine import erine, erine_config
+from mindnlp.models.erine import erine, erine_config,env,model_outputs,model_utils
 from mindnlp.models.erine.erine import *
 from mindnlp.models.erine.erine_config import *
+from mindnlp.models.erine.env import *
+from mindnlp.models.erine.model_outputs import *
+from mindnlp.models.erine.model_utils import *
