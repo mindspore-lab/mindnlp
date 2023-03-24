@@ -17,7 +17,9 @@
 """
 MindNlp LUKE model
 """
+import inspect
 import math
+from typing import Callable
 
 import mindspore
 import numpy as np
@@ -27,6 +29,7 @@ from mindspore import ops, Tensor
 from mindnlp.models.luke.luke_config import LukeConfig
 from ..utils import logging
 
+ACT2FN = {"gelu": ops.gelu, "relu": ops.relu}
 logger = logging.get_logger(__name__)
 
 
@@ -331,6 +334,226 @@ class LukeAttention(nn.Cell):
         return outputs
 
 
+class LukeIntermediate(nn.Cell):
+    """
+    LukeIntermediate
+    """
+
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        if isinstance(config.hidden_act, str):
+            self.intermediate_act_fn = ACT2FN[config.hidden_act]
+        else:
+            self.intermediate_act_fn = config.hidden_act
+
+    def construct(self, hidden_states: Tensor) -> Tensor:
+        hidden_states = self.dense(hidden_states)
+        hidden_states = self.intermediate_act_fn(hidden_states)
+        return hidden_states
+
+
+class LukeOutput(nn.Cell):
+    """
+    LukeOutput
+    """
+
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.layer_norm = nn.LayerNorm([config.hidden_size, ], epsilon=config.layer_norm_eps)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+
+    def construct(self, hidden_states: Tensor, input_tensor: Tensor) -> Tensor:
+        hidden_states = self.dense(hidden_states)
+        hidden_states = self.dropout(hidden_states)
+        hidden_states = self.layer_norm(hidden_states + input_tensor)
+        return hidden_states
+
+
+class LukeLayer(nn.Cell):
+    """
+    LukeOutput
+    """
+
+    def __init__(self, config):
+        super().__init__()
+        self.chunk_size_feed_forward = config.chunk_size_feed_forward
+        self.seq_len_dim = 1
+        self.attention = LukeAttention(config)
+        self.intermediate = LukeIntermediate(config)
+        self.output = LukeOutput(config)
+
+    def construct(
+            self,
+            word_hidden_states,
+            entity_hidden_states,
+            attention_mask=None,
+            head_mask=None,
+            output_attentions=False,
+    ):
+        word_size = word_hidden_states.shape[1]
+
+        self_attention_outputs = self.attention(
+            word_hidden_states,
+            entity_hidden_states,
+            attention_mask,
+            head_mask,
+            output_attentions=output_attentions,
+        )
+        if entity_hidden_states is None:
+            concat_attention_output = self_attention_outputs[0]
+        else:
+            concat_attention_output = ops.cat(self_attention_outputs[:2], axis=1)
+
+        outputs = self_attention_outputs[2:]  # add self attentions if we output attention weights
+
+        layer_output = apply_chunking_to_forward(
+            self.feed_forward_chunk, self.chunk_size_feed_forward, self.seq_len_dim, concat_attention_output
+        )
+        word_layer_output = layer_output[:, :word_size, :]
+        if entity_hidden_states is None:
+            entity_layer_output = None
+        else:
+            entity_layer_output = layer_output[:, word_size:, :]
+
+        outputs = (word_layer_output, entity_layer_output) + outputs
+
+        return outputs
+
+    def feed_forward_chunk(self, attention_output):
+        """
+        This function applies transformations to an input tensor
+        using two other layers  to produce an output tensor.
+        """
+        intermediate_output = self.intermediate(attention_output)
+        layer_output = self.output(intermediate_output, attention_output)
+        return layer_output
+
+
+class LukeEncoder(nn.Cell):
+    """
+    LukeEncoder
+    """
+
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+        self.layer = nn.CellList([LukeLayer(config) for _ in range(config.num_hidden_layers)])
+        self.gradient_checkpointing = False
+
+    def construct(
+            self,
+            word_hidden_states,
+            entity_hidden_states,
+            attention_mask=None,
+            head_mask=None,
+            output_attentions=False,
+            output_hidden_states=False,
+            return_dict=True,
+    ):
+        all_word_hidden_states = () if output_hidden_states else None
+        all_entity_hidden_states = () if output_hidden_states else None
+        all_self_attentions = () if output_attentions else None
+
+        for i, layer_module in enumerate(self.layer):
+            if output_hidden_states:
+                all_word_hidden_states = all_word_hidden_states + (word_hidden_states,)
+                all_entity_hidden_states = all_entity_hidden_states + (entity_hidden_states,)
+
+            layer_head_mask = head_mask[i] if head_mask is not None else None
+            # if self.gradient_checkpointing and self.training:
+            #
+            #     def create_custom_forward(module):
+            #         def custom_forward(*inputs):
+            #             return module(*inputs, output_attentions)
+            #
+            #         return custom_forward
+            #
+            #     layer_outputs = torch.utils.checkpoint.checkpoint(
+            #         create_custom_forward(layer_module),
+            #         word_hidden_states,
+            #         entity_hidden_states,
+            #         attention_mask,
+            #         layer_head_mask,
+            #     )
+            layer_outputs = layer_module(
+                word_hidden_states,
+                entity_hidden_states,
+                attention_mask,
+                layer_head_mask,
+                output_attentions,
+            )
+
+            word_hidden_states = layer_outputs[0]
+
+            if entity_hidden_states is not None:
+                entity_hidden_states = layer_outputs[1]
+
+            if output_attentions:
+                all_self_attentions = all_self_attentions + (layer_outputs[2],)
+
+        if output_hidden_states:
+            all_word_hidden_states = all_word_hidden_states + (word_hidden_states,)
+            all_entity_hidden_states = all_entity_hidden_states + (entity_hidden_states,)
+
+        if not return_dict:
+            return tuple(
+                v
+                for v in [
+                    word_hidden_states,
+                    all_word_hidden_states,
+                    all_self_attentions,
+                    entity_hidden_states,
+                    all_entity_hidden_states,
+                ]
+                if v is not None
+            )
+        output = (word_hidden_states,) + (all_word_hidden_states,) + \
+                 (all_self_attentions,) + (entity_hidden_states,) + (all_entity_hidden_states,)
+        return output
+
+
+class LukePooler(nn.Cell):
+    """
+    LukePooler
+    """
+
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.activation = nn.Tanh()
+
+    def construct(self, hidden_states: Tensor) -> Tensor:
+        # We "pool" the model by simply taking the hidden state corresponding
+        # to the first token.
+        first_token_tensor = hidden_states[:, 0]
+        pooled_output = self.dense(first_token_tensor)
+        pooled_output = self.activation(pooled_output)
+        return pooled_output
+
+
+class EntityPredictionHeadTransform(nn.Cell):
+    """
+    EntityPredictionHeadTransform
+    """
+
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Dense(config.hidden_size, config.entity_emb_size)
+        if isinstance(config.hidden_act, str):
+            self.transform_act_fn = ACT2FN[config.hidden_act]
+        else:
+            self.transform_act_fn = config.hidden_act
+        self.layer_norm = nn.LayerNorm([config.entity_emb_size, ], epsilon=config.layer_norm_eps)
+
+    def construct(self, hidden_states):
+        hidden_states = self.dense(hidden_states)
+        hidden_states = self.transform_act_fn(hidden_states)
+        hidden_states = self.layer_norm(hidden_states)
+        return hidden_states
+
+
 def create_position_ids_from_input_ids(input_ids, padding_idx):
     """
     Replace non-padding symbols with their position numbers. Position numbers begin at padding_idx+1. Padding symbols
@@ -339,3 +562,53 @@ def create_position_ids_from_input_ids(input_ids, padding_idx):
     mask = ops.not_equal(input_ids, padding_idx).astype(mindspore.int32)
     incremental_indices = ops.cumsum(mask, -1).astype(mindspore.int32) * mask
     return incremental_indices.astype(mindspore.int64) + padding_idx
+
+
+def apply_chunking_to_forward(
+        forward_fn: Callable[..., mindspore.Tensor], chunk_size: int, chunk_dim: int, *input_tensors
+) -> mindspore.Tensor:
+    """
+    This function chunks the `input_tensors` into smaller input tensor parts
+    of size `chunk_size` over the dimension
+    `chunk_dim`. It then applies a layer `forward_fn` to each chunk independently to save memory.
+
+    If the `forward_fn` is independent across the `chunk_dim` this function will yield
+    the same result as directly applying `forward_fn` to `input_tensors`.
+    """
+
+    assert len(input_tensors) > 0, f"{input_tensors} has to be a tuple/list of tensors"
+
+    # inspect.signature exist since python 3.5 and is a python method
+    # -> no problem with backward compatibility
+    num_args_in_forward_chunk_fn = len(inspect.signature(forward_fn).parameters)
+    if num_args_in_forward_chunk_fn != len(input_tensors):
+        raise ValueError(
+            f"forward_chunk_fn expects {num_args_in_forward_chunk_fn} arguments, but only {len(input_tensors)} input "
+            "tensors are given"
+        )
+
+    if chunk_size > 0:
+        tensor_shape = input_tensors[0].shape[chunk_dim]
+        for input_tensor in input_tensors:
+            if input_tensor.shape[chunk_dim] != tensor_shape:
+                raise ValueError(
+                    f"All input tenors have to be of the same shape: {tensor_shape}, "
+                    f"found shape {input_tensor.shape[chunk_dim]}"
+                )
+
+        if input_tensors[0].shape[chunk_dim] % chunk_size != 0:
+            raise ValueError(
+                f"The dimension to be chunked {input_tensors[0].shape[chunk_dim]} has to be a multiple of the chunk "
+                f"size {chunk_size}"
+            )
+
+        num_chunks = input_tensors[0].shape[chunk_dim] // chunk_size
+
+        # chunk input tensor into tuples
+        input_tensors_chunks = tuple(input_tensor.chunk(num_chunks, dim=chunk_dim) for input_tensor in input_tensors)
+        # apply forward fn to every tuple
+        output_chunks = tuple(forward_fn(*input_tensors_chunk) for input_tensors_chunk in zip(*input_tensors_chunks))
+        # concatenate output at same dimension
+        return ops.cat(output_chunks, axis=chunk_dim)
+
+    return forward_fn(*input_tensors)

@@ -90,3 +90,68 @@ class TestModelingLUKE(unittest.TestCase):
         outputs = model(word_hidden_states, entity_hidden_states)
         assert outputs[0].shape == (1, 384, 768)
         assert outputs[1].shape == (1, 512, 768)
+
+    def test_luke_intermediate(self):
+        r"""
+        Test LukeIntermediate
+        """
+        config = luke_config.LukeConfig()
+        model = luke.LukeIntermediate(config)
+        hidden_states = Tensor(np.random.randn(1, 768), mindspore.float32)
+        output = model(hidden_states)
+        assert output.shape == (1, 3072)
+
+    def test_luke_output(self):
+        r"""
+        Test LukeOutput
+        """
+        config = luke_config.LukeConfig()
+        model = luke.LukeOutput(config)
+        hidden_states = Tensor(np.random.randn(1, 3072), mindspore.float32)
+        input_tensor = Tensor(np.random.rand(2, 768), mindspore.float32)
+        output = model(hidden_states, input_tensor)
+        assert output.shape == (2, 768)
+
+    def test_luke_layer(self):
+        r"""
+        Test LukeLayer
+        """
+        config = luke_config.LukeConfig()
+        model = luke.LukeLayer(config)
+        word_hidden_states = Tensor(np.random.randn(1, 256, 768), mindspore.float32)
+        entity_hidden_states = Tensor(np.random.randn(1, 512, 768), mindspore.float32)
+        outputs = model(word_hidden_states, entity_hidden_states)
+        assert outputs[0].shape == (1, 256, 768)
+        assert outputs[1].shape == (1, 512, 768)
+
+    def test_luke_encoder(self):
+        r"""
+        test_LukeEncoder
+        """
+        config = luke_config.LukeConfig()
+        model = luke.LukeEncoder(config)
+        word_hidden_states = Tensor(np.random.randn(1, 256, 768), mindspore.float32)
+        entity_hidden_states = Tensor(np.random.randn(1, 512, 768), mindspore.float32)
+        outputs = model(word_hidden_states, entity_hidden_states)
+        assert outputs[0].shape == (1, 256, 768)
+        assert outputs[3].shape == (1, 512, 768)
+
+    def test_luke_pooler(self):
+        r"""
+        Test LukePooler
+        """
+        config = luke_config.LukeConfig()
+        model = luke.LukePooler(config)
+        hidden_states = Tensor(np.random.randn(768, 768), mindspore.float32)
+        output = model(hidden_states)
+        assert output.shape == (768,)
+
+    def test_entity_prediction_head_transform(self):
+        r"""
+        Test EntityPredictionHeadTransform
+        """
+        config = luke_config.LukeConfig()
+        model = luke.EntityPredictionHeadTransform(config)
+        hidden_states = Tensor(np.random.randn(2, 768), mindspore.float32)
+        output = model(hidden_states)
+        assert output.shape == (2, 256)
