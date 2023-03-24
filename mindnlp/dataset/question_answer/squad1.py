@@ -24,11 +24,12 @@ import numpy as np
 
 import mindspore
 import mindspore.dataset as ds
-from mindspore.dataset import GeneratorDataset, text, transforms
+from mindspore.dataset import GeneratorDataset, transforms
 
+from mindnlp.vocab import Vocab
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.register import load_dataset, process
-from mindnlp.transforms import BasicTokenizer
+from mindnlp.transforms import BasicTokenizer, Lookup
 from mindnlp.configs import DEFAULT_ROOT
 
 URL = {
@@ -199,7 +200,7 @@ def SQuAD1_Process(dataset, char_vocab, word_vocab=None,\
     q_lens = []
     s_idx = []
     e_idx = []
-    pad_value_char = char_vocab.tokens_to_ids('<pad>')
+    pad_value_char = char_vocab.lookup_ids("<pad>")
     abnormals = [' ', '\n', '\u3000', '\u202f', '\u2009']
     for data in dataset:
         context = data[1].asnumpy().tolist()
@@ -230,9 +231,12 @@ def SQuAD1_Process(dataset, char_vocab, word_vocab=None,\
             if l >= e_index:
                 e_index = i
                 break
+        # define lookup operation in char vocab
+        char_lookup = Lookup(char_vocab, unk_token="<unk>")
         # generate the char list of the context(after lookup and padding operation)
         for token in c_token:
-            token_ids = char_vocab.tokens_to_ids(list(token))
+            token_ids = char_lookup(list(token))
+            token_ids = list(token_ids)
             if isinstance(token_ids, int):
                 token_list = []
                 token_list.append(token_ids)
@@ -243,7 +247,8 @@ def SQuAD1_Process(dataset, char_vocab, word_vocab=None,\
             c_char.append(token_pad)
         # generate the char list of the question(after lookup and padding operation)
         for token in q_token:
-            token_ids = char_vocab.tokens_to_ids(list(token))
+            token_ids = char_lookup(list(token))
+            token_ids = list(token_ids)
             if isinstance(token_ids, int):
             # if type(token_ids)==int:
                 token_list = []
@@ -274,12 +279,13 @@ def SQuAD1_Process(dataset, char_vocab, word_vocab=None,\
     dataset = dataset.map(tokenizer, 'question', 'q_word')
 
     if word_vocab is None:
-        word_vocab = text.Vocab.from_dataset(dataset, columns=['c_word', 'q_word'],\
+        word_vocab = Vocab.from_dataset(dataset, columns=['c_word', 'q_word'],\
                                              special_tokens=["<unk>", "<pad>"], special_first=True)
 
-    lookup_op = text.Lookup(word_vocab, unknown_token='<unk>')
+    # lookup_op = text.Lookup(word_vocab, unknown_token='<unk>')
+    lookup_op = Lookup(word_vocab, unk_token="<unk>")
     type_cast_op = transforms.TypeCast(mindspore.int32)
-    pad_value_word = word_vocab.tokens_to_ids('<pad>')
+    pad_value_word = word_vocab.lookup_ids('<pad>')
 
     dataset = dataset.map(lookup_op, 'c_word')
     dataset = dataset.map(lookup_op, 'q_word')
