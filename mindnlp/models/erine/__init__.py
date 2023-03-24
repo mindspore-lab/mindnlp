@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,9 +13,9 @@
 # limitations under the License.
 # ============================================================================
 """
-MachineTranslation dataset init
+Erine Model.
 """
 
-from .multi30k import Multi30k, Multi30k_Process
-from .iwslt2016 import IWSLT2016
-from .iwslt2017 import IWSLT2017, IWSLT2017_Process
+from mindnlp.models.erine import erine, erine_config
+from mindnlp.models.erine.erine import *
+from mindnlp.models.erine.erine_config import *
