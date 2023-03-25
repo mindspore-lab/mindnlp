@@ -24,7 +24,8 @@ import os
 import mindspore
 from mindspore import Tensor
 from mindspore.dataset import text
-from mindspore.ops import functional as F, argmax
+from mindspore.ops import functional as F
+from mindnlp._legacy.functional import argmax
 from mindnlp.workflow.work import Work
 from mindnlp.workflow.downstream import BertForSentimentAnalysis
 from mindnlp.models import BertConfig

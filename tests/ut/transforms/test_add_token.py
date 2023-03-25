@@ -14,8 +14,12 @@
 # ============================================================================
 """Test the AddToken"""
 
+from packaging import version
+import mindspore
 from mindspore.dataset import NumpySlicesDataset
 from mindnlp._legacy.transforms import AddToken
+
+MIN_COMPATIBLE_VERSION = '1.8.1'
 
 def test_addtoken_begin():
     """test addtoken by dataset.map"""
@@ -33,7 +37,10 @@ def test_addtoken_begin():
     # | ['TOKEN', 'a', 'b', 'c', 'd', 'e'] |
     # +---------------------------+
     data_after = next(dataset.create_tuple_iterator(output_numpy=True))[0]
-    assert data_after.tolist() == ['TOKEN', 'a', 'b', 'c', 'd', 'e']
+    if version.parse(mindspore.__version__) <= version.parse(MIN_COMPATIBLE_VERSION):
+        assert data_after.tolist() == [b'TOKEN', b'a', b'b', b'c', b'd', b'e']
+    else:
+        assert data_after.tolist() == ['TOKEN', 'a', 'b', 'c', 'd', 'e']
 
 def test_addtoken_end():
     """test addtoken by dataset.map"""
@@ -51,4 +58,7 @@ def test_addtoken_end():
     # | ['a', 'b', 'c', 'd', 'e', 'TOKEN'] |
     # +---------------------------+
     data_after = next(dataset.create_tuple_iterator(output_numpy=True))[0]
-    assert data_after.tolist() == ['a', 'b', 'c', 'd', 'e', 'TOKEN']
+    if version.parse(mindspore.__version__) <= version.parse(MIN_COMPATIBLE_VERSION):
+        assert data_after.tolist() == [b'a', b'b', b'c', b'd', b'e', b'TOKEN']
+    else:
+        assert data_after.tolist() == ['a', 'b', 'c', 'd', 'e', 'TOKEN']

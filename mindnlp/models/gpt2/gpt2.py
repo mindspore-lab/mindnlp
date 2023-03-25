@@ -824,7 +824,7 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
                     "%s will not detect padding tokens in `inputs_embeds`. Results may be unexpected if using padding "
                     "tokens in conjunction with `inputs_embeds.`", self.__class__.__name__)
 
-        pooled_logits = logits[list(arange(batch_size).asnumpy()), sequence_lengths]
+        pooled_logits = logits[:, sequence_lengths]
 
         loss = None
         if labels is not None:
