@@ -15,12 +15,18 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=C0103
+# pylint: disable=C0412
 
 """bilstm imdb st"""
 
 import numpy as np
 import mindspore as ms
 from mindspore import nn, ops, Tensor
+from mindnlp.utils import less_min_pynative_first
+if less_min_pynative_first:
+    from mindspore.ops import value_and_grad
+else:
+    from mindspore import value_and_grad
 
 class BiLSTM(nn.Cell):
     """bilstm network"""
@@ -64,7 +70,7 @@ def test_bilstm_imdb():
         loss = loss_fn(logits, label)
         return loss
 
-    grad_fn = ms.value_and_grad(forward_fn, None, optimizer.parameters)
+    grad_fn = value_and_grad(forward_fn, None, optimizer.parameters)
 
     def train_step(data, label):
         loss, grads = grad_fn(data, label)
