@@ -21,7 +21,7 @@ __all__ = [
 from abc import abstractmethod
 from mindspore import nn
 from mindspore import Parameter
-
+from mindnlp._legacy.nn import Dropout
 
 class TokenEmbedding(nn.Cell):
     r"""
@@ -37,7 +37,7 @@ class TokenEmbedding(nn.Cell):
         super().__init__()
 
         self.embed = Parameter(init_embed, name='embed', requires_grad=requires_grad)
-        self.dropout_layer = nn.Dropout(p=dropout)
+        self.dropout_layer = Dropout(p=dropout)
         self._embed_size = self.embed.shape
 
     def dropout(self, words):
