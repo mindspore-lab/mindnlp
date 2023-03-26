@@ -15,6 +15,7 @@
 # pylint: disable=C0103
 # pylint: disable=W0123
 # pylint: disable=W0212
+# pylint: disable=C0412
 
 '''RNN operators module, include RNN, GRU, LSTM'''
 import math
@@ -24,11 +25,18 @@ from mindspore import nn, ops, context
 from mindspore import Tensor, Parameter, ParameterTuple
 from mindspore import log as logger
 from mindspore.common.initializer import initializer, Uniform
-from mindspore.ops.primitive import _primexpr
+from mindspore.ops.primitive import constexpr
 from mindspore.ops.operations._rl_inner_ops import CudnnGRU
 from mindspore.ops._primitive_cache import _get_cache_prim
+from mindnlp.utils import less_min_pynative_first
+if less_min_pynative_first:
+    from mindnlp._legacy.nn import Dropout
+    from mindnlp._legacy.functional import tensor_split, sigmoid, reverse
+else:
+    from mindspore.nn import Dropout
+    from mindspore.ops import tensor_split, sigmoid, reverse
 
-@_primexpr
+@constexpr
 def _init_state(shape, dtype, is_lstm):
     hx = Tensor(np.zeros(shape), dtype)
     cx = Tensor(np.zeros(shape), dtype)
@@ -40,16 +48,16 @@ def _init_state(shape, dtype, is_lstm):
 def gru_cell(inputs, hidden, w_ih, w_hh, b_ih=None, b_hh=None):
     '''GRU cell function'''
     if b_ih is None:
-        gi = ops.mm(inputs, w_ih.T)
-        gh = ops.mm(hidden, w_hh.T)
+        gi = ops.matmul(inputs, w_ih.T)
+        gh = ops.matmul(hidden, w_hh.T)
     else:
-        gi = ops.mm(inputs, w_ih.T) + b_ih
-        gh = ops.mm(hidden, w_hh.T) + b_hh
-    i_r, i_i, i_n = ops.tensor_split(gi, 3, 1)
-    h_r, h_i, h_n = ops.tensor_split(gh, 3, 1)
+        gi = ops.matmul(inputs, w_ih.T) + b_ih
+        gh = ops.matmul(hidden, w_hh.T) + b_hh
+    i_r, i_i, i_n = tensor_split(gi, 3, 1)
+    h_r, h_i, h_n = tensor_split(gh, 3, 1)
 
-    resetgate = ops.sigmoid(i_r + h_r)
-    inputgate = ops.sigmoid(i_i + h_i)
+    resetgate = sigmoid(i_r + h_r)
+    inputgate = sigmoid(i_i + h_i)
     newgate = ops.tanh(i_n + resetgate * h_n)
     hy = newgate + inputgate * (hidden - newgate)
 
@@ -95,8 +103,8 @@ class SingleGRULayer_CPU(nn.Cell):
 
     def bidirection(self, inputs, h, weights, biases):
         """bidirectional."""
-        rev_inputs = ops.reverse(inputs, [0])
-        h_f, h_b = ops.tensor_split(h, 2)
+        rev_inputs = reverse(inputs, [0])
+        h_f, h_b = tensor_split(h, 2)
         if self.has_bias:
             weights_f = weights[:2]
             weights_b = weights[2:]
@@ -112,7 +120,7 @@ class SingleGRULayer_CPU(nn.Cell):
         outputs_f, hn_f = self.forward(inputs, h_f, weights_f, biases_f)
         outputs_b, hn_b = self.forward(rev_inputs, h_b, weights_b, biases_b)
 
-        outputs_b = ops.reverse(outputs_b, [0])
+        outputs_b = reverse(outputs_b, [0])
         outputs = ops.concat([outputs_f, outputs_b], 2)
         hn = ops.concat([hn_f, hn_b], 0)
 
@@ -221,7 +229,7 @@ class SingleGRULayer_Ascend(nn.Cell):
 
     def bidirection(self, inputs, h, weights):
         """bidirectional."""
-        rev_inputs = ops.reverse(inputs, 0)
+        rev_inputs = reverse(inputs, 0)
         if not self.has_bias:
             w_ih_f, w_hh_f, w_ih_b, w_hh_b = weights
             b_ih_f = ops.zeros(self.gate_size, inputs.dtype)
@@ -241,7 +249,7 @@ class SingleGRULayer_Ascend(nn.Cell):
                                                w_hh_b.transpose((1, 0)).astype(ms.float16), \
                                                b_ih_b, b_hh_b, \
                                                None, h[1].astype(ms.float16))
-        outputs_b = ops.reverse(outputs_b, 0)
+        outputs_b = reverse(outputs_b, 0)
         outputs = ops.concat([outputs_f, outputs_b], 2)
         hn = ops.concat([hn_f, hn_b], 0)
 
@@ -269,7 +277,7 @@ class MultiLayerRNN(nn.Cell):
             w_stride = w_stride * 2
         self.w_stride = w_stride
 
-        self.dropout = nn.Dropout(p=dropout)
+        self.dropout = Dropout(p=dropout)
         self.dropout_rate = dropout
         self.is_lstm = mode == 'LSTM'
         self.num_layers = num_layers
@@ -283,10 +291,10 @@ class MultiLayerRNN(nn.Cell):
         c_n = ()
         output = 0
         if self.is_lstm:
-            hx_list = ops.tensor_split(hx[0], self.num_layers)
-            cx_list = ops.tensor_split(hx[1], self.num_layers)
+            hx_list = tensor_split(hx[0], self.num_layers)
+            cx_list = tensor_split(hx[1], self.num_layers)
         else:
-            hx_list = ops.tensor_split(hx, self.num_layers)
+            hx_list = tensor_split(hx, self.num_layers)
             cx_list = None
 
         w_list = ()

@@ -1,5 +1,4 @@
 sphinx == 5.1.1
-mindspore
 recommonmark
 sphinx-markdown-tables
 sphinx_rtd_theme
@@ -9,3 +8,4 @@ tqdm
 datasets
 tokenizers
 git+https://github.com/mindspore-lab/mindnlp
+https://huggingface.co/lvyufeng/mindspore-daily/resolve/main/mindspore-newest-cp37-cp37m-linux_x86_64.whl
