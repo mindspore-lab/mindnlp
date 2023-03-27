@@ -14,22 +14,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.\
 # ============================================================================
+# pylint: disable=C0103
 """
 MindNlp LUKE model
 """
 import inspect
 import math
-from typing import Callable
+import os
+from typing import Callable, Union, Optional, Tuple
 
 import mindspore
 import numpy as np
 from mindspore import nn
 from mindspore import ops, Tensor
 
+from mindnlp.abc.backbones.pretrained import PretrainedModel
 from mindnlp.models.luke.luke_config import LukeConfig
 from ..utils import logging
+from ..utils.activations import ACT2FN
+from ..utils.mixin import CellUtilMixin
 
-ACT2FN = {"gelu": ops.gelu, "relu": ops.relu}
 logger = logging.get_logger(__name__)
 
 
@@ -76,6 +80,7 @@ class LukeEmbeddings(nn.Cell):
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
+        #     print
 
         position_embeddings = self.position_embeddings(position_ids)
         token_type_embeddings = self.token_type_embeddings(token_type_ids)
@@ -462,6 +467,7 @@ class LukeEncoder(nn.Cell):
                 all_entity_hidden_states = all_entity_hidden_states + (entity_hidden_states,)
 
             layer_head_mask = head_mask[i] if head_mask is not None else None
+            # TODO
             # if self.gradient_checkpointing and self.training:
             #
             #     def create_custom_forward(module):
@@ -496,7 +502,6 @@ class LukeEncoder(nn.Cell):
         if output_hidden_states:
             all_word_hidden_states = all_word_hidden_states + (word_hidden_states,)
             all_entity_hidden_states = all_entity_hidden_states + (entity_hidden_states,)
-
         if not return_dict:
             return tuple(
                 v
@@ -509,9 +514,13 @@ class LukeEncoder(nn.Cell):
                 ]
                 if v is not None
             )
-        output = (word_hidden_states,) + (all_word_hidden_states,) + \
-                 (all_self_attentions,) + (entity_hidden_states,) + (all_entity_hidden_states,)
-        return output
+        return {
+            "last_hidden_state": word_hidden_states,
+            "hidden_states": all_word_hidden_states,
+            "attentions": all_self_attentions,
+            "entity_last_hidden_state": entity_hidden_states,
+            "entity_hidden_states": all_entity_hidden_states,
+        }
 
 
 class LukePooler(nn.Cell):
@@ -554,6 +563,221 @@ class EntityPredictionHeadTransform(nn.Cell):
         return hidden_states
 
 
+# 0325==============================
+class EntityPredictionHead(nn.Cell):
+    """
+    EntityPredictionHead
+    """
+
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+        self.transform = EntityPredictionHeadTransform(config)
+        self.decoder = nn.Dense(config.entity_emb_size, config.entity_vocab_size, has_bias=False)
+        self.bias = mindspore.Parameter(ops.zeros((config.entity_vocab_size,)))
+
+    def construct(self, hidden_states):
+        hidden_states = self.transform(hidden_states)
+        hidden_states = self.decoder(hidden_states) + self.bias
+
+        return hidden_states
+
+
+class LukePreTrainedModel(PretrainedModel, CellUtilMixin):
+    """
+    LukePreTrainedModel
+    """
+
+    config_class = LukeConfig
+    base_model_prefix = "luke"
+    supports_gradient_checkpointing = True
+    _no_split_modules = ["LukeAttention", "LukeEntityEmbeddings"]
+
+    def post_init(self):
+        pass
+
+    def init_model_weights(self):
+        pass
+
+    def get_input_embeddings(self) -> "nn.Cell":
+        pass
+
+    def set_input_embeddings(self, value: "nn.Cell"):
+        pass
+
+    def resize_position_embeddings(self, new_num_position_embeddings: int):
+        pass
+
+    def get_position_embeddings(self):
+        pass
+
+    def save(self, save_dir: Union[str, os.PathLike]):
+        pass
+
+    def _init_weights(self, module: nn.Cell):
+        """Initialize the weights"""
+        if isinstance(module, nn.Dense):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                module.bias.data.zero_()
+        elif isinstance(module, nn.Embedding):
+            if module.embedding_dim == 1:  # embedding for bias parameters
+                module.weight.data.zero_()
+            else:
+                module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx].zero_()
+        elif isinstance(module, nn.LayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
+
+    def _set_gradient_checkpointing(self, module, value=False):
+        if isinstance(module, LukeEncoder):
+            module.gradient_checkpointing = value
+
+
+class LukeModel(LukePreTrainedModel):
+    """
+    LukeModel
+    """
+    _keys_to_ignore_on_load_missing = [r"position_ids"]
+
+    def __init__(self, config: LukeConfig, add_pooling_layer: bool = True):
+        super().__init__(config)
+        self.config = config
+
+        self.embeddings = LukeEmbeddings(config)
+        self.entity_embeddings = LukeEntityEmbeddings(config)
+        self.encoder = LukeEncoder(config)
+
+        self.pooler = LukePooler(config) if add_pooling_layer else None
+
+    def get_input_embeddings(self):
+        return self.embeddings.word_embeddings
+
+    def set_input_embeddings(self, value):
+        self.embeddings.word_embeddings = value
+
+    def get_entity_embeddings(self):
+        """get_entity_embeddings"""
+        return self.entity_embeddings.entity_embeddings
+
+    def set_entity_embeddings(self, value):
+        """set_entity_embeddings"""
+        self.entity_embeddings.entity_embeddings = value
+
+    def _prune_heads(self, heads_to_prune):
+        raise NotImplementedError("LUKE does not support the pruning of attention heads")
+
+    def construct(
+            self,
+            input_ids: Optional[Tensor] = None,
+            attention_mask: Optional[Tensor] = None,
+            token_type_ids: Optional[Tensor] = None,
+            position_ids: Optional[Tensor] = None,
+            entity_ids: Optional[Tensor] = None,
+            entity_attention_mask: Optional[Tensor] = None,
+            entity_token_type_ids: Optional[Tensor] = None,
+            entity_position_ids: Optional[Tensor] = None,
+            head_mask: Optional[Tensor] = None,
+            inputs_embeds: Optional[Tensor] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+    ):
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        if input_ids is not None and inputs_embeds is not None:
+            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
+        if input_ids is not None and inputs_embeds is None:
+            input_shape = input_ids.shape
+        elif inputs_embeds is not None:
+            input_shape = inputs_embeds.shape[:-1]
+        else:
+            raise ValueError("You have to specify either input_ids or inputs_embeds")
+
+        batch_size, seq_length = input_shape
+
+        if attention_mask is None:
+            attention_mask = ops.ones((batch_size, seq_length))
+        if token_type_ids is None:
+            token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
+        if entity_ids is not None:
+            entity_seq_length = entity_ids.shape[1]
+            if entity_attention_mask is None:
+                entity_attention_mask = ops.ones((batch_size, entity_seq_length))
+            if entity_token_type_ids is None:
+                entity_token_type_ids = ops.zeros((batch_size, entity_seq_length), dtype=mindspore.int64)
+
+        head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
+
+        # First, compute word embeddings
+        word_embedding_output = self.embeddings(
+            input_ids=input_ids,
+            position_ids=position_ids,
+            token_type_ids=token_type_ids,
+            inputs_embeds=inputs_embeds,
+        )
+
+        # Second, compute extended attention mask
+        extended_attention_mask = self.get_extended_attention_mask(attention_mask, entity_attention_mask)
+
+        # Third, compute entity embeddings and concatenate with word embeddings
+        if entity_ids is None:
+            entity_embedding_output = None
+        else:
+            entity_embedding_output = self.entity_embeddings(entity_ids, entity_position_ids, entity_token_type_ids)
+
+        encoder_outputs = self.encoder(
+            word_embedding_output,
+            entity_embedding_output,
+            attention_mask=extended_attention_mask,
+            head_mask=head_mask,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        sequence_output = encoder_outputs[0] if not return_dict else tuple(
+            i for i in encoder_outputs.values() if i is not None)[0]
+
+        pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
+        if not return_dict:
+            return (sequence_output, pooled_output) + encoder_outputs[1:]
+
+        return {
+            'last_hidden_state': sequence_output,
+            'pooler_output': pooled_output,
+            'hidden_states': encoder_outputs['hidden_states'],
+            'attentions': encoder_outputs['attentions'],
+            'entity_last_hidden_state': encoder_outputs['entity_last_hidden_state'],
+            'entity_hidden_states': encoder_outputs['entity_hidden_states']
+        }
+
+    def get_extended_attention_mask(
+            self, attention_mask: Tensor, input_shape: Tuple[int], dtype=None
+    ):
+        if input_shape is not None:
+            attention_mask = ops.cat([attention_mask, input_shape], axis=-1)
+
+        if attention_mask.dim() == 3:
+            extended_attention_mask = attention_mask[:, None, :, :]
+        elif attention_mask.dim() == 2:
+            extended_attention_mask = attention_mask[:, None, None, :]
+        else:
+            raise ValueError(f"Wrong shape for attention_mask (shape {attention_mask.shape})")
+
+        extended_attention_mask = extended_attention_mask.to(dtype=self.dtype)  # fp16 compatibility
+        extended_attention_mask = (1.0 - extended_attention_mask) * Tensor(
+            np.finfo(mindspore.dtype_to_nptype(self.dtype)).min)
+
+        return extended_attention_mask
+
+
 def create_position_ids_from_input_ids(input_ids, padding_idx):
     """
     Replace non-padding symbols with their position numbers. Position numbers begin at padding_idx+1. Padding symbols
@@ -562,6 +786,307 @@ def create_position_ids_from_input_ids(input_ids, padding_idx):
     mask = ops.not_equal(input_ids, padding_idx).astype(mindspore.int32)
     incremental_indices = ops.cumsum(mask, -1).astype(mindspore.int32) * mask
     return incremental_indices.astype(mindspore.int64) + padding_idx
+
+
+class LukeLMHead(nn.Cell):
+    """LukeLMead"""
+
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.layer_norm = nn.LayerNorm([config.hidden_size, ], epsilon=config.layer_norm_eps)
+
+        self.decoder = nn.Dense(config.hidden_size, config.vocab_size)
+        self.bias = mindspore.Parameter(ops.zeros(config.vocab_size))
+        self.decoder.bias = self.bias
+
+    def construct(self, features, **kwargs):
+        # hidden
+        x = self.dense(features)
+        x = ops.gelu(x)
+        x = self.layer_norm(x)
+        # project back to size of vocabulary with bias
+        # endecoded
+        x = self.decoder(x)
+
+        return x
+
+    def _tie_weights(self):
+        # To tie those two weights if they get disconnected (on TPU or when the bias is resized)
+        # For accelerate compatibility and to not break backward compatibility
+        if self.decoder.bias.device.type == "meta":
+            self.decoder.bias = self.bias
+        else:
+            self.bias = self.decoder.bias
+
+
+class LukeForMaskedLM(LukePreTrainedModel):
+    """
+    LukeForMaskedLM
+    """
+    _keys_to_ignore_on_save = [
+        r"lm_head.decoder.weight",
+        r"lm_head.decoder.bias",
+        r"entity_predictions.decoder.weight",
+    ]
+    _keys_to_ignore_on_load_missing = [
+        r"position_ids",
+        r"lm_head.decoder.weight",
+        r"lm_head.decoder.bias",
+        r"entity_predictions.decoder.weight",
+    ]
+
+    def __init__(self, config):
+        super().__init__(config)
+
+        self.luke = LukeModel(config)
+
+        self.lm_head = LukeLMHead(config)
+        self.entity_predictions = EntityPredictionHead(config)
+
+        self.loss_fn = nn.CrossEntropyLoss(ignore_index=-1)
+
+    def tie_weights(self):
+        """tie_weight"""
+        super().tie_weights()
+        self._tie_or_clone_weights(self.entity_predictions.decoder, self.luke.entity_embeddings.entity_embeddings)
+
+    def get_output_embeddings(self):
+        """get_output_embeddings"""
+        return self.lm_head.decoder
+
+    def set_output_embeddings(self, new_embeddings):
+        """set_output_embeddings"""
+        self.lm_head.decoder = new_embeddings
+
+    def construct(
+            self,
+            input_ids: Optional[Tensor] = None,
+            attention_mask: Optional[Tensor] = None,
+            token_type_ids: Optional[Tensor] = None,
+            position_ids: Optional[Tensor] = None,
+            entity_ids: Optional[Tensor] = None,
+            entity_attention_mask: Optional[Tensor] = None,
+            entity_token_type_ids: Optional[Tensor] = None,
+            entity_position_ids: Optional[Tensor] = None,
+            labels: Optional[Tensor] = None,
+            entity_labels: Optional[Tensor] = None,
+            head_mask: Optional[Tensor] = None,
+            inputs_embeds: Optional[Tensor] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+    ):
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        outputs = self.luke(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            entity_ids=entity_ids,
+            entity_attention_mask=entity_attention_mask,
+            entity_token_type_ids=entity_token_type_ids,
+            entity_position_ids=entity_position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=True,
+        )
+        loss = None
+        mlm_loss = None
+        logits = self.lm_head(outputs['last_hidden_state'])
+        if labels is not None:
+            mlm_loss = self.loss_fn(logits.view(-1, self.config.vocab_size), labels.view(-1))
+            if loss is None:
+                loss = mlm_loss
+
+        mep_loss = None
+        entity_logits = None
+        if outputs['entity_last_hidden_state'] is not None:
+            entity_logits = self.entity_predictions(outputs['entity_last_hidden_state'])
+            if entity_labels is not None:
+                mep_loss = self.loss_fn(entity_logits.view(-1, self.config.entity_vocab_size), entity_labels.view(-1))
+                if loss is None:
+                    loss = mep_loss
+                else:
+                    loss = loss + mep_loss
+        if not return_dict:
+            return tuple(
+                v
+                for v in [
+                    loss,
+                    mlm_loss,
+                    mep_loss,
+                    logits,
+                    entity_logits,
+                    outputs['hidden_states'],
+                    outputs['entity_hidden_states'],
+                    outputs['attentions'],
+                ]
+                if v is not None
+            )
+        return tuple(
+            v
+            for v in [
+                loss,
+                mlm_loss,
+                mep_loss,
+                logits,
+                entity_logits,
+                outputs['hidden_states'],
+                outputs['entity_hidden_states'],
+                outputs['attentions'],
+            ]
+            if v is not None
+        )
+
+
+class LukeForEntityClassification(LukePreTrainedModel):
+    """
+    LukeForEntityClassification
+    """
+
+    def __init__(self, config):
+        super().__init__(config)
+
+        self.luke = LukeModel(config)
+
+        self.num_labels = config.num_labels
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+
+    def construct(
+            self,
+            input_ids: Optional[Tensor] = None,
+            attention_mask: Optional[Tensor] = None,
+            token_type_ids: Optional[Tensor] = None,
+            position_ids: Optional[Tensor] = None,
+            entity_ids: Optional[Tensor] = None,
+            entity_attention_mask: Optional[Tensor] = None,
+            entity_token_type_ids: Optional[Tensor] = None,
+            entity_position_ids: Optional[Tensor] = None,
+            head_mask: Optional[Tensor] = None,
+            inputs_embeds: Optional[Tensor] = None,
+            labels: Optional[Tensor] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+    ):
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        outputs = self.luke(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            entity_ids=entity_ids,
+            entity_attention_mask=entity_attention_mask,
+            entity_token_type_ids=entity_token_type_ids,
+            entity_position_ids=entity_position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=True,
+        )
+        feature_vector = outputs['entity_last_hidden_state'][:, 0, :]
+        feature_vector = self.dropout(feature_vector)
+        logits = self.classifier(feature_vector)
+
+        loss = None
+        if labels is not None:
+            if labels.ndim == 1:
+                loss = ops.cross_entropy(logits, labels)
+            else:
+                loss = ops.binary_cross_entropy_with_logits(logits.view(-1), labels.view(-1).type_as(logits), Tensor(),
+                                                            Tensor())
+        if not return_dict:
+            return tuple(
+                v
+                for v in
+                [loss, logits, outputs['hidden_states'], outputs['entity_hidden_states'], outputs['attentions']]
+                if v is not None
+            )
+        return tuple(
+            v
+            for v in [loss, logits, outputs['hidden_states'], outputs['entity_hidden_states'], outputs['attentions']]
+            if v is not None
+        )
+
+
+class LukeForEntityPairClassification(LukePreTrainedModel):
+    """
+    LukeForEntityPairClassification
+    """
+
+    def __init__(self, config):
+        super().__init__(config)
+
+        self.luke = LukeModel(config)
+
+        self.num_labels = config.num_labels
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.classifier = nn.Dense(config.hidden_size * 2, config.num_labels, has_bias=False)
+
+    def construct(
+            self,
+            input_ids: Optional[Tensor] = None,
+            attention_mask: Optional[Tensor] = None,
+            token_type_ids: Optional[Tensor] = None,
+            position_ids: Optional[Tensor] = None,
+            entity_ids: Optional[Tensor] = None,
+            entity_attention_mask: Optional[Tensor] = None,
+            entity_token_type_ids: Optional[Tensor] = None,
+            entity_position_ids: Optional[Tensor] = None,
+            head_mask: Optional[Tensor] = None,
+            inputs_embeds: Optional[Tensor] = None,
+            labels: Optional[Tensor] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+    ):
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        outputs = self.luke(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            entity_ids=entity_ids,
+            entity_attention_mask=entity_attention_mask,
+            entity_token_type_ids=entity_token_type_ids,
+            entity_position_ids=entity_position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=True,
+        )
+
+        feature_vector = ops.cat(
+            [outputs['entity_last_hidden_state'][:, 0, :], outputs['entity_last_hidden_state'][:, 1, :]], axis=1
+        )
+        feature_vector = self.dropout(feature_vector)
+        logits = self.classifier(feature_vector)
+
+        loss = None
+        if labels is not None:
+            if labels.ndim == 1:
+                loss = ops.cross_entropy(logits, labels)
+            else:
+                loss = ops.binary_cross_entropy_with_logits(logits.view(-1), labels.view(-1).type_as(logits), Tensor(),
+                                                            Tensor())
+        if not return_dict:
+            return tuple(
+                v
+                for v in
+                [loss, logits, outputs['hidden_states'], outputs['entity_hidden_states'], outputs['attentions']]
+                if v is not None
+            )
+        return tuple(
+            v
+            for v in [loss, logits, outputs['hidden_states'], outputs['entity_hidden_states'], outputs['attentions']]
+            if v is not None
+        )
 
 
 def apply_chunking_to_forward(
