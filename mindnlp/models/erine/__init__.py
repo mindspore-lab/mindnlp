@@ -15,3 +15,6 @@
 """
 Erine Model.
 """
+
+from erine_config import *
+from erine import *
