@@ -1089,6 +1089,412 @@ class LukeForEntityPairClassification(LukePreTrainedModel):
         )
 
 
+class LukeForEntitySpanClassification(LukePreTrainedModel):
+    def __init__(self, config):
+        super().__init__(config)
+
+        self.luke = LukeModel(config)
+
+        self.num_labels = config.num_labels
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.classifier = nn.Dense(config.hidden_size * 3, config.num_labels)
+
+    def construct(
+            self,
+            input_ids: Optional[Tensor] = None,
+            attention_mask=None,
+            token_type_ids: Optional[Tensor] = None,
+            position_ids: Optional[Tensor] = None,
+            entity_ids: Optional[Tensor] = None,
+            entity_attention_mask: Optional[Tensor] = None,
+            entity_token_type_ids: Optional[Tensor] = None,
+            entity_position_ids: Optional[Tensor] = None,
+            entity_start_positions: Optional[Tensor] = None,
+            entity_end_positions: Optional[Tensor] = None,
+            head_mask: Optional[Tensor] = None,
+            inputs_embeds: Optional[Tensor] = None,
+            labels: Optional[Tensor] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+    ):
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.luke(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            entity_ids=entity_ids,
+            entity_attention_mask=entity_attention_mask,
+            entity_token_type_ids=entity_token_type_ids,
+            entity_position_ids=entity_position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=True,
+        )
+        hidden_size = outputs['last_hidden_state'].shape[-1]
+        entity_start_positions = ops.BroadcastTo(shape=(-1, -1, hidden_size))(entity_start_positions.unsqueeze(-1))
+        # if entity_start_positions.device != outputs['last_hidden_state'].device:
+        #     entity_start_positions = entity_start_positions.to(outputs['last_hidden_state'].device)
+        start_states = ops.gather_elements(outputs['last_hidden_state'], -2, entity_start_positions)
+
+        entity_end_positions = ops.BroadcastTo(shape=(-1, -1, hidden_size))(entity_end_positions.unsqueeze(-1))
+        # if entity_end_positions.device != outputs['last_hidden_state'].device:
+        #     entity_end_positions = entity_end_positions.to(outputs['last_hidden_state'].device)
+        end_states = ops.gather_elements(outputs['last_hidden_state'], -2, entity_end_positions)
+
+        feature_vector = ops.cat([start_states, end_states, outputs['entity_last_hidden_state']], axis=2)
+
+        feature_vector = self.dropout(feature_vector)
+        logits = self.classifier(feature_vector)
+
+        loss = None
+        if labels is not None:
+            if labels.ndim == 2:
+                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            else:
+                loss = ops.binary_cross_entropy_with_logits(logits.view(-1), labels.view(-1).type_as(logits))
+
+        return tuple(
+            v
+            for v in [loss, logits, outputs['hidden_states'], outputs['entity_hidden_states'], outputs['attentions']]
+            if v is not None
+        )
+
+
+class LukeForSequenceClassification(LukePreTrainedModel):
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+        self.luke = LukeModel(config)
+        self.dropout = nn.Dropout(p=
+                                  config.classifier_dropout
+                                  if config.classifier_dropout is not None
+                                  else config.hidden_dropout_prob
+                                  )
+        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+
+        self.post_init()
+
+    def construct(
+            self,
+            input_ids: Optional[Tensor] = None,
+            attention_mask: Optional[Tensor] = None,
+            token_type_ids: Optional[Tensor] = None,
+            position_ids: Optional[Tensor] = None,
+            entity_ids: Optional[Tensor] = None,
+            entity_attention_mask: Optional[Tensor] = None,
+            entity_token_type_ids: Optional[Tensor] = None,
+            entity_position_ids: Optional[Tensor] = None,
+            head_mask: Optional[Tensor] = None,
+            inputs_embeds: Optional[Tensor] = None,
+            labels: Optional[Tensor] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+    ):
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.luke(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            entity_ids=entity_ids,
+            entity_attention_mask=entity_attention_mask,
+            entity_token_type_ids=entity_token_type_ids,
+            entity_position_ids=entity_position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=True,
+        )
+
+        pooled_output = outputs['pooler_output']
+
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+
+        loss = None
+        if labels is not None:
+            if self.config.problem_type is None:
+                if self.num_labels == 1:
+                    self.config.problem_type = "regression"
+                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                    self.config.problem_type = "single_label_classification"
+                else:
+                    self.config.problem_type = "multi_label_classification"
+
+            if self.config.problem_type == "regression":
+                loss_fct = nn.MSELoss()
+                if self.num_labels == 1:
+                    loss = loss_fct(logits.squeeze(), labels.squeeze())
+                else:
+                    loss = loss_fct(logits, labels)
+            elif self.config.problem_type == "single_label_classification":
+                loss_fct = nn.CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            elif self.config.problem_type == "multi_label_classification":
+                loss_fct = nn.BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
+
+        return tuple(
+            v
+            for v in
+            [loss, logits, outputs['hidden_states'], outputs['entity_hidden_states'], outputs['attentions']]
+            if v is not None
+        )
+
+
+class LukeForTokenClassification(LukePreTrainedModel):
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+
+        self.luke = LukeModel(config, add_pooling_layer=False)
+        self.dropout = nn.Dropout(p=
+                                  config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
+                                  )
+        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+
+        self.post_init()
+
+    def construct(
+            self,
+            input_ids: Optional[Tensor] = None,
+            attention_mask: Optional[Tensor] = None,
+            token_type_ids: Optional[Tensor] = None,
+            position_ids: Optional[Tensor] = None,
+            entity_ids: Optional[Tensor] = None,
+            entity_attention_mask: Optional[Tensor] = None,
+            entity_token_type_ids: Optional[Tensor] = None,
+            entity_position_ids: Optional[Tensor] = None,
+            head_mask: Optional[Tensor] = None,
+            inputs_embeds: Optional[Tensor] = None,
+            labels: Optional[Tensor] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+    ):
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.luke(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            entity_ids=entity_ids,
+            entity_attention_mask=entity_attention_mask,
+            entity_token_type_ids=entity_token_type_ids,
+            entity_position_ids=entity_position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=True,
+        )
+
+        sequence_output = outputs['last_hidden_state']
+
+        sequence_output = self.dropout(sequence_output)
+        logits = self.classifier(sequence_output)
+
+        loss = None
+        if labels is not None:
+            loss_fct = nn.CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+        return tuple(
+            v
+            for v in [loss, logits, outputs['hidden_states'], outputs['entity_hidden_states'], outputs['attentions']]
+            if v is not None
+        )
+
+
+class LukeForQuestionAnswering(LukePreTrainedModel):
+    def __init__(self, config):
+        super().__init__(config)
+
+        self.num_labels = config.num_labels
+
+        self.luke = LukeModel(config, add_pooling_layer=False)
+        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+
+    def construct(
+            self,
+            input_ids: Optional[Tensor] = None,
+            attention_mask: Optional[Tensor] = None,
+            token_type_ids: Optional[Tensor] = None,
+            position_ids: Optional[Tensor] = None,
+            entity_ids: Optional[Tensor] = None,
+            entity_attention_mask: Optional[Tensor] = None,
+            entity_token_type_ids: Optional[Tensor] = None,
+            entity_position_ids: Optional[Tensor] = None,
+            head_mask: Optional[Tensor] = None,
+            inputs_embeds: Optional[Tensor] = None,
+            start_positions: Optional[Tensor] = None,
+            end_positions: Optional[Tensor] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+    ):
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.luke(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            entity_ids=entity_ids,
+            entity_attention_mask=entity_attention_mask,
+            entity_token_type_ids=entity_token_type_ids,
+            entity_position_ids=entity_position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=True,
+        )
+
+        sequence_output = outputs['last_hidden_state']
+
+        logits = self.qa_outputs(sequence_output)
+        start_logits, end_logits = logits.split(1, axis=-1)
+        start_logits = start_logits.squeeze(-1)
+        end_logits = end_logits.squeeze(-1)
+
+        total_loss = None
+        if start_positions is not None and end_positions is not None:
+            # If we are on multi-GPU, split add a dimension
+            if len(start_positions.shape) > 1:
+                start_positions = start_positions.squeeze(-1)
+            if len(end_positions.shape) > 1:
+                end_positions = end_positions.squeeze(-1)
+            # sometimes the start/end positions are outside our model inputs, we ignore these terms
+            ignored_index = start_logits.shape[1]
+            start_positions.clamp_(0, ignored_index)
+            end_positions.clamp_(0, ignored_index)
+
+            loss_fct = nn.CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
+            total_loss = (start_loss + end_loss) / 2
+
+        return tuple(
+            v
+            for v in [
+                total_loss,
+                start_logits,
+                end_logits,
+                outputs['hidden_states'],
+                outputs['entity_hidden_states'],
+                outputs['attentions'],
+            ]
+            if v is not None
+        )
+
+
+class LukeForMultipleChoice(LukePreTrainedModel):
+    def __init__(self, config):
+        super().__init__(config)
+
+        self.luke = LukeModel(config)
+        self.dropout = nn.Dropout(p=
+                                  config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
+                                  )
+        self.classifier = nn.Dense(config.hidden_size, 1)
+
+    def construct(
+            self,
+            input_ids: Optional[Tensor] = None,
+            attention_mask: Optional[Tensor] = None,
+            token_type_ids: Optional[Tensor] = None,
+            position_ids: Optional[Tensor] = None,
+            entity_ids: Optional[Tensor] = None,
+            entity_attention_mask: Optional[Tensor] = None,
+            entity_token_type_ids: Optional[Tensor] = None,
+            entity_position_ids: Optional[Tensor] = None,
+            head_mask: Optional[Tensor] = None,
+            inputs_embeds: Optional[Tensor] = None,
+            labels: Optional[Tensor] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+    ):
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
+
+        input_ids = input_ids.view(-1, input_ids.shape[-1]) if input_ids is not None else None
+        attention_mask = attention_mask.view(-1, attention_mask.shape[-1]) if attention_mask is not None else None
+        token_type_ids = token_type_ids.view(-1, token_type_ids.shape[-1]) if token_type_ids is not None else None
+        position_ids = position_ids.view(-1, position_ids.shape[-1]) if position_ids is not None else None
+        inputs_embeds = (
+            inputs_embeds.view(-1, inputs_embeds.shape[-2], inputs_embeds.shape[-1])
+            if inputs_embeds is not None
+            else None
+        )
+
+        entity_ids = entity_ids.view(-1, entity_ids.shape[-1]) if entity_ids is not None else None
+        entity_attention_mask = (
+            entity_attention_mask.view(-1, entity_attention_mask.shape[-1])
+            if entity_attention_mask is not None
+            else None
+        )
+        entity_token_type_ids = (
+            entity_token_type_ids.view(-1, entity_token_type_ids.shape[-1])
+            if entity_token_type_ids is not None
+            else None
+        )
+        entity_position_ids = (
+            entity_position_ids.view(-1, entity_position_ids.shape[-2], entity_position_ids.shape[-1])
+            if entity_position_ids is not None
+            else None
+        )
+
+        outputs = self.luke(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            entity_ids=entity_ids,
+            entity_attention_mask=entity_attention_mask,
+            entity_token_type_ids=entity_token_type_ids,
+            entity_position_ids=entity_position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=True,
+        )
+
+        pooled_output = outputs['pooler_output']
+
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+        reshaped_logits = logits.view(-1, num_choices)
+
+        loss = None
+        if labels is not None:
+            loss_fct = nn.CrossEntropyLoss()
+            loss = loss_fct(reshaped_logits, labels)
+
+        return tuple(
+            v
+            for v in [
+                loss,
+                reshaped_logits,
+                outputs['hidden_states'],
+                outputs['entity_hidden_states'],
+                outputs['attentions'],
+            ]
+            if v is not None
+        )
+
+
 def apply_chunking_to_forward(
         forward_fn: Callable[..., mindspore.Tensor], chunk_size: int, chunk_dim: int, *input_tensors
 ) -> mindspore.Tensor:

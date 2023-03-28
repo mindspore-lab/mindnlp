@@ -158,7 +158,7 @@ class TestModelingLUKE(unittest.TestCase):
 
     def test_entity_prediction_head(self):
         r"""
-        Test
+        Test EntityPredictionHead
         """
         config = luke_config.LukeConfig()
         model = luke.EntityPredictionHead(config)
@@ -168,7 +168,7 @@ class TestModelingLUKE(unittest.TestCase):
 
     def test_luke_model(self):
         r"""
-        Test
+        Test LukeModel
         """
         config = luke_config.LukeConfig()
         model = luke.LukeModel(config)
@@ -178,7 +178,7 @@ class TestModelingLUKE(unittest.TestCase):
 
     def test_luke_lm_head(self):
         r"""
-        Test
+        Test LukeLMHead
         """
         config = luke_config.LukeConfig()
         model = luke.LukeLMHead(config)
@@ -188,7 +188,7 @@ class TestModelingLUKE(unittest.TestCase):
 
     def test_luke_for_masked_lm(self):
         r"""
-        Test
+        Test LukeForMaskedLM
         """
         config = luke_config.LukeConfig()
         model = luke.LukeForMaskedLM(config)
@@ -198,28 +198,87 @@ class TestModelingLUKE(unittest.TestCase):
 
     def test_luke_for_entity_classification(self):
         r"""
-        Test
+        Test LukeForEntityClassification
         """
         config = luke_config.LukeConfig()
         model = luke.LukeForEntityClassification(config)
-
-        input_ids = Tensor(np.random.randint(0, 10, (2, 512)), mindspore.int32)
-        entity_ids = Tensor(np.random.randint(0, 10, (2, 768)), mindspore.int32)
-        position_ids = Tensor(np.random.randint(0, 10, (768, 768)), mindspore.int32)
-
+        input_ids = Tensor(np.random.randint(0, 10, (2, 768)), mindspore.int32)
+        entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
+        position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
         outputs = model(input_ids=input_ids, entity_ids=entity_ids, entity_position_ids=position_ids)
         assert outputs[0].shape == (2, 2)
 
     def test_luke_for_entity_pair_classification(self):
         r"""
-        Test
+        Test LukeForEntityPairClassification
         """
         config = luke_config.LukeConfig()
         model = luke.LukeForEntityPairClassification(config)
-
-        input_ids = Tensor(np.random.randint(0, 10, (2, 512)), mindspore.int32)
-        entity_ids = Tensor(np.random.randint(0, 10, (2, 768)), mindspore.int32)
-        position_ids = Tensor(np.random.randint(0, 10, (768, 768)), mindspore.int32)
-
+        input_ids = Tensor(np.random.randint(0, 10, (2, 768)), mindspore.int32)
+        entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
+        position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
         outputs = model(input_ids=input_ids, entity_ids=entity_ids, entity_position_ids=position_ids)
         assert outputs[0].shape == (2, 2)
+
+    def test_luke_for_entity_span_classification(self):
+        r"""
+        Test LukeForEntitySpanClassification
+        """
+        config = luke_config.LukeConfig()
+        model = luke.LukeForEntitySpanClassification(config)
+        input_ids = Tensor(np.random.randint(0, 5, (2, 5)), mindspore.int32)
+        entity_ids = Tensor(np.random.randint(0, 5, (2, 2)), mindspore.int32)
+        position_ids = Tensor(np.random.randint(0, 5, (2, 2)), mindspore.int32)
+        entity_start_positions = Tensor(np.random.randint(0, 5, (2, 2)), mindspore.int32)
+        entity_end_positions = Tensor(np.random.randint(0, 5, (2, 2)), mindspore.int32)
+        outputs = model(input_ids=input_ids, entity_ids=entity_ids, entity_position_ids=position_ids,
+                        entity_start_positions=entity_start_positions, entity_end_positions=entity_end_positions)
+        assert outputs[0].shape == (2, 2, 2)
+
+    def test_luke_for_sequence_classification(self):
+        r"""
+        Test LukeForSequenceClassification
+        """
+        config = luke_config.LukeConfig()
+        model = luke.LukeForSequenceClassification(config)
+        input_ids = Tensor(np.random.randint(0, 10, (2, 5)), mindspore.int32)
+        entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
+        position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
+        outputs = model(input_ids=input_ids, entity_ids=entity_ids, entity_position_ids=position_ids)
+        assert outputs[0].shape == (2, 2)
+
+    def test_luke_for_token_classification(self):
+        r"""
+        Test LukeForTokenClassification
+        """
+        config = luke_config.LukeConfig()
+        model = luke.LukeForTokenClassification(config)
+        input_ids = Tensor(np.random.randint(0, 10, (2, 5)), mindspore.int32)
+        entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
+        position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
+        outputs = model(input_ids=input_ids, entity_ids=entity_ids, entity_position_ids=position_ids)
+        assert outputs[0].shape == (2, 5, 2)
+
+    def test_luke_for_question_answering(self):
+        r"""
+        Test LukeForQuestionAnswering
+        """
+        config = luke_config.LukeConfig()
+        model = luke.LukeForQuestionAnswering(config)
+        input_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
+        entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
+        position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
+        outputs = model(input_ids=input_ids, entity_ids=entity_ids, entity_position_ids=position_ids)
+        assert outputs[0].shape == (2, 5)
+
+    def test_luke_for_multiple_choice(self):
+        r"""
+        Test LukeForMultipleChoice
+        """
+        config = luke_config.LukeConfig()
+        model = luke.LukeForMultipleChoice(config)
+        input_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
+        entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
+        position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
+        outputs = model(input_ids=input_ids, entity_ids=entity_ids, entity_position_ids=position_ids)
+        assert outputs[0].shape == (1, 2)
