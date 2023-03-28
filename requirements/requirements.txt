@@ -1,5 +1,7 @@
 requests
 tqdm
+pylint
+pytest
 ddt
 datasets
 tokenizers

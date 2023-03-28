@@ -88,7 +88,7 @@ class PretrainedModel(nn.Cell):
         """
         A method executed at the end of each Transformer model initialization, to execute code that needs the model's
         modules properly initialized (such as weight initialization).
-        
+
         self.init_model_weights()
         self._backward_compatibility_gradient_checkpointing()
         """

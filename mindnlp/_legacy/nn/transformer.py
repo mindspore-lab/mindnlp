@@ -9,6 +9,7 @@ from mindspore.common.initializer import initializer, XavierUniform, HeUniform, 
     _calculate_fan_in_and_fan_out
 from mindnlp._legacy.initializer import XavierNormal
 from mindnlp._legacy.functional import multi_head_attention_forward, relu, gelu
+from .dropout import Dropout
 
 
 class Linear(nn.Dense):
@@ -255,14 +256,14 @@ class TransformerEncoderLayer(nn.Cell):
         self.self_attn = MultiheadAttention(d_model, nhead, dropout=dropout, batch_first=batch_first)
         # Implementation of Feedforward model
         self.linear1 = Linear(d_model, dim_feedforward)
-        self.dropout = nn.Dropout(p=dropout)
+        self.dropout = Dropout(p=dropout)
         self.linear2 = Linear(dim_feedforward, d_model)
 
         self.norm_first = norm_first
         self.norm1 = nn.LayerNorm((d_model,), epsilon=layer_norm_eps)
         self.norm2 = nn.LayerNorm((d_model,), epsilon=layer_norm_eps)
-        self.dropout1 = nn.Dropout(p=dropout)
-        self.dropout2 = nn.Dropout(p=dropout)
+        self.dropout1 = Dropout(p=dropout)
+        self.dropout2 = Dropout(p=dropout)
 
         # Legacy string support for activation function.
         if isinstance(activation, str):
@@ -365,16 +366,16 @@ class TransformerDecoderLayer(nn.Cell):
         self.multihead_attn = MultiheadAttention(d_model, nhead, dropout=dropout, batch_first=batch_first)
         # Implementation of Feedforward model
         self.linear1 = Linear(d_model, dim_feedforward)
-        self.dropout = nn.Dropout(p=dropout)
+        self.dropout = Dropout(p=dropout)
         self.linear2 = Linear(dim_feedforward, d_model)
 
         self.norm_first = norm_first
         self.norm1 = nn.LayerNorm((d_model,), epsilon=layer_norm_eps)
         self.norm2 = nn.LayerNorm((d_model,), epsilon=layer_norm_eps)
         self.norm3 = nn.LayerNorm((d_model,), epsilon=layer_norm_eps)
-        self.dropout1 = nn.Dropout(p=dropout)
-        self.dropout2 = nn.Dropout(p=dropout)
-        self.dropout3 = nn.Dropout(p=dropout)
+        self.dropout1 = Dropout(p=dropout)
+        self.dropout2 = Dropout(p=dropout)
+        self.dropout3 = Dropout(p=dropout)
 
         # Legacy string support for activation function.
         if isinstance(activation, str):

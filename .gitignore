@@ -135,3 +135,4 @@ rank_0/
 .vscode/
 *.ckpt
 download.txt
+*.whl
