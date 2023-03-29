@@ -42,9 +42,9 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.LukeEmbeddings(config)
-        input_ids = Tensor(np.random.randn(1, 512), mindspore.int32)
+        input_ids = Tensor(np.random.randn(1, 2), mindspore.int32)
         outputs = model(input_ids)
-        assert outputs.shape == (1, 512, 768)
+        assert outputs.shape == (1, 2, 128)
 
     def test_luke_entity_embeddings(self):
         r"""
@@ -53,9 +53,9 @@ class TestModelingLUKE(unittest.TestCase):
         config = luke_config.LukeConfig()
         model = luke.LukeEmbeddings(config)
         entity_ids = Tensor(np.random.randn(1, ), mindspore.int32)
-        position_ids = Tensor(np.random.randn(1, 512), mindspore.int32)
+        position_ids = Tensor(np.random.randn(1, 2), mindspore.int32)
         outputs = model(entity_ids, position_ids)
-        assert outputs.shape == (1, 512, 768)
+        assert outputs.shape == (1, 2, 128)
 
     def test_luke_self_attention(self):
         r"""
@@ -63,11 +63,11 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.LukeSelfAttention(config)
-        word_hidden_states = Tensor(np.random.randn(1, 256, 768), mindspore.float32)
-        entity_hidden_states = Tensor(np.random.randn(1, 512, 768), mindspore.float32)
+        word_hidden_states = Tensor(np.random.randn(1, 2, 128), mindspore.float32)
+        entity_hidden_states = Tensor(np.random.randn(1, 4, 128), mindspore.float32)
         outputs = model(word_hidden_states, entity_hidden_states)
-        assert outputs[0].shape == (1, 256, 768)
-        assert outputs[1].shape == (1, 512, 768)
+        assert outputs[0].shape == (1, 2, 128)
+        assert outputs[1].shape == (1, 4, 128)
 
     def test_luke_self_output(self):
         r"""
@@ -75,10 +75,10 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.LukeSelfOutput(config)
-        hidden_states = Tensor(np.random.randn(2, 768), mindspore.float32)
-        input_tensor = Tensor(np.random.randn(2, 768), mindspore.float32)
+        hidden_states = Tensor(np.random.randn(2, 128), mindspore.float32)
+        input_tensor = Tensor(np.random.randn(2, 128), mindspore.float32)
         outputs = model(hidden_states, input_tensor)
-        assert outputs.shape == (2, 768)
+        assert outputs.shape == (2, 128)
 
     def test_luke_attention(self):
         r"""
@@ -86,11 +86,11 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.LukeAttention(config)
-        word_hidden_states = Tensor(np.random.randn(1, 384, 768), mindspore.float32)
-        entity_hidden_states = Tensor(np.random.randn(1, 512, 768), mindspore.float32)
+        word_hidden_states = Tensor(np.random.randn(1, 2, 128), mindspore.float32)
+        entity_hidden_states = Tensor(np.random.randn(1, 4, 128), mindspore.float32)
         outputs = model(word_hidden_states, entity_hidden_states)
-        assert outputs[0].shape == (1, 384, 768)
-        assert outputs[1].shape == (1, 512, 768)
+        assert outputs[0].shape == (1, 2, 128)
+        assert outputs[1].shape == (1, 4, 128)
 
     def test_luke_intermediate(self):
         r"""
@@ -98,7 +98,7 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.LukeIntermediate(config)
-        hidden_states = Tensor(np.random.randn(1, 768), mindspore.float32)
+        hidden_states = Tensor(np.random.randn(1, 128), mindspore.float32)
         output = model(hidden_states)
         assert output.shape == (1, 3072)
 
@@ -109,9 +109,9 @@ class TestModelingLUKE(unittest.TestCase):
         config = luke_config.LukeConfig()
         model = luke.LukeOutput(config)
         hidden_states = Tensor(np.random.randn(1, 3072), mindspore.float32)
-        input_tensor = Tensor(np.random.rand(2, 768), mindspore.float32)
+        input_tensor = Tensor(np.random.rand(2, 128), mindspore.float32)
         output = model(hidden_states, input_tensor)
-        assert output.shape == (2, 768)
+        assert output.shape == (2, 128)
 
     def test_luke_layer(self):
         r"""
@@ -119,11 +119,11 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.LukeLayer(config)
-        word_hidden_states = Tensor(np.random.randn(1, 256, 768), mindspore.float32)
-        entity_hidden_states = Tensor(np.random.randn(1, 512, 768), mindspore.float32)
+        word_hidden_states = Tensor(np.random.randn(1, 2, 128), mindspore.float32)
+        entity_hidden_states = Tensor(np.random.randn(1, 4, 128), mindspore.float32)
         outputs = model(word_hidden_states, entity_hidden_states)
-        assert outputs[0].shape == (1, 256, 768)
-        assert outputs[1].shape == (1, 512, 768)
+        assert outputs[0].shape == (1, 2, 128)
+        assert outputs[1].shape == (1, 4, 128)
 
     def test_luke_encoder(self):
         r"""
@@ -131,11 +131,11 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.LukeEncoder(config)
-        word_hidden_states = Tensor(np.random.randn(1, 256, 768), mindspore.float32)
-        entity_hidden_states = Tensor(np.random.randn(1, 512, 768), mindspore.float32)
+        word_hidden_states = Tensor(np.random.randn(1, 2, 128), mindspore.float32)
+        entity_hidden_states = Tensor(np.random.randn(1, 4, 128), mindspore.float32)
         outputs = model(word_hidden_states, entity_hidden_states, return_dict=False)
-        assert outputs[0].shape == (1, 256, 768)
-        assert outputs[1].shape == (1, 512, 768)
+        assert outputs[0].shape == (1, 2, 128)
+        assert outputs[1].shape == (1, 4, 128)
 
     def test_luke_pooler(self):
         r"""
@@ -143,9 +143,9 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.LukePooler(config)
-        hidden_states = Tensor(np.random.randn(768, 768), mindspore.float32)
+        hidden_states = Tensor(np.random.randn(128, 128), mindspore.float32)
         output = model(hidden_states)
-        assert output.shape == (768,)
+        assert output.shape == (128,)
 
     def test_entity_prediction_head_transform(self):
         r"""
@@ -153,7 +153,7 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.EntityPredictionHeadTransform(config)
-        hidden_states = Tensor(np.random.randn(2, 768), mindspore.float32)
+        hidden_states = Tensor(np.random.randn(2, 128), mindspore.float32)
         output = model(hidden_states)
         assert output.shape == (2, 256)
 
@@ -163,9 +163,9 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.EntityPredictionHead(config)
-        hidden_states = Tensor(np.random.randn(2, 768), dtype=mindspore.float32)
+        hidden_states = Tensor(np.random.randn(2, 128), dtype=mindspore.float32)
         output = model(hidden_states)
-        assert output.shape == (2, 500000)
+        assert output.shape == (2, 500)
 
     def test_luke_model(self):
         r"""
@@ -173,9 +173,9 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.LukeModel(config)
-        input_ids = Tensor(np.random.randint(0, 10, (2, 512)), dtype=mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, 10, (2, 4)), dtype=mindspore.int32)
         outputs = model(input_ids, return_dict=False)
-        assert outputs[0].shape == (2, 512, 768)
+        assert outputs[0].shape == (2, 4, 128)
 
     def test_luke_lm_head(self):
         r"""
@@ -183,9 +183,9 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.LukeLMHead(config)
-        features = Tensor(np.random.randn(2, 768), mindspore.float32)
+        features = Tensor(np.random.randn(2, 128), mindspore.float32)
         output = model(features)
-        assert output.shape == (2, 50267)
+        assert output.shape == (2, 100)
 
     def test_luke_for_masked_lm(self):
         r"""
@@ -193,9 +193,9 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.LukeForMaskedLM(config)
-        input_ids = Tensor(np.random.randint(0, 10, (2, 512)), mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, 10, (2, 4)), mindspore.int32)
         outputs = model(input_ids)
-        assert outputs[0].shape == (2, 512, 50267)
+        assert outputs[0].shape == (2, 4, 100)
 
     def test_luke_for_entity_classification(self):
         r"""
@@ -203,7 +203,7 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.LukeForEntityClassification(config)
-        input_ids = Tensor(np.random.randint(0, 10, (2, 768)), mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, 10, (2, 128)), mindspore.int32)
         entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
         position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
         outputs = model(input_ids=input_ids, entity_ids=entity_ids, entity_position_ids=position_ids)
@@ -215,7 +215,7 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.LukeForEntityPairClassification(config)
-        input_ids = Tensor(np.random.randint(0, 10, (2, 768)), mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, 10, (2, 128)), mindspore.int32)
         entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
         position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
         outputs = model(input_ids=input_ids, entity_ids=entity_ids, entity_position_ids=position_ids)
