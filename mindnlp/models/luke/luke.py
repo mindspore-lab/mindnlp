@@ -877,7 +877,7 @@ class LukeForMaskedLM(LukePreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = True
         outputs = self.luke(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -891,7 +891,7 @@ class LukeForMaskedLM(LukePreTrainedModel):
             inputs_embeds=inputs_embeds,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=True,
+            return_dict=return_dict,
         )
         loss = None
         mlm_loss = None
@@ -911,21 +911,6 @@ class LukeForMaskedLM(LukePreTrainedModel):
                     loss = mep_loss
                 else:
                     loss = loss + mep_loss
-        if not return_dict:
-            return tuple(
-                v
-                for v in [
-                    loss,
-                    mlm_loss,
-                    mep_loss,
-                    logits,
-                    entity_logits,
-                    outputs['hidden_states'],
-                    outputs['entity_hidden_states'],
-                    outputs['attentions'],
-                ]
-                if v is not None
-            )
         return tuple(
             v
             for v in [
@@ -973,7 +958,7 @@ class LukeForEntityClassification(LukePreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = True
         outputs = self.luke(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -987,7 +972,7 @@ class LukeForEntityClassification(LukePreTrainedModel):
             inputs_embeds=inputs_embeds,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=True,
+            return_dict=return_dict,
         )
         feature_vector = outputs['entity_last_hidden_state'][:, 0, :]
         feature_vector = self.dropout(feature_vector)
@@ -1000,13 +985,6 @@ class LukeForEntityClassification(LukePreTrainedModel):
             else:
                 loss = ops.binary_cross_entropy_with_logits(logits.view(-1), labels.view(-1).type_as(logits), Tensor(),
                                                             Tensor())
-        if not return_dict:
-            return tuple(
-                v
-                for v in
-                [loss, logits, outputs['hidden_states'], outputs['entity_hidden_states'], outputs['attentions']]
-                if v is not None
-            )
         return tuple(
             v
             for v in [loss, logits, outputs['hidden_states'], outputs['entity_hidden_states'], outputs['attentions']]
@@ -1045,7 +1023,7 @@ class LukeForEntityPairClassification(LukePreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = True
         outputs = self.luke(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -1059,7 +1037,7 @@ class LukeForEntityPairClassification(LukePreTrainedModel):
             inputs_embeds=inputs_embeds,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=True,
+            return_dict=return_dict,
         )
 
         feature_vector = ops.cat(
@@ -1075,13 +1053,6 @@ class LukeForEntityPairClassification(LukePreTrainedModel):
             else:
                 loss = ops.binary_cross_entropy_with_logits(logits.view(-1), labels.view(-1).type_as(logits), Tensor(),
                                                             Tensor())
-        if not return_dict:
-            return tuple(
-                v
-                for v in
-                [loss, logits, outputs['hidden_states'], outputs['entity_hidden_states'], outputs['attentions']]
-                if v is not None
-            )
         return tuple(
             v
             for v in [loss, logits, outputs['hidden_states'], outputs['entity_hidden_states'], outputs['attentions']]
@@ -1090,6 +1061,10 @@ class LukeForEntityPairClassification(LukePreTrainedModel):
 
 
 class LukeForEntitySpanClassification(LukePreTrainedModel):
+    """
+    LukeForEntitySpanClassification
+    """
+
     def __init__(self, config):
         super().__init__(config)
 
@@ -1118,8 +1093,7 @@ class LukeForEntitySpanClassification(LukePreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
+        return_dict = True
         outputs = self.luke(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -1133,21 +1107,16 @@ class LukeForEntitySpanClassification(LukePreTrainedModel):
             inputs_embeds=inputs_embeds,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=True,
+            return_dict=return_dict,
         )
         hidden_size = outputs['last_hidden_state'].shape[-1]
         entity_start_positions = ops.BroadcastTo(shape=(-1, -1, hidden_size))(entity_start_positions.unsqueeze(-1))
-        # if entity_start_positions.device != outputs['last_hidden_state'].device:
-        #     entity_start_positions = entity_start_positions.to(outputs['last_hidden_state'].device)
         start_states = ops.gather_elements(outputs['last_hidden_state'], -2, entity_start_positions)
 
         entity_end_positions = ops.BroadcastTo(shape=(-1, -1, hidden_size))(entity_end_positions.unsqueeze(-1))
-        # if entity_end_positions.device != outputs['last_hidden_state'].device:
-        #     entity_end_positions = entity_end_positions.to(outputs['last_hidden_state'].device)
         end_states = ops.gather_elements(outputs['last_hidden_state'], -2, entity_end_positions)
 
         feature_vector = ops.cat([start_states, end_states, outputs['entity_last_hidden_state']], axis=2)
-
         feature_vector = self.dropout(feature_vector)
         logits = self.classifier(feature_vector)
 
@@ -1156,7 +1125,8 @@ class LukeForEntitySpanClassification(LukePreTrainedModel):
             if labels.ndim == 2:
                 loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             else:
-                loss = ops.binary_cross_entropy_with_logits(logits.view(-1), labels.view(-1).type_as(logits))
+                loss = ops.binary_cross_entropy_with_logits(logits.view(-1), labels.view(-1).type_as(logits),
+                                                            weight=None, pos_weight=None)
 
         return tuple(
             v
@@ -1166,6 +1136,10 @@ class LukeForEntitySpanClassification(LukePreTrainedModel):
 
 
 class LukeForSequenceClassification(LukePreTrainedModel):
+    """
+    LukeForSequenceClassification
+    """
+
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1196,8 +1170,7 @@ class LukeForSequenceClassification(LukePreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
+        return_dict = True
         outputs = self.luke(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -1211,7 +1184,7 @@ class LukeForSequenceClassification(LukePreTrainedModel):
             inputs_embeds=inputs_embeds,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=True,
+            return_dict=return_dict,
         )
 
         pooled_output = outputs['pooler_output']
@@ -1224,7 +1197,7 @@ class LukeForSequenceClassification(LukePreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1251,17 +1224,21 @@ class LukeForSequenceClassification(LukePreTrainedModel):
 
 
 class LukeForTokenClassification(LukePreTrainedModel):
+    """
+    LukeForTokenClassification
+    """
+
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
 
         self.luke = LukeModel(config, add_pooling_layer=False)
         self.dropout = nn.Dropout(p=
-                                  config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
+                                  config.classifier_dropout
+                                  if config.classifier_dropout is not None
+                                  else config.hidden_dropout_prob
                                   )
         self.classifier = nn.Dense(config.hidden_size, config.num_labels)
-
-        self.post_init()
 
     def construct(
             self,
@@ -1280,8 +1257,7 @@ class LukeForTokenClassification(LukePreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
+        return_dict = True
         outputs = self.luke(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -1295,19 +1271,16 @@ class LukeForTokenClassification(LukePreTrainedModel):
             inputs_embeds=inputs_embeds,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=True,
+            return_dict=return_dict,
         )
 
         sequence_output = outputs['last_hidden_state']
-
         sequence_output = self.dropout(sequence_output)
         logits = self.classifier(sequence_output)
-
         loss = None
         if labels is not None:
             loss_fct = nn.CrossEntropyLoss()
             loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-
         return tuple(
             v
             for v in [loss, logits, outputs['hidden_states'], outputs['entity_hidden_states'], outputs['attentions']]
@@ -1316,6 +1289,10 @@ class LukeForTokenClassification(LukePreTrainedModel):
 
 
 class LukeForQuestionAnswering(LukePreTrainedModel):
+    """
+    LukeForQuestionAnswering
+    """
+
     def __init__(self, config):
         super().__init__(config)
 
@@ -1342,8 +1319,7 @@ class LukeForQuestionAnswering(LukePreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
+        return_dict = True
         outputs = self.luke(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -1357,7 +1333,7 @@ class LukeForQuestionAnswering(LukePreTrainedModel):
             inputs_embeds=inputs_embeds,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=True,
+            return_dict=return_dict,
         )
 
         sequence_output = outputs['last_hidden_state']
@@ -1399,12 +1375,18 @@ class LukeForQuestionAnswering(LukePreTrainedModel):
 
 
 class LukeForMultipleChoice(LukePreTrainedModel):
+    """
+    LukeForMultipleChoice
+    """
+
     def __init__(self, config):
         super().__init__(config)
 
         self.luke = LukeModel(config)
         self.dropout = nn.Dropout(p=
-                                  config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
+                                  config.classifier_dropout
+                                  if config.classifier_dropout is not None
+                                  else config.hidden_dropout_prob
                                   )
         self.classifier = nn.Dense(config.hidden_size, 1)
 
@@ -1425,9 +1407,8 @@ class LukeForMultipleChoice(LukePreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ):
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = True
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
-
         input_ids = input_ids.view(-1, input_ids.shape[-1]) if input_ids is not None else None
         attention_mask = attention_mask.view(-1, attention_mask.shape[-1]) if attention_mask is not None else None
         token_type_ids = token_type_ids.view(-1, token_type_ids.shape[-1]) if token_type_ids is not None else None
@@ -1468,7 +1449,7 @@ class LukeForMultipleChoice(LukePreTrainedModel):
             inputs_embeds=inputs_embeds,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=True,
+            return_dict=return_dict,
         )
 
         pooled_output = outputs['pooler_output']
@@ -1502,9 +1483,6 @@ def apply_chunking_to_forward(
     This function chunks the `input_tensors` into smaller input tensor parts
     of size `chunk_size` over the dimension
     `chunk_dim`. It then applies a layer `forward_fn` to each chunk independently to save memory.
-
-    If the `forward_fn` is independent across the `chunk_dim` this function will yield
-    the same result as directly applying `forward_fn` to `input_tensors`.
     """
 
     assert len(input_tensors) > 0, f"{input_tensors} has to be a tuple/list of tensors"
