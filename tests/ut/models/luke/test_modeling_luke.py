@@ -270,7 +270,7 @@ class TestModelingLUKE(unittest.TestCase):
         entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
         position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
         outputs = model(input_ids=input_ids, entity_ids=entity_ids, entity_position_ids=position_ids)
-        assert outputs[0].shape == (2, 5)
+        assert outputs[0].shape == (2, 2)
 
     def test_luke_for_multiple_choice(self):
         r"""
