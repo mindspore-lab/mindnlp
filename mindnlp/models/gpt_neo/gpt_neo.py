@@ -424,16 +424,12 @@ class GPTNeoModel(GPTNeoPreTrainedModel):
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
     ) -> Tuple[Tensor]:
-        # Modeling_outputs is missed, and Tuple is temporarily used instead.
-        # Original return type: Union[Tuple[Tensor], BaseModelOutputWithPastAndCrossAttentions].
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
         use_cache = use_cache if use_cache is not None else self.config.use_cache
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError(
@@ -562,16 +558,6 @@ class GPTNeoModel(GPTNeoPreTrainedModel):
         if output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)
 
-        if not return_dict:
-            return tuple(v for v in [hidden_states, presents, all_hidden_states, all_self_attentions] if v is not None)
-
-        # Temporarily use tuples as output
-        # return BaseModelOutputWithPast(
-        #     last_hidden_state=hidden_states,
-        #     past_key_values=presents,
-        #     hidden_states=all_hidden_states,
-        #     attentions=all_self_attentions,
-        # )
         return tuple(v for v in [hidden_states, presents, all_hidden_states, all_self_attentions] if v is not None)
 
 
@@ -650,17 +636,13 @@ class GPTNeoForCausalLM(GPTNeoPreTrainedModel):
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
     ) -> Tuple[Tensor]:
-        # Modeling_outputs is missed, and Tuple is temporarily used instead.
-        # Original return type: Union[Tuple[Tensor], CausalLMOutputWithCrossAttentions].
         r"""
         labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
             `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
             are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         transformer_outputs = self.transformer(
             input_ids,
             past_key_values=past_key_values,
@@ -672,7 +654,6 @@ class GPTNeoForCausalLM(GPTNeoPreTrainedModel):
             use_cache=use_cache,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
         )
         hidden_states = transformer_outputs[0]
 
@@ -695,17 +676,7 @@ class GPTNeoForCausalLM(GPTNeoPreTrainedModel):
             lm_logits = lm_logits.astype(hidden_states.dtype)
             loss = loss.astype(hidden_states.dtype)
 
-        if not return_dict:
-            output = (lm_logits,) + transformer_outputs[1:]
-            return ((loss,) + output) if loss is not None else output
-        # Temporarily use tuples as output
-        # return CausalLMOutputWithPast(
-        #     loss=loss,
-        #     logits=lm_logits,
-        #     past_key_values=transformer_outputs.past_key_values,
-        #     hidden_states=transformer_outputs.hidden_states,
-        #     attentions=transformer_outputs.attentions,
-        # )
+        output = (lm_logits,) + transformer_outputs[1:]
         return ((loss,) + output) if loss is not None else output
 
     @staticmethod
@@ -754,17 +725,13 @@ class GPTNeoForSequenceClassification(GPTNeoPreTrainedModel):
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
     ) -> Tuple[Tensor]:
-        # Modeling_outputs is missed, and Tuple is temporarily used instead.
-        # Original return type: Union[Tuple[Tensor], SequenceClassifierOutputWithPast].
         r"""
         labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.transformer(
             input_ids,
@@ -777,7 +744,6 @@ class GPTNeoForSequenceClassification(GPTNeoPreTrainedModel):
             use_cache=use_cache,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
         )
         hidden_states = transformer_outputs[0]
         logits = self.score(hidden_states)
@@ -829,16 +795,6 @@ class GPTNeoForSequenceClassification(GPTNeoPreTrainedModel):
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = nn.BCEWithLogitsLoss()
                 loss = loss_fct(pooled_logits, labels)
-        if not return_dict:
-            output = (pooled_logits,) + transformer_outputs[1:]
-            return ((loss,) + output) if loss is not None else output
 
-        # Temporarily use tuples as output
-        # return SequenceClassifierOutputWithPast(
-        #     loss=loss,
-        #     logits=pooled_logits,
-        #     past_key_values=transformer_outputs.past_key_values,
-        #     hidden_states=transformer_outputs.hidden_states,
-        #     attentions=transformer_outputs.attentions,
-        # )
+        output = (pooled_logits,) + transformer_outputs[1:]
         return ((loss,) + output) if loss is not None else output
