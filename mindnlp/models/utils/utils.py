@@ -122,7 +122,7 @@ def find_pruneable_heads_and_indices(heads, n_heads, head_size, already_pruned_h
 
 class SequenceSummary(nn.Cell):
     """
-    GPT2DoubleHeadsModel class that self.multiple_choice_head
+    GPTDoubleHeadsModel and GPT2DoubleHeadsModel class that self.multiple_choice_head
     """
 
     def __init__(self, config):
