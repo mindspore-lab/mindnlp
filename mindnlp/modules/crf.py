@@ -12,22 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=C0412
+
 """crf module"""
 
 import mindspore
-import mindspore.numpy as mnp
 from mindspore import nn, ops, Tensor
 from mindspore import Parameter
 from mindspore.common.initializer import initializer, Uniform
 from mindnlp.utils import less_min_pynative_first
+if less_min_pynative_first:
+    from mindnlp._legacy.functional import full, arange, where, tensor_split
+else:
+    from mindspore.ops import full, arange, where, tensor_split
 
 def sequence_mask(seq_length, max_length, batch_first=False):
     """generate mask matrix by seq_length"""
-    range_vector = mnp.arange(0, max_length, 1, seq_length.dtype)
+    range_vector = arange(0, max_length, 1, dtype=seq_length.dtype)
     result = range_vector < seq_length.view(seq_length.shape + (1,))
     if batch_first:
-        return result.astype(mindspore.int64)
-    return result.astype(mindspore.int64).swapaxes(0, 1)
+        return result
+    return result.swapaxes(0, 1)
 
 class CRF(nn.Cell):
     """Conditional random field.
@@ -95,7 +100,7 @@ class CRF(nn.Cell):
             max_length, batch_size = tags.shape
 
         if seq_length is None:
-            seq_length = mnp.full((batch_size,), max_length, mindspore.int64)
+            seq_length = full((batch_size,), max_length, dtype=mindspore.int64)
 
         mask = sequence_mask(seq_length, max_length)
 
@@ -135,7 +140,7 @@ class CRF(nn.Cell):
             max_length, batch_size = emissions.shape[:2]
 
         if seq_length is None:
-            seq_length = mnp.full((batch_size,), max_length, mindspore.int64)
+            seq_length = full((batch_size,), max_length, dtype=mindspore.int64)
 
         mask = sequence_mask(seq_length, max_length)
 
@@ -152,23 +157,30 @@ class CRF(nn.Cell):
         # Start transition score and first emission
         # shape: (batch_size,)
         score = self.start_transitions[tags[0]]
-        score += emissions[0, mnp.arange(batch_size), tags[0]]
+        indices = ops.stack([ops.zeros((batch_size,), mindspore.int64), arange(batch_size), tags[0]])
+        # score += emissions[0, arange(batch_size), tags[0]]
+        score += ops.gather_nd(emissions, indices.T)
 
-        i = Tensor(1, mindspore.int32)
+        i = Tensor(1, mindspore.int64)
         while i < seq_length:
         # for i in range(1, seq_length):
             # Transition score to next tag, only added if next timestep is valid (mask == 1)
             # shape: (batch_size,)
-            score += self.transitions[tags[i - 1], tags[i]] * mask[i]
+            t_indices = ops.stack([tags[i - 1], tags[i]])
+            # score += self.transitions[tags[i - 1], tags[i]] * mask[i]
+            score += ops.gather_nd(self.transitions, t_indices.T) * mask[i]
 
             # Emission score for next tag, only added if next timestep is valid (mask == 1)
             # shape: (batch_size,)
-            score += emissions[i, mnp.arange(batch_size), tags[i]] * mask[i]
+            e_indices = ops.stack([ops.tile(i, (batch_size,)), arange(batch_size), tags[i]])
+            score += ops.gather_nd(emissions, e_indices.T) * mask[i]
             i += 1
 
         # End transition score
         # shape: (batch_size,)
-        last_tags = tags[seq_ends, mnp.arange(batch_size)]
+        tag_indices = ops.stack([seq_ends, arange(batch_size)])
+        # last_tags = tags[seq_ends, arange(batch_size)]
+        last_tags = ops.gather_nd(tags, tag_indices.T)
         # shape: (batch_size,)
         score += self.end_transitions[last_tags]
 
@@ -208,11 +220,11 @@ class CRF(nn.Cell):
             # becomes a log-sum-exp: for each sample, entry i stores the sum of scores of
             # all possible tag sequences so far, that end in tag i
             # shape: (batch_size, num_tags)
-            next_score = mnp.log(mnp.sum(mnp.exp(next_score), axis=1))
+            next_score = ops.logsumexp(next_score, axis=1)
 
             # Set score to the next score if this timestep is valid (mask == 1)
             # shape: (batch_size, num_tags)
-            score = mnp.where(mask[i].expand_dims(1), next_score, score)
+            score = where(mask[i].expand_dims(1), next_score, score)
             i += 1
 
         # End transition score
@@ -221,7 +233,7 @@ class CRF(nn.Cell):
 
         # Sum (log-sum-exp) over all possible tags
         # shape: (batch_size,)
-        return mnp.log(mnp.sum(mnp.exp(score), axis=1))
+        return ops.logsumexp(score, axis=1)
 
     def _viterbi_decode(self, emissions, mask):
         # emissions: (seq_length, batch_size, num_tags)
@@ -267,7 +279,7 @@ class CRF(nn.Cell):
             # Set score to the next score if this timestep is valid (mask == 1)
             # and save the index that produces the next score
             # shape: (batch_size, num_tags)
-            score = mnp.where(mask[i].expand_dims(1), next_score, score)
+            score = where(mask[i].expand_dims(1), next_score, score)
             history[i - 1] = indices
             i += 1
 
@@ -285,9 +297,8 @@ class CRF(nn.Cell):
         # shape: (batch_size,)
         best_tags_list = []
 
-        if less_min_pynative_first:
-            history = history.split(0, history.shape[0])
-            history = [hist.squeeze() for hist in history]
+        history = tensor_split(history, history.shape[0], 0)
+        history = [hist.squeeze() for hist in history]
 
         for idx in range(batch_size):
             # Find the tag which maximizes the score at the last timestep; this is our best tag
@@ -299,11 +310,10 @@ class CRF(nn.Cell):
             for hist in reversed(history[:seq_ends[idx]]):
                 best_last_tag = hist[idx][best_tags[-1]]
                 best_tags.append(best_last_tag)
-
             # Reverse the order because we start from the last timestep
             best_tags.reverse()
             best_tags_list.append(best_tags)
 
         return best_tags_list
 
-__all__ = ["CRF"]
+__all__ = ["CRF", "sequence_mask"]

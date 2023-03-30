@@ -21,8 +21,7 @@ import shutil
 import unittest
 import pytest
 import mindspore as ms
-from mindspore.dataset import text
-from mindnlp import load_dataset, process
+from mindnlp import load_dataset, process, Vocab
 from mindnlp.dataset import SQuAD1, SQuAD1_Process
 
 char_dic = {"<unk>": 0, "<pad>": 1, "e": 2, "t": 3, "a": 4, "i": 5, "n": 6,\
@@ -32,7 +31,7 @@ char_dic = {"<unk>": 0, "<pad>": 1, "e": 2, "t": 3, "a": 4, "i": 5, "n": 6,\
                     "-": 31, "j": 32, "9": 33, "'": 34, ")": 35, "(": 36, "?": 37, "z": 38,\
                     "5": 39, "8": 40, "q": 41, "3": 42, "4": 43, "7": 44, "6": 45, ";": 46,\
                     ":": 47, "\u2013": 48, "%": 49, "/": 50, "]": 51, "[": 52}
-char_vocab = text.Vocab.from_dict(char_dic)
+char_vocab = Vocab(char_dic)
 
 class TestSQuAD1(unittest.TestCase):
     r"""

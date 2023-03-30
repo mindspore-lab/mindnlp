@@ -21,26 +21,23 @@ __all__ = [
 from abc import abstractmethod
 from mindspore import nn
 from mindspore import Parameter
-from mindspore.dataset.text.utils import Vocab
-
+from mindnlp._legacy.nn import Dropout
 
 class TokenEmbedding(nn.Cell):
     r"""
-    Create vocab and Embedding from a given pre-trained vector file.
+    Create Embedding from a given pre-trained vector file.
 
     Args:
-        vocab (Vocab): Passins into Vocab for initialization.
         init_embed (Tensor): Passing into Vocab and Tensor,use these values to initialize Embedding directly.
         requires_grad (bool): Whether this parameter needs to be gradient to update.
         dropout (float): Dropout of the output of Embedding.
 
     """
-    def __init__(self, vocab: Vocab, init_embed, requires_grad: bool = True, dropout=0.0):
+    def __init__(self, init_embed, requires_grad: bool = True, dropout=0.0):
         super().__init__()
 
-        self._word_vocab = vocab
         self.embed = Parameter(init_embed, name='embed', requires_grad=requires_grad)
-        self.dropout_layer = nn.Dropout(1 - dropout)
+        self.dropout_layer = Dropout(p=dropout)
         self._embed_size = self.embed.shape
 
     def dropout(self, words):
@@ -72,13 +69,7 @@ class TokenEmbedding(nn.Cell):
         """
         num embeddings
         """
-        return len(self._word_vocab.vocab())
-
-    def get_word_vocab(self):
-        """
-        get word vocab
-        """
-        return self._word_vocab.vocab()
+        return len(self.embed)
 
     @abstractmethod
     def construct(self, ids):
