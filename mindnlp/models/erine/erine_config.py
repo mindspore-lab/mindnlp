@@ -17,9 +17,6 @@ from __future__ import annotations
 
 from typing import Dict
 
-import sys
-sys.path.append('/home/luul/下载/mindnlp/mindnlp')
-print(sys.path)
 from mindnlp.abc.backbones.pretrained import PretrainedConfig
 
 CONFIG_NAME = "config.json"

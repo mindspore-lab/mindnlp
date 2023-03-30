@@ -15,23 +15,23 @@
 '''erine model'''
 
 
-from dataclasses import dataclass
-from typing import Optional, Tuple
+#from dataclasses import dataclass
+from typing import Optional
 
 
 import mindspore
 from mindspore import nn
 from mindspore import ops
 
-from mindspore.common.initializer import initializer, TruncatedNormal, Normal
+#from mindspore.common.initializer import initializer, TruncatedNormal, Normal
 from mindspore import Tensor
 
 
-from erine_config import (
-    ERNIE_PRETRAINED_INIT_CONFIGURATION,
-    ERNIE_PRETRAINED_RESOURCE_FILES_MAP,
+from .erine_config import (
+    #ERNIE_PRETRAINED_INIT_CONFIGURATION,
+    #ERNIE_PRETRAINED_RESOURCE_FILES_MAP,
     ErnieConfig,
-    CONFIG_NAME
+    #CONFIG_NAME
 )
 
 
@@ -43,11 +43,16 @@ class ErnieEmbeddings(nn.Cell):
     def __init__(self, config: ErnieConfig, weight_attr):
         super(ErnieEmbeddings, self).__init__()
         self.word_embeddings = nn.Embedding(
-            config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id, embedding_table=weight_attr
+            config.vocab_size,
+            config.hidden_size,
+            padding_idx=config.pad_token_id,
+            embedding_table=weight_attr
         )
 
         self.position_embeddings = nn.Embedding(
-            config.max_position_embeddings, config.hidden_size, embedding_table=weight_attr
+            config.max_position_embeddings,
+            config.hidden_size,
+            embedding_table=weight_attr
         )
 
         self.type_vocab_size = config.type_vocab_size
@@ -110,3 +115,4 @@ class ErnieEmbeddings(nn.Cell):
         embeddings = self.layer_norm(embeddings)
         embeddings = self.dropout(embeddings)
         return embeddings
+        
