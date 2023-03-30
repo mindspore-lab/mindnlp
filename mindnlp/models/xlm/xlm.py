@@ -33,6 +33,7 @@ from mindnlp.models.utils.utils import SequenceSummary,SQuADHead
 from ...abc.backbones.pretrained import PretrainedModel
 from .xlm_config import XLMConfig
 from ..utils import logging
+from ..utils.activations import get_activation
 
 logger = logging.get_logger(__name__)
 
@@ -52,25 +53,15 @@ def find_pruneable_heads_and_indices(
     heads: List[int], n_heads: int, head_size: int, already_pruned_heads: Set[int]
 ) -> Tuple[Set[int], mindspore.Tensor]:
     """
-    Finds the heads and their indices taking `already_pruned_heads` into account.
-
-    Args:
-        heads (`List[int]`): List of the indices of heads to prune.
-        n_heads (`int`): The number of heads in the model.
-        head_size (`int`): The size of each head.
-        already_pruned_heads (`Set[int]`): A set of already pruned heads.
-
-    Returns:
-        `Tuple[Set[int], mindspore.Tensor]`: A tuple with the remaining heads
-        and their corresponding indices.
+    find_pruneable_heads_and_indices
     """
-    mask = mindspore.ops.ones(n_heads, head_size)
+    mask = ops.ones(n_heads, head_size)
     heads = set(heads) - already_pruned_heads  # Convert to set and remove already pruned heads
     for head in heads:
         # Compute how many pruned heads are before the head and move the index accordingly
         head = head - sum(1 if h < head else 0 for h in already_pruned_heads)
         mask[head] = 0
-    mask = mask.view(-1).contiguous().eq(1)
+    mask = mask.view(-1).equal(1)
     index: mindspore.Tensor(dtype = mindspore.int64) = mindspore.numpy.arange(len(mask))[mask].astype(mindspore.int64)
     return heads, index
 
@@ -102,36 +93,19 @@ def get_masks(slen, lengths, causal, padding_mask=None):
 
 def prune_linear_layer(layer: nn.Dense, index: mindspore.int64, dim: int = 0) -> nn.Dense:
     """
-    Prune a linear layer to keep only entries in index.
-
-    Used to remove heads.
-
-    Args:
-        layer (`mindspore.nn.Dense`): The layer to prune.
-        index (`Tensor(dtype = mindspore.int64)`): The indices to keep in the layer.
-        dim (`int`, *optional*, defaults to 0): The dimension on which to keep the indices.
-
-    Returns:
-        `mindspore.nn.Dense`: The pruned layer as a new layer with `requires_grad=True`.
+    prune_linear_layer
     """
-    index = index.to(layer.weight.device)
-    W = layer.weight.index_select(dim, index).clone().detach()
-    if layer.bias is not None:
-        if dim == 1:
-            b = layer.bias.clone().detach()
-        else:
-            b = layer.bias[index].clone().detach()
     new_size = list(layer.weight.shape)
     new_size[dim] = len(index)
     new_layer = nn.Dense(new_size[1],
                          new_size[0],
-                         has_bias=layer.bias is not None).to(layer.weight.device)
+                         has_bias=layer.bias is not None)
     new_layer.weight.requires_grad = False
-    new_layer.weight.copy_(W)
+    new_layer.weight.copy()
     new_layer.weight.requires_grad = True
     if layer.bias is not None:
         new_layer.bias.requires_grad = False
-        new_layer.bias.copy_(b)
+        new_layer.bias.copy()
         new_layer.bias.requires_grad = True
     return new_layer
 
@@ -140,42 +114,8 @@ def apply_chunking_to_forward(
     forward_fn: Callable[..., mindspore.Tensor], chunk_size: int, chunk_dim: int, *input_tensors
 ) -> mindspore.Tensor:
     """
-    This function chunks the `input_tensors` into smaller input tensor parts
-    of size `chunk_size` over the dimension
-    `chunk_dim`. It then applies a layer `forward_fn` to each chunk independently to save memory.
-
-    If the `forward_fn` is independent across the `chunk_dim` this function will yield
-    the same result as directly applying `forward_fn` to `input_tensors`.
-
-    Args:
-        forward_fn (`Callable[..., torch.Tensor]`):
-            The forward function of the model.
-        chunk_size (`int`):
-            The chunk size of a chunked tensor: `num_chunks = len(input_tensors[0]) / chunk_size`.
-        chunk_dim (`int`):
-            The dimension over which the `input_tensors` should be chunked.
-        input_tensors (`Tuple[torch.Tensor]`):
-            The input tensors of `forward_fn` which will be chunked
-
-    Returns:
-        `torch.Tensor`: A tensor with the same shape as the `forward_fn`
-         would have given if applied`.
-
-
-    Examples:
-
-    ```python
-    # rename the usual forward() fn to forward_chunk()
-    def forward_chunk(self, hidden_states):
-        hidden_states = self.decoder(hidden_states)
-        return hidden_states
-
-
-    # implement a chunked forward function
-    def forward(self, hidden_states):
-        return apply_chunking_to_forward(self.forward_chunk, self.chunk_size_lm_head
-        , self.seq_len_dim, hidden_states)
-    ```"""
+    apply_chunking_to_forward
+    """
 
     assert len(input_tensors) > 0, f"{input_tensors} has to be a tuple/list of tensors"
 
@@ -206,7 +146,7 @@ def apply_chunking_to_forward(
         num_chunks = input_tensors[0].shape[chunk_dim] // chunk_size
 
         # chunk input tensor into tuples
-        input_tensors_chunks = tuple(input_tensor.chunk(num_chunks, dim=chunk_dim) for input_tensor in input_tensors)
+        input_tensors_chunks = tuple(input_tensor.split(num_chunks, axis=chunk_dim) for input_tensor in input_tensors)
         # apply forward fn to every tuple
         output_chunks = tuple(forward_fn(*input_tensors_chunk) for input_tensors_chunk in zip(*input_tensors_chunks))
         # concatenate output at same dimension
@@ -266,7 +206,7 @@ class MultiHeadAttention(nn.Cell):
         # assert dim == self.dim, f'Dimensions do not match: {dim} input vs {self.dim} configured'
         n_heads = self.n_heads
         dim_per_head = self.dim // n_heads
-        mask_reshape = (bs, 1, qlen, klen) if mask.dim() == 3 else (bs, 1, 1, klen)
+        mask_reshape = (bs, 1, qlen, klen) if mask.ndim == 3 else (bs, 1, 1, klen)
 
         def shape(x):
             """projection"""
@@ -277,6 +217,7 @@ class MultiHeadAttention(nn.Cell):
             return x.transpose(0,2,1,3).view(bs, -1, self.n_heads * dim_per_head)
 
         q = shape(self.q_lin(input))  # (bs, n_heads, qlen, dim_per_head)
+
         if kv is None:
             k = shape(self.k_lin(input))  # (bs, n_heads, qlen, dim_per_head)
             v = shape(self.v_lin(input))  # (bs, n_heads, qlen, dim_per_head)
@@ -326,7 +267,7 @@ class TransformerFFN(nn.Cell):
         self.dropout = config.dropout
         self.lin1 = nn.Dense(in_dim, dim_hidden)
         self.lin2 = nn.Dense(dim_hidden, out_dim)
-        self.act = nn.GELU() if config.gelu_activation else nn.ReLU()
+        self.act = get_activation("gelu") if config.gelu_activation else ops.relu
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
 
@@ -338,6 +279,7 @@ class TransformerFFN(nn.Cell):
         ff_chunk
         """
         x = self.lin1(input)
+
         x = self.act(x)
         x = self.lin2(x)
         if self.training:
@@ -459,11 +401,13 @@ class XLMModel(XLMPreTrainedModel):
         # embeddings
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, self.dim)
         if config.sinusoidal_embeddings:
-            create_sinusoidal_embeddings(config.max_position_embeddings, self.dim, out=self.position_embeddings.weight)
+            create_sinusoidal_embeddings(config.max_position_embeddings, self.dim, out=self.position_embeddings.embedding_table)
         if config.n_langs > 1 and config.use_lang_emb:
             self.lang_embeddings = nn.Embedding(self.n_langs, self.dim)
+
         self.embeddings = nn.Embedding(self.n_words, self.dim, padding_idx=self.pad_index)
         self.layer_norm_emb = nn.LayerNorm((self.dim,), epsilon=config.layer_norm_eps)
+
 
         # transformer layers
         self.attentions = nn.CellList()
@@ -480,6 +424,7 @@ class XLMModel(XLMPreTrainedModel):
             self.ffns.append(TransformerFFN(self.dim, self.hidden_dim, self.dim, config=config))
             self.layer_norm2.append(nn.LayerNorm((self.dim,), epsilon=config.layer_norm_eps))
 
+
         if hasattr(config, "pruned_heads"):
             pruned_heads = config.pruned_heads.copy().items()
             config.pruned_heads = {}
@@ -490,7 +435,8 @@ class XLMModel(XLMPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
         self.position_ids = Parameter(ops.BroadcastTo(shape=(1,-1))
-                                     (mindspore.ops.arange(config.max_position_embeddings)))
+                                     (ops.arange(config.max_position_embeddings)))
+
 
     def get_input_embeddings(self):
         return self.embeddings
@@ -509,37 +455,24 @@ class XLMModel(XLMPreTrainedModel):
 
     def _convert_head_mask_to_5d(self, head_mask, num_hidden_layers):
         """-> [num_hidden_layers x batch x num_heads x seq_length x seq_length]"""
-        if head_mask.dim() == 1:
-            head_mask = head_mask.unsqueeze(0).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+        if head_mask.ndim == 1:
+            head_mask = head_mask.expand_dims(0).expand_dims(0).expand_dims(-1).expand_dims(-1)
             head_mask = head_mask.expand(num_hidden_layers, -1, -1, -1, -1)
-        elif head_mask.dim() == 2:
-            head_mask = head_mask.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)  # We can specify head_mask for each layer
-        assert head_mask.dim() == 5, f"head_mask.dim != 5, instead {head_mask.dim()}"
-        head_mask = head_mask.to(dtype=self.dtype)  # switch to float if need + fp16 compatibility
+        elif head_mask.ndim == 2:
+            head_mask = head_mask.expand_dims(1).expand_dims(-1).expand_dims(-1)  # We can specify head_mask for each layer
+        assert head_mask.ndim == 5, f"head_mask.dim != 5, instead {head_mask.ndim}"
+        head_mask = head_mask.astype(dtype=self.dtype)  # switch to float if need + fp16 compatibility
         return head_mask
 
 
     def get_head_mask(
         self, head_mask: Optional[mindspore.Tensor], num_hidden_layers: int, is_attention_chunked: bool = False
     ) -> mindspore.Tensor:
-        """
-        Prepare the head mask if needed.
-        Args:
-            head_mask (`torch.Tensor` with shape `[num_heads]` or `[num_hidden_layers x num_heads]`, *optional*):
-                The mask indicating if we should keep the heads or not (1.0 for keep, 0.0 for discard).
-            num_hidden_layers (`int`):
-                The number of hidden layers in the model.
-            is_attention_chunked: (`bool`, *optional*, defaults to `False`):
-                Whether or not the attentions scores are computed by chunks or not.
 
-        Returns:
-            `torch.Tensor` with shape `[num_hidden_layers x batch x num_heads x seq_length x seq_length]` or list with
-            `[None]` for each layer.
-        """
         if head_mask is not None:
             head_mask = self._convert_head_mask_to_5d(head_mask, num_hidden_layers)
             if is_attention_chunked is True:
-                head_mask = head_mask.unsqueeze(-1)
+                head_mask = head_mask.expand_dims(-1)
         else:
             head_mask = [None] * num_hidden_layers
 
@@ -576,8 +509,8 @@ class XLMModel(XLMPreTrainedModel):
                 lengths = (input_ids != self.pad_index).sum(axis=1).astype(mindspore.int64)
             else:
                 lengths = mindspore.Tensor([slen] * bs)
-        # mask = input_ids != self.pad_index
 
+        # mask = input_ids != self.pad_index
         # check inputs
         assert lengths.shape[0] == bs
         assert mindspore.Tensor.max(lengths) <= slen
@@ -589,8 +522,6 @@ class XLMModel(XLMPreTrainedModel):
 
         # generate masks
         mask, attn_mask = get_masks(slen, lengths, self.causal, padding_mask=attention_mask)
-        # if self.is_decoder and src_enc is not None:
-        #     src_mask = torch.arange(src_len.max(), dtype=torch.long, device=lengths.device) < src_len[:, None]
 
         # position_ids
         if position_ids is None:
@@ -620,15 +551,20 @@ class XLMModel(XLMPreTrainedModel):
         # embeddings
         if inputs_embeds is None:
             inputs_embeds = self.embeddings(input_ids)
+
         tensor = inputs_embeds + self.position_embeddings(position_ids).expand_as(inputs_embeds)
+
         if langs is not None and self.use_lang_emb and self.n_langs > 1:
             tensor = tensor + self.lang_embeddings(langs)
         if token_type_ids is not None:
             tensor = tensor + self.embeddings(token_type_ids)
         tensor = self.layer_norm_emb(tensor)
+
         if self.training:
             tensor = ops.dropout(tensor, p = self.dropout)
-        tensor *= mask.unsqueeze(-1).to(tensor.dtype)
+
+        tensor *= ops.expand_dims(mask,axis = -1).astype(tensor.dtype)
+
 
         # transformer layers
         hidden_states = () if output_hidden_states else None
@@ -651,6 +587,7 @@ class XLMModel(XLMPreTrainedModel):
             if self.training:
                 attn = ops.dropout(attn, p=self.dropout)
             tensor = tensor + attn
+
             tensor = self.layer_norm1[i](tensor)
 
             # encoder attention (for decoder only)
@@ -663,7 +600,7 @@ class XLMModel(XLMPreTrainedModel):
             # FFN
             tensor = tensor + self.ffns[i](tensor)
             tensor = self.layer_norm2[i](tensor)
-            tensor *= mask.unsqueeze(-1).to(tensor.dtype)
+            tensor *= ops.expand_dims(mask,axis=-1).astype(tensor.dtype)
 
         # Add last hidden state
         if output_hidden_states:
@@ -702,11 +639,13 @@ class XLMPredLayer(nn.Cell):
         if self.asm is False:
             scores = self.proj(x)
             outputs = (scores,) + outputs
+
             if y is not None:
                 loss = ops.cross_entropy(scores.view(-1, self.n_words),
                                         y.view(-1),
                                         reduction="mean")
                 outputs = (loss,) + outputs
+
         else:
             scores = self.proj.log_prob(x)
             outputs = (scores,) + outputs
@@ -776,12 +715,7 @@ class XLMWithLMHeadModel(XLMPreTrainedModel):
         output_hidden_states = None,
         return_dict = None,
     ) -> Tuple:
-        r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
-            `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
-            are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
-        """
+
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.transformer(
@@ -916,16 +850,7 @@ class XLMForQuestionAnsweringSimple(XLMPreTrainedModel):
         output_hidden_states = None,
         return_dict = None,
     ) -> Tuple:
-        r"""
-        start_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        """
+
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.transformer(
@@ -1023,7 +948,6 @@ class XLMForQuestionAnswering(XLMPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-
         output = transformer_outputs[0]
         outputs = self.qa_outputs(
             output,
@@ -1071,10 +995,7 @@ class XLMForTokenClassification(XLMPreTrainedModel):
         output_hidden_states = None,
         return_dict = None,
     ) -> Tuple:
-        r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
-        """
+
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.transformer(
@@ -1137,12 +1058,6 @@ class XLMForMultipleChoice(XLMPreTrainedModel):
         output_hidden_states = None,
         return_dict = None,
     ) -> Tuple:
-        r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-            `input_ids` above)
-        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
 
