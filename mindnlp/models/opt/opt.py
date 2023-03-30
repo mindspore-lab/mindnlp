@@ -36,3 +36,9 @@ OPT_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "facebook/opt-30b",
     # See all OPT models at https://huggingface.co/models?filter=opt
 ]
+
+def _make_causal_mask(input_ids_shape: mindspore.size, dtype: mindspore.dtype, past_key_values_length: int = 0):
+    """
+    Make casual mask for bi-directional self-attention
+    """
+    bsz, tag_len = input_ids_shape;
