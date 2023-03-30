@@ -1,10 +1,12 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
-#
+# coding=utf-8
+# Copyright 2021 The Eleuther AI and HuggingFace Inc. team. All rights reserved.
+# Copyright 2023 Huawei Technologies Co., Ltd
+
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,12 +25,12 @@ class LukeConfig(PretrainedConfig):
     """
     def __init__(
             self,
-            vocab_size=50267,
-            entity_vocab_size=500000,
-            hidden_size=768,
+            vocab_size=100,
+            entity_vocab_size=500,
+            hidden_size=128,
             entity_emb_size=256,
             num_hidden_layers=12,
-            num_attention_heads=12,
+            num_attention_heads=16,
             intermediate_size=3072,
             hidden_act="gelu",
             hidden_dropout_prob=0.1,

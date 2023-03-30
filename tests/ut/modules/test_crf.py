@@ -49,7 +49,8 @@ def compute_score(crf, emission, tag):
     # Add transitions score
     score = crf.start_transitions[tag[0]] + crf.end_transitions[tag[-1]]
     for cur_tag, next_tag in zip(tag, tag[1:]):
-        score += crf.transitions[cur_tag, next_tag]
+        indices = ops.stack([Tensor(cur_tag), Tensor(next_tag)])
+        score += ops.gather_nd(crf.transitions, indices.T)
 
     # Add emission score
     for i in range(emission.shape[0]):
@@ -304,13 +305,12 @@ class TestDecode(unittest.TestCase):
         emissions = emissions.swapaxes(0, 1)
         # shape: (batch_size, seq_length)
         mask = sequence_mask(seq_length, emissions.shape[1], True)
-
         # Compute best tag manually
         for emission, best_tag, mask_ in zip(emissions, best_tags, mask):
-            seq_len = mask_.sum()
+            seq_len = mask_.sum().astype(mindspore.int64)
             assert len(best_tag) == seq_len
             # assert all(isinstance(t, int) for t in best_tag)
-            emission = emission[:seq_len]
+            emission = emission[:len(best_tag)]
             manual_best_tag = max(
                 itertools.product(range(crf.num_tags), repeat=seq_len),
                 key=lambda t: compute_score(crf, emission, t))

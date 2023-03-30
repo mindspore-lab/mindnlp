@@ -106,7 +106,7 @@ The code of defining and initializing the network is as follows:
             bias_init = Uniform(1 / math.sqrt(hidden_dim * 2))
             self.fc = nn.Dense(hidden_dim * 2, output_dim, weight_init=weight_init, bias_init=bias_init)
             self.sigmoid = nn.Sigmoid()
-            self.dropout = nn.Dropout(1 - dropout)
+            self.dropout = nn.Dropout(p=dropout)
 
         def construct(self, context):
             context = ops.concat((context[-2, :, :], context[-1, :, :]), axis=1)

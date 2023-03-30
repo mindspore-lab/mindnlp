@@ -1,4 +1,4 @@
-# Copyright 2021 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,21 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""
-MindNLP library.
-"""
+"""Test Glove Vocab"""
 
-from mindnlp.dataset import load_dataset, process
-from mindnlp.utils import less_min_pynative_first
-from mindnlp.workflow.workflow import Workflow
-from mindnlp.vocab import Vocab
-
-if less_min_pynative_first:
-    from mindspore import context
-    from mindspore import ms_function as ms_jit
-    context.set_context(mode=context.PYNATIVE_MODE)
-else:
-    from mindspore import jit as ms_jit
+from mindnlp import Vocab
 
 
-__all__ = ['ms_jit', 'load_dataset', 'process', 'Workflow', 'Vocab']
+def test_vocab_glove_from_pretrained():
+    """test glove vocab from URL"""
+
+    vocab_50d = Vocab.from_pretrained("glove.6B.50d")
+    vocab_100d = Vocab.from_pretrained("glove.6B.100d")
+    vocab_200d = Vocab.from_pretrained("glove.6B.200d")
+    vocab_300d = Vocab.from_pretrained("glove.6B.300d")
+
+    assert len(vocab_50d) == 4 * 10 ** 5 + 2
+    assert len(vocab_100d) == 4 * 10 ** 5 + 2
+    assert len(vocab_200d) == 4 * 10 ** 5 + 2
+    assert len(vocab_300d) == 4 * 10 ** 5 + 2
