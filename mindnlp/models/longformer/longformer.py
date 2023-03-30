@@ -895,3 +895,20 @@ class LongformerSelfAttention(nn.Cell):
             batch_size, self.num_heads, int(max_num_global_attn_indices), self.head_dim
         )
         return global_attn_output, global_attn_probs
+
+
+class LongformerSelfOutput(nn.Cell):
+    """
+    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
+    """
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm(normalized_shape=(config.hidden_size, ), epsilon=config.layer_norm_eps)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+
+    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+        hidden_states = self.dense(hidden_states)
+        hidden_states = self.dropout(hidden_states)
+        hidden_states = self.LayerNorm(hidden_states + input_tensor)
+        return hidden_states
