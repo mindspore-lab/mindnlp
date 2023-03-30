@@ -19,7 +19,7 @@ from mindspore import nn
 from mindspore import ops
 from mindspore import Parameter, Tensor
 from mindspore.common.initializer import initializer, TruncatedNormal
-from mindnlp._legacy.nn import Dropout
+from mindnlp._legacy.nn import Dropout, Matmul
 
 activation_map = {
     'relu': nn.ReLU(),
@@ -27,13 +27,6 @@ activation_map = {
     'gelu_approximate': nn.GELU(),
     'swish':nn.SiLU()
 }
-
-class Matmul(nn.Cell):
-    r"""
-    Matmul Operation
-    """
-    def construct(self, a, b):
-        return ops.matmul(a, b)
 
 
 class BertEmbeddings(nn.Cell):
