@@ -22,6 +22,7 @@ from mindnlp.models.longformer.longformer import LongformerEmbeddings
 from mindnlp.models.longformer.longformer_config import LongformerConfig
 from mindnlp.models.longformer.longformer import LongformerSelfAttention
 from mindnlp.models.longformer.longformer import LongformerSelfOutput
+from mindnlp.models.longformer.longformer import LongformerAttention
 
 
 class TestModelingEmbeddings(unittest.TestCase):
@@ -102,3 +103,41 @@ class TestModelingSelfOutput(unittest.TestCase):
 
         ms_outputs = ms_model(ms_hidden_states, ms_input_tensors)
         assert (1, 8, 768) == ms_outputs.shape
+
+
+class TestModelingAttention(unittest.TestCase):
+    r"""
+    Test model bert
+    """
+    def setUp(self):
+        """
+        Set up.
+        """
+        self.input = None
+
+    def test_modeling_longformer_embedding(self):
+        r"""
+        Test model bert with pynative mode
+        """
+        ms_config = LongformerConfig(attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8])
+        ms_model = LongformerAttention(ms_config)
+        ms_model.set_train(False)
+        hidden_states = np.random.randint(1, 10, (1, 8, 768))
+        attention_mask = np.random.randint(1, 10, (1, 8))
+        is_index_mask = np.random.randint(0, 2, (1, 8))
+        is_index_global_attn = np.random.randint(0, 2, (1, 8))
+        is_global_attn = True
+        output_attentions = False
+        ms_hidden_states = mindspore.Tensor(hidden_states, dtype=mindspore.float32)
+        ms_attention_mask = mindspore.Tensor(attention_mask, dtype=mindspore.float32)
+        ms_is_index_mask = mindspore.Tensor(is_index_mask, dtype=mindspore.bool_)
+        ms_is_index_global_attn = mindspore.Tensor(is_index_global_attn, dtype=mindspore.bool_)
+        ms_outputs = ms_model(
+            hidden_states=ms_hidden_states,
+            attention_mask=ms_attention_mask,
+            is_index_masked=ms_is_index_mask,
+            is_index_global_attn=ms_is_index_global_attn,
+            is_global_attn=is_global_attn,
+            output_attentions=output_attentions
+        )
+        assert (1, 8, 768) == ms_outputs[0].shape

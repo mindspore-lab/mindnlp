@@ -20,12 +20,63 @@
 # pylint: disable=too-many-arguments
 # pylint: disable=invalid-name
 import math
+from typing import List, Set, Tuple
+
 import numpy as np
 import mindspore
 from mindspore import nn
 from mindspore import Tensor
 from mindspore import ops
 
+
+def find_pruneable_heads_and_indices(
+    heads: List[int], n_heads: int, head_size: int, already_pruned_heads: Set[int]
+) -> Tuple[Set[int], mindspore.Tensor]:
+    # qbh longTensor->tensor
+    """
+    Finds the heads and their indices taking `already_pruned_heads` into account.
+
+    Args:
+        heads (`List[int]`): List of the indices of heads to prune.
+        n_heads (`int`): The number of heads in the model.
+        head_size (`int`): The size of each head.
+        already_pruned_heads (`Set[int]`): A set of already pruned heads.
+
+    Returns:
+        `Tuple[Set[int], torch.LongTensor]`: A tuple with the remaining heads and their corresponding indices.
+    """
+    mask = mindspore.ops.ones((n_heads, head_size))
+    heads = set(heads) - already_pruned_heads  # Convert to set and remove already pruned heads
+    for head in heads:
+        # Compute how many pruned heads are before the head and move the index accordingly
+        head = head - sum(1 if h < head else 0 for h in already_pruned_heads)
+        mask[head] = 0
+    mask = mask.view(-1).equal(1)
+    index: mindspore.Tensor = mindspore.ops.arange(len(mask))[mask].long()
+    return heads, index
+
+
+def prune_linear_layer(layer: nn.Dense, index: mindspore.Tensor, dim: int = 0) -> nn.Dense:# qbh longtensor->tensor
+    """
+    Prune a linear layer to keep only entries in index.
+    """
+    W = layer.weight.index_select(dim, index).copy()
+    if layer.bias is not None:
+        if dim == 1:
+            b = layer.bias.copy()
+        else:
+            b = layer.bias[index].copy()
+    new_size = list(layer.weight.shape)
+    new_size[dim] = len(index)
+    new_layer = nn.Dense(in_channels=new_size[1], out_channels=new_size[0], has_bias=layer.bias is not None)
+    new_layer.weight.requires_grad = False
+    new_layer.weight.copy_(W)
+    new_layer.weight.requires_grad = True
+    if layer.bias is not None:
+        new_layer.bias.requires_grad = False
+        new_layer.bias.copy_(b)
+        new_layer.bias.requires_grad = True
+    return new_layer
 
 def tensor_to_tuple(self):
     """
@@ -912,3 +963,52 @@ class LongformerSelfOutput(nn.Cell):
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
+
+
+class LongformerAttention(nn.Cell):
+    def __init__(self, config, layer_id=0):
+        super().__init__()
+        self.self = LongformerSelfAttention(config, layer_id)
+        self.output = LongformerSelfOutput(config)
+        self.pruned_heads = set()
+
+    def prune_heads(self, heads):  # qbh pytorch.util
+        if len(heads) == 0:
+            return
+        heads, index = find_pruneable_heads_and_indices(
+            heads, self.self.num_attention_heads, self.self.attention_head_size, self.pruned_heads
+        )
+
+        # Prune linear layers
+        self.self.query = prune_linear_layer(self.self.query, index)
+        self.self.key = prune_linear_layer(self.self.key, index)
+        self.self.value = prune_linear_layer(self.self.value, index)
+        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
+
+        # Update hyper params and store pruned heads
+        self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
+        self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
+        self.pruned_heads = self.pruned_heads.union(heads)
+
+    def construct(
+        self,
+        hidden_states,
+        attention_mask=None,
+        layer_head_mask=None,
+        is_index_masked=None,
+        is_index_global_attn=None,
+        is_global_attn=None,
+        output_attentions=False,
+    ):
+        self_outputs = self.self(
+            hidden_states,
+            attention_mask=attention_mask,
+            layer_head_mask=layer_head_mask,
+            is_index_masked=is_index_masked,
+            is_index_global_attn=is_index_global_attn,
+            is_global_attn=is_global_attn,
+            output_attentions=output_attentions,
+        )
+        attn_output = self.output(self_outputs[0], hidden_states)
+        outputs = (attn_output,) + self_outputs[1:]
+        return outputs
