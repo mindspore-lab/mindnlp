@@ -1029,3 +1029,18 @@ class LongformerIntermediate(nn.Cell):
         hidden_states = self.intermediate_act_fn(hidden_states)
         hidden_states = Tensor(hidden_states)
         return hidden_states
+
+
+# Copied from transformers.models.bert.modeling_bert.BertOutput
+class LongformerOutput(nn.Cell):
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)  # qbh remain to do 3.9 22.29
+        self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+
+    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
+        hidden_states = self.dense(hidden_states)
+        hidden_states = self.dropout(hidden_states)
+        hidden_states = self.LayerNorm(hidden_states + input_tensor)
+        return hidden_states

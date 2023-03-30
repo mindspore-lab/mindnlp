@@ -24,6 +24,7 @@ from mindnlp.models.longformer.longformer import LongformerSelfAttention
 from mindnlp.models.longformer.longformer import LongformerSelfOutput
 from mindnlp.models.longformer.longformer import LongformerAttention
 from mindnlp.models.longformer.longformer import LongformerIntermediate
+from mindnlp.models.longformer.longformer import LongformerOutput
 
 class TestModelingEmbeddings(unittest.TestCase):
     r"""
@@ -165,3 +166,29 @@ class TestModelingIntermediate(unittest.TestCase):
             hidden_states=ms_hidden_states
         )
         assert (1, 8, 10) == ms_outputs.shape
+
+
+class TestModelingOutput(unittest.TestCase):
+    r"""
+    Test model bert
+    """
+    def setUp(self):
+        """
+        Set up.
+        """
+        self.input = None
+
+    def test_modeling_longformer_embedding(self):
+        r"""
+        Test model bert with pynative mode
+        """
+        ms_config = LongformerConfig(intermediate_size=768)
+        ms_model = LongformerOutput(ms_config)
+        ms_model.set_train(False)
+        hidden_states = np.random.randint(1, 10, (1, 8, 768))
+        input_tensor = np.random.randint(1, 10, (1, 8, 768))
+        ms_hidden_states = Tensor(hidden_states, dtype=mindspore.float32)
+        ms_input_tensors = Tensor(input_tensor, dtype=mindspore.float32)
+
+        ms_outputs = ms_model(ms_hidden_states, ms_input_tensors)
+        assert (8, 768) == ms_outputs[0].shape
