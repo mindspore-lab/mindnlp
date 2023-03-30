@@ -496,7 +496,7 @@ class StaticGRU(_RNNBase):
         ``Ascend`` ``GPU`` ``CPU``
 
     Examples:
-        >>> net = nn.GRU(10, 16, 2, has_bias=True, batch_first=True, bidirectional=False)
+        >>> net = StaticGRU(10, 16, 2, has_bias=True, batch_first=True, bidirectional=False)
         >>> x = Tensor(np.ones([3, 5, 10]).astype(np.float32))
         >>> h0 = Tensor(np.ones([1 * 2, 3, 16]).astype(np.float32))
         >>> output, hn = net(x, h0)
@@ -579,7 +579,7 @@ class StaticLSTM(_RNNBase):
         ``Ascend`` ``GPU`` ``CPU``
 
     Examples:
-        >>> net = nn.LSTM(10, 16, 2, has_bias=True, batch_first=True, bidirectional=False)
+        >>> net = StaticLSTM(10, 16, 2, has_bias=True, batch_first=True, bidirectional=False)
         >>> x = Tensor(np.ones([3, 5, 10]).astype(np.float32))
         >>> h0 = Tensor(np.ones([1 * 2, 3, 16]).astype(np.float32))
         >>> c0 = Tensor(np.ones([1 * 2, 3, 16]).astype(np.float32))

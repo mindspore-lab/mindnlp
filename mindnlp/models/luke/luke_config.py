@@ -25,12 +25,12 @@ class LukeConfig(PretrainedConfig):
     """
     def __init__(
             self,
-            vocab_size=50267,
-            entity_vocab_size=500000,
-            hidden_size=768,
+            vocab_size=100,
+            entity_vocab_size=500,
+            hidden_size=128,
             entity_emb_size=256,
             num_hidden_layers=12,
-            num_attention_heads=12,
+            num_attention_heads=16,
             intermediate_size=3072,
             hidden_act="gelu",
             hidden_dropout_prob=0.1,
