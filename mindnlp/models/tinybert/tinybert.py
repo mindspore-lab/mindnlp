@@ -46,7 +46,7 @@ class TinyBertEmbeddings(nn.Cell):
             config.type_vocab_size, config.hidden_size)
 
         self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=1e-12)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, input_ids, token_type_ids=None):
         """
@@ -89,7 +89,7 @@ class TinyBertSelfAttention(nn.Cell):
         self.key = nn.Dense(config.hidden_size, self.all_head_size)
         self.value = nn.Dense(config.hidden_size, self.all_head_size)
 
-        self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x):
         """
@@ -158,7 +158,7 @@ class TinyBertSelfOutput(nn.Cell):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=1e-12)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
@@ -370,7 +370,7 @@ class TinyBertPreTrainingHeads(nn.Cell):
 
 
 class TinyBertPreTrainedModel(PretrainedModel):
-    """ 
+    """
     An abstract class to handle weights initialization.
     """
 
@@ -435,6 +435,10 @@ class TinyBertPreTrainedModel(PretrainedModel):
 
     def save(self, save_dir: Union[str, os.PathLike]):
         "save pretrain model"
+
+    #TODO
+    def post_init(self):
+        pass
 
 
 class TinyBertModel(TinyBertPreTrainedModel):
@@ -624,7 +628,7 @@ class TinyBertForSentencePairClassification(TinyBertPreTrainedModel):
         super().__init__(config)
         self.num_labels = num_labels
         self.bert = TinyBertModel(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.classifier = nn.Dense(config.hidden_size * 3, num_labels)
         self.apply(self.init_model_weights)
 
@@ -657,7 +661,7 @@ class TinyBertForSequenceClassification(TinyBertPreTrainedModel):
         super().__init__(config)
         self.num_labels = num_labels
         self.bert = TinyBertModel(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.classifier = nn.Dense(config.hidden_size, num_labels)
         self.fit_dense = nn.Dense(config.hidden_size, fit_size)
         self.apply(self.init_model_weights)

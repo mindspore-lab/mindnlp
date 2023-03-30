@@ -20,12 +20,12 @@ import json
 import logging
 from itertools import islice
 import numpy as np
-from mindspore import nn
 from mindspore import ops
 from mindspore import Tensor
 from mindnlp.utils import cache_file, unzip
 from mindnlp.abc.modules.embedding import TokenEmbedding
 from mindnlp.configs import DEFAULT_ROOT
+from mindnlp._legacy.nn import Dropout
 
 JSON_FILENAME = 'fasttext_hyper.json'
 EMBED_FILENAME = 'fasttext.txt'
@@ -63,7 +63,7 @@ class Fasttext(TokenEmbedding):
         self._embed_dim = init_embed.shape[1]
         self._embed_size = init_embed.shape
         self.requires_grad = requires_grad
-        self.dropout_layer = nn.Dropout(1 - dropout)
+        self.dropout_layer = Dropout(p=dropout)
         self.dropout_p = dropout
 
     @classmethod

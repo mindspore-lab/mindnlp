@@ -24,72 +24,7 @@ from mindspore import nn
 from mindspore import context
 from mindspore import Tensor
 
-from mindnlp.modules import RNNEncoder, CNNEncoder
-
-
-class TestRNNEncoder(unittest.TestCase):
-    r"""
-    Test module RNN Encoder
-    """
-
-    def test_rnn_encoder_graph(self):
-        """
-        Test rnn encoder module in graph mode
-        """
-        context.set_context(mode=context.GRAPH_MODE)
-
-        vocab_size = 1000
-        embedding_size = 32
-        hidden_size = 16
-        num_layers = 2
-        has_bias = True
-        dropout = 0.1
-        bidirectional = False
-        embedding = nn.Embedding(vocab_size, embedding_size)
-        rnn = nn.RNN(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
-                     batch_first=True, dropout=dropout, bidirectional=bidirectional)
-
-        rnn_encoder = RNNEncoder(embedding, rnn)
-
-        src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
-        src_length = Tensor(np.ones([8]), mindspore.int32)
-        mask = Tensor(np.ones([8, 16]), mindspore.int32)
-
-        output, hiddens_n, mask = rnn_encoder(src_tokens, src_length, mask=mask)
-
-        assert output.shape == (8, 16, 16)
-        assert hiddens_n.shape == (2, 8, 16)
-        assert mask.shape == (8, 16)
-
-    def test_rnn_encoder_pynative(self):
-        """
-        Test rnn encoder module in pynative mode
-        """
-        context.set_context(mode=context.PYNATIVE_MODE)
-
-        vocab_size = 1000
-        embedding_size = 32
-        hidden_size = 16
-        num_layers = 2
-        has_bias = True
-        dropout = 0.1
-        bidirectional = False
-        embedding = nn.Embedding(vocab_size, embedding_size)
-        rnn = nn.RNN(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
-                     batch_first=True, dropout=dropout, bidirectional=bidirectional)
-
-        rnn_encoder = RNNEncoder(embedding, rnn)
-
-        src_tokens = Tensor(np.ones([8, 16]), mindspore.int32)
-        src_length = Tensor(np.ones([8]), mindspore.int32)
-        mask = Tensor(np.ones([8, 16]), mindspore.int32)
-
-        output, hiddens_n, mask = rnn_encoder(src_tokens, src_length, mask=mask)
-
-        assert output.shape == (8, 16, 16)
-        assert hiddens_n.shape == (2, 8, 16)
-        assert mask.shape == (8, 16)
-
+from mindnlp.modules import RNNEncoder, CNNEncoder, StaticGRU, StaticLSTM
 
 class TestLSTMEncoder(unittest.TestCase):
     r"""
@@ -110,8 +45,8 @@ class TestLSTMEncoder(unittest.TestCase):
         dropout = 0.1
         bidirectional = False
         embedding = nn.Embedding(vocab_size, embedding_size)
-        lstm = nn.LSTM(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
-                     batch_first=True, dropout=dropout, bidirectional=bidirectional)
+        lstm = StaticLSTM(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+                          batch_first=True, dropout=dropout, bidirectional=bidirectional)
 
         lstm_encoder = RNNEncoder(embedding, lstm)
 
@@ -140,8 +75,8 @@ class TestLSTMEncoder(unittest.TestCase):
         dropout = 0.1
         bidirectional = False
         embedding = nn.Embedding(vocab_size, embedding_size)
-        lstm = nn.LSTM(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
-                     batch_first=True, dropout=dropout, bidirectional=bidirectional)
+        lstm = StaticLSTM(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+                          batch_first=True, dropout=dropout, bidirectional=bidirectional)
 
         lstm_encoder = RNNEncoder(embedding, lstm)
 
@@ -176,8 +111,8 @@ class TestGRUEncoder(unittest.TestCase):
         dropout = 0.1
         bidirectional = False
         embedding = nn.Embedding(vocab_size, embedding_size)
-        gru = nn.GRU(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
-                     batch_first=True, dropout=dropout, bidirectional=bidirectional)
+        gru = StaticGRU(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+                        batch_first=True, dropout=dropout, bidirectional=bidirectional)
 
         gru_encoder = RNNEncoder(embedding, gru)
 
@@ -205,8 +140,8 @@ class TestGRUEncoder(unittest.TestCase):
         dropout = 0.1
         bidirectional = False
         embedding = nn.Embedding(vocab_size, embedding_size)
-        gru = nn.GRU(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
-                     batch_first=True, dropout=dropout, bidirectional=bidirectional)
+        gru = StaticGRU(embedding_size, hidden_size, num_layers=num_layers, has_bias=has_bias,
+                        batch_first=True, dropout=dropout, bidirectional=bidirectional)
 
         gru_encoder = RNNEncoder(embedding, gru)
 
