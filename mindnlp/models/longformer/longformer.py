@@ -27,7 +27,7 @@ import mindspore
 from mindspore import nn
 from mindspore import Tensor
 from mindspore import ops
-
+from ..utils.activations import ACT2FN
 
 def find_pruneable_heads_and_indices(
     heads: List[int], n_heads: int, head_size: int, already_pruned_heads: Set[int]
@@ -77,6 +77,7 @@ def prune_linear_layer(layer: nn.Dense, index: mindspore.Tensor, dim: int = 0) -
         new_layer.bias.copy_(b)
         new_layer.bias.requires_grad = True
     return new_layer
+
 
 def tensor_to_tuple(self):
     """
@@ -1012,3 +1013,19 @@ class LongformerAttention(nn.Cell):
         attn_output = self.output(self_outputs[0], hidden_states)
         outputs = (attn_output,) + self_outputs[1:]
         return outputs
+
+
+class LongformerIntermediate(nn.Cell):
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
+        if isinstance(config.hidden_act, str):
+            self.intermediate_act_fn = ACT2FN[config.hidden_act]  # qbh remain ACT2FN
+        else:
+            self.intermediate_act_fn = config.hidden_act
+
+    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        hidden_states = self.dense(hidden_states)
+        hidden_states = self.intermediate_act_fn(hidden_states)
+        hidden_states = Tensor(hidden_states)
+        return hidden_states
