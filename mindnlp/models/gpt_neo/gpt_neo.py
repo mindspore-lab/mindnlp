@@ -804,7 +804,7 @@ class GPTNeoForSequenceClassification(GPTNeoPreTrainedModel):
                     self.__class__.__name__
                 )
 
-        pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
+        pooled_logits = logits[:, sequence_lengths]
 
         loss = None
         if labels is not None:

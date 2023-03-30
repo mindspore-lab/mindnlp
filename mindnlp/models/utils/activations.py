@@ -34,7 +34,7 @@ ACT2CLS = {
     Excitation equation matrix
     """
     'relu': nn.ReLU,
-    'gelu': (nn.GELU, {"approximate=": False}),
+    'gelu': nn.GELU,
     'gelu_new': nn.GELU,
     'gelu_approximate': (nn.GELU, {"approximate=": True}),
     "swish": nn.SiLU,  # MindSpore的SiLU激活函数是Swish函数

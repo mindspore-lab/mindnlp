@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=C0103
+"""nn wraper operators for half precision cast."""
 
-"""nn layer for legacy mindspore"""
+from mindspore import nn, ops
 
-from .transformer import Transformer, TransformerDecoder, TransformerEncoder, \
-    TransformerEncoderLayer, TransformerDecoderLayer, MultiheadAttention
+class Matmul(nn.Cell):
+    r"""
+    Matmul Operation
+    """
+    def construct(self, a, b):
+        return ops.matmul(a, b)
 
-from .dropout import Dropout
-from .half_op import *
-
-__all__ = [
-    'Transformer', 'TransformerEncoder', 'TransformerDecoder',
-    'TransformerEncoderLayer', 'TransformerDecoderLayer',
-    'MultiheadAttention', 'Dropout', 'Matmul']
+__all__ = ['Matmul']
