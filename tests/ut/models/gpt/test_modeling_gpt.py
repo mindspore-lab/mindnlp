@@ -75,8 +75,8 @@ class TestModelingGPT(unittest.TestCase):
         model_outputs = model(input_ids)
         assert model_outputs[0].shape == (2, 512, 768)
 
-     def test_gpt_lmhead_model(self):
-            r"""
+    def test_gpt_lmhead_model(self):
+        r"""
         Test GPT2 LMHead Model
         """
         config = gpt_config.GPTConfig()
