@@ -401,7 +401,9 @@ class XLMModel(XLMPreTrainedModel):
         # embeddings
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, self.dim)
         if config.sinusoidal_embeddings:
-            create_sinusoidal_embeddings(config.max_position_embeddings, self.dim, out=self.position_embeddings.embedding_table)
+            create_sinusoidal_embeddings(config.max_position_embeddings,
+                                         self.dim,
+                                         out=self.position_embeddings.embedding_table)
         if config.n_langs > 1 and config.use_lang_emb:
             self.lang_embeddings = nn.Embedding(self.n_langs, self.dim)
 
@@ -459,16 +461,16 @@ class XLMModel(XLMPreTrainedModel):
             head_mask = head_mask.expand_dims(0).expand_dims(0).expand_dims(-1).expand_dims(-1)
             head_mask = head_mask.expand(num_hidden_layers, -1, -1, -1, -1)
         elif head_mask.ndim == 2:
-            head_mask = head_mask.expand_dims(1).expand_dims(-1).expand_dims(-1)  # We can specify head_mask for each layer
+            head_mask = head_mask.expand_dims(1).expand_dims(-1).expand_dims(-1)
+            # We can specify head_mask for each layer
         assert head_mask.ndim == 5, f"head_mask.dim != 5, instead {head_mask.ndim}"
         head_mask = head_mask.astype(dtype=self.dtype)  # switch to float if need + fp16 compatibility
         return head_mask
 
-
     def get_head_mask(
         self, head_mask: Optional[mindspore.Tensor], num_hidden_layers: int, is_attention_chunked: bool = False
     ) -> mindspore.Tensor:
-
+        """get_head_mask"""
         if head_mask is not None:
             head_mask = self._convert_head_mask_to_5d(head_mask, num_hidden_layers)
             if is_attention_chunked is True:
