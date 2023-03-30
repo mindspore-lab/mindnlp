@@ -19,6 +19,25 @@
 
 from ...abc.backbones.pretrained import PretrainedConfig
 
+# Copyright 2022 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+"""MindNLP gpt config"""
+
+from ...abc.backbones.pretrained import PretrainedConfig
+
+
 class GPTConfig(PretrainedConfig):
     r"""
     GPT config
@@ -36,6 +55,7 @@ class GPTConfig(PretrainedConfig):
         vocab_size=40478,
         n_positions=512,
         n_embd=768,
+        hidden_size=768,
         n_layer=12,
         n_head=12,
         afn="gelu_new",
@@ -54,6 +74,7 @@ class GPTConfig(PretrainedConfig):
         self.vocab_size = vocab_size
         self.n_positions = n_positions
         self.n_embd = n_embd
+        self.hidden_size = hidden_size
         self.n_layer = n_layer
         self.n_head = n_head
         self.afn = afn
