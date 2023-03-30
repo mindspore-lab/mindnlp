@@ -15,6 +15,7 @@
 # pylint: disable=C0103
 # pylint: disable=W0123
 # pylint: disable=W0212
+# pylint: disable=C0412
 
 '''RNN operators module, include RNN, GRU, LSTM'''
 import math
@@ -24,10 +25,18 @@ from mindspore import nn, ops, context
 from mindspore import Tensor, Parameter, ParameterTuple
 from mindspore import log as logger
 from mindspore.common.initializer import initializer, Uniform
+from mindspore.ops.primitive import constexpr
 from mindspore.ops.operations._rl_inner_ops import CudnnGRU
 from mindspore.ops._primitive_cache import _get_cache_prim
-from mindnlp import ms_jit
+from mindnlp.utils import less_min_pynative_first
+if less_min_pynative_first:
+    from mindnlp._legacy.nn import Dropout
+    from mindnlp._legacy.functional import tensor_split, sigmoid, reverse
+else:
+    from mindspore.nn import Dropout
+    from mindspore.ops import tensor_split, sigmoid, reverse
 
+@constexpr
 def _init_state(shape, dtype, is_lstm):
     hx = Tensor(np.zeros(shape), dtype)
     cx = Tensor(np.zeros(shape), dtype)
@@ -39,16 +48,16 @@ def _init_state(shape, dtype, is_lstm):
 def gru_cell(inputs, hidden, w_ih, w_hh, b_ih=None, b_hh=None):
     '''GRU cell function'''
     if b_ih is None:
-        gi = ops.mm(inputs, w_ih.T)
-        gh = ops.mm(hidden, w_hh.T)
+        gi = ops.matmul(inputs, w_ih.T)
+        gh = ops.matmul(hidden, w_hh.T)
     else:
-        gi = ops.mm(inputs, w_ih.T) + b_ih
-        gh = ops.mm(hidden, w_hh.T) + b_hh
-    i_r, i_i, i_n = ops.tensor_split(gi, 3, 1)
-    h_r, h_i, h_n = ops.tensor_split(gh, 3, 1)
+        gi = ops.matmul(inputs, w_ih.T) + b_ih
+        gh = ops.matmul(hidden, w_hh.T) + b_hh
+    i_r, i_i, i_n = tensor_split(gi, 3, 1)
+    h_r, h_i, h_n = tensor_split(gh, 3, 1)
 
-    resetgate = ops.sigmoid(i_r + h_r)
-    inputgate = ops.sigmoid(i_i + h_i)
+    resetgate = sigmoid(i_r + h_r)
+    inputgate = sigmoid(i_i + h_i)
     newgate = ops.tanh(i_n + resetgate * h_n)
     hy = newgate + inputgate * (hidden - newgate)
 
@@ -63,7 +72,7 @@ class SingleGRULayer_CPU(nn.Cell):
         self.has_bias = has_bias
         self.bidirectional = bidirectional
 
-    def forward(self, x, h, weights):
+    def forward(self, x, h, weights, biases):
         """forward direction."""
         h_shape = h.shape
         h = h.squeeze()
@@ -74,7 +83,8 @@ class SingleGRULayer_CPU(nn.Cell):
             w_ih, w_hh = w_ih.astype(x_dtype), w_hh.astype(x_dtype)
             b_ih, b_hh = None, None
         else:
-            w_ih, w_hh, b_ih, b_hh = weights
+            w_ih, w_hh = weights
+            b_ih, b_hh = biases
             w_ih, w_hh = w_ih.astype(x_dtype), w_hh.astype(x_dtype)
             b_ih, b_hh = b_ih.astype(x_dtype), b_hh.astype(x_dtype)
 
@@ -90,35 +100,40 @@ class SingleGRULayer_CPU(nn.Cell):
 
         return outputs, h.view(h_shape)
 
-    def bidirection(self, inputs, h, weights):
+
+    def bidirection(self, inputs, h, weights, biases):
         """bidirectional."""
-        rev_inputs = ops.reverse(inputs, [0])
-        h_f, h_b = ops.tensor_split(h, 2)
+        rev_inputs = reverse(inputs, [0])
+        h_f, h_b = tensor_split(h, 2)
         if self.has_bias:
-            weights_f = weights[:4]
-            weights_b = weights[4:]
+            weights_f = weights[:2]
+            weights_b = weights[2:]
+            biases_f = biases[:2]
+            biases_b = biases[2:]
         else:
             weights_f = weights[:2]
             weights_b = weights[2:]
+            biases_f = None
+            biases_b = None
 
-        outputs_f, hn_f = self.forward(inputs, h_f, weights_f)
-        outputs_b, hn_b = self.forward(rev_inputs, h_b, weights_b)
 
-        outputs_b = ops.reverse(outputs_b, [0])
+        outputs_f, hn_f = self.forward(inputs, h_f, weights_f, biases_f)
+        outputs_b, hn_b = self.forward(rev_inputs, h_b, weights_b, biases_b)
+
+        outputs_b = reverse(outputs_b, [0])
         outputs = ops.concat([outputs_f, outputs_b], 2)
         hn = ops.concat([hn_f, hn_b], 0)
 
         return outputs, hn
 
-    @ms_jit
-    def construct(self, inputs, h, weights):
+    def construct(self, inputs, h, weights, biases):
         if self.bidirectional:
-            return self.bidirection(inputs, h, weights)
-        return self.forward(inputs, h, weights)
+            return self.bidirection(inputs, h, weights, biases)
+        return self.forward(inputs, h, weights, biases)
 
 
-class SingleLSTMLayer_CPU(nn.Cell):
-    """Single LSTM on CPU."""
+class SingleLSTMLayerBase(nn.Cell):
+    """Single LSTM Layer"""
     def __init__(self, input_size, hidden_size, has_bias, bidirectional):
         super().__init__(False)
         self.input_size = input_size
@@ -128,22 +143,57 @@ class SingleLSTMLayer_CPU(nn.Cell):
 
         self.rnn = ops.LSTM(input_size, hidden_size, 1, has_bias, bidirectional, 0.0)
 
-    def construct(self, inputs, h, weights):
-        h0, c0 = h
-        if self.bidirectional:
-            weights = (weights[0].view((-1, 1, 1)), weights[4].view((-1, 1, 1)),
-                       weights[1].view((-1, 1, 1)), weights[5].view((-1, 1, 1)),
-                       (weights[2] + weights[3]).view((-1, 1, 1)),
-                       (weights[6] + weights[7]).view((-1, 1, 1)))
-        else:
-            weights = (weights[0].view((-1, 1, 1)), weights[1].view((-1, 1, 1)),
-                       (weights[2] + weights[3]).view((-1, 1, 1)))
+    def _flatten_weights(self, weights, biases):
+        raise NotImplementedError
 
-        weights = ops.concat(weights)
+    def construct(self, inputs, h, weights, biases):
+        h0, c0 = h
+        weights = self._flatten_weights(weights, biases)
         outputs, hn, cn, _, _ =  self.rnn(inputs, h0, c0, weights.astype(inputs.dtype))
 
         return outputs, (hn, cn)
 
+
+class SingleLSTMLayer_CPU(SingleLSTMLayerBase):
+    """Single LSTM Layer CPU"""
+    def _flatten_weights(self, weights, biases):
+        if self.bidirectional:
+            weights = (weights[0].view((-1, 1, 1)), weights[2].view((-1, 1, 1)),
+                       weights[1].view((-1, 1, 1)), weights[3].view((-1, 1, 1)))
+        else:
+            weights = (weights[0].view((-1, 1, 1)), weights[1].view((-1, 1, 1)))
+
+        if self.has_bias:
+            if self.bidirectional:
+                biases = ((biases[0] + biases[1]).view((-1, 1, 1)),
+                          (biases[2] + biases[3]).view((-1, 1, 1)))
+            else:
+                biases = ((biases[0] + biases[1]).view((-1, 1, 1)),)
+            weights += biases
+
+        weights = ops.concat(weights)
+        return weights
+
+
+class SingleLSTMLayer_GPU(SingleLSTMLayerBase):
+    """Single LSTM Layer GPU"""
+    def _flatten_weights(self, weights, biases):
+        if self.bidirectional:
+            weights = (weights[0].view((-1, 1, 1)), weights[1].view((-1, 1, 1)),
+                       weights[2].view((-1, 1, 1)), weights[3].view((-1, 1, 1)))
+        else:
+            weights = (weights[0].view((-1, 1, 1)), weights[1].view((-1, 1, 1)))
+
+        if self.has_bias:
+            if self.bidirectional:
+                biases = (biases[0].view((-1, 1, 1)), biases[1].view((-1, 1, 1)),
+                          biases[2].view((-1, 1, 1)), biases[3].view((-1, 1, 1)))
+            else:
+                biases = (biases[0].view((-1, 1, 1)), biases[1].view((-1, 1, 1)),)
+            weights += biases
+
+        weights = ops.concat(weights)
+        return weights
 
 class SingleGRULayer_Ascend(nn.Cell):
     """Single GRU on Ascend."""
@@ -179,7 +229,7 @@ class SingleGRULayer_Ascend(nn.Cell):
 
     def bidirection(self, inputs, h, weights):
         """bidirectional."""
-        rev_inputs = ops.reverse(inputs, 0)
+        rev_inputs = reverse(inputs, 0)
         if not self.has_bias:
             w_ih_f, w_hh_f, w_ih_b, w_hh_b = weights
             b_ih_f = ops.zeros(self.gate_size, inputs.dtype)
@@ -187,7 +237,7 @@ class SingleGRULayer_Ascend(nn.Cell):
             b_ih_b = ops.zeros(self.gate_size, inputs.dtype)
             b_hh_b = ops.zeros(self.gate_size, inputs.dtype)
         else:
-            w_ih_f, w_hh_f, b_ih_f, b_hh_f, w_ih_b, w_hh_b, b_ih_b, b_hh_b = weights
+            w_ih_f, w_hh_f, w_ih_b, w_hh_b, b_ih_f, b_hh_f, b_ih_b, b_hh_b = weights
 
         outputs_f, hn_f, _, _, _, _ = self.rnn(inputs.astype(ms.float16), \
                                                w_ih_f.transpose((1, 0)).astype(ms.float16), \
@@ -199,7 +249,7 @@ class SingleGRULayer_Ascend(nn.Cell):
                                                w_hh_b.transpose((1, 0)).astype(ms.float16), \
                                                b_ih_b, b_hh_b, \
                                                None, h[1].astype(ms.float16))
-        outputs_b = ops.reverse(outputs_b, 0)
+        outputs_b = reverse(outputs_b, 0)
         outputs = ops.concat([outputs_f, outputs_b], 2)
         hn = ops.concat([hn_f, hn_b], 0)
 
@@ -223,39 +273,43 @@ class MultiLayerRNN(nn.Cell):
         self.cell_list = nn.CellList(cell_list)
 
         w_stride = 2
-        if has_bias:
-            w_stride = w_stride * 2
         if bidirectional:
             w_stride = w_stride * 2
         self.w_stride = w_stride
 
-        self.dropout = nn.Dropout(p=dropout)
+        self.dropout = Dropout(p=dropout)
         self.dropout_rate = dropout
         self.is_lstm = mode == 'LSTM'
         self.num_layers = num_layers
         self.num_directions = num_directions
+        self.has_bias = has_bias
 
-    def construct(self, inputs, hx, weights):
+    def construct(self, inputs, hx, weights, biases):
         """stacked mutil_layer static rnn"""
         pre_layer = inputs
         h_n = ()
         c_n = ()
         output = 0
         if self.is_lstm:
-            hx_list = ops.tensor_split(hx[0], self.num_layers)
-            cx_list = ops.tensor_split(hx[1], self.num_layers)
+            hx_list = tensor_split(hx[0], self.num_layers)
+            cx_list = tensor_split(hx[1], self.num_layers)
         else:
-            hx_list = ops.tensor_split(hx, self.num_layers)
+            hx_list = tensor_split(hx, self.num_layers)
             cx_list = None
 
+        w_list = ()
+        b_list = ()
         for i in range(self.num_layers):
             w_list = weights[i * self.w_stride: (i + 1) * self.w_stride]
-
+            if self.has_bias:
+                b_list = biases[i * self.w_stride: (i + 1) * self.w_stride]
+            else:
+                b_list = None
             if self.is_lstm:
                 h_i = (hx_list[i], cx_list[i])
             else:
                 h_i = hx_list[i]
-            output, h_t = self.cell_list[i](pre_layer, h_i, w_list)
+            output, h_t = self.cell_list[i](pre_layer, h_i, w_list, b_list)
             pre_layer = self.dropout(output) if (self.dropout_rate != 0 and i < self.num_layers - 1) else output
             if self.is_lstm:
                 h_n += (h_t[0],)
@@ -270,27 +324,6 @@ class MultiLayerRNN(nn.Cell):
         h_n = ops.concat(h_n)
         return output, h_n
 
-class StaticLSTM_GPU(nn.Cell):
-    """Static LSTM on GPU."""
-    def __init__(self, input_size, hidden_size, num_layers, has_bias, \
-                 bidirectional, dropout):
-        super().__init__(False)
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.has_bias = has_bias
-        self.bidirectional = bidirectional
-        self.dropout = dropout
-
-    def construct(self, inputs, hx, weights):
-        h, c = hx
-        weights = Tensor._flatten_tensors(weights, 0)[0]
-        weights = ops.reshape(weights, (-1, 1, 1))
-        dropout = self.dropout if self.training else 0.0
-        _lstm = _get_cache_prim(ops.LSTM)(self.input_size, self.hidden_size, self.num_layers, \
-                                          self.has_bias, self.bidirectional, dropout)
-        outputs, hn,cn, _, _ =  _lstm(inputs, h, c, weights.astype(inputs.dtype))
-        return outputs, (hn, cn)
 
 class StaticGRU_GPU(nn.Cell):
     """Static GRU on GPU"""
@@ -304,14 +337,20 @@ class StaticGRU_GPU(nn.Cell):
         self.bidirectional = bidirectional
         self.dropout = dropout
 
-    def construct(self, inputs, h, weights):
-        weights = Tensor._flatten_tensors(weights, 0)[0]
-        weights = ops.reshape(weights, (-1, 1, 1))
+    def construct(self, inputs, h, weights, biases):
+        weights_new = ()
+        for w in weights:
+            weights_new += (ops.reshape(w, (-1, 1, 1)),)
+        for b in biases:
+            weights_new += (ops.reshape(b, (-1, 1, 1)),)
+
+        weights = ops.concat(weights_new)
         dropout = self.dropout if self.training else 0.0
         _gru = _get_cache_prim(CudnnGRU)(self.input_size, self.hidden_size, self.num_layers, \
-                                      self.has_bias, self.bidirectional, dropout)
+                                         self.has_bias, self.bidirectional, dropout)
         outputs, hn, _, _ =  _gru(inputs, h, weights.astype(inputs.dtype))
         return outputs, hn
+
 
 class _RNNBase(nn.Cell):
     '''Basic class for RNN operators'''
@@ -343,36 +382,34 @@ class _RNNBase(nn.Cell):
                 self.rnn = MultiLayerRNN('GRU', input_size, hidden_size, num_layers, has_bias, bidirectional, dropout)
         elif mode == "LSTM":
             gate_size = 4 * hidden_size
-            if is_gpu:
-                self.rnn = StaticLSTM_GPU(input_size, hidden_size, num_layers, has_bias, bidirectional, dropout)
-            else:
-                self.rnn = MultiLayerRNN('LSTM', input_size, hidden_size, num_layers, has_bias, bidirectional, dropout)
+            self.rnn = MultiLayerRNN('LSTM', input_size, hidden_size, num_layers, has_bias, bidirectional, dropout)
         else:
             raise ValueError("Unrecognized RNN mode: " + mode)
 
         num_directions = 2 if bidirectional else 1
         self.is_lstm = mode == "LSTM"
 
-        self._flat_weights = []
+        self._weights = []
+        self._biases = []
         stdv = 1 / math.sqrt(hidden_size)
         for layer in range(num_layers):
             for direction in range(num_directions):
                 layer_input_size = input_size if layer == 0 else hidden_size * num_directions
                 suffix = '_reverse' if direction == 1 else ''
 
-                self._flat_weights.append(Parameter(initializer(Uniform(stdv), (gate_size, layer_input_size)),
+                self._weights.append(Parameter(initializer(Uniform(stdv), (gate_size, layer_input_size)),
                                                     name=f'weight_ih_l{layer}{suffix}'))
-                self._flat_weights.append(Parameter(initializer(Uniform(stdv), (gate_size, hidden_size)),
+                self._weights.append(Parameter(initializer(Uniform(stdv), (gate_size, hidden_size)),
                                                     name=f'weight_hh_l{layer}{suffix}'))
                 if has_bias:
-                    self._flat_weights.append(Parameter(initializer(Uniform(stdv), (gate_size,)),
+                    self._biases.append(Parameter(initializer(Uniform(stdv), (gate_size,)),
                                                         name=f'bias_ih_l{layer}{suffix}'))
-                    self._flat_weights.append(Parameter(initializer(Uniform(stdv), (gate_size,)),
+                    self._biases.append(Parameter(initializer(Uniform(stdv), (gate_size,)),
                                                         name=f'bias_hh_l{layer}{suffix}'))
 
-        self._flat_weights = ParameterTuple(self._flat_weights)
+        self._weights = ParameterTuple(self._weights)
+        self._biases = ParameterTuple(self._biases)
 
-    @ms_jit
     def construct(self, x, hx=None):
         '''Defines the RNN like operators performed'''
         max_batch_size = x.shape[0] if self.batch_first else x.shape[1]
@@ -386,7 +423,7 @@ class _RNNBase(nn.Cell):
         if self.batch_first:
             x = x.transpose((1, 0, 2))
 
-        x_n, hx_n = self.rnn(x, hx, self._flat_weights)
+        x_n, hx_n = self.rnn(x, hx, self._weights, self._biases)
 
         if self.batch_first:
             x_n = x_n.transpose((1, 0, 2))
@@ -459,7 +496,7 @@ class StaticGRU(_RNNBase):
         ``Ascend`` ``GPU`` ``CPU``
 
     Examples:
-        >>> net = nn.GRU(10, 16, 2, has_bias=True, batch_first=True, bidirectional=False)
+        >>> net = StaticGRU(10, 16, 2, has_bias=True, batch_first=True, bidirectional=False)
         >>> x = Tensor(np.ones([3, 5, 10]).astype(np.float32))
         >>> h0 = Tensor(np.ones([1 * 2, 3, 16]).astype(np.float32))
         >>> output, hn = net(x, h0)
@@ -542,7 +579,7 @@ class StaticLSTM(_RNNBase):
         ``Ascend`` ``GPU`` ``CPU``
 
     Examples:
-        >>> net = nn.LSTM(10, 16, 2, has_bias=True, batch_first=True, bidirectional=False)
+        >>> net = StaticLSTM(10, 16, 2, has_bias=True, batch_first=True, bidirectional=False)
         >>> x = Tensor(np.ones([3, 5, 10]).astype(np.float32))
         >>> h0 = Tensor(np.ones([1 * 2, 3, 16]).astype(np.float32))
         >>> c0 = Tensor(np.ones([1 * 2, 3, 16]).astype(np.float32))

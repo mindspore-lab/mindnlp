@@ -19,7 +19,9 @@ from .transformer import Transformer, TransformerDecoder, TransformerEncoder, \
     TransformerEncoderLayer, TransformerDecoderLayer, MultiheadAttention
 
 from .dropout import Dropout
+from .half_op import *
+
 __all__ = [
     'Transformer', 'TransformerEncoder', 'TransformerDecoder',
     'TransformerEncoderLayer', 'TransformerDecoderLayer',
-    'MultiheadAttention', 'Dropout']
+    'MultiheadAttention', 'Dropout', 'Matmul']
