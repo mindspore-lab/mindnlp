@@ -29,6 +29,7 @@ from mindnlp.models.longformer.longformer import LongformerLayer
 from mindnlp.models.longformer.longformer import LongformerEncoder
 from mindnlp.models.longformer.longformer import LongformerPooler
 from mindnlp.models.longformer.longformer import LongformerLMHead
+from mindnlp.models.longformer.longformer import LongformerModel
 
 
 class TestModelingEmbeddings(unittest.TestCase):
@@ -315,3 +316,39 @@ class TestModelingLMHead(unittest.TestCase):
             features=ms_features,
         )
         assert (1, 8, 30522) == ms_outputs.shape
+
+
+class TestModelingLongformerModel(unittest.TestCase):
+    r"""
+    Test model bert
+    """
+    def setUp(self):
+        """
+        Set up.
+        """
+        self.input = None
+
+    def test_modeling_longformer_embedding(self):
+        r"""
+        Test model bert with pynative mode
+        """
+        ms_config = LongformerConfig(
+            attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            max_position_embeddings=40,
+        )
+        ms_model = LongformerModel(ms_config)
+        ms_model.set_train(False)
+        input_ids = np.random.randint(1, 10, (1, 10))
+        attention_mask = np.random.randint(0, 2, (1, 10))
+        global_attention_mask = np.random.randint(0, 2, (1, 10))
+
+        ms_input_ids = mindspore.Tensor(input_ids, dtype=mindspore.int32)
+        ms_attention_mask = mindspore.Tensor(attention_mask, dtype=mindspore.int32)
+        ms_global_attention_mask = mindspore.Tensor(global_attention_mask, dtype=mindspore.int32)
+        ms_outputs = ms_model(
+            input_ids=ms_input_ids,
+            attention_mask=ms_attention_mask,
+            global_attention_mask=ms_global_attention_mask,
+        )
+        assert (1, 10, 768) == ms_outputs[0].shape
+        assert (1, 768) == ms_outputs[1].shape
