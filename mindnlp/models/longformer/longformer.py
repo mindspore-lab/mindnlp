@@ -1259,3 +1259,18 @@ class LongformerEncoder(nn.Cell):
         return tuple(
             v for v in [hidden_states, all_hidden_states, all_attentions, all_global_attentions] if v is not None
         )
+
+
+class LongformerPooler(nn.Cell):
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.activation = nn.Tanh()
+
+    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        # We "pool" the model by simply taking the hidden state corresponding
+        # to the first token.
+        first_token_tensor = hidden_states[:, 0]
+        pooled_output = self.dense(first_token_tensor)
+        pooled_output = self.activation(pooled_output)
+        return pooled_output
