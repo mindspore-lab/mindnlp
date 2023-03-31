@@ -1168,3 +1168,94 @@ class LongformerLayer(nn.Cell):
         intermediate_output = self.intermediate(attn_output)
         layer_output = self.output(intermediate_output, attn_output)
         return layer_output
+
+
+class LongformerEncoder(nn.Cell):
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+        self.layer = nn.CellList([LongformerLayer(config, layer_id=i) for i in range(config.num_hidden_layers)])
+        self.gradient_checkpointing = False
+
+    def construct(
+        self,
+        hidden_states,
+        attention_mask=None,
+        head_mask=None,
+        padding_len=0,
+        output_attentions=False,
+        output_hidden_states=False,
+        return_dict=True,
+    ):
+        return_dict = return_dict if return_dict is not None else self.config.use_cache
+        is_index_masked = attention_mask < 0
+        is_index_global_attn = attention_mask > 0
+
+        # Record `is_global_attn == True` to enable ONNX export
+        is_global_attn = bool(is_index_global_attn.flatten().any())
+
+        all_hidden_states = () if output_hidden_states else None
+        all_attentions = () if output_attentions else None  # All local attentions.
+        all_global_attentions = () if (output_attentions and is_global_attn) else None
+
+        # check if head_mask has a correct number of layers specified if desired
+        if head_mask is not None:
+            assert head_mask.shape[0] == (
+                len(self.layer)
+            ), f"The head_mask should be specified for {len(self.layer)} layers, but it is for {head_mask.size()[0]}."
+        for idx, layer_module in enumerate(self.layer):
+            if output_hidden_states:
+                all_hidden_states = all_hidden_states + (hidden_states,)
+            # qbh TODO
+            # if self.gradient_checkpointing and self.training:
+            #
+            #     def create_custom_forward(module):
+            #         def custom_forward(*inputs):
+            #             return module(*inputs, is_global_attn, output_attentions)
+            #
+            #         return custom_forward
+            #
+            #     layer_outputs = torch.utils.checkpoint.checkpoint(
+            #         create_custom_forward(layer_module),
+            #         hidden_states,
+            #         attention_mask,
+            #         head_mask[idx] if head_mask is not None else None,
+            #         is_index_masked,
+            #         is_index_global_attn,
+            #     )
+            # else:
+            layer_outputs = layer_module(
+                hidden_states,
+                attention_mask=attention_mask,
+                layer_head_mask=head_mask[idx] if head_mask is not None else None,
+                is_index_masked=is_index_masked,
+                is_index_global_attn=is_index_global_attn,
+                is_global_attn=is_global_attn,
+                output_attentions=output_attentions,
+            )
+            hidden_states = layer_outputs[0]
+
+            if output_attentions:
+                # bzs x seq_len x num_attn_heads x (num_global_attn + attention_window_len + 1) => bzs x num_attn_heads x seq_len x (num_global_attn + attention_window_len + 1)
+                all_attentions = all_attentions + (layer_outputs[1].swapaxes(1, 2),)
+
+                if is_global_attn:
+                    # bzs x num_attn_heads x num_global_attn x seq_len => bzs x num_attn_heads x seq_len x num_global_attn
+                    all_global_attentions = all_global_attentions + (layer_outputs[2].swapaxes(2, 3),)
+
+        # Add last layer
+        if output_hidden_states:
+            all_hidden_states = all_hidden_states + (hidden_states,)
+
+        # undo padding if necessary
+        # unpad `hidden_states` because the calling function is expecting a length == input_ids.size(1)
+        hidden_states = hidden_states[:, : hidden_states.shape[1] - padding_len]
+        if output_hidden_states:
+            all_hidden_states = tuple([state[:, : state.shape[1] - padding_len] for state in all_hidden_states])
+
+        if output_attentions:
+            all_attentions = tuple([state[:, :, : state.shape[2] - padding_len, :] for state in all_attentions])
+
+        return tuple(
+            v for v in [hidden_states, all_hidden_states, all_attentions, all_global_attentions] if v is not None
+        )
