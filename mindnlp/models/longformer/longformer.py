@@ -1274,3 +1274,31 @@ class LongformerPooler(nn.Cell):
         pooled_output = self.dense(first_token_tensor)
         pooled_output = self.activation(pooled_output)
         return pooled_output
+
+
+class LongformerLMHead(nn.Cell):
+    """Longformer Head for masked language modeling."""
+
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.layer_norm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+
+        self.decoder = nn.Dense(config.hidden_size, config.vocab_size)
+        self.bias = mindspore.Parameter(ops.zeros(config.vocab_size))
+        self.decoder.bias = self.bias
+
+    def construct(self, features, **kwargs):
+        x = self.dense(features)
+        x = ops.gelu(x)
+        x = self.layer_norm(x)
+
+        # project back to size of vocabulary with bias
+        x = self.decoder(x)
+
+        return x
+
+    def _tie_weights(self):
+        # To tie those two weights if they get disconnected (on TPU or when the bias is resized)
+        # For accelerate compatibility and to not break backward compatibility
+        self.bias = self.decoder.bias # qbh delete if device

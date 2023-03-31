@@ -28,6 +28,7 @@ from mindnlp.models.longformer.longformer import LongformerOutput
 from mindnlp.models.longformer.longformer import LongformerLayer
 from mindnlp.models.longformer.longformer import LongformerEncoder
 from mindnlp.models.longformer.longformer import LongformerPooler
+from mindnlp.models.longformer.longformer import LongformerLMHead
 
 
 class TestModelingEmbeddings(unittest.TestCase):
@@ -289,3 +290,28 @@ class TestModelingPooler(unittest.TestCase):
             hidden_states=ms_hidden_states,
         )
         assert (1, 768) == ms_outputs.shape
+
+
+class TestModelingLMHead(unittest.TestCase):
+    r"""
+    Test model bert
+    """
+    def setUp(self):
+        """
+        Set up.
+        """
+        self.input = None
+
+    def test_modeling_longformer_embedding(self):
+        r"""
+        Test model bert with pynative mode
+        """
+        ms_config = LongformerConfig(attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8])
+        ms_model = LongformerLMHead(ms_config)
+        ms_model.set_train(False)
+        features = np.random.randint(1, 10, (1, 8, 768))
+        ms_features = mindspore.Tensor(features, dtype=mindspore.float32)
+        ms_outputs = ms_model(
+            features=ms_features,
+        )
+        assert (1, 8, 30522) == ms_outputs.shape
