@@ -19,9 +19,11 @@
 # pylint: disable=too-few-public-methods
 # pylint: disable=too-many-arguments
 # pylint: disable=invalid-name
+# pylint: disable=too-many-lines
 import inspect
 import math
-from typing import List, Set, Tuple, Callable, Optional
+import os
+from typing import List, Set, Tuple, Callable, Optional, Union
 
 import numpy as np
 import mindspore
@@ -333,6 +335,8 @@ class LongformerSelfAttention(nn.Cell):
                 f"The hidden size ({config.hidden_size}) is not a multiple of the number of attention "
                 f"heads ({config.num_attention_heads})"
             )
+        self.num_attention_heads = None
+        self.all_head_size = None
         self.num_heads = config.num_attention_heads
         self.head_dim = int(config.hidden_size / config.num_attention_heads)
         self.embed_dim = config.hidden_size
@@ -839,7 +843,7 @@ class LongformerSelfAttention(nn.Cell):
 
         key_vectors_only_global[is_local_index_global_attn_nonzero] = \
             key_vectors[is_index_global_attn_nonzero]
-
+        key_vectors_only_global = Tensor(key_vectors_only_global)
         # (batch_size, seq_len, num_heads, max_num_global_attn_indices)
         # attn_probs_from_global_key = ops.einsum("blhd,bshd->blhs", query_vectors, key_vectors_only_global)
         attn_probs_from_global_key = mindspore.Tensor(np.einsum(
@@ -1054,6 +1058,9 @@ class LongformerSelfOutput(nn.Cell):
 
 
 class LongformerAttention(nn.Cell):
+    """
+    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
+    """
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.self = LongformerSelfAttention(config, layer_id)
@@ -1061,6 +1068,9 @@ class LongformerAttention(nn.Cell):
         self.pruned_heads = set()
 
     def prune_heads(self, heads):  # qbh pytorch.util
+        """
+        Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
+        """
         if len(heads) == 0:
             return
         heads, index = find_pruneable_heads_and_indices(
@@ -1103,6 +1113,9 @@ class LongformerAttention(nn.Cell):
 
 
 class LongformerIntermediate(nn.Cell):
+    """
+    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
+    """
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
@@ -1120,6 +1133,9 @@ class LongformerIntermediate(nn.Cell):
 
 # Copied from transformers.models.bert.modeling_bert.BertOutput
 class LongformerOutput(nn.Cell):
+    """
+    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
+    """
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size)  # qbh remain to do 3.9 22.29
@@ -1134,6 +1150,9 @@ class LongformerOutput(nn.Cell):
 
 
 class LongformerLayer(nn.Cell):
+    """
+    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
+    """
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.attention = LongformerAttention(config, layer_id)
@@ -1171,12 +1190,18 @@ class LongformerLayer(nn.Cell):
         return outputs
 
     def ff_chunk(self, attn_output):
+        """
+        Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
+        """
         intermediate_output = self.intermediate(attn_output)
         layer_output = self.output(intermediate_output, attn_output)
         return layer_output
 
 
 class LongformerEncoder(nn.Cell):
+    """
+    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
+    """
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -1242,11 +1267,13 @@ class LongformerEncoder(nn.Cell):
             hidden_states = layer_outputs[0]
 
             if output_attentions:
-                # bzs x seq_len x num_attn_heads x (num_global_attn + attention_window_len + 1) => bzs x num_attn_heads x seq_len x (num_global_attn + attention_window_len + 1)
+                # bzs x seq_len x num_attn_heads x (num_global_attn + attention_window_len +
+                # 1) => bzs x num_attn_heads x seq_len x (num_global_attn + attention_window_len + 1)
                 all_attentions = all_attentions + (layer_outputs[1].swapaxes(1, 2),)
 
                 if is_global_attn:
-                    # bzs x num_attn_heads x num_global_attn x seq_len => bzs x num_attn_heads x seq_len x num_global_attn
+                    # bzs x num_attn_heads x num_global_attn x seq_len =>
+                    # bzs x num_attn_heads x seq_len x num_global_attn
                     all_global_attentions = all_global_attentions + (layer_outputs[2].swapaxes(2, 3),)
 
         # Add last layer
@@ -1257,10 +1284,10 @@ class LongformerEncoder(nn.Cell):
         # unpad `hidden_states` because the calling function is expecting a length == input_ids.size(1)
         hidden_states = hidden_states[:, : hidden_states.shape[1] - padding_len]
         if output_hidden_states:
-            all_hidden_states = tuple([state[:, : state.shape[1] - padding_len] for state in all_hidden_states])
+            all_hidden_states = (state[:, : state.shape[1] - padding_len] for state in all_hidden_states)
 
         if output_attentions:
-            all_attentions = tuple([state[:, :, : state.shape[2] - padding_len, :] for state in all_attentions])
+            all_attentions = (state[:, :, : state.shape[2] - padding_len, :] for state in all_attentions)
 
         return tuple(
             v for v in [hidden_states, all_hidden_states, all_attentions, all_global_attentions] if v is not None
@@ -1268,6 +1295,9 @@ class LongformerEncoder(nn.Cell):
 
 
 class LongformerPooler(nn.Cell):
+    """
+    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
+    """
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -1315,6 +1345,24 @@ class LongformerPreTrainedModel(PretrainedModel, CellUtilMixin):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
+
+    def init_model_weights(self):
+        pass
+
+    def get_input_embeddings(self) -> "nn.Cell":
+        pass
+
+    def set_input_embeddings(self, value: "nn.Cell"):
+        pass
+
+    def resize_position_embeddings(self, new_num_position_embeddings: int):
+        pass
+
+    def get_position_embeddings(self):
+        pass
+
+    def save(self, save_dir: Union[str, os.PathLike]):
+        pass
 
     config_class = LongformerConfig
     base_model_prefix = "longformer"
@@ -1423,8 +1471,8 @@ class LongformerModel(LongformerPreTrainedModel):
         # this path should be recorded in the ONNX export, it is fine with padding_len == 0 as well
         if padding_len > 0:
             logger.info(
-                f"Input ids are automatically padded from {seq_len} to {seq_len + padding_len} to be a multiple of "
-                f"`config.attention_window`: {attention_window}"
+                "Input ids are automatically padded from %s to %s to be a multiple of " 
+                "`config.attention_window`: %s", seq_len, seq_len + padding_len, attention_window
             )
             if input_ids is not None:
                 input_ids = ops.pad(input_ids, (0, padding_len), value=pad_token_id)
@@ -1519,7 +1567,7 @@ class LongformerModel(LongformerPreTrainedModel):
 
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
-        elif input_ids is not None:
+        if input_ids is not None:
             input_shape = input_ids.shape
         elif inputs_embeds is not None:
             input_shape = inputs_embeds.shape[:-1]
@@ -1569,9 +1617,12 @@ class LongformerModel(LongformerPreTrainedModel):
 
         if not return_dict or return_dict:
             return (sequence_output, pooled_output) + encoder_outputs[1:]
-
+        return (sequence_output, pooled_output) + encoder_outputs[1:]
 
 class LongformerForMaskedLM(LongformerPreTrainedModel):
+    """
+    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
+    """
     _keys_to_ignore_on_load_missing = ["lm_head.decoder"]
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
@@ -1585,9 +1636,15 @@ class LongformerForMaskedLM(LongformerPreTrainedModel):
         self.post_init()
 
     def get_output_embeddings(self):
+        """
+        Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
+        """
         return self.lm_head.decoder
 
     def set_output_embeddings(self, new_embeddings):
+        """
+        Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
+        """
         self.lm_head.decoder = new_embeddings
 
     def construct(
@@ -1603,7 +1660,7 @@ class LongformerForMaskedLM(LongformerPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Tuple:
+    ) -> Union[Tuple, None]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
@@ -1665,10 +1722,13 @@ class LongformerForMaskedLM(LongformerPreTrainedModel):
         if not return_dict or return_dict:
             output = (prediction_scores,) + outputs[2:]
             return ((masked_lm_loss,) + output) if masked_lm_loss is not None else output
+        return None
 
 
 class LongformerForSequenceClassification(LongformerPreTrainedModel):
-
+    """
+    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
+    """
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
     def __init__(self, config):
@@ -1696,7 +1756,7 @@ class LongformerForSequenceClassification(LongformerPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Tuple:
+    ) -> Union[Tuple, None]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
@@ -1731,7 +1791,7 @@ class LongformerForSequenceClassification(LongformerPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and (labels.dtype in (mindspore.int32, mindspore.int64)):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1752,7 +1812,7 @@ class LongformerForSequenceClassification(LongformerPreTrainedModel):
         if not return_dict or return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
-
+        return None
 
 class LongformerClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
@@ -1774,7 +1834,9 @@ class LongformerClassificationHead(nn.Cell):
 
 
 class LongformerForQuestionAnswering(LongformerPreTrainedModel):
-
+    """
+    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
+    """
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
     def __init__(self, config):
@@ -1801,7 +1863,7 @@ class LongformerForQuestionAnswering(LongformerPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Tuple:
+    ) -> Union[Tuple, None]:
         r"""
         start_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
             Labels for position (index) of the start of the labelled span for computing the token classification loss.
@@ -1894,9 +1956,13 @@ class LongformerForQuestionAnswering(LongformerPreTrainedModel):
             output = (start_logits, end_logits) + outputs[2:]
             return ((total_loss,) + output) if total_loss is not None else output
 
+        return None
+
 
 class LongformerForTokenClassification(LongformerPreTrainedModel):
-
+    """
+    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
+    """
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
     def __init__(self, config):
@@ -1924,7 +1990,7 @@ class LongformerForTokenClassification(LongformerPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Tuple:
+    ) -> Union[Tuple, None]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
@@ -1957,3 +2023,98 @@ class LongformerForTokenClassification(LongformerPreTrainedModel):
         if not return_dict or return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
+        return None
+
+
+class LongformerForMultipleChoice(LongformerPreTrainedModel):
+    """
+    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
+    """
+    def __init__(self, config):
+        super().__init__(config)
+
+        self.longformer = LongformerModel(config)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.classifier = nn.Dense(config.hidden_size, 1)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    # qbh delete docs
+    def construct(
+        self,
+        input_ids: Optional[Tensor] = None,
+        token_type_ids: Optional[Tensor] = None,
+        attention_mask: Optional[Tensor] = None,
+        global_attention_mask: Optional[Tensor] = None,
+        head_mask: Optional[Tensor] = None,
+        labels: Optional[Tensor] = None,
+        position_ids: Optional[Tensor] = None,
+        inputs_embeds: Optional[Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple, None]:
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+            `input_ids` above)
+        """
+        num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        # set global attention on question tokens
+        if global_attention_mask is None and input_ids is not None:
+            logger.info("Initializing global attention on multiple choice...")
+            # put global attention on all tokens after `config.sep_token_id`
+            global_attention_mask = ops.stack(
+                [
+                    _compute_global_attention_mask(input_ids[:, i], self.config.sep_token_id, before_sep_token=False)
+                    for i in range(num_choices)
+                ],
+                axis=1,
+            )
+
+        flat_input_ids = input_ids.view(-1, input_ids.shape[-1]) if input_ids is not None else None
+        flat_position_ids = position_ids.view(-1, position_ids.shape[-1]) if position_ids is not None else None
+        flat_token_type_ids = token_type_ids.view(-1, token_type_ids.shape[-1]) if token_type_ids is not None else None
+        flat_attention_mask = attention_mask.view(-1, attention_mask.shape[-1]) if attention_mask is not None else None
+        flat_global_attention_mask = (
+            global_attention_mask.view(-1, global_attention_mask.shape[-1])
+            if global_attention_mask is not None
+            else None
+        )
+        flat_inputs_embeds = (
+            inputs_embeds.view(-1, inputs_embeds.shape[-2], inputs_embeds.shape[-1])
+            if inputs_embeds is not None
+            else None
+        )
+
+        outputs = self.longformer(
+            flat_input_ids,
+            position_ids=flat_position_ids,
+            token_type_ids=flat_token_type_ids,
+            attention_mask=flat_attention_mask,
+            global_attention_mask=flat_global_attention_mask,
+            head_mask=head_mask,
+            inputs_embeds=flat_inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        pooled_output = outputs[1]
+
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+        reshaped_logits = logits.view(-1, num_choices)
+
+        loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(reshaped_logits, labels)
+
+        if not return_dict or return_dict:
+            output = (reshaped_logits,) + outputs[2:]
+            return ((loss,) + output) if loss is not None else output
+        return None
