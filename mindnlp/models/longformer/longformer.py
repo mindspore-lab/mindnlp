@@ -28,6 +28,8 @@ import mindspore
 from mindspore import nn
 from mindspore import Tensor
 from mindspore import ops
+from mindspore.nn import CrossEntropyLoss
+
 from ..utils.activations import ACT2FN
 from .longformer_config import LongformerConfig
 from ...abc.backbones.pretrained import PretrainedModel
@@ -1567,3 +1569,99 @@ class LongformerModel(LongformerPreTrainedModel):
 
         if not return_dict or return_dict:
             return (sequence_output, pooled_output) + encoder_outputs[1:]
+
+
+class LongformerForMaskedLM(LongformerPreTrainedModel):
+    _keys_to_ignore_on_load_missing = ["lm_head.decoder"]
+    _keys_to_ignore_on_load_unexpected = [r"pooler"]
+
+    def __init__(self, config):
+        super().__init__(config)
+
+        self.longformer = LongformerModel(config, add_pooling_layer=False)
+        self.lm_head = LongformerLMHead(config)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def get_output_embeddings(self):
+        return self.lm_head.decoder
+
+    def set_output_embeddings(self, new_embeddings):
+        self.lm_head.decoder = new_embeddings
+
+    def construct(
+        self,
+        input_ids: Optional[Tensor] = None,
+        attention_mask: Optional[Tensor] = None,
+        global_attention_mask: Optional[Tensor] = None,
+        head_mask: Optional[Tensor] = None,
+        token_type_ids: Optional[Tensor] = None,
+        position_ids: Optional[Tensor] = None,
+        inputs_embeds: Optional[Tensor] = None,
+        labels: Optional[Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Tuple:
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+            config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
+            loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        kwargs (`Dict[str, any]`, optional, defaults to *{}*):
+            Used to hide legacy arguments that have been deprecated.
+
+        Returns:
+
+        Mask filling example:
+
+        ```python
+        >>> from transformers import AutoTokenizer, LongformerForMaskedLM
+
+        >>> tokenizer = AutoTokenizer.from_pretrained("allenai/longformer-base-4096")
+        >>> model = LongformerForMaskedLM.from_pretrained("allenai/longformer-base-4096")
+        ```
+
+        Let's try a very long input.
+
+        ```python
+        >>> TXT = (
+        ...     "My friends are <mask> but they eat too many carbs."
+        ...     + " That's why I decide not to eat with them." * 300
+        ... )
+        >>> input_ids = tokenizer([TXT], return_tensors="pt")["input_ids"]
+        >>> logits = model(input_ids).logits
+
+        >>> masked_index = (input_ids[0] == tokenizer.mask_token_id).nonzero().item()
+        >>> probs = logits[0, masked_index].softmax(dim=0)
+        >>> values, predictions = probs.topk(5)
+
+        >>> tokenizer.decode(predictions).split()
+        ['healthy', 'skinny', 'thin', 'good', 'vegetarian']
+        ```"""
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.longformer(
+            input_ids,
+            attention_mask=attention_mask,
+            global_attention_mask=global_attention_mask,
+            head_mask=head_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        sequence_output = outputs[0]
+        prediction_scores = self.lm_head(sequence_output)
+
+        masked_lm_loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+
+        if not return_dict or return_dict:
+            output = (prediction_scores,) + outputs[2:]
+            return ((masked_lm_loss,) + output) if masked_lm_loss is not None else output
