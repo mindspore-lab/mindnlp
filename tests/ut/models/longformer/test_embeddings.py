@@ -35,6 +35,7 @@ from mindnlp.models.longformer.longformer import LongformerForSequenceClassifica
 from mindnlp.models.longformer.longformer import LongformerClassificationHead
 from mindnlp.models.longformer.longformer import LongformerForQuestionAnswering
 from mindnlp.models.longformer.longformer import LongformerForTokenClassification
+from mindnlp.models.longformer.longformer import LongformerForMultipleChoice
 
 
 class TestModelingEmbeddings(unittest.TestCase):
@@ -533,3 +534,37 @@ class TestModelingLongformerForTokenClassification(unittest.TestCase):
         assert (1, 10, 2) == ms_outputs[0].shape
 
 
+class TestModelingLongformerForMultipleChoice(unittest.TestCase):
+    r"""
+    Test model bert
+    """
+    def setUp(self):
+        """
+        Set up.
+        """
+        self.input = None
+
+    def test_modeling_longformer_embedding(self):
+        r"""
+        Test model bert with pynative mode
+        """
+        ms_config = LongformerConfig(
+            attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            max_position_embeddings=40,
+            vocab_size=30,
+        )
+        ms_model = LongformerForMultipleChoice(ms_config)
+        ms_model.set_train(False)
+        input_ids = np.random.randint(1, 10, (10, 10))
+        attention_mask = np.random.randint(0, 2, (10, 10))
+        global_attention_mask = np.random.randint(0, 2, (10, 10))
+
+        ms_input_ids = mindspore.Tensor(input_ids, dtype=mindspore.int32)
+        ms_attention_mask = mindspore.Tensor(attention_mask, dtype=mindspore.int32)
+        ms_global_attention_mask = mindspore.Tensor(global_attention_mask, dtype=mindspore.int32)
+        ms_outputs = ms_model(
+            input_ids=ms_input_ids,
+            attention_mask=ms_attention_mask,
+            global_attention_mask=ms_global_attention_mask,
+        )
+        assert (1, 10) == ms_outputs[0].shape
