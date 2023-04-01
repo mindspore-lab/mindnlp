@@ -32,6 +32,7 @@ from mindnlp.models.longformer.longformer import LongformerLMHead
 from mindnlp.models.longformer.longformer import LongformerModel
 from mindnlp.models.longformer.longformer import LongformerForMaskedLM
 from mindnlp.models.longformer.longformer import LongformerForSequenceClassification
+from mindnlp.models.longformer.longformer import LongformerClassificationHead
 
 
 class TestModelingEmbeddings(unittest.TestCase):
@@ -426,3 +427,36 @@ class TestModelingLongformerForSequenceClassification(unittest.TestCase):
             global_attention_mask=ms_global_attention_mask,
         )
         assert (1, 2) == ms_outputs[0].shape
+
+
+class TestModelingLongformerClassificationHead(unittest.TestCase):
+    r"""
+    Test model bert
+    """
+    def setUp(self):
+        """
+        Set up.
+        """
+        self.input = None
+
+    def test_modeling_longformer_embedding(self):
+        r"""
+        Test model bert with pynative mode
+        """
+        ms_config = LongformerConfig(
+            attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            max_position_embeddings=40,
+            vocab_size=30,
+        )
+        ms_model = LongformerClassificationHead(ms_config)
+        ms_model.set_train(False)
+        hidden_states = np.random.randint(1, 10, (1, 8, 768))
+        ms_hidden_states = mindspore.Tensor(hidden_states, dtype=mindspore.float32)
+        ms_outputs = ms_model(
+            hidden_states=ms_hidden_states,
+        )
+        print(ms_outputs[0].shape)
+        assert (2,) == ms_outputs[0].shape
+
+
+
