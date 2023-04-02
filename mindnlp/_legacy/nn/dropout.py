@@ -16,7 +16,6 @@
 """Dropout"""
 
 from mindspore import nn
-from mindspore._checkparam import Validator
 from mindspore.common.seed import _get_graph_seed
 from mindspore.ops import operations as P
 
@@ -73,7 +72,6 @@ class Dropout(nn.Cell):
         """
 
         super().__init__()
-        Validator.check_value_type('p', p, [float, int], self.cls_name)
         if p < 0 or p >= 1:
             raise ValueError(f"For '{self.cls_name}', the 'p' must be a number in range [0, 1), "
                              f"but got {p}.")
