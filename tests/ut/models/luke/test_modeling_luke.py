@@ -143,9 +143,9 @@ class TestModelingLUKE(unittest.TestCase):
         """
         config = luke_config.LukeConfig()
         model = luke.LukePooler(config)
-        hidden_states = Tensor(np.random.randn(128, 128), mindspore.float32)
+        hidden_states = Tensor(np.random.randn(128, 128, 128), mindspore.float32)
         output = model(hidden_states)
-        assert output.shape == (128,)
+        assert output.shape == (128, 128)
 
     def test_entity_prediction_head_transform(self):
         r"""
