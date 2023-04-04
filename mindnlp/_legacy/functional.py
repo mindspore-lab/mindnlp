@@ -27,10 +27,7 @@ from mindspore import ops, Tensor
 from mindspore.common import dtype as mstype
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindspore.ops import constexpr
-from packaging import version
-
-MS_COMPATIBLE_VERSION = '1.10.1'
-
+from mindnlp.utils import less_min_api_compatible
 tensor_slice = ops.Slice()
 cast_ = ops.Cast()
 scalar_to_tensor_ = ops.ScalarToTensor()
@@ -86,7 +83,7 @@ def kl_div(inputs, target, reduction='none', log_target=False):
 
 def split(x, size, axis=0):
     """inner split"""
-    if version.parse(mindspore.__version__) <= version.parse(MS_COMPATIBLE_VERSION):
+    if less_min_api_compatible:
         num = int(x.shape[axis] / size)
         return ops.split(x, axis, num)
     return ops.split(x, split_size_or_sections=size, axis=axis)

@@ -57,15 +57,23 @@ class TestRDropLoss(unittest.TestCase):
         Test RDropLoss loss
         """
         r_drop_loss = RDropLoss()
-        temp_p = Tensor(np.array([1., 0., 1.]), mindspore.float32)
-        temp_q = Tensor(np.array([0.2, 0.3, 1.1]), mindspore.float32)
+
+        @ms_jit
+        def forward_jit(temp_p, temp_q):
+            loss = r_drop_loss(temp_p, temp_q)
+            return loss
 
         def forward(temp_p, temp_q):
             loss = r_drop_loss(temp_p, temp_q)
             return loss
 
+        temp_p = Tensor(np.array([1., 0., 1.]), mindspore.float32)
+        temp_q = Tensor(np.array([0.2, 0.3, 1.1]), mindspore.float32)
+
+
         if jit:
-            forward = ms_jit(forward)
-        loss = forward(temp_p, temp_q)
+            loss = forward_jit(temp_p, temp_q)
+        else:
+            loss = forward(temp_p, temp_q)
 
         assert np.allclose(loss.asnumpy(), np.array([0.10013707]), 1e-5, 1e-5)
