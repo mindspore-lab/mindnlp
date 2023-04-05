@@ -19,7 +19,7 @@
 # pylint: disable=too-few-public-methods
 # pylint: disable=too-many-arguments
 # pylint: disable=invalid-name
-# pylint: disable=too-many-lines
+# pylint: disable=C0302
 import inspect
 import math
 import os
