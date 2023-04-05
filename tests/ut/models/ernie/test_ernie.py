@@ -12,35 +12,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Word2vec_embedding"""
+"""Test Ernie"""
 
 import unittest
+import numpy as np
+import mindspore
 from mindspore import Tensor
-from mindspore.dataset.text import Vocab
-from mindnlp.modules.embeddings.word2vec_embedding import Word2vec
+from mindnlp.models import (UIEConfig,
+                            UIE,)
 
 
-class TestWord2vec(unittest.TestCase):
+class TestModelingErnie(unittest.TestCase):
     r"""
-    Test module Word2vec
+    Test Ernie
     """
 
     def setUp(self):
+        """
+        Set up.
+        """
         self.input = None
 
-    def test_word2vec_embedding(self):
-        r"""
-        Unit test for word2vec embedding.
+    def test_ernie_model(self):
         """
-        wordlist = [0, 2]
-        wordlist_input = Tensor(wordlist)
+        Test ErnieModel
+        """
 
-        init_embed = Tensor([[0.1, 0.2, 0.3],
-                             [0.4, 0.5, 0.6],
-                             [0.7, 0.8, 0.9]])
-
-        init_vocab = Vocab.from_list(['i', 'am', 'human'])
-        embed = Word2vec(vocab=init_vocab, init_embed=init_embed)
-        w_res = embed(wordlist_input)
-
-        assert w_res.shape == (2, 3)
+    def test_uie_model(self):
+        """
+        Test UIEModel
+        """
+        config = UIEConfig()
+        model = UIE(config)
+        input_ids = Tensor(np.random.randint(
+            0, 100, (1, 20)), dtype=mindspore.int32)
+        outputs = model(input_ids=input_ids)
+        assert outputs[0].shape == (1, 20)
+        assert outputs[1].shape == (1, 20)

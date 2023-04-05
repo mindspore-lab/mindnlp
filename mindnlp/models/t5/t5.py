@@ -538,6 +538,10 @@ class T5PreTrainedModel(PretrainedModel, CellUtilMixin):
     def set_input_embeddings(self):
         pass
 
+    #TODO
+    def post_init(self):
+        pass
+
     def _shift_right(self, input_ids):
         decoder_start_token_id = self.config.decoder_start_token_id
         pad_token_id = self.config.pad_token_id

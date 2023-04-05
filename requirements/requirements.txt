@@ -1,7 +1,7 @@
-mindspore>=1.8.1
 requests
 tqdm
-gensim
+pylint
+pytest
 ddt
 datasets
 tokenizers

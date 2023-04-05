@@ -16,6 +16,7 @@
 
 from mindspore.dataset import NumpySlicesDataset
 from mindnlp._legacy.transforms import AddToken
+from mindnlp.utils import less_min_minddata_compatible
 
 def test_addtoken_begin():
     """test addtoken by dataset.map"""
@@ -33,7 +34,10 @@ def test_addtoken_begin():
     # | ['TOKEN', 'a', 'b', 'c', 'd', 'e'] |
     # +---------------------------+
     data_after = next(dataset.create_tuple_iterator(output_numpy=True))[0]
-    assert data_after.tolist() == ['TOKEN', 'a', 'b', 'c', 'd', 'e']
+    if less_min_minddata_compatible:
+        assert data_after.tolist() == [b'TOKEN', b'a', b'b', b'c', b'd', b'e']
+    else:
+        assert data_after.tolist() == ['TOKEN', 'a', 'b', 'c', 'd', 'e']
 
 def test_addtoken_end():
     """test addtoken by dataset.map"""
@@ -51,4 +55,7 @@ def test_addtoken_end():
     # | ['a', 'b', 'c', 'd', 'e', 'TOKEN'] |
     # +---------------------------+
     data_after = next(dataset.create_tuple_iterator(output_numpy=True))[0]
-    assert data_after.tolist() == ['a', 'b', 'c', 'd', 'e', 'TOKEN']
+    if less_min_minddata_compatible:
+        assert data_after.tolist() == [b'a', b'b', b'c', b'd', b'e', b'TOKEN']
+    else:
+        assert data_after.tolist() == ['a', 'b', 'c', 'd', 'e', 'TOKEN']

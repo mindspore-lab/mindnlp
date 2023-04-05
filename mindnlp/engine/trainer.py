@@ -101,11 +101,17 @@ class Trainer:
 
         def _run_step(inputs, labels):
             """Core process of each step, including the forward propagation process and back propagation of data."""
+            (loss, *_), grads = grad_fn(inputs, labels)
+            optimizer(grads)
+            return loss
+        @ms_jit
+        def _run_step_graph(inputs, labels):
+            """Core process of each step, including the forward propagation process and back propagation of data."""
             (loss, _), grads = grad_fn(inputs, labels)
             optimizer(grads)
             return loss
         if jit:
-            return ms_jit(_run_step)
+            return _run_step_graph
         return _run_step
 
     def _prepare_callbacks(self, callbacks):

@@ -15,10 +15,9 @@
 """Sequence-to-vector basic model"""
 # pylint: disable=abstract-method
 # pylint: disable=arguments-differ
-from mindspore import nn
 from mindspore import ops
 from mindnlp.abc.backbones.base import BaseModel
-
+from mindnlp._legacy.nn import Dropout
 
 class Seq2vecModel(BaseModel):
     r"""
@@ -38,7 +37,7 @@ class Seq2vecModel(BaseModel):
         if dropout is None:
             self.dropout = None
         else:
-            self.dropout = nn.Dropout(1 - dropout)
+            self.dropout = Dropout(p=dropout)
 
     def construct(self, src_tokens, mask=None):
         """
