@@ -122,7 +122,7 @@ def find_pruneable_heads_and_indices(heads, n_heads, head_size, already_pruned_h
 
 class SequenceSummary(nn.Cell):
     """
-    GPT2DoubleHeadsModel class that self.multiple_choice_head
+    GPTDoubleHeadsModel and GPT2DoubleHeadsModel class that self.multiple_choice_head
     """
 
     def __init__(self, config):
@@ -145,11 +145,11 @@ class SequenceSummary(nn.Cell):
 
         self.first_dropout = Identity()
         if hasattr(config, "summary_first_dropout") and config.summary_first_dropout > 0:
-            self.first_dropout = nn.Dropout(config.summary_first_dropout)
+            self.first_dropout = nn.Dropout(p=config.summary_first_dropout)
 
         self.last_dropout = Identity()
         if hasattr(config, "summary_last_dropout") and config.summary_last_dropout > 0:
-            self.last_dropout = nn.Dropout(config.summary_last_dropout)
+            self.last_dropout = nn.Dropout(p=config.summary_last_dropout)
 
     def construct(self, hidden_states: Tensor, cls_index: Optional[Tensor] = None) -> Tensor:
         if self.summary_type == "last":

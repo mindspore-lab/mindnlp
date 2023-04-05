@@ -869,7 +869,7 @@ class GPT2ForTokenClassification(GPT2PreTrainedModel):
             classifier_dropout = config.hidden_dropout
         else:
             classifier_dropout = 0.1
-        self.dropout = nn.Dropout(classifier_dropout)
+        self.dropout = nn.Dropout(p=classifier_dropout)
         self.classifier = nn.Dense(config.hidden_size, config.num_labels)
 
     def construct(self, input_ids=None, past_key_values=None, attention_mask=None, token_type_ids=None,

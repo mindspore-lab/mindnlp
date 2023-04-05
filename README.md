@@ -130,7 +130,7 @@ encoder = RNNEncoder(embedding, lstm_layer)
 
 # build head
 head = nn.SequentialCell([
-    nn.Dropout(1 - dropout),
+    nn.Dropout(p=dropout),
     nn.Sigmoid(),
     nn.Dense(hidden_size * 2, output_size,
              weight_init=HeUniform(math.sqrt(5)),
