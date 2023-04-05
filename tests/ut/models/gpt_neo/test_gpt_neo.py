@@ -1,17 +1,18 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2021 The Eleuther AI and HuggingFace Inc. team. All rights reserved.
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
 """Test GPTNeo"""
 import unittest
 import numpy as np
@@ -37,58 +38,109 @@ class TestModelingGPTNeo(unittest.TestCase):
         """
         Test GPTNeo Self Attention.
         """
-        config = gpt_neo_config.GPTNeoConfig()
+        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=128)
         model = gpt_neo.GPTNeoSelfAttention(
             config=config, attention_type=config.attention_types)
 
         hidden_states = Tensor(np.random.randint(
-            0, 10, (2, 512, 2048)), mindspore.float32)
+            0, 10, (1, 128, 128)), mindspore.float32)
 
         attn_output = model(hidden_states=hidden_states)[0]
 
-        assert attn_output.shape == (2, 512, 2048)
+        assert attn_output.shape == (1, 128, 128)
 
     def test_gptneo_attention(self):
         """
         Test GPTNeo Attention.
         """
-        config = gpt_neo_config.GPTNeoConfig()
+        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=128)
         model = gpt_neo.GPTNeoAttention(config=config)
 
         hidden_states = Tensor(np.random.randint(
-            0, 10, (2, 512, 2048)), mindspore.float32)
+            0, 10, (1, 128, 128)), mindspore.float32)
 
         attn_output = model(hidden_states=hidden_states)[0]
 
-        assert attn_output.shape == (2, 512, 2048)
+        assert attn_output.shape == (1, 128, 128)
 
     def test_gptneo_mlp(self):
         """
         Test GPTNeo MLP.
         """
-        intermediate_size = 8192
-        config = gpt_neo_config.GPTNeoConfig()
+        intermediate_size = 512
+        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=128)
         model = gpt_neo.GPTNeoMLP(
             intermediate_size=intermediate_size, config=config)
 
         hidden_states = Tensor(np.random.randint(
-            0, 10, (2, 512, 2048)), mindspore.float32)
+            0, 10, (1, 128, 128)), mindspore.float32)
 
-        attn_output = model(hidden_states=hidden_states)
+        outputs = model(hidden_states=hidden_states)
 
-        assert attn_output.shape == (2, 512, 2048)
+        assert outputs.shape == (1, 128, 128)
 
     def test_gptneo_block(self):
         """
         Test GPTNeo Block.
         """
-        config = gpt_neo_config.GPTNeoConfig()
+        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=128)
         model = gpt_neo.GPTNeoBlock(
             layer_id=0, config=config)
 
         hidden_states = Tensor(np.random.randint(
-            0, 10, (2, 512, 2048)), mindspore.float32)
+            0, 10, (1, 128, 128)), mindspore.float32)
 
-        attn_output = model(hidden_states=hidden_states)[0]
+        outputs = model(hidden_states=hidden_states)[0]
 
-        assert attn_output.shape == (2, 512, 2048)
+        assert outputs.shape == (1, 128, 128)
+
+    def test_gptneo_model(self):
+        """
+        Test GPTNeo Model.
+        """
+        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=128)
+        model = gpt_neo.GPTNeoModel(config=config)
+
+        input_ids = Tensor(np.random.randint(
+            0, 10, (1, 128)))
+
+        outputs = model(input_ids)
+
+        assert outputs[0].shape == (1, 128, 128)
+        for i in range(len(outputs[1])):
+            for j in range(len(outputs[1][i])):
+                assert outputs[1][i][j].shape == (1, 16, 128, 8)
+
+    def test_gptneo_for_causal_lm(self):
+        """
+        Test GPTNeo For CausalLM.
+        """
+        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=128)
+        model = gpt_neo.GPTNeoForCausalLM(config=config)
+
+        input_ids = Tensor(np.random.randint(
+            0, 10, (1, 128)))
+
+        outputs = model(input_ids)
+
+        assert outputs[0].shape == (1, 128, 100)
+        for i in range(len(outputs[1])):
+            for j in range(len(outputs[1][i])):
+                assert outputs[1][i][j].shape == (1, 16, 128, 8)
+
+    def test_gptneo_for_sequence_classification(self):
+        """
+        Test GPTNeo For Sequence Classification.
+        """
+        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=128)
+        model = gpt_neo.GPTNeoForSequenceClassification(config=config)
+
+        input_ids = Tensor(np.random.randint(
+            0, 10, (1, 128)))
+
+        outputs = model(input_ids)
+
+        assert outputs[0].shape == (1, 2)
+        for i in range(len(outputs[1])):
+            for j in range(len(outputs[1][i])):
+                assert outputs[1][i][j].shape == (1, 16, 128, 8)
