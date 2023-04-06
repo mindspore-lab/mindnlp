@@ -62,7 +62,7 @@ class AlbertEmbeddings(nn.Cell):
         self.layer_norm = nn.LayerNorm(
             (config.embedding_size,),
             epsilon=config.layer_norm_eps)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, input_ids, token_type_ids=None, position_ids=None):
         seq_len = input_ids.shape[1]

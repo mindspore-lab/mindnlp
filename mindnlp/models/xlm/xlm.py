@@ -974,7 +974,7 @@ class XLMForTokenClassification(XLMPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.transformer = XLMModel(config)
-        self.dropout = nn.Dropout(config.dropout)
+        self.dropout = nn.Dropout(p=config.dropout)
         self.classifier = nn.Dense(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
