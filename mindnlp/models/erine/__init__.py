@@ -1,4 +1,4 @@
-# Copyright 2021 Huawei Technologies Co., Ltd
+# Copyright 2022 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,11 +13,8 @@
 # limitations under the License.
 # ============================================================================
 """
-Models init
+Ernie Model init
 """
-from mindnlp.models import bert
-from mindnlp.models.bert import *
-from mindnlp.models.erine import *
 
-__all__ = []
-__all__.extend(bert.__all__)
+from .ernie_config import *
+from .ernie import *

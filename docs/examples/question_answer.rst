@@ -148,7 +148,7 @@ using MindNLP:
            self.char_channel_size = char_channel_size
            self.word_vocab = word_vocab
            self.hidden_size = hidden_size
-           self.dropout = nn.Dropout(1 - dropout)
+           self.dropout = nn.Dropout(p=dropout)
            self.init_embed = initializer(Uniform(0.001), [char_vocab_size, char_dim])
            self.embed = Parameter(self.init_embed, name='embed')
 
