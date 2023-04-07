@@ -22,7 +22,7 @@ from mindspore import nn
 from mindspore import ops
 from mindspore import Tensor, Parameter, context, ms_class
 import mindspore.common.dtype as mstype
-
+from mindnlp.modules import StaticGRU, StaticLSTM
 
 # For AMP white list
 AMP_WHITE_LIST = (
@@ -39,7 +39,9 @@ AMP_WHITE_LIST = (
     nn.LSTM,
     nn.RNN,
     nn.GRU,
-    nn.PReLU
+    nn.PReLU,
+    StaticGRU,
+    StaticLSTM
 )
 
 AMP_BLACK_LIST = (

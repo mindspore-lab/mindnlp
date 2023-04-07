@@ -1,4 +1,4 @@
-# Copyright 2021 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""
-Models init
-"""
-from mindnlp.models import bert
-from mindnlp.models.bert import *
-from mindnlp.models.erine import *
+# pylint: disable=C0103
+"""nn wraper operators for half precision cast."""
 
-__all__ = []
-__all__.extend(bert.__all__)
+from mindspore import nn, ops
+
+class Matmul(nn.Cell):
+    r"""
+    Matmul Operation
+    """
+    def construct(self, a, b):
+        return ops.matmul(a, b)
+
+__all__ = ['Matmul']

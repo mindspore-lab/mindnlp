@@ -1,4 +1,7 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2018 The OpenAI Team Authors and HuggingFace Inc. team.
+# Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,9 +22,11 @@ import mindspore
 from mindspore import nn
 from mindspore import ops
 from mindspore import Tensor, Parameter
+from mindnlp.models.gpt.gpt_config import GPTConfig
 from mindnlp._legacy.functional import split, tril
 from mindnlp._legacy.nn import Dropout
 from ..utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
+from ..utils.utils import SequenceSummary
 from ..utils.activations import ACT2FN
 from ..utils import logging
 
@@ -175,7 +180,7 @@ class GPTPreTrainedModel(nn.Cell):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-
+    config_class = GPTConfig
     base_model_prefix = "transformer"
     _keys_to_ignore_on_load_missing = [r"position_ids"]
 
@@ -224,7 +229,7 @@ class GPTPreTrainedModel(nn.Cell):
 
 class GPTModel(GPTPreTrainedModel):
     """
-    The bare OpenAI GPT transformer model outputting raw hidden-states without any specific head on top
+    The bare GPT transformer model outputting raw hidden-states without any specific head on top
     """
 
     def __init__(self, config):
@@ -325,3 +330,239 @@ class GPTModel(GPTPreTrainedModel):
             all_hidden_states = all_hidden_states + (hidden_states,)
 
         return tuple(v for v in [hidden_states, all_hidden_states, all_attentions] if v is not None)
+
+
+class GPTLMHeadModel(GPTPreTrainedModel):
+    r"""
+    GPT Model transformer with a language modeling head on top 
+    (linear layer with weights tied to the input embeddings).
+    """
+    def __init__(self, config):
+        super().__init__(config)
+        self.config = config
+        self.transformer = GPTModel(config)
+        self.lm_head = nn.Dense(config.n_embd, config.vocab_size, has_bias=False)
+
+    def get_output_embeddings(self):
+        """
+        Returns the embeddings of the obtained output
+        """
+        return self.lm_head
+
+    def set_output_embeddings(self, new_embeddings):
+        """
+        Define the embeddings of the output
+        """
+        self.lm_head = new_embeddings
+
+    def construct(
+        self,
+        input_ids = None,
+        attention_mask = None,
+        token_type_ids = None,
+        position_ids = None,
+        head_mask = None,
+        inputs_embeds = None,
+        labels = None,
+        output_attentions = None,
+        output_hidden_states = None
+    ):
+        transformer_outputs = self.transformer(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states
+        )
+        hidden_states = transformer_outputs[0]
+        lm_logits = self.lm_head(hidden_states)
+
+        loss = None
+        if labels is not None:
+            # Shift so that tokens < n predict n
+            shift_logits = lm_logits[..., :-1, :]
+            shift_labels = labels[..., 1:]
+            # Flatten the tokens
+            loss_fct = nn.CrossEntropyLoss()
+            loss = loss_fct(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+
+        output = (lm_logits,) + transformer_outputs[1:]
+        if loss is not None:
+            output = (loss,) + output
+        return output
+
+class GPTDoubleHeadsModel(GPTPreTrainedModel):
+    """
+    OpenAI GPT Model transformer with a language modeling and a multiple-choice classification head on top e.g. for
+    RocStories/SWAG tasks. The two heads are two linear layers. The language modeling head has its weights tied to the
+    input embeddings, the classification head takes as input the input of a specified classification token index in the
+    input sequence).
+    """
+    def __init__(self, config):
+        super().__init__(config)
+        self.config = config
+        config.num_labels = 1
+        self.transformer = GPTModel(config)
+        self.lm_head = nn.Dense(config.n_embd, config.vocab_size, has_bias=False)
+        self.multiple_choice_head = SequenceSummary(config)
+
+    def get_output_embeddings(self):
+        """
+        Returns the embeddings of the obtained output
+        """
+        return self.lm_head
+
+    def set_output_embeddings(self, new_embeddings):
+        """
+        Define the embeddings of the output
+        """
+        self.lm_head = new_embeddings
+
+    def construct(
+        self,
+        input_ids = None,
+        attention_mask = None,
+        token_type_ids = None,
+        position_ids = None,
+        head_mask = None,
+        inputs_embeds = None,
+        mc_token_ids = None,
+        labels = None,
+        mc_labels = None,
+        output_attentions = None,
+        output_hidden_states = None,
+    ):
+        transformer_outputs = self.transformer(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states
+        )
+        hidden_states = transformer_outputs[0]
+
+        lm_logits = self.lm_head(hidden_states)
+        mc_logits = self.multiple_choice_head(hidden_states, mc_token_ids).squeeze(-1)
+
+        lm_loss, mc_loss = None, None
+        if mc_labels is not None:
+            loss_fct = nn.CrossEntropyLoss()
+            mc_loss = loss_fct(mc_logits.view(-1, mc_logits.size(-1)), mc_labels.view(-1))
+        if labels is not None:
+            shift_logits = lm_logits[..., :-1, :]
+            shift_labels = labels[..., 1:]
+            loss_fct = nn.CrossEntropyLoss()
+            lm_loss = loss_fct(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+
+        output = (lm_logits, mc_logits) + transformer_outputs[1:]
+        if mc_loss is not None:
+            output = (mc_loss,) + output
+        if lm_loss is not None:
+            output = (lm_loss,) + output
+        return output
+
+class GPTForSequenceClassification(GPTPreTrainedModel):
+    """
+    The Original GPT Model transformer with a sequence classification head on top (linear layer).
+    GPTForSequenceClassification uses the last token in order to do the classification, as other causal
+    models (e.g. GPT-2) do. Since it does classification on the last token, it requires to know the position of the
+    last token. If a `pad_token_id` is defined in the configuration, it finds the last token that is not a padding
+    token in each row. If no `pad_token_id` is defined, it simply takes the last value in each row of the batch. Since
+    it cannot guess the padding tokens when `inputs_embeds` are passed instead of `input_ids`, it does the same (take
+    the last value in each row of the batch).
+    """
+    def __init__(self, config):
+        super().__init__(config)
+        self.config = config
+        self.num_labels = config.num_labels
+        self.transformer = GPTModel(config)
+        self.score = nn.Dense(config.n_embd, self.num_labels, has_bias=False)
+
+    def construct(
+        self,
+        input_ids = None,
+        attention_mask = None,
+        token_type_ids = None,
+        position_ids = None,
+        head_mask = None,
+        inputs_embeds = None,
+        labels = None,
+        output_attentions = None,
+        output_hidden_states = None
+    ):
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in 
+            `[0, ...,config.num_labels - 1]`. 
+            If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        """
+        transformer_outputs = self.transformer(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states
+        )
+
+        hidden_states = transformer_outputs[0]
+        logits = self.score(hidden_states)
+
+        if input_ids is not None:
+            batch_size, _ = input_ids.shape[:2]
+        else:
+            batch_size, _ = inputs_embeds.shape[:2]
+
+        # Ensure the batch size is > 1 if there is no padding.
+        if self.config.pad_token_id is None and batch_size != 1:
+            raise ValueError("Cannot handle batch sizes > 1 if no padding token is defined.")
+
+        if self.config.pad_token_id is None:
+            sequence_lengths = -1
+        else:
+            if input_ids is not None:
+                sequence_lengths = ops.ne(input_ids, self.config.pad_token_id).sum(-1) - 1
+            else:
+                sequence_lengths = -1
+                logger.warning(
+                    "%s will not detect padding tokens in `inputs_embeds`. Results may be unexpected if using padding "
+                    "tokens in conjunction with `inputs_embeds.`", self.__class__.__name__)
+
+        pooled_logits = logits[:, sequence_lengths]
+
+        loss = None
+        if labels is not None:
+            if self.config.problem_type is None:
+                if self.num_labels == 1:
+                    self.config.problem_type = "regression"
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
+                    self.config.problem_type = "single_label_classification"
+                else:
+                    self.config.problem_type = "multi_label_classification"
+
+            if self.config.problem_type == "regression":
+                loss_fct = nn.MSELoss()
+                if self.num_labels == 1:
+                    loss = loss_fct(pooled_logits.squeeze(), labels.squeeze())
+                else:
+                    loss = loss_fct(pooled_logits, labels)
+            elif self.config.problem_type == "single_label_classification":
+                loss_fct = nn.CrossEntropyLoss()
+                loss = loss_fct(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+            elif self.config.problem_type == "multi_label_classification":
+                loss_fct = nn.BCEWithLogitsLoss()
+                loss = loss_fct(pooled_logits, labels)
+
+        output = (pooled_logits,) + transformer_outputs[1:]
+        if  loss is not None:
+            output = (loss,) + output
+        return output
