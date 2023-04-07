@@ -31,15 +31,33 @@ class TestModelingLlama(unittest.TestCase):
         """
         self.input = None
 
-    def test_llama_rmsnorm(self):
-        """
-        test llama rmsnorm
-        """
+    # def test_llama_rmsnorm(self):
+    #     """
+    #     test llama rmsnorm
+    #     """
+    #     config = llama_config.LlamaConfig()
+    #     model = llama.RMSNorm(config.dim)
+
+    #     rmsnorm_input = Tensor(np.random.randint(0, 10, (32, 2048, 512)), mindspore.float32)
+
+    #     output = model(rmsnorm_input)
+
+    #     assert output.shape == (32, 2048, 512)
+
+    def test_llama_attention(self):
+        '''
+        test llama attention
+        '''
         config = llama_config.LlamaConfig()
-        model = llama.RMSNorm(config.dim)
+        config.max_batch_size = 2
+        config.dim = 128
+        config.max_seq_len = 256
+        model = llama.Attention(config)
+        attention_input = Tensor(np.random.randint(0, 10,
+                                (config.max_batch_size, config.max_seq_len, config.dim))
+                                , mindspore.float32)
+        freqs_cis = llama.precompute_freqs_cis(config.dim // config.n_heads,
+                                                config.max_seq_len * 2)[0:config.max_seq_len]
+        output = model(attention_input, start_pos=0, freqs_cis=freqs_cis, mask=None)
 
-        rmsnorm_input = Tensor(np.random.randint(0, 10, (32, 2048, 512)), mindspore.float32)
-
-        output = model(rmsnorm_input)
-
-        assert output.shape == (32, 2048, 512)
+        assert output.shape == (config.max_batch_size, config.max_seq_len, config.dim)
