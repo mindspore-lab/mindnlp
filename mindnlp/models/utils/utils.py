@@ -20,6 +20,7 @@ import inspect
 from typing import Optional
 
 import mindspore
+import numpy as np
 from mindspore import nn, ops, Parameter, Tensor
 from mindspore.nn import CrossEntropyLoss
 from mindspore.common.initializer import initializer, Normal
@@ -43,6 +44,7 @@ except ImportError:
             Return hidden value
             """
             return hidden_states
+
 
 class Conv1D(nn.Cell):
     """
@@ -121,6 +123,7 @@ def find_pruneable_heads_and_indices(heads, n_heads, head_size, already_pruned_h
     index = ops.arange(len(mask), dtype=mindspore.int64)[mask]
     return heads, index
 
+
 class SequenceSummary(nn.Cell):
     """
     GPTDoubleHeadsModel and GPT2DoubleHeadsModel class that self.multiple_choice_head
@@ -179,6 +182,7 @@ class SequenceSummary(nn.Cell):
         output = self.last_dropout(output)
         return output
 
+
 class PoolerStartLogits(nn.Cell):
     """
     Compute SQuAD start logits from sequence hidden states.
@@ -193,8 +197,8 @@ class PoolerStartLogits(nn.Cell):
         self.dense = nn.Dense(config.hidden_size, 1)
 
     def construct(
-        self, hidden_states: Tensor,
-        p_mask: Optional[Tensor] = None
+            self, hidden_states: Tensor,
+            p_mask: Optional[Tensor] = None
     ) -> Tensor:
         """
         Args:
@@ -209,15 +213,16 @@ class PoolerStartLogits(nn.Cell):
         """
         x = self.dense(hidden_states).squeeze(-1)
 
-        #TODO : get_parameter_dtype(self)
+        # TODO : get_parameter_dtype(self)
 
         # if p_mask is not None:
         #     if get_parameter_dtype(self) == torch.float16:
         #         x = x * (1 - p_mask) - 65500 * p_mask
         #     else:
-                # x = x * (1 - p_mask) - 1e30 * p_mask
+        # x = x * (1 - p_mask) - 1e30 * p_mask
         x = x * (1 - p_mask) - 1e30 * p_mask
         return x
+
 
 class SQuADHead(nn.Cell):
     r"""
@@ -239,30 +244,30 @@ class SQuADHead(nn.Cell):
         self.answer_class = PoolerAnswerClass(config)
 
     def construct(
-        self,
-        hidden_states: Tensor,
-        start_positions: Optional[Tensor] = None,
-        end_positions: Optional[Tensor] = None,
-        cls_index: Optional[Tensor] = None,
-        is_impossible: Optional[Tensor] = None,
-        p_mask: Optional[Tensor] = None,
-        # return_dict: bool = False,
+            self,
+            hidden_states: Tensor,
+            start_positions: Optional[Tensor] = None,
+            end_positions: Optional[Tensor] = None,
+            cls_index: Optional[Tensor] = None,
+            is_impossible: Optional[Tensor] = None,
+            p_mask: Optional[Tensor] = None,
+            # return_dict: bool = False,
     ) -> Tensor:
 
-        start_logits = self.start_logits(hidden_states,p_mask=p_mask)   #TODO (hidden_states, p_mask=p_mask)
+        start_logits = self.start_logits(hidden_states, p_mask=p_mask)  # TODO (hidden_states, p_mask=p_mask)
 
         if start_positions is not None and end_positions is not None:
             # If we are on multi-GPU, let's remove the dimension added by batch splitting
             for x in (start_positions, end_positions, cls_index, is_impossible):
                 try:
                     if x is not None and x.ndim > 1:
-                        x = ops.squeeze(x,axis=-1)
+                        x = ops.squeeze(x, axis=-1)
                 except ValueError:
                     pass
 
             # during training, compute the end logits based on the ground truth of the start position
-            end_logits = self.end_logits(hidden_states, start_positions=start_positions,p_mask=p_mask)
-            #TODO:(hidden_states, start_positions=start_positions, p_mask=p_mask)
+            end_logits = self.end_logits(hidden_states, start_positions=start_positions, p_mask=p_mask)
+            # TODO:(hidden_states, start_positions=start_positions, p_mask=p_mask)
 
             loss_fct = CrossEntropyLoss()
             start_loss = loss_fct(start_logits, start_positions.astype(mindspore.int32))
@@ -283,25 +288,25 @@ class SQuADHead(nn.Cell):
             return (total_loss,)
 
         # during inference, compute the end logits based on beam search
-        _, slen, hsz = hidden_states.shape   #(bsz,slen.hsz)
-        start_log_probs = ops.softmax(start_logits,axis=-1)  # shape (bsz, slen)
+        _, slen, hsz = hidden_states.shape  # (bsz,slen.hsz)
+        start_log_probs = ops.softmax(start_logits, axis=-1)  # shape (bsz, slen)
 
         start_top_log_probs, start_top_index = ops.topk(
             start_log_probs, self.start_n_top
         )  # shape (bsz, start_n_top)
         start_top_index_exp = ops.BroadcastTo(shape
                                               =(-1, -1, hsz))(start_top_index.expand_dims(-1))
-                                              # shape (bsz, start_n_top, hsz)
+        # shape (bsz, start_n_top, hsz)
         start_states = ops.gather_elements(hidden_states, -2, start_top_index_exp)  # shape (bsz, start_n_top, hsz)
         start_states = ops.BroadcastTo(shape
                                        =(-1, slen, -1, -1))(start_states.expand_dims(1))
-                                              # shape (bsz, slen, start_n_top, hsz)
+        # shape (bsz, slen, start_n_top, hsz)
 
         hidden_states_expanded = hidden_states.expand_dims(2).expand_as(
             start_states
         )  # shape (bsz, slen, start_n_top, hsz)
         p_mask = p_mask.expand_dims(-1) if p_mask is not None else None
-        end_logits = self.end_logits(hidden_states_expanded, start_states=start_states)#, p_mask=p_mask
+        end_logits = self.end_logits(hidden_states_expanded, start_states=start_states)  # , p_mask=p_mask
         end_log_probs = ops.softmax(end_logits, axis=1)  # shape (bsz, slen, start_n_top)
         end_top_log_probs, end_top_index = ops.topk(
             end_log_probs, self.end_n_top
@@ -310,7 +315,7 @@ class SQuADHead(nn.Cell):
         end_top_log_probs = end_top_log_probs.view(-1, self.start_n_top * self.end_n_top)
         end_top_index = end_top_index.view(-1, self.start_n_top * self.end_n_top)
 
-        start_states = ops.matmul(hidden_states,start_log_probs)
+        start_states = ops.matmul(hidden_states, start_log_probs)
 
         # start_states = ops.einsum("blh,bl->bh", hidden_states, start_log_probs)
         cls_logits = self.answer_class(hidden_states, start_states=start_states, cls_index=cls_index)
@@ -336,28 +341,27 @@ class PoolerEndLogits(nn.Cell):
         self.dense_1 = nn.Dense(config.hidden_size, 1)
 
     def construct(
-        self,
-        hidden_states: Tensor,
-        start_states: Optional[Tensor] = None,
-        start_positions: Optional[Tensor] = None,
-        p_mask: Optional[Tensor] = None,
+            self,
+            hidden_states: Tensor,
+            start_states: Optional[Tensor] = None,
+            start_positions: Optional[Tensor] = None,
+            p_mask: Optional[Tensor] = None,
     ) -> Tensor:
-
         assert (
-            start_states is not None or start_positions is not None
+                start_states is not None or start_positions is not None
         ), "One of start_states, start_positions should be not None"
         if start_positions is not None:
             slen, hsz = hidden_states.shape[-2:]
             start_positions = ops.BroadcastTo(shape
                                               =(-1, -1, hsz))(start_positions[:, None, None])  # shape (bsz, 1, hsz)
-            start_states = ops.gather_elements(hidden_states,-2, start_positions)  # shape (bsz, 1, hsz)
+            start_states = ops.gather_elements(hidden_states, -2, start_positions)  # shape (bsz, 1, hsz)
             start_states = ops.BroadcastTo(shape=(-1, slen, -1))(start_states)  # shape (bsz, slen, hsz)
 
         x = self.dense_0(ops.cat([hidden_states, start_states], axis=-1))
         x = self.activation(x)
         x = self.LayerNorm(x)
         x = self.dense_1(x).squeeze(-1)
-       #TODO : get_parameter_dtype(self)
+        # TODO : get_parameter_dtype(self)
         # if p_mask is not None:
         #     if get_parameter_dtype(self) == mindspore.float16:
         #         x = x * (1 - p_mask) - 65500 * p_mask
@@ -383,31 +387,31 @@ class PoolerAnswerClass(nn.Cell):
         self.dense_1 = nn.Dense(config.hidden_size, 1, has_bias=False)
 
     def construct(
-        self,
-        hidden_states: Tensor,
-        start_states: Optional[Tensor] = None,
-        start_positions: Optional[Tensor] = None,
-        cls_index: Optional[Tensor] = None,
+            self,
+            hidden_states: Tensor,
+            start_states: Optional[Tensor] = None,
+            start_positions: Optional[Tensor] = None,
+            cls_index: Optional[Tensor] = None,
     ) -> Tensor:
 
         # No dependency on end_feature so that we can obtain one single `cls_logits` for each sample.
         hsz = hidden_states.shape[-1]
         assert (
-            start_states is not None or start_positions is not None
+                start_states is not None or start_positions is not None
         ), "One of start_states, start_positions should be not None"
         if start_positions is not None:
             start_positions = ops.BroadcastTo(shape
                                               =(-1, -1, hsz))(start_positions[:, None, None])  # shape (bsz, 1, hsz)
-            start_states = ops.gather_elements(hidden_states,-2, start_positions).squeeze(-2)  # shape (bsz, hsz)
+            start_states = ops.gather_elements(hidden_states, -2, start_positions).squeeze(-2)  # shape (bsz, hsz)
         if cls_index is not None:
             cls_index = ops.BroadcastTo(shape=(-1, -1, hsz))(cls_index[:, None, None])  # shape (bsz, 1, hsz)
-            cls_token_state = ops.gather_elements(hidden_states,-2, cls_index).squeeze(-2)  # shape (bsz, hsz)
+            cls_token_state = ops.gather_elements(hidden_states, -2, cls_index).squeeze(-2)  # shape (bsz, hsz)
         else:
             cls_token_state = hidden_states[:, -1, :]  # shape (bsz, hsz)
 
         x = self.dense_0(ops.cat([start_states, cls_token_state], axis=-1))
         x = self.activation(x)
-        x = ops.squeeze(self.dense_1(x),axis=-1)
+        x = ops.squeeze(self.dense_1(x), axis=-1)
 
         return x
 
@@ -462,7 +466,7 @@ def apply_chunking_to_forward(forward_fn, chunk_size, chunk_axis, *input_tensors
     """
     assert len(input_tensors) > 0, f"{input_tensors} has to be a tuple/list of tensors"
 
-     # inspect.signature exist since python 3.5 and is a python method -> no problem with backward compatibility
+    # inspect.signature exist since python 3.5 and is a python method -> no problem with backward compatibility
     num_args_in_forward_chunk_fn = len(inspect.signature(forward_fn).parameters)
     if num_args_in_forward_chunk_fn != len(input_tensors):
         raise ValueError(
@@ -495,3 +499,140 @@ def apply_chunking_to_forward(forward_fn, chunk_size, chunk_axis, *input_tensors
         return ops.cat(output_chunks, axis=chunk_axis)
 
     return forward_fn(*input_tensors)
+
+
+class ModuleUtilsMixin:
+    """
+    A few utilities to be used as a mixin.
+    """
+
+    @property
+    def dtype(self) -> mindspore.dtype:
+        """
+        `mindspore.dtype`:
+            The dtype of the module (assuming that all the module parameters have the same dtype).
+        """
+        return mindspore.float32
+
+    def get_extended_attention_mask(
+            self, attention_mask, input_shape, dtype=None
+    ) -> Tensor:
+        """
+        Makes broadcastable attention and causal masks so that future and
+        masked tokens are ignored.
+
+        Arguments:
+            attention_mask (`mindspore.Tensor`):
+                Mask with ones indicating tokens to attend to, zeros for tokens to ignore.
+            input_shape (`Tuple[int]`):
+                The shape of the input to the model.
+            dtype ():
+                tensor type
+
+        Returns:
+            `mindspore.Tensor` The extended attention mask,
+            with a same dtype as `attention_mask.dtype`.
+        """
+        if dtype is None:
+            dtype = self.dtype
+
+        # We can provide a self-attention mask of dimensions
+        # [batch_size, from_seq_length, to_seq_length]
+        # ourselves in which case we just need to make it broadcastable to all heads.
+        if attention_mask.dim() == 3:
+            extended_attention_mask = attention_mask[:, None, :, :]
+        elif attention_mask.dim() == 2:
+            # Provided a padding mask of dimensions [batch_size, seq_length]
+            # - if the model is a decoder,
+            #   apply a causal mask in addition to the padding mask
+            # - if the model is an encoder,
+            #   make the mask broadcastable to [batch_size, num_heads, seq_length, seq_length]
+            if self.config.is_decoder:
+                extended_attention_mask = \
+                    ModuleUtilsMixin.create_extended_attention_mask_for_decoder(input_shape,
+                                                                                attention_mask)
+            else:
+                extended_attention_mask = attention_mask[:, None, None, :]
+        else:
+            raise ValueError(
+                f"Wrong shape for input_ids (shape {input_shape}) or attention_mask "
+                f"(shape {attention_mask.shape})"
+            )
+
+        # Since attention_mask is 1.0 for positions we want to attend and 0.0 for
+        # masked positions, this operation will create a tensor which is 0.0 for
+        # positions we want to attend and the dtype's smallest value for masked positions.
+        # Since we are adding it to the raw scores before the softmax, this is
+        # effectively the same as removing these entirely.
+        extended_attention_mask = extended_attention_mask.to(dtype=dtype)  # fp16 compatibility
+        extended_attention_mask = (1.0 - extended_attention_mask) * Tensor(
+            np.finfo(mindspore.dtype_to_nptype(dtype)).min)
+        return extended_attention_mask
+
+    def get_head_mask(
+            self, head_mask, num_hidden_layers: int, is_attention_chunked: bool = False
+    ) -> Tensor:
+        """
+        Prepare the head mask if needed.
+
+        Args:
+            head_mask (`mindspore.Tensor` with shape `[num_heads]` or
+                `[num_hidden_layers x num_heads]`, *optional*):
+                The mask indicating if we should keep the heads or not (1.0 for keep, 0.0 for
+                discard).
+            num_hidden_layers (`int`):
+                The number of hidden layers in the model.
+            is_attention_chunked: (`bool`, *optional*, defaults to `False`):
+                Whether or not the attentions scores are computed by chunks or not.
+
+        Returns:
+            `mindspore.Tensor` with shape
+            `[num_hidden_layers x batch x num_heads x seq_length x seq_length]`
+            or list with `[None]` for each layer.
+        """
+        if head_mask is not None:
+            head_mask = self._convert_head_mask_to_5d(head_mask, num_hidden_layers)
+            if is_attention_chunked is True:
+                head_mask = head_mask.unsqueeze(-1)
+        else:
+            head_mask = [None] * num_hidden_layers
+
+        return head_mask
+
+    def _convert_head_mask_to_5d(self, head_mask, num_hidden_layers):
+        """-> [num_hidden_layers x batch x num_heads x seq_length x seq_length]"""
+        if head_mask.dim() == 1:
+            head_mask = head_mask.unsqueeze(0).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+            head_mask = head_mask.expand(num_hidden_layers, -1, -1, -1, -1)
+        elif head_mask.dim() == 2:
+            head_mask = head_mask.unsqueeze(1).unsqueeze(-1).unsqueeze(
+                -1)  # We can specify head_mask for each layer
+        assert head_mask.dim() == 5, f"head_mask.dim != 5, instead {head_mask.dim()}"
+        head_mask = head_mask.to(dtype=self.dtype)  # switch to float if need + fp16 compatibility
+        return head_mask
+
+    @staticmethod
+    def create_extended_attention_mask_for_decoder(input_shape, attention_mask):
+        """
+        used in the context of generating models, such as Seq2Seq models,
+        to create an extended attention mask for the decoder.
+        """
+        batch_size, seq_length = input_shape
+        seq_ids = ops.arange(seq_length)
+        causal_mask = ops.tile(seq_ids[None, None, :], (batch_size, seq_length, 1)) <= seq_ids[None,
+                                                                                       :, None]
+
+        causal_mask = causal_mask.to(attention_mask.dtype)
+
+        if causal_mask.shape[1] < attention_mask.shape[1]:
+            prefix_seq_len = attention_mask.shape[1] - causal_mask.shape[1]
+            causal_mask = ops.cat(
+                [
+                    ops.ones((batch_size, seq_length, prefix_seq_len), dtype=causal_mask.dtype),
+                    causal_mask,
+                ],
+                axis=-1,
+            )
+
+        extended_attention_mask = causal_mask[:, None, :, :] * attention_mask[:, None, None, :]
+        return extended_attention_mask

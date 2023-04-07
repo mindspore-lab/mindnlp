@@ -26,11 +26,14 @@ from mindspore import nn
 from ...utils.download import cached_path
 
 logger = logging.getLogger(__name__)
+INIT_WEIGHTS = True
+
 
 class PretrainedConfig:
     """
     Abstract class for Pretrained models config.
     """
+
     def __init__(self, **kwargs):
         self.finetuning_task = kwargs.pop('finetuning_task', None)
         self.num_labels = kwargs.pop('num_labels', 2)
@@ -136,7 +139,7 @@ class PretrainedConfig:
 
     @classmethod
     def get_config_dict(
-        cls, pretrained_model_name_or_path: str, pretrained_config_archive_map: Optional[Dict] = None, **kwargs
+            cls, pretrained_model_name_or_path: str, pretrained_config_archive_map: Optional[Dict] = None, **kwargs
     ) -> Tuple[Dict, Dict]:
         """
         From a `pretrained_model_name_or_path`, resolve to a dictionary of parameters, to be used
@@ -221,6 +224,7 @@ class PretrainedModel(nn.Cell):
     Abstract class for Pretrained models
     """
     config_class = None
+
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -233,7 +237,35 @@ class PretrainedModel(nn.Cell):
         self.init_model_weights()
         self._backward_compatibility_gradient_checkpointing()
         """
-        raise NotImplementedError
+        self.init_weights()
+        self._backward_compatibility_gradient_checkpointing()
+
+    def init_weights(self):
+        """
+        If needed prunes and maybe initializes weights.
+        """
+        # Prune heads if needed
+        if self.config.pruned_heads:
+            self.prune_heads(self.config.pruned_heads)
+
+        if INIT_WEIGHTS:
+            # Initialize weights
+            self.apply(self._initialize_weights)
+
+            # Tie weights should be skipped when not initializing all weights
+            # since from_pretrained(...) calls tie weights anyways
+            self.tie_weights()
+
+    def _backward_compatibility_gradient_checkpointing(self):
+        """
+        memory-saving technique used in deep learning models to reduce the amount of memory required
+        for computing gradients during backpropagation.
+        """
+        if self.supports_gradient_checkpointing \
+                and getattr(self.config, "gradient_checkpointing", False):
+            self.gradient_checkpointing_enable()
+            # Remove the attribute now that is has been consumed, so it's no saved in the config.
+            delattr(self.config, "gradient_checkpointing")
 
     def init_model_weights(self):
         """
