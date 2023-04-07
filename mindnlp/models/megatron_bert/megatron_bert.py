@@ -805,6 +805,10 @@ class MegatronBertPreTrainedModel(PretrainedModel, ModuleUtilsMixin):
         """
         rewrite abstract method
         """
+    def get_input_embeddings(self):
+        """
+        rewrite abstract method
+        """
 
 
 class MegatronBertForPreTrainingOutput(nn.Cell):
