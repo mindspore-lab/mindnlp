@@ -173,3 +173,90 @@ class Attention(nn.Cell):
         output = ops.matmul(scores, values)  # (bs, n_local_heads, slen, head_dim)
         output = ops.transpose(output, (0, 2, 1, 3)).view(bsz, seqlen, -1) # .contiguous()???
         return self.w_o(output)
+
+class FeedForward(nn.Cell):
+    '''
+    FeedForward
+    '''
+    def __init__(
+        self,
+        dim: int,
+        hidden_dim: int,
+        multiple_of: int,
+    ):
+        super().__init__()
+        hidden_dim = int(2 * hidden_dim / 3)
+        hidden_dim = multiple_of * ((hidden_dim + multiple_of - 1) // multiple_of)
+
+        self.w_1 = nn.Dense(dim, hidden_dim, has_bias=False)
+        self.w_2 = nn.Dense(hidden_dim, dim, has_bias=False)
+        self.w_3 = nn.Dense(dim, hidden_dim, has_bias=False)
+
+    def construct(self, _x):
+        return self.w_2(ops.silu(self.w_1(_x)) * self.w_3(_x))
+
+class TransformerBlock(nn.Cell):
+    '''
+    TransformerBlock
+    '''
+    def __init__(self, layer_id: int, config: LlamaConfig):
+        super().__init__()
+        self.n_heads = config.n_heads
+        self.dim = config.dim
+        self.head_dim = config.dim // config.n_heads
+        self.attention = Attention(config)
+        self.feed_forward = FeedForward(
+            dim=config.dim, hidden_dim=4 * config.dim, multiple_of=config.multiple_of
+        )
+        self.layer_id = layer_id
+        self.attention_norm = RMSNorm(config.dim, eps=config.norm_eps)
+        self.ffn_norm = RMSNorm(config.dim, eps=config.norm_eps)
+
+    def construct(self, _x: mindspore.Tensor, start_pos: int,
+                freqs_cis: mindspore.Tensor, mask: Optional[mindspore.Tensor]):
+        _h = _x + self.attention.construct(self.attention_norm(_x), start_pos, freqs_cis, mask)
+        out = _h + self.feed_forward.construct(self.ffn_norm(_h))
+        return out
+
+class Transformer(nn.Cell):
+    '''
+    Transformer
+    '''
+    def __init__(self, config: LlamaConfig):
+        super().__init__()
+        self.config = config
+        self.vocab_size = config.vocab_size
+        self.n_layers = config.n_layers
+
+        self.tok_embeddings = nn.Embedding(
+            config.vocab_size, config.dim
+        )
+
+        self.layers = nn.SequentialCell()
+        for layer_id in range(config.n_layers):
+            self.layers.append(TransformerBlock(layer_id, config))
+
+        self.norm = RMSNorm(config.dim, eps=config.norm_eps)
+        self.output = nn.Dense(
+            config.dim, config.vocab_size, has_bias=False
+        )
+
+        self.freqs_cis = precompute_freqs_cis(
+            self.config.dim // self.config.n_heads, self.config.max_seq_len * 2
+        )
+
+    def construct(self, tokens: mindspore.Tensor, start_pos: int):
+        _bsz, seqlen = tokens.shape   # tokens.shape = [bsz * seqlen]
+        _h = self.tok_embeddings(tokens) # h = [bsz * seqlen * emb_dim]
+        freqs_cis = self.freqs_cis[start_pos : start_pos + seqlen] # freqs_cis = [seqlen, emb_dim // nheads // 2]
+
+        mask = None
+        if seqlen > 1:
+            mask = numpy.full((1, 1, seqlen, seqlen), float("-inf"))
+            mask = numpy.triu(mask, k=start_pos + 1).astype(_h.dtype)
+
+        for layer in self.layers:
+            _h = layer(_h, start_pos, freqs_cis, mask)
+        _h = self.norm(_h) # h = [bsz * seqlen * emb_dim]
+        output = self.output(_h[:, -1, :])  # only compute last logits  output = [bsz * vocab_size]
+        return ops.cast(output, mindspore.float32)
