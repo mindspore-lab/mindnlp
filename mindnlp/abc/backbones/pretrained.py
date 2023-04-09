@@ -15,6 +15,8 @@
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=too-many-locals
 # pylint: disable=too-many-branches
+# pylint: disable=W0212
+
 """
 Abstract class for Pretrained models.
 """
