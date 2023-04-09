@@ -28,6 +28,7 @@ from ..utils import logging
 from ..utils.activations import ACT2FN
 from ..utils.utils import SequenceSummary
 from ..utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
+from ...abc.backbones.pretrained import PretrainedModel
 
 logger = logging.get_logger(__name__)
 
@@ -41,7 +42,7 @@ class GPT2Attention(nn.Cell):
         super().__init__()
 
         max_positions = config.max_position_embeddings
-        self.bias = Parameter(tril(ops.ones((max_positions, max_positions), mindspore.int32)).view(
+        self.bias = Parameter(tril(ops.ones((max_positions, max_positions), mindspore.float32)).view(
             1, 1, max_positions, max_positions), requires_grad=False)
         self.masked_bias = Parameter(Tensor(-1e4), requires_grad=False)
 
@@ -343,7 +344,7 @@ class GPT2Block(nn.Cell):
         return outputs  # hidden_states, present, (attentions, cross_attentions)
 
 
-class GPT2PreTrainedModel(nn.Cell):
+class GPT2PreTrainedModel(PretrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
@@ -354,8 +355,8 @@ class GPT2PreTrainedModel(nn.Cell):
     supports_gradient_checkpointing = True
     _no_split_modules = ["GPT2Block"]
 
-    def __init__(self, *inputs, **kwargs):
-        super().__init__(*inputs, **kwargs)
+    def __init__(self, config):
+        super().__init__(config)
 
     def get_head_mask(self, head_mask, num_hidden_layers, is_attention_chunked=False):
         """
@@ -392,7 +393,7 @@ class GPT2Model(GPT2PreTrainedModel):
     """
 
     def __init__(self, config):
-        super().__init__()
+        super().__init__(config)
         self.config = config
 
         self.embed_dim = config.hidden_size
