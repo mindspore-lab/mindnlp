@@ -355,8 +355,8 @@ class GPT2PreTrainedModel(PretrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["GPT2Block"]
 
-    def __init__(self, config):
-        super().__init__(config)
+    # def __init__(self, config):
+    #     super().__init__(config)
 
     def get_head_mask(self, head_mask, num_hidden_layers, is_attention_chunked=False):
         """
@@ -385,6 +385,27 @@ class GPT2PreTrainedModel(PretrainedModel):
     def _set_gradient_checkpointing(self, module, value=False):
         if isinstance(module, GPT2Model):
             module.gradient_checkpointing = value
+
+    def get_input_embeddings(self):
+        pass
+
+    def get_position_embeddings(self):
+        pass
+
+    def init_model_weights(self):
+        pass
+
+    def post_init(self):
+        pass
+
+    def resize_position_embeddings(self):
+        pass
+
+    def save(self):
+        pass
+
+    def set_input_embeddings(self):
+        pass
 
 
 class GPT2Model(GPT2PreTrainedModel):
