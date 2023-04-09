@@ -21,10 +21,10 @@ Abstract class for Pretrained models.
 import json
 import os
 import logging
-from typing import Union, Optional, Tuple, Dict
+from typing import Union, Optional, Tuple, Dict, List
 import mindspore
 from mindspore.train.serialization import load_checkpoint, load_param_into_net
-from mindspore import nn
+from mindspore import nn, ops
 
 from ...utils.download import cached_path
 
@@ -236,9 +236,6 @@ class PretrainedModel(nn.Cell):
         """
         A method executed at the end of each Transformer model initialization, to execute code that needs the model's
         modules properly initialized (such as weight initialization).
-
-        self.init_model_weights()
-        self._backward_compatibility_gradient_checkpointing()
         """
         self.init_weights()
         self._backward_compatibility_gradient_checkpointing()
@@ -258,6 +255,55 @@ class PretrainedModel(nn.Cell):
             # Tie weights should be skipped when not initializing all weights
             # since from_pretrained(...) calls tie weights anyways
             self.tie_weights()
+
+    def prune_heads(self, heads_to_prune: Dict[int, List[int]]):
+        """
+        Prunes heads of the base model.
+
+        Arguments:
+            heads_to_prune (`Dict[int, List[int]]`):
+                Dictionary with keys being selected layer indices (`int`) and
+                associated values being the list of heads to prune in said layer (list of `int`).
+                For instance {1: [0, 2], 2: [2, 3]} will prune heads 0 and 2 on
+                layer 1 and heads 2 and 3 on layer 2.
+        """
+        # save new sets of pruned heads as union of previously stored pruned heads
+        # and newly pruned heads
+        for layer, heads in heads_to_prune.items():
+            union_heads = set(self.config.pruned_heads.get(layer, [])) | set(heads)
+            # Unfortunately we have to store it as list for JSON
+            self.config.pruned_heads[layer] = list(union_heads)
+
+        # self.base_model._prune_heads(heads_to_prune)
+
+    @property
+    def base_model(self) -> nn.Cell:
+        """
+        `torch.nn.Module`: The main body of the model.
+        """
+        return getattr(self, self.base_model_prefix, self)
+
+    def tie_weights(self):
+        """
+        Tie the weights between the input embeddings and the output embeddings.
+
+        If the `torchscript` flag is set in the configuration,
+        can't handle parameter sharing so we are cloning the weights instead.
+        """
+        # if getattr(self.config, "tie_word_embeddings", True):
+        #     output_embeddings = self.get_output_embeddings()
+        #     if output_embeddings is not None:
+        #         _tie_or_clone_weights(output_embeddings, self.get_input_embeddings())
+
+        if getattr(self.config, "is_encoder_decoder", False) and getattr(self.config, "tie_encoder_decoder", False):
+            if hasattr(self, self.base_model_prefix):
+                # self = getattr(self, self.base_model_prefix)
+                getattr(self, self.base_model_prefix)
+            self._tie_encoder_decoder_weights(self.encoder, self.decoder, self.base_model_prefix)
+
+        for cell in self.cells():
+            if hasattr(cell, "_tie_weights"):
+                cell._tie_weights()
 
     def _backward_compatibility_gradient_checkpointing(self):
         """
@@ -436,3 +482,115 @@ class PretrainedModel(nn.Cell):
         mindspore.load_param_into_net(model, state_dict)
 
         return model
+
+    def gradient_checkpointing_enable(self):
+        """
+        Activates gradient checkpointing for the current model.
+
+        Note that in other frameworks this feature can be referred to as
+        "activation checkpointing" or "checkpoint activations".
+        """
+        if not self.supports_gradient_checkpointing:
+            raise ValueError(f"{self.__class__.__name__} does not support gradient checkpointing.")
+        # self.apply(partial(self._set_gradient_checkpointing, value=True))
+        self.apply(ops.partial(self._set_gradient_checkpointing))
+
+    @staticmethod
+    def _tie_encoder_decoder_weights(encoder: nn.Cell, decoder: nn.Cell, base_model_prefix: str):
+        uninitialized_encoder_weights: List[str] = []
+
+        # if decoder.__class__ != encoder.__class__:
+        #     logger.info(
+        #         f"{decoder.__class__} and {encoder.__class__} are not equal. "
+        #         f"In this case make sure that all encoder weights are correctly initialized."
+        #     )
+
+        def tie_encoder_to_decoder_recursively(
+                decoder_pointer: nn.Cell,
+                encoder_pointer: nn.Cell,
+                module_name: str,
+                uninitialized_encoder_weights: List[str],
+                depth=0,
+        ):
+            assert isinstance(decoder_pointer, nn.Cell) and isinstance(
+                encoder_pointer, nn.Cell
+            ), f"{decoder_pointer} and {encoder_pointer} have to be of type nn.Module"
+            if hasattr(decoder_pointer, "weight"):
+                assert hasattr(encoder_pointer, "weight")
+                encoder_pointer.weight = decoder_pointer.weight
+                if hasattr(decoder_pointer, "bias"):
+                    assert hasattr(encoder_pointer, "bias")
+                    encoder_pointer.bias = decoder_pointer.bias
+                return
+
+            encoder_modules = encoder_pointer._cells
+            decoder_modules = decoder_pointer._cells
+            if len(decoder_modules) > 0:
+                assert (len(encoder_modules) > 0), f"Encoder module {encoder_pointer} does not " \
+                                                   f"match decoder module {decoder_pointer}"
+
+                all_encoder_weights = set(module_name + "/" + sub_name
+                                          for sub_name in encoder_modules.keys())
+                encoder_layer_pos = 0
+                for name, _ in decoder_modules.items():
+                    if name.isdigit():
+                        encoder_name = str(int(name) + encoder_layer_pos)
+                        decoder_name = name
+                        if not isinstance(decoder_modules[decoder_name],
+                                          type(encoder_modules[encoder_name])) \
+                                and len(encoder_modules) != len(decoder_modules):
+                            # this can happen if the name corresponds to the position in
+                            # a list module list of layers in this case the decoder has added
+                            # a cross-attention that the encoder does not have
+                            # thus skip this step and subtract one layer pos from encoder
+                            encoder_layer_pos -= 1
+                            continue
+                    elif name not in encoder_modules:
+                        continue
+                    elif depth > 500:
+                        raise ValueError(
+                            "Max depth of recursive function `tie_encoder_to_decoder` reached. "
+                            "It seems that there is a circular dependency between two or more "
+                            "`nn.Modules` of your model."
+                        )
+                    else:
+                        decoder_name = encoder_name = name
+                    tie_encoder_to_decoder_recursively(
+                        decoder_modules[decoder_name],
+                        encoder_modules[encoder_name],
+                        module_name + "/" + name,
+                        uninitialized_encoder_weights,
+                        depth=depth + 1,
+                    )
+                    all_encoder_weights.remove(module_name + "/" + encoder_name)
+
+                uninitialized_encoder_weights += list(all_encoder_weights)
+
+        # tie weights recursively
+        tie_encoder_to_decoder_recursively(
+            decoder,
+            encoder,
+            base_model_prefix,
+            uninitialized_encoder_weights)
+
+
+def _tie_or_clone_weights(output_embeddings, input_embeddings):
+    """Tie or clone module weights"""
+
+    output_embeddings.embedding_table = input_embeddings.embedding_table
+
+    if getattr(output_embeddings, "bias", None) is not None:
+        # if hasattr(output_embeddings, "bias") and output_embeddings.bias is not None:
+        parameter = ops.pad(
+            output_embeddings.bias.data,
+            (
+                0,
+                output_embeddings.weight.shape[0] - output_embeddings.bias.shape[0],
+            ),
+            "constant",
+            0,
+        )
+        output_embeddings.bias.set_data(parameter)
+    if hasattr(output_embeddings, "out_features") \
+            and hasattr(input_embeddings, "num_embeddings"):
+        output_embeddings.out_features = input_embeddings.num_embeddings
