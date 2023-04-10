@@ -258,6 +258,8 @@ class ErnieModel(ErniePretrainedModel):
         elif attention_mask.ndim == 2:
             attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
             attention_mask = (1.0 - attention_mask) * -1e4
+            attention_mask = ops.tile(
+                attention_mask, (1, self.nheads, seq_length, 1)).reshape(-1, seq_length, seq_length)
 
         attention_mask.stop_gradient = True
 
