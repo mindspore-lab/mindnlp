@@ -17,10 +17,15 @@ Abstract class for Pretrained models.
 """
 import json
 import os
-from typing import Union, Optional
+import logging
+from typing import Union, Optional, Tuple, Dict
+import mindspore
 from mindspore.train.serialization import load_checkpoint, load_param_into_net
 from mindspore import nn
 
+from ...utils.download import cached_path
+
+logger = logging.getLogger(__name__)
 
 class PretrainedConfig:
     """
@@ -42,6 +47,17 @@ class PretrainedConfig:
         self.decoder_start_token_id = kwargs.pop("decoder_start_token_id", None)
         self.return_dict = kwargs.pop("return_dict", False)
         self.chunk_size_feed_forward = kwargs.pop("chunk_size_feed_forward", 0)
+        self.pruned_heads = kwargs.pop("pruned_heads", {})
+
+        self.problem_type = kwargs.pop("problem_type", None)
+        allowed_problem_types = ("regression", "single_label_classification", "multi_label_classification")
+        if self.problem_type is not None and self.problem_type not in allowed_problem_types:
+            raise ValueError(
+                f"The config parameter `problem_type` was not understood: received {self.problem_type} "
+                "but only 'regression', 'single_label_classification' and 'multi_label_classification' are valid."
+            )
+
+    pretrained_config_archive_map: Dict[str, str] = {}
 
     @classmethod
     def from_json(cls, file_path):
@@ -74,6 +90,131 @@ class PretrainedConfig:
         """
         # If torchscript is set, force `return_dict=False` to avoid jit errors
         return self.return_dict
+
+    @classmethod
+    def from_dict(cls, config_dict: Dict, **kwargs) -> "PretrainedConfig":
+        """
+        Constructs a `Config` from a Python dictionary of parameters.
+
+        Args:
+            config_dict (:obj:`Dict[str, any]`):
+                Dictionary that will be used to instantiate the configuration object. Such a dictionary can be retrieved
+                from a pre-trained checkpoint by leveraging the :func:`~transformers.PretrainedConfig.get_config_dict`
+                method.
+            kwargs (:obj:`Dict[str, any]`):
+                Additional parameters from which to initialize the configuration object.
+
+        Returns:
+            :class:`PretrainedConfig`: An instance of a configuration object
+        """
+        return_unused_kwargs = kwargs.pop("return_unused_kwargs", False)
+
+        config = cls(**config_dict)
+
+        if hasattr(config, "pruned_heads"):
+            config.pruned_heads = dict((int(key), value) for key, value in config.pruned_heads.items())
+
+        # Update config with kwargs if needed
+        to_remove = []
+        for key, value in kwargs.items():
+            if hasattr(config, key):
+                setattr(config, key, value)
+                to_remove.append(key)
+        for key in to_remove:
+            kwargs.pop(key, None)
+
+        logger.info("Model config %s", str(config))
+        if return_unused_kwargs:
+            return config, kwargs
+        return config
+
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path, **kwargs) -> "PretrainedConfig":
+        """from_pretrained"""
+        config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
+        return cls.from_dict(config_dict, **kwargs)
+
+    @classmethod
+    def get_config_dict(
+        cls, pretrained_model_name_or_path: str, pretrained_config_archive_map: Optional[Dict] = None, **kwargs
+    ) -> Tuple[Dict, Dict]:
+        """
+        From a `pretrained_model_name_or_path`, resolve to a dictionary of parameters, to be used
+        for instantiating a Config using `from_dict`.
+
+        Parameters:
+            pretrained_model_name_or_path (:obj:`string`):
+                The identifier of the pre-trained checkpoint from which we want the dictionary of parameters.
+            pretrained_config_archive_map: (:obj:`Dict[str, str]`, `optional`) Dict:
+                A map of `shortcut names` to `url`. By default, will use the current class attribute.
+
+        Returns:
+            :obj:`Tuple[Dict, Dict]`: The dictionary that will be used to instantiate the configuration object.
+
+        """
+        cache_dir = kwargs.pop("cache_dir", None)
+        kwargs.pop("force_download", False)
+        kwargs.pop("resume_download", False)
+        proxies = kwargs.pop("proxies", None)
+        kwargs.pop("local_files_only", False)
+
+        if pretrained_config_archive_map is None:
+            pretrained_config_archive_map = cls.pretrained_config_archive_map
+
+        if pretrained_model_name_or_path in pretrained_config_archive_map:
+            config_file = pretrained_config_archive_map[pretrained_model_name_or_path]
+        elif os.path.isdir(pretrained_model_name_or_path):
+            config_file = os.path.join(pretrained_model_name_or_path, "config.json")
+        elif os.path.isfile(pretrained_model_name_or_path):
+            config_file = pretrained_model_name_or_path
+
+        try:
+            # Load from URL or cache if already cached
+            resolved_config_file = str(cached_path(
+                config_file,
+                cache_dir=cache_dir,
+                proxies=proxies,
+            ))
+            # Load config dict
+            if resolved_config_file is None:
+                raise EnvironmentError
+            config_dict = cls._dict_from_json_file(resolved_config_file)
+
+        except EnvironmentError as exc:
+            if pretrained_model_name_or_path in pretrained_config_archive_map:
+                msg = f"Couldn't reach server at '{config_file}' to download pretrained model configuration file."
+            else:
+                msg = (
+                    f"Can't load '{pretrained_model_name_or_path}'. Make sure that:\n\n"
+                    f"- '{pretrained_model_name_or_path}' "
+                    f"is a correct model identifier listed on 'https://huggingface.co/models'\n\n"
+                    f"- or '{pretrained_model_name_or_path}' "
+                    f"is the correct path to a directory containing a config.json file\n\n"
+                )
+            raise EnvironmentError(msg) from exc
+
+        except json.JSONDecodeError as exc:
+            msg = (
+                f"Couldn't reach server at '{config_file}' to download configuration file or "
+                f"configuration file is not a valid JSON file. "
+                f"Please check network or file content here: {resolved_config_file}."
+            )
+            raise EnvironmentError(msg) from exc
+
+        if resolved_config_file == config_file:
+            logger.info("loading configuration file %s", config_file)
+        else:
+            logger.info("loading configuration file %s from cache at %s", config_file, resolved_config_file)
+
+        return config_dict, kwargs
+
+    @classmethod
+    def _dict_from_json_file(cls, json_file: str):
+        """_dict_from_json_file"""
+        with open(json_file, "r", encoding="utf-8") as reader:
+            text = reader.read()
+        return json.loads(text)
+
 
 class PretrainedModel(nn.Cell):
     """
@@ -176,5 +317,87 @@ class PretrainedModel(nn.Cell):
         param_not_load = load_param_into_net(model, param_dict)
         if len(param_not_load) == len(model.trainable_params()):
             raise KeyError(f"The following weights in model are not found: {param_not_load}")
+
+        return model
+
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
+        """from_pretrained"""
+        config = kwargs.pop("config", None)
+        state_dict = kwargs.pop("state_dict", None)
+        cache_dir = kwargs.pop("cache_dir", None)
+        kwargs.pop("from_tf", False)
+        force_download = kwargs.pop("force_download", False)
+        resume_download = kwargs.pop("resume_download", False)
+        proxies = kwargs.pop("proxies", None)
+        local_files_only = kwargs.pop("local_files_only", False)
+
+        # Load config if we don't provide a configuration
+        if not isinstance(config, PretrainedConfig):
+            config_path = config if config is not None else pretrained_model_name_or_path
+            config, model_kwargs = cls.config_class.from_pretrained(
+                config_path,
+                *model_args,
+                cache_dir=cache_dir,
+                return_unused_kwargs=True,
+                force_download=force_download,
+                resume_download=resume_download,
+                proxies=proxies,
+                local_files_only=local_files_only,
+                **kwargs,
+            )
+        else:
+            model_kwargs = kwargs
+
+        # Load model
+        if pretrained_model_name_or_path is not None:
+            if pretrained_model_name_or_path in cls.pretrained_model_archive_map:
+                archive_file = cls.pretrained_model_archive_map[pretrained_model_name_or_path]
+            elif os.path.isdir(pretrained_model_name_or_path):
+                archive_file = os.path.join(pretrained_model_name_or_path, "mindspore_model.ckpt")
+            elif os.path.isfile(pretrained_model_name_or_path):
+                archive_file = pretrained_model_name_or_path
+
+            # redirect to the cache, if necessary
+            try:
+                resolved_archive_file = str(cached_path(
+                    archive_file,
+                    cache_dir=cache_dir,
+                    proxies=proxies,
+                ))
+            except EnvironmentError as exc:
+                if pretrained_model_name_or_path in cls.pretrained_model_archive_map:
+                    msg = f"Couldn't reach server at '{archive_file}' to download pretrained weights."
+                else:
+                    format1 = ", ".join(cls.pretrained_model_archive_map.keys())
+                    format2 = ["mindspore_model.ckpt"]
+                    msg = (
+                        f"Model name '{pretrained_model_name_or_path}' "
+                        f"was not found in model name list ({format1}). "
+                        f"We assumed '{archive_file}' "
+                        f"was a path or url to model weight files named one of {format2} but "
+                        f"couldn't find any such file at this path or url."
+                    )
+                raise EnvironmentError(msg) from exc
+
+            if resolved_archive_file == archive_file:
+                logger.info("loading weights file %s", archive_file)
+            else:
+                logger.info("loading weights file %s from cache at %s", archive_file, resolved_archive_file)
+        else:
+            resolved_archive_file = None
+
+        # Instantiate model.
+        model = cls(config, *model_args, **model_kwargs)
+
+        if state_dict is None:
+            try:
+                state_dict = mindspore.load_checkpoint(resolved_archive_file)
+            except Exception as exc:
+                raise OSError(
+                    "Unable to load weights from mindspore checkpoint file. "
+                ) from exc
+
+        mindspore.load_param_into_net(model, state_dict)
 
         return model

@@ -24,10 +24,10 @@ class GPT2Config(PretrainedConfig):
     def __init__(
         self,
         vocab_size=50257,
-        max_position_embeddings=1024,
-        hidden_size=768,
-        num_hidden_layers=12,
-        num_attention_heads=12,
+        n_positions=1024,
+        n_embd=768,
+        n_layer=12,
+        n_head=12,
         n_inner=None,
         activation_function="gelu_new",
         resid_pdrop=0.1,
@@ -49,10 +49,14 @@ class GPT2Config(PretrainedConfig):
         **kwargs,
     ):
         self.vocab_size = vocab_size
-        self.max_position_embeddings = max_position_embeddings
-        self.hidden_size = hidden_size
-        self.num_hidden_layers = num_hidden_layers
-        self.num_attention_heads = num_attention_heads
+        self.max_position_embeddings = n_positions
+        self.hidden_size = n_embd
+        self.num_hidden_layers = n_layer
+        self.num_attention_heads = n_head
+        self.n_positions = n_positions
+        self.n_embd = n_embd
+        self.n_layer = n_layer
+        self.n_head = n_head
         self.n_inner = n_inner
         self.activation_function = activation_function
         self.resid_pdrop = resid_pdrop
