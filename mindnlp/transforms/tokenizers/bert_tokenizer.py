@@ -16,11 +16,13 @@
 BertTokenizer
 """
 
+from typing import Union
 import numpy as np
 from mindspore.dataset.transforms.transforms import PyTensorOperation
 from mindspore.dataset.text.transforms import Implementation
+from mindspore.dataset.text import Vocab as msVocab
 from tokenizers.implementations import BertWordPieceTokenizer
-
+from mindnlp.vocab import Vocab
 class BertTokenizer(PyTensorOperation):
     """
     Tokenizer used for Bert text process.
@@ -51,10 +53,15 @@ class BertTokenizer(PyTensorOperation):
 
     """
 
-    # @check_decode
-    def __init__(self, vocab, lower_case:bool = True, return_token = False):
+    def __init__(self, vocab: Union[msVocab, Vocab], lower_case:bool = True, return_token = False):
         super().__init__()
-        self.tokenizer = BertWordPieceTokenizer(vocab=vocab.vocab(), lowercase=lower_case)
+        if isinstance(vocab, msVocab):
+            vocab_dict = vocab.vocab()
+        elif isinstance(vocab, Vocab):
+            vocab_dict = vocab.vocab
+        else:
+            raise ValueError(f'only support Vocab class from mindspore or mindnlp, but got {vocab}')
+        self.tokenizer = BertWordPieceTokenizer(vocab=vocab_dict, lowercase=lower_case)
         self.return_token = return_token
         self.implementation = Implementation.PY
 

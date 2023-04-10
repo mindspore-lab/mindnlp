@@ -1,5 +1,7 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
-# Copyright 2022 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2018 The OpenAI Team Authors and HuggingFace Inc. team.
+# Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -72,3 +74,33 @@ class TestModelingGPT(unittest.TestCase):
         input_ids = Tensor(np.random.randint(0, 10, (2, 512)))
         model_outputs = model(input_ids)
         assert model_outputs[0].shape == (2, 512, 768)
+
+    def test_gpt_lmhead_model(self):
+        r"""
+        Test GPT2 LMHead Model
+        """
+        config = gpt_config.GPTConfig()
+        model = gpt.GPTLMHeadModel(config)
+        input_ids = Tensor(np.random.randint(0, 10, (2, 512)))
+        model_outputs = model(input_ids)
+        assert model_outputs[0].shape == (2, 512, 40478)
+
+    def test_gpt_double_heads_model(self):
+        r"""
+        Test model GPT Model with pynative mode
+        """
+        config = gpt_config.GPTConfig()
+        model = gpt.GPTDoubleHeadsModel(config)
+        input_ids = Tensor(np.random.randint(0, 10, (2, 512)))
+        model_outputs = model(input_ids)
+        assert model_outputs[0].shape == (2, 512, 40478)
+
+    def test_gpt_for_sequence_classification(self):
+        r"""
+        Test GPT For Sequence Classification
+        """
+        config = gpt_config.GPTConfig()
+        model = gpt.GPTForSequenceClassification(config)
+        input_ids = Tensor(np.random.randint(0, 10, (1, 512)))
+        model_outputs = model(input_ids)
+        assert model_outputs[0].shape == (1, 2)

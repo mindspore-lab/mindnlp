@@ -260,7 +260,10 @@ class Vocab:
 
         return vocab
 
-
+    @property
+    def vocab(self):
+        """return vocab dict."""
+        return self._token_dict
 
 pretrained_aliases = {
     "glove.6B.50d": "https://download.mindspore.cn/toolkits/mindnlp/vocab/Glove/glove.6B.50d.txt",
