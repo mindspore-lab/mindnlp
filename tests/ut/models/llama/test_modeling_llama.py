@@ -24,22 +24,84 @@ class TestModelingLlama(unittest.TestCase):
     """
     Test Llama
     """
-
     def setUp(self):
         """
         Set up.
         """
+        self.config = llama_config.LlamaConfig()
+        self.config.max_batch_size = 2
+        self.config.dim = 128
+        self.config.max_seq_len = 256
+        self.config.vocab_size = 256 # define by tokenizer
         self.input = None
 
     def test_llama_rmsnorm(self):
         """
         test llama rmsnorm
         """
-        config = llama_config.LlamaConfig()
+        config = self.config
         model = llama.RMSNorm(config.dim)
 
-        rmsnorm_input = Tensor(np.random.randint(0, 10, (32, 2048, 512)), mindspore.float32)
+        rmsnorm_input = Tensor(np.random.randint(0, 10,
+                                                 (config.max_batch_size, config.max_seq_len, config.dim)
+                                                 ), mindspore.float32)
 
         output = model(rmsnorm_input)
 
-        assert output.shape == (32, 2048, 512)
+        assert output.shape == (config.max_batch_size, config.max_seq_len, config.dim)
+
+    def test_llama_attention(self):
+        '''
+        test llama attention
+        '''
+        config = self.config
+        model = llama.Attention(config)
+        attention_input = Tensor(np.random.randint(0, 10,
+                                (config.max_batch_size, config.max_seq_len, config.dim))
+                                , mindspore.float32)
+        freqs_cis = llama.precompute_freqs_cis(config.dim // config.n_heads,
+                                                config.max_seq_len * 2)[0:config.max_seq_len]
+        output = model(attention_input, start_pos=0, freqs_cis=freqs_cis, mask=None)
+
+        assert output.shape == (config.max_batch_size, config.max_seq_len, config.dim)
+
+    def test_llama_feedforward(self):
+        '''
+        test llama test_llama_feedforward
+        '''
+        config = self.config
+        model = llama.FeedForward(config.dim, config.dim * 4, config.multiple_of)
+        feedforward_input = Tensor(np.random.randint(0, 10,
+                                (config.max_batch_size, config.max_seq_len, config.dim))
+                                , mindspore.float32)
+        output = model(feedforward_input)
+
+        assert output.shape == (config.max_batch_size, config.max_seq_len, config.dim)
+
+    def test_llama_transformerblock(self):
+        '''
+        test_llama_transformerblock
+        '''
+        config = self.config
+        model = llama.TransformerBlock(0, config)
+        transformerblock_input = Tensor(np.random.randint(0, 10,
+                                (config.max_batch_size, config.max_seq_len, config.dim))
+                                , mindspore.float32)
+        freqs_cis = llama.precompute_freqs_cis(config.dim // config.n_heads,
+                                                config.max_seq_len * 2)[0:config.max_seq_len]
+        output = model(_x=transformerblock_input, freqs_cis=freqs_cis, start_pos=0, mask=None)
+
+        assert output.shape == (config.max_batch_size, config.max_seq_len, config.dim)
+
+    def test_llama_transformer(self):
+        '''
+        test_llama_transformer
+        '''
+        config = self.config
+        model = llama.Transformer(config)
+        tokens = Tensor(np.random.randint(0, config.vocab_size,
+                                (config.max_batch_size, config.max_seq_len))
+                                , mindspore.int32)
+        output = model(tokens, 0)
+
+        assert output.shape == (config.max_batch_size, config.max_seq_len)
