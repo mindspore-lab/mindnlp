@@ -44,3 +44,16 @@ class TestModelingCodeGen(unittest.TestCase):
 
         attn_output, _ = model(hidden_states)
         assert attn_output.shape == (2, 2, 4096)
+
+    def test_codegen_mlp(self):
+        r"""
+        Test CodeGen MLP
+        """
+        intermediate_size = 100
+        config = codegen_config.CodeGenConfig()
+        model = codegen.CodeGenMLP(intermediate_size, config)
+
+        hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 4096)), mindspore.float32)
+
+        hidden_states = model(hidden_states)
+        assert hidden_states.shape == (2, 2, 4096)

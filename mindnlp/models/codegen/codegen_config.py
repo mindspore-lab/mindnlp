@@ -43,7 +43,7 @@ class CodeGenConfig(PretrainedConfig):
         rotary_dim=64,
         n_inner=None,
         activation_function="gelu_new",
-        resid_pdrop=0.0,
+        resid_pdrop=0.01,
         embd_pdrop=0.0,
         attn_pdrop=0.0,
         layer_norm_epsilon=1e-5,

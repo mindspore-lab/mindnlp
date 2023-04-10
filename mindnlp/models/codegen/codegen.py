@@ -24,6 +24,7 @@ from mindspore import nn, Tensor, Parameter
 from mindspore import ops
 
 from mindnlp.models.utils import logging
+from mindnlp.models.utils.activations import ACT2FN
 
 logger = logging.get_logger(__name__)
 
@@ -180,10 +181,10 @@ class CodeGenAttention(nn.Cell):
             head_mask: Optional[mindspore.Tensor] = None,
             use_cache: Optional[bool] = False,
             output_attentions: Optional[bool] = False,
-    ) -> tuple[Any, Optional[tuple[Any, Any]]]:
+    ) -> Tuple[Any, Optional[Tuple[Any, Any]]]:
 
         qkv = self.qkv_proj(hidden_states)
-        # TODO(enijkamp): factor out number of logical TPU-v4 cores or make forward pass agnostic
+
         mp_num = 4
         qkv_split = qkv.reshape(qkv.shape[:-1] + (mp_num, -1))
 
@@ -246,3 +247,26 @@ class CodeGenAttention(nn.Cell):
             outputs += (attn_weights,)
 
         return outputs  # a, present, (attentions)
+
+
+# Copied from transformers.models.gptj.modeling_gptj.GPTJMLP with GPTJ->CodeGen
+class CodeGenMLP(nn.Cell):
+    """
+    CodeGenMLP
+    """
+    def __init__(self, intermediate_size, config):  # in MLP: intermediate_size= 4 * embed_dim
+        super().__init__()
+        embed_dim = config.n_embd
+
+        self.fc_in = nn.Dense(embed_dim, intermediate_size)
+        self.fc_out = nn.Dense(intermediate_size, embed_dim)
+
+        self.act = ACT2FN[config.activation_function]
+        self.dropout = nn.Dropout(config.resid_pdrop)
+
+    def construct(self, hidden_states: Optional[mindspore.Tensor]) -> mindspore.Tensor:
+        hidden_states = self.fc_in(hidden_states)
+        hidden_states = self.act(hidden_states)
+        hidden_states = self.fc_out(hidden_states)
+        hidden_states = self.dropout(hidden_states)
+        return hidden_states
