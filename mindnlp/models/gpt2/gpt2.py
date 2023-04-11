@@ -28,6 +28,7 @@ from ..utils import logging
 from ..utils.activations import ACT2FN
 from ..utils.utils import SequenceSummary
 from ..utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
+from ...abc.backbones.pretrained import PretrainedModel
 
 logger = logging.get_logger(__name__)
 
@@ -41,7 +42,7 @@ class GPT2Attention(nn.Cell):
         super().__init__()
 
         max_positions = config.max_position_embeddings
-        self.bias = Parameter(tril(ops.ones((max_positions, max_positions), mindspore.int32)).view(
+        self.bias = Parameter(tril(ops.ones((max_positions, max_positions), mindspore.float32)).view(
             1, 1, max_positions, max_positions), requires_grad=False)
         self.masked_bias = Parameter(Tensor(-1e4), requires_grad=False)
 
@@ -343,7 +344,7 @@ class GPT2Block(nn.Cell):
         return outputs  # hidden_states, present, (attentions, cross_attentions)
 
 
-class GPT2PreTrainedModel(nn.Cell):
+class GPT2PreTrainedModel(PretrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
@@ -354,8 +355,8 @@ class GPT2PreTrainedModel(nn.Cell):
     supports_gradient_checkpointing = True
     _no_split_modules = ["GPT2Block"]
 
-    def __init__(self, *inputs, **kwargs):
-        super().__init__(*inputs, **kwargs)
+    # def __init__(self, config):
+    #     super().__init__(config)
 
     def get_head_mask(self, head_mask, num_hidden_layers, is_attention_chunked=False):
         """
@@ -385,6 +386,27 @@ class GPT2PreTrainedModel(nn.Cell):
         if isinstance(module, GPT2Model):
             module.gradient_checkpointing = value
 
+    def get_input_embeddings(self):
+        pass
+
+    def get_position_embeddings(self):
+        pass
+
+    def init_model_weights(self):
+        pass
+
+    def post_init(self):
+        pass
+
+    def resize_position_embeddings(self):
+        pass
+
+    def save(self):
+        pass
+
+    def set_input_embeddings(self):
+        pass
+
 
 class GPT2Model(GPT2PreTrainedModel):
     r"""
@@ -392,7 +414,7 @@ class GPT2Model(GPT2PreTrainedModel):
     """
 
     def __init__(self, config):
-        super().__init__()
+        super().__init__(config)
         self.config = config
 
         self.embed_dim = config.hidden_size
@@ -869,7 +891,7 @@ class GPT2ForTokenClassification(GPT2PreTrainedModel):
             classifier_dropout = config.hidden_dropout
         else:
             classifier_dropout = 0.1
-        self.dropout = nn.Dropout(classifier_dropout)
+        self.dropout = nn.Dropout(p=classifier_dropout)
         self.classifier = nn.Dense(config.hidden_size, config.num_labels)
 
     def construct(self, input_ids=None, past_key_values=None, attention_mask=None, token_type_ids=None,

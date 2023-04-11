@@ -54,8 +54,13 @@ class TestCMRC2018Loss(unittest.TestCase):
             loss = cmrc_loss(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)
             return loss
 
-        if jit:
-            forward = ms_jit(forward)
+        @ms_jit
+        def forward_jit(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d):
+            loss = cmrc_loss(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)
+            return loss
 
-        loss = forward(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)
+        if jit:
+            loss = forward_jit(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)
+        else:
+            loss = forward(tensor_a, tensor_b, my_context_len, tensor_c, tensor_d)
         assert loss.shape == ()

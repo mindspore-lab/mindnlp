@@ -17,6 +17,7 @@ Models init
 """
 from mindnlp.models import bert
 from mindnlp.models.bert import *
+from mindnlp.models.erine import *
 
 __all__ = []
 __all__.extend(bert.__all__)
