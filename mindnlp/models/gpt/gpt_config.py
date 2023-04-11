@@ -1,4 +1,7 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2018 The OpenAI Team Authors and HuggingFace Inc. team.
+# Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +18,6 @@
 """MindNLP gpt config"""
 
 from ...abc.backbones.pretrained import PretrainedConfig
-
 
 class GPTConfig(PretrainedConfig):
     r"""
@@ -34,6 +36,7 @@ class GPTConfig(PretrainedConfig):
         vocab_size=40478,
         n_positions=512,
         n_embd=768,
+        hidden_size=768,
         n_layer=12,
         n_head=12,
         afn="gelu_new",
@@ -52,6 +55,7 @@ class GPTConfig(PretrainedConfig):
         self.vocab_size = vocab_size
         self.n_positions = n_positions
         self.n_embd = n_embd
+        self.hidden_size = hidden_size
         self.n_layer = n_layer
         self.n_head = n_head
         self.afn = afn
@@ -66,4 +70,3 @@ class GPTConfig(PretrainedConfig):
         self.summary_first_dropout = summary_first_dropout
         self.summary_proj_to_labels = summary_proj_to_labels
         super().__init__(**kwargs)
-        

@@ -201,19 +201,19 @@ class TestMobileBert(unittest.TestCase):
         Test MobileBertPooler
         """
         model = MobileBertPooler(MobileBertConfig())
-        hidden_states = Tensor(np.random.randint(0, 1000, (512, 128)), mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, 1000, (512, 128, 512)), mindspore.float32)
 
         output = model(hidden_states)
-        assert output.shape == (512,)
+        assert output.shape == (512, 512)
 
     def test_mobilebert_mobilebertpredictionheadtransform(self):
         """
         Test MobileBertPredictionHeadTransform
         """
         model = MobileBertPredictionHeadTransform(MobileBertConfig())
-        hidden_states = Tensor(np.random.randint(0, 1000, (256, 512)), mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, 1000, (2, 512, 512)), mindspore.float32)
         output = model(hidden_states)
-        assert output.shape == (256, 512)
+        assert output.shape == (2, 512, 512)
 
     def test_mobilebert_mobilebertlmpredictionhead(self):
         """

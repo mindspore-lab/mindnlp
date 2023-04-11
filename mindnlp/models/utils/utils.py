@@ -16,6 +16,7 @@
 # pylint: disable=C0412
 # pylint: disable=C0103
 
+import inspect
 from typing import Optional
 
 import mindspore
@@ -122,7 +123,7 @@ def find_pruneable_heads_and_indices(heads, n_heads, head_size, already_pruned_h
 
 class SequenceSummary(nn.Cell):
     """
-    GPT2DoubleHeadsModel class that self.multiple_choice_head
+    GPTDoubleHeadsModel and GPT2DoubleHeadsModel class that self.multiple_choice_head
     """
 
     def __init__(self, config):
@@ -145,11 +146,11 @@ class SequenceSummary(nn.Cell):
 
         self.first_dropout = Identity()
         if hasattr(config, "summary_first_dropout") and config.summary_first_dropout > 0:
-            self.first_dropout = nn.Dropout(config.summary_first_dropout)
+            self.first_dropout = nn.Dropout(p=config.summary_first_dropout)
 
         self.last_dropout = Identity()
         if hasattr(config, "summary_last_dropout") and config.summary_last_dropout > 0:
-            self.last_dropout = nn.Dropout(config.summary_last_dropout)
+            self.last_dropout = nn.Dropout(p=config.summary_last_dropout)
 
     def construct(self, hidden_states: Tensor, cls_index: Optional[Tensor] = None) -> Tensor:
         if self.summary_type == "last":
@@ -166,7 +167,7 @@ class SequenceSummary(nn.Cell):
                     hidden_states.shape[-2] - 1,
                 )
             else:
-                cls_index = cls_index.unsqueeze(-1).unsqueeze(-1)
+                cls_index = cls_index.expand_dims(-1).expand_dims(-1)
                 cls_index = cls_index.expand((-1,) * (cls_index.ndim - 1) + (hidden_states.shape[-1],))
             output = hidden_states.gather_elements(-2, cls_index).squeeze(-2)  # shape (bsz, XX, hidden_size)
         elif self.summary_type == "attn":
@@ -193,7 +194,7 @@ class PoolerStartLogits(nn.Cell):
 
     def construct(
         self, hidden_states: Tensor,
-        # p_mask: Optional[Tensor] = None
+        p_mask: Optional[Tensor] = None
     ) -> Tensor:
         """
         Args:
@@ -214,8 +215,8 @@ class PoolerStartLogits(nn.Cell):
         #     if get_parameter_dtype(self) == torch.float16:
         #         x = x * (1 - p_mask) - 65500 * p_mask
         #     else:
-        #         x = x * (1 - p_mask) - 1e30 * p_mask
-
+                # x = x * (1 - p_mask) - 1e30 * p_mask
+        x = x * (1 - p_mask) - 1e30 * p_mask
         return x
 
 class SQuADHead(nn.Cell):
@@ -247,28 +248,8 @@ class SQuADHead(nn.Cell):
         p_mask: Optional[Tensor] = None,
         # return_dict: bool = False,
     ) -> Tensor:
-        """
-        Args:
-            hidden_states (`torch.FloatTensor` of shape `(batch_size, seq_len, hidden_size)`):
-                Final hidden states of the model on the sequence tokens.
-            start_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-                Positions of the first token for the labeled span.
-            end_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-                Positions of the last token for the labeled span.
-            cls_index (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-                Position of the CLS token for each sentence in the batch. If `None`, takes the last token.
-            is_impossible (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-                Whether the question has a possible answer in the paragraph or not.
-            p_mask (`torch.FloatTensor` of shape `(batch_size, seq_len)`, *optional*):
-                Mask for tokens at invalid position, such as query and special symbols (PAD, SEP, CLS). 1.0 means token
-                should be masked.
-            return_dict (`bool`, *optional*, defaults to `False`):
-                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
 
-        Returns:
-        """
-
-        start_logits = self.start_logits(hidden_states)   #TODO (hidden_states, p_mask=p_mask)
+        start_logits = self.start_logits(hidden_states,p_mask=p_mask)   #TODO (hidden_states, p_mask=p_mask)
 
         if start_positions is not None and end_positions is not None:
             # If we are on multi-GPU, let's remove the dimension added by batch splitting
@@ -280,17 +261,18 @@ class SQuADHead(nn.Cell):
                     pass
 
             # during training, compute the end logits based on the ground truth of the start position
-            end_logits = self.end_logits(hidden_states, start_positions=start_positions)
+            end_logits = self.end_logits(hidden_states, start_positions=start_positions,p_mask=p_mask)
             #TODO:(hidden_states, start_positions=start_positions, p_mask=p_mask)
 
             loss_fct = CrossEntropyLoss()
-            start_loss = loss_fct(start_logits, start_positions)
-            end_loss = loss_fct(end_logits, end_positions)
+            start_loss = loss_fct(start_logits, start_positions.astype(mindspore.int32))
+            end_loss = loss_fct(end_logits, end_positions.astype(mindspore.int32))
             total_loss = (start_loss + end_loss) / 2
 
             if cls_index is not None and is_impossible is not None:
                 # Predict answerability from the representation of CLS and START
                 cls_logits = self.answer_class(hidden_states, start_positions=start_positions, cls_index=cls_index)
+
                 loss_fct_cls = nn.BCEWithLogitsLoss()
                 cls_loss = loss_fct_cls(cls_logits, is_impossible)
 
@@ -308,22 +290,23 @@ class SQuADHead(nn.Cell):
             start_log_probs, self.start_n_top
         )  # shape (bsz, start_n_top)
         start_top_index_exp = ops.BroadcastTo(shape
-                                              =(-1, -1, hsz))(start_top_index.unsqueeze(-1))
+                                              =(-1, -1, hsz))(start_top_index.expand_dims(-1))
                                               # shape (bsz, start_n_top, hsz)
         start_states = ops.gather_elements(hidden_states, -2, start_top_index_exp)  # shape (bsz, start_n_top, hsz)
         start_states = ops.BroadcastTo(shape
-                                       =(-1, slen, -1, -1))(start_states.unsqueeze(1))
+                                       =(-1, slen, -1, -1))(start_states.expand_dims(1))
                                               # shape (bsz, slen, start_n_top, hsz)
 
-        hidden_states_expanded = hidden_states.unsqueeze(2).expand_as(
+        hidden_states_expanded = hidden_states.expand_dims(2).expand_as(
             start_states
         )  # shape (bsz, slen, start_n_top, hsz)
-        p_mask = p_mask.unsqueeze(-1) if p_mask is not None else None
-        end_logits = self.end_logits(hidden_states_expanded, start_states=start_states, p_mask=p_mask)
+        p_mask = p_mask.expand_dims(-1) if p_mask is not None else None
+        end_logits = self.end_logits(hidden_states_expanded, start_states=start_states)#, p_mask=p_mask
         end_log_probs = ops.softmax(end_logits, axis=1)  # shape (bsz, slen, start_n_top)
         end_top_log_probs, end_top_index = ops.topk(
             end_log_probs, self.end_n_top
         )  # shape (bsz, end_n_top, start_n_top)
+
         end_top_log_probs = end_top_log_probs.view(-1, self.start_n_top * self.end_n_top)
         end_top_index = end_top_index.view(-1, self.start_n_top * self.end_n_top)
 
@@ -357,7 +340,7 @@ class PoolerEndLogits(nn.Cell):
         hidden_states: Tensor,
         start_states: Optional[Tensor] = None,
         start_positions: Optional[Tensor] = None,
-        # p_mask: Optional[Tensor] = None,
+        p_mask: Optional[Tensor] = None,
     ) -> Tensor:
 
         assert (
@@ -380,7 +363,7 @@ class PoolerEndLogits(nn.Cell):
         #         x = x * (1 - p_mask) - 65500 * p_mask
         #     else:
         #         x = x * (1 - p_mask) - 1e30 * p_mask
-
+        x = x * (1 - p_mask) - 1e30 * p_mask
         return x
 
 
@@ -427,3 +410,88 @@ class PoolerAnswerClass(nn.Cell):
         x = ops.squeeze(self.dense_1(x),axis=-1)
 
         return x
+
+
+def prune_linear_layer(layer, index, axis=0):
+    """
+    Prune a linear layer to keep only entries in index.
+    Used to remove heads.
+    Args:
+        layer (`mindspore.nn.Dense`): The layer to prune.
+        index (`mindspore.Tensor[int64]`): The indices to keep in the layer.
+        axis (`int`, *optional*, defaults to 0): The dimension on which to keep the indices.
+    Returns:
+        `mindspore.nn.Dense`: The pruned layer as a new layer with `requires_grad=True`.
+    """
+    gamma_l = layer.gamma.index_select(axis, index)
+    if layer.beta is not None:
+        if axis == 1:
+            beta_l = layer.beta
+        else:
+            beta_l = layer.beta[index]
+    new_size = list(layer.gamma.shape())
+    new_size[axis] = len(index)
+    new_layer = nn.Dense(new_size[1], new_size[0], has_bias=layer.beta is not None)
+    new_layer.gamma.requires_grad = False
+    new_layer.gamma = gamma_l.copy()
+    new_layer.gamma.requires_grad = True
+    if layer.beta is not None:
+        new_layer.beta.requires_grad = False
+        new_layer.beta = beta_l.copy()
+        new_layer.beta.requires_grad = True
+    return new_layer
+
+
+def apply_chunking_to_forward(forward_fn, chunk_size, chunk_axis, *input_tensors):
+    """
+    This function chunks the `input_tensors` into smaller input tensor parts of size `chunk_size` over the dimension
+    `chunk_axis`. It then applies a layer `forward_fn` to each chunk independently to save memory.
+    If the `forward_fn` is independent across the `chunk_dim` this function will yield the same result as directly
+    applying `forward_fn` to `input_tensors`.
+    Args:
+        forward_fn (`Callable[..., mindspore.Tensor]`):
+            The forward function of the model.
+        chunk_size (`int`):
+            The chunk size of a chunked tensor: `num_chunks = len(input_tensors[0]) / chunk_size`.
+        chunk_axis (`int`):
+            The dimension over which the `input_tensors` should be chunked.
+        input_tensors (`Tuple[mindspore.Tensor]`):
+            The input tensors of `forward_fn` which will be chunked
+    Returns:
+        `mindspore.Tensor`: A tensor with the same shape as the `forward_fn` would have given if applied`.
+    """
+    assert len(input_tensors) > 0, f"{input_tensors} has to be a tuple/list of tensors"
+
+     # inspect.signature exist since python 3.5 and is a python method -> no problem with backward compatibility
+    num_args_in_forward_chunk_fn = len(inspect.signature(forward_fn).parameters)
+    if num_args_in_forward_chunk_fn != len(input_tensors):
+        raise ValueError(
+            f"forward_chunk_fn expects {num_args_in_forward_chunk_fn} arguments, but only {len(input_tensors)} input "
+            "tensors are given"
+        )
+
+    if chunk_size > 0:
+        tensor_shape = input_tensors[0].shape[chunk_axis]
+        for input_tensor in input_tensors:
+            if input_tensor.shape[chunk_axis] != tensor_shape:
+                raise ValueError(
+                    f"All input tenors have to be of the same shape: {tensor_shape}, "
+                    f"found shape {input_tensor.shape[chunk_axis]}"
+                )
+
+        if input_tensors[0].shape[chunk_axis] % chunk_size != 0:
+            raise ValueError(
+                f"The dimension to be chunked {input_tensors[0].shape[chunk_axis]} has to be a multiple of the chunk "
+                f"size {chunk_size}"
+            )
+
+        num_chunks = input_tensors[0].shape[chunk_axis] // chunk_size
+
+        # chunk input tensor into tuples
+        input_tensors_chunks = tuple(input_tensor.chunk(num_chunks, axis=chunk_axis) for input_tensor in input_tensors)
+        # apply forward fn to every tuple
+        output_chunks = tuple(forward_fn(*input_tensors_chunk) for input_tensors_chunk in zip(*input_tensors_chunks))
+        # concatenate output at same dimension
+        return ops.cat(output_chunks, axis=chunk_axis)
+
+    return forward_fn(*input_tensors)
