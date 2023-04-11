@@ -240,7 +240,7 @@ class TestModelingNezha(unittest.TestCase):
         r"""
         Test NezhaForMaskedLM
         """
-        config = NezhaConfig(vocab_size=64)
+        config = NezhaConfig(hidden_size=48, vocab_size=64)
         model = NezhaForMaskedLM(config)
         inputs= Tensor(np.random.randn(4, 16), mindspore.int64)
         outputs = model(inputs)
