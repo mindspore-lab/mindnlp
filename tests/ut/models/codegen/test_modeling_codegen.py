@@ -57,3 +57,15 @@ class TestModelingCodeGen(unittest.TestCase):
 
         hidden_states = model(hidden_states)
         assert hidden_states.shape == (2, 2, 4096)
+
+    def test_codegen_block(self):
+        r"""
+            Test CodeGen BLOCK
+        """
+        config = codegen_config.CodeGenConfig()
+        model = codegen.CodeGenBlock(config)
+
+        hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 4096)), mindspore.float32)
+
+        hidden_states = model(hidden_states)
+        assert hidden_states[0].shape == (2, 2, 4096)

@@ -16,7 +16,7 @@
 
 """ MindSpore CodeGen model."""
 
-from typing import Optional, Tuple, Any
+from typing import Optional, Tuple, Any, Union
 
 import mindspore
 import numpy as np
@@ -34,9 +34,9 @@ _CONFIG_FOR_DOC = "CodeGenConfig"
 
 #
 def fixed_pos_embedding(tensor, seq_dim=1, seq_len=None):
-    '''
+    """
     fixed_pos_embedding
-    '''
+    """
     axis = tensor.shape[-1]
     if seq_len is None:
         seq_len = tensor.shape[seq_dim]
@@ -48,9 +48,9 @@ def fixed_pos_embedding(tensor, seq_dim=1, seq_len=None):
 
 
 def rotate_every_two(tensor):
-    '''
+    """
     rotate_every_two
-    '''
+    """
     tensor1 = tensor[:, :, :, ::2]
     tensor2 = tensor[:, :, :, 1::2]
     tensor = ops.stack((-tensor2, tensor1), axis=-1)
@@ -254,6 +254,7 @@ class CodeGenMLP(nn.Cell):
     """
     CodeGenMLP
     """
+
     def __init__(self, intermediate_size, config):  # in MLP: intermediate_size= 4 * embed_dim
         super().__init__()
         embed_dim = config.n_embd
@@ -270,3 +271,46 @@ class CodeGenMLP(nn.Cell):
         hidden_states = self.fc_out(hidden_states)
         hidden_states = self.dropout(hidden_states)
         return hidden_states
+
+
+# Copied from transformers.models.gptj.modeling_gptj.GPTJBlock with GPTJ->CodeGen
+class CodeGenBlock(nn.Cell):
+    """CodeGenBlock"""
+    def __init__(self, config):
+        super().__init__()
+        inner_dim = config.n_inner if config.n_inner is not None else 4 * config.n_embd
+        self.ln_1 = nn.LayerNorm((config.n_embd,), epsilon=config.layer_norm_epsilon)
+        self.attn = CodeGenAttention(config)
+        self.mlp = CodeGenMLP(inner_dim, config)
+
+    def construct(
+            self,
+            hidden_states: Optional[mindspore.Tensor],
+            layer_past: Optional[Tuple[mindspore.Tensor]] = None,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            head_mask: Optional[mindspore.Tensor] = None,
+            use_cache: Optional[bool] = False,
+            output_attentions: Optional[bool] = False,
+    ) -> Union[Tuple[mindspore.Tensor], Optional[Tuple[mindspore.Tensor, Tuple[mindspore.Tensor, ...]]]]:
+        residual = hidden_states
+        hidden_states = self.ln_1(hidden_states)
+        attn_outputs = self.attn(
+            hidden_states,
+            layer_past=layer_past,
+            attention_mask=attention_mask,
+            head_mask=head_mask,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+        )
+        attn_output = attn_outputs[0]  # output_attn: a, present, (attentions)
+        outputs = attn_outputs[1:]
+
+        feed_forward_hidden_states = self.mlp(hidden_states)
+        hidden_states = attn_output + feed_forward_hidden_states + residual
+
+        if use_cache:
+            outputs = (hidden_states,) + outputs
+        else:
+            outputs = (hidden_states,) + outputs[1:]
+
+        return outputs  # hidden_states, present, (attentions)
