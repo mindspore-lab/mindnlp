@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,9 +13,8 @@
 # limitations under the License.
 # ============================================================================
 """
-model nezha init
+QuestionAnswer bidaf model init
 """
 
-
-from .nezha import *
-from .nezha_config import *
+from .squad_process import SQuAD1_Process
+from .evaluate import evaluate

@@ -15,13 +15,14 @@
 """
 Abstract class for Pretrained models.
 """
+import copy
 import json
 import os
 import logging
 from typing import Union, Optional, Tuple, Dict
 import mindspore
 from mindspore.train.serialization import load_checkpoint, load_param_into_net
-from mindspore import nn
+from mindspore import nn, ops
 
 from ...utils.download import cached_path
 
@@ -215,14 +216,26 @@ class PretrainedConfig:
             text = reader.read()
         return json.loads(text)
 
+    def to_dict(self):
+        """Serializes this instance to a Python dictionary."""
+        output = copy.deepcopy(self.__dict__)
+        return output
+
+    def to_json_string(self):
+        """Serializes this instance to a JSON string."""
+        return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
+
 
 class PretrainedModel(nn.Cell):
     """
     Abstract class for Pretrained models
     """
     config_class = None
+    pretrained_model_archive_map = {}
+    base_model_prefix = ""
+
     def __init__(self, config):
-        super().__init__()
+        super().__init__(config)
         self.config = config
 
     def post_init(self):
@@ -248,6 +261,9 @@ class PretrainedModel(nn.Cell):
         Returns:
             :obj:`nn.Cell`: A mindspore cell mapping vocabulary to hidden states.
         """
+        base_model = getattr(self, self.base_model_prefix, self)
+        if base_model is not self:
+            return base_model.get_input_embeddings()
         raise NotImplementedError
 
     def set_input_embeddings(self, value: "nn.Cell"):
@@ -257,7 +273,11 @@ class PretrainedModel(nn.Cell):
         Args:
             value (:obj:`nn.Cell`): A mindspore cell mapping vocabulary to hidden states.
         """
-        raise NotImplementedError
+        base_model = getattr(self, self.base_model_prefix, self)
+        if base_model is not self:
+            base_model.set_input_embeddings(value)
+        else:
+            raise NotImplementedError
 
     def resize_position_embeddings(self, new_num_position_embeddings: int):
         """
@@ -268,6 +288,12 @@ class PretrainedModel(nn.Cell):
             f"overwrite this method in the class {self.__class__}"
         )
 
+    def get_output_embeddings(self):
+        """ Get model's output embeddings
+            Return None if the model doesn't have output embeddings
+        """
+        return None  # Overwrite for models with output embeddings
+
     def get_position_embeddings(self):
         """
         get the model position embeddings if necessary
@@ -276,6 +302,107 @@ class PretrainedModel(nn.Cell):
             f"`get_position_embeddings` is not implemented for {self.__class__}`. To implement it, you should "
             f"overwrite this method in the class {self.__class__}"
         )
+
+    # def tie_weights(self):
+    #     """
+    #     Make sure we are sharing the input and output embeddings.
+    #     If you need this feature,
+    #     you need to get it yourself output Add the output you need to add to the embeddings function_ Embedding layer,
+    #     otherwise you cannot
+    #     """
+    #     output_embeddings = self.get_output_embeddings()
+    #     if output_embeddings is not None:
+    #         self._tie_or_clone_weights(output_embeddings, self.get_input_embeddings())
+
+    def _tie_or_clone_weights(self, output_embeddings, input_embeddings):
+        """ Tie or clone module weights depending of weither we are using or not
+        """
+
+        output_embeddings.embedding_table = input_embeddings.embedding_table
+
+        if hasattr(output_embeddings, "bias") and output_embeddings.bias is not None:
+            output_embeddings.bias.data = ops.pad(
+                output_embeddings.bias.data,
+                (0, output_embeddings.embedding_table.shape[0] - output_embeddings.bias.shape[0]),
+                "constant",
+                0,
+            )
+        if hasattr(output_embeddings, "out_features") and hasattr(input_embeddings, "num_embeddings"):
+            output_embeddings.out_features = input_embeddings.num_embeddings
+
+    def resize_token_embeddings(self, new_num_tokens=None):
+        """ Resize input token embeddings matrix of the model if new_num_tokens != config.vocab_size.
+        Take care of tying weights embeddings afterwards if the model class has a `tie_weights()` method.
+
+        Arguments:
+
+            new_num_tokens: (`optional`) int:
+                New number of tokens in the embedding matrix.
+                Increasing the size will add newly initialized vectors at the end.
+                Reducing the size will remove vectors from the end.
+                If not provided or None:
+                    does nothing and just returns a pointer to
+                    the input tokens ``mindspore.nn.Embeddings`` Module of the model.
+
+        Return: ``mindspore.nn.Embeddings``
+            Pointer to the input tokens Embeddings Module of the model
+        """
+        base_model = getattr(self, self.base_model_prefix, self)  # get the base model if needed
+        model_embeds = base_model.resize_tokenizer_embeddings(new_num_tokens)
+        if new_num_tokens is None:
+            return model_embeds
+
+        # Update base model and current model config
+        self.config.vocab_size = new_num_tokens
+        base_model.vocab_size = new_num_tokens
+
+        # Tie weights again if needed
+        # self.tie_weights()
+
+        return model_embeds
+
+    def resize_tokenizer_embeddings(self, new_num_tokens):
+        """
+        Obtain a new embedding layer or use the original one without updating it.
+        """
+        old_embeddings = self.get_input_embeddings()
+        new_embeddings = self._get_resized_embeddings(old_embeddings, new_num_tokens)
+        self.set_input_embeddings(new_embeddings)
+        return self.get_input_embeddings()
+
+    def _get_resized_embeddings(self, old_embeddings, new_num_tokens=None):
+        """ Build a resized Embedding Module from a provided token Embedding Module.
+            Increasing the size will add newly initialized vectors at the end
+            Reducing the size will remove vectors from the end
+
+        Args:
+            new_num_tokens: (`optional`) int
+                New number of tokens in the embedding matrix.
+                Increasing the size will add newly initialized vectors at the end
+                Reducing the size will remove vectors from the end
+                If not provided or None: return the provided token Embedding Module.
+        Return: ``mindspore.nn.Embeddings``
+            Pointer to the resized Embedding Module or the old Embedding Module if new_num_tokens is None
+        """
+        if new_num_tokens is None:
+            return old_embeddings
+
+        old_num_tokens, old_embedding_dim = old_embeddings.embedding_table.shape
+        if old_num_tokens == new_num_tokens:
+            return old_embeddings
+
+        # Build new embeddings
+        new_embeddings = nn.Embedding(new_num_tokens, old_embedding_dim)
+
+        # initialize all new embeddings (in particular added tokens)
+        self._init_weights(new_embeddings)
+
+        # Copy word embeddings from the previous weights
+        num_tokens_to_copy = min(old_num_tokens, new_num_tokens)
+        new_embeddings.embedding_table.data[:num_tokens_to_copy, :] = old_embeddings.embedding_table.data[
+                                                                      :num_tokens_to_copy, :]
+
+        return new_embeddings
 
     def save(self, save_dir: Union[str, os.PathLike]):
         "save pretrain model"
