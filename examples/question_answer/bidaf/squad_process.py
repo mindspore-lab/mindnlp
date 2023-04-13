@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,139 +13,18 @@
 # limitations under the License.
 # ============================================================================
 """
-SQuAD1 load function
+SQuAD1 process function
 """
 # pylint: disable=C0103
 
-import os
-import json
-from typing import Tuple, Union
 import numpy as np
 
 import mindspore
 import mindspore.dataset as ds
-from mindspore.dataset import GeneratorDataset, transforms
+from mindspore.dataset import transforms, text
 
-from mindnlp.vocab import Vocab
-from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load_dataset, process
-from mindnlp.transforms import BasicTokenizer, Lookup
-from mindnlp.configs import DEFAULT_ROOT
+from mindnlp.transforms import BasicTokenizer
 
-URL = {
-    "train": "https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v1.1.json",
-    "dev": "https://rajpurkar.github.io/SQuAD-explorer/dataset/dev-v1.1.json",
-}
-
-MD5 = {
-    "train": "981b29407e0affa3b1b156f72073b945",
-    "dev": "3e85deb501d4e538b6bc56f786231552",
-}
-
-
-class Squad1():
-    """
-    SQuAD1 dataset source
-    """
-
-    def __init__(self, path):
-        self.path = path
-        self._id = []
-        self._context = []
-        self._question = []
-        self._anwsers = []
-        self._s_idex = []
-        self._load()
-
-    def _load(self):
-        with open(self.path, 'r', encoding='utf8') as f:
-            data = json.load(f)
-            data = data['data']
-
-            for article in data:
-                for paragragh in article['paragraphs']:
-                    context = paragragh['context']
-                    for qa in paragragh['qas']:
-                        ids = qa['id']
-                        question = qa['question']
-                        for ans in qa['answers']:
-                            self._id.append(ids)
-                            self._context.append(context)
-                            self._question.append(question)
-                            answer = ans['text']
-                            self._anwsers.append(answer)
-                            s_idx = ans['answer_start']
-                            self._s_idex.append(s_idx)
-                            break
-
-    def __getitem__(self, index):
-        return self._id[index], self._context[index], self._question[index],\
-            self._anwsers[index], self._s_idex[index]
-
-    def __len__(self):
-        return len(self._anwsers)
-
-
-@load_dataset.register
-def SQuAD1(
-    root: str = DEFAULT_ROOT,
-    split: Union[Tuple[str], str] = ('train', 'dev'),
-    proxies=None
-):
-    r"""
-    Load the SQuAD1 dataset
-
-    Args:
-        root (str): Directory where the datasets are saved.
-        split (str|Tuple[str]): Split or splits to be returned.
-            Default:('train','dev').
-        proxies (dict): a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
-
-    Returns:
-        - **datasets_list** (list) -A list of loaded datasets.
-          If only one type of dataset is specified,such as 'trian',
-          this dataset is returned instead of a list of datasets.
-
-    Raises:
-        TypeError: If `root` is not a string.
-        TypeError: If `split` is not a string or Tuple[str].
-
-    Examples:
-        >>> root = "~/.mindnlp"
-        >>> split = ('train', 'dev')
-        >>> dataset_train, dataset_dev = SQuAD1(root, split)
-        >>> train_iter = dataset_train.create_tuple_iterator()
-        >>> print(next(train_iter))
-        {'context': Tensor(shape=[], dtype=String, value= 'Architecturally, \
-            the school has a Catholic character. Atop the Main Building\'s gold dome ...'),
-        'question': Tensor(shape=[], dtype=String, value= 'To whom did the Virgin Mary allegedly \
-            appear in 1858 in Lourdes France?'),
-        'answers': Tensor(shape=[1], dtype=String, value= ['Saint Bernadette Soubirous']),
-        'answers_start': Tensor(shape=[1], dtype=Int32, value= [515])}
-
-    """
-    cache_dir = os.path.join(root, "datasets", "SQuAD1")
-    file_list = []
-    datasets_list = []
-    if isinstance(split, str):
-        split = split.split()
-    for s in split:
-        path, _ = cache_file(
-            None, url=URL[s], cache_dir=cache_dir, md5sum=MD5[s], proxies=proxies
-        )
-        file_list.append(path)
-
-    for _, file in enumerate(file_list):
-        dataset = GeneratorDataset(source=Squad1(file),
-                                   column_names=[
-                                       "id" ,"context", "question", "answers", "answer_start"],
-                                   shuffle=False)
-        datasets_list.append(dataset)
-    if len(file_list) == 1:
-        return datasets_list[0]
-    return datasets_list
-
-@process.register
 def SQuAD1_Process(dataset, char_vocab, word_vocab=None,\
                    tokenizer=BasicTokenizer(True),\
                    max_context_len=768, max_question_len=64, max_char_len=48,\
@@ -178,8 +57,6 @@ def SQuAD1_Process(dataset, char_vocab, word_vocab=None,\
         TypeError: If `drop_remainder` is not of type bool.
 
     Examples:
-        >>> from mindspore.dataset import text
-        >>> from mindnlp.dataset import SQuAD1, SQuAD1_Process
         >>> char_dic = {"<unk>": 0, "<pad>": 1, "e": 2, "t": 3, "a": 4, "i": 5, "n": 6,\
                     "o": 7, "s": 8, "r": 9, "h": 10, "l": 11, "d": 12, "c": 13, "u": 14,\
                     "m": 15, "f": 16, "p": 17, "g": 18, "w": 19, "y": 20, "b": 21, ",": 22,\
@@ -200,7 +77,7 @@ def SQuAD1_Process(dataset, char_vocab, word_vocab=None,\
     q_lens = []
     s_idx = []
     e_idx = []
-    pad_value_char = char_vocab.lookup_ids("<pad>")
+    pad_value_char = char_vocab.tokens_to_ids('<pad>')
     abnormals = [' ', '\n', '\u3000', '\u202f', '\u2009','\u200B', '\u0303', '\u092e']
     for data in dataset:
         context = data[1].asnumpy().tolist()
@@ -241,12 +118,9 @@ def SQuAD1_Process(dataset, char_vocab, word_vocab=None,\
                     if c_token[i + answer_len - 1] == answer_token[-1]:
                         e_index = i + answer_len - 1
                         break
-        # define lookup operation in char vocab
-        char_lookup = Lookup(char_vocab, unk_token="<unk>")
         # generate the char list of the context(after lookup and padding operation)
         for token in c_token:
-            token_ids = char_lookup(list(token))
-            token_ids = list(token_ids)
+            token_ids = char_vocab.tokens_to_ids(list(token))
             if isinstance(token_ids, int):
                 token_list = []
                 token_list.append(token_ids)
@@ -257,8 +131,7 @@ def SQuAD1_Process(dataset, char_vocab, word_vocab=None,\
             c_char.append(token_pad)
         # generate the char list of the question(after lookup and padding operation)
         for token in q_token:
-            token_ids = char_lookup(list(token))
-            token_ids = list(token_ids)
+            token_ids = char_vocab.tokens_to_ids(list(token))
             if isinstance(token_ids, int):
             # if type(token_ids)==int:
                 token_list = []
@@ -289,13 +162,12 @@ def SQuAD1_Process(dataset, char_vocab, word_vocab=None,\
     dataset = dataset.map(tokenizer, 'question', 'q_word')
 
     if word_vocab is None:
-        word_vocab = Vocab.from_dataset(dataset, columns=['c_word', 'q_word'],\
+        word_vocab = text.Vocab.from_dataset(dataset, columns=['c_word', 'q_word'],\
                                              special_tokens=["<unk>", "<pad>"], special_first=True)
 
-    # lookup_op = text.Lookup(word_vocab, unknown_token='<unk>')
-    lookup_op = Lookup(word_vocab, unk_token="<unk>")
+    lookup_op = text.Lookup(word_vocab, unknown_token='<unk>')
     type_cast_op = transforms.TypeCast(mindspore.int32)
-    pad_value_word = word_vocab.lookup_ids('<pad>')
+    pad_value_word = word_vocab.tokens_to_ids('<pad>')
 
     dataset = dataset.map(lookup_op, 'c_word')
     dataset = dataset.map(lookup_op, 'q_word')
