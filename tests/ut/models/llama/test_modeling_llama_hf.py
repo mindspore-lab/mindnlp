@@ -21,7 +21,11 @@ from mindspore import Tensor
 from mindnlp.models.llama.llama_hf import (
     LlamaRMSNorm,
     LlamaMLP,
-    LlamaAttention
+    LlamaAttention,
+    LlamaDecoderLayer,
+    LlamaModel,
+    LlamaForCausalLM,
+    LlamaForSequenceClassification,
 )
 from mindnlp.models.llama.llama_hf_config import LlamaConfig
 
@@ -77,4 +81,73 @@ class TestModelingLlama(unittest.TestCase):
                                , np.arange(0, config.max_position_embeddings)], mindspore.int64)
         outputs = model(input_ids, position_ids=position_ids)
         assert outputs[0].shape == (2, config.max_position_embeddings, 64)
-    
+
+    def test_llama_decoderlayer(self):
+        r"""
+        test_llama_decoderlayer
+        """
+        config = LlamaConfig()
+        config.max_position_embeddings = 128
+        config.hidden_size = 64
+        config.num_attention_heads = 8
+
+        model = LlamaDecoderLayer(config)
+
+        input_ids = Tensor(np.random.randn(2, config.max_position_embeddings, 64), mindspore.float32)
+        position_ids = Tensor([np.arange(0, config.max_position_embeddings)
+                               , np.arange(0, config.max_position_embeddings)], mindspore.int64)
+        outputs = model(input_ids, position_ids=position_ids)
+        assert outputs[0].shape == (2, config.max_position_embeddings, 64)
+
+    def test_llama_model(self):
+        """
+        Test Llama Model.
+        """
+        config = LlamaConfig()
+        config.max_position_embeddings = 128
+        config.hidden_size = 64
+        config.num_attention_heads = 8
+        model = LlamaModel(config=config)
+
+        input_ids = Tensor(np.random.randint(
+            0, 100, (2, 128)))
+
+        outputs = model(input_ids)
+
+        assert outputs[0].shape == (2, 128, 64)
+        for i in range(len(outputs[1])):
+            for j in range(len(outputs[1][i])):
+                assert outputs[1][i][j].shape == (2, 8, 128, 8)
+    def test_llama_for_causal_lm(self):
+        """
+        test_llama_for_causal_lm
+        """
+        config = LlamaConfig(vocab_size=100, hidden_size=128, num_attention_heads=16)
+        model = LlamaForCausalLM(config=config)
+
+        input_ids = Tensor(np.random.randint(
+            0, 100, (2, 128)))
+
+        outputs = model(input_ids)
+
+        assert outputs[0].shape == (2, 128, 100)
+        for i in range(len(outputs[1])):
+            for j in range(len(outputs[1][i])):
+                assert outputs[1][i][j].shape == (2, 16, 128, 8)
+
+    def test_llama_for_sequence_classification(self):
+        """
+        test_llama_for_sequence_classification
+        """
+        config = LlamaConfig(vocab_size=100, hidden_size=128, num_attention_heads=16)
+        model = LlamaForSequenceClassification(config=config)
+
+        input_ids = Tensor(np.random.randint(
+            0, 10, (2, 128)))
+
+        outputs = model(input_ids)
+
+        assert outputs[0].shape == (2, 2)
+        for i in range(len(outputs[1])):
+            for j in range(len(outputs[1][i])):
+                assert outputs[1][i][j].shape == (2, 16, 128, 8)
