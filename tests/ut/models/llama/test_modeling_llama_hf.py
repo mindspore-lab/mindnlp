@@ -21,11 +21,15 @@ from mindspore import Tensor
 from mindnlp.models.llama.llama_hf import (
     LlamaRMSNorm,
     LlamaMLP,
+<<<<<<< HEAD
     LlamaAttention,
     LlamaDecoderLayer,
     LlamaModel,
     LlamaForCausalLM,
     LlamaForSequenceClassification,
+=======
+    LlamaAttention
+>>>>>>> b6bfb99b245a1008e70e0a7bd1b9270da958f460
 )
 from mindnlp.models.llama.llama_hf_config import LlamaConfig
 
@@ -81,6 +85,7 @@ class TestModelingLlama(unittest.TestCase):
                                , np.arange(0, config.max_position_embeddings)], mindspore.int64)
         outputs = model(input_ids, position_ids=position_ids)
         assert outputs[0].shape == (2, config.max_position_embeddings, 64)
+<<<<<<< HEAD
 
     def test_llama_decoderlayer(self):
         r"""
@@ -151,3 +156,6 @@ class TestModelingLlama(unittest.TestCase):
         for i in range(len(outputs[1])):
             for j in range(len(outputs[1][i])):
                 assert outputs[1][i][j].shape == (2, 16, 128, 8)
+=======
+    
+>>>>>>> b6bfb99b245a1008e70e0a7bd1b9270da958f460
