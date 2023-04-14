@@ -584,6 +584,9 @@ class LlamaModel(LlamaPreTrainedModel):
         return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
 
 class LlamaForCausalLM(LlamaPreTrainedModel):
+    '''
+    LlamaForCausalLM
+    '''
     def __init__(self, config):
         super().__init__(config)
         self.model = LlamaModel(config)
@@ -594,21 +597,39 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
+        '''
+        get_input_embeddings
+        '''
         return self.model.embed_tokens
 
     def set_input_embeddings(self, value):
+        '''
+        set_input_embeddings
+        '''
         self.model.embed_tokens = value
 
     def get_output_embeddings(self):
+        '''
+        get_output_embeddings
+        '''
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
+        '''
+        set_output_embeddings
+        '''
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
+        '''
+        set_decoder
+        '''
         self.model = decoder
 
     def get_decoder(self):
+        '''
+        get_decoder
+        '''
         return self.model
 
     def construct(
@@ -681,6 +702,9 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
+        '''
+        prepare_inputs_for_generation
+        '''
         if past_key_values:
             input_ids = input_ids[:, -1:]
 
@@ -714,8 +738,11 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         for layer_past in past_key_values:
             reordered_past += (tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),)
         return reordered_past
-    
+
 class LlamaForSequenceClassification(LlamaPreTrainedModel):
+    '''
+    LlamaForSequenceClassification
+    '''
     _keys_to_ignore_on_load_missing = [r"lm_head.weight"]
 
     def __init__(self, config):
@@ -776,7 +803,7 @@ class LlamaForSequenceClassification(LlamaPreTrainedModel):
             sequence_lengths = -1
         else:
             if input_ids is not None:
-                sequence_lengths = (ops.ne(input_ids, self.config.pad_token_id).sum(-1) - 1)
+                sequence_lengths = ops.ne(input_ids, self.config.pad_token_id).sum(-1) - 1
             else:
                 sequence_lengths = -1
 
@@ -787,7 +814,7 @@ class LlamaForSequenceClassification(LlamaPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
