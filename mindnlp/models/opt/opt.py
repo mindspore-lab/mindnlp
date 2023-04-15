@@ -6,11 +6,15 @@ import mindspore
 import numpy as np
 from mindspore import nn
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from mindnlp.abc.backbones.pretrained import PretrainedModel
 from mindnlp._legacy.nn import Dropout
 from mindnlp._legacy.functional import arange
 from ..utils.activations import ACT2FN
 from ..utils.mixin import CellUtilMixin
 from ..utils import logging
+from dataclasses import dataclass
+from collections import OrderedDict
+from dataclasses import fields
 
 from .opt_config import OPTConfig
 
@@ -43,7 +47,7 @@ def _make_causal_mask(input_ids_shape: mindspore.size, dtype: mindspore.dtype, p
     """
     Make casual mask for bi-directional self-attention
     """
-    bsz, tgt_len = input_ids_shape
+    bsz, tgt_len = input_ids_shape;
     #mask = mindspore.numpy.full((tgt_len,tgt_len),mindspore.tensor(mindspore.finfo(dtype).min))
     mask = mindspore.numpy.full((tgt_len,tgt_len),mindspore.Tensor(np.finfo(dtype).min))
     mask_cond = mindspore.arrange(mask.size(-1))
@@ -51,7 +55,7 @@ def _make_causal_mask(input_ids_shape: mindspore.size, dtype: mindspore.dtype, p
     mask = mask.to(dtype)
 
     if past_key_values_length > 0:
-        mask = mindspore.ops.concat([mindspore.ops.Zeros(tgt_len, past_key_values_length, dtype=dtype),mask], axis=-1)
+        mask = mindspore.ops.Concat([mindspore.ops.Zeros(tgt_len, past_key_values_length, dtype=dtype),mask], dim=-1)
     return mask[None, None, :, :].expand(bsz, 1, tgt_len, tgt_len + past_key_values_length)
 
 def _expand_mask(mask: mindspore.Tensor, dtype: mindspore.dtype, tgt_len: Optional[int] = None):
@@ -78,7 +82,7 @@ class OPTLearnedPositionalEmbedding(nn.Embedding):
         self.offset = 2
         super().__init__(num_embeddings + self.offset, embedding_dim)
 
-    def forward(self, attention_mask: LongTensor, past_key_values_length: int = 0):
+    def construct(self, attention_mask: LongTensor, past_key_values_length: int = 0):
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
         attention_mask = attention_mask.to(mindspore.int64)# equivalent to torch.tensor.long()?
 
@@ -89,7 +93,7 @@ class OPTLearnedPositionalEmbedding(nn.Embedding):
         # cut positions if `past_key_values_length` is > 0
         positions = positions[:, past_key_values_length:]
 
-        return super().forward(positions + self.offset)
+        return super().construct(positions + self.offset)
 
 
 class OPTAttention(nn.Cell):
@@ -131,15 +135,15 @@ class OPTAttention(nn.Cell):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
     #batch表示有批量中的句子数量，seqlen表示句子中的单词数量，numheads表示头的数量，head_dim表示每个头下单词特征向量的维度
     #这里如果传入一个QKV矩阵，相当于直接通过view被拆分为了多头！！！
-    def forward(
+    def construct(
         self,
         hidden_states: mindspore.Tensor,
-        key_value_states: Optional[mindspore.Tensor] = None,
-        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        layer_head_mask: Optional[mindspore.Tensor] = None,
-        output_attentions: bool = False,
-    ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
+        key_value_states = None,
+        past_key_value = None,
+        attention_mask = None,
+        layer_head_mask = None,
+        output_attentions = False,
+    ):
         """Input shape: Batch x Time x Channel"""
 
         # if key_value_states are provided this layer is used as a cross-attention layer
@@ -205,7 +209,7 @@ class OPTAttention(nn.Cell):
             )
 
         """
-        attention_mask,一个forward中传入的参数,可以看作之前mask机制中返回的一个张量,在这里如果mask不是None的话,就进行mask相关的操作
+        attention_mask,一个construct中传入的参数,可以看作之前mask机制中返回的一个张量,在这里如果mask不是None的话,就进行mask相关的操作
         这是因为这个attention类是attention is all you need paper中所有的实现方法,所以包括了各种attention情况
         """
         if attention_mask is not None:
@@ -295,30 +299,15 @@ class OPTDecoderLayer(nn.Cell):
         self.fc2 = nn.Dense(config.ffn_dim, self.embed_dim, bias=config.enable_bias)#没看太懂具体是要干什么
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)#最后再来一层layernorm
 
-    def forward(
+    def construct(
         self,
         hidden_states: mindspore.Tensor,
-        attention_mask: Optional[mindspore.Tensor] = None,#区分重点
-        layer_head_mask: Optional[mindspore.Tensor] = None,#
-        output_attentions: Optional[bool] = False,
-        use_cache: Optional[bool] = False,
-        past_key_value: Optional[Tuple[torch.Tensor]] = None,
-    ) -> Tuple[torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
-        """
-        Args:
-            hidden_states (`torch.FloatTensor`): input to the layer of shape `(batch, seq_len, embed_dim)`
-            attention_mask (`torch.FloatTensor`, *optional*): attention mask of size
-                `(batch, 1, tgt_len, src_len)` where padding elements are indicated by very large negative values.
-            layer_head_mask (`torch.FloatTensor`, *optional*): mask for attention heads in a given layer of size
-                `(encoder_attention_heads,)`.
-            output_attentions (`bool`, *optional*):
-                Whether or not to return the attentions tensors of all attention layers. See `attentions` under
-                returned tensors for more detail.
-            use_cache (`bool`, *optional*):
-                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding
-                (see `past_key_values`).
-            past_key_value (`Tuple(torch.FloatTensor)`, *optional*): cached past key and value projection states
-        """
+        attention_mask = None,#区分重点
+        layer_head_mask = None,#
+        output_attentions = False,
+        use_cache = False,
+        past_key_value = None,
+    ):
 
         residual = hidden_states
 
@@ -487,65 +476,18 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
 
         return combined_attention_mask
 
-    def forward(
+    def construct(
         self,
         input_ids: mindspore.LongTensor = None,
-        attention_mask: Optional[mindspore.Tensor] = None,#attention mask 和headmask又是什么关系
-        head_mask: Optional[mindspore.Tensor] = None,#传入head_mask,而且这个headmask指定了每一层的mask,通过head_mask[idx]来传递每一层的mask
-        past_key_values: Optional[List[mindspore.FloatTensor]] = None,
-        inputs_embeds: Optional[mindspore.FloatTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, BaseModelOutputWithPast]:
-        r"""
-        Args:
-            input_ids (`torch.LongTensor` of shape `(batch_size, sequence_length)`):
-                Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you
-                provide it.
-
-                Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
-                [`PreTrainedTokenizer.__call__`] for details.
-
-                [What are input IDs?](../glossary#input-ids)
-            attention_mask (`torch.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
-                [What are attention masks?](../glossary#attention-mask)
-            head_mask (`torch.Tensor` of shape `(num_hidden_layers, num_attention_heads)`, *optional*):
-                Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
-            past_key_values (`tuple(tuple(torch.FloatTensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-                Tuple of `tuple(torch.FloatTensor)` of length `config.n_layers`, with each tuple having 2 tensors of
-                shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
-
-                Contains pre-computed hidden-states (key and values in the self-attention blocks and in the
-                cross-attention blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
-
-                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those
-                that don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of
-                all `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-
-            inputs_embeds (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-                Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation.
-                This is useful if you want more control over how to convert `input_ids` indices into associated vectors
-                than the model's internal embedding lookup matrix.
-            output_attentions (`bool`, *optional*):
-                Whether or not to return the attentions tensors of all attention layers. See `attentions` under
-                returned tensors for more detail.
-            output_hidden_states (`bool`, *optional*):
-                Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors
-                for more detail.
-            return_dict (`bool`, *optional*):
-                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-        """
+        attention_mask = None,#attention mask 和headmask又是什么关系
+        head_mask = None,#传入head_mask,而且这个headmask指定了每一层的mask,通过head_mask[idx]来传递每一层的mask
+        past_key_values = None,
+        inputs_embeds = None,
+        use_cache = None,
+        output_attentions = None,
+        output_hidden_states = None,
+        return_dict = None,
+    ):
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -626,7 +568,7 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
 
                     return custom_forward
 
-                """layer_outputs = torch.utils.checkpoint.checkpoint(
+                """layer_outputs = mindspore.utils.checkpoint.checkpoint(
                     create_custom_forward(decoder_layer),
                     hidden_states,
                     attention_mask,
@@ -664,12 +606,15 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
         next_cache = next_decoder_cache if use_cache else None
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
-        return BaseModelOutputWithPast(#problem 缺少BaseModelOutputWithPast，来自from ...modeling_outputs import
+        """return BaseModelOutputWithPast(#problem 缺少BaseModelOutputWithPast，来自from ...modeling_outputs import
             last_hidden_state=hidden_states,
             past_key_values=next_cache,
             hidden_states=all_hidden_states,
             attentions=all_self_attns,
-        )
+        )"""
+        output = (hidden_states,)+(next_cache,)+\
+            (all_hidden_states,)+(all_self_attns,)
+        return output
     
 class OPTModel(OPTPreTrainedModel):
     def __init__(self, config: OPTConfig):
@@ -694,18 +639,18 @@ class OPTModel(OPTPreTrainedModel):
         config_class=_CONFIG_FOR_DOC,
         expected_output=_EXPECTED_OUTPUT_SHAPE,
     )"""
-    def forward(
+    def construct(
         self,
-        input_ids: mindspore.LongTensor = None,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        head_mask: Optional[mindspore.Tensor] = None,#来传递每一层的mask
-        past_key_values: Optional[List[mindspore.FloatTensor]] = None,
-        inputs_embeds: Optional[mindspore.FloatTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, BaseModelOutputWithPast]:
+        input_ids = None,
+        attention_mask = None,
+        head_mask = None,#来传递每一层的mask
+        past_key_values = None,
+        inputs_embeds = None,
+        use_cache = None,
+        output_attentions = None,
+        output_hidden_states = None,
+        return_dict = None,
+    ):
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -729,12 +674,15 @@ class OPTModel(OPTPreTrainedModel):
         if not return_dict:
             return decoder_outputs
 
-        return BaseModelOutputWithPast(
+        """return BaseModelOutputWithPast(
             last_hidden_state=decoder_outputs.last_hidden_state,
             past_key_values=decoder_outputs.past_key_values,
             hidden_states=decoder_outputs.hidden_states,
             attentions=decoder_outputs.attentions,#这些参数都会被optdecoder返回的decoder_outputs更新
-        )
+        )"""
+        output = (decoder_outputs.last_hidden_state,)+(decoder_outputs.past_key_values,)+\
+            (decoder_outputs.hidden_states,)+(decoder_outputs.attentions,)
+        return output
 
 class OPTForCausalLM(OPTPreTrainedModel):
     _keys_to_ignore_on_load_missing = [r"lm_head.weight"]
@@ -768,93 +716,19 @@ class OPTForCausalLM(OPTPreTrainedModel):
         return self.model.decoder
 
     #@replace_return_docstrings(output_type=CausalLMOutputWithPast, config_class=_CONFIG_FOR_DOC)
-    def forward(
+    def construct(
         self,
-        input_ids: mindspore.LongTensor = None,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        head_mask: Optional[mindspore.Tensor] = None,
-        past_key_values: Optional[List[mindspore.FloatTensor]] = None,
-        inputs_embeds: Optional[mindspore.FloatTensor] = None,
-        labels: Optional[mindspore.LongTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, CausalLMOutputWithPast]:
-        r"""
-        Args:
-            input_ids (`mindspore.LongTensor` of shape `(batch_size, sequence_length)`):
-                Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you
-                provide it.
-
-                Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
-                [`PreTrainedTokenizer.__call__`] for details.
-
-                [What are input IDs?](../glossary#input-ids)
-            attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-                - 1 for tokens that are **not masked**,
-                - 0 for tokens that are **masked**.
-
-                [What are attention masks?](../glossary#attention-mask)
-            head_mask (`mindspore.Tensor` of shape `(num_hidden_layers, num_attention_heads)`, *optional*):
-                Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
-
-                - 1 indicates the head is **not masked**,
-                - 0 indicates the head is **masked**.
-
-            past_key_values (`tuple(tuple(mindspore.FloatTensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-                Tuple of `tuple(mindspore.FloatTensor)` of length `config.n_layers`, with each tuple having 2 tensors of
-                shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
-                shape `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`. The two additional
-                tensors are only required when the model is used as a decoder in a Sequence to Sequence model.
-
-                Contains pre-computed hidden-states (key and values in the self-attention blocks and in the
-                cross-attention blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
-
-                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those
-                that don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of
-                all `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-            inputs_embeds (`mindspore.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-                Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation.
-                This is useful if you want more control over how to convert `input_ids` indices into associated vectors
-                than the model's internal embedding lookup matrix.
-            labels (`mindspore.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
-                config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
-                (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
-            use_cache (`bool`, *optional*):
-                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding
-                (see `past_key_values`).
-            output_attentions (`bool`, *optional*):
-                Whether or not to return the attentions tensors of all attention layers. See `attentions` under
-                returned tensors for more detail.
-            output_hidden_states (`bool`, *optional*):
-                Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors
-                for more detail.
-            return_dict (`bool`, *optional*):
-                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-
-        Returns:
-
-        Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, OPTForCausalLM
-
-        >>> model = OPTForCausalLM.from_pretrained("facebook/opt-350m")
-        >>> tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
-
-        >>> prompt = "Hey, are you consciours? Can you talk to me?"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
-
-        >>> # Generate
-        >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
-        >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        "Hey, are you consciours? Can you talk to me?\nI'm not consciours, but I can talk to you."
-        ```"""
-
+        input_ids = None,
+        attention_mask = None,
+        head_mask = None,
+        past_key_values = None,
+        inputs_embeds = None,
+        labels = None,
+        use_cache = None,
+        output_attentions = None,
+        output_hidden_states = None,
+        return_dict = None,
+    ):
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -889,14 +763,17 @@ class OPTForCausalLM(OPTPreTrainedModel):
             output = (logits,) + outputs[1:]
             return (loss,) + output if loss is not None else output
 
-        return CausalLMOutputWithPast(
+        """return CausalLMOutputWithPast(
             loss=loss,
             logits=logits,
             past_key_values=outputs.past_key_values,
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
-        )
-
+        )"""
+        output = (loss,)+(logits,)+\
+            (outputs.past_key_values,)+(outputs.hidden_states,)+(outputs.attentions,)
+        return output
+    
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
@@ -937,33 +814,27 @@ class OPTForSequenceClassification(OPTPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    @add_start_docstrings_to_model_forward(OPT_INPUTS_DOCSTRING)
+    """@add_start_docstrings_to_model_forward(OPT_INPUTS_DOCSTRING)
     @add_code_sample_docstrings(
         checkpoint=_CHECKPOINT_FOR_SEQUENCE_CLASSIFICATION,
         output_type=SequenceClassifierOutputWithPast,
         config_class=_CONFIG_FOR_DOC,
         expected_output=_SEQ_CLASS_EXPECTED_OUTPUT,
         expected_loss=_SEQ_CLASS_EXPECTED_LOSS,
-    )
-    def forward(
+    )"""
+    def construct(
         self,
-        input_ids: Optional[torch.LongTensor] = None,
-        attention_mask: Optional[torch.FloatTensor] = None,
-        head_mask: Optional[torch.FloatTensor] = None,
-        past_key_values: Optional[Tuple[Tuple[torch.Tensor]]] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        labels: Optional[torch.LongTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
-        r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
-        """
+        input_ids = None,
+        attention_mask = None,
+        head_mask = None,
+        past_key_values = None,
+        inputs_embeds = None,
+        labels = None,
+        use_cache = None,
+        output_attentions = None,
+        output_hidden_states = None,
+        return_dict = None,
+    ):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.model(
@@ -1027,13 +898,16 @@ class OPTForSequenceClassification(OPTPreTrainedModel):
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output
 
-        return SequenceClassifierOutputWithPast(
+        """return SequenceClassifierOutputWithPast(
             loss=loss,
             logits=pooled_logits,
             past_key_values=transformer_outputs.past_key_values,
             hidden_states=transformer_outputs.hidden_states,
             attentions=transformer_outputs.attentions,
-        )# problem output函数
+        )# problem output函数"""
+
+        output = (loss,) + (pooled_logits,) + (transformer_outputs.past_key_values,) + (transformer_outputs.hidden_states,) + (transformer_outputs.attentions,)
+        return output       
 
     def get_input_embeddings(self):
         return self.model.decoder.embed_tokens
@@ -1054,59 +928,20 @@ class OPTForQuestionAnswering(OPTPreTrainedModel):
 
     #@add_start_docstrings_to_model_forward(OPT_INPUTS_DOCSTRING)
     #@replace_return_docstrings(output_type=QuestionAnsweringModelOutput, config_class=_CONFIG_FOR_DOC)
-    def forward(
+    def construct(
         self,
-        input_ids: Optional[torch.LongTensor] = None,
-        attention_mask: Optional[mindspore.FloatTensor] = None,
-        head_mask: Optional[mindspore.FloatTensor] = None,
-        past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
-        inputs_embeds: Optional[mindspore.FloatTensor] = None,
-        start_positions: Optional[mindspore.LongTensor] = None,
-        end_positions: Optional[mindspore.LongTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, QuestionAnsweringModelOutput]:
-        r"""
-        start_positions (`mindspore.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the start of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-        end_positions (`mindspore.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for position (index) of the end of the labelled span for computing the token classification loss.
-            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
-            are not taken into account for computing the loss.
-
-        Returns:
-
-        Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, OPTForQuestionAnswering
-        >>> import mindspore
-
-        >>> mindspore.manual_seed(4)  # doctest: +IGNORE_RESULT
-        >>> tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
-
-        >>> # note: we are loading a OPTForQuestionAnswering from the hub here,
-        >>> # so the head will be randomly initialized, hence the predictions will be random
-        >>> model = OPTForQuestionAnswering.from_pretrained("facebook/opt-350m")
-
-        >>> question, text = "Who was Jim Henson?", "Jim Henson was a nice puppet"
-
-        >>> inputs = tokenizer(question, text, return_tensors="pt")
-        >>> with mindspore.no_grad():
-        ...     outputs = model(**inputs)
-
-        >>> answer_start_index = outputs.start_logits.argmax()
-        >>> answer_end_index = outputs.end_logits.argmax()
-
-        >>> predict_answer_tokens = inputs.input_ids[0, answer_start_index : answer_end_index + 1]
-        >>> predicted = tokenizer.decode(predict_answer_tokens)
-        >>> predicted
-        ' Henson?'
-        ```"""
+        input_ids = None,
+        attention_mask = None,
+        head_mask = None,
+        past_key_values = None,
+        inputs_embeds = None,
+        start_positions   = None,
+        end_positions = None,
+        use_cache = None,
+        output_attentions = None,
+        output_hidden_states = None,
+        return_dict = None,
+    ):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.model(
@@ -1148,16 +983,18 @@ class OPTForQuestionAnswering(OPTPreTrainedModel):
             output = (start_logits, end_logits) + transformer_outputs[2:]
             return ((total_loss,) + output) if total_loss is not None else output
 
-        return QuestionAnsweringModelOutput(
+        """return QuestionAnsweringModelOutput(
             loss=total_loss,
             start_logits=start_logits,
             end_logits=end_logits,
             hidden_states=transformer_outputs.hidden_states,
             attentions=transformer_outputs.attentions,
-        )#problem
-
+        )#problem"""
+        output = (total_loss,) + (start_logits,) + (end_logits,) + (transformer_outputs.hidden_states,) + (transformer_outputs.attentions,)
+        return output
     def get_input_embeddings(self):
         return self.model.decoder.embed_tokens
 
     def set_input_embeddings(self, value):
         self.model.decoder.embed_tokens = value
+    
