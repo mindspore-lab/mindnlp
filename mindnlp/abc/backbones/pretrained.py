@@ -15,6 +15,8 @@
 """
 Abstract class for Pretrained models.
 """
+# pylint: disable=E1128
+
 import copy
 import json
 import os
@@ -70,6 +72,14 @@ class PretrainedConfig:
         for key, value in config_map.items():
             setattr(config, key, value)
         return config
+
+    @classmethod
+    def from_json_file(cls, json_file):
+        """Constructs a `Config` from a json file of parameters."""
+        with open(json_file, "r", encoding="utf-8") as reader:
+            text = reader.read()
+        dict_obj = json.loads(text)
+        return cls(**dict_obj)
 
     @classmethod
     def load(cls, pretrained_model_name_or_path):
@@ -303,16 +313,16 @@ class PretrainedModel(nn.Cell):
             f"overwrite this method in the class {self.__class__}"
         )
 
-    # def tie_weights(self):
-    #     """
-    #     Make sure we are sharing the input and output embeddings.
-    #     If you need this feature,
-    #     you need to get it yourself output Add the output you need to add to the embeddings function_ Embedding layer,
-    #     otherwise you cannot
-    #     """
-    #     output_embeddings = self.get_output_embeddings()
-    #     if output_embeddings is not None:
-    #         self._tie_or_clone_weights(output_embeddings, self.get_input_embeddings())
+    def tie_weights(self):
+        """
+        Make sure we are sharing the input and output embeddings.
+        If you need this feature,
+        you need to get it yourself output Add the output you need to add to the embeddings function_ Embedding layer,
+        otherwise you cannot
+        """
+        output_embeddings = self.get_output_embeddings()
+        if output_embeddings is not None:
+            self._tie_or_clone_weights(output_embeddings, self.get_input_embeddings())
 
     def _tie_or_clone_weights(self, output_embeddings, input_embeddings):
         """ Tie or clone module weights depending of weither we are using or not
@@ -357,7 +367,7 @@ class PretrainedModel(nn.Cell):
         base_model.vocab_size = new_num_tokens
 
         # Tie weights again if needed
-        # self.tie_weights()
+        self.tie_weights()
 
         return model_embeds
 
