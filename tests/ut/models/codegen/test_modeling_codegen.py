@@ -40,10 +40,10 @@ class TestModelingCodeGen(unittest.TestCase):
         config = codegen_config.CodeGenConfig()
         model = codegen.CodeGenAttention(config)
 
-        hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 4096)), mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.float32)
 
         attn_output, _ = model(hidden_states)
-        assert attn_output.shape == (2, 2, 4096)
+        assert attn_output.shape == (2, 2, 512)
 
     def test_codegen_mlp(self):
         r"""
@@ -53,10 +53,10 @@ class TestModelingCodeGen(unittest.TestCase):
         config = codegen_config.CodeGenConfig()
         model = codegen.CodeGenMLP(intermediate_size, config)
 
-        hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 4096)), mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.float32)
 
         hidden_states = model(hidden_states)
-        assert hidden_states.shape == (2, 2, 4096)
+        assert hidden_states.shape == (2, 2, 512)
 
     def test_codegen_block(self):
         r"""
@@ -65,7 +65,31 @@ class TestModelingCodeGen(unittest.TestCase):
         config = codegen_config.CodeGenConfig()
         model = codegen.CodeGenBlock(config)
 
-        hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 4096)), mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.float32)
 
         hidden_states = model(hidden_states)
-        assert hidden_states[0].shape == (2, 2, 4096)
+        assert hidden_states[0].shape == (2, 2, 512)
+
+    def test_codegen_model(self):
+        r"""
+            Test CodeGen MODEL
+        """
+        config = codegen_config.CodeGenConfig()
+        model = codegen.CodeGenModel(config)
+
+        input_ids = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.int32)
+
+        input_ids = model(input_ids)
+        assert input_ids[0].shape == (2, 2, 512, 512)
+
+    def test_codegen_forcausallm(self):
+        r"""
+            Test CodeGen FORCAUSALLM
+        """
+        config = codegen_config.CodeGenConfig()
+        model = codegen.CodeGenForCausalLM(config)
+
+        input_ids = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.int32)
+
+        input_ids = model(input_ids)
+        assert input_ids[0].shape == (2, 2, 512, 504)
