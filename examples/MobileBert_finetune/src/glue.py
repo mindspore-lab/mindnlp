@@ -7,20 +7,6 @@ from .utils import DataProcessor, InputExample, InputFeatures
 
 logger = logging.getLogger(__name__)
 
-
-def collate_fn(batch):
-    """
-    batch should be a list of (sequence, target, length) tuples...
-    Returns a padded tensor of sequences sorted from longest to shortest,
-    """
-    all_input_ids, all_attention_mask, all_token_type_ids, all_lens, all_labels = map(ops.stack, zip(*batch))
-    max_len = max(all_lens).item()
-    all_input_ids = all_input_ids[:, :max_len]
-    all_attention_mask = all_attention_mask[:, :max_len]
-    all_token_type_ids = all_token_type_ids[:, :max_len]
-    return all_input_ids, all_attention_mask, all_token_type_ids, all_labels
-
-
 def glue_convert_examples_to_features(examples, tokenizer,
                                       max_seq_length=512,
                                       task=None,
@@ -81,13 +67,9 @@ def glue_convert_examples_to_features(examples, tokenizer,
 
         tokens = []
         token_type_ids = []
-        # tokens.append("[CLS]")
-        # token_type_ids.append(0)
         for token in tokens_a:
             tokens.append(token)
             token_type_ids.append(0)
-        # tokens.append("[SEP]")
-        # token_type_ids.append(0)
 
         if tokens_b:
             for token in tokens_b:
