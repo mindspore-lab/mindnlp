@@ -12,7 +12,7 @@ on:
       - '!mindnlp/dataset/**'
       - '!tests/ut/dataset/**'
       - '!docs/**'
-      - '.github/workflows/ut_test.yaml'
+      - '.github/workflows/**'
   push:
     branches: [ "master" ]
     paths:
@@ -132,3 +132,20 @@ jobs:
     - name: Test ST with pytest
       run: |
         pytest tests/st
+
+  kaggle-gpu-test:
+    needs: pylint-check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.repository_owner == 'mindspore-lab'
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.7
+    - uses: "lvyufeng/action-kaggle-gpu-test@latest"
+      with:
+        kaggle_username: "${{ secrets.KAGGLE_USERNAME }}"
+        kaggle_key: "${{ secrets.KAGGLE_API_KEY }}"
+        kernel_name: mindnlp
+        kernel_job_file: .github/kaggle_gpu_test.py
