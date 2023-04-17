@@ -18,3 +18,4 @@ tokenizers init
 
 from .basic_tokenizer import BasicTokenizer
 from .bert_tokenizer import BertTokenizer
+from .t5_tokenizer import T5Tokenizer
