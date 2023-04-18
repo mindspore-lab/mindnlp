@@ -246,6 +246,15 @@ class PretrainedModel(nn.Cell):
 
     def __init__(self, config):
         super().__init__(config)
+        if not isinstance(config, PretrainedConfig):
+            raise ValueError(
+                "Parameter config in `{}(config)` should be an instance of class `PretrainedConfig`. "
+                "To create a model from a pretrained model use "
+                "`model = {}.from_pretrained(PRETRAINED_MODEL_NAME)`".format(
+                    self.__class__.__name__, self.__class__.__name__
+                )
+            )
+        # Save config in model
         self.config = config
 
     def post_init(self):
@@ -263,6 +272,10 @@ class PretrainedModel(nn.Cell):
         initialize model weights.
         """
         raise NotImplementedError
+
+    @property
+    def base_model(self):
+        return getattr(self, self.base_model_prefix, self)
 
     def get_input_embeddings(self) -> "nn.Cell":
         """
@@ -367,7 +380,7 @@ class PretrainedModel(nn.Cell):
         base_model.vocab_size = new_num_tokens
 
         # Tie weights again if needed
-        self.tie_weights()
+        # self.tie_weights()
 
         return model_embeds
 
