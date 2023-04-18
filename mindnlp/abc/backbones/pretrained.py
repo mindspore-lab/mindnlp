@@ -246,13 +246,6 @@ class PretrainedModel(nn.Cell):
 
     def __init__(self, config):
         super().__init__(config)
-        if not isinstance(config, PretrainedConfig):
-            raise ValueError(
-                f"Parameter config in `{self.__class__.__name__}(config)` "
-                f"should be an instance of class `PretrainedConfig`. "
-                f"To create a model from a pretrained model use "
-                f"`model = {self.__class__.__name__}.from_pretrained(PRETRAINED_MODEL_NAME)`"
-            )
         # Save config in model
         self.config = config
 
