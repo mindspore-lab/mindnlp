@@ -26,7 +26,7 @@ from mindspore.common.initializer import initializer, Normal
 
 from mindnlp._legacy.functional import addmm
 from ..utils.activations import get_activation
-from ...abc.backbones.pretrained import PretrainedConfig
+from ...abc.backbones.pretrained import PreTrainedConfig
 
 try:
     from mindspore.nn import Identity
@@ -184,11 +184,11 @@ class PoolerStartLogits(nn.Cell):
     Compute SQuAD start logits from sequence hidden states.
 
     Args:
-        config ([`PretrainedConfig`]):
+        config ([`PreTrainedConfig`]):
             The config used by the model, will be used to grab the `hidden_size` of the model.
     """
 
-    def __init__(self, config: PretrainedConfig):
+    def __init__(self, config: PreTrainedConfig):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, 1)
 
@@ -224,7 +224,7 @@ class SQuADHead(nn.Cell):
     A SQuAD head inspired by XLNet.
 
     Args:
-        config ([`PretrainedConfig`]):
+        config ([`PreTrainedConfig`]):
             The config used by the model, will be used to grab the `hidden_size` of the model and the `layer_norm_eps`
             to use.
     """
@@ -323,12 +323,12 @@ class PoolerEndLogits(nn.Cell):
     Compute SQuAD end logits from sequence hidden states.
 
     Args:
-        config ([`PretrainedConfig`]):
+        config ([`PreTrainedConfig`]):
             The config used by the model, will be used to grab the `hidden_size` of the model and the `layer_norm_eps`
             to use.
     """
 
-    def __init__(self, config: PretrainedConfig):
+    def __init__(self, config: PreTrainedConfig):
         super().__init__()
         self.dense_0 = nn.Dense(config.hidden_size * 2, config.hidden_size)
         self.activation = nn.Tanh()
@@ -372,7 +372,7 @@ class PoolerAnswerClass(nn.Cell):
     Compute SQuAD 2.0 answer class from classification and start tokens hidden states.
 
     Args:
-        config ([`PretrainedConfig`]):
+        config ([`PreTrainedConfig`]):
             The config used by the model, will be used to grab the `hidden_size` of the model.
     """
 

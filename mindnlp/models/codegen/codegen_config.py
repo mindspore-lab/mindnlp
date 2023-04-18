@@ -16,10 +16,10 @@
 # ============================================================================
 """ CodeGen model configuration"""
 
-from mindnlp.abc.backbones.pretrained import PretrainedConfig
+from mindnlp.abc.backbones.pretrained import PreTrainedConfig
 
 
-class CodeGenConfig(PretrainedConfig):
+class CodeGenConfig(PreTrainedConfig):
     r"""
     CodeGen config
     """

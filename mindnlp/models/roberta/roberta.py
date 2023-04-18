@@ -1,10 +1,26 @@
+# Copyright 2023 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+# pylint: disable=C0103
+
+"""roberta model, base on bert."""
 import mindspore
 from mindspore import nn, ops
 from mindspore import Parameter
 from mindspore.common.initializer import initializer
 
-from mindnlp.abc import PretrainedModel
-from mindnlp.models.bert import BertEmbeddings, BertModel
+from mindnlp.models.bert.bert import BertEmbeddings, BertModel, BertPretrainedModel
 from .roberta_config import RobertaConfig
 
 PRETRAINED_MODEL_ARCHIVE_MAP = {
@@ -23,10 +39,11 @@ PYTORCH_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 
 class RobertaEmbeddings(BertEmbeddings):
+    """Roberta embeddings"""
     def __init__(self, config):
         super().__init__(config)
         self.padding_idx = 1
-    
+
     def construct(self, input_ids, token_type_ids=None, position_ids=None):
         seq_length = input_ids.shape[1]
         if position_ids is None:
@@ -34,19 +51,20 @@ class RobertaEmbeddings(BertEmbeddings):
             position_ids = position_ids.expand_dims(0).expand_as(input_ids)
         return super().construct(input_ids, token_type_ids, position_ids)
 
-class RobertaModel(BertModel):
+class RobertaPreTrainedModel(BertPretrainedModel):
+    """Roberta Pretrained Model."""
     pretrained_model_archive = PRETRAINED_MODEL_ARCHIVE_MAP
     pytorch_pretrained_model_archive_list = PYTORCH_PRETRAINED_MODEL_ARCHIVE_LIST
     config_class = RobertaConfig
 
+class RobertaModel(BertModel):
+    """Roberta Model"""
     def __init__(self, config):
         super().__init__(config)
         self.embeddings = RobertaEmbeddings(config)
 
-    def construct(self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None):
-        return super().construct(input_ids, attention_mask, token_type_ids, position_ids, head_mask)
-
 class RobertaLMHead(nn.Cell):
+    """RobertaLMHead"""
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -65,12 +83,13 @@ class RobertaLMHead(nn.Cell):
         return x
 
 class RobertaClassificationHead(nn.Cell):
+    """RobertaClassificationHead"""
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size, activation='tanh')
         self.dropout = nn.Dropout(p=1-config.hidden_dropout_prob)
         self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
-    
+
     def construct(self, features):
         x = features[:, 0, :]
         x = self.dropout(x)
@@ -79,11 +98,8 @@ class RobertaClassificationHead(nn.Cell):
         x = self.out_proj(x)
         return x
 
-class RobertaForMaskedLM(PretrainedModel):
-    pretrained_model_archive = PRETRAINED_MODEL_ARCHIVE_MAP
-    pytorch_pretrained_model_archive_list = PYTORCH_PRETRAINED_MODEL_ARCHIVE_LIST
-    config_class = RobertaConfig
-
+class RobertaForMaskedLM(RobertaPreTrainedModel):
+    """RobertaForMaskedLM"""
     def __init__(self, config, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
         self.roberta = RobertaModel(config)
@@ -109,12 +125,9 @@ class RobertaForMaskedLM(PretrainedModel):
             outputs = (masked_lm_loss,) + outputs
 
         return outputs
-    
-class RobertaForSequenceClassification(PretrainedModel):
-    pretrained_model_archive = PRETRAINED_MODEL_ARCHIVE_MAP
-    pytorch_pretrained_model_archive_list = PYTORCH_PRETRAINED_MODEL_ARCHIVE_LIST
-    config_class = RobertaConfig
 
+class RobertaForSequenceClassification(RobertaPreTrainedModel):
+    """RobertaForSequenceClassification"""
     def __init__(self, config, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
         self.num_labels = config.num_labels
@@ -142,17 +155,14 @@ class RobertaForSequenceClassification(PretrainedModel):
 
         return outputs  # (loss), logits, (hidden_states), (attentions)
 
-class RobertaForMultipleChoice(PretrainedModel):
-    pretrained_model_archive = PRETRAINED_MODEL_ARCHIVE_MAP
-    pytorch_pretrained_model_archive_list = PYTORCH_PRETRAINED_MODEL_ARCHIVE_LIST
-    config_class = RobertaConfig
-
+class RobertaForMultipleChoice(RobertaPreTrainedModel):
+    """RobertaForMultipleChoice"""
     def __init__(self, config, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
         self.roberta = RobertaModel(config)
-        self.dropout = nn.Dropout(1-config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.classifier = nn.Dense(config.hidden_size, 1)
-    
+
     def construct(self, input_ids, token_type_ids=None, attention_mask=None, labels=None,
                   position_ids=None, head_mask=None):
         num_choices = input_ids.shape[1]

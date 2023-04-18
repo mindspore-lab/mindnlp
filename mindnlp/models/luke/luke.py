@@ -32,7 +32,7 @@ from mindspore import ops, Tensor
 from mindnlp.models.luke.luke_config import LukeConfig
 from ..utils import logging
 from ..utils.activations import ACT2FN
-from ...abc import CellUtilMixin, PretrainedModel
+from ...abc import CellUtilMixin, PreTrainedModel
 
 logger = logging.get_logger(__name__)
 
@@ -583,7 +583,7 @@ class EntityPredictionHead(nn.Cell):
         return hidden_states
 
 
-class LukePreTrainedModel(PretrainedModel, CellUtilMixin):
+class LukePreTrainedModel(PreTrainedModel, CellUtilMixin):
     """
     LukePreTrainedModel
     """
