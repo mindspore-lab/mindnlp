@@ -34,9 +34,8 @@ from mindspore.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
 
 from ..utils.activations import ACT2FN
 from .longformer_config import LongformerConfig
-from ...abc.backbones.pretrained import PretrainedModel
 from ..utils import logging
-from ..utils.mixin import CellUtilMixin
+from ...abc import CellUtilMixin, PretrainedModel
 logger = logging.get_logger(__name__)
 
 def apply_chunking_to_forward(
