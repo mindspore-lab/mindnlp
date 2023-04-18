@@ -24,12 +24,11 @@ import numpy as np
 from mindspore import nn
 from mindspore import ops
 from mindspore import Parameter, Tensor
-from mindnlp.abc.backbones.pretrained import PretrainedModel
 
 from mindnlp._legacy.nn import Dropout
 from mindnlp._legacy.functional import arange
 from ..utils.activations import ACT2FN
-from ..utils.mixin import CellUtilMixin
+from ...abc import CellUtilMixin, PretrainedModel
 from ..utils import logging
 
 from .t5_config import T5Config

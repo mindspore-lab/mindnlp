@@ -20,10 +20,9 @@ import mindspore
 from mindspore import nn
 from mindspore import ops
 from mindspore import Tensor, Parameter
-from mindnlp.abc.backbones.pretrained import PretrainedModel
 from .nezha_config import NezhaConfig
 from ..utils import logging
-from ..utils.mixin import CellUtilMixin
+from ...abc import CellUtilMixin, PretrainedModel
 from ..utils.utils import prune_linear_layer, find_pruneable_heads_and_indices, apply_chunking_to_forward
 from ..utils.activations import ACT2FN
 
