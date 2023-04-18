@@ -248,11 +248,9 @@ class PretrainedModel(nn.Cell):
         super().__init__(config)
         if not isinstance(config, PretrainedConfig):
             raise ValueError(
-                "Parameter config in `{}(config)` should be an instance of class `PretrainedConfig`. "
-                "To create a model from a pretrained model use "
-                "`model = {}.from_pretrained(PRETRAINED_MODEL_NAME)`".format(
-                    self.__class__.__name__, self.__class__.__name__
-                )
+                f"Parameter config in `{self.__class__.__name__}(config)` should be an instance of class `PretrainedConfig`. "
+                f"To create a model from a pretrained model use "
+                f"`model = {self.__class__.__name__}.from_pretrained(PRETRAINED_MODEL_NAME)`"
             )
         # Save config in model
         self.config = config
@@ -275,6 +273,9 @@ class PretrainedModel(nn.Cell):
 
     @property
     def base_model(self):
+        """
+        to get base_model
+        """
         return getattr(self, self.base_model_prefix, self)
 
     def get_input_embeddings(self) -> "nn.Cell":
