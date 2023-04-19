@@ -23,4 +23,6 @@ CONFIG_ARCHIVE_MAP = {
 
 class RobertaConfig(BertConfig):
     """Roberta Config."""
-    pretrained_config_archive = CONFIG_ARCHIVE_MAP
+    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
+
+__all__ = ['RobertaConfig']

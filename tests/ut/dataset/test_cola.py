@@ -39,7 +39,7 @@ class TestCoLA(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_cola(self):
         """Test cola"""
         num_lines = {
@@ -61,7 +61,7 @@ class TestCoLA(unittest.TestCase):
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_cola_by_register(self):
         """test cola by register"""
         _ = load_dataset(
@@ -70,7 +70,7 @@ class TestCoLA(unittest.TestCase):
             split=("train", "dev", "test"),
         )
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_cola_process(self):
         r"""
         Test CoLA_Process
@@ -86,7 +86,7 @@ class TestCoLA(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_cola_process_by_register(self):
         """test cola process by register"""
         train_dataset, _, _ = CoLA()

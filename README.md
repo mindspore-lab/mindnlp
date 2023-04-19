@@ -28,7 +28,7 @@
 ## News 📢
 
 * 🔥 **Latest Features**
-  * 📃 Support PreTrained Models, including **[BERT](./mindnlp/models/bert)**, **[BERT](./mindnlp/models/bert)**, **[GPT2](./mindnlp/models/gpt2)** and **[T5](./mindnlp/models/t5)**.
+  * 📃 Support PreTrained Models, including **[BERT](./mindnlp/models/bert)**, **[Roberta](./mindnlp/models/roberta)**, **[GPT2](./mindnlp/models/gpt2)** and **[T5](./mindnlp/models/t5)**.
     You can use them by following code snippet:
     ```python
     from mindnlp.models import BertModel
