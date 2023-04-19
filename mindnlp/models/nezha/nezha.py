@@ -22,7 +22,7 @@ from mindspore import ops
 from mindspore import Tensor, Parameter
 from .nezha_config import NezhaConfig
 from ..utils import logging
-from ...abc import CellUtilMixin, PretrainedModel
+from ...abc import CellUtilMixin, PreTrainedModel
 from ..utils.utils import prune_linear_layer, find_pruneable_heads_and_indices, apply_chunking_to_forward
 from ..utils.activations import ACT2FN
 
@@ -581,7 +581,7 @@ class NezhaPreTrainingHeads(nn.Cell):
         return prediction_scores, seq_relationship_score
 
 
-class NezhaPreTrainedModel(PretrainedModel):
+class NezhaPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.

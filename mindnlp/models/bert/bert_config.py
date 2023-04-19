@@ -15,12 +15,39 @@
 """
 Bert Model config
 """
-from mindnlp.abc.backbones.pretrained import PretrainedConfig
+from mindnlp.abc.backbones.pretrained import PreTrainedConfig
+from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
 
-class BertConfig(PretrainedConfig):
+
+BERT_SUPPORT_LIST = [
+    "bert-base-uncased",
+    "bert-large-uncased",
+    "bert-base-cased",
+    "bert-large-cased",
+    "bert-base-multilingual-uncased",
+    "bert-base-multilingual-cased",
+    "bert-base-chinese",
+    "bert-base-german-cased",
+    "bert-large-uncased-whole-word-masking",
+    "bert-large-cased-whole-word-masking",
+    "bert-large-uncased-whole-word-masking-finetuned-squad",
+    "bert-large-cased-whole-word-masking-finetuned-squad",
+    "bert-base-cased-finetuned-mrpc",
+    "bert-base-german-dbmdz-cased",
+    "bert-base-german-dbmdz-uncased",
+]
+
+CONFIG_ARCHIVE_MAP = {
+    model: MINDNLP_CONFIG_URL_BASE.format('bert', model) for model in BERT_SUPPORT_LIST
+}
+
+
+class BertConfig(PreTrainedConfig):
     """
     Configuration for BERT-base
     """
+    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
+
     def __init__(self,
                  vocab_size=30522,
                  hidden_size=768,

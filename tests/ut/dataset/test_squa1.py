@@ -46,7 +46,7 @@ class TestSQuAD1(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_squad1(self):
         """Test SQuAD1"""
@@ -63,7 +63,7 @@ class TestSQuAD1(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_squad1_by_register(self):
         """test squad1 by register"""
         _ = load_dataset('squad1',
@@ -71,7 +71,7 @@ class TestSQuAD1(unittest.TestCase):
                  split=('dev')
                  )
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_squad1_process(self):
         """
         Test SQuAD1_Process
@@ -92,7 +92,7 @@ class TestSQuAD1(unittest.TestCase):
         assert (next(squad_dev)[7]).dtype == ms.int32
         assert (next(squad_dev)[8]).dtype == ms.int32
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_squad1_process_by_register(self):
         """
         Test SQuAD1_Process by register

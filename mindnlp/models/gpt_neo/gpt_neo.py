@@ -26,7 +26,7 @@ from mindspore.common.initializer import initializer, Normal
 from mindnlp.models.utils import logging
 from mindnlp.models.utils.activations import ACT2FN
 from mindnlp.models.gpt_neo.gpt_neo_config import GPTNeoConfig
-from ...abc import CellUtilMixin, PretrainedModel
+from ...abc import CellUtilMixin, PreTrainedModel
 
 logger = logging.get_logger(__name__)
 
@@ -278,7 +278,7 @@ class GPTNeoBlock(nn.Cell):
         return outputs
 
 
-class GPTNeoPreTrainedModel(PretrainedModel, CellUtilMixin):
+class GPTNeoPreTrainedModel(PreTrainedModel, CellUtilMixin):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.

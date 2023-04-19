@@ -19,9 +19,9 @@
 # pylint: disable=too-many-arguments
 """ Longformer configuration"""
 from typing import List, Union
-from ...abc.backbones.pretrained import PretrainedConfig
+from ...abc.backbones.pretrained import PreTrainedConfig
 
-class LongformerConfig(PretrainedConfig):
+class LongformerConfig(PreTrainedConfig):
     r"""
     Example:
 
