@@ -74,12 +74,15 @@ def _expand_mask(mask: mindspore.Tensor, dtype: mindspore.dtype, tgt_len = None)
     #bsz, src_len = mask.size()
     bsz, src_len = mindspore.ops.shape(mask)
     tgt_len = tgt_len if tgt_len is not None else src_len
-    maskshape = np.array([bsz, 1, tgt_len, src_len])
-    maskshape = mindspore.Tensor(maskshape, mindspore.int32)
+    #出错原因在于expand不支持在GPU上运行?
+    #maskshape = np.array([bsz, 1, tgt_len, src_len])
+    #maskshape = mindspore.Tensor(maskshape)
     #expanded_mask = mask[:, None, None, :].expand(maskshape).to(dtype)
-    #尝试处理expand的问题,must be a Tensor but got Tuple[Int64*4].
-    expanded_mask = mindspore.ops.expand(mindspore.Tensor(mask[:, None, None, :],mindspore.int32),maskshape).to(dtype)
-
+    #must be a Tensor but got Tuple[Int64*4].
+    #expanded_mask = mindspore.ops.expand(mindspore.Tensor(mask[:, None, None, :]),mindspore.Tensor(maskshape)).to(dtype)
+    multiples = (1, 1, tgt_len,1)
+    expanded_mask = mindspore.ops.tile(mindspore.Tensor(mask[:, None, None, :]),mindspore.Tensor(multiples))
+   
     inverted_mask = 1.0 - expanded_mask
 
     return inverted_mask.masked_fill(inverted_mask.to(mindspore.Tensor.bool), np.finfo(dtype).min)
