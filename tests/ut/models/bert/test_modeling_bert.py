@@ -1,5 +1,4 @@
 # Copyright 2022 Huawei Technologies Co., Ltd
-# Copyright 2022 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +21,9 @@ import mindspore
 from mindspore import Tensor
 from mindspore import context
 
-from mindnlp.models.bert import BertConfig, BertModel
+from mindnlp.models import BertConfig, BertModel
+
+
 class TestModelingBert(unittest.TestCase):
     r"""
     Test model bert
@@ -62,3 +63,11 @@ class TestModelingBert(unittest.TestCase):
         outputs, pooled = model(input_ids)
         assert outputs.shape == (1, 512, 768)
         assert pooled.shape == (1, 768)
+
+    def test_from_pretrained(self):
+        """test from pretrained"""
+        _ = BertModel.from_pretrained('bert-base-uncased')
+
+    def test_from_pretrained_from_pt(self):
+        """test from pt"""
+        _ = BertModel.from_pretrained('bert-base-uncased', from_pt=True)

@@ -21,7 +21,7 @@ import mindspore.numpy as mnp
 from mindspore import nn
 from mindspore import ops
 from mindspore.common.initializer import TruncatedNormal
-from mindnlp.abc.backbones.pretrained import PretrainedModel
+from mindnlp.abc.backbones.pretrained import PreTrainedModel
 
 activation_map = {
     'relu': nn.ReLU(),
@@ -259,30 +259,30 @@ class AlbertTransformer(nn.Cell):
         return outputs  # last-layer hidden state, (all hidden states), (all attentions)
 
 
-class AlbertPretrainedModel(PretrainedModel):
+class AlbertPretrainedModel(PreTrainedModel):
     """ An abstract class to handle weights initialization and
         a simple interface for downloading and loading pretrained models.
     """
     def get_input_embeddings(self):
-        pass
+        """get input embeddings"""
 
     def get_position_embeddings(self):
-        pass
+        """get position embeddings"""
 
     def init_model_weights(self):
-        pass
+        """init model weights"""
 
     def post_init(self):
-        pass
+        """post init"""
 
     def resize_position_embeddings(self):
-        pass
+        """resize position embeddings"""
 
     def save(self):
-        pass
+        """save"""
 
     def set_input_embeddings(self):
-        pass
+        """set input embeddings"""
 
 
 class AlbertModel(AlbertPretrainedModel):
@@ -308,6 +308,7 @@ class AlbertModel(AlbertPretrainedModel):
             output_attentions=None,
             output_hidden_states=None,
     ):
+        """construct"""
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

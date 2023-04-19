@@ -16,5 +16,10 @@
 Ernie Model init
 """
 
+from .import ernie, ernie_config
 from .ernie_config import *
 from .ernie import *
+
+__all__ = []
+__all__.extend(ernie.__all__)
+__all__.extend(ernie_config.__all__)

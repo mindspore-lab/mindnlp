@@ -334,7 +334,7 @@ class GPTModel(GPTPreTrainedModel):
 
 class GPTLMHeadModel(GPTPreTrainedModel):
     r"""
-    GPT Model transformer with a language modeling head on top 
+    GPT Model transformer with a language modeling head on top
     (linear layer with weights tied to the input embeddings).
     """
     def __init__(self, config):
@@ -498,8 +498,8 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
     ):
         r"""
         labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in 
-            `[0, ...,config.num_labels - 1]`. 
+            Labels for computing the sequence classification/regression loss. Indices should be in
+            `[0, ...,config.num_labels - 1]`.
             If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """

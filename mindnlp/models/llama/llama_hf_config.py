@@ -20,9 +20,9 @@
 # limitations under the License.
 """ LLaMA model configuration"""
 
-from ...abc.backbones.pretrained import PretrainedConfig
+from mindnlp.abc import PreTrainedConfig
 
-class LlamaConfig(PretrainedConfig):
+class LlamaConfig(PreTrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`LlamaModel`]. It is used to instantiate an LLaMA
     model according to the specified arguments, defining the model architecture. Instantiating a configuration with the

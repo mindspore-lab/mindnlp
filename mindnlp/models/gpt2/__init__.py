@@ -15,4 +15,10 @@
 """
 GPT2 Models init
 """
-import mindspore
+from . import gpt2, config_gpt2
+from .gpt2 import *
+from .config_gpt2 import *
+
+__all__ = []
+__all__.extend(gpt2.__all__)
+__all__.extend(config_gpt2.__all__)

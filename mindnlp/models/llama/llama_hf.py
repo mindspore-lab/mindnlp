@@ -32,7 +32,7 @@ from mindspore.common.initializer import initializer, Normal
 from mindnlp.models.utils import logging
 from .llama_hf_config import LlamaConfig
 from ..utils.activations import ACT2FN
-from ...abc.backbones.pretrained import PretrainedModel
+from ...abc.backbones.pretrained import PreTrainedModel
 
 logger = logging.get_logger(__name__)
 
@@ -323,7 +323,7 @@ class LlamaDecoderLayer(nn.Cell):
 
         return outputs
 
-class LlamaPreTrainedModel(PretrainedModel):
+class LlamaPreTrainedModel(PreTrainedModel):
     '''
     LlamaPreTrainedModel
     '''
@@ -475,7 +475,8 @@ class LlamaModel(LlamaPreTrainedModel):
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-    ) -> Tuple[Tensor]: # [BaseModelOutputWithPast] ?
+    ) -> Tuple[Tensor]:
+        """construct."""
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
