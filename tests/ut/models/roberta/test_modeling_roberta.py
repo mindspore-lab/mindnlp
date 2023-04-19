@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Bert"""
+"""Test Roberta"""
 import pytest
 import unittest
 import numpy as np
@@ -22,27 +22,21 @@ import mindspore
 from mindspore import Tensor
 from mindspore import context
 
-from mindnlp.models import BertConfig, BertModel
+from mindnlp.models import RobertaConfig, RobertaModel
 
 
-class TestModelingBert(unittest.TestCase):
+class TestModelingRoberta(unittest.TestCase):
     r"""
     Test model bert
     """
-    def setUp(self):
-        """
-        Set up.
-        """
-        self.input = None
-
-    def test_modeling_bert_pynative(self):
+    def test_modeling_roberta_pynative(self):
         r"""
         Test model bert with pynative mode
         """
 
         context.set_context(mode=context.PYNATIVE_MODE)
-        config = BertConfig(num_hidden_layers=2)
-        model = BertModel(config)
+        config = RobertaConfig(num_hidden_layers=2)
+        model = RobertaModel(config)
 
         input_ids = Tensor(np.random.randn(1, 512), mindspore.int32)
 
@@ -50,14 +44,14 @@ class TestModelingBert(unittest.TestCase):
         assert outputs.shape == (1, 512, 768)
         assert pooled.shape == (1, 768)
 
-    def test_modeling_bert_graph(self):
+    def test_modeling_roberta_graph(self):
         r"""
         Test model bert with graph mode
         """
 
         context.set_context(mode=context.GRAPH_MODE)
-        config = BertConfig(num_hidden_layers=2)
-        model = BertModel(config)
+        config = RobertaConfig(num_hidden_layers=2)
+        model = RobertaModel(config)
 
         input_ids = Tensor(np.random.randn(1, 512), mindspore.int32)
 
@@ -66,11 +60,11 @@ class TestModelingBert(unittest.TestCase):
         assert pooled.shape == (1, 768)
 
     @pytest.mark.download
-    def test_from_pretrained(self):
-        """test from pretrained"""
-        _ = BertModel.from_pretrained('bert-base-uncased')
-
-    @pytest.mark.download
     def test_from_pretrained_from_pt(self):
         """test from pt"""
-        _ = BertModel.from_pretrained('bert-base-uncased', from_pt=True)
+        _ = RobertaModel.from_pretrained('roberta-base', from_pt=True)
+
+    @pytest.mark.download
+    def test_from_pretrained(self):
+        """test from pretrained"""
+        _ = RobertaModel.from_pretrained('bert-base-uncased')

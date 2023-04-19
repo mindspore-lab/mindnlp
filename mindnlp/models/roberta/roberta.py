@@ -29,15 +29,6 @@ PRETRAINED_MODEL_ARCHIVE_MAP = {
     "roberta-large-mnli": "https://huggingface.co/lvyufeng/roberta/resolve/main/roberta-large-mnli.ckpt",
 }
 
-PYTORCH_PRETRAINED_MODEL_ARCHIVE_LIST = [
-    "roberta-base",
-    "roberta-large",
-    "roberta-large-mnli",
-    "distilroberta-base",
-    "roberta-base-openai-detector",
-    "roberta-large-openai-detector",
-]
-
 class RobertaEmbeddings(BertEmbeddings):
     """Roberta embeddings"""
     def __init__(self, config):
@@ -53,8 +44,7 @@ class RobertaEmbeddings(BertEmbeddings):
 
 class RobertaPreTrainedModel(BertPretrainedModel):
     """Roberta Pretrained Model."""
-    pretrained_model_archive = PRETRAINED_MODEL_ARCHIVE_MAP
-    pytorch_pretrained_model_archive_list = PYTORCH_PRETRAINED_MODEL_ARCHIVE_LIST
+    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
     config_class = RobertaConfig
 
 class RobertaModel(BertModel):
@@ -186,3 +176,7 @@ class RobertaForMultipleChoice(RobertaPreTrainedModel):
             outputs = (loss,) + outputs
 
         return outputs  # (loss), reshaped_logits, (hidden_states), (attentions)
+
+__all__ = ['RobertaEmbeddings', 'RobertaModel', 'RobertaLMHead', 'RobertaPreTrainedModel',
+           'RobertaForMaskedLM', 'RobertaClassificationHead', 'RobertaForMultipleChoice',
+           'RobertaForSequenceClassification']

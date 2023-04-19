@@ -39,7 +39,7 @@ class TestAmazonReviewFull(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_amazonreviewfull(self):
         """Test amazonreviewfull"""
@@ -58,7 +58,7 @@ class TestAmazonReviewFull(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_amazonreviewfull_by_register(self):
         """test amazonreviewfull by register"""
@@ -68,7 +68,7 @@ class TestAmazonReviewFull(unittest.TestCase):
             split="test"
         )
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_amazonreviewfull_process(self):
         r"""
@@ -85,7 +85,7 @@ class TestAmazonReviewFull(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_amazonreviewfull_process_by_register(self):
         """test amazonreviewfull process by register"""
