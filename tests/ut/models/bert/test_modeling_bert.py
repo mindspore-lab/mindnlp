@@ -13,8 +13,8 @@
 # limitations under the License.
 # ============================================================================
 """Test Bert"""
-import pytest
 import unittest
+import pytest
 import numpy as np
 
 import mindspore
