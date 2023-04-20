@@ -39,7 +39,7 @@ class TestDBpedia(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_dbpedia(self):
         """Test DBpedia"""
@@ -58,7 +58,7 @@ class TestDBpedia(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_dbpedia_by_register(self):
         """test dbpedia by register"""
@@ -68,7 +68,7 @@ class TestDBpedia(unittest.TestCase):
             split=("test"),
         )
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_dbpedia_process(self):
         r"""
@@ -85,7 +85,7 @@ class TestDBpedia(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_dbpedia_process_by_register(self):
         """test DBpedia process by register"""

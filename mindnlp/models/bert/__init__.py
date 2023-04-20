@@ -15,9 +15,9 @@
 """
 Bert Model.
 """
-from mindnlp.models.bert import bert, bert_config
-from mindnlp.models.bert.bert import *
-from mindnlp.models.bert.bert_config import *
+from . import bert, bert_config
+from .bert import *
+from .bert_config import *
 
 __all__ = []
 __all__.extend(bert.__all__)

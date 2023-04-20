@@ -17,9 +17,9 @@
 # ============================================================================
 """MindNLP gpt config"""
 
-from ...abc.backbones.pretrained import PretrainedConfig
+from ...abc.backbones.pretrained import PreTrainedConfig
 
-class GPTConfig(PretrainedConfig):
+class GPTConfig(PreTrainedConfig):
     r"""
     GPT config
     """

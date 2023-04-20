@@ -201,7 +201,7 @@ def SQuAD1_Process(dataset, char_vocab, word_vocab=None,\
     s_idx = []
     e_idx = []
     pad_value_char = char_vocab.lookup_ids("<pad>")
-    abnormals = [' ', '\n', '\u3000', '\u202f', '\u2009']
+    abnormals = [' ', '\n', '\u3000', '\u202f', '\u2009','\u200B', '\u0303', '\u092e']
     for data in dataset:
         context = data[1].asnumpy().tolist()
         question = data[2].asnumpy().tolist()
@@ -210,6 +210,8 @@ def SQuAD1_Process(dataset, char_vocab, word_vocab=None,\
         c_len = len(c_token)
         q_token = tokenizer(question)
         q_len = len(q_token)
+        answer_token = tokenizer(answer)
+        answer_len = len(answer_token)
         s_index = int(data[4])
         e_index = s_index + len(answer)
         c_char = []
@@ -231,6 +233,14 @@ def SQuAD1_Process(dataset, char_vocab, word_vocab=None,\
             if l >= e_index:
                 e_index = i
                 break
+        # exceptional cases
+        if s_index >= c_len or e_index >= c_len:
+            for i, token in enumerate(c_token):
+                if token == answer_token[0]:
+                    s_index = i
+                    if c_token[i + answer_len - 1] == answer_token[-1]:
+                        e_index = i + answer_len - 1
+                        break
         # define lookup operation in char vocab
         char_lookup = Lookup(char_vocab, unk_token="<unk>")
         # generate the char list of the context(after lookup and padding operation)

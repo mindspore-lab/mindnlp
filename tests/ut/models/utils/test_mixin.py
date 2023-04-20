@@ -20,7 +20,7 @@ import numpy as np
 import mindspore
 from mindspore import Tensor
 
-from mindnlp.models.utils.mixin import CellUtilMixin
+from mindnlp.abc import CellUtilMixin
 
 class TestCellUtilMixin(unittest.TestCase):
     r"""

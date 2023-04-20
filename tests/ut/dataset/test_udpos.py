@@ -36,7 +36,7 @@ class TestUDPOS(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_udpos(self):
         """Test UDPOS"""
         num_lines = {
@@ -58,7 +58,7 @@ class TestUDPOS(unittest.TestCase):
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_udpos_by_register(self):
         """test udpos by register"""
         _ = load_dataset(

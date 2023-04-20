@@ -15,9 +15,16 @@
 """
 Models init
 """
-from mindnlp.models import bert
-from mindnlp.models.bert import *
-from mindnlp.models.erine import *
+from . import bert, gpt2, t5, ernie, roberta
+from .bert import *
+from .gpt2 import *
+from .t5 import *
+from .ernie import *
+from .roberta import *
 
 __all__ = []
 __all__.extend(bert.__all__)
+__all__.extend(gpt2.__all__)
+__all__.extend(t5.__all__)
+__all__.extend(ernie.__all__)
+__all__.extend(roberta.__all__)
