@@ -6,12 +6,13 @@ import mindspore
 import numpy as np
 from mindspore import nn
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from mindnlp.abc.backbones.pretrained import PretrainedModel
+#from mindnlp.abc.backbones.pretrained import PreTrainedModel
+from ...abc import CellUtilMixin, PreTrainedModel
 
 from mindnlp._legacy.nn import Dropout
 from mindnlp._legacy.functional import arange
 from ..utils.activations import ACT2FN
-from ..utils.mixin import CellUtilMixin
+#from ..utils.mixin import CellUtilMixin
 from ..utils import logging
 from dataclasses import dataclass
 from collections import OrderedDict
@@ -64,16 +65,28 @@ def _make_causal_mask(input_ids_shape, dtype: mindspore.dtype, past_key_values_l
 
     if past_key_values_length > 0:
         mask = mindspore.ops.Concat([mindspore.ops.Zeros((tgt_len, past_key_values_length), dtype),mask], dim=-1)
-    return mask[None, None, :, :].expand((bsz, 1, tgt_len, tgt_len + past_key_values_length))
+    
+    print("this is mask shape",mindspore.ops.shape(mask))
+    print("tag_len is ", tgt_len)
+    print("bsz is ", bsz)
+    print("tgt_len + past_key_values_length", tgt_len + past_key_values_length)
+    #return mask[None, None, :, :].expand((bsz, 1, tgt_len, tgt_len + past_key_values_length))
     #problem expand的处理
+    multiples = (bsz, 1, 1, 1)
+    return mindspore.ops.tile(mask[None, None, :, :], multiples)
 
 def _expand_mask(mask: mindspore.Tensor, dtype: mindspore.dtype, tgt_len = None):
     """
     Expands attention_mask from `[bsz, seq_len]` to `[bsz, 1, tgt_seq_len, src_seq_len]`.
     """
     #bsz, src_len = mask.size()
+    print("here is mask")
+    print(mindspore.ops.shape(mask))
+    print(mask)
+    print(type(mask))#这里都能出错<class 'mindspore.common.tensor.Tensor'> <class 'mindspore.common._stub_tensor.StubTensor'>
     bsz, src_len = mindspore.ops.shape(mask)
     tgt_len = tgt_len if tgt_len is not None else src_len
+    print(tgt_len)
     #出错原因在于expand不支持在GPU上运行?
     #maskshape = np.array([bsz, 1, tgt_len, src_len])
     #maskshape = mindspore.Tensor(maskshape)
@@ -81,11 +94,29 @@ def _expand_mask(mask: mindspore.Tensor, dtype: mindspore.dtype, tgt_len = None)
     #must be a Tensor but got Tuple[Int64*4].
     #expanded_mask = mindspore.ops.expand(mindspore.Tensor(mask[:, None, None, :]),mindspore.Tensor(maskshape)).to(dtype)
     multiples = (1, 1, tgt_len,1)
-    expanded_mask = mindspore.ops.tile(mindspore.Tensor(mask[:, None, None, :]),mindspore.Tensor(multiples))
+    print(multiples)
+    mask = mindspore.Tensor(mask)
+    #print(mindspore.ops.shape(mask[:, None, None, :]))
+    print("here is unsqueeze")
+    mask = mindspore.ops.unsqueeze(mindspore.Tensor(mask),dim = 1)
+    mask = mindspore.ops.unsqueeze(mindspore.Tensor(mask),dim = 1)
+    #print(mindspore.ops.shape(mindspore.ops.unsqueeze(mindspore.Tensor(mask),dim = 1)))
+    #expanded_mask = mindspore.Tensor(mask[:, None, None, :])
+    #print(expanded_mask)
+    expanded_mask = mindspore.ops.tile(mindspore.Tensor(mask),multiples)
    
     inverted_mask = 1.0 - expanded_mask
+    #mask = mindspore.numpy.full((tgt_len,tgt_len),mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min))
+    #return inverted_mask.masked_fill(inverted_mask.to(mindspore.Tensor.bool), np.finfo(mindspore.dtype_to_nptype(dtype)).min)
+    #return mindspore.ops.masked_fill(inverted_mask,inverted_mask.to(mindspore.Tensor.bool), np.finfo(mindspore.dtype_to_nptype(dtype)).min)
+    #return mindspore.ops.masked_fill(inverted_mask,mindspore.Tensor.bool(inverted_mask), mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min))
+    print("dtype is ",dtype)
+    print("shape of mask is", mindspore.ops.shape(inverted_mask))
+    print(inverted_mask)
+    mask_bool = inverted_mask.astype(mindspore.bool_)
+    print(mask_bool)
+    return mindspore.ops.masked_fill(inverted_mask, mask_bool, mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min))
 
-    return inverted_mask.masked_fill(inverted_mask.to(mindspore.Tensor.bool), np.finfo(dtype).min)
 
 class OPTLearnedPositionalEmbedding(nn.Embedding):
     """
@@ -256,12 +287,20 @@ class OPTAttention(nn.Cell):
         这是因为这个attention类是attention is all you need paper中所有的实现方法,所以包括了各种attention情况
         """
         if attention_mask is not None:
-            if attention_mask.size() != (bsz, 1, tgt_len, src_len):
+            #if attention_mask.size() != (bsz, 1, tgt_len, src_len):
+            if mindspore.ops.shape(attention_mask) != (bsz, 1, tgt_len, src_len):
                 raise ValueError(
                     f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.size()}"
                 )
+            #print("dtype of aw is ", attn_weights.dtype)
+            #print("test min", mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min))
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask#直接加上mask即可
-            attn_weights = mindspore.ops.max(attn_weights, mindspore.tensor(np.finfo(attn_weights.dtype).min))#problem
+            #print("shape of atten_weights is ", mindspore.ops.shape(attn_weights))
+            #attn_weights = mindspore.ops.max(attn_weights, mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min))#problem pytorch与mindspore完全对不上
+            attn_weights = mindspore.ops.maximum(attn_weights, mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min))
+            #print("test max", mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min))
+            #attn_weights = torch.max(attn_weights, torch.tensor(torch.finfo(attn_weights.dtype).min))
+            #mask = mindspore.numpy.full((tgt_len,tgt_len),mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min))
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         # upcast to fp32 if the weights are in fp16. Please see https://github.com/huggingface/transformers/pull/17437
@@ -417,8 +456,8 @@ class OPTDecoderLayer(nn.Cell):
 
         return outputs
     
-class OPTPreTrainedModel(PretrainedModel):#没太看懂
-    """name changed PreTrainedModel->PretrainedModel"""
+class OPTPreTrainedModel(PreTrainedModel):#没太看懂
+    """name changed PreTrainedModel->PretrainedModel,CHANGED BACK"""
     config_class = OPTConfig
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
@@ -514,7 +553,9 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
         """
         mask 机制
         """
+        print("from prepare test direct outputs", attention_mask)
         combined_attention_mask = None
+        print("inputshape is", input_shape[-1])
         if input_shape[-1] > 1:
             combined_attention_mask = _make_causal_mask(
                 input_shape, inputs_embeds.dtype, past_key_values_length=past_key_values_length
@@ -522,6 +563,9 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
 
         if attention_mask is not None:
             # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
+            print("from prepare test type", type(attention_mask))
+            print("from prepare test direct output", attention_mask)
+            #pass
             expanded_attn_mask = _expand_mask(attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1])#.to(inputs_embeds.device)
             combined_attention_mask = (
                 expanded_attn_mask if combined_attention_mask is None else expanded_attn_mask + combined_attention_mask
@@ -541,6 +585,9 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
         output_hidden_states = None,
         return_dict = None,
     ):
+        #problem
+        print("this is input_ids", input_ids)
+        print("this is attention", attention_mask)
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -569,7 +616,13 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
         # embed positions
         if attention_mask is None:
             #attention_mask = mindspore.ops.ones(inputs_embeds.shape[:2], dtype=mindspore.bool, device=inputs_embeds.device)
-            attention_mask = mindspore.ops.ones(inputs_embeds.shape[:2], dtype=mindspore.bool_)
+            attention_mask = mindspore.ops.ones(inputs_embeds.shape[:2], dtype=mindspore.int64)
+            
+        #problem1 None->StubTensor,是否应该通过dtype来修正
+        print("this is attention mask changed",attention_mask)
+        print(type(attention_mask))
+        print("attention_mask direct ouput",attention_mask)
+        #这里可以直接输出，但是传入到expand_mask中就不能输出了
         pos_embeds = self.embed_positions(attention_mask, past_key_values_length)
 
         #调用_prepare_decoder_attention_mask，使用causal mask，然后再下面传入decoder_layer
