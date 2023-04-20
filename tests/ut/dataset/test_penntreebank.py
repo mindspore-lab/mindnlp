@@ -36,7 +36,7 @@ class TestPennTreebank(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_penn_treebank(self):
         """Test PennTreebank"""
         num_lines = {
@@ -57,7 +57,7 @@ class TestPennTreebank(unittest.TestCase):
         assert dataset_valid.get_dataset_size() == num_lines["valid"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_penn_treebank_by_register(self):
         """test penn treebank by register"""
         _ = load_dataset('PennTreebank',

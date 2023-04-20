@@ -24,18 +24,21 @@ import numpy as np
 from mindspore import nn
 from mindspore import ops
 from mindspore import Parameter, Tensor
-from mindnlp.abc.backbones.pretrained import PretrainedModel
 
 from mindnlp._legacy.nn import Dropout
 from mindnlp._legacy.functional import arange
 from ..utils.activations import ACT2FN
-from ..utils.mixin import CellUtilMixin
+from ...abc import CellUtilMixin, PreTrainedModel
 from ..utils import logging
 
 from .t5_config import T5Config
 
 logger = logging.get_logger(__name__)
 
+
+__all__ = ['T5Attention', 'T5DenseActDense', 'T5DenseGatedActDense', 'T5EncoderModel',
+           'T5ForConditionalGeneration', 'T5LayerCrossAttention', 'T5Stack', 'T5LayerSelfAttention',
+           'T5LayerNorm', 'T5Model', 'T5LayerFF', 'T5Block', 'T5PreTrainedModel']
 
 class T5LayerNorm(nn.Cell):
     """T5LayerNorm"""
@@ -502,7 +505,7 @@ class T5Block(nn.Cell):
         # (self-attention weights), (cross-attention position bias),(cross-attention weights)
 
 
-class T5PreTrainedModel(PretrainedModel, CellUtilMixin):
+class T5PreTrainedModel(PreTrainedModel, CellUtilMixin):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.

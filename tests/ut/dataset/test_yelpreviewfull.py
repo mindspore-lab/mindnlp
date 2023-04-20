@@ -39,7 +39,7 @@ class TestYelpReviewFull(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_yelpreviewfull(self):
         """Test yelpreviewfull"""
@@ -58,7 +58,7 @@ class TestYelpReviewFull(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_yelpreviewfull_by_register(self):
         """test yelpreviewfull by register"""
@@ -68,7 +68,7 @@ class TestYelpReviewFull(unittest.TestCase):
             split=("train", "test"),
         )
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_yelpreviewfull_process(self):
         r"""
         Test YelpReviewFull_Process
@@ -84,7 +84,7 @@ class TestYelpReviewFull(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_yelpreviewfull_process_by_register(self):
         """test yelpreviewfull process by register"""
