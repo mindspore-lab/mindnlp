@@ -15,6 +15,10 @@
 """
 T5 Model init
 """
-
+from . import t5, t5_config
 from .t5_config import *
 from .t5 import *
+
+__all__ = []
+__all__.extend(t5.__all__)
+__all__.extend(t5_config.__all__)

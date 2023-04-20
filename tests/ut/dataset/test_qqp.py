@@ -39,7 +39,7 @@ class TestQQP(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_qqp(self):
         """Test qqp"""
@@ -49,13 +49,13 @@ class TestQQP(unittest.TestCase):
         dataset_train = QQP(root=self.root)
         assert dataset_train.get_dataset_size() == num_lines["train"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_qqp_by_register(self):
         """test qqp by register"""
         _ = load_dataset("QQP", root=self.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_qqp_process(self):
         r"""
@@ -73,7 +73,7 @@ class TestQQP(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_qqp_process_by_register(self):
         """test qqp process by register"""

@@ -35,7 +35,7 @@ from mindspore.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
 from ..utils.activations import ACT2FN
 from .longformer_config import LongformerConfig
 from ..utils import logging
-from ...abc import CellUtilMixin, PretrainedModel
+from ...abc import CellUtilMixin, PreTrainedModel
 logger = logging.get_logger(__name__)
 
 def apply_chunking_to_forward(
@@ -1339,7 +1339,7 @@ class LongformerLMHead(nn.Cell):
         self.bias = self.decoder.bias # qbh delete if device
 
 
-class LongformerPreTrainedModel(PretrainedModel, CellUtilMixin):
+class LongformerPreTrainedModel(PreTrainedModel, CellUtilMixin):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
@@ -1470,7 +1470,7 @@ class LongformerModel(LongformerPreTrainedModel):
         # this path should be recorded in the ONNX export, it is fine with padding_len == 0 as well
         if padding_len > 0:
             logger.info(
-                "Input ids are automatically padded from %s to %s to be a multiple of " 
+                "Input ids are automatically padded from %s to %s to be a multiple of "
                 "`config.attention_window`: %s", seq_len, seq_len + padding_len, attention_window
             )
             if input_ids is not None:

@@ -39,7 +39,7 @@ class TestYahooAnswers(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_yahooanswers(self):
         """Test yahooanswers"""
@@ -58,7 +58,7 @@ class TestYahooAnswers(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_yahooanswers_by_register(self):
         """test yahooanswers by register"""
@@ -68,7 +68,7 @@ class TestYahooAnswers(unittest.TestCase):
             split=("train", "test"),
         )
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_yahooanswers_process(self):
         r"""
@@ -85,7 +85,7 @@ class TestYahooAnswers(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_yahooanswers_process_by_register(self):
         """test yahooanswers process by register"""

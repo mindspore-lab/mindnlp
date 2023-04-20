@@ -36,7 +36,7 @@ class TestSogouNews(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_sogounews(self):
         """Test sogounews"""
@@ -55,7 +55,7 @@ class TestSogouNews(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_sogounews_by_register(self):
         """test sogounews by register"""
