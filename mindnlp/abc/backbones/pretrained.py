@@ -385,7 +385,6 @@ class PreTrainedModel(nn.Cell):
         base_model.vocab_size = new_num_tokens
 
         # Tie weights again if needed
-        # self.tie_weights()
 
         return model_embeds
 
