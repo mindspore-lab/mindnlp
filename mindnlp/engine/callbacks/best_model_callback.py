@@ -16,6 +16,7 @@
 Callback for saving and loading best model
 """
 import os
+from pathlib import Path
 import mindspore
 from mindnlp.abc import Callback
 
@@ -33,14 +34,18 @@ class BestModelCallback(Callback):
         save_on_exception (bool): Whether save the model on exception.
 
     """
-    def __init__(self, save_path=None, ckpt_name=None, larger_better=True,
+    def __init__(self, save_path, ckpt_name=None, larger_better=True,
                  auto_load=False, save_on_exception=False):
-        if save_path is not None:
-            os.makedirs(save_path, exist_ok=True)
+        if isinstance(save_path, str):
+            self.save_path = Path(save_path)
+        elif isinstance(save_path, Path):
+            self.save_path = save_path
         else:
-            os.makedirs(os.path.expanduser('~'), exist_ok=True)
+            raise ValueError(f"the 'save_path' argument must be str or Path, but got {type(save_path)}.")
 
-        self.save_path = save_path
+        if not self.save_path.exists():
+            os.makedirs(str(self.save_path))
+
         self.larger_better = larger_better
         self.auto_load = auto_load
         self.best_metrics_values = []
@@ -112,7 +117,7 @@ class BestModelCallback(Callback):
 
         """
         model = run_context.network
-        mindspore.save_checkpoint(model, self.save_path + '/' + self.ckpt_name)
+        mindspore.save_checkpoint(model, str(self.save_path.joinpath(self.ckpt_name)))
         print(f"---------------Best Model: '{self.ckpt_name}' "
               f"has been saved in epoch: {run_context.cur_epoch_nums - 1}.---------------")
 
@@ -125,7 +130,7 @@ class BestModelCallback(Callback):
             run_context (RunContext): Information about the model.
 
         """
-        param_dict = mindspore.load_checkpoint(self.save_path + '/' + self.ckpt_name)
+        param_dict = mindspore.load_checkpoint(str(self.save_path.joinpath(self.ckpt_name)))
         mindspore.load_param_into_net(run_context.network, param_dict)
         run_context.callbacks = []
         print(f"---------------The model is already load the best model from '{self.ckpt_name}'.---------------")
