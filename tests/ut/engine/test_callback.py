@@ -54,7 +54,7 @@ class TestCallbackRun(unittest.TestCase):
     def test_checkpoint_callback_init(self):
         """Test Checkpoint Callback Initialization."""
         try:
-            checkpoint_callback = CheckpointCallback(epochs=1)
+            checkpoint_callback = CheckpointCallback(save_path='save', epochs=1)
         except Exception as exception:
             raise exception
         print(checkpoint_callback)

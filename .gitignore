@@ -136,3 +136,4 @@ rank_0/
 *.ckpt
 download.txt
 *.whl
+*.tar.gz
