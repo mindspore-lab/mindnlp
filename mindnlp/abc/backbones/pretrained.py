@@ -256,6 +256,7 @@ class PreTrainedModel(nn.Cell):
 
     def __init__(self, config):
         super().__init__(config)
+        # Save config in model
         self.config = config
 
     def post_init(self):
@@ -273,6 +274,13 @@ class PreTrainedModel(nn.Cell):
         initialize model weights.
         """
         raise NotImplementedError
+
+    @property
+    def base_model(self):
+        """
+        to get base_model
+        """
+        return getattr(self, self.base_model_prefix, self)
 
     def get_input_embeddings(self) -> "nn.Cell":
         """
@@ -377,7 +385,6 @@ class PreTrainedModel(nn.Cell):
         base_model.vocab_size = new_num_tokens
 
         # Tie weights again if needed
-        self.tie_weights()
 
         return model_embeds
 
