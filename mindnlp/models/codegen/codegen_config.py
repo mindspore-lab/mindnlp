@@ -38,7 +38,7 @@ class CodeGenConfig(PreTrainedConfig):
             n_positions=512,
             n_ctx=512,
             n_embd=512,
-            n_layer=28,
+            n_layer=2,
             n_head=16,
             rotary_dim=64,
             n_inner=None,
