@@ -539,9 +539,6 @@ class PreTrainedModel(nn.Cell):
                     f"Unable to load weights from mindspore checkpoint file '{resolved_archive_file}'. "
                 ) from exc
 
-        not_loaded = load_param_into_net(model, state_dict)[0]
-
-        if not_loaded:
-            raise LookupError(f'found not loaded parameters {not_loaded}.')
+        load_param_into_net(model, state_dict)
 
         return model
