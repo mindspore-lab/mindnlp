@@ -28,7 +28,7 @@ class GPT2Config(PreTrainedConfig):
         vocab_size=50257,
         n_positions=1024,
         n_embd=768,
-        n_layer=2,
+        n_layer=12,
         n_head=12,
         n_inner=None,
         activation_function="gelu_new",
