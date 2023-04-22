@@ -28,10 +28,13 @@ from ..utils import logging
 from ..utils.activations import ACT2FN
 from ..utils.utils import SequenceSummary
 from ..utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
-from ...abc.backbones.pretrained import PretrainedModel
+from ...abc.backbones.pretrained import PreTrainedModel
 
 logger = logging.get_logger(__name__)
 
+
+__all__ = ['GPT2Attention', 'GPT2DoubleHeadsModel', 'GPT2ForSequenceClassification',
+           'GPT2ForTokenClassification', 'GPT2LMHeadModel', 'GPT2Model', 'GPT2MLP']
 
 class GPT2Attention(nn.Cell):
     r"""
@@ -344,7 +347,7 @@ class GPT2Block(nn.Cell):
         return outputs  # hidden_states, present, (attentions, cross_attentions)
 
 
-class GPT2PreTrainedModel(PretrainedModel):
+class GPT2PreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.

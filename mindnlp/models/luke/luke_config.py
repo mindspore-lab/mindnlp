@@ -16,10 +16,10 @@
 # ============================================================================
 """ LUKE configuration"""
 
-from mindnlp.abc.backbones.pretrained import PretrainedConfig
+from mindnlp.abc.backbones.pretrained import PreTrainedConfig
 
 
-class LukeConfig(PretrainedConfig):
+class LukeConfig(PreTrainedConfig):
     """
     Configurations for Luke
     """

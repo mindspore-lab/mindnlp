@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=C0415
 """MindNLP bert model"""
+import os
+import logging
 import mindspore.numpy as mnp
 import mindspore.common.dtype as mstype
 from mindspore import nn
@@ -20,14 +23,55 @@ from mindspore import ops
 from mindspore import Parameter, Tensor
 from mindspore.common.initializer import initializer, TruncatedNormal
 from mindnlp._legacy.nn import Dropout, Matmul
+from mindnlp.abc import PreTrainedModel
+from mindnlp.configs import MINDNLP_MODEL_URL_BASE
+from ..utils.activations import ACT2FN
+from .bert_config import BertConfig, BERT_SUPPORT_LIST
 
-activation_map = {
-    'relu': nn.ReLU(),
-    'gelu': nn.GELU(False),
-    'gelu_approximate': nn.GELU(),
-    'swish':nn.SiLU()
+
+PRETRAINED_MODEL_ARCHIVE_MAP = {
+    model: MINDNLP_MODEL_URL_BASE.format('bert', model) for model in BERT_SUPPORT_LIST
 }
 
+
+def torch_to_mindspore(pth_file):
+    """convert torch checkpoint to mindspore"""
+    try:
+        import torch
+    except Exception as exc:
+        raise ImportError("'import torch' failed, please install torch by "
+                          "`pip install torch` or instructions from 'https://pytorch.org'") \
+                          from exc
+
+    from mindspore.train.serialization import save_checkpoint
+
+    logging.info('Starting checkpoint conversion.')
+    ms_ckpt = []
+    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
+
+    for key, value in state_dict.items():
+        if 'LayerNorm' in key:
+            key = key.replace('LayerNorm', 'layer_norm')
+        if 'layer_norm' in key:
+            if '.weight' in key:
+                key = key.replace('.weight', '.gamma')
+            if '.bias' in key:
+                key = key.replace('.bias', '.beta')
+        if 'embeddings' in key:
+            key = key.replace('weight', 'embedding_table')
+        if 'self' in key:
+            key = key.replace('self', 'self_attn')
+        ms_ckpt.append({'name': key, 'data': Tensor(value.numpy())})
+
+    ms_ckpt_path = pth_file.replace('pytorch_model.bin','mindspore.ckpt')
+    if not os.path.exists(ms_ckpt_path):
+        try:
+            save_checkpoint(ms_ckpt, ms_ckpt_path)
+        except Exception as exc:
+            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, '
+                               f'please checkout the path.') from exc
+
+    return ms_ckpt_path
 
 class BertEmbeddings(nn.Cell):
     """
@@ -59,6 +103,7 @@ class BertEmbeddings(nn.Cell):
         embeddings = self.layer_norm(embeddings)
         embeddings = self.dropout(embeddings)
         return embeddings
+
 
 class BertSelfAttention(nn.Cell):
     """
@@ -161,6 +206,7 @@ class BertAttention(nn.Cell):
         outputs = (attention_output,) + self_outputs[1:]
         return outputs
 
+
 class BertIntermediate(nn.Cell):
     r"""
     Bert Intermediate
@@ -169,7 +215,7 @@ class BertIntermediate(nn.Cell):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size, \
             weight_init=TruncatedNormal(config.initializer_range))
-        self.intermediate_act_fn = activation_map.get(config.hidden_act, nn.GELU(False))
+        self.intermediate_act_fn = ACT2FN[config.hidden_act]
 
     def construct(self, hidden_states):
         hidden_states = self.dense(hidden_states)
@@ -193,6 +239,7 @@ class BertOutput(nn.Cell):
         hidden_states = self. layer_norm(hidden_states + input_tensor)
         return hidden_states
 
+
 class BertLayer(nn.Cell):
     r"""
     Bert Layer
@@ -210,6 +257,7 @@ class BertLayer(nn.Cell):
         layer_output = self.output(intermediate_output, attention_output)
         outputs = (layer_output,) + attention_outputs[1:]
         return outputs
+
 
 class BertEncoder(nn.Cell):
     r"""
@@ -244,6 +292,7 @@ class BertEncoder(nn.Cell):
             outputs += (all_attentions,)
         return outputs
 
+
 class BertPooler(nn.Cell):
     r"""
     Bert Pooler
@@ -268,7 +317,7 @@ class BertPredictionHeadTransform(nn.Cell):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size, \
             weight_init=TruncatedNormal(config.initializer_range))
-        self.transform_act_fn = activation_map.get(config.hidden_act, nn.GELU(False))
+        self.transform_act_fn = ACT2FN[config.hidden_act]
         self.layer_norm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
 
     def construct(self, hidden_states):
@@ -303,6 +352,7 @@ class BertLMPredictionHead(nn.Cell):
         hidden_states = self.decoder(hidden_states) + self.bias
         return hidden_states
 
+
 class BertPreTrainingHeads(nn.Cell):
     r"""
     Bert PreTraining Heads
@@ -319,12 +369,41 @@ class BertPreTrainingHeads(nn.Cell):
         return prediction_scores, seq_relationship_score
 
 
-class BertModel(nn.Cell):
+class BertPretrainedModel(PreTrainedModel):
+    """BertPretrainedModel"""
+    convert_torch_to_mindspore = torch_to_mindspore
+    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+    config_class = BertConfig
+    name = 'bert'
+
+    def get_input_embeddings(self):
+        """get input embeddings"""
+
+    def get_position_embeddings(self):
+        """get position embeddings"""
+
+    def init_model_weights(self):
+        """init model weights"""
+
+    def post_init(self):
+        """post init"""
+
+    def resize_position_embeddings(self):
+        """resize position embeddings"""
+
+    def save(self):
+        """save"""
+
+    def set_input_embeddings(self):
+        """set input embeddings"""
+
+
+class BertModel(BertPretrainedModel):
     r"""
     Bert Model
     """
     def __init__(self, config):
-        super().__init__()
+        super().__init__(config)
         self.embeddings = BertEmbeddings(config)
         self.encoder = BertEncoder(config)
         self.pooler = BertPooler(config)
@@ -359,10 +438,10 @@ class BertModel(nn.Cell):
 
         outputs = (sequence_output, pooled_output,) + encoder_outputs[1:]
         # add hidden_states and attentions if they are here
-        return outputs
-        # sequence_output, pooled_output, (hidden_states), (attentions)
+        return outputs # sequence_output, pooled_output, (hidden_states), (attentions)
 
-class BertForPretraining(nn.Cell):
+
+class BertForPretraining(BertPretrainedModel):
     r"""
     Bert For Pretraining
     """

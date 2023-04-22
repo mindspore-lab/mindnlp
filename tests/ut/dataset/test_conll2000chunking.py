@@ -38,7 +38,7 @@ class TestCoNLL2000Chunking(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_conll2000chunking(self):
         """Test CoNLL2000Chunking"""
         num_lines = {
@@ -56,7 +56,7 @@ class TestCoNLL2000Chunking(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_conll2000chunking_by_register(self):
         """test conll2000chunking by register"""
         _ = load_dataset(
@@ -66,7 +66,7 @@ class TestCoNLL2000Chunking(unittest.TestCase):
         )
 
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_conll2000chunking_process(self):
         r"""
         Test CoNLL2000Chunking_Process
@@ -81,7 +81,7 @@ class TestCoNLL2000Chunking(unittest.TestCase):
         assert (next(agnews_dataset)[1]).dtype == ms.int64
 
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_conll2000chunking_process_by_register(self):
         """test CoNLL2000Chunking process by register"""
         test_dataset = CoNLL2000Chunking(split='test')

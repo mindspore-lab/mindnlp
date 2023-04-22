@@ -20,10 +20,9 @@ import mindspore
 from mindspore import nn
 from mindspore import ops
 from mindspore import Tensor, Parameter
-from mindnlp.abc.backbones.pretrained import PretrainedModel
 from .nezha_config import NezhaConfig
 from ..utils import logging
-from ..utils.mixin import CellUtilMixin
+from ...abc import CellUtilMixin, PreTrainedModel
 from ..utils.utils import prune_linear_layer, find_pruneable_heads_and_indices, apply_chunking_to_forward
 from ..utils.activations import ACT2FN
 
@@ -57,7 +56,7 @@ class NezhaRelativePositionsEncoding(nn.Cell):
         positions_encoding = ops.matmul(one_hot_relative_positions_matrix, embeddings_table)
         my_shape = list(final_mat.shape)
         my_shape.append(depth)
-        self.positions_encoding = positions_encoding.view(tuple(my_shape))
+        self.positions_encoding = Parameter(positions_encoding.view(tuple(my_shape)), requires_grad=False)
 
     def construct(self, length):
         return self.positions_encoding[:length, :length, :]
@@ -73,6 +72,7 @@ class NezhaEmbeddings(nn.Cell):
         self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.token_type_ids = ops.zeros((1, config.max_position_embeddings), dtype=mindspore.int64)
 
     def construct(self, input_ids = None, token_type_ids = None, inputs_embeds = None):
         if input_ids is not None:
@@ -91,7 +91,8 @@ class NezhaEmbeddings(nn.Cell):
         if token_type_ids is None:
             if hasattr(self, "token_type_ids"):
                 buffered_token_type_ids = self.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
+                buffered_token_type_ids_expanded = ops.broadcast_to(buffered_token_type_ids,
+                                                                    (input_shape[0], seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
                 token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
@@ -580,7 +581,7 @@ class NezhaPreTrainingHeads(nn.Cell):
         return prediction_scores, seq_relationship_score
 
 
-class NezhaPreTrainedModel(PretrainedModel):
+class NezhaPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
@@ -678,7 +679,7 @@ class NezhaModel(NezhaPreTrainedModel, CellUtilMixin):
         if token_type_ids is None:
             if hasattr(self.embeddings, "token_type_ids"):
                 buffered_token_type_ids = self.embeddings.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(batch_size, seq_length)
+                buffered_token_type_ids_expanded = ops.broadcast_to(buffered_token_type_ids, (batch_size, seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
                 token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
