@@ -339,8 +339,9 @@ class TestModelingLongformerModel(unittest.TestCase):
         Test model bert with pynative mode
         """
         ms_config = LongformerConfig(
-            attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            attention_window=[8, 8],
             max_position_embeddings=40,
+            num_hidden_layers=2
         )
         ms_model = LongformerModel(ms_config)
         ms_model.set_train(False)
@@ -375,9 +376,10 @@ class TestModelingLongformerForMaskedLM(unittest.TestCase):
         Test model bert with pynative mode
         """
         ms_config = LongformerConfig(
-            attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            attention_window=[8, 8],
             max_position_embeddings=40,
             vocab_size=30,
+            num_hidden_layers=2
         )
         ms_model = LongformerForMaskedLM(ms_config)
         ms_model.set_train(False)
@@ -411,9 +413,10 @@ class TestModelingLongformerForSequenceClassification(unittest.TestCase):
         Test model bert with pynative mode
         """
         ms_config = LongformerConfig(
-            attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            attention_window=[8, 8],
             max_position_embeddings=40,
             vocab_size=30,
+            num_hidden_layers=2
         )
         ms_model = LongformerForSequenceClassification(ms_config)
         ms_model.set_train(False)
@@ -447,9 +450,10 @@ class TestModelingLongformerClassificationHead(unittest.TestCase):
         Test model bert with pynative mode
         """
         ms_config = LongformerConfig(
-            attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            attention_window=[8, 8],
             max_position_embeddings=40,
             vocab_size=30,
+            num_hidden_layers=2
         )
         ms_model = LongformerClassificationHead(ms_config)
         ms_model.set_train(False)
@@ -477,9 +481,10 @@ class TestModelingLongformerForQuestionAnswering(unittest.TestCase):
         Test model bert with pynative mode
         """
         ms_config = LongformerConfig(
-            attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            attention_window=[8, 8],
             max_position_embeddings=40,
             vocab_size=30,
+            num_hidden_layers=2
         )
         ms_model = LongformerForQuestionAnswering(ms_config)
         ms_model.set_train(False)
@@ -513,9 +518,10 @@ class TestModelingLongformerForTokenClassification(unittest.TestCase):
         Test model bert with pynative mode
         """
         ms_config = LongformerConfig(
-            attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            attention_window=[8, 8],
             max_position_embeddings=40,
             vocab_size=30,
+            num_hidden_layers=2
         )
         ms_model = LongformerForTokenClassification(ms_config)
         ms_model.set_train(False)
@@ -549,9 +555,10 @@ class TestModelingLongformerForMultipleChoice(unittest.TestCase):
         Test model bert with pynative mode
         """
         ms_config = LongformerConfig(
-            attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            attention_window=[8, 8],
             max_position_embeddings=40,
             vocab_size=30,
+            num_hidden_layers=2
         )
         ms_model = LongformerForMultipleChoice(ms_config)
         ms_model.set_train(False)

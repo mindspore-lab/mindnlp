@@ -16,7 +16,7 @@
 Callback for saving checkpoint.
 """
 import os
-
+from pathlib import Path
 import mindspore
 from mindnlp.abc import Callback
 
@@ -28,20 +28,25 @@ class CheckpointCallback(Callback):
     Continue training a sample code using the most recent epoch
 
     Args:
-        save_path (str): The path to save the state. A specific path needs to be specified,
-            such as 'checkpoints/'. Default: None.
+        save_path (str, Path): The path to save the state. A specific path needs to be specified,
+            such as 'checkpoints/'.
         ckpt_name (str): Checkpoint name to store. It will set model class name when not specified.
             Default: None.
         epochs (int): Save a checkpoint file every n epochs.
         keep_checkpoint_max (int): Save checkpoint files at most. Default:5.
 
     """
-    def __init__(self, save_path=None, ckpt_name=None, epochs=None, keep_checkpoint_max=5):
-        if save_path is not None:
-            os.makedirs(save_path, exist_ok=True)
+    def __init__(self, save_path, ckpt_name=None, epochs=None, keep_checkpoint_max=5):
+        if isinstance(save_path, str):
+            self.save_path = Path(save_path)
+        elif isinstance(save_path, Path):
+            self.save_path = save_path
         else:
-            os.makedirs(os.path.expanduser('~'), exist_ok=True)
-        self.save_path = save_path
+            raise ValueError(f"the 'save_path' argument must be str or Path, but got {type(save_path)}.")
+
+        if not self.save_path.exists():
+            os.makedirs(str(self.save_path))
+
         self.epochs = epochs
         self.keep_checkpoint_max = keep_checkpoint_max
         self.ckpt_name = ckpt_name
@@ -88,8 +93,10 @@ class CheckpointCallback(Callback):
         if len(self.cached_ckpts) == self.keep_checkpoint_max:
             print('The maximum number of stored checkpoints has been reached.')
             del_ckpt = self.cached_ckpts.pop(0)
-            os.remove(self.save_path + '/' + del_ckpt)
+            del_file = self.save_path.joinpath(del_ckpt)
+            del_file.chmod(0o777)
+            del_file.unlink()
 
-        mindspore.save_checkpoint(model, self.save_path + '/' + ckpt_name)
+        mindspore.save_checkpoint(model, str(self.save_path.joinpath(ckpt_name).resolve()))
         self.cached_ckpts.append(ckpt_name)
         print(f"Checkpoint: '{ckpt_name}' has been saved in epoch: {run_context.cur_epoch_nums - 1}.")
