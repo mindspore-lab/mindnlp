@@ -320,7 +320,7 @@ class LongformerEmbeddings(nn.Cell):
         position_ids = mindspore.numpy.arange(
             self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=mindspore.int64  # delete device
         )
-        return position_ids.unsqueeze(0).expand(input_shape)
+        return position_ids.unsqueeze(0).broadcast_to(input_shape)
 
 
 class LongformerSelfAttention(nn.Cell):
@@ -480,7 +480,7 @@ class LongformerSelfAttention(nn.Cell):
         del attn_scores
 
         # apply dropout
-        attn_probs = mindspore.ops.dropout(attn_probs, p=1-self.dropout, training=self.training)  # qbh no training?
+        attn_probs = ops.dropout(attn_probs, p=self.dropout, training=self.training)  # qbh no training?
         value_vectors = value_vectors.view(seq_len, batch_size, self.num_heads, self.head_dim).swapaxes(0, 1)
         value_vectors = mindspore.Tensor(value_vectors)
         # compute local attention output with global attention value and add
@@ -652,14 +652,14 @@ class LongformerSelfAttention(nn.Cell):
         beginning_mask = beginning_mask_2d[None, :, None, :]
         ending_mask = ops.flip(beginning_mask.copy(), dims=(1, 3))
         beginning_input = input_tensor[:, :affected_seq_len, :, : affected_seq_len + 1]
-        beginning_mask = ops.expand(beginning_mask, Tensor(beginning_input.shape))
+        beginning_mask = ops.broadcast_to(beginning_mask, beginning_input.shape)
 
         input_tensor[:, :affected_seq_len, :, : affected_seq_len + 1] = mindspore.numpy.full_like(
             beginning_input, -float("inf")
         ).where(beginning_mask.bool(), beginning_input)
 
         ending_input = input_tensor[:, -affected_seq_len:, :, -(affected_seq_len + 1):]
-        ending_mask = ending_mask.expand(Tensor(ending_input.shape))
+        ending_mask = ending_mask.broadcast_to(ending_input.shape)
         input_tensor[:, -affected_seq_len:, :, -(affected_seq_len + 1):] = ops.full_like(
             ending_input, -float("inf")
         ).where(ending_mask.bool(), ending_input)
@@ -1819,7 +1819,7 @@ class LongformerClassificationHead(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
 
     def construct(self, hidden_states, **kwargs):
@@ -1969,7 +1969,7 @@ class LongformerForTokenClassification(LongformerPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.longformer = LongformerModel(config, add_pooling_layer=False)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.classifier = nn.Dense(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
@@ -2033,7 +2033,7 @@ class LongformerForMultipleChoice(LongformerPreTrainedModel):
         super().__init__(config)
 
         self.longformer = LongformerModel(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.classifier = nn.Dense(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
