@@ -14,9 +14,9 @@
 # ============================================================================
 """llama model configuration"""
 
-from mindnlp.abc.backbones.pretrained import PretrainedConfig
+from mindnlp.abc import PreTrainedConfig
 
-class LlamaConfig(PretrainedConfig):
+class LlamaConfig(PreTrainedConfig):
     """
     Configuration for Llama
     """

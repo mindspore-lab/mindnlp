@@ -16,6 +16,7 @@
 # pylint: disable=C0412
 # pylint: disable=C0103
 
+import inspect
 from typing import Optional
 
 import mindspore
@@ -25,7 +26,7 @@ from mindspore.common.initializer import initializer, Normal
 
 from mindnlp._legacy.functional import addmm
 from ..utils.activations import get_activation
-from ...abc.backbones.pretrained import PretrainedConfig
+from ...abc.backbones.pretrained import PreTrainedConfig
 
 try:
     from mindspore.nn import Identity
@@ -183,11 +184,11 @@ class PoolerStartLogits(nn.Cell):
     Compute SQuAD start logits from sequence hidden states.
 
     Args:
-        config ([`PretrainedConfig`]):
+        config ([`PreTrainedConfig`]):
             The config used by the model, will be used to grab the `hidden_size` of the model.
     """
 
-    def __init__(self, config: PretrainedConfig):
+    def __init__(self, config: PreTrainedConfig):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, 1)
 
@@ -223,7 +224,7 @@ class SQuADHead(nn.Cell):
     A SQuAD head inspired by XLNet.
 
     Args:
-        config ([`PretrainedConfig`]):
+        config ([`PreTrainedConfig`]):
             The config used by the model, will be used to grab the `hidden_size` of the model and the `layer_norm_eps`
             to use.
     """
@@ -322,12 +323,12 @@ class PoolerEndLogits(nn.Cell):
     Compute SQuAD end logits from sequence hidden states.
 
     Args:
-        config ([`PretrainedConfig`]):
+        config ([`PreTrainedConfig`]):
             The config used by the model, will be used to grab the `hidden_size` of the model and the `layer_norm_eps`
             to use.
     """
 
-    def __init__(self, config: PretrainedConfig):
+    def __init__(self, config: PreTrainedConfig):
         super().__init__()
         self.dense_0 = nn.Dense(config.hidden_size * 2, config.hidden_size)
         self.activation = nn.Tanh()
@@ -371,7 +372,7 @@ class PoolerAnswerClass(nn.Cell):
     Compute SQuAD 2.0 answer class from classification and start tokens hidden states.
 
     Args:
-        config ([`PretrainedConfig`]):
+        config ([`PreTrainedConfig`]):
             The config used by the model, will be used to grab the `hidden_size` of the model.
     """
 
@@ -409,3 +410,88 @@ class PoolerAnswerClass(nn.Cell):
         x = ops.squeeze(self.dense_1(x),axis=-1)
 
         return x
+
+
+def prune_linear_layer(layer, index, axis=0):
+    """
+    Prune a linear layer to keep only entries in index.
+    Used to remove heads.
+    Args:
+        layer (`mindspore.nn.Dense`): The layer to prune.
+        index (`mindspore.Tensor[int64]`): The indices to keep in the layer.
+        axis (`int`, *optional*, defaults to 0): The dimension on which to keep the indices.
+    Returns:
+        `mindspore.nn.Dense`: The pruned layer as a new layer with `requires_grad=True`.
+    """
+    gamma_l = layer.gamma.index_select(axis, index)
+    if layer.beta is not None:
+        if axis == 1:
+            beta_l = layer.beta
+        else:
+            beta_l = layer.beta[index]
+    new_size = list(layer.gamma.shape())
+    new_size[axis] = len(index)
+    new_layer = nn.Dense(new_size[1], new_size[0], has_bias=layer.beta is not None)
+    new_layer.gamma.requires_grad = False
+    new_layer.gamma = gamma_l.copy()
+    new_layer.gamma.requires_grad = True
+    if layer.beta is not None:
+        new_layer.beta.requires_grad = False
+        new_layer.beta = beta_l.copy()
+        new_layer.beta.requires_grad = True
+    return new_layer
+
+
+def apply_chunking_to_forward(forward_fn, chunk_size, chunk_axis, *input_tensors):
+    """
+    This function chunks the `input_tensors` into smaller input tensor parts of size `chunk_size` over the dimension
+    `chunk_axis`. It then applies a layer `forward_fn` to each chunk independently to save memory.
+    If the `forward_fn` is independent across the `chunk_dim` this function will yield the same result as directly
+    applying `forward_fn` to `input_tensors`.
+    Args:
+        forward_fn (`Callable[..., mindspore.Tensor]`):
+            The forward function of the model.
+        chunk_size (`int`):
+            The chunk size of a chunked tensor: `num_chunks = len(input_tensors[0]) / chunk_size`.
+        chunk_axis (`int`):
+            The dimension over which the `input_tensors` should be chunked.
+        input_tensors (`Tuple[mindspore.Tensor]`):
+            The input tensors of `forward_fn` which will be chunked
+    Returns:
+        `mindspore.Tensor`: A tensor with the same shape as the `forward_fn` would have given if applied`.
+    """
+    assert len(input_tensors) > 0, f"{input_tensors} has to be a tuple/list of tensors"
+
+     # inspect.signature exist since python 3.5 and is a python method -> no problem with backward compatibility
+    num_args_in_forward_chunk_fn = len(inspect.signature(forward_fn).parameters)
+    if num_args_in_forward_chunk_fn != len(input_tensors):
+        raise ValueError(
+            f"forward_chunk_fn expects {num_args_in_forward_chunk_fn} arguments, but only {len(input_tensors)} input "
+            "tensors are given"
+        )
+
+    if chunk_size > 0:
+        tensor_shape = input_tensors[0].shape[chunk_axis]
+        for input_tensor in input_tensors:
+            if input_tensor.shape[chunk_axis] != tensor_shape:
+                raise ValueError(
+                    f"All input tenors have to be of the same shape: {tensor_shape}, "
+                    f"found shape {input_tensor.shape[chunk_axis]}"
+                )
+
+        if input_tensors[0].shape[chunk_axis] % chunk_size != 0:
+            raise ValueError(
+                f"The dimension to be chunked {input_tensors[0].shape[chunk_axis]} has to be a multiple of the chunk "
+                f"size {chunk_size}"
+            )
+
+        num_chunks = input_tensors[0].shape[chunk_axis] // chunk_size
+
+        # chunk input tensor into tuples
+        input_tensors_chunks = tuple(input_tensor.chunk(num_chunks, axis=chunk_axis) for input_tensor in input_tensors)
+        # apply forward fn to every tuple
+        output_chunks = tuple(forward_fn(*input_tensors_chunk) for input_tensors_chunk in zip(*input_tensors_chunks))
+        # concatenate output at same dimension
+        return ops.cat(output_chunks, axis=chunk_axis)
+
+    return forward_fn(*input_tensors)
