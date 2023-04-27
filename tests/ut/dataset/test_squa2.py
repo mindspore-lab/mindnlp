@@ -37,7 +37,7 @@ class TestSQuAD2(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_squad2(self):
         """Test SQuAD2"""
@@ -54,7 +54,7 @@ class TestSQuAD2(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_squad2_by_register(self):
         """test squad2 by register"""
         _ = load_dataset('squad2',

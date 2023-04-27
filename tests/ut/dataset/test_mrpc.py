@@ -39,7 +39,7 @@ class TestMRPC(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_mrpc(self):
         """Test mrpc"""
         num_lines = {
@@ -56,12 +56,12 @@ class TestMRPC(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_mrpc_by_register(self):
         """test mrpc by register"""
         _ = load_dataset('MRPC', root=self.root, split=('train', 'test'),)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_mrpc_process(self):
         r"""
         Test MRPC_Process
@@ -78,7 +78,7 @@ class TestMRPC(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_mrpc_process_by_register(self):
         """test mrpc process by register"""
         train_dataset, _ = MRPC()

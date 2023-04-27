@@ -39,7 +39,7 @@ class TestMNLI(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_mnli(self):
         """Test mnli"""
@@ -62,7 +62,7 @@ class TestMNLI(unittest.TestCase):
         assert dataset_dev_matched.get_dataset_size() == num_lines["dev_matched"]
         assert dataset_dev_mismatched.get_dataset_size() == num_lines["dev_mismatched"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_mnli_by_register(self):
         """test mnli by register"""
@@ -72,7 +72,7 @@ class TestMNLI(unittest.TestCase):
             split=("dev_matched", "dev_mismatched"),
         )
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_mnli_process(self):
         r"""
@@ -90,7 +90,7 @@ class TestMNLI(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_mnli_process_by_register(self):
         """test mnli process by register"""

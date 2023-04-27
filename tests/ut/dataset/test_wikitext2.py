@@ -37,7 +37,7 @@ class TestWikiText2(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_wikitext2(self):
         """Test WikiText2"""
         num_lines = {
@@ -58,7 +58,7 @@ class TestWikiText2(unittest.TestCase):
         assert dataset_valid.get_dataset_size() == num_lines["valid"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_squad2_by_register(self):
         """test squad2 by register"""
         _ = load_dataset('WikiText2',

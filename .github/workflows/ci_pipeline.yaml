@@ -12,7 +12,7 @@ on:
       - '!mindnlp/dataset/**'
       - '!tests/ut/dataset/**'
       - '!docs/**'
-      - '.github/workflows/ut_test.yaml'
+      - '.github/workflows/**'
   push:
     branches: [ "master" ]
     paths:
@@ -78,7 +78,7 @@ jobs:
         pip install -r download.txt
     - name: Test with pytest
       run: |
-        pytest -m 'not dataset' tests/ut
+        pytest -m 'not download' tests/ut
 
   release-test:
     needs: pylint-check
@@ -102,7 +102,7 @@ jobs:
         pip install mindspore==${{matrix.ms_version}}
     - name: Test with pytest
       run: |
-        pytest -m 'not dataset' --ignore=tests/ut/models tests/ut 
+        pytest -m 'not download' --ignore=tests/ut/models tests/ut 
 
   st-test:
     needs: ut-test
@@ -132,3 +132,20 @@ jobs:
     - name: Test ST with pytest
       run: |
         pytest tests/st
+
+  kaggle-gpu-test:
+    needs: pylint-check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.repository_owner == 'mindspore-lab'
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.7
+    - uses: "lvyufeng/action-kaggle-gpu-test@latest"
+      with:
+        kaggle_username: "${{ secrets.KAGGLE_USERNAME }}"
+        kaggle_key: "${{ secrets.KAGGLE_API_KEY }}"
+        kernel_name: mindnlp
+        kernel_job_file: .github/kaggle_gpu_test.py

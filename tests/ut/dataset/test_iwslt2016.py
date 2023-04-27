@@ -36,7 +36,7 @@ class TestIWSLT2016(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_iwslt2016(self):
         """Test IWSLT2016"""
@@ -55,7 +55,7 @@ class TestIWSLT2016(unittest.TestCase):
             root=self.root, split='train', language_pair=('de', 'en'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_iwslt2016_by_register(self):
         """test iwslt2016 by register"""

@@ -25,6 +25,19 @@
 [Tutorials](#tutorials) |
 [Notes](#notes)
 
+## News 📢
+
+* 🔥 **Latest Features**
+  * 📃 Support PreTrained Models, including **[BERT](./mindnlp/models/bert)**, **[Roberta](./mindnlp/models/roberta)**, **[GPT2](./mindnlp/models/gpt2)** and **[T5](./mindnlp/models/t5)**.
+    You can use them by following code snippet:
+    ```python
+    from mindnlp.models import BertModel
+
+    model = BertModel.from_pretrained('bert-base-cased')
+    ```
+
+
+
 ## Introduction
 
 MindNLP is an open source NLP library based on MindSpore. It supports a platform for solving natural language processing tasks, containing many common approaches in NLP. It can help researchers and developers to construct and train models more conveniently and rapidly.
