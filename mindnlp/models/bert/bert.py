@@ -18,8 +18,7 @@ import os
 import logging
 import mindspore.numpy as mnp
 import mindspore.common.dtype as mstype
-from mindspore import nn
-from mindspore import ops
+from mindspore import nn, ops
 from mindspore import Parameter, Tensor
 from mindspore.common.initializer import initializer, TruncatedNormal
 from mindnlp._legacy.nn import Dropout, Matmul
@@ -474,7 +473,64 @@ class BertForPretraining(BertPretrainedModel):
 
         return outputs
 
+class BertForSequenceClassification(BertPretrainedModel):
+    """Bert Model for classification tasks"""
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+        self.config = config
+
+        self.bert = BertModel(config)
+        classifier_dropout = (
+            config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
+        )
+        self.classifier = nn.Dense(config.hidden_size, self.num_labels)
+        self.dropout = Dropout(classifier_dropout)
+
+        problem_type = config.problem_type
+        if problem_type is None:
+            self.loss = None
+        else:
+            if self.num_labels == 1:
+                self.problem_type = "regression"
+                self.loss = nn.MSELoss()
+            elif self.num_labels > 1:
+                self.problem_type = "single_label_classification"
+                self.loss = nn.CrossEntropyLoss()
+            else:
+                self.problem_type = "multi_label_classification"
+                self.loss = nn.BCEWithLogitsLoss()
+
+    def construct(self, input_ids, attention_mask=None, token_type_ids=None,
+                  position_ids=None, head_mask=None, labels=None):
+        outputs = self.bert(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask
+        )
+        pooled_output = outputs[1]
+
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+
+        output = (logits,) + outputs[2:]
+
+        if labels is not None:
+            if self.num_labels == 1:
+                loss = self.loss(logits.squeeze(), labels.squeeze())
+            elif self.num_labels > 1:
+                loss = self.loss(logits.view(-1, self.num_labels), labels.view(-1))
+            else:
+                loss = self.loss(logits, labels)
+
+            return (loss,) + output
+
+        return output
+
 __all__ = [
     'BertEmbeddings', 'BertAttention', 'BertEncoder', 'BertIntermediate', 'BertLayer',
-    'BertModel', 'BertForPretraining', 'BertLMPredictionHead'
+    'BertModel', 'BertForPretraining', 'BertLMPredictionHead', 'BertForSequenceClassification'
 ]
