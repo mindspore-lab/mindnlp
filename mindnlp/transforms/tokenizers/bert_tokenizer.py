@@ -15,16 +15,44 @@
 """
 BertTokenizer
 """
-
+import os
 from typing import Union
 import numpy as np
 from mindspore.dataset.transforms.transforms import PyTensorOperation
 from mindspore.dataset.text.transforms import Implementation
 from mindspore.dataset.text import Vocab as msVocab
+from tokenizers import Tokenizer
 from tokenizers.implementations import BertWordPieceTokenizer
+from mindnlp.abc import PreTrainedTokenizer
 from mindnlp.vocab import Vocab
+from mindnlp.models.bert.bert_config import BERT_SUPPORT_LIST
+from mindnlp.configs import HF_TOKENIZER_CONFIG_URL_BASE
 
-class BertTokenizer(PyTensorOperation):
+PRETRAINED_VOCAB_MAP = {
+    model: HF_TOKENIZER_CONFIG_URL_BASE.format(model) for model in BERT_SUPPORT_LIST
+}
+
+
+PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
+    "bert-base-uncased": 512,
+    "bert-large-uncased": 512,
+    "bert-base-cased": 512,
+    "bert-large-cased": 512,
+    "bert-base-multilingual-uncased": 512,
+    "bert-base-multilingual-cased": 512,
+    "bert-base-chinese": 512,
+    "bert-base-german-cased": 512,
+    "bert-large-uncased-whole-word-masking": 512,
+    "bert-large-cased-whole-word-masking": 512,
+    "bert-large-uncased-whole-word-masking-finetuned-squad": 512,
+    "bert-large-cased-whole-word-masking-finetuned-squad": 512,
+    "bert-base-cased-finetuned-mrpc": 512,
+    "bert-base-german-dbmdz-cased": 512,
+    "bert-base-german-dbmdz-uncased": 512,
+}
+
+
+class BertTokenizer(PyTensorOperation, PreTrainedTokenizer):
     """
     Tokenizer used for Bert text process.
 
@@ -60,15 +88,29 @@ class BertTokenizer(PyTensorOperation):
 
     """
 
-    def __init__(self, vocab: Union[msVocab, Vocab], lower_case:bool = True, return_token = False):
+    max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
+    pretrained_vocab_map = PRETRAINED_VOCAB_MAP
+
+    def __init__(self, vocab: Union[msVocab, Vocab, str], **kwargs):
         super().__init__()
         if isinstance(vocab, msVocab):
             vocab_dict = vocab.vocab()
         elif isinstance(vocab, Vocab):
             vocab_dict = vocab.vocab
+        elif isinstance(vocab, str):
+            if not os.path.isfile(vocab):
+                raise ValueError(f"{vocab} is not a file.")
         else:
             raise ValueError(f'only support Vocab class from mindspore or mindnlp, but got {vocab}')
-        self.tokenizer = BertWordPieceTokenizer(vocab=vocab_dict, lowercase=lower_case)
+
+        lower_case = kwargs.pop('lower_case', False)
+        return_token = kwargs.pop('return_token', False)
+
+        if isinstance(vocab, str):
+            self.tokenizer = Tokenizer.from_file(vocab)
+        else:
+            self.tokenizer = BertWordPieceTokenizer(vocab=vocab_dict, lowercase=lower_case)
+
         self.return_token = return_token
         self.implementation = Implementation.PY
 
@@ -91,6 +133,14 @@ class BertTokenizer(PyTensorOperation):
     def decode(self, ids:list):
         """decode function"""
         return self.tokenizer.decode(ids)
+
+    def token_to_id(self, token):
+        """token to index."""
+        return self.tokenizer.token_to_id(token)
+
+    def id_to_token(self, index):
+        """index to token."""
+        return self.tokenizer.id_to_token(index)
 
     def execute_py(self, text_input):
         """
