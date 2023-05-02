@@ -27,6 +27,7 @@ from mindspore import nn, ops
 
 from mindnlp.configs import HF_CONFIG_URL_BASE, HF_MODEL_URL_BASE
 from mindnlp.utils.download import cached_path
+from .mixin import CellUtilMixin, GenerationMixin
 
 logger = logging.getLogger(__name__)
 
@@ -238,7 +239,7 @@ class PreTrainedConfig:
         return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
 
 
-class PreTrainedModel(nn.Cell):
+class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
     """
     Abstract class for Pretrained models
     """
