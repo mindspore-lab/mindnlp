@@ -174,3 +174,8 @@ class CellUtilMixin:
         assert head_mask.dim() == 5, f"head_mask.dim != 5, instead {head_mask.dim()}"
         head_mask = head_mask.astype(dtype=self.dtype)  # switch to float if need + fp16 compatibility
         return head_mask
+
+class GenerationMixin:
+    """
+    A class containing all functions for auto-regressive text generation, to be used as a mixin in [`PreTrainedModel`].
+    """

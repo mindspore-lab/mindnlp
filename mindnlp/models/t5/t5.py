@@ -28,7 +28,7 @@ from mindspore import Parameter, Tensor
 from mindnlp._legacy.nn import Dropout
 from mindnlp._legacy.functional import arange
 from ..utils.activations import ACT2FN
-from ...abc import CellUtilMixin, PreTrainedModel
+from ...abc import PreTrainedModel
 from ..utils import logging
 
 from .t5_config import T5Config
@@ -505,7 +505,7 @@ class T5Block(nn.Cell):
         # (self-attention weights), (cross-attention position bias),(cross-attention weights)
 
 
-class T5PreTrainedModel(PreTrainedModel, CellUtilMixin):
+class T5PreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
