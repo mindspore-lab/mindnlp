@@ -522,7 +522,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         model = cls(config, *model_args, **model_kwargs)
 
         if from_pt:
-            resolved_archive_file = cls.convert_torch_to_mindspore(resolved_archive_file)
+            resolved_archive_file = cls.convert_torch_to_mindspore(resolved_archive_file, prefix=cls.base_model_prefix)
 
         if state_dict is None:
             try:
@@ -540,6 +540,9 @@ class PreTrainedTokenizer:
     """
     Pretrained Tokenizer abstract class.
     """
+
+    tokenizer = None
+
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *init_inputs, **kwargs):
         """from_pretrained"""
@@ -594,5 +597,23 @@ class PreTrainedTokenizer:
                              "a string of model name or checkpoint path, but got `None`.")
 
         return cls(resolved_archive_file, *init_inputs, **kwargs)
+
+    def encode(self, text_input):
+        """encode funtion"""
+        tokens = self.tokenizer.encode(text_input)
+        return tokens
+
+    def decode(self, ids:list):
+        """decode function"""
+        return self.tokenizer.decode(ids)
+
+    def token_to_id(self, token):
+        """token to index."""
+        return self.tokenizer.token_to_id(token)
+
+    def id_to_token(self, index):
+        """index to token."""
+        return self.tokenizer.id_to_token(index)
+
 
 __all__ = ['PreTrainedConfig', 'PreTrainedModel', 'PreTrainedTokenizer']

@@ -125,23 +125,6 @@ class BertTokenizer(PyTensorOperation, PreTrainedTokenizer):
                 f"Input should be a text line in 1-D NumPy format, got {type(text_input)}.")
         return super().__call__(text_input)
 
-    def encode(self, text_input):
-        """encode funtion"""
-        tokens = self.tokenizer.encode(text_input)
-        return tokens
-
-    def decode(self, ids:list):
-        """decode function"""
-        return self.tokenizer.decode(ids)
-
-    def token_to_id(self, token):
-        """token to index."""
-        return self.tokenizer.token_to_id(token)
-
-    def id_to_token(self, index):
-        """index to token."""
-        return self.tokenizer.id_to_token(index)
-
     def execute_py(self, text_input):
         """
         Execute method.

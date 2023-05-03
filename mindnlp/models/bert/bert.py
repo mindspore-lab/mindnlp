@@ -33,8 +33,10 @@ PRETRAINED_MODEL_ARCHIVE_MAP = {
 }
 
 
-def torch_to_mindspore(pth_file):
+def torch_to_mindspore(pth_file, **kwargs):
     """convert torch checkpoint to mindspore"""
+    _ = kwargs.get('prefix', '')
+
     try:
         import torch
     except Exception as exc:
