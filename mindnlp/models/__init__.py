@@ -15,8 +15,9 @@
 """
 Models init
 """
-from . import bert, gpt2, t5, ernie, roberta
+from . import bert, gpt2, t5, ernie, roberta, gpt
 from .bert import *
+from .gpt import *
 from .gpt2 import *
 from .t5 import *
 from .ernie import *
@@ -24,6 +25,7 @@ from .roberta import *
 
 __all__ = []
 __all__.extend(bert.__all__)
+__all__.extend(gpt.__all__)
 __all__.extend(gpt2.__all__)
 __all__.extend(t5.__all__)
 __all__.extend(ernie.__all__)

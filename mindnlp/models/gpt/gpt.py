@@ -15,24 +15,71 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=C0103
+# pylint: disable=C0415
+
 """MindNLP gpt model"""
-import math
+import os
 import numpy as np
 import mindspore
 from mindspore import nn
 from mindspore import ops
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindnlp.models.gpt.gpt_config import GPTConfig
-from mindnlp._legacy.functional import split, tril
 from mindnlp._legacy.nn import Dropout
+from mindnlp.abc import PreTrainedModel
+from mindnlp.configs import HF_MODEL_URL_BASE
 from ..utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
 from ..utils.utils import SequenceSummary
 from ..utils.activations import ACT2FN
 from ..utils import logging
+from .gpt_config import GPT_SUPPORT_LIST, GPTConfig
 
 logger = logging.get_logger(__name__)
 
-class GPTMLP(nn.Cell):
+
+PRETRAINED_MODEL_ARCHIVE_MAP = {
+    model: HF_MODEL_URL_BASE.format(model) for model in GPT_SUPPORT_LIST
+}
+
+
+def torch_to_mindspore(pth_file):
+    """torch to mindspore."""
+    try:
+        import torch
+    except Exception as exc:
+        raise ImportError("'import torch' failed, please install torch by "
+                          "`pip install torch` or instructions from 'https://pytorch.org'") \
+        from exc
+
+    from mindspore.train.serialization import save_checkpoint
+
+    logging.info('Starting checkpoint conversion.')
+    ms_ckpt = []
+    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
+
+    for k, v in state_dict.items():
+        if 'ln' in k:
+            if '.weight' in k:
+                k = k.replace('.weight', '.gamma')
+            if '.bias' in k:
+                k = k.replace('.bias', '.beta')
+        if 'embed' in k:
+            k = k.replace('weight', 'embedding_table')
+        ms_ckpt.append({'name': k, 'data': Tensor(v.numpy())})
+
+    ms_ckpt_path = pth_file.replace('.bin','.ckpt')
+    if not os.path.exists(ms_ckpt_path):
+        try:
+            save_checkpoint(ms_ckpt, ms_ckpt_path)
+        except Exception as exc:
+            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, please checkout the path.') \
+            from exc
+
+    return ms_ckpt_path
+
+
+class MLP(nn.Cell):
     r"""
     GPT MLP
 	"""
@@ -46,26 +93,24 @@ class GPTMLP(nn.Cell):
         self.dropout = Dropout(p=config.resid_pdrop)
 
     def construct(self, x):
-        hidden_states1 = self.c_fc(x)
-        hidden_states2 = self.act(hidden_states1)
-        hidden_states3 = self.c_proj(hidden_states2)
-        outputs = self.dropout(hidden_states3)
-        return outputs
+        h = self.act(self.c_fc(x))
+        h2 = self.c_proj(h)
+        return self.dropout(h2)
 
 
-class GPTAttention(nn.Cell):
+class Attention(nn.Cell):
     r"""
     GPT Attention
     """
 
-    def __init__(self, config, scale=False):
+    def __init__(self, nx, n_positions, config, scale=False):
         super().__init__()
-        n_state = config.n_embd
-        n_positions = config.n_positions
+        n_state = nx  # in Attention: n_state=768 (nx=n_embd)
+        # [switch nx => n_state from Block to Attention to keep identical to TF implementation]
         if n_state % config.n_head != 0:
             raise ValueError(f"Attention n_state shape: {n_state} must be divisible by config.n_head {config.n_head}")
-        bias_tensor = tril(ops.ones((n_positions, n_positions), mindspore.int32))
-        self.bias = Parameter(bias_tensor.view(1, 1, n_positions, n_positions), requires_grad=False)
+
+        self.bias = Tensor(np.tril(np.ones((n_positions, n_positions))), mindspore.float32).view(1, 1, n_positions, n_positions)
         self.n_head = config.n_head
         self.split_size = n_state
         self.scale = scale
@@ -76,6 +121,8 @@ class GPTAttention(nn.Cell):
         self.attn_dropout = Dropout(p=config.attn_pdrop)
         self.resid_dropout = Dropout(p=config.resid_pdrop)
         self.pruned_heads = set()
+
+        self.output_attentions = config.output_attentions
 
     def prune_heads(self, heads):
         """
@@ -94,137 +141,115 @@ class GPTAttention(nn.Cell):
         self.n_head = self.n_head - len(heads)
         self.pruned_heads = self.pruned_heads.union(heads)
 
-    def _attn(self, query, key, value, attention_mask=None, head_mask=None, output_attentions=False):
-        attn_weights = ops.matmul(query, key)
+    def _attn(self, q, k, v, attention_mask=None, head_mask=None):
+        w = ops.matmul(q, k)
         if self.scale:
-            attn_weights = attn_weights / math.sqrt(value.shape[-1])
-
-        attn_bias = self.bias[:, :, : attn_weights.shape[-2], : attn_weights.shape[-1]]
-        attn_weights = attn_weights * attn_bias + -1e4 * (1 - attn_bias)
+            w = w / ops.sqrt(ops.scalar_to_tensor(v.shape[-1]))
+        b = self.bias[:, :, : w.shape[-2], : w.shape[-1]]
+        w = w * b + -1e9 * (1 - b)
 
         if attention_mask is not None:
-            attn_weights = attn_weights + attention_mask
+            w = w + attention_mask
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
-        attn_weights = self.attn_dropout(attn_weights)
+        w = ops.softmax(w)
+        w = self.attn_dropout(w)
 
         if head_mask is not None:
-            attn_weights = attn_weights * head_mask
+            w = w * head_mask
 
-        outputs = [ops.matmul(attn_weights, value)]
-        if output_attentions:
-            outputs.append(attn_weights)
+        outputs = (ops.matmul(w, v),)
+        if self.output_attentions:
+            outputs += (w,)
         return outputs
 
-    def merge_heads(self, tensor):
-        """
-        Merges attn_head_size dim and num_attn_heads dim into hidden_size
-        """
-        tensor = tensor.transpose(0, 2, 1, 3)
-        new_tensor_shape = tensor.shape[:-2] + (tensor.shape[-2] * tensor.shape[-1],)
-        return tensor.view(*new_tensor_shape)
 
-    def split_heads(self, tensor, tensor_transpose=False):
-        """
-        Splits hidden_size dim into attn_head_size and num_heads
-        """
-        new_tensor_shape = tensor.shape[:-1] + (self.n_head, tensor.shape[-1] // self.n_head)
-        tensor = tensor.view(*new_tensor_shape)
-        if tensor_transpose:
-            return tensor.transpose(0, 2, 3, 1)
-        return tensor.transpose(0, 2, 1, 3)
+    def merge_heads(self, x):
+        """merge heads"""
+        x = x.transpose(0, 2, 1, 3)
+        new_x_shape = x.shape[:-2] + (x.shape[-2] * x.shape[-1],)
+        return x.view(new_x_shape)
 
-    def construct(self, input_states, attention_mask=None, head_mask=None, output_attentions=False):
-        c_states = self.c_attn(input_states)
-        query, key, value = split(c_states, self.split_size, axis=2)
+    def split_heads(self, x, k=False):
+        """split heads"""
+        new_x_shape = x.shape[:-1] + (self.n_head, x.shape[-1] // self.n_head)
+        x = x.view(new_x_shape)
+        if k:
+            return x.transpose(0, 2, 3, 1)
+        return x.transpose(0, 2, 1, 3)
+
+    def construct(self, x, attention_mask=None, head_mask=None):
+        x = self.c_attn(x)
+        query, key, value = ops.split(x, self.split_size, axis=2)
         query = self.split_heads(query)
-        key = self.split_heads(key, tensor_transpose=True)
+        key = self.split_heads(key, k=True)
         value = self.split_heads(value)
-        attn_outputs = self._attn(query, key, value, attention_mask, head_mask, output_attentions)
 
-        output = attn_outputs[0]
-        output = self.merge_heads(output)
-        output = self.c_proj(output)
-        output = self.resid_dropout(output)
-        outputs = [output] + attn_outputs[1:]
+        attn_outputs = self._attn(query, key, value, attention_mask, head_mask)
+        a = attn_outputs[0]
+
+        a = self.merge_heads(a)
+        a = self.c_proj(a)
+        a = self.resid_dropout(a)
+        outputs = (a,) + attn_outputs[1:]
         return outputs
 
 
-class GPTBlock(nn.Cell):
+class Block(nn.Cell):
     r"""
     GPT Block
     """
 
-    def __init__(self, config, scale=False):
+    def __init__(self, n_positions, config, scale=False):
         super().__init__()
-        hidden_size = config.n_embd
-        self.attn = GPTAttention(config, scale)
-        self.ln_1 = nn.LayerNorm(normalized_shape=[hidden_size], epsilon=config.layer_norm_epsilon)
-        self.mlp = GPTMLP(4 * hidden_size, config)
-        self.ln_2 = nn.LayerNorm(normalized_shape=[hidden_size], epsilon=config.layer_norm_epsilon)
+        nx = config.n_embd
+        self.attn = Attention(nx, n_positions, config, scale)
+        self.ln_1 = nn.LayerNorm((nx,), epsilon=config.layer_norm_epsilon)
+        self.mlp = MLP(4 * nx, config)
+        self.ln_2 = nn.LayerNorm((nx,), epsilon=config.layer_norm_epsilon)
 
-    def construct(self, input_states, attention_mask=None, head_mask=None, output_attentions=False):
-        residual_1 = input_states
-        attn_outputs = self.attn(input_states, attention_mask, head_mask, output_attentions,)
-        attn_output = attn_outputs[0]
-        hidden_states = self.ln_1(residual_1 + attn_output)
-        residual_2 = hidden_states
-        feed_forward_hidden_states = self.mlp(hidden_states)
-        output_hidden_states = self.ln_2(residual_2 + feed_forward_hidden_states)
-        outputs = [output_hidden_states] + attn_outputs[1:]
+    def construct(self, x, attention_mask=None, head_mask=None):
+        output_attn = self.attn(
+            x,
+            attention_mask=attention_mask,
+            head_mask=head_mask
+        )
+
+        a = output_attn[0]
+        n = self.ln_1(x + a)
+        m = self.mlp(n)
+        h = self.ln_2(n + m)
+
+        outputs = (h,) + output_attn[1:]
         return outputs
 
 
-class GPTPreTrainedModel(nn.Cell):
-    """
-    An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
-    models.
-    """
+class GPTPreTrainedModel(PreTrainedModel):
+    """BertPretrainedModel"""
+    convert_torch_to_mindspore = torch_to_mindspore
+    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
     config_class = GPTConfig
-    base_model_prefix = "transformer"
-    _keys_to_ignore_on_load_missing = [r"position_ids"]
+    name = 'gpt'
 
-    def __init__(self, *inputs, **kwargs):
-        super().__init__(*inputs, **kwargs)
+    def get_input_embeddings(self):
+        """get input embeddings"""
 
-    def _init_weights(self, module):
-        """Initialize the weights."""
-        if isinstance(module, (nn.Dense, Conv1D)):
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if module.bias is not None:
-                module.bias.data.zero_()
-        elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
-        elif isinstance(module, nn.LayerNorm):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
+    def get_position_embeddings(self):
+        """get position embeddings"""
 
-    def get_head_mask(self, head_mask, num_hidden_layers, is_attention_chunked=False):
-        """
-        Prepare the head mask if needed.
-        """
-        if head_mask is not None:
-            head_mask = self._convert_head_mask_to_5d(head_mask, num_hidden_layers)
-            if is_attention_chunked is True:
-                head_mask = head_mask.expand_dims(-1)
-        else:
-            head_mask = [None] * num_hidden_layers
-        return head_mask
+    def init_model_weights(self):
+        """init model weights"""
 
-    def _convert_head_mask_to_5d(self, head_mask, num_hidden_layers):
-        """
-        -> [num_hidden_layers x batch x num_heads x seq_length x seq_length]
-        """
-        if head_mask.dim() == 1:
-            head_mask = head_mask.expand_dims(0).expand_dims(0).expand_dims(-1).expand_dims(-1)
-            head_mask = head_mask.expand(num_hidden_layers, -1, -1, -1, -1)
-        elif head_mask.dim() == 2:
-            head_mask = head_mask.expand_dims(1).expand_dims(-1).expand_dims(-1)
-        assert head_mask.dim() == 5, f"head_mask.dim != 5, instead {head_mask.dim()}"
-        head_mask = head_mask.to(dtype=self.dtype)  # switch to float if need + fp16 compatibility
-        return head_mask
+    def post_init(self):
+        """post init"""
+
+    def resize_position_embeddings(self):
+        """resize position embeddings"""
+
+    def save(self):
+        """save"""
+
+    def set_input_embeddings(self):
+        """set input embeddings"""
 
 
 class GPTModel(GPTPreTrainedModel):
@@ -233,13 +258,17 @@ class GPTModel(GPTPreTrainedModel):
     """
 
     def __init__(self, config):
-        super().__init__()
+        super().__init__(config)
         self.config = config
         self.tokens_embed = nn.Embedding(config.vocab_size, config.n_embd)
         self.positions_embed = nn.Embedding(config.n_positions, config.n_embd)
         self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.block_list = nn.CellList([GPTBlock(config, scale=True) for _ in range(config.n_layer)])
-        self.position_ids = Parameter(ops.arange(config.n_positions), requires_grad=False)
+        self.block_list = nn.CellList([Block(config.n_positions, config, scale=True) for _ in range(config.n_layer)])
+        self.position_ids = ops.arange(config.n_positions)
+
+        self.n_layer = self.config.n_layer
+        self.output_attentions = self.config.output_attentions
+        self.output_hidden_states = self.config.output_hidden_states
 
     def get_input_embeddings(self):
         """
@@ -268,14 +297,7 @@ class GPTModel(GPTPreTrainedModel):
             position_ids=None,
             head_mask=None,
             inputs_embeds=None,
-            output_attentions=None,
-            output_hidden_states=None
     ):
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
-        )
-
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
         if input_ids is not None:
@@ -297,7 +319,7 @@ class GPTModel(GPTPreTrainedModel):
                                                              self.dtype)
 
         # Prepare head mask if needed
-        head_mask = self.get_head_mask(head_mask, self.config.n_layer)
+        head_mask = self.get_head_mask(head_mask, self.n_layer)
 
         if inputs_embeds is None:
             inputs_embeds = self.tokens_embed(input_ids)
@@ -312,24 +334,24 @@ class GPTModel(GPTPreTrainedModel):
 
         output_shape = input_shape + (hidden_states.shape[-1],)
 
-        all_attentions = () if output_attentions else None
-        all_hidden_states = () if output_hidden_states else None
+        all_attentions = ()
+        all_hidden_states = ()
         for i, block in enumerate(self.block_list):
-            if output_hidden_states:
+            if self.output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
-            outputs = block(hidden_states, attention_mask, head_mask[i], output_attentions)
+            outputs = block(hidden_states, attention_mask, head_mask[i])
             hidden_states = outputs[0]
-            if output_attentions:
+            if self.output_attentions:
                 all_attentions = all_attentions + (outputs[1],)
 
         hidden_states = hidden_states.view(*output_shape)
 
         # Add last layer
-        if output_hidden_states:
+        if self.output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)
 
-        return tuple(v for v in [hidden_states, all_hidden_states, all_attentions] if v is not None)
+        return (hidden_states, all_hidden_states, all_attentions)
 
 
 class GPTLMHeadModel(GPTPreTrainedModel):
@@ -364,8 +386,6 @@ class GPTLMHeadModel(GPTPreTrainedModel):
         head_mask = None,
         inputs_embeds = None,
         labels = None,
-        output_attentions = None,
-        output_hidden_states = None
     ):
         transformer_outputs = self.transformer(
             input_ids,
@@ -374,8 +394,6 @@ class GPTLMHeadModel(GPTPreTrainedModel):
             position_ids=position_ids,
             head_mask=head_mask,
             inputs_embeds=inputs_embeds,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states
         )
         hidden_states = transformer_outputs[0]
         lm_logits = self.lm_head(hidden_states)
@@ -432,8 +450,6 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
         mc_token_ids = None,
         labels = None,
         mc_labels = None,
-        output_attentions = None,
-        output_hidden_states = None,
     ):
         transformer_outputs = self.transformer(
             input_ids,
@@ -442,8 +458,6 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
             position_ids=position_ids,
             head_mask=head_mask,
             inputs_embeds=inputs_embeds,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states
         )
         hidden_states = transformer_outputs[0]
 
@@ -493,8 +507,6 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
         head_mask = None,
         inputs_embeds = None,
         labels = None,
-        output_attentions = None,
-        output_hidden_states = None
     ):
         r"""
         labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
@@ -510,8 +522,6 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
             position_ids=position_ids,
             head_mask=head_mask,
             inputs_embeds=inputs_embeds,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states
         )
 
         hidden_states = transformer_outputs[0]
@@ -566,3 +576,6 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
         if  loss is not None:
             output = (loss,) + output
         return output
+
+__all__ = ['MLP', 'Attention', 'Block', 'GPTModel', 'GPTLMHeadModel',
+           'GPTDoubleHeadsModel', 'GPTForSequenceClassification']
