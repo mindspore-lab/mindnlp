@@ -159,7 +159,9 @@ class CellUtilMixin:
             if is_attention_chunked is True:
                 head_mask = head_mask.expand_dims(-1)
         else:
-            head_mask = [None] * num_hidden_layers
+            head_mask = ()
+            for _ in range(num_hidden_layers):
+                head_mask += (None,)
 
         return head_mask
 
