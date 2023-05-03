@@ -29,6 +29,7 @@ from mindspore import ops
 from mindspore import numpy as mnp
 from mindspore import Tensor
 from mindspore.nn import Dense, Dropout, LayerNorm
+from mindspore.ops import Zeros, Ones, OnesLike
 from mindspore.common import initializer
 
 from .glm_config import GLMConfig
@@ -52,6 +53,9 @@ def divide(numerator, denominator):
 
 
 def split_tensor_along_last_dim(tensor, num_partitions, contiguous_split_chunks=False):
+    """
+    split tensor along last dim
+    """
     # Get the size and dimension.
     last_dim = tensor.dim() - 1
     last_dim_size = divide(tensor.shape[last_dim], num_partitions)
@@ -100,6 +104,9 @@ class PromptSpell(nn.Cell):
             raise NotImplementedError("Prompt function " + self.spell_func)
 
     def init_embedding(self, word_embeddings=None, task_tokens=None):
+        """
+        init_embedding method
+        """
         num_words = 5000
         for i in range(self.spell_length):
             rand_token = random.randrange(num_words)
@@ -123,6 +130,10 @@ class PromptSpell(nn.Cell):
 
 
 class PositionalEmbedding(nn.Cell):
+    """
+    Positional Embedding
+    """
+
     def __init__(self, hidden_size):
         super(PositionalEmbedding, self).__init__()
 
@@ -248,7 +259,7 @@ class GLMSelfAttention(nn.Cell):
 
     @staticmethod
     def _rel_shift(x: Tensor, zero_triu=False):
-        zero_pad = ops.Zeros((*x.shape[:-2], x.shape[-2], 1), type=x.dtype)
+        zero_pad = ops.zeros((*x.shape[:-2], x.shape[-2], 1), dtype=x.dtype)
         x_padded = ops.cat([zero_pad, x], axis=-1)
 
         x_padded = x_padded.view(*x.shape[:-2], x.shape[-1] + 1, x.shape[-2])
@@ -256,7 +267,7 @@ class GLMSelfAttention(nn.Cell):
         x = x_padded[:, :, 1:].view(x.shape)
 
         if zero_triu:
-            ones = ops.Ones((x.shape[0], x.shape[1]))
+            ones = ops.ones((x.shape[0], x.shape[1]))
             x = x * mnp.tril(ones, x.shape[1] - x.shape[0])[:, :, None, None]
 
         return x
@@ -749,7 +760,10 @@ class GLMTransformer(nn.Cell):
         detach_memory=True,
     ):
         batch_size, query_length = hidden_states.shape[:2]
-        memory_length = memory_states[0].shape[1] if memory_states else 0
+        if memory_states is not None:
+            memory_length = memory_states[0].shape[1]
+        else:
+            memory_length = 0
         key_length = query_length + memory_length
         # attention mask is the beginning postion of B region, \in [0, query_len)
         is_scalar = ops.numel(attention_mask) == 1
@@ -765,27 +779,26 @@ class GLMTransformer(nn.Cell):
 
             # conventional transformer
             def build_mask_matrix(seq_length, sep, memory_length=0):
-                m = ops.OnesLike(hidden_states).shape(1, seq_length, seq_length)
+                oneslike = ops.OnesLike()
+                m = oneslike(hidden_states).shape(1, seq_length, seq_length)
                 m = mnp.tril(m)
                 if is_scalar:
                     m[0, :, :sep] = 1
                 else:
                     m = m.expand(batch_size, -1, -1)
-                    ids = mnp.arange(
-                        seq_length, device=sep.device, dtype=sep.dtype
-                    ).view(1, -1)
+                    ids = mnp.arange(seq_length, dtype=sep.dtype).view(1, -1)
                     mask = ids < sep.view(-1, 1)
                     m = ops.masked_fill(m, ops.unsqueeze(mask, 1).expand_as(m), 1)
                 if memory_length > 0:
                     m = m.expand(batch_size, -1, -1)
                     m = ops.cat(
                         (
-                            ops.OnesLike(hidden_states).shape(
+                            oneslike(hidden_states).shape(
                                 batch_size, seq_length, memory_length
                             ),
                             m,
                         ),
-                        dim=2,
+                        axis=2,
                     )
                 m = ops.unsqueeze(m, 1)
                 return m
@@ -888,7 +901,7 @@ class GLMTransformer(nn.Cell):
                 new_mems.append(
                     ops.cat(
                         (mems[i][:, -new_memory_length + query_length :], hiddens[i]),
-                        dim=1,
+                        axis=1,
                     )
                 )
         return new_mems
@@ -920,7 +933,7 @@ class GLMModel(nn.Cell):
         input_ids,
         position_ids,
         attention_mask,
-        *mems,
+        mems,
         return_memory=False,
         detach_memory=True,
         prompt_pos=None,
@@ -939,6 +952,7 @@ class GLMModel(nn.Cell):
             embeddings,
             position_ids,
             attention_mask,
+            mems,
             return_memory=return_memory,
             detach_memory=detach_memory,
         )
