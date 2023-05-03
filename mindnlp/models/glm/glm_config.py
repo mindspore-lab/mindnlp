@@ -22,6 +22,7 @@ GLM Model Config
 from mindnlp.abc.backbones.pretrained import PreTrainedConfig
 from mindnlp.models.glm import glm
 
+
 class GLMConfig(PreTrainedConfig):
     """
     GLMConfig
@@ -40,13 +41,13 @@ class GLMConfig(PreTrainedConfig):
         max_memory_length=0,
         checkpoint_activations=False,
         checkpoint_num_layers=1,
-        init_method_std = 0.02,
+        init_method_std=0.02,
         relative_encoding=False,
         layernorm_epsilon=1.0e-5,
         block_position_encoding=False,
         output_predict=True,
         spell_length=None,
-        spell_func='lstm',
+        spell_func="lstm",
         attention_scale=1.0,
         **kwargs,
     ):
@@ -74,6 +75,6 @@ class GLMConfig(PreTrainedConfig):
         self.output_predict = output_predict
 
         if spell_length is not None:
-            self.prompt_spell = PromptSpell(spell_length, self.hidden_size, spell_func)
-
-
+            self.prompt_spell = glm.PromptSpell(
+                spell_length, self.hidden_size, spell_func
+            )
