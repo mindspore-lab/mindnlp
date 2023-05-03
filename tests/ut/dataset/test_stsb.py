@@ -39,7 +39,7 @@ class TestSTSB(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_stsb(self):
         """Test stsb"""
         num_lines = {
@@ -61,7 +61,7 @@ class TestSTSB(unittest.TestCase):
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_agnews_by_register(self):
         """test agnews by register"""
         _ = load_dataset(
@@ -70,7 +70,7 @@ class TestSTSB(unittest.TestCase):
             split=("train", "dev", "test"),
         )
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_stsb_process(self):
         r"""
         Test STSB_Process
@@ -87,7 +87,7 @@ class TestSTSB(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_stsb_process_by_register(self):
         """test stsb process by register"""
         train_dataset, _, _ = STSB()

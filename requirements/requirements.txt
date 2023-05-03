@@ -5,3 +5,4 @@ pytest
 ddt
 datasets
 tokenizers
+torch

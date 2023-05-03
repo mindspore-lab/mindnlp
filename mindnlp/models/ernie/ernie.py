@@ -22,9 +22,11 @@ from typing import Optional, Tuple
 import mindspore
 from mindspore import nn, ops, Tensor
 from mindspore.common.initializer import TruncatedNormal
-from mindnlp.abc import PretrainedModel
+from mindnlp.abc import PreTrainedModel
 from .ernie_config import ErnieConfig, ERNIE_PRETRAINED_INIT_CONFIGURATION, ERNIE_PRETRAINED_RESOURCE_FILES_MAP
 
+
+__all__ = ['ErnieEmbeddings', 'ErnieModel', 'ErniePooler', "UIE"]
 
 class ErnieEmbeddings(nn.Cell):
     """
@@ -99,7 +101,7 @@ class ErnieEmbeddings(nn.Cell):
         return embeddings
 
 
-class ErniePretrainedModel(PretrainedModel):
+class ErniePretrainedModel(PreTrainedModel):
     """
     Ernie Pretrained Model.
     """
@@ -258,6 +260,8 @@ class ErnieModel(ErniePretrainedModel):
         elif attention_mask.ndim == 2:
             attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
             attention_mask = (1.0 - attention_mask) * -1e4
+            attention_mask = ops.tile(
+                attention_mask, (1, self.nheads, seq_length, 1)).reshape(-1, seq_length, seq_length)
 
         attention_mask.stop_gradient = True
 

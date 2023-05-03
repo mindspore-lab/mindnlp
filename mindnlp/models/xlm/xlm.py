@@ -30,7 +30,7 @@ from mindspore import ops,nn,Parameter
 from mindspore.common.initializer import Normal, initializer
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindnlp.models.utils.utils import SequenceSummary,SQuADHead
-from ...abc.backbones.pretrained import PretrainedModel
+from ...abc.backbones.pretrained import PreTrainedModel
 from .xlm_config import XLMConfig
 from ..utils import logging
 from ..utils.activations import get_activation
@@ -287,7 +287,7 @@ class TransformerFFN(nn.Cell):
         return x
 
 
-class XLMPreTrainedModel(PretrainedModel):
+class XLMPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.

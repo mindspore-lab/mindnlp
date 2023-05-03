@@ -159,7 +159,9 @@ class CellUtilMixin:
             if is_attention_chunked is True:
                 head_mask = head_mask.expand_dims(-1)
         else:
-            head_mask = [None] * num_hidden_layers
+            head_mask = ()
+            for _ in range(num_hidden_layers):
+                head_mask += (None,)
 
         return head_mask
 
@@ -174,3 +176,8 @@ class CellUtilMixin:
         assert head_mask.dim() == 5, f"head_mask.dim != 5, instead {head_mask.dim()}"
         head_mask = head_mask.astype(dtype=self.dtype)  # switch to float if need + fp16 compatibility
         return head_mask
+
+class GenerationMixin:
+    """
+    A class containing all functions for auto-regressive text generation, to be used as a mixin in [`PreTrainedModel`].
+    """

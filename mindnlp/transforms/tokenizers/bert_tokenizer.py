@@ -15,15 +15,44 @@
 """
 BertTokenizer
 """
-
+import os
 from typing import Union
 import numpy as np
 from mindspore.dataset.transforms.transforms import PyTensorOperation
 from mindspore.dataset.text.transforms import Implementation
 from mindspore.dataset.text import Vocab as msVocab
+from tokenizers import Tokenizer
 from tokenizers.implementations import BertWordPieceTokenizer
+from mindnlp.abc import PreTrainedTokenizer
 from mindnlp.vocab import Vocab
-class BertTokenizer(PyTensorOperation):
+from mindnlp.models.bert.bert_config import BERT_SUPPORT_LIST
+from mindnlp.configs import HF_TOKENIZER_CONFIG_URL_BASE
+
+PRETRAINED_VOCAB_MAP = {
+    model: HF_TOKENIZER_CONFIG_URL_BASE.format(model) for model in BERT_SUPPORT_LIST
+}
+
+
+PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
+    "bert-base-uncased": 512,
+    "bert-large-uncased": 512,
+    "bert-base-cased": 512,
+    "bert-large-cased": 512,
+    "bert-base-multilingual-uncased": 512,
+    "bert-base-multilingual-cased": 512,
+    "bert-base-chinese": 512,
+    "bert-base-german-cased": 512,
+    "bert-large-uncased-whole-word-masking": 512,
+    "bert-large-cased-whole-word-masking": 512,
+    "bert-large-uncased-whole-word-masking-finetuned-squad": 512,
+    "bert-large-cased-whole-word-masking-finetuned-squad": 512,
+    "bert-base-cased-finetuned-mrpc": 512,
+    "bert-base-german-dbmdz-cased": 512,
+    "bert-base-german-dbmdz-uncased": 512,
+}
+
+
+class BertTokenizer(PyTensorOperation, PreTrainedTokenizer):
     """
     Tokenizer used for Bert text process.
 
@@ -31,7 +60,7 @@ class BertTokenizer(PyTensorOperation):
         vocab (Vocab): Vocabulary used to look up words.
         lower_case (bool, optional): Whether to perform lowercase processing on the text. If True, will fold the
             text to lower case. Default: True.
-        py_transform (bool, optional): Whether use python implementation. Default: False.
+        return_token (bool): Whether to return token. If True: return tokens. False: return ids. Default: True.
 
     Raises:
         TypeError: If `lower_case` is not of type bool.
@@ -40,7 +69,7 @@ class BertTokenizer(PyTensorOperation):
 
     Examples:
         >>> from mindspore.dataset import text
-        >>> from mindnlp.dataset.transforms import BertTokenizer
+        >>> from mindnlp.transforms import BertTokenizer
         >>> vocab_list = ["床", "前", "明", "月", "光", "疑", "是", "地", "上", "霜", "举", "头", "望", "低",
               "思", "故", "乡","繁", "體", "字", "嘿", "哈", "大", "笑", "嘻", "i", "am", "mak",
               "make", "small", "mistake", "##s", "during", "work", "##ing", "hour", "😀", "😃",
@@ -49,19 +78,39 @@ class BertTokenizer(PyTensorOperation):
         >>> vocab = text.Vocab.from_list(vocab_list)
         >>> tokenizer_op = BertTokenizer(vocab=vocab, lower_case=True)
         >>> text = "i make a small mistake when i\'m working! 床前明月光😀"
+        >>> test_dataset = ['A small mistake was made when I was working.']
+        >>> dataset = GeneratorDataset(test_dataset, 'text')
         >>> tokenized_text = tokenizer_op(text)
+        >>> tokenized_dataset = dataset.map(operations=tokenizer_op)
+        >>> #encode method will return a Encoding class with many useful attributes
+        >>> tokens = tokenizer_op.encode(text)
+        >>> tokens_offset = tokens.offsets
 
     """
 
-    def __init__(self, vocab: Union[msVocab, Vocab], lower_case:bool = True, return_token = False):
+    max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
+    pretrained_vocab_map = PRETRAINED_VOCAB_MAP
+
+    def __init__(self, vocab: Union[msVocab, Vocab, str], **kwargs):
         super().__init__()
         if isinstance(vocab, msVocab):
             vocab_dict = vocab.vocab()
         elif isinstance(vocab, Vocab):
             vocab_dict = vocab.vocab
+        elif isinstance(vocab, str):
+            if not os.path.isfile(vocab):
+                raise ValueError(f"{vocab} is not a file.")
         else:
             raise ValueError(f'only support Vocab class from mindspore or mindnlp, but got {vocab}')
-        self.tokenizer = BertWordPieceTokenizer(vocab=vocab_dict, lowercase=lower_case)
+
+        lower_case = kwargs.pop('lower_case', False)
+        return_token = kwargs.pop('return_token', False)
+
+        if isinstance(vocab, str):
+            self.tokenizer = Tokenizer.from_file(vocab)
+        else:
+            self.tokenizer = BertWordPieceTokenizer(vocab=vocab_dict, lowercase=lower_case)
+
         self.return_token = return_token
         self.implementation = Implementation.PY
 

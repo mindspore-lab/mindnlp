@@ -16,8 +16,11 @@
 T5 Model config
 """
 
-from mindnlp.abc.backbones.pretrained import PretrainedConfig
-class T5Config(PretrainedConfig):
+from mindnlp.abc.backbones.pretrained import PreTrainedConfig
+
+__all__ = ['T5Config']
+
+class T5Config(PreTrainedConfig):
     """
     Configuration for T5
     """
