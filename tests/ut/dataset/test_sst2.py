@@ -38,7 +38,7 @@ class TestSST2(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_sst2(self):
         """Test sst2"""
         num_lines = {
@@ -60,7 +60,7 @@ class TestSST2(unittest.TestCase):
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_agnews_by_register(self):
         """test agnews by register"""
         _ = load_dataset(
@@ -69,7 +69,7 @@ class TestSST2(unittest.TestCase):
             split=("train", "dev", "test"),
         )
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_sst2_process(self):
         r"""
         Test SST2_Process
@@ -85,7 +85,7 @@ class TestSST2(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_sst2_process_by_register(self):
         """test sst2 process by register"""
         train_dataset, _, _ = SST2()

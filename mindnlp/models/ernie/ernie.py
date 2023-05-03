@@ -22,9 +22,11 @@ from typing import Optional, Tuple
 import mindspore
 from mindspore import nn, ops, Tensor
 from mindspore.common.initializer import TruncatedNormal
-from mindnlp.abc import PretrainedModel
+from mindnlp.abc import PreTrainedModel
 from .ernie_config import ErnieConfig, ERNIE_PRETRAINED_INIT_CONFIGURATION, ERNIE_PRETRAINED_RESOURCE_FILES_MAP
 
+
+__all__ = ['ErnieEmbeddings', 'ErnieModel', 'ErniePooler', "UIE"]
 
 class ErnieEmbeddings(nn.Cell):
     """
@@ -99,7 +101,7 @@ class ErnieEmbeddings(nn.Cell):
         return embeddings
 
 
-class ErniePretrainedModel(PretrainedModel):
+class ErniePretrainedModel(PreTrainedModel):
     """
     Ernie Pretrained Model.
     """

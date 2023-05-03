@@ -38,7 +38,7 @@ class TestAGNEWS(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_agnews(self):
         """Test agnews"""
@@ -56,12 +56,12 @@ class TestAGNEWS(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_agnews_by_register(self):
         """test agnews by register"""
         _ = load_dataset('AG_NEWS', root=self.root, split='test')
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_agnews_process(self):
         r"""
         Test AG_NEWS_Process
@@ -74,7 +74,7 @@ class TestAGNEWS(unittest.TestCase):
         assert (next(agnews_dataset)[1]).dtype == ms.int32
 
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_agnews_process_by_register(self):
         """test agnews process by register"""
         test_dataset = AG_NEWS(split='test')

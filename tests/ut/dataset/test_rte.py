@@ -39,7 +39,7 @@ class TestRTE(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_rte(self):
         """Test rte"""
         num_lines = {
@@ -61,7 +61,7 @@ class TestRTE(unittest.TestCase):
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_rte_by_register(self):
         """test rte by register"""
         _ = load_dataset(
@@ -70,7 +70,7 @@ class TestRTE(unittest.TestCase):
             split=("train", "dev", "test"),
         )
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_rte_process(self):
         r"""
         Test RTE_Process
@@ -87,7 +87,7 @@ class TestRTE(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_rte_process_by_register(self):
         """test rte process by register"""
         train_dataset, _, _ = RTE()

@@ -37,7 +37,7 @@ class TestLCSTS(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_lcsts(self):
         """Test LCSTS"""
@@ -54,7 +54,7 @@ class TestLCSTS(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_lcsts_by_register(self):
         """test lcsts by register"""
         _ = load_dataset('lcsts',

@@ -16,6 +16,7 @@
 Callback for saving and loading best model
 """
 import os
+from pathlib import Path
 import mindspore
 from mindnlp.abc import Callback
 
@@ -26,22 +27,34 @@ class BestModelCallback(Callback):
 
     Args:
         save_path (str): Folder for saving.
+        ckpt_name (str): Checkpoint name to store. It will set "best_so_far.ckpt" when not specified.
+            Default: None.
         larger_better (bool): Whether the larger `metrics`, the better `metrics`. Default: True.
         auto_load (bool): Whether load the best model at the end of the training.
         save_on_exception (bool): Whether save the model on exception.
 
     """
-    def __init__(self, save_path=None, larger_better=True, auto_load=False, save_on_exception=False):
-        if save_path is not None:
-            os.makedirs(save_path, exist_ok=True)
+    def __init__(self, save_path, ckpt_name=None, larger_better=True,
+                 auto_load=False, save_on_exception=False):
+        if isinstance(save_path, str):
+            self.save_path = Path(save_path)
+        elif isinstance(save_path, Path):
+            self.save_path = save_path
         else:
-            os.makedirs(os.path.expanduser('~'), exist_ok=True)
+            raise ValueError(f"the 'save_path' argument must be str or Path, but got {type(save_path)}.")
 
-        self.save_path = save_path
+        if not self.save_path.exists():
+            os.makedirs(str(self.save_path))
+
         self.larger_better = larger_better
         self.auto_load = auto_load
         self.best_metrics_values = []
         self.save_on_exception = save_on_exception
+
+        if ckpt_name is None:
+            self.ckpt_name = "best_so_far.ckpt"
+        else:
+            self.ckpt_name = ckpt_name if '.ckpt' in ckpt_name else ckpt_name + '.ckpt'
 
     def evaluate_end(self, run_context):
         r"""
@@ -67,15 +80,14 @@ class BestModelCallback(Callback):
 
         """
         if self.auto_load:
-            print(f"Loading best model from {self.save_path} with {run_context.metrics_names}: "
+            print(f"Loading best model from '{self.save_path}' with '{run_context.metrics_names}': "
                   f"{self.best_metrics_values}...")
             self._load_model(run_context)
 
-    # to do
 
-    # def exception(self, run_context):
-    #     """Called if having exceptions."""
-    #     pass
+    def exception(self, run_context):
+        """Called if having exceptions."""
+        # to do
         # if self.save_on_exception:
         #     self._load_model(load_folder=self.real_save_path, run_context=run_context, \
         #         only_state_dict=self.only_state_dict)
@@ -105,9 +117,8 @@ class BestModelCallback(Callback):
 
         """
         model = run_context.network
-        ckpt_name = "best_so_far.ckpt"
-        mindspore.save_checkpoint(model, self.save_path + '/' + ckpt_name)
-        print(f"---------------Best Model: {ckpt_name} "
+        mindspore.save_checkpoint(model, str(self.save_path.joinpath(self.ckpt_name)))
+        print(f"---------------Best Model: '{self.ckpt_name}' "
               f"has been saved in epoch: {run_context.cur_epoch_nums - 1}.---------------")
 
     def _load_model(self, run_context):
@@ -119,8 +130,7 @@ class BestModelCallback(Callback):
             run_context (RunContext): Information about the model.
 
         """
-        ckpt_name = "best_so_far.ckpt"
-        param_dict = mindspore.load_checkpoint(self.save_path + '/' + ckpt_name)
+        param_dict = mindspore.load_checkpoint(str(self.save_path.joinpath(self.ckpt_name)))
         mindspore.load_param_into_net(run_context.network, param_dict)
         run_context.callbacks = []
-        print("---------------The model is already load the best model from best_so_far.ckpt.---------------")
+        print(f"---------------The model is already load the best model from '{self.ckpt_name}'.---------------")

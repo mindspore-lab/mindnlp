@@ -40,7 +40,7 @@ class TestMulti30k(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_multi30k(self):
         """Test Multi30k"""
         num_lines = {
@@ -68,7 +68,7 @@ class TestMulti30k(unittest.TestCase):
         assert dataset_valid.get_dataset_size() == num_lines["valid"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_multi30k_by_register(self):
         """test multi30k by register"""
         _ = load_dataset('multi30k',
@@ -77,7 +77,7 @@ class TestMulti30k(unittest.TestCase):
                  language_pair=('de', 'en')
                  )
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_multi30k_process(self):
         r"""
         Test multi30k process
@@ -112,7 +112,7 @@ class TestMulti30k(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_multi30k_process_by_register(self):
         '''
         Test multi30k process by register

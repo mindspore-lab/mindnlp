@@ -17,7 +17,7 @@ UIE config
 """
 
 from typing import Dict
-from mindnlp.abc import PretrainedConfig
+from mindnlp.abc import PreTrainedConfig
 
 ERNIE_PRETRAINED_INIT_CONFIGURATION = {
     "uie-base": {
@@ -229,7 +229,7 @@ ERNIE_PRETRAINED_RESOURCE_FILES_MAP = {
 }
 
 
-class ErnieConfig(PretrainedConfig):
+class ErnieConfig(PreTrainedConfig):
     """
     Configuration for Ernie.
     """
@@ -282,7 +282,7 @@ class ErnieConfig(PretrainedConfig):
         self.use_cache = use_cache
         self.use_task_id = use_task_id
         self.enable_recompute = enable_recompute
-class UIEConfig(PretrainedConfig):
+class UIEConfig(PreTrainedConfig):
     """
     Configuration for UIE.
     """
@@ -335,3 +335,5 @@ class UIEConfig(PretrainedConfig):
         self.use_cache = use_cache
         self.use_task_id = use_task_id
         self.enable_recompute = enable_recompute
+
+__all__ = ["ErnieConfig", "UIEConfig"]

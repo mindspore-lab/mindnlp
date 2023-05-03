@@ -20,4 +20,5 @@ Abstract classes for Backbones.
 from .base import BaseModel
 from .seq2seq import Seq2seqModel
 from .seq2vec import Seq2vecModel
-from .pretrained import PretrainedConfig, PretrainedModel
+from .pretrained import *
+from .mixin import CellUtilMixin, GenerationMixin
