@@ -146,6 +146,3 @@ class TestModelingGlm(unittest.TestCase):
 
         assert output.shape == (batch_size, max_sequence_length, hidden_size)
 
-        
-        
-        

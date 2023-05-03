@@ -15,10 +15,5 @@
 # ============================================================================
 
 # This software may be used and distributed according to the terms of the GNU General Public License version 3.
-from . import glm, glm_config
 from .glm import *
 from .glm_config import *
-
-__all__ = []
-__all__.extend(glm.__all__)
-__all__.extend(glm_config.__all__)

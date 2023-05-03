@@ -600,7 +600,9 @@ class GLMDecoderLayer(nn.Cell):
         # MLP
         self.mlp = GlmMLP(config, init_method, output_layer_init_method)
 
-    def construct(self, hidden_states, encoder_states, ltor_mask, cross_mask=None):
+    def construct(
+        self, hidden_states, encoder_states, ltor_mask, cross_mask=None, mem=None
+    ):
         # hidden_states: [b, s, h]
         # ltor_mask: [1, 1, s, s]
 
@@ -727,7 +729,7 @@ class GLMTransformer(nn.Cell):
 
         # Transformer layers.
         self.layers = nn.SequentialCell([get_layer() for _ in range(config.num_layers)])
-        # Final layer norm before output.ss
+        # Final layer norm before output.
 
         self.final_layernorm = LayerNorm(
             [config.max_sequence_length, config.hidden_size],
