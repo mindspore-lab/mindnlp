@@ -36,7 +36,7 @@ class T5Tokenizer(PyTensorOperation):
     """
     Tokenizer used for Bert text process.
     Args:
-        tokenizer_file (Str): The path of the tokenizer.json 
+        tokenizer_file (Str): The path of the tokenizer.json
     Examples:
         >>> from mindspore.dataset import text
         >>> from mindnlp.transforms import T5Tokenizer

@@ -22,15 +22,16 @@ import json
 import os
 import logging
 from typing import Union, Optional, Tuple, Dict
-import mindspore
 from mindspore.train.serialization import load_checkpoint, load_param_into_net
 from mindspore import nn, ops
 
-from ...utils.download import cached_path
+from mindnlp.configs import HF_CONFIG_URL_BASE, HF_MODEL_URL_BASE
+from mindnlp.utils.download import cached_path
+from .mixin import CellUtilMixin, GenerationMixin
 
 logger = logging.getLogger(__name__)
 
-class PretrainedConfig:
+class PreTrainedConfig:
     """
     Abstract class for Pretrained models config.
     """
@@ -84,15 +85,7 @@ class PretrainedConfig:
     @classmethod
     def load(cls, pretrained_model_name_or_path):
         """load config."""
-        if os.path.exists(pretrained_model_name_or_path):
-            config_file = pretrained_model_name_or_path
-        else:
-            raise ValueError(
-                f"unable to parse {pretrained_model_name_or_path} as a local path or model name")
-
-        config = cls.from_json(config_file)
-
-        return config
+        return cls.from_pretrained(pretrained_model_name_or_path)
 
     @property
     def use_return_dict(self) -> bool:
@@ -103,7 +96,7 @@ class PretrainedConfig:
         return self.return_dict
 
     @classmethod
-    def from_dict(cls, config_dict: Dict, **kwargs) -> "PretrainedConfig":
+    def from_dict(cls, config_dict: Dict, **kwargs) -> "PreTrainedConfig":
         """
         Constructs a `Config` from a Python dictionary of parameters.
 
@@ -140,7 +133,7 @@ class PretrainedConfig:
         return config
 
     @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path, **kwargs) -> "PretrainedConfig":
+    def from_pretrained(cls, pretrained_model_name_or_path, **kwargs) -> "PreTrainedConfig":
         """from_pretrained"""
         config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
         return cls.from_dict(config_dict, **kwargs)
@@ -164,20 +157,28 @@ class PretrainedConfig:
 
         """
         cache_dir = kwargs.pop("cache_dir", None)
-        kwargs.pop("force_download", False)
-        kwargs.pop("resume_download", False)
+        _ = kwargs.pop("force_download", False)
+        _ = kwargs.pop("resume_download", False)
         proxies = kwargs.pop("proxies", None)
-        kwargs.pop("local_files_only", False)
+        _ = kwargs.pop("local_files_only", False)
+        from_pt = kwargs.pop("from_pt", False)
 
+        folder_name = None
         if pretrained_config_archive_map is None:
             pretrained_config_archive_map = cls.pretrained_config_archive_map
 
         if pretrained_model_name_or_path in pretrained_config_archive_map:
             config_file = pretrained_config_archive_map[pretrained_model_name_or_path]
+            folder_name = pretrained_model_name_or_path
         elif os.path.isdir(pretrained_model_name_or_path):
             config_file = os.path.join(pretrained_model_name_or_path, "config.json")
         elif os.path.isfile(pretrained_model_name_or_path):
             config_file = pretrained_model_name_or_path
+        elif from_pt:
+            config_file = HF_CONFIG_URL_BASE.format(pretrained_model_name_or_path)
+            folder_name = pretrained_model_name_or_path
+        else:
+            raise ValueError(f'not found config of {pretrained_model_name_or_path}')
 
         try:
             # Load from URL or cache if already cached
@@ -185,7 +186,9 @@ class PretrainedConfig:
                 config_file,
                 cache_dir=cache_dir,
                 proxies=proxies,
-            ))
+                folder_name=folder_name
+            )[0])
+
             # Load config dict
             if resolved_config_file is None:
                 raise EnvironmentError
@@ -198,7 +201,7 @@ class PretrainedConfig:
                 msg = (
                     f"Can't load '{pretrained_model_name_or_path}'. Make sure that:\n\n"
                     f"- '{pretrained_model_name_or_path}' "
-                    f"is a correct model identifier listed on 'https://huggingface.co/models'\n\n"
+                    f"is a correct model identifier listed on 'https://download.mindspore.cn/toolkits/mindnlp/models'\n\n"
                     f"- or '{pretrained_model_name_or_path}' "
                     f"is the correct path to a directory containing a config.json file\n\n"
                 )
@@ -236,7 +239,7 @@ class PretrainedConfig:
         return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
 
 
-class PretrainedModel(nn.Cell):
+class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
     """
     Abstract class for Pretrained models
     """
@@ -246,6 +249,7 @@ class PretrainedModel(nn.Cell):
 
     def __init__(self, config):
         super().__init__(config)
+        # Save config in model
         self.config = config
 
     def post_init(self):
@@ -263,6 +267,13 @@ class PretrainedModel(nn.Cell):
         initialize model weights.
         """
         raise NotImplementedError
+
+    @property
+    def base_model(self):
+        """
+        to get base_model
+        """
+        return getattr(self, self.base_model_prefix, self)
 
     def get_input_embeddings(self) -> "nn.Cell":
         """
@@ -367,7 +378,6 @@ class PretrainedModel(nn.Cell):
         base_model.vocab_size = new_num_tokens
 
         # Tie weights again if needed
-        self.tie_weights()
 
         return model_embeds
 
@@ -428,34 +438,8 @@ class PretrainedModel(nn.Cell):
         Params:
             pretrained_model_name_or_path:
         """
+        return cls.from_pretrained(pretrained_model_name_or_path, args, kwargs)
 
-        # Todo: load huggingface checkpoint
-        config = kwargs.pop("config", None)
-        # load config
-        if not isinstance(config, PretrainedConfig):
-            config_path = config if config is not None else pretrained_model_name_or_path
-            config = cls.config_class.load(config_path)
-        model = cls(config, *args, **kwargs)
-        if os.path.exists(pretrained_model_name_or_path):
-            # File exists.
-            model_file = os.path.join(pretrained_model_name_or_path)
-            assert os.path.isfile(model_file)
-        else:
-            # Something unknown
-            raise ValueError(
-                f"unable to parse {pretrained_model_name_or_path} as a local path or model name")
-        # load ckpt
-        try:
-            param_dict = load_checkpoint(model_file)
-        except Exception as exc:
-            raise ValueError(f"File {model_file} is not a checkpoint file, "
-                             f"please check the path.") from exc
-
-        param_not_load = load_param_into_net(model, param_dict)
-        if len(param_not_load) == len(model.trainable_params()):
-            raise KeyError(f"The following weights in model are not found: {param_not_load}")
-
-        return model
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
@@ -463,18 +447,19 @@ class PretrainedModel(nn.Cell):
         config = kwargs.pop("config", None)
         state_dict = kwargs.pop("state_dict", None)
         cache_dir = kwargs.pop("cache_dir", None)
-        kwargs.pop("from_tf", False)
+        from_pt = kwargs.pop("from_pt", False)
         force_download = kwargs.pop("force_download", False)
         resume_download = kwargs.pop("resume_download", False)
         proxies = kwargs.pop("proxies", None)
         local_files_only = kwargs.pop("local_files_only", False)
 
         # Load config if we don't provide a configuration
-        if not isinstance(config, PretrainedConfig):
+        if not isinstance(config, PreTrainedConfig):
             config_path = config if config is not None else pretrained_model_name_or_path
             config, model_kwargs = cls.config_class.from_pretrained(
                 config_path,
                 *model_args,
+                from_pt=from_pt,
                 cache_dir=cache_dir,
                 return_unused_kwargs=True,
                 force_download=force_download,
@@ -486,14 +471,21 @@ class PretrainedModel(nn.Cell):
         else:
             model_kwargs = kwargs
 
+        folder_name = None
         # Load model
         if pretrained_model_name_or_path is not None:
-            if pretrained_model_name_or_path in cls.pretrained_model_archive_map:
+            if pretrained_model_name_or_path in cls.pretrained_model_archive_map and not from_pt:
                 archive_file = cls.pretrained_model_archive_map[pretrained_model_name_or_path]
+                folder_name = pretrained_model_name_or_path
             elif os.path.isdir(pretrained_model_name_or_path):
                 archive_file = os.path.join(pretrained_model_name_or_path, "mindspore_model.ckpt")
             elif os.path.isfile(pretrained_model_name_or_path):
                 archive_file = pretrained_model_name_or_path
+            elif from_pt:
+                archive_file = HF_MODEL_URL_BASE.format(pretrained_model_name_or_path)
+                folder_name = pretrained_model_name_or_path
+            else:
+                raise ValueError(f'not found model of {pretrained_model_name_or_path}.')
 
             # redirect to the cache, if necessary
             try:
@@ -501,13 +493,14 @@ class PretrainedModel(nn.Cell):
                     archive_file,
                     cache_dir=cache_dir,
                     proxies=proxies,
-                ))
+                    folder_name=folder_name
+                )[0])
             except EnvironmentError as exc:
                 if pretrained_model_name_or_path in cls.pretrained_model_archive_map:
                     msg = f"Couldn't reach server at '{archive_file}' to download pretrained weights."
                 else:
                     format1 = ", ".join(cls.pretrained_model_archive_map.keys())
-                    format2 = ["mindspore_model.ckpt"]
+                    format2 = ["mindspore.ckpt"]
                     msg = (
                         f"Model name '{pretrained_model_name_or_path}' "
                         f"was not found in model name list ({format1}). "
@@ -522,19 +515,84 @@ class PretrainedModel(nn.Cell):
             else:
                 logger.info("loading weights file %s from cache at %s", archive_file, resolved_archive_file)
         else:
-            resolved_archive_file = None
+            raise ValueError("the argument 'pretrained_model_name_or_path' should be "
+                             "a string of model name or checkpoint path, but got 'None'.")
 
         # Instantiate model.
         model = cls(config, *model_args, **model_kwargs)
 
+        if from_pt:
+            resolved_archive_file = cls.convert_torch_to_mindspore(resolved_archive_file)
+
         if state_dict is None:
             try:
-                state_dict = mindspore.load_checkpoint(resolved_archive_file)
+                state_dict = load_checkpoint(resolved_archive_file)
             except Exception as exc:
                 raise OSError(
-                    "Unable to load weights from mindspore checkpoint file. "
+                    f"Unable to load weights from mindspore checkpoint file '{resolved_archive_file}'. "
                 ) from exc
 
-        mindspore.load_param_into_net(model, state_dict)
+        load_param_into_net(model, state_dict)
 
         return model
+
+class PreTrainedTokenizer:
+    """
+    Pretrained Tokenizer abstract class.
+    """
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path, *init_inputs, **kwargs):
+        """from_pretrained"""
+        cache_dir = kwargs.pop("cache_dir", None)
+        _ = kwargs.pop("force_download", False)
+        proxies = kwargs.pop("proxies", None)
+
+        pretrained_model_name_or_path = str(pretrained_model_name_or_path)
+
+        # Get files from url, cache, or disk depending on the case
+        # Load tokenizer
+        if pretrained_model_name_or_path is not None:
+            if pretrained_model_name_or_path in cls.pretrained_vocab_map:
+                archive_file = cls.pretrained_vocab_map[pretrained_model_name_or_path]
+                folder_name = pretrained_model_name_or_path
+            elif os.path.isdir(pretrained_model_name_or_path):
+                archive_file = os.path.join(pretrained_model_name_or_path, "tokenizer.json")
+            elif os.path.isfile(pretrained_model_name_or_path):
+                archive_file = pretrained_model_name_or_path
+            else:
+                raise ValueError(f'not found model of {pretrained_model_name_or_path}.')
+
+            # redirect to the cache, if necessary
+            try:
+                resolved_archive_file = str(cached_path(
+                    archive_file,
+                    cache_dir=cache_dir,
+                    proxies=proxies,
+                    folder_name=folder_name
+                )[0])
+            except EnvironmentError as exc:
+                if pretrained_model_name_or_path in cls.pretrained_model_archive_map:
+                    msg = f"Couldn't reach server at '{archive_file}' to download pretrained weights."
+                else:
+                    format1 = ", ".join(cls.pretrained_model_archive_map.keys())
+                    format2 = ["tokenizer.json"]
+                    msg = (
+                        f"Model name '{pretrained_model_name_or_path}' "
+                        f"was not found in model name list ({format1}). "
+                        f"We assumed '{archive_file}' "
+                        f"was a path or url to model weight files named one of {format2} but "
+                        f"couldn't find any such file at this path or url."
+                    )
+                raise EnvironmentError(msg) from exc
+
+            if resolved_archive_file == archive_file:
+                logger.info("loading tokenizer file %s", archive_file)
+            else:
+                logger.info("loading tokenizer file %s from cache at %s", archive_file, resolved_archive_file)
+        else:
+            raise ValueError("the argument 'pretrained_model_name_or_path' should be "
+                             "a string of model name or checkpoint path, but got `None`.")
+
+        return cls(resolved_archive_file, *init_inputs, **kwargs)
+
+__all__ = ['PreTrainedConfig', 'PreTrainedModel', 'PreTrainedTokenizer']

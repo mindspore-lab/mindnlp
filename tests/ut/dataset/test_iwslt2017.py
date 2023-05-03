@@ -39,7 +39,7 @@ class TestIWSLT2017(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_iwslt2017(self):
         """Test IWSLT2017"""
@@ -58,7 +58,7 @@ class TestIWSLT2017(unittest.TestCase):
             root=self.root, split='train', language_pair=('de', 'en'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_iwslt2017_by_register(self):
         """test iwslt2017 by register"""
@@ -68,7 +68,7 @@ class TestIWSLT2017(unittest.TestCase):
                  language_pair=('de', 'en')
                  )
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_iwslt2017_process_no_vocab(self):
         r"""
@@ -92,7 +92,7 @@ class TestIWSLT2017(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_iwslt2017_process_no_vocab_by_register(self):
         '''

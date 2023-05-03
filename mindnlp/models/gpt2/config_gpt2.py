@@ -14,10 +14,12 @@
 # ============================================================================
 """MindNLP gpt2 config"""
 
-from ...abc.backbones.pretrained import PretrainedConfig
+from ...abc.backbones.pretrained import PreTrainedConfig
 
 
-class GPT2Config(PretrainedConfig):
+__all__ = ['GPT2Config']
+
+class GPT2Config(PreTrainedConfig):
     """
     Configuration for gpt2-base
     """

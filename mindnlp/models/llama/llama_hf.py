@@ -32,7 +32,7 @@ from mindspore.common.initializer import initializer, Normal
 from mindnlp.models.utils import logging
 from .llama_hf_config import LlamaConfig
 from ..utils.activations import ACT2FN
-from ...abc.backbones.pretrained import PretrainedModel
+from ...abc.backbones.pretrained import PreTrainedModel
 
 logger = logging.get_logger(__name__)
 
@@ -50,7 +50,7 @@ def _make_causal_mask(
     mask = mask.astype(dtype)
     if past_key_values_length > 0:
         mask = ops.cat([numpy.zeros((tgt_len, past_key_values_length), dtype=dtype), mask], axis=-1)
-    return ops.expand(mask[None, None, :, :], Tensor([bsz, 1, tgt_len, tgt_len + past_key_values_length]))
+    return ops.broadcast_to(mask[None, None, :, :], (bsz, 1, tgt_len, tgt_len + past_key_values_length))
 
 def _expand_mask(mask: Tensor, dtype: mindspore.dtype, tgt_len: Optional[int] = None):
     """
@@ -58,8 +58,8 @@ def _expand_mask(mask: Tensor, dtype: mindspore.dtype, tgt_len: Optional[int] = 
     """
     bsz, src_len = mask.shape
     tgt_len = tgt_len if tgt_len is not None else src_len
-    expanded_mask = ops.expand((mask[:, None, None, :]).astype(mindspore.float32),
-                               Tensor([bsz, 1, tgt_len, src_len])).astype(dtype)
+    expanded_mask = ops.broadcast_to((mask[:, None, None, :]).astype(mindspore.float32),
+                                     (bsz, 1, tgt_len, src_len)).astype(dtype)
 
     inverted_mask = 1.0 - expanded_mask
 
@@ -323,7 +323,7 @@ class LlamaDecoderLayer(nn.Cell):
 
         return outputs
 
-class LlamaPreTrainedModel(PretrainedModel):
+class LlamaPreTrainedModel(PreTrainedModel):
     '''
     LlamaPreTrainedModel
     '''
@@ -475,7 +475,8 @@ class LlamaModel(LlamaPreTrainedModel):
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-    ) -> Tuple[Tensor]: # [BaseModelOutputWithPast] ?
+    ) -> Tuple[Tensor]:
+        """construct."""
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states

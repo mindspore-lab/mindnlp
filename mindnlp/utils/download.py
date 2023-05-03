@@ -23,7 +23,7 @@ import re
 from pathlib import Path
 from urllib.parse import urlparse
 import requests
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 from mindnlp.configs import DEFAULT_ROOT
 
 def get_cache_path():
@@ -39,7 +39,7 @@ def get_cache_path():
     Examples:
         >>> default_cache_path = get_cache_path()
         >>> print(default_cache_path)
-        '{home}\.text'
+        '{home}\.mindnlp'
 
     """
     if "CACHE_DIR" in os.environ:
@@ -237,7 +237,7 @@ def cache_file(
     path, filename = cached_path(
         filename_or_url=url,
         cache_dir=cache_dir,
-        foldername=None,
+        folder_name=None,
         md5sum=md5sum,
         download_file_name=download_file_name,
         proxies=proxies,
@@ -249,7 +249,7 @@ def cache_file(
 def cached_path(
     filename_or_url: str,
     cache_dir: str = None,
-    foldername=None,
+    folder_name=None,
     md5sum=None,
     download_file_name=None,
     proxies=None,
@@ -260,7 +260,7 @@ def cached_path(
     Args:
         filename_or_url (str): The name or url of the required file .
         cache_dir (str): The path of save the file.
-        foldername (str): The additional folder to which the dataset is cached.(under the `cache_dir`)
+        folder_name (str): The additional folder to which the dataset is cached.(under the `cache_dir`)
         md5sum (str): The true md5sum of download file.
         download_file_name(str): The name of the downloaded file.\
             (This parameter is required if the end of the link is not the downloaded file name.)
@@ -286,8 +286,8 @@ def cached_path(
     else:
         dataset_cache = cache_dir
 
-    if foldername:
-        dataset_cache = os.path.join(dataset_cache, foldername)
+    if folder_name:
+        dataset_cache = os.path.join(dataset_cache, folder_name)
 
     parsed = urlparse(filename_or_url)
 

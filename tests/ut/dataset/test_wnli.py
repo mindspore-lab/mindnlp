@@ -39,7 +39,7 @@ class TestWNLI(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_wnli(self):
         """Test wnli"""
         num_lines = {
@@ -61,7 +61,7 @@ class TestWNLI(unittest.TestCase):
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_wnli_by_register(self):
         """test wnli by register"""
         _ = load_dataset(
@@ -83,7 +83,7 @@ class TestWNLIProcess(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_wnli_process(self):
         r"""
         Test WNLI_Process
@@ -100,7 +100,7 @@ class TestWNLIProcess(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_wnli_process_by_register(self):
         """test wnli process by register"""
         train_dataset, _, _ = WNLI()
