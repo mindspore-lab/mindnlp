@@ -73,7 +73,6 @@ class GLMConfig(PreTrainedConfig):
         self.spell_func = spell_func
         self.attention_scale = attention_scale
         self.output_predict = output_predict
-        
         if spell_length is not None:
             self.prompt_spell = glm.PromptSpell(
                 spell_length, self.hidden_size, spell_func

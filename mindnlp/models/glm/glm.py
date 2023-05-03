@@ -29,7 +29,6 @@ from mindspore import ops
 from mindspore import numpy as mnp
 from mindspore import Tensor
 from mindspore.nn import Dense, Dropout, LayerNorm
-from mindspore.ops import Zeros, Ones, OnesLike
 from mindspore.common import initializer
 
 from .glm_config import GLMConfig
@@ -39,9 +38,7 @@ def ensure_divisibility(numerator, denominator):
     """
     ensure_divisibility
     """
-    assert numerator % denominator == 0, "{} is not divisible by {}".format(
-        numerator, denominator
-    )
+    assert numerator % denominator == 0
 
 
 def divide(numerator, denominator):
@@ -52,7 +49,7 @@ def divide(numerator, denominator):
     return numerator // denominator
 
 
-def split_tensor_along_last_dim(tensor, num_partitions, contiguous_split_chunks=False):
+def split_tensor_along_last_dim(tensor, num_partitions):
     """
     split tensor along last dim
     """
@@ -73,8 +70,11 @@ def scaled_init_method(sigma, num_layers):
 
 
 class PromptSpell(nn.Cell):
+    """
+    PromptSpell modoel
+    """
     def __init__(self, spell_length, hidden_size, spell_func):
-        super(PromptSpell, self).__init__()
+        super().__init__()
         self.spell_length = spell_length
         self.hidden_size = hidden_size
         self.spell_embeddings = nn.Embedding(self.spell_length, self.hidden_size)
@@ -135,7 +135,7 @@ class PositionalEmbedding(nn.Cell):
     """
 
     def __init__(self, hidden_size):
-        super(PositionalEmbedding, self).__init__()
+        super().__init__()
 
         self.hidden_size = hidden_size
 
@@ -163,7 +163,7 @@ class GlmMLP(nn.Cell):
         init_method=initializer.Normal(sigma=0.02),
         output_layer_init_method=None,
     ):
-        super(GlmMLP, self).__init__()
+        super().__init__()
         # Set output layer initialization if not provided.
         if output_layer_init_method is None:
             output_layer_init_method = init_method
@@ -207,7 +207,7 @@ class GLMSelfAttention(nn.Cell):
         output_layer_init_method=None,
         performer=False,
     ):
-        super(GLMSelfAttention, self).__init__()
+        super().__init__()
         self.performer = performer
         # Set output layer initialization if not provided.
         if output_layer_init_method is None:
@@ -380,7 +380,7 @@ class GLMCrossAttention(nn.Cell):
         init_method=initializer.Normal(sigma=0.02),
         output_layer_init_method=None,
     ):
-        super(GLMCrossAttention, self).__init__()
+        super().__init__()
         # Set output layer initialization if not provided.
         if output_layer_init_method is None:
             output_layer_init_method = init_method
@@ -485,7 +485,7 @@ class GLMTransformerLayer(nn.Cell):
         output_layer_init_method=None,
         performer=False,
     ):
-        super(GLMTransformerLayer, self).__init__()
+        super().__init__()
         # Set output layer initialization if not provided.
         if output_layer_init_method is None:
             output_layer_init_method = init_method
@@ -565,7 +565,7 @@ class GLMDecoderLayer(nn.Cell):
         init_method=initializer.Normal(sigma=0.02),
         output_layer_init_method=None,
     ):
-        super(GLMDecoderLayer, self).__init__()
+        super().__init__()
         # Set output layer initialization if not provided.
         if output_layer_init_method is None:
             output_layer_init_method = init_method
@@ -653,7 +653,7 @@ class GLMTransformer(nn.Cell):
         performer=False,
         use_decoder_layer=False,
     ):
-        super(GLMTransformer, self).__init__()
+        super().__init__()
         assert not (
             performer and config.relative_encoding
         ), f"performer and relative_encoding can't be both False"
@@ -780,28 +780,28 @@ class GLMTransformer(nn.Cell):
             # conventional transformer
             def build_mask_matrix(seq_length, sep, memory_length=0):
                 oneslike = ops.OnesLike()
-                m = oneslike(hidden_states).shape(1, seq_length, seq_length)
-                m = mnp.tril(m)
+                mask_matrix = oneslike(hidden_states).shape(1, seq_length, seq_length)
+                mask_matrix = mnp.tril(mask_matrix)
                 if is_scalar:
-                    m[0, :, :sep] = 1
+                    mask_matrix[0, :, :sep] = 1
                 else:
-                    m = m.expand(batch_size, -1, -1)
+                    mask_matrix = mask_matrix.expand(batch_size, -1, -1)
                     ids = mnp.arange(seq_length, dtype=sep.dtype).view(1, -1)
                     mask = ids < sep.view(-1, 1)
-                    m = ops.masked_fill(m, ops.unsqueeze(mask, 1).expand_as(m), 1)
+                    mask_matrix = ops.masked_fill(mask_matrix, ops.unsqueeze(mask, 1).expand_as(mask_matrix), 1)
                 if memory_length > 0:
-                    m = m.expand(batch_size, -1, -1)
-                    m = ops.cat(
+                    mask_matrix = mask_matrix.expand(batch_size, -1, -1)
+                    mask_matrix = ops.cat(
                         (
                             oneslike(hidden_states).shape(
                                 batch_size, seq_length, memory_length
                             ),
-                            m,
+                            mask_matrix,
                         ),
                         axis=2,
                     )
-                m = ops.unsqueeze(m, 1)
-                return m
+                mask_matrix = ops.unsqueeze(mask_matrix, 1)
+                return mask_matrix
 
             if not self.performer:
                 attention_mask = build_mask_matrix(
@@ -887,6 +887,9 @@ class GLMTransformer(nn.Cell):
         return (output, mem_layers)
 
     def update_mems(self, hiddens, mems, return_memory=False):
+        """
+        update mems
+        """
         memory_length = mems[0].shape[1] if mems else 0
         query_length = hiddens[0].shape[1]
         new_memory_length = memory_length + query_length
@@ -908,6 +911,9 @@ class GLMTransformer(nn.Cell):
 
 
 class GLMModel(nn.Cell):
+    """
+    Glm Model
+    """
     def __init__(self, config: GLMConfig):
         super().__init__()
 
