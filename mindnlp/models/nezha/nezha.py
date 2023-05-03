@@ -22,7 +22,7 @@ from mindspore import ops
 from mindspore import Tensor, Parameter
 from .nezha_config import NezhaConfig
 from ..utils import logging
-from ...abc import CellUtilMixin, PreTrainedModel
+from ...abc import PreTrainedModel
 from ..utils.utils import prune_linear_layer, find_pruneable_heads_and_indices, apply_chunking_to_forward
 from ..utils.activations import ACT2FN
 
@@ -621,7 +621,7 @@ class NezhaPreTrainedModel(PreTrainedModel):
         pass
 
 
-class NezhaModel(NezhaPreTrainedModel, CellUtilMixin):
+class NezhaModel(NezhaPreTrainedModel):
     """Nezha Model"""
 
     def __init__(self, config, add_pooling_layer=True):

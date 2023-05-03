@@ -35,7 +35,7 @@ from mindspore.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
 from ..utils.activations import ACT2FN
 from .longformer_config import LongformerConfig
 from ..utils import logging
-from ...abc import CellUtilMixin, PreTrainedModel
+from ...abc import PreTrainedModel
 logger = logging.get_logger(__name__)
 
 def apply_chunking_to_forward(
@@ -1339,7 +1339,7 @@ class LongformerLMHead(nn.Cell):
         self.bias = self.decoder.bias # qbh delete if device
 
 
-class LongformerPreTrainedModel(PreTrainedModel, CellUtilMixin):
+class LongformerPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
