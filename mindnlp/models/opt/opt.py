@@ -55,23 +55,27 @@ def _make_causal_mask(input_ids_shape, dtype: mindspore.dtype, past_key_values_l
     #mask = mindspore.numpy.full((tgt_len,tgt_len),mindspore.Tensor(np.finfo(dtype).min))
     mask = mindspore.numpy.full((tgt_len,tgt_len),mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min))
     #尝试解决finfo问题
+    #print("mask1 of ms is ", mask)
     maskshape = mindspore.ops.shape(mask)[-1]
     #mask_cond = mindspore.ops.arange(mask.shqpe(-1))
     #mask.masked_fill(mask_cond < (mask_cond + 1).view(mask.shape(-1),1),0)
     #修改shape问题
     mask_cond = mindspore.ops.arange(maskshape)
-    mask.masked_fill(mask_cond < (mask_cond + 1).view(maskshape,1),0)
+    #print("cond of ms is ",mask_cond)
+    #print("bool of ms is ", mask_cond < (mask_cond + 1).view(maskshape,1))#pass
+    mask = mask.masked_fill(mask_cond < (mask_cond + 1).view(maskshape,1),0)
     mask = mask.to(dtype)
-
+    #print("mask2 of ms is ", mask)
     if past_key_values_length > 0:
         mask = mindspore.ops.Concat([mindspore.ops.Zeros((tgt_len, past_key_values_length), dtype),mask], dim=-1)
-    
+    """
     print("this is mask shape",mindspore.ops.shape(mask))
     print("tag_len is ", tgt_len)
     print("bsz is ", bsz)
     print("tgt_len + past_key_values_length", tgt_len + past_key_values_length)
     #return mask[None, None, :, :].expand((bsz, 1, tgt_len, tgt_len + past_key_values_length))
     #problem expand的处理
+    """
     multiples = (bsz, 1, 1, 1)
     return mindspore.ops.tile(mask[None, None, :, :], multiples)
 
@@ -80,13 +84,13 @@ def _expand_mask(mask: mindspore.Tensor, dtype: mindspore.dtype, tgt_len = None)
     Expands attention_mask from `[bsz, seq_len]` to `[bsz, 1, tgt_seq_len, src_seq_len]`.
     """
     #bsz, src_len = mask.size()
-    print("here is mask")
-    print(mindspore.ops.shape(mask))
-    print(mask)
-    print(type(mask))#这里都能出错<class 'mindspore.common.tensor.Tensor'> <class 'mindspore.common._stub_tensor.StubTensor'>
+    #print("here is mask")
+    #print(mindspore.ops.shape(mask))
+    #print(mask)
+    #print(type(mask))#这里都能出错<class 'mindspore.common.tensor.Tensor'> <class 'mindspore.common._stub_tensor.StubTensor'>
     bsz, src_len = mindspore.ops.shape(mask)
     tgt_len = tgt_len if tgt_len is not None else src_len
-    print(tgt_len)
+    #print(tgt_len)
     #出错原因在于expand不支持在GPU上运行?
     #maskshape = np.array([bsz, 1, tgt_len, src_len])
     #maskshape = mindspore.Tensor(maskshape)
@@ -94,10 +98,10 @@ def _expand_mask(mask: mindspore.Tensor, dtype: mindspore.dtype, tgt_len = None)
     #must be a Tensor but got Tuple[Int64*4].
     #expanded_mask = mindspore.ops.expand(mindspore.Tensor(mask[:, None, None, :]),mindspore.Tensor(maskshape)).to(dtype)
     multiples = (1, 1, tgt_len,1)
-    print(multiples)
+    #print(multiples)
     mask = mindspore.Tensor(mask)
     #print(mindspore.ops.shape(mask[:, None, None, :]))
-    print("here is unsqueeze")
+    #print("here is unsqueeze")
     mask = mindspore.ops.unsqueeze(mindspore.Tensor(mask),dim = 1)
     mask = mindspore.ops.unsqueeze(mindspore.Tensor(mask),dim = 1)
     #print(mindspore.ops.shape(mindspore.ops.unsqueeze(mindspore.Tensor(mask),dim = 1)))
@@ -110,11 +114,11 @@ def _expand_mask(mask: mindspore.Tensor, dtype: mindspore.dtype, tgt_len = None)
     #return inverted_mask.masked_fill(inverted_mask.to(mindspore.Tensor.bool), np.finfo(mindspore.dtype_to_nptype(dtype)).min)
     #return mindspore.ops.masked_fill(inverted_mask,inverted_mask.to(mindspore.Tensor.bool), np.finfo(mindspore.dtype_to_nptype(dtype)).min)
     #return mindspore.ops.masked_fill(inverted_mask,mindspore.Tensor.bool(inverted_mask), mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min))
-    print("dtype is ",dtype)
-    print("shape of mask is", mindspore.ops.shape(inverted_mask))
-    print(inverted_mask)
+    #print("dtype is ",dtype)
+    #print("shape of mask is", mindspore.ops.shape(inverted_mask))
+    #print(inverted_mask)
     mask_bool = inverted_mask.astype(mindspore.bool_)
-    print(mask_bool)
+    #print(mask_bool)
     return mindspore.ops.masked_fill(inverted_mask, mask_bool, mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min))
 
 
@@ -376,12 +380,17 @@ class OPTDecoderLayer(nn.Cell):
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]#设置激活函数
         #pytorch 中 layernorm可以传入一个数 但是mindspore中只能传入一个tuple或者list
+        """
         self.self_attn_layer_norm = nn.LayerNorm(#设置layernorm，直接调用LayerNorm 相比于pytorch中的nn.LayerNorm函数，没有elementwise_affine参数
             [self.embed_dim], begin_norm_axis = -1, begin_params_axis = -1
         )
+        """
+        self.self_attn_layer_norm = nn.LayerNorm(#设置layernorm，直接调用LayerNorm 相比于pytorch中的nn.LayerNorm函数，没有elementwise_affine参数
+            [self.embed_dim], epsilon=1e-5
+        )
         self.fc1 = nn.Dense(self.embed_dim, config.ffn_dim, has_bias=config.enable_bias)#两个线性层embed_dim->ffn_dim,然后再ffn_dim->embed_dim
         self.fc2 = nn.Dense(config.ffn_dim, self.embed_dim, has_bias=config.enable_bias)#没看太懂具体是要干什么
-        self.final_layer_norm = nn.LayerNorm([self.embed_dim], begin_norm_axis = -1, begin_params_axis = -1)#最后再来一层layernorm
+        self.final_layer_norm = nn.LayerNorm([self.embed_dim], epsilon=1e-5)#最后再来一层layernorm
 
     def construct(
         self,
@@ -392,16 +401,25 @@ class OPTDecoderLayer(nn.Cell):
         use_cache = False,
         past_key_value = None,
     ):
-
+        """
+        print("mindspore decoder layer")
+        print("hidden state is ", hidden_states)
+        print("attention mask is ", attention_mask)
+        print("layer_head mask is :", layer_head_mask)
+        print("output attention is ", output_attentions)
+        print("use cache is ",use_cache)
+        print("past key value is ", past_key_value)
+        
+        """
         residual = hidden_states
-
         """
         与之前self.do_layer_norm_before相关,这里opt在大模型中要先使用layernorm
         """
         # 125m, 1.7B, ..., 175B applies layer norm BEFORE attention
         if self.do_layer_norm_before:
             hidden_states = self.self_attn_layer_norm(hidden_states)
-
+        print("hidden states of mindspore after layer norm")
+        print(hidden_states)
         # Self Attention
         #这里的selfattention就是上面的OPTAttention,mask也在这个过程中完成？
         hidden_states, self_attn_weights, present_key_value = self.self_attn(
@@ -411,7 +429,11 @@ class OPTDecoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,#这里传入layer_head_mask
             output_attentions=output_attentions,
         )
+        print("hidden state of mindspore after attention!")
+        print(hidden_states)
         hidden_states = mindspore.ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        #print("hidden state of mindspore after dropout!")
+        #print(hidden_states)
         #problem dropout 的training问题
         #hiddenstate进行完attention进行dropout然后加上residual
         hidden_states = residual + hidden_states
@@ -500,7 +522,8 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
         self.max_target_positions = config.max_position_embeddings
         self.vocab_size = config.vocab_size
         #把word embedding 与 position设置好
-        self.embed_tokens = nn.Embedding(config.vocab_size, config.word_embed_proj_dim, use_one_hot = False, padding_idx = 1)
+        #self.embed_tokens = nn.Embedding(config.vocab_size, config.word_embed_proj_dim, use_one_hot = False, padding_idx = 1)
+        self.embed_tokens = nn.Embedding(config.vocab_size, config.word_embed_proj_dim,padding_idx = self.padding_idx)
         self.embed_positions = OPTLearnedPositionalEmbedding(config.max_position_embeddings, config.hidden_size)
 
         if config.word_embed_proj_dim != config.hidden_size:
@@ -525,7 +548,9 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
         """
         if config.do_layer_norm_before and not config._remove_final_layer_norm:
             self.final_layer_norm = nn.LayerNorm(
-                [config.hidden_size], begin_norm_axis = -1, begin_params_axis = -1
+                #[config.hidden_size], begin_norm_axis = -1, begin_params_axis = -1
+                #[config.hidden_size], begin_norm_axis = 0, begin_params_axis = 0
+                [config.hidden_size], epsilon=1e-5
             )
         else:
             self.final_layer_norm = None
@@ -553,18 +578,19 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
         """
         mask 机制
         """
-        print("from prepare test direct outputs", attention_mask)
+        #print("from prepare test direct outputs", attention_mask)
+        #print("input shape is: ", input_shape, "input embeds is: ", inputs_embeds)#pass
         combined_attention_mask = None
-        print("inputshape is", input_shape[-1])
+        #print("inputshape is", input_shape[-1])
         if input_shape[-1] > 1:
             combined_attention_mask = _make_causal_mask(
                 input_shape, inputs_embeds.dtype, past_key_values_length=past_key_values_length
             )#.to(inputs_embeds.device)
-
+        #print("combined mask of ms is: ", combined_attention_mask) #FAIL
         if attention_mask is not None:
             # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
-            print("from prepare test type", type(attention_mask))
-            print("from prepare test direct output", attention_mask)
+            #print("from prepare test type", type(attention_mask))
+            #print("from prepare test direct output", attention_mask)
             #pass
             expanded_attn_mask = _expand_mask(attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1])#.to(inputs_embeds.device)
             combined_attention_mask = (
@@ -586,8 +612,8 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
         return_dict = None,
     ):
         #problem
-        print("this is input_ids", input_ids)
-        print("this is attention", attention_mask)
+        #print("this is input_ids", input_ids)
+        #print("this is attention", attention_mask)
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -616,24 +642,27 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
         # embed positions
         if attention_mask is None:
             #attention_mask = mindspore.ops.ones(inputs_embeds.shape[:2], dtype=mindspore.bool, device=inputs_embeds.device)
-            attention_mask = mindspore.ops.ones(inputs_embeds.shape[:2], dtype=mindspore.int64)
-            
+            #attention_mask = mindspore.ops.ones(inputs_embeds.shape[:2], dtype=mindspore.int64)
+            attention_mask = mindspore.ops.ones(inputs_embeds.shape[:2], dtype=mindspore.bool_)
+            """这里之前调试的时候dtyoe改为了int64"""
+        #print("attention mask is",attention_mask)    #pass
         #problem1 None->StubTensor,是否应该通过dtype来修正
-        print("this is attention mask changed",attention_mask)
-        print(type(attention_mask))
-        print("attention_mask direct ouput",attention_mask)
+        #print("this is attention mask changed",attention_mask)
+        #print(type(attention_mask))
+        #print("attention_mask direct ouput",attention_mask)
         #这里可以直接输出，但是传入到expand_mask中就不能输出了
         pos_embeds = self.embed_positions(attention_mask, past_key_values_length)
-
+        #print("past key value of ms is: ", past_key_values) #pass both are none
         #调用_prepare_decoder_attention_mask，使用causal mask，然后再下面传入decoder_layer
         attention_mask = self._prepare_decoder_attention_mask(
             attention_mask, input_shape, inputs_embeds, past_key_values_length
         )
-
+        #print("attention mask is",attention_mask)#FAIL 理论上应该是阶梯状那种 now pass
         if self.project_in is not None:
             inputs_embeds = self.project_in(inputs_embeds)
 
         hidden_states = inputs_embeds + pos_embeds
+        #print("hidden_states of mindspore is ",hidden_states)
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
@@ -667,6 +696,9 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
 
             past_key_value = past_key_values[idx] if past_key_values is not None else None
 
+            #print("hiddenstate before mslayer ", hidden_states) pass
+            #print("attentionmask before mslayer ", attention_mask)#FAIL
+            #print("past key values:", past_key_value)
             if self.gradient_checkpointing and self.training:
 
                 def create_custom_forward(module):
@@ -675,7 +707,7 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
                         return module(*inputs, output_attentions, None)
 
                     return custom_forward
-
+                print("Training = true???")
                 """layer_outputs = mindspore.utils.checkpoint.checkpoint(
                     create_custom_forward(decoder_layer),
                     hidden_states,
@@ -694,7 +726,8 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
                 )
 
             hidden_states = layer_outputs[0]
-
+            print("hiddenstate after mindspore layer: ")
+            print(hidden_states)
             if use_cache:
                 next_decoder_cache += (layer_outputs[2 if output_attentions else 1],)
 
@@ -714,7 +747,7 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
         next_cache = next_decoder_cache if use_cache else None
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
-        """return BaseModelOutputWithPast(#problem 缺少BaseModelOutputWithPast，来自from ...modeling_outputs import
+        """return BaseModelOutputWithPast(#problem 缺少BaseModelOutputWithPast 来自from ...modeling_outputs import
             last_hidden_state=hidden_states,
             past_key_values=next_cache,
             hidden_states=all_hidden_states,
