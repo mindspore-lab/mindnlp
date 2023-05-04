@@ -68,7 +68,6 @@ def scaled_init_method(sigma, num_layers):
     init_method = initializer.Normal(sigma=std, mean=0.0)
     return init_method
 
-
 class PromptSpell(nn.Cell):
     """
     PromptSpell modoel

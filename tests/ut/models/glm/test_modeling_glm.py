@@ -114,7 +114,6 @@ class TestModelingGlm(unittest.TestCase):
         hidden_states_input = Tensor(np.random.randint(0, 10, (10, 100, 512)), dtype = mindspore.float32)
         position_ids_input = Tensor(np.random.randint(0, 1, (10, 100)), dtype = mindspore.int32)
         attention_mask_input = Tensor(np.random.randint(0, 1, (10, 1, 1, 100)), dtype = mindspore.int32)
-
         output = model(hidden_states_input, position_ids_input, attention_mask_input)
 
         assert output[0].shape == (batch_size,max_sequence_length,hidden_size)
