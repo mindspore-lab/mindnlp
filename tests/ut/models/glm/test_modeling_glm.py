@@ -30,12 +30,11 @@ class TestModelingGlm(unittest.TestCase):
         Set up.
         """
         self.config = glm_config.GLMConfig()
-    
+
     def test_position_embedding(self):
         """
         test position embedding
         """
-        config = self.config
         model = glm.PositionalEmbedding(hidden_size=512)
         pos_seq = Tensor(np.random.randint(0, 10, (10,)), mindspore.float32)
         output = model(pos_seq)
@@ -50,7 +49,6 @@ class TestModelingGlm(unittest.TestCase):
 
         assert output.shape == (1,10,20)
 
-
     def test_glm_selfattention(self):
         """
         test glm selfattention
@@ -61,7 +59,6 @@ class TestModelingGlm(unittest.TestCase):
         output = model(selfattention_input)
 
         assert output.shape == (2, 50, 512)
-    
     def test_glm_crossattention(self):
         """
         test glm cross-attention
@@ -80,20 +77,17 @@ class TestModelingGlm(unittest.TestCase):
         """
         config = self.config
         model = glm.GlmMLP(config=config)
-        mlp_input = Tensor(np.random.randint(0, 10, (2,50,512)), mindspore.float32)
-        
+        mlp_input = Tensor(np.random.randint(0, 10, (2,50,512)), mindspore.float32)       
         output = model(mlp_input)
-
         assert output.shape == (2, 50, 512)
-    
+
     def test_glm_transformer_layer(self):
         """
         test glm transformer layer
         """
         model = glm.GLMTransformerLayer(config=self.config)
         transformer_layer_input = Tensor(np.random.randint(0, 10, (2,100,512)), mindspore.float32)
-        ltor_mask_input = Tensor(np.random.randint(0, 1, (1,1,100,100)), mindspore.float32)
-        
+        ltor_mask_input = Tensor(np.random.randint(0, 1, (1,1,100,100)), mindspore.float32)     
         output = model(transformer_layer_input, ltor_mask_input)
 
         assert output.shape == (2, 100, 512)
@@ -106,11 +100,9 @@ class TestModelingGlm(unittest.TestCase):
         hidden_states_input = Tensor(np.random.randint(0, 10, (2,100,512)), mindspore.float32)
         encoder_states_input = Tensor(np.random.randint(0, 1, (2,100,512)), mindspore.float32)
         ltor_mask_input = Tensor(np.random.randint(0, 1, (1,1,100,100)), mindspore.float32)
-
         output = model(hidden_states_input, encoder_states_input, ltor_mask_input)
-
         assert output.shape == (2, 100, 512)
-    
+
     def test_glm_transformer(self):
         """
         test glm transformer
@@ -136,13 +128,13 @@ class TestModelingGlm(unittest.TestCase):
         max_sequence_length = 100
         hidden_size = 512
         mems = None
-        input_ids_input = Tensor(np.random.randint(0, 10, (batch_size, max_sequence_length)), dtype = mindspore.int32)
-        position_ids_input = Tensor(np.random.randint(0, 1, (batch_size, max_sequence_length)), dtype = mindspore.int32)
-        attention_mask_input = Tensor(np.random.randint(0, 1, (batch_size, 1, 1, max_sequence_length)), dtype = mindspore.int32)
+        input_ids_input = Tensor(np.random.randint(0, 10,
+                                (batch_size, max_sequence_length)), dtype = mindspore.int32)
+        position_ids_input = Tensor(np.random.randint(0, 1,
+                                (batch_size, max_sequence_length)), dtype = mindspore.int32)
+        attention_mask_input = Tensor(np.random.randint(0, 1,
+                                (batch_size, 1, 1, max_sequence_length)), dtype = mindspore.int32)
 
         output_tuple = model(input_ids_input, position_ids_input, attention_mask_input, mems)
-
         output = output_tuple[0]
-
         assert output.shape == (batch_size, max_sequence_length, hidden_size)
-

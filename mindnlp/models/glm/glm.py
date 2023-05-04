@@ -148,7 +148,6 @@ class PositionalEmbedding(nn.Cell):
 
         if bsz is not None:
             return pos_emb[None, :, :].expand(bsz, -1, -1)
-        
         return pos_emb[None, :, :]
 
 
@@ -880,13 +879,13 @@ class GLMTransformer(nn.Cell):
             new_memory_length = min(self.max_memory_length, new_memory_length)
         new_mems = []
 
-        for i in range(len(hiddens)):
+        for i, layers in enumerate(hiddens):
             if new_memory_length <= query_length:
-                new_mems.append(hiddens[i][:, -new_memory_length:])
+                new_mems.append(layers[:, -new_memory_length:])
             else:
                 new_mems.append(
                     ops.cat(
-                        (mems[i][:, -new_memory_length + query_length :], hiddens[i]),
+                        (mems[i][:, -new_memory_length + query_length :], layers),
                         axis=1,
                     )
                 )
