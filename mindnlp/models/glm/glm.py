@@ -124,7 +124,7 @@ class PromptSpell(nn.Cell):
         prompt_embeds = self.spell_embeddings.embedding_table.unsqueeze(0)
         if self.spell_func == "lstm":
             prompt_embeds = self.lstm_head(prompt_embeds)[0]
-        if self.spell_func == "lstm" or self.spell_func == "mlp":
+        if self.spell_func in ("lstm", "mlp"):
             prompt_embeds = self.mlp_head(prompt_embeds)
         return prompt_embeds
 
@@ -148,8 +148,8 @@ class PositionalEmbedding(nn.Cell):
 
         if bsz is not None:
             return pos_emb[None, :, :].expand(bsz, -1, -1)
-        else:
-            return pos_emb[None, :, :]
+        
+        return pos_emb[None, :, :]
 
 
 class GlmMLP(nn.Cell):
@@ -258,19 +258,19 @@ class GLMSelfAttention(nn.Cell):
         return tensor.permute(0, 2, 1, 3)
 
     @staticmethod
-    def _rel_shift(x: Tensor, zero_triu=False):
-        zero_pad = ops.zeros((*x.shape[:-2], x.shape[-2], 1), dtype=x.dtype)
-        x_padded = ops.cat([zero_pad, x], axis=-1)
+    def _rel_shift(input_x: Tensor, zero_triu=False):
+        zero_pad = ops.zeros((*input_x.shape[:-2], input_x.shape[-2], 1), dtype=input_x.dtype)
+        x_padded = ops.cat([zero_pad, input_x], axis=-1)
 
-        x_padded = x_padded.view(*x.shape[:-2], x.shape[-1] + 1, x.shape[-2])
+        x_padded = x_padded.view(*input_x.shape[:-2], input_x.shape[-1] + 1, input_x.shape[-2])
 
-        x = x_padded[:, :, 1:].view(x.shape)
+        input_x = x_padded[:, :, 1:].view(input_x.shape)
 
         if zero_triu:
-            ones = ops.ones((x.shape[0], x.shape[1]))
-            x = x * mnp.tril(ones, x.shape[1] - x.shape[0])[:, :, None, None]
+            ones = ops.ones((input_x.shape[0], input_x.shape[1]))
+            input_x = input_x * mnp.tril(ones, input_x.shape[1] - input_x.shape[0])[:, :, None, None]
 
-        return x
+        return input_x
 
     def construct(
         self,
@@ -616,7 +616,7 @@ class GLMDecoderLayer(nn.Cell):
     ):
         # hidden_states: [b, s, h]
         # ltor_mask: [1, 1, s, s]
-
+        mem = self.input_layernorm(mem) if mem is not None else None
         # Layer norm at the begining of the transformer layer.
         layernorm_output = self.input_layernorm(hidden_states)
         # Self attention.
@@ -656,7 +656,7 @@ class GLMTransformer(nn.Cell):
         super().__init__()
         assert not (
             performer and config.relative_encoding
-        ), f"performer and relative_encoding can't be both False"
+        )
         self.performer = performer
         self.init_method_std = config.init_method_std
         self.use_scaled_init_for_output_weights = use_scaled_init_for_output_weights
@@ -730,13 +730,13 @@ class GLMTransformer(nn.Cell):
                     init_method=initializer.Normal(sigma=config.init_method_std),
                     output_layer_init_method=output_layer_init_method,
                 )
-            else:
-                return GLMTransformerLayer(
-                    config,
-                    init_method=initializer.Normal(sigma=config.init_method_std),
-                    output_layer_init_method=output_layer_init_method,
-                    performer=performer,
-                )
+
+            return GLMTransformerLayer(
+                config,
+                init_method=initializer.Normal(sigma=config.init_method_std),
+                output_layer_init_method=output_layer_init_method,
+                performer=performer,
+            )
 
         # Transformer layers.
         self.layers = nn.SequentialCell([get_layer() for _ in range(config.num_layers)])
@@ -846,23 +846,6 @@ class GLMTransformer(nn.Cell):
             mem_layers = [check_detach(hidden_states)]
         else:
             mem_layers = []
-
-        def custom(start, end):
-            def custom_forward(*inputs):
-                layers_ = self.layers[start:end]
-                x_, inputs = inputs[0], inputs[1:]
-                if self.relative_encoding:
-                    inputs, mems_ = inputs[:4], inputs[4:]
-                else:
-                    inputs, mems_ = inputs[:1], inputs[1:]
-                for i, layer in enumerate(layers_):
-                    mem_i_ = mems_[i] if mems_ else None
-                    x_ = layer(x_, *inputs, mem=mem_i_)
-                    if self.max_memory_length > 0 or return_memory:
-                        mem_layers.append(check_detach(x_))
-                return x_
-
-            return custom_forward
 
         for i, layer in enumerate(self.layers):
             args = (
