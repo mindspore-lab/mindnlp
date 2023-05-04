@@ -33,8 +33,10 @@ PRETRAINED_MODEL_ARCHIVE_MAP = {
 }
 
 
-def torch_to_mindspore(pth_file):
+def torch_to_mindspore(pth_file, **kwargs):
     """convert torch checkpoint to mindspore"""
+    _ = kwargs.get('prefix', '')
+
     try:
         import torch
     except Exception as exc:
@@ -368,7 +370,7 @@ class BertPreTrainingHeads(nn.Cell):
         return prediction_scores, seq_relationship_score
 
 
-class BertPretrainedModel(PreTrainedModel):
+class BertPreTrainedModel(PreTrainedModel):
     """BertPretrainedModel"""
     convert_torch_to_mindspore = torch_to_mindspore
     pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
@@ -397,7 +399,7 @@ class BertPretrainedModel(PreTrainedModel):
         """set input embeddings"""
 
 
-class BertModel(BertPretrainedModel):
+class BertModel(BertPreTrainedModel):
     r"""
     Bert Model
     """
@@ -440,7 +442,7 @@ class BertModel(BertPretrainedModel):
         return outputs # sequence_output, pooled_output, (hidden_states), (attentions)
 
 
-class BertForPretraining(BertPretrainedModel):
+class BertForPretraining(BertPreTrainedModel):
     r"""
     Bert For Pretraining
     """
@@ -473,7 +475,7 @@ class BertForPretraining(BertPretrainedModel):
 
         return outputs
 
-class BertForSequenceClassification(BertPretrainedModel):
+class BertForSequenceClassification(BertPreTrainedModel):
     """Bert Model for classification tasks"""
 
     def __init__(self, config):

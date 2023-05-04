@@ -12,14 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""
-GPT Model.
-"""
+"""Test the GPTTokenizer"""
 
-from . import gpt, gpt_config
-from .gpt import *
-from .gpt_config import *
+import mindspore as ms
+from mindspore.dataset import GeneratorDataset
+from mindnlp.transforms import GPTTokenizer
 
-__all__ = []
-__all__.extend(gpt.__all__)
-__all__.extend(gpt_config.__all__)
+def test_bert_tokenizer_from_pretrained():
+    """test GPTTokenizer from pretrained."""
+    texts = ['i make a small mistake when i\'m working! 床前明月光']
+    test_dataset = GeneratorDataset(texts, 'text')
+
+    bert_tokenizer = GPTTokenizer.from_pretrained('openai-gpt', return_token=True)
+    test_dataset = test_dataset.map(operations=bert_tokenizer)
+    dataset_after = next(test_dataset.create_tuple_iterator())[0]
+
+    assert len(dataset_after) == 16
+    assert dataset_after.dtype == ms.string

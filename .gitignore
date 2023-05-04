@@ -137,3 +137,5 @@ rank_0/
 download.txt
 *.whl
 *.tar.gz
+*hf*.py
+*torch*.py
