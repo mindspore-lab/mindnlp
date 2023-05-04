@@ -61,7 +61,6 @@ def split_tensor_along_last_dim(tensor, num_partitions):
 
     return tensor_list
 
-
 def scaled_init_method(sigma, num_layers):
     """Init method based on N(0, sigma/sqrt(2*num_layers)."""
     std = sigma / math.sqrt(2.0 * num_layers)
