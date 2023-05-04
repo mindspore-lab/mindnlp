@@ -1,26 +1,28 @@
-# coding=utf-8
-# Copyright (c) 2022 PaddlePaddle Authors. All Rights Reserved.
-# Copyright 2020 The TensorFlow Datasets Authors and the HuggingFace Datasets Authors.
+# Copyright 2022 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ============================================================================
 
-# Lint as: python3
 
 import os
+from typing import Union, Tuple
 import json
 import hashlib
 
 import datasets
+from datasets import load_dataset as hf_load
+from mindnlp.dataset.register import load_dataset, process
+from mindnlp.configs import DEFAULT_ROOT
 
 logger = datasets.logging.get_logger(__name__)
 
@@ -129,3 +131,59 @@ class DocVQAZh(datasets.GeneratorBasedBuilder):
                 data["md5sum"] = _get_md5(data["image"])
                 yield idx, data
                 idx += 1
+
+                
+                
+                
+ class HFdocvqa_zh:
+    """
+    Hugging Face docvqa_zh dataset source
+    """
+    def __init__(self, dataset_list) -> None:
+        self.dataset_list = dataset_list
+        self._label, self._text = [], []
+        self._load()
+
+    def _load(self):
+        for every_dict in self.dataset_list:
+            self._label.append(every_dict['label'])
+            self._text.append(every_dict['text'])
+
+    def __getitem__(self, index):
+        return self._text[index], self._label[index]
+
+    def __len__(self):
+        return len(self._label)
+
+
+@load_dataset.register
+def HF_Docvqa_zh(
+    root: str = DEFAULT_ROOT,
+    split: Union[Tuple[str], str] = ("train", "dev", "test"),
+    shuffle=True,
+):
+    r"""
+    Load the huggingface docvqa_zh dataset.
+
+    """
+
+    cache_dir = os.path.join(root, "datasets", "hf_datasets", "IMDB")
+    column_names = ["text", "label"]
+    datasets_list = []
+    mode_list = []
+
+    if isinstance(split, str):
+        mode_list.append(split)
+    else:
+        for s in split:
+            mode_list.append(s)
+
+    ds_list = hf_load("docvqa_zh")
+    for every_ds in ds_list:
+        datasets_list.append(GeneratorDataset(
+            source=HFimdb(every_ds),
+            column_names=column_names, shuffle=shuffle)
+        )
+    if len(mode_list) == 1:
+        return datasets_list[0]
+    return datasets_list
