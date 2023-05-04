@@ -77,7 +77,7 @@ class TestModelingGlm(unittest.TestCase):
         """
         config = self.config
         model = glm.GlmMLP(config=config)
-        mlp_input = Tensor(np.random.randint(0, 10, (2,50,512)), mindspore.float32)       
+        mlp_input = Tensor(np.random.randint(0, 10, (2,50,512)), mindspore.float32)
         output = model(mlp_input)
         assert output.shape == (2, 50, 512)
 
@@ -87,7 +87,7 @@ class TestModelingGlm(unittest.TestCase):
         """
         model = glm.GLMTransformerLayer(config=self.config)
         transformer_layer_input = Tensor(np.random.randint(0, 10, (2,100,512)), mindspore.float32)
-        ltor_mask_input = Tensor(np.random.randint(0, 1, (1,1,100,100)), mindspore.float32)     
+        ltor_mask_input = Tensor(np.random.randint(0, 1, (1,1,100,100)), mindspore.float32)
         output = model(transformer_layer_input, ltor_mask_input)
 
         assert output.shape == (2, 100, 512)
@@ -115,9 +115,9 @@ class TestModelingGlm(unittest.TestCase):
         position_ids_input = Tensor(np.random.randint(0, 1, (10, 100)), dtype = mindspore.int32)
         attention_mask_input = Tensor(np.random.randint(0, 1, (10, 1, 1, 100)), dtype = mindspore.int32)
 
-        output, mem_layers = model(hidden_states_input, position_ids_input, attention_mask_input)
+        output = model(hidden_states_input, position_ids_input, attention_mask_input)
 
-        assert output.shape == (batch_size,max_sequence_length,hidden_size)
+        assert output[0].shape == (batch_size,max_sequence_length,hidden_size)
 
     def test_glm_model(self):
         """
