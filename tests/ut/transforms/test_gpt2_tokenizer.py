@@ -4,6 +4,7 @@ import mindspore as ms
 from mindspore.dataset import GeneratorDataset
 from mindnlp.transforms import GPT2Tokenizer
 
+
 def test_gpt2_tokenizer_from_pretrained():
     """test GPTTokenizer from pretrained."""
     texts = ['i make a small mistake when i\'m working! 床前明月光']
