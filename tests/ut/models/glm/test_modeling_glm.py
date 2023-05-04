@@ -59,6 +59,7 @@ class TestModelingGlm(unittest.TestCase):
         output = model(selfattention_input)
 
         assert output.shape == (2, 50, 512)
+
     def test_glm_crossattention(self):
         """
         test glm cross-attention
