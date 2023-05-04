@@ -14,7 +14,7 @@
 # ============================================================================
 """MindNLP gpt2 config"""
 
-from ...abc.backbones.pretrained import PreTrainedConfig
+from mindnlp.abc import PreTrainedConfig
 from mindnlp.configs import HF_CONFIG_URL_BASE
 
 
