@@ -18,7 +18,7 @@ import mindspore as ms
 from mindspore.dataset import GeneratorDataset
 from mindnlp.transforms import GPTTokenizer
 
-def test_bert_tokenizer_from_pretrained():
+def test_gpt_tokenizer_from_pretrained():
     """test GPTTokenizer from pretrained."""
     texts = ['i make a small mistake when i\'m working! 床前明月光']
     test_dataset = GeneratorDataset(texts, 'text')
