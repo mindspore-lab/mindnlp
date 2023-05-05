@@ -30,7 +30,7 @@ from mindspore import ops,nn,Parameter
 from mindspore.common.initializer import Normal, initializer
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindnlp.models.utils.utils import SequenceSummary,SQuADHead
-from ...abc.backbones.pretrained import PreTrainedModel
+from mindnlp.abc import PreTrainedModel
 from .xlm_config import XLMConfig
 from ..utils import logging
 from ..utils.activations import get_activation

@@ -18,7 +18,6 @@ BertTokenizer
 import os
 from typing import Union
 import numpy as np
-from mindspore.dataset.transforms.transforms import PyTensorOperation
 from mindspore.dataset.text.transforms import Implementation
 from mindspore.dataset.text import Vocab as msVocab
 from tokenizers import Tokenizer
@@ -52,7 +51,7 @@ PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
 }
 
 
-class BertTokenizer(PyTensorOperation, PreTrainedTokenizer):
+class BertTokenizer(PreTrainedTokenizer):
     """
     Tokenizer used for Bert text process.
 
@@ -92,7 +91,6 @@ class BertTokenizer(PyTensorOperation, PreTrainedTokenizer):
     pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
     def __init__(self, vocab: Union[msVocab, Vocab, str], **kwargs):
-        super().__init__()
         if isinstance(vocab, msVocab):
             vocab_dict = vocab.vocab()
         elif isinstance(vocab, Vocab):
@@ -105,11 +103,12 @@ class BertTokenizer(PyTensorOperation, PreTrainedTokenizer):
 
         lower_case = kwargs.pop('lower_case', False)
         return_token = kwargs.pop('return_token', False)
+        super().__init__(**kwargs)
 
         if isinstance(vocab, str):
-            self.tokenizer = Tokenizer.from_file(vocab)
+            self._tokenizer = Tokenizer.from_file(vocab)
         else:
-            self.tokenizer = BertWordPieceTokenizer(vocab=vocab_dict, lowercase=lower_case)
+            self._tokenizer = BertWordPieceTokenizer(vocab=vocab_dict, lowercase=lower_case)
 
         self.return_token = return_token
         self.implementation = Implementation.PY
@@ -136,7 +135,7 @@ class BertTokenizer(PyTensorOperation, PreTrainedTokenizer):
         Execute method.
         """
         text = self._convert_to_unicode(text_input)
-        output = self.tokenizer.encode(text)
+        output = self._tokenizer.encode(text)
         if self.return_token is True:
             return np.array(output.tokens)
         return np.array(output.ids)

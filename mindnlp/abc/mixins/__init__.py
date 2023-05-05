@@ -1,4 +1,4 @@
-# Copyright 2021 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,12 +14,11 @@
 # ============================================================================
 
 """
-Abstract classes.
+Mixin classes.
 """
-from .configs import *
-from .models import *
-from .modules import *
-from .callback import Callback
-from .metric import Metric
-from .mixins import *
-from .transforms import *
+
+from .cell_mixin import CellUtilMixin
+from .generation_mixin import GenerationMixin
+from .special_tokens_mixin import SpecialTokensMixin
+
+__all__ = ['CellUtilMixin', 'GenerationMixin', 'SpecialTokensMixin']
