@@ -15,7 +15,7 @@
 """
 model nezha config
 """
-from mindnlp.abc.backbones.pretrained import PreTrainedConfig
+from mindnlp.abc import PreTrainedConfig
 
 
 class NezhaConfig(PreTrainedConfig):

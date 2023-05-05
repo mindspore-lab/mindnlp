@@ -29,3 +29,19 @@ def test_gpt_tokenizer_from_pretrained():
 
     assert len(dataset_after) == 16
     assert dataset_after.dtype == ms.string
+
+def test_gpt_tokenizer_add_special_tokens():
+    """test add special tokens."""
+    gpt_tokenizer = GPTTokenizer.from_pretrained('openai-gpt')
+    cls_id = gpt_tokenizer.token_to_id("[CLS]")
+
+    assert cls_id is None
+
+    add_num = gpt_tokenizer.add_special_tokens({
+        'cls_token': "[CLS]"
+    })
+
+    assert add_num == 1
+
+    cls_id = gpt_tokenizer.token_to_id("[CLS]")
+    assert cls_id == 40478

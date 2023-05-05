@@ -17,7 +17,6 @@ T5Tokenizer
 """
 
 import numpy as np
-from mindspore.dataset.transforms.transforms import PyTensorOperation
 from mindspore.dataset.text.transforms import Implementation
 from tokenizers import Tokenizer
 from mindnlp.abc import PreTrainedTokenizer
@@ -36,7 +35,7 @@ PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
     "t5-11b": 512,
 }
 
-class T5Tokenizer(PyTensorOperation, PreTrainedTokenizer):
+class T5Tokenizer(PreTrainedTokenizer):
     """
         Tokenizer used for T5 text process.
         Args:

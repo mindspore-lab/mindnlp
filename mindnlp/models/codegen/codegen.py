@@ -26,7 +26,7 @@ from mindspore import ops
 from mindnlp.models.utils import logging
 from mindnlp.models.utils.activations import ACT2FN
 from mindnlp.models.codegen.codegen_config import CodeGenConfig
-from mindnlp.abc.backbones.pretrained import PreTrainedModel
+from mindnlp.abc import PreTrainedModel
 
 logger = logging.get_logger(__name__)
 

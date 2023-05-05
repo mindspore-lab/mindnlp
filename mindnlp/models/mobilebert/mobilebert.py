@@ -29,7 +29,7 @@ import mindspore.numpy as mnp
 from mindspore import nn
 from mindspore import ops
 from mindspore.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
-from mindnlp.abc.backbones.pretrained import PreTrainedModel
+from mindnlp.abc import PreTrainedModel
 from ..mobilebert.mobilebert_config import MobileBertConfig
 from ..utils.utils import find_pruneable_heads_and_indices, prune_conv1d_layer
 from ..utils.activations import ACT2FN

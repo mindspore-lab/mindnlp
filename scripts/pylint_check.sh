@@ -1,4 +1,5 @@
-# Copyright 2021 Huawei Technologies Co., Ltd
+#!/bin/bash
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,15 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
 
-"""
-Abstract classes.
-"""
-from .configs import *
-from .models import *
-from .modules import *
-from .callback import Callback
-from .metric import Metric
-from .mixins import *
-from .transforms import *
+pylint mindnlp --rcfile=.github/pylint.conf
+pylint tests --rcfile=.github/pylint.conf
