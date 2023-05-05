@@ -118,23 +118,11 @@ class ErniePretrainedModel(PreTrainedModel):
         pass
 
     #TODO
-    def init_model_weights(self):
-        pass
-
-    #TODO
     def resize_position_embeddings(self):
         pass
 
     #TODO
-    def save(self):
-        pass
-
-    #TODO
     def set_input_embeddings(self):
-        pass
-
-    #TODO
-    def post_init(self):
         pass
 
     def init_weights(self, layer):

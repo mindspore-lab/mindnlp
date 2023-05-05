@@ -13,6 +13,7 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=C0103
+# pylint: disable=W0223
 
 """roberta model, base on bert."""
 import mindspore
