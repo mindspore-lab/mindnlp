@@ -15,13 +15,13 @@
 # pylint: disable=C0103
 
 """ MindSpore CodeGen model."""
-import os
 from typing import Optional, Tuple, Union
 
 import mindspore
 import numpy as np
-from mindspore import nn, Tensor, Parameter
-from mindspore import ops
+from mindspore import nn, ops
+from mindspore import Tensor, Parameter
+from mindspore.common.initializer import Normal, initializer
 
 from mindnlp.models.utils import logging
 from mindnlp.models.utils.activations import ACT2FN
@@ -329,38 +329,31 @@ class CodeGenPreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["CodeGenBlock"]
 
-    # def __init__(self, *inputs, **kwargs):
-    #     super().__init__(*inputs, **kwargs)
-
     def get_position_embeddings(self):
         pass
 
     def resize_position_embeddings(self, new_num_position_embeddings: int):
         pass
 
-    def save(self, save_dir: Union[str, os.PathLike]):
-        pass
-
-    def init_model_weights(self):
-        pass
-
-    def post_init(self):
-        pass
-
-    def _init_weights(self, module):
-        if isinstance(module, (nn.Dense,)):
-            # Slightly different from Mesh Transformer JAX which uses truncated_normal for initialization
+    def _init_weights(self, cell):
+        """Initialize the weights"""
+        if isinstance(cell, nn.Dense):
+            # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if module.bias is not None:
-                module.bias.data.zero_()
-        elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
-        elif isinstance(module, nn.LayerNorm):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+                                                    cell.weight.shape, cell.weight.dtype))
+            if cell.has_bias:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        elif isinstance(cell, nn.Embedding):
+            embedding_table = initializer(Normal(self.config.initializer_range),
+                                                 cell.embedding_table.shape,
+                                                 cell.embedding_table.dtype)
+            if cell.padding_idx is not None:
+                embedding_table[cell.padding_idx] = 0
+            cell.embedding_table.set_data(embedding_table)
+        elif isinstance(cell, nn.LayerNorm):
+            cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
+            cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
 
     def _set_gradient_checkpointing(self, module, value=False):
         if isinstance(module, CodeGenModel):
@@ -396,22 +389,14 @@ class CodeGenModel(CodeGenPreTrainedModel):
         self.ln_f = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_epsilon)
         self.rotary_dim = min(config.rotary_dim, config.n_ctx // config.n_head)
 
-        self.gradient_checkpointing = False
-
         # Initialize weights and apply final processing
-        # self.post_init()
+        self.post_init()
 
     def get_input_embeddings(self):
         return self.wte
 
     def set_input_embeddings(self, value):
         self.wte = value
-
-    def init_model_weights(self):
-        pass
-
-    def post_init(self):
-        pass
 
     def construct(
             self,

@@ -17,6 +17,7 @@
 # ============================================================================
 # pylint: disable=C0103
 # pylint: disable=C0415
+# pylint: disable=W0223
 
 """MindNLP gpt model"""
 import os
@@ -26,6 +27,7 @@ import mindspore
 from mindspore import nn
 from mindspore import ops
 from mindspore import Tensor
+from mindspore.common.initializer import initializer, Normal
 from mindnlp.models.gpt.gpt_config import GPTConfig
 from mindnlp._legacy.nn import Dropout
 from mindnlp.abc import PreTrainedModel
@@ -231,27 +233,25 @@ class GPTPreTrainedModel(PreTrainedModel):
     config_class = GPTConfig
     base_model_prefix = 'transformer'
 
-    def get_input_embeddings(self):
-        """get input embeddings"""
-
-    def get_position_embeddings(self):
-        """get position embeddings"""
-
-    def init_model_weights(self):
-        """init model weights"""
-
-    def post_init(self):
-        """post init"""
-
-    def resize_position_embeddings(self):
-        """resize position embeddings"""
-
-    def save(self):
-        """save"""
-
-    def set_input_embeddings(self):
-        """set input embeddings"""
-
+    def _init_weights(self, cell):
+        """Initialize the weights"""
+        if isinstance(cell, nn.Dense):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+                                                    cell.weight.shape, cell.weight.dtype))
+            if cell.has_bias:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        elif isinstance(cell, nn.Embedding):
+            embedding_table = initializer(Normal(self.config.initializer_range),
+                                                 cell.embedding_table.shape,
+                                                 cell.embedding_table.dtype)
+            if cell.padding_idx is not None:
+                embedding_table[cell.padding_idx] = 0
+            cell.embedding_table.set_data(embedding_table)
+        elif isinstance(cell, nn.LayerNorm):
+            cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
+            cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
 
 class GPTModel(GPTPreTrainedModel):
     """
@@ -277,11 +277,11 @@ class GPTModel(GPTPreTrainedModel):
         """
         return self.tokens_embed
 
-    def set_input_embeddings(self, new_embeddings):
+    def set_input_embeddings(self, value):
         """
         set the input embeddings layer
         """
-        self.tokens_embed = new_embeddings
+        self.tokens_embed = value
 
     def _prune_heads(self, heads_to_prune):
         """
@@ -427,6 +427,7 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
         self.transformer = GPTModel(config)
         self.lm_head = nn.Dense(config.n_embd, config.vocab_size, has_bias=False)
         self.multiple_choice_head = SequenceSummary(config)
+        self.post_init()
 
     def get_output_embeddings(self):
         """

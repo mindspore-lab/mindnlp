@@ -395,16 +395,7 @@ class GPT2PreTrainedModel(PreTrainedModel):
     def get_position_embeddings(self):
         pass
 
-    def init_model_weights(self):
-        pass
-
-    def post_init(self):
-        pass
-
     def resize_position_embeddings(self):
-        pass
-
-    def save(self):
         pass
 
     def set_input_embeddings(self):
