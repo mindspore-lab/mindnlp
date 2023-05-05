@@ -24,10 +24,10 @@ from mindspore import nn, ops, Parameter, Tensor
 from mindspore.nn import CrossEntropyLoss
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.abc import PreTrainedConfig
 from mindnlp._legacy.nn import Dropout
 from mindnlp._legacy.functional import addmm
 from ..utils.activations import get_activation
-from ...abc.backbones.pretrained import PreTrainedConfig
 
 try:
     from mindspore.nn import Identity

@@ -13,10 +13,14 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=C0103
+# pylint: disable=C0415
+
 """
 T5 model
 """
 
+import os
+import logging
 import math
 import copy
 import mindspore
@@ -39,6 +43,42 @@ logger = logging.get_logger(__name__)
 __all__ = ['T5Attention', 'T5DenseActDense', 'T5DenseGatedActDense', 'T5EncoderModel',
            'T5ForConditionalGeneration', 'T5LayerCrossAttention', 'T5Stack', 'T5LayerSelfAttention',
            'T5LayerNorm', 'T5Model', 'T5LayerFF', 'T5Block', 'T5PreTrainedModel']
+
+def torch_to_mindspore(pth_file, **kwargs):
+    """torch to mindspore."""
+    prefix = kwargs.get("prefix", "")
+
+    try:
+        import torch
+    except Exception as exc:
+        raise ImportError("'import torch' failed, please install torch by "
+                          "`pip install torch` or instructions from 'https://pytorch.org'") \
+        from exc
+
+    from mindspore.train.serialization import save_checkpoint
+
+    logging.info('Starting checkpoint conversion.')
+    ms_ckpt = []
+    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
+
+    for k, v in state_dict.items():
+        if 'shared.weight' in k:
+            k = k.replace('shared.weight', 'decoder.embed_tokens.embedding_table')
+        if 'relative_attention_bias.weight' in k:
+            k = k.replace('relative_attention_bias.weight', 'relative_attention_bias.embedding_table')
+        if prefix:
+            k = prefix + "." + k
+        ms_ckpt.append({'name': k, 'data': Tensor(v.numpy())})
+
+    ms_ckpt_path = pth_file.replace('pytorch_model.bin','mindspore.ckpt')
+    if not os.path.exists(ms_ckpt_path):
+        try:
+            save_checkpoint(ms_ckpt, ms_ckpt_path)
+        except Exception as exc:
+            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, please checkout the path.') \
+            from exc
+
+    return ms_ckpt_path
 
 class T5LayerNorm(nn.Cell):
     """T5LayerNorm"""

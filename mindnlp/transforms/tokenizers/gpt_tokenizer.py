@@ -16,7 +16,6 @@
 BertTokenizer
 """
 import numpy as np
-from mindspore.dataset.transforms.transforms import PyTensorOperation
 from mindspore.dataset.text.transforms import Implementation
 from tokenizers import Tokenizer
 from mindnlp.abc import PreTrainedTokenizer
@@ -33,7 +32,7 @@ PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
 }
 
 
-class GPTTokenizer(PyTensorOperation, PreTrainedTokenizer):
+class GPTTokenizer(PreTrainedTokenizer):
     """
     Tokenizer used for Bert text process.
 
@@ -47,16 +46,16 @@ class GPTTokenizer(PyTensorOperation, PreTrainedTokenizer):
     pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
     def __init__(self, vocab: str, **kwargs):
-        super().__init__()
         return_token = kwargs.pop('return_token', False)
 
         if isinstance(vocab, str):
-            self.tokenizer = Tokenizer.from_file(vocab)
+            self._tokenizer = Tokenizer.from_file(vocab)
         else:
             raise ValueError(f'only support string, but got {vocab}')
 
         self.return_token = return_token
         self.implementation = Implementation.PY
+        super().__init__(**kwargs)
 
     def __call__(self, text_input):
         """
@@ -80,7 +79,7 @@ class GPTTokenizer(PyTensorOperation, PreTrainedTokenizer):
         Execute method.
         """
         text = self._convert_to_unicode(text_input)
-        output = self.tokenizer.encode(text)
+        output = self._tokenizer.encode(text)
         if self.return_token is True:
             return np.array(output.tokens)
         return np.array(output.ids)

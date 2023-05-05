@@ -15,7 +15,7 @@
 # limitations under the License.
 """ GPT Neo model configuration"""
 
-from ...abc.backbones.pretrained import PreTrainedConfig
+from mindnlp.abc import PreTrainedConfig
 
 
 class GPTNeoConfig(PreTrainedConfig):

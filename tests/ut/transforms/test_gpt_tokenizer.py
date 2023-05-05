@@ -18,7 +18,7 @@ import mindspore as ms
 from mindspore.dataset import GeneratorDataset
 from mindnlp.transforms import GPTTokenizer
 
-def test_bert_tokenizer_from_pretrained():
+def test_gpt_tokenizer_from_pretrained():
     """test GPTTokenizer from pretrained."""
     texts = ['i make a small mistake when i\'m working! 床前明月光']
     test_dataset = GeneratorDataset(texts, 'text')
@@ -29,3 +29,19 @@ def test_bert_tokenizer_from_pretrained():
 
     assert len(dataset_after) == 16
     assert dataset_after.dtype == ms.string
+
+def test_gpt_tokenizer_add_special_tokens():
+    """test add special tokens."""
+    gpt_tokenizer = GPTTokenizer.from_pretrained('openai-gpt')
+    cls_id = gpt_tokenizer.token_to_id("[CLS]")
+
+    assert cls_id is None
+
+    add_num = gpt_tokenizer.add_special_tokens({
+        'cls_token': "[CLS]"
+    })
+
+    assert add_num == 1
+
+    cls_id = gpt_tokenizer.token_to_id("[CLS]")
+    assert cls_id == 40478
