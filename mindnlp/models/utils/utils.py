@@ -25,8 +25,7 @@ from mindspore.nn import CrossEntropyLoss
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.abc import PreTrainedConfig
-from mindnlp._legacy.nn import Dropout
-from mindnlp._legacy.functional import addmm
+from mindnlp._legacy.nn import Dropout, Matmul
 from ..utils.activations import get_activation
 
 try:
@@ -59,10 +58,11 @@ class Conv1D(nn.Cell):
         self.n_out = n_out
         self.weight = Parameter(initializer(Normal(sigma=0.02), (n_in, n_out), mindspore.float32))
         self.bias = Parameter(ops.zeros(n_out, mindspore.float32))
+        self.matmul = Matmul()
 
     def construct(self, x):
         size_out = x.shape[:-1] + (self.n_out,)
-        x = addmm(self.bias, x.view(-1, x.shape[-1]), self.weight)
+        x = self.matmul(x.view(-1, x.shape[-1]), self.weight) + self.bias
         x = x.view(size_out)
         return x
 

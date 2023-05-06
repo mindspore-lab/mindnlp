@@ -23,7 +23,7 @@ from tqdm.autonotebook import tqdm
 from mindspore import nn, Tensor
 from mindspore import log, mutable
 from mindspore.ops import value_and_grad
-from mindspore.dataset.engine import Dataset
+from mindspore.dataset.engine import Dataset, TakeDataset
 from mindnlp import ms_jit
 from mindnlp.abc import Callback, Metric
 from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContext
@@ -86,6 +86,11 @@ class Trainer:
         check_gradients = kwargs.pop('check_gradients', False)
 
         self.network = network
+        if isinstance(train_dataset, TakeDataset):
+            log.warning("The `train_dataset` is split after the 'batch' operation, "
+                        "which will slow down the training speed and recompile the neural network"
+                        "please split it first, and then use 'map' operation.")
+
         self.train_dataset = train_dataset
         self.epochs = epochs
 
