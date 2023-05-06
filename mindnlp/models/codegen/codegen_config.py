@@ -21,18 +21,9 @@ from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
 
 __all__ = ['CodeGenConfig']
 
-CODEGEN_SUPPORT_LIST = ["Salesforce/codegen-350M-nl",
-                        "Salesforce/codegen-350M-multi",
-                        "Salesforce/codegen-350M-mono",
-                        "Salesforce/codegen-2B-nl",
-                        "Salesforce/codegen-2B-multi",
-                        "Salesforce/codegen-2B-mono",
-                        "Salesforce/codegen-6B-nl",
-                        "Salesforce/codegen-6B-multi",
-                        "Salesforce/codegen-6B-mono",
-                        "Salesforce/codegen-16B-nl",
-                        "Salesforce/codegen-16B-multi",
-                        "Salesforce/codegen-16B-mono"]
+CODEGEN_SUPPORT_LIST = [
+                        "Salesforce/codegen-350M-mono"
+                        ]
 
 CONFIG_ARCHIVE_MAP = {
     model: MINDNLP_CONFIG_URL_BASE.format('codegen', model) for model in CODEGEN_SUPPORT_LIST}

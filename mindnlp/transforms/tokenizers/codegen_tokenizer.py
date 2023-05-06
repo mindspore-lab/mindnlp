@@ -9,22 +9,11 @@ from mindnlp.models.codegen.codegen_config import CODEGEN_SUPPORT_LIST
 from mindnlp.configs import HF_TOKENIZER_CONFIG_URL_BASE
 
 PRETRAINED_VOCAB_MAP = {
-    model: HF_TOKENIZER_CONFIG_URL_BASE.format('codegen', model) for model in CODEGEN_SUPPORT_LIST
+    model: HF_TOKENIZER_CONFIG_URL_BASE.format(model) for model in CODEGEN_SUPPORT_LIST
 }
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
-    "Salesforce/codegen-350M-nl": 1024,
-    "Salesforce/codegen-350M-multi": 1024,
-    "Salesforce/codegen-350M-mono": 1024,
-    "Salesforce/codegen-2B-nl": 1024,
-    "Salesforce/codegen-2B-multi": 1024,
-    "Salesforce/codegen-2B-mono": 1024,
-    "Salesforce/codegen-6B-nl": 1024,
-    "Salesforce/codegen-6B-multi": 1024,
-    "Salesforce/codegen-6B-mono": 1024,
-    "Salesforce/codegen-16B-nl": 1024,
-    "Salesforce/codegen-16B-multi": 1024,
-    "Salesforce/codegen-16B-mono": 1024,
+    "Salesforce/codegen-350M-mono": 2048
 }
 
 
