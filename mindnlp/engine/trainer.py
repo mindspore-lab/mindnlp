@@ -83,7 +83,7 @@ class Trainer:
         self.args = args
         epochs = kwargs.pop('epochs', None)
         jit = kwargs.pop('jit', False)
-        check_gradients = kwargs.pop('check_gradients', True)
+        check_gradients = kwargs.pop('check_gradients', False)
 
         self.network = network
         self.train_dataset = train_dataset
@@ -115,7 +115,7 @@ class Trainer:
             else:
                 logits_list += (logits,)
 
-            loss = loss_fn(*logits_list, *labels)
+            loss = loss_fn(logits_list[0], *labels)
             loss = loss_scaler.scale(loss)
             return_list = (loss,) + logits_list
             return return_list
