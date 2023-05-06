@@ -20,10 +20,10 @@ from mindspore.dataset.text.transforms import Implementation
 from tokenizers import Tokenizer
 from mindnlp.abc import PreTrainedTokenizer
 from mindnlp.models.gpt.gpt_config import GPT_SUPPORT_LIST
-from mindnlp.configs import HF_TOKENIZER_CONFIG_URL_BASE
+from mindnlp.configs import MINDNLP_TOKENIZER_CONFIG_URL_BASE
 
 PRETRAINED_VOCAB_MAP = {
-    model: HF_TOKENIZER_CONFIG_URL_BASE.format(model) for model in GPT_SUPPORT_LIST
+    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format('gpt', model) for model in GPT_SUPPORT_LIST
 }
 
 
