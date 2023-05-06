@@ -31,18 +31,20 @@ from mindspore import Parameter, Tensor
 
 from mindnlp._legacy.nn import Dropout
 from mindnlp._legacy.functional import arange
+from mindnlp.configs import MINDNLP_MODEL_URL_BASE
 from ..utils.activations import ACT2FN
 from ...abc import PreTrainedModel
-from ..utils import logging
 
-from .t5_config import T5Config
-
-logger = logging.get_logger(__name__)
+from .t5_config import T5Config, T5_SUPPORT_LIST
 
 
 __all__ = ['T5Attention', 'T5DenseActDense', 'T5DenseGatedActDense', 'T5EncoderModel',
            'T5ForConditionalGeneration', 'T5LayerCrossAttention', 'T5Stack', 'T5LayerSelfAttention',
            'T5LayerNorm', 'T5Model', 'T5LayerFF', 'T5Block', 'T5PreTrainedModel']
+
+PRETRAINED_MODEL_ARCHIVE_MAP = {
+    model: MINDNLP_MODEL_URL_BASE.format('t5', model) for model in T5_SUPPORT_LIST
+}
 
 def torch_to_mindspore(pth_file, **kwargs):
     """torch to mindspore."""
@@ -459,7 +461,7 @@ class T5Block(nn.Cell):
 
         if past_key_value is not None:
             if not self.is_decoder:
-                logger.warning("`past_key_values` is passed to the encoder. Please make sure this is intended.")
+                logging.warning("`past_key_values` is passed to the encoder. Please make sure this is intended.")
             expected_num_past_key_values = 2 if encoder_hidden_states is None else 4
 
             if len(past_key_value) != expected_num_past_key_values:
@@ -552,6 +554,8 @@ class T5PreTrainedModel(PreTrainedModel):
     """
     config_class = T5Config
     base_model_prefix = "transformer"
+    convert_torch_to_mindspore = torch_to_mindspore
+    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
     is_parallelizable = True
     supports_gradient_checkpointing = True
     _no_split_modules = ["T5Block"]
@@ -566,15 +570,7 @@ class T5PreTrainedModel(PreTrainedModel):
         pass
 
     #TODO
-    def init_model_weights(self):
-        pass
-
-    #TODO
     def resize_position_embeddings(self):
-        pass
-
-    #TODO
-    def save(self):
         pass
 
     #TODO
@@ -1049,7 +1045,7 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
         # if decoder past is not included in output
         # speedy decoding is disabled and no need to reorder
         if past is None:
-            logger.warning("You might want to consider setting `use_cache=True` to speed up decoding")
+            logging.warning("You might want to consider setting `use_cache=True` to speed up decoding")
             return past
 
         reordered_decoder_past = ()

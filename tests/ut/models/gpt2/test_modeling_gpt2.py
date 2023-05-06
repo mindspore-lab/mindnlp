@@ -14,6 +14,7 @@
 # ============================================================================
 """Test GPT2"""
 import unittest
+import pytest
 import numpy as np
 
 import mindspore
@@ -141,3 +142,18 @@ class TestModelingGPT2(unittest.TestCase):
 
         logits = model(input_ids)
         assert logits[0].shape == (2, 512, 2)
+
+    @pytest.mark.download
+    def test_from_pretrained(self):
+        """test from pretrained"""
+        _ = gpt2.GPT2Model.from_pretrained('gpt2')
+
+    @pytest.mark.download
+    def test_gpt2_lm_head_model_from_pretrained(self):
+        """test from pretrained"""
+        _ = gpt2.GPT2LMHeadModel.from_pretrained('gpt2', from_pt=True)
+
+    @pytest.mark.download
+    def test_from_pretrained_from_pt(self):
+        """test from pt"""
+        _ = gpt2.GPT2Model.from_pretrained('gpt2', from_pt=True)

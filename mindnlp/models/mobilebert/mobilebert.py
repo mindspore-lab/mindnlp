@@ -616,12 +616,6 @@ class MobileBertPreTrainedModel(PreTrainedModel):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
 
-    def post_init(self):
-        pass
-
-    def init_model_weights(self):
-        pass
-
     def get_input_embeddings(self):
         pass
 
@@ -632,9 +626,6 @@ class MobileBertPreTrainedModel(PreTrainedModel):
         pass
 
     def get_position_embeddings(self):
-        pass
-
-    def save(self):
         pass
 
 

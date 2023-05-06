@@ -219,6 +219,11 @@ class TestModelingT5(unittest.TestCase):
         assert outputs[0].shape == (1, 10, 512)
 
     @pytest.mark.download
+    def test_from_pretrained(self):
+        """test from pretrained"""
+        _ = T5Model.from_pretrained('t5-small')
+
+    @pytest.mark.download
     def test_from_pretrained_from_pt(self):
         """test from pt"""
         _ = T5Model.from_pretrained('t5-small', from_pt=True)
