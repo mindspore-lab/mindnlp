@@ -31,14 +31,13 @@ class TestModelingCodeGen(unittest.TestCase):
         """
         Set up.
         """
-        self.input = None
+        self.config = codegen_config.CodeGenConfig(n_layer=2)
 
     def test_codegen_attention(self):
         r"""
         Test CodeGen Attention
         """
-        config = codegen_config.CodeGenConfig()
-        model = codegen.CodeGenAttention(config)
+        model = codegen.CodeGenAttention(self.config)
 
         hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.float32)
 
@@ -50,8 +49,7 @@ class TestModelingCodeGen(unittest.TestCase):
         Test CodeGen MLP
         """
         intermediate_size = 100
-        config = codegen_config.CodeGenConfig()
-        model = codegen.CodeGenMLP(intermediate_size, config)
+        model = codegen.CodeGenMLP(intermediate_size, self.config)
 
         hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.float32)
 
@@ -62,8 +60,7 @@ class TestModelingCodeGen(unittest.TestCase):
         r"""
             Test CodeGen BLOCK
         """
-        config = codegen_config.CodeGenConfig()
-        model = codegen.CodeGenBlock(config)
+        model = codegen.CodeGenBlock(self.config)
 
         hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.float32)
 
@@ -74,8 +71,7 @@ class TestModelingCodeGen(unittest.TestCase):
         r"""
             Test CodeGen MODEL
         """
-        config = codegen_config.CodeGenConfig()
-        model = codegen.CodeGenModel(config)
+        model = codegen.CodeGenModel(self.config)
 
         input_ids = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.int32)
 
@@ -86,8 +82,7 @@ class TestModelingCodeGen(unittest.TestCase):
         r"""
             Test CodeGen FORCAUSALLM
         """
-        config = codegen_config.CodeGenConfig()
-        model = codegen.CodeGenForCausalLM(config)
+        model = codegen.CodeGenForCausalLM(self.config)
 
         input_ids = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.int32)
 
