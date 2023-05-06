@@ -32,14 +32,15 @@ from mindnlp.models.gpt.gpt_config import GPTConfig
 from mindnlp._legacy.nn import Dropout, Matmul
 from mindnlp._legacy.functional import split, softmax, arange
 from mindnlp.abc import PreTrainedModel
+from mindnlp.configs import MINDNLP_MODEL_URL_BASE
 from ..utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
 from ..utils.utils import SequenceSummary
 from ..utils.activations import ACT2FN
-from .gpt_config import GPTConfig
+from .gpt_config import GPTConfig, GPT_SUPPORT_LIST
 
 
 PRETRAINED_MODEL_ARCHIVE_MAP = {
-    "openai-gpt": "https://huggingface.co/lvyufeng/gpt/resolve/main/mindspore.ckpt"
+    model: MINDNLP_MODEL_URL_BASE.format('gpt', model) for model in GPT_SUPPORT_LIST
 }
 
 
@@ -556,11 +557,14 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
             sequence_lengths = -1
         else:
             if input_ids is not None:
-                sequence_lengths = ops.ne(input_ids, self.pad_token_id).sum(-1) - 1
+                # reduce sum not support int on Ascend.
+                sequence_lengths = ops.ne(input_ids, self.pad_token_id) \
+                        .astype(mindspore.float32).sum(-1) \
+                        .astype(mindspore.int32) - 1
             else:
                 sequence_lengths = -1
 
-        pooled_logits = logits[arange(32), sequence_lengths]
+        pooled_logits = logits[arange(batch_size), sequence_lengths]
 
         loss = None
 

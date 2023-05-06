@@ -18,14 +18,14 @@
 """MindNLP gpt config"""
 
 from mindnlp.abc import PreTrainedConfig
-from mindnlp.configs import HF_CONFIG_URL_BASE
+from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
 
 __all__ = ['GPTConfig']
 
 GPT_SUPPORT_LIST = ["openai-gpt"]
 
 CONFIG_ARCHIVE_MAP = {
-    model: HF_CONFIG_URL_BASE.format(model) for model in GPT_SUPPORT_LIST
+    model: MINDNLP_CONFIG_URL_BASE.format('gpt', model) for model in GPT_SUPPORT_LIST
 }
 
 class GPTConfig(PreTrainedConfig):
