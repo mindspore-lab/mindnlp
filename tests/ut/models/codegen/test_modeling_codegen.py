@@ -1,12 +1,10 @@
-# coding=utf-8
-# Copyright 2021 The Eleuther AI and HuggingFace Inc. team. All rights reserved.
-# Copyright 2023 Huawei Technologies Co., Ltd
-
+# Copyright 2022 Huawei Technologies Co., Ltd
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,65 +12,84 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-""" CodeGen model configuration"""
+"""Test CodeGen"""
+import unittest
 
-from mindnlp.abc import PreTrainedConfig
+import mindspore
+import numpy as np
+from mindspore import Tensor
+
+from mindnlp.models.codegen import codegen_config, codegen
 
 
-class CodeGenConfig(PreTrainedConfig):
+class TestModelingCodeGen(unittest.TestCase):
     r"""
-    CodeGen config
+    Test CodeGen
     """
 
-    model_type = "codegen"
-    attribute_map = {
-        "max_position_embeddings": "n_positions",
-        "hidden_size": "n_embd",
-        "num_attention_heads": "n_head",
-        "num_hidden_layers": "n_layer",
-    }
+    def setUp(self):
+        """
+        Set up.
+        """
+        self.input = None
 
-    def __init__(
-            self,
-            vocab_size=504,
-            n_positions=512,
-            n_ctx=512,
-            n_embd=512,
-            n_layer=28,
-            n_head=16,
-            rotary_dim=64,
-            n_inner=None,
-            activation_function="gelu_new",
-            resid_pdrop=0.01,
-            embd_pdrop=0.01,
-            attn_pdrop=0.0,
-            layer_norm_epsilon=1e-5,
-            initializer_range=0.02,
-            use_cache=True,
-            bos_token_id=502,
-            eos_token_id=502,
-            tie_word_embeddings=False,
-            **kwargs,
-    ):
-        self.vocab_size = vocab_size
-        self.n_ctx = n_ctx
-        self.n_positions = n_positions
-        self.n_embd = n_embd
-        self.n_layer = n_layer
-        self.n_head = n_head
-        self.n_inner = n_inner
-        self.rotary_dim = rotary_dim
-        self.activation_function = activation_function
-        self.resid_pdrop = resid_pdrop
-        self.embd_pdrop = embd_pdrop
-        self.attn_pdrop = attn_pdrop
-        self.layer_norm_epsilon = layer_norm_epsilon
-        self.initializer_range = initializer_range
-        self.use_cache = use_cache
+    def test_codegen_attention(self):
+        r"""
+        Test CodeGen Attention
+        """
+        config = codegen_config.CodeGenConfig()
+        model = codegen.CodeGenAttention(config)
 
-        self.bos_token_id = bos_token_id
-        self.eos_token_id = eos_token_id
+        hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.float32)
 
-        super().__init__(
-            bos_token_id=bos_token_id, eos_token_id=eos_token_id, tie_word_embeddings=tie_word_embeddings, **kwargs
-        )
+        attn_output, _ = model(hidden_states)
+        assert attn_output.shape == (2, 2, 512)
+
+    def test_codegen_mlp(self):
+        r"""
+        Test CodeGen MLP
+        """
+        intermediate_size = 100
+        config = codegen_config.CodeGenConfig()
+        model = codegen.CodeGenMLP(intermediate_size, config)
+
+        hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.float32)
+
+        hidden_states = model(hidden_states)
+        assert hidden_states.shape == (2, 2, 512)
+
+    def test_codegen_block(self):
+        r"""
+            Test CodeGen BLOCK
+        """
+        config = codegen_config.CodeGenConfig()
+        model = codegen.CodeGenBlock(config)
+
+        hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.float32)
+
+        hidden_states = model(hidden_states)
+        assert hidden_states[0].shape == (2, 2, 512)
+
+    def test_codegen_model(self):
+        r"""
+            Test CodeGen MODEL
+        """
+        config = codegen_config.CodeGenConfig()
+        model = codegen.CodeGenModel(config)
+
+        input_ids = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.int32)
+
+        input_ids = model(input_ids)
+        assert input_ids[0].shape == (2, 2, 512, 512)
+
+    def test_codegen_forcausallm(self):
+        r"""
+            Test CodeGen FORCAUSALLM
+        """
+        config = codegen_config.CodeGenConfig()
+        model = codegen.CodeGenForCausalLM(config)
+
+        input_ids = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.int32)
+
+        input_ids = model(input_ids)
+        assert input_ids[0].shape == (2, 2, 512, 504)

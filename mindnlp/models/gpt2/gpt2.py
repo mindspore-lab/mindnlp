@@ -14,13 +14,17 @@
 # ============================================================================
 """MindNLP gpt2 model"""
 # pylint: disable=C0103
+# pylint: disable=C0415
+# pylint: disable=W0621
 
 from typing import Optional, Tuple
 
+import os
 import mindspore
 import numpy as np
 from mindspore import nn, ops, Parameter, Tensor, dtype_to_nptype
 
+from mindnlp.abc import PreTrainedModel
 from mindnlp._legacy.functional import tril, split, where, arange
 from mindnlp._legacy.nn import Dropout
 from mindnlp.models.gpt2.config_gpt2 import GPT2Config
@@ -28,13 +32,61 @@ from ..utils import logging
 from ..utils.activations import ACT2FN
 from ..utils.utils import SequenceSummary
 from ..utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
-from ...abc.backbones.pretrained import PreTrainedModel
 
 logger = logging.get_logger(__name__)
 
-
 __all__ = ['GPT2Attention', 'GPT2DoubleHeadsModel', 'GPT2ForSequenceClassification',
            'GPT2ForTokenClassification', 'GPT2LMHeadModel', 'GPT2Model', 'GPT2MLP']
+
+PRETRAINED_MODEL_ARCHIVE_MAP = {
+    "gpt2": "https://download.mindspore.cn/toolkits/mindnlp/models/gpt2/gpt2/mindspore.ckpt",
+    "gpt2-large": "https://download.mindspore.cn/toolkits/mindnlp/models/gpt2/gpt2-large/mindspore.ckpt",
+    "gpt2-medium": "https://download.mindspore.cn/toolkits/mindnlp/models/gpt2/gpt2-medium/mindspore.ckpt",
+    "gpt2-xl": "https://download.mindspore.cn/toolkits/mindnlp/models/gpt2/gpt2-xl/mindspore.ckpt",
+}
+
+
+def torch_to_mindspore(pth_file, **kwargs):
+    """torch to mindspore."""
+    prefix = kwargs.get("prefix", "")
+
+    import logging
+    try:
+        import torch
+    except Exception as exc:
+        raise ImportError("'import torch' failed, please install torch by "
+                          "`pip install torch` or instructions from 'https://pytorch.org'") \
+            from exc
+
+    from mindspore.train.serialization import save_checkpoint
+
+    logging.info('Starting checkpoint conversion.')
+    ms_ckpt = []
+    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
+
+    for k, v in state_dict.items():
+        if 'wte.' in k:
+            k = k.replace('.weight', '.embedding_table')
+        if 'wpe.' in k:
+            k = k.replace('.weight', '.embedding_table')
+        if 'weight' in k and 'lm_head.weight' not in k:
+            k = k.replace('weight', 'gamma')
+        if '.bias' in k and '.attn.bias' not in k:
+            k = k.replace('.bias', '.beta')
+        if prefix:
+            k = prefix + "." + k
+        ms_ckpt.append({'name': k, 'data': Tensor(v.numpy())})
+
+    ms_ckpt_path = pth_file.replace('pytorch_model.bin', 'mindspore.ckpt')
+    if not os.path.exists(ms_ckpt_path):
+        try:
+            save_checkpoint(ms_ckpt, ms_ckpt_path)
+        except Exception as exc:
+            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, please checkout the path.') \
+                from exc
+
+    return ms_ckpt_path
+
 
 class GPT2Attention(nn.Cell):
     r"""
@@ -353,13 +405,12 @@ class GPT2PreTrainedModel(PreTrainedModel):
     models.
     """
     config_class = GPT2Config
+    convert_torch_to_mindspore = torch_to_mindspore
+    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
     base_model_prefix = "transformer"
     is_parallelizable = True
     supports_gradient_checkpointing = True
     _no_split_modules = ["GPT2Block"]
-
-    # def __init__(self, config):
-    #     super().__init__(config)
 
     def get_head_mask(self, head_mask, num_hidden_layers, is_attention_chunked=False):
         """
@@ -395,16 +446,7 @@ class GPT2PreTrainedModel(PreTrainedModel):
     def get_position_embeddings(self):
         pass
 
-    def init_model_weights(self):
-        pass
-
-    def post_init(self):
-        pass
-
     def resize_position_embeddings(self):
-        pass
-
-    def save(self):
         pass
 
     def set_input_embeddings(self):

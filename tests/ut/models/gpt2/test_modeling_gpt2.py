@@ -14,6 +14,7 @@
 # ============================================================================
 """Test GPT2"""
 import unittest
+import pytest
 import numpy as np
 
 import mindspore
@@ -76,7 +77,7 @@ class TestModelingGPT2(unittest.TestCase):
         r"""
         Test GPT2 Model
         """
-        config = config_gpt2.GPT2Config()
+        config = config_gpt2.GPT2Config(n_layer=2)
         model = gpt2.GPT2Model(config)
 
         input_ids = Tensor(np.random.randint(0, 10, (2, 512)))
@@ -90,7 +91,7 @@ class TestModelingGPT2(unittest.TestCase):
         r"""
         Test GPT2 LMHead Model
         """
-        config = config_gpt2.GPT2Config()
+        config = config_gpt2.GPT2Config(n_layer=2)
         model = gpt2.GPT2LMHeadModel(config)
 
         input_ids = Tensor(np.random.randint(0, 10, (2, 512)))
@@ -104,7 +105,7 @@ class TestModelingGPT2(unittest.TestCase):
         r"""
         Test model GPT2 Model with pynative mode
         """
-        config = config_gpt2.GPT2Config()
+        config = config_gpt2.GPT2Config(n_layer=2)
         model = gpt2.GPT2DoubleHeadsModel(config)
 
         input_ids = Tensor(np.random.randint(0, 10, (2, 512)))
@@ -120,7 +121,7 @@ class TestModelingGPT2(unittest.TestCase):
         r"""
         Test GPT2 For Sequence Classification
         """
-        config = config_gpt2.GPT2Config()
+        config = config_gpt2.GPT2Config(n_layer=2)
         model = gpt2.GPT2ForSequenceClassification(config)
 
         input_ids = Tensor(np.random.randint(0, 10, (1, 512)))
@@ -134,10 +135,25 @@ class TestModelingGPT2(unittest.TestCase):
         r"""
         Test model GPT2 Model with pynative mode
         """
-        config = config_gpt2.GPT2Config()
+        config = config_gpt2.GPT2Config(n_layer=2)
         model = gpt2.GPT2ForTokenClassification(config)
 
         input_ids = Tensor(np.random.randint(0, 10, (2, 512)))
 
         logits = model(input_ids)
         assert logits[0].shape == (2, 512, 2)
+
+    @pytest.mark.download
+    def test_from_pretrained(self):
+        """test from pretrained"""
+        _ = gpt2.GPT2Model.from_pretrained('gpt2')
+
+    @pytest.mark.download
+    def test_gpt2_lm_head_model_from_pretrained(self):
+        """test from pretrained"""
+        _ = gpt2.GPT2LMHeadModel.from_pretrained('gpt2', from_pt=True)
+
+    @pytest.mark.download
+    def test_from_pretrained_from_pt(self):
+        """test from pt"""
+        _ = gpt2.GPT2Model.from_pretrained('gpt2', from_pt=True)

@@ -21,7 +21,7 @@ import mindspore.numpy as mnp
 from mindspore import nn
 from mindspore import ops
 from mindspore.common.initializer import TruncatedNormal
-from mindnlp.abc.backbones.pretrained import PreTrainedModel
+from mindnlp.abc import PreTrainedModel
 
 activation_map = {
     'relu': nn.ReLU(),

@@ -18,7 +18,7 @@
 MobileBERT model configuration
 """
 
-from mindnlp.abc.backbones.pretrained import PreTrainedConfig
+from mindnlp.abc import PreTrainedConfig
 
 class MobileBertConfig(PreTrainedConfig):
     """

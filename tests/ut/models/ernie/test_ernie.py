@@ -31,7 +31,7 @@ class TestModelingErnie(unittest.TestCase):
         """
         Set up.
         """
-        self.input = None
+        self.config = UIEConfig(num_hidden_layers=2)
 
     def test_ernie_model(self):
         """
@@ -42,8 +42,8 @@ class TestModelingErnie(unittest.TestCase):
         """
         Test UIEModel
         """
-        config = UIEConfig()
-        model = UIE(config)
+
+        model = UIE(self.config)
         input_ids = Tensor(np.random.randint(
             0, 100, (1, 20)), dtype=mindspore.int32)
         outputs = model(input_ids=input_ids)

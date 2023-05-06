@@ -15,6 +15,7 @@
 # pylint:disable=W0212
 """Test T5"""
 import unittest
+import pytest
 import numpy as np
 
 import mindspore
@@ -174,7 +175,7 @@ class TestModelingT5(unittest.TestCase):
         r"""
         Test T5Model
         """
-        config = T5Config(decoder_start_token_id = 0,dropout_rate=0, return_dict = False)
+        config = T5Config(decoder_start_token_id = 0,dropout_rate=0, return_dict = False, num_layers=2)
         model = T5Model(config)
         input_ids = Tensor(np.random.randint(0,100,(1,10)), dtype=mindspore.int64)
         decoder_input_ids = Tensor(np.random.randint(0,100,(1,20)), dtype=mindspore.int64)
@@ -192,7 +193,7 @@ class TestModelingT5(unittest.TestCase):
         r"""
         Test T5ForConditionalGeneration
         """
-        config = T5Config(decoder_start_token_id = 0,dropout_rate=0, return_dict = False)
+        config = T5Config(decoder_start_token_id = 0,dropout_rate=0, return_dict = False, num_layers=2)
         model = T5ForConditionalGeneration(config)
         input_ids = Tensor(np.random.randint(0,100,(1,10)), dtype=mindspore.int64)
         labels = Tensor(np.random.randint(0,100,(1,20)), dtype=mindspore.int32)
@@ -210,9 +211,19 @@ class TestModelingT5(unittest.TestCase):
         r"""
         Test T5EncoderModel
         """
-        config = T5Config(decoder_start_token_id = 0,dropout_rate=0, return_dict = False)
+        config = T5Config(decoder_start_token_id = 0,dropout_rate=0, return_dict = False, num_layers=2)
         model = T5EncoderModel(config)
         input_ids = Tensor(np.random.randint(0,100,(1,10)), dtype=mindspore.int64)
 
         outputs = model(input_ids=input_ids)
         assert outputs[0].shape == (1, 10, 512)
+
+    @pytest.mark.download
+    def test_from_pretrained(self):
+        """test from pretrained"""
+        _ = T5Model.from_pretrained('t5-small')
+
+    @pytest.mark.download
+    def test_from_pretrained_from_pt(self):
+        """test from pt"""
+        _ = T5Model.from_pretrained('t5-small', from_pt=True)

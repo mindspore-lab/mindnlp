@@ -16,6 +16,10 @@
 GPT Model.
 """
 
-from mindnlp.models.gpt import gpt, gpt_config
-from mindnlp.models.gpt.gpt import *
-from mindnlp.models.gpt.gpt_config import *
+from . import gpt, gpt_config
+from .gpt import *
+from .gpt_config import *
+
+__all__ = []
+__all__.extend(gpt.__all__)
+__all__.extend(gpt_config.__all__)

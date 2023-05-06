@@ -13,6 +13,7 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=C0103
+# pylint: disable=W0223
 
 """roberta model, base on bert."""
 import mindspore
@@ -20,7 +21,7 @@ from mindspore import nn, ops
 from mindspore import Parameter
 from mindspore.common.initializer import initializer
 
-from mindnlp.models.bert.bert import BertEmbeddings, BertModel, BertPretrainedModel
+from mindnlp.models.bert.bert import BertEmbeddings, BertModel, BertPreTrainedModel
 from .roberta_config import RobertaConfig
 
 PRETRAINED_MODEL_ARCHIVE_MAP = {
@@ -42,7 +43,7 @@ class RobertaEmbeddings(BertEmbeddings):
             position_ids = position_ids.expand_dims(0).expand_as(input_ids)
         return super().construct(input_ids, token_type_ids, position_ids)
 
-class RobertaPreTrainedModel(BertPretrainedModel):
+class RobertaPreTrainedModel(BertPreTrainedModel):
     """Roberta Pretrained Model."""
     pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
     config_class = RobertaConfig
