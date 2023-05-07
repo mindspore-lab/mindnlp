@@ -1,4 +1,4 @@
-"""Test the CODEGENTokenizer"""
+"""Test the CodeGenTokenizer"""
 
 import mindspore as ms
 from mindspore.dataset import GeneratorDataset
