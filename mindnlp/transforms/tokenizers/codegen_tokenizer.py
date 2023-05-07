@@ -17,9 +17,9 @@ PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
 }
 
 
-class CODEGENTokenizer(PreTrainedTokenizer):
+class CodeGenTokenizer(PreTrainedTokenizer):
     """
-        Tokenizer used for CODEGEN text process.
+        Tokenizer used for CodeGen text process.
         Args:
             vocab (Vocab): Vocabulary used to look up words.
             return_token (bool): Whether to return token. If True: return tokens. False: return ids. Default: True.

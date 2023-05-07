@@ -6,7 +6,7 @@ from mindnlp.transforms import CODEGENTokenizer
 
 
 def test_codegen_tokenizer_from_pretrained():
-    """test CODEGENTokenizer from pretrained."""
+    """test CodeGenTokenizer from pretrained."""
     texts = ['i make a small mistake when i\'m working! 床前明月光']
     test_dataset = GeneratorDataset(texts, 'text')
 
