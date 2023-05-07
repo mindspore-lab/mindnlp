@@ -2,7 +2,7 @@
 
 import mindspore as ms
 from mindspore.dataset import GeneratorDataset
-from mindnlp.transforms import CODEGENTokenizer
+from mindnlp.transforms import CodeGenTokenizer
 
 
 def test_codegen_tokenizer_from_pretrained():
@@ -10,7 +10,7 @@ def test_codegen_tokenizer_from_pretrained():
     texts = ['i make a small mistake when i\'m working! 床前明月光']
     test_dataset = GeneratorDataset(texts, 'text')
 
-    codegen_tokenizer = CODEGENTokenizer.from_pretrained('Salesforce/codegen-350M-mono', return_token=True)
+    codegen_tokenizer = CodeGenTokenizer.from_pretrained('Salesforce/codegen-350M-mono', return_token=True)
     test_dataset = test_dataset.map(operations=codegen_tokenizer)
     dataset_after = next(test_dataset.create_tuple_iterator())[0]
 
@@ -20,7 +20,7 @@ def test_codegen_tokenizer_from_pretrained():
 
 def test_codegen_tokenizer_add_special_tokens():
     """test add special tokens."""
-    codegen_tokenizer = CODEGENTokenizer.from_pretrained('Salesforce/codegen-350M-mono')
+    codegen_tokenizer = CodeGenTokenizer.from_pretrained('Salesforce/codegen-350M-mono')
     cls_id = codegen_tokenizer.token_to_id("[CLS]")
 
     assert cls_id is None
