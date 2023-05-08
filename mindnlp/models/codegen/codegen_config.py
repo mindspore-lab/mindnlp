@@ -17,12 +17,21 @@
 """ CodeGen model configuration"""
 
 from mindnlp.abc import PreTrainedConfig
+from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
+
+__all__ = ['CodeGenConfig']
+
+CODEGEN_SUPPORT_LIST = ["Salesforce/codegen-350M-mono"]
+
+CONFIG_ARCHIVE_MAP = {
+    model: MINDNLP_CONFIG_URL_BASE.format('codegen', model) for model in CODEGEN_SUPPORT_LIST}
 
 
 class CodeGenConfig(PreTrainedConfig):
     r"""
     CodeGen config
     """
+    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     model_type = "codegen"
     attribute_map = {
