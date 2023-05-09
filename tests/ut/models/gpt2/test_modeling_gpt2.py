@@ -39,7 +39,7 @@ class TestModelingGPT2(unittest.TestCase):
         r"""
         Test GPT2 Attention
         """
-        config = config_gpt2.GPT2Config()
+        config = config_gpt2.GPT2Config(n_layer=2)
         model = gpt2.GPT2Attention(config)
 
         hidden_states = Tensor(np.random.randint(0, 10, (2, 512, 768)), mindspore.float32)
@@ -52,7 +52,7 @@ class TestModelingGPT2(unittest.TestCase):
         Test GPT2 MLP
         """
         intermediate_size = 3072
-        config = config_gpt2.GPT2Config()
+        config = config_gpt2.GPT2Config(n_layer=2)
         model = gpt2.GPT2MLP(intermediate_size, config)
 
         hidden_states = Tensor(np.random.randint(0, 10, (2, 512, 768)), mindspore.float32)
@@ -65,7 +65,7 @@ class TestModelingGPT2(unittest.TestCase):
         Test GPT2 Block
         """
         layer_idx = 0
-        config = config_gpt2.GPT2Config()
+        config = config_gpt2.GPT2Config(n_layer=2)
         model = gpt2.GPT2Block(config, layer_idx)
 
         hidden_states = Tensor(np.random.randint(0, 10, (2, 512, 768)), mindspore.float32)

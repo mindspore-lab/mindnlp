@@ -22,7 +22,7 @@ Abstract class for Pretrained models.
 """
 import os
 from typing import Union, Optional
-from mindspore.train.serialization import load_checkpoint, load_param_into_net
+from mindspore.train.serialization import load_checkpoint, load_param_into_net, save_checkpoint
 from mindspore import nn, ops
 from mindspore import log as logger
 
@@ -32,6 +32,7 @@ from mindnlp.abc.configs import PreTrainedConfig
 from mindnlp.abc.mixins import CellUtilMixin, GenerationMixin
 
 _init_weights = True
+WEIGHTS_NAME = "mindspore.ckpt"
 
 
 class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
@@ -107,8 +108,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         base_model = getattr(self, self.base_model_prefix, self)
         if base_model is not self:
             base_model.set_input_embeddings(value)
-        else:
-            raise NotImplementedError
+        raise NotImplementedError
 
     def resize_position_embeddings(self, new_num_position_embeddings: int):
         """
@@ -377,3 +377,27 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         load_param_into_net(model, state_dict)
 
         return model
+
+    def save(self, save_dir):
+        """ Save a model and its configuration file to a directory, so that
+            it can be re-loaded using the `:func:`PreTrainedModel.from_pretrained`` class method.
+
+            Arguments:
+                save_dir: directory to which to save.
+        """
+        if os.path.isfile(save_dir):
+            logger.error(f"Provided path ({save_dir}) should be a directory, not a file")
+            return
+        os.makedirs(save_dir, exist_ok=True)
+
+        # Only save the model itself if we are using distributed training
+        model_to_save = self.cell if hasattr(self, "cell") else self
+
+        # Attach architecture to the config
+        model_to_save.config.architectures = [model_to_save.__class__.__name__]
+
+        # If we save using the predefined names, we can load using `from_pretrained`
+        output_model_file = os.path.join(save_dir, WEIGHTS_NAME)
+        save_checkpoint(model_to_save, output_model_file)
+
+        logger.info(f"Model weights saved in {output_model_file}")
