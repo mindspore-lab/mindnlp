@@ -45,17 +45,23 @@ class GPTTokenizer(PreTrainedTokenizer):
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
-    def __init__(self, vocab: str, **kwargs):
+    def __init__(
+        self,
+        tokenizer_file=None,
+        unk_token="<unk>",
+        **kwargs
+    ):
+        super().__init__(unk_token=unk_token, **kwargs)
+
         return_token = kwargs.pop('return_token', False)
 
-        if isinstance(vocab, str):
-            self._tokenizer = Tokenizer.from_file(vocab)
+        if isinstance(tokenizer_file, str):
+            self._tokenizer = Tokenizer.from_file(tokenizer_file)
         else:
-            raise ValueError(f'only support string, but got {vocab}')
+            raise ValueError(f'only support string, but got {tokenizer_file}')
 
         self.return_token = return_token
         self.implementation = Implementation.PY
-        super().__init__(**kwargs)
 
     def __call__(self, text_input):
         """
