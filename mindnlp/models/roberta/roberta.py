@@ -21,13 +21,13 @@ from mindspore import nn, ops
 from mindspore import Parameter
 from mindspore.common.initializer import initializer
 
+from mindnlp.configs import MINDNLP_MODEL_URL_BASE
 from mindnlp.models.bert.bert import BertEmbeddings, BertModel, BertPreTrainedModel
-from .roberta_config import RobertaConfig
+from .roberta_config import RobertaConfig, ROBERTA_SUPPORT_LIST
+
 
 PRETRAINED_MODEL_ARCHIVE_MAP = {
-    "roberta-base": "https://huggingface.co/lvyufeng/roberta/resolve/main/roberta-base.ckpt",
-    "roberta-large": "https://huggingface.co/lvyufeng/roberta/resolve/main/roberta-large.ckpt",
-    "roberta-large-mnli": "https://huggingface.co/lvyufeng/roberta/resolve/main/roberta-large-mnli.ckpt",
+    model: MINDNLP_MODEL_URL_BASE.format('bert', model) for model in ROBERTA_SUPPORT_LIST
 }
 
 class RobertaEmbeddings(BertEmbeddings):
