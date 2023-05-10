@@ -27,24 +27,22 @@ from mindspore import nn, ops, Parameter, Tensor, dtype_to_nptype
 from mindnlp.abc import PreTrainedModel
 from mindnlp._legacy.functional import tril, split, where, arange
 from mindnlp._legacy.nn import Dropout
-from mindnlp.models.gpt2.config_gpt2 import GPT2Config
+from mindnlp.configs import MINDNLP_MODEL_URL_BASE
 from ..utils import logging
 from ..utils.activations import ACT2FN
 from ..utils.utils import SequenceSummary
 from ..utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
+from .config_gpt2 import GPT2Config, GPT2_SUPPORT_LIST
 
 logger = logging.get_logger(__name__)
 
-__all__ = ['GPT2Attention', 'GPT2DoubleHeadsModel', 'GPT2ForSequenceClassification',
-           'GPT2ForTokenClassification', 'GPT2LMHeadModel', 'GPT2Model', 'GPT2MLP']
-
 PRETRAINED_MODEL_ARCHIVE_MAP = {
-    "gpt2": "https://download.mindspore.cn/toolkits/mindnlp/models/gpt2/gpt2/mindspore.ckpt",
-    "gpt2-large": "https://download.mindspore.cn/toolkits/mindnlp/models/gpt2/gpt2-large/mindspore.ckpt",
-    "gpt2-medium": "https://download.mindspore.cn/toolkits/mindnlp/models/gpt2/gpt2-medium/mindspore.ckpt",
-    "gpt2-xl": "https://download.mindspore.cn/toolkits/mindnlp/models/gpt2/gpt2-xl/mindspore.ckpt",
+    model: MINDNLP_MODEL_URL_BASE.format('gpt2', model) for model in GPT2_SUPPORT_LIST
 }
 
+
+__all__ = ['GPT2Attention', 'GPT2DoubleHeadsModel', 'GPT2ForSequenceClassification',
+           'GPT2ForTokenClassification', 'GPT2LMHeadModel', 'GPT2Model', 'GPT2MLP']
 
 def torch_to_mindspore(pth_file, **kwargs):
     """torch to mindspore."""
