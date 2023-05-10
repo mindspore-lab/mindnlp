@@ -617,10 +617,13 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
     gpt2 LMHead Model
     """
 
-    def __init__(self, config):
+    def __init__(self, config, **kwargs):
         super().__init__(config)
         self.transformer = GPT2Model(config)
         self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+
+        ignore_index = kwargs.pop('ignore_index', -1)
+        self.loss_fct = nn.CrossEntropyLoss(ignore_index=ignore_index)
 
     def get_output_embeddings(self):
         """
@@ -706,8 +709,7 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss_fct = nn.CrossEntropyLoss()
-            loss = loss_fct(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            loss = self.loss_fct(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
         output = (lm_logits,) + transformer_outputs[1:]
         return ((loss,) + output) if loss is not None else output
