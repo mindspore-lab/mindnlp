@@ -22,12 +22,13 @@ from mindspore import Parameter
 from mindspore.common.initializer import initializer
 
 from mindnlp.configs import MINDNLP_MODEL_URL_BASE
+from mindnlp._legacy.nn import Dropout
 from mindnlp.models.bert.bert import BertEmbeddings, BertModel, BertPreTrainedModel
 from .roberta_config import RobertaConfig, ROBERTA_SUPPORT_LIST
 
 
 PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MINDNLP_MODEL_URL_BASE.format('bert', model) for model in ROBERTA_SUPPORT_LIST
+    model: MINDNLP_MODEL_URL_BASE.format('roberta', model) for model in ROBERTA_SUPPORT_LIST
 }
 
 class RobertaEmbeddings(BertEmbeddings):
@@ -78,7 +79,7 @@ class RobertaClassificationHead(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size, activation='tanh')
-        self.dropout = nn.Dropout(p=1-config.hidden_dropout_prob)
+        self.dropout = Dropout(p=1-config.hidden_dropout_prob)
         self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
 
     def construct(self, features):
@@ -151,7 +152,7 @@ class RobertaForMultipleChoice(RobertaPreTrainedModel):
     def __init__(self, config, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
         self.roberta = RobertaModel(config)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = Dropout(p=config.hidden_dropout_prob)
         self.classifier = nn.Dense(config.hidden_size, 1)
 
     def construct(self, input_ids, token_type_ids=None, attention_mask=None, labels=None,
