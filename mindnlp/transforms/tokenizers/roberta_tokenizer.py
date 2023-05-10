@@ -13,28 +13,30 @@
 # limitations under the License.
 # ============================================================================
 """
-GPTTokenizer
+RobertaTokenizer
 """
 import numpy as np
 from mindspore.dataset.text.transforms import Implementation
 from tokenizers import Tokenizer
 from mindnlp.abc import PreTrainedTokenizer
-from mindnlp.models.gpt.gpt_config import GPT_SUPPORT_LIST
+from mindnlp.models.roberta.roberta_config import ROBERTA_SUPPORT_LIST
 from mindnlp.configs import MINDNLP_TOKENIZER_CONFIG_URL_BASE
 
 PRETRAINED_VOCAB_MAP = {
-    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format('gpt', model) for model in GPT_SUPPORT_LIST
+    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format('roberta', model) for model in ROBERTA_SUPPORT_LIST
 }
 
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
-    "openai-gpt": 512,
+    "roberta-base": 512,
+    "roberta-large": 512,
+    "roberta-large-mnli": 512,
 }
 
 
-class GPTTokenizer(PreTrainedTokenizer):
+class RobertaTokenizer(PreTrainedTokenizer):
     """
-    Tokenizer used for Bert text process.
+    Tokenizer used for Robertas text process.
 
     Args:
         vocab (Vocab): Vocabulary used to look up words.
