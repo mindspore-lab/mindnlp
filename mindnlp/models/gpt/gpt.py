@@ -17,34 +17,37 @@
 # ============================================================================
 # pylint: disable=C0103
 # pylint: disable=C0415
+# pylint: disable=W0223
 
 """MindNLP gpt model"""
 import os
+import logging
 import numpy as np
 import mindspore
 from mindspore import nn
 from mindspore import ops
 from mindspore import Tensor
+from mindspore.common.initializer import initializer, Normal
 from mindnlp.models.gpt.gpt_config import GPTConfig
-from mindnlp._legacy.nn import Dropout
+from mindnlp._legacy.nn import Dropout, Matmul
+from mindnlp._legacy.functional import split, softmax, arange
 from mindnlp.abc import PreTrainedModel
-from mindnlp.configs import HF_MODEL_URL_BASE
+from mindnlp.configs import MINDNLP_MODEL_URL_BASE
 from ..utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
 from ..utils.utils import SequenceSummary
 from ..utils.activations import ACT2FN
-from ..utils import logging
-from .gpt_config import GPT_SUPPORT_LIST, GPTConfig
-
-logger = logging.get_logger(__name__)
+from .gpt_config import GPTConfig, GPT_SUPPORT_LIST
 
 
 PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: HF_MODEL_URL_BASE.format(model) for model in GPT_SUPPORT_LIST
+    model: MINDNLP_MODEL_URL_BASE.format('gpt', model) for model in GPT_SUPPORT_LIST
 }
 
 
-def torch_to_mindspore(pth_file):
+def torch_to_mindspore(pth_file, **kwargs):
     """torch to mindspore."""
+    prefix = kwargs.get("prefix", "")
+
     try:
         import torch
     except Exception as exc:
@@ -66,9 +69,11 @@ def torch_to_mindspore(pth_file):
                 k = k.replace('.bias', '.beta')
         if 'embed' in k:
             k = k.replace('weight', 'embedding_table')
+        if prefix:
+            k = prefix + "." + k
         ms_ckpt.append({'name': k, 'data': Tensor(v.numpy())})
 
-    ms_ckpt_path = pth_file.replace('.bin','.ckpt')
+    ms_ckpt_path = pth_file.replace('pytorch_model.bin','mindspore.ckpt')
     if not os.path.exists(ms_ckpt_path):
         try:
             save_checkpoint(ms_ckpt, ms_ckpt_path)
@@ -120,6 +125,7 @@ class Attention(nn.Cell):
         self.c_proj = Conv1D(n_state, n_state)
         self.attn_dropout = Dropout(p=config.attn_pdrop)
         self.resid_dropout = Dropout(p=config.resid_pdrop)
+        self.matmul = Matmul()
         self.pruned_heads = set()
 
         self.output_attentions = config.output_attentions
@@ -142,7 +148,7 @@ class Attention(nn.Cell):
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def _attn(self, q, k, v, attention_mask=None, head_mask=None):
-        w = ops.matmul(q, k)
+        w = self.matmul(q, k)
         if self.scale:
             w = w / ops.sqrt(ops.scalar_to_tensor(v.shape[-1]))
         b = self.bias[:, :, : w.shape[-2], : w.shape[-1]]
@@ -151,13 +157,13 @@ class Attention(nn.Cell):
         if attention_mask is not None:
             w = w + attention_mask
 
-        w = ops.softmax(w)
+        w = softmax(w)
         w = self.attn_dropout(w)
 
         if head_mask is not None:
             w = w * head_mask
 
-        outputs = (ops.matmul(w, v),)
+        outputs = (self.matmul(w, v),)
         if self.output_attentions:
             outputs += (w,)
         return outputs
@@ -179,7 +185,7 @@ class Attention(nn.Cell):
 
     def construct(self, x, attention_mask=None, head_mask=None):
         x = self.c_attn(x)
-        query, key, value = ops.split(x, self.split_size, axis=2)
+        query, key, value = split(x, self.split_size, axis=2)
         query = self.split_heads(query)
         key = self.split_heads(key, k=True)
         value = self.split_heads(value)
@@ -228,29 +234,27 @@ class GPTPreTrainedModel(PreTrainedModel):
     convert_torch_to_mindspore = torch_to_mindspore
     pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
     config_class = GPTConfig
-    name = 'gpt'
+    base_model_prefix = 'transformer'
 
-    def get_input_embeddings(self):
-        """get input embeddings"""
-
-    def get_position_embeddings(self):
-        """get position embeddings"""
-
-    def init_model_weights(self):
-        """init model weights"""
-
-    def post_init(self):
-        """post init"""
-
-    def resize_position_embeddings(self):
-        """resize position embeddings"""
-
-    def save(self):
-        """save"""
-
-    def set_input_embeddings(self):
-        """set input embeddings"""
-
+    def _init_weights(self, cell):
+        """Initialize the weights"""
+        if isinstance(cell, nn.Dense):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+                                                    cell.weight.shape, cell.weight.dtype))
+            if cell.has_bias:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        elif isinstance(cell, nn.Embedding):
+            embedding_table = initializer(Normal(self.config.initializer_range),
+                                                 cell.embedding_table.shape,
+                                                 cell.embedding_table.dtype)
+            if cell.padding_idx is not None:
+                embedding_table[cell.padding_idx] = 0
+            cell.embedding_table.set_data(embedding_table)
+        elif isinstance(cell, nn.LayerNorm):
+            cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
+            cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
 
 class GPTModel(GPTPreTrainedModel):
     """
@@ -262,8 +266,8 @@ class GPTModel(GPTPreTrainedModel):
         self.config = config
         self.tokens_embed = nn.Embedding(config.vocab_size, config.n_embd)
         self.positions_embed = nn.Embedding(config.n_positions, config.n_embd)
-        self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.block_list = nn.CellList([Block(config.n_positions, config, scale=True) for _ in range(config.n_layer)])
+        self.drop = Dropout(p=config.embd_pdrop)
+        self.h = nn.CellList([Block(config.n_positions, config, scale=True) for _ in range(config.n_layer)])
         self.position_ids = ops.arange(config.n_positions)
 
         self.n_layer = self.config.n_layer
@@ -276,11 +280,11 @@ class GPTModel(GPTPreTrainedModel):
         """
         return self.tokens_embed
 
-    def set_input_embeddings(self, new_embeddings):
+    def set_input_embeddings(self, value):
         """
         set the input embeddings layer
         """
-        self.tokens_embed = new_embeddings
+        self.tokens_embed = value
 
     def _prune_heads(self, heads_to_prune):
         """
@@ -336,7 +340,7 @@ class GPTModel(GPTPreTrainedModel):
 
         all_attentions = ()
         all_hidden_states = ()
-        for i, block in enumerate(self.block_list):
+        for i, block in enumerate(self.h):
             if self.output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
@@ -350,7 +354,6 @@ class GPTModel(GPTPreTrainedModel):
         # Add last layer
         if self.output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)
-
         return (hidden_states, all_hidden_states, all_attentions)
 
 
@@ -404,13 +407,13 @@ class GPTLMHeadModel(GPTPreTrainedModel):
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss_fct = nn.CrossEntropyLoss()
-            loss = loss_fct(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
         output = (lm_logits,) + transformer_outputs[1:]
         if loss is not None:
             output = (loss,) + output
         return output
+
 
 class GPTDoubleHeadsModel(GPTPreTrainedModel):
     """
@@ -426,6 +429,7 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
         self.transformer = GPTModel(config)
         self.lm_head = nn.Dense(config.n_embd, config.vocab_size, has_bias=False)
         self.multiple_choice_head = SequenceSummary(config)
+        self.post_init()
 
     def get_output_embeddings(self):
         """
@@ -466,13 +470,11 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
 
         lm_loss, mc_loss = None, None
         if mc_labels is not None:
-            loss_fct = nn.CrossEntropyLoss()
-            mc_loss = loss_fct(mc_logits.view(-1, mc_logits.size(-1)), mc_labels.view(-1))
+            mc_loss = ops.cross_entropy(mc_logits.view(-1, mc_logits.size(-1)), mc_labels.view(-1))
         if labels is not None:
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
-            loss_fct = nn.CrossEntropyLoss()
-            lm_loss = loss_fct(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            lm_loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
         output = (lm_logits, mc_logits) + transformer_outputs[1:]
         if mc_loss is not None:
@@ -497,6 +499,21 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
         self.num_labels = config.num_labels
         self.transformer = GPTModel(config)
         self.score = nn.Dense(config.n_embd, self.num_labels, has_bias=False)
+
+        self.pad_token_id = self.config.pad_token_id
+        problem_type = config.problem_type
+        if problem_type is None:
+            self.loss = None
+        else:
+            if self.num_labels == 1:
+                self.problem_type = "regression"
+                self.loss = nn.MSELoss()
+            elif self.num_labels > 1:
+                self.problem_type = "single_label_classification"
+                self.loss = nn.CrossEntropyLoss()
+            else:
+                self.problem_type = "multi_label_classification"
+                self.loss = nn.BCEWithLogitsLoss()
 
     def construct(
         self,
@@ -533,49 +550,38 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
             batch_size, _ = inputs_embeds.shape[:2]
 
         # Ensure the batch size is > 1 if there is no padding.
-        if self.config.pad_token_id is None and batch_size != 1:
+        if self.pad_token_id is None and batch_size != 1:
             raise ValueError("Cannot handle batch sizes > 1 if no padding token is defined.")
 
-        if self.config.pad_token_id is None:
+        if self.pad_token_id is None:
             sequence_lengths = -1
         else:
             if input_ids is not None:
-                sequence_lengths = ops.ne(input_ids, self.config.pad_token_id).sum(-1) - 1
+                # reduce sum not support int on Ascend.
+                sequence_lengths = ops.ne(input_ids, self.pad_token_id) \
+                        .astype(mindspore.float32).sum(-1) \
+                        .astype(mindspore.int32) - 1
             else:
                 sequence_lengths = -1
-                logger.warning(
-                    "%s will not detect padding tokens in `inputs_embeds`. Results may be unexpected if using padding "
-                    "tokens in conjunction with `inputs_embeds.`", self.__class__.__name__)
 
-        pooled_logits = logits[:, sequence_lengths]
+        pooled_logits = logits[arange(batch_size), sequence_lengths]
 
         loss = None
-        if labels is not None:
-            if self.config.problem_type is None:
-                if self.num_labels == 1:
-                    self.config.problem_type = "regression"
-                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
-                    self.config.problem_type = "single_label_classification"
-                else:
-                    self.config.problem_type = "multi_label_classification"
-
-            if self.config.problem_type == "regression":
-                loss_fct = nn.MSELoss()
-                if self.num_labels == 1:
-                    loss = loss_fct(pooled_logits.squeeze(), labels.squeeze())
-                else:
-                    loss = loss_fct(pooled_logits, labels)
-            elif self.config.problem_type == "single_label_classification":
-                loss_fct = nn.CrossEntropyLoss()
-                loss = loss_fct(pooled_logits.view(-1, self.num_labels), labels.view(-1))
-            elif self.config.problem_type == "multi_label_classification":
-                loss_fct = nn.BCEWithLogitsLoss()
-                loss = loss_fct(pooled_logits, labels)
 
         output = (pooled_logits,) + transformer_outputs[1:]
-        if  loss is not None:
+
+        if labels is not None:
+            if self.num_labels == 1:
+                loss = self.loss(pooled_logits.squeeze(), labels.squeeze())
+            elif self.num_labels > 1:
+                loss = self.loss(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+            else:
+                loss = self.loss(pooled_logits, labels)
+
+        if loss is not None:
             output = (loss,) + output
         return output
+
 
 __all__ = ['MLP', 'Attention', 'Block', 'GPTModel', 'GPTLMHeadModel',
            'GPTDoubleHeadsModel', 'GPTForSequenceClassification']

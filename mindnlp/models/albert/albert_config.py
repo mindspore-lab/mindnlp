@@ -15,7 +15,7 @@
 """
 ALBERT model config
 """
-from mindnlp.abc.backbones.pretrained import PreTrainedConfig
+from mindnlp.abc import PreTrainedConfig
 
 __all__ = ['AlbertConfig']
 

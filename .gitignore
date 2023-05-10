@@ -139,4 +139,3 @@ download.txt
 *.tar.gz
 *hf*.py
 *torch*.py
-*pt*.py

@@ -1,5 +1,6 @@
 # coding=utf-8
 # Copyright 2020 The Allen Institute for AI team and The HuggingFace Inc. team.
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch Longformer model."""
+"""MindSpore Longformer model."""
 # pylint: disable=relative-beyond-top-level
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=too-many-locals
@@ -22,7 +23,6 @@
 # pylint: disable=C0302
 import inspect
 import math
-import os
 from typing import List, Set, Tuple, Callable, Optional, Union
 
 import numpy as np
@@ -1345,9 +1345,6 @@ class LongformerPreTrainedModel(PreTrainedModel):
     models.
     """
 
-    def init_model_weights(self):
-        pass
-
     def get_input_embeddings(self) -> "nn.Cell":
         pass
 
@@ -1358,9 +1355,6 @@ class LongformerPreTrainedModel(PreTrainedModel):
         pass
 
     def get_position_embeddings(self):
-        pass
-
-    def save(self, save_dir: Union[str, os.PathLike]):
         pass
 
     config_class = LongformerConfig
