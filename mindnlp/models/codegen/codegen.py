@@ -88,7 +88,7 @@ class CodeGenAttention(nn.Cell):
         super().__init__()
 
         max_positions = config.n_positions
-        self.causal_mask = Parameter(ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.uint8)).view(
+        self.causal_mask = Parameter(ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.bool_)).view(
             1, 1, max_positions, max_positions
         ), requires_grad=False)
 
@@ -157,7 +157,7 @@ class CodeGenAttention(nn.Cell):
         # Need to be on the same device, otherwise `RuntimeError: ..., x and y to be on the same device`
         # mask_value = Tensor(mask_value, dtype=attn_weights.dtype).astype(attn_weights.device)
         mask_value = Tensor(mask_value, dtype=attn_weights.dtype)
-        attn_weights = mindspore.numpy.where(causal_mask, attn_weights, mask_value)
+        attn_weights = ops.select(causal_mask, attn_weights, mask_value)
 
         if attention_mask is not None:
             # Apply the attention mask
