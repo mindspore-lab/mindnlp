@@ -22,7 +22,7 @@ def test_gpt2_tokenizer_add_special_tokens():
     gpt2_tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
     cls_id = gpt2_tokenizer.token_to_id("[CLS]")
 
-    assert cls_id is None
+    assert cls_id == gpt2_tokenizer.unk_token_id
 
     add_num = gpt2_tokenizer.add_special_tokens({
         'cls_token': "[CLS]"

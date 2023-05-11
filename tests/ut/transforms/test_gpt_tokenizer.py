@@ -35,7 +35,7 @@ def test_gpt_tokenizer_add_special_tokens():
     gpt_tokenizer = GPTTokenizer.from_pretrained('openai-gpt')
     cls_id = gpt_tokenizer.token_to_id("[CLS]")
 
-    assert cls_id is None
+    assert cls_id == gpt_tokenizer.unk_token_id
 
     add_num = gpt_tokenizer.add_special_tokens({
         'cls_token': "[CLS]"
