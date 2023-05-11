@@ -408,7 +408,10 @@ class BertModel(BertPreTrainedModel):
         super().__init__(config)
         self.embeddings = BertEmbeddings(config)
         self.encoder = BertEncoder(config)
-        self.pooler = BertPooler(config)
+        if getattr(config, 'add_pooling_layer', False):
+            self.pooler = BertPooler(config)
+        else:
+            self.pooler = None
         self.num_hidden_layers = config.num_hidden_layers
 
     def get_input_embeddings(self):
@@ -442,7 +445,10 @@ class BertModel(BertPreTrainedModel):
                                        extended_attention_mask,
                                        head_mask=head_mask)
         sequence_output = encoder_outputs[0]
-        pooled_output = self.pooler(sequence_output)
+        if self.pooler is not None:
+            pooled_output = self.pooler(sequence_output)
+        else:
+            pooled_output = None
 
         outputs = (sequence_output, pooled_output,) + encoder_outputs[1:]
         # add hidden_states and attentions if they are here
