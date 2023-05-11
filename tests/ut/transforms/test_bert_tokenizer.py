@@ -53,3 +53,23 @@ def test_bert_tokenizer_mindspore_vocab():
 
     assert len(dataset_after) == 19
     assert dataset_after.dtype == ms.string
+
+def test_bert_tokenizer_from_pretrained():
+    """test BertTokenizer from pretrained."""
+    texts = ['i make a small mistake when i\'m working! 床前明月光']
+    test_dataset = GeneratorDataset(texts, 'text')
+
+    bert_tokenizer = BertTokenizer.from_pretrained('bert-base-chinese', return_token=True)
+    test_dataset = test_dataset.map(operations=bert_tokenizer)
+    dataset_after = next(test_dataset.create_tuple_iterator())[0]
+
+    assert len(dataset_after) == 21
+    assert dataset_after.dtype == ms.string
+
+
+def test_bert_tokenizer_add_special_tokens():
+    """test add special tokens."""
+    bert_tokenizer = BertTokenizer.from_pretrained('bert-base-chinese')
+    cls_id = bert_tokenizer.token_to_id("[CLS]")
+
+    assert cls_id is not None

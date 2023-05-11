@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+
 """
-CellUtilMixin
+Cell mixin
 """
 
 from typing import Tuple
@@ -72,10 +73,12 @@ class CellUtilMixin:
         Returns:
             `mindspore.Tensor`: The inverted attention mask.
         """
-        if encoder_attention_mask.dim() == 3:
+        if encoder_attention_mask.ndim == 3:
             encoder_extended_attention_mask = encoder_attention_mask[:, None, :, :]
-        if encoder_attention_mask.dim() == 2:
+        if encoder_attention_mask.ndim == 2:
             encoder_extended_attention_mask = encoder_attention_mask[:, None, None, :]
+        else:
+            encoder_extended_attention_mask = encoder_attention_mask
         # T5 has a mask that can compare sequence ids, we can simulate this here with this transposition
         # Cf. https://github.com/tensorflow/mesh/blob/8d2465e9bc93129b913b5ccc6a59aa97abd96ec6/mesh_tensorflow
         # /transformer/transformer_layers.py#L270
@@ -107,9 +110,9 @@ class CellUtilMixin:
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
-        if attention_mask.dim() == 3:
+        if attention_mask.ndim == 3:
             extended_attention_mask = attention_mask[:, None, :, :]
-        elif attention_mask.dim() == 2:
+        elif attention_mask.ndim == 2:
             # Provided a padding mask of dimensions [batch_size, seq_length]
             # - if the model is a decoder, apply a causal mask in addition to the padding mask
             # - if the model is an encoder, make the mask broadcastable
@@ -159,7 +162,9 @@ class CellUtilMixin:
             if is_attention_chunked is True:
                 head_mask = head_mask.expand_dims(-1)
         else:
-            head_mask = [None] * num_hidden_layers
+            head_mask = ()
+            for _ in range(num_hidden_layers):
+                head_mask += (None,)
 
         return head_mask
 
