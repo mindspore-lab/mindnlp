@@ -3,15 +3,14 @@
 GPT2Tokenizer
 """
 import numpy as np
-from mindspore.dataset.transforms.transforms import PyTensorOperation
 from mindspore.dataset.text.transforms import Implementation
 from tokenizers import Tokenizer
 from mindnlp.abc import PreTrainedTokenizer
 from mindnlp.models.gpt2.config_gpt2 import GPT2_SUPPORT_LIST
-from mindnlp.configs import HF_TOKENIZER_CONFIG_URL_BASE
+from mindnlp.configs import MINDNLP_TOKENIZER_CONFIG_URL_BASE
 
 PRETRAINED_VOCAB_MAP = {
-    model: HF_TOKENIZER_CONFIG_URL_BASE.format(model) for model in GPT2_SUPPORT_LIST
+    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format('gpt2', model) for model in GPT2_SUPPORT_LIST
 }
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
@@ -22,7 +21,7 @@ PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
     "distilgpt2": 1024,
 }
 
-class GPT2Tokenizer(PyTensorOperation, PreTrainedTokenizer):
+class GPT2Tokenizer(PreTrainedTokenizer):
     """
         Tokenizer used for GPT2 text process.
         Args:
@@ -34,14 +33,29 @@ class GPT2Tokenizer(PyTensorOperation, PreTrainedTokenizer):
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
-    def __init__(self, vocab: str, **kwargs):
-        super().__init__()
+    def __init__(
+        self,
+        tokenizer_file=None,
+        unk_token="<|endoftext|>",
+        bos_token="<|endoftext|>",
+        eos_token="<|endoftext|>",
+        add_prefix_space=False,
+        **kwargs
+    ):
+        super().__init__(
+            unk_token=unk_token,
+            bos_token=bos_token,
+            eos_token=eos_token,
+            add_prefix_space=add_prefix_space,
+            **kwargs)
+
         return_token = kwargs.pop('return_token', False)
 
-        if isinstance(vocab, str):
-            self.tokenizer = Tokenizer.from_file(vocab)
+        if isinstance(tokenizer_file, str):
+            self._tokenizer = Tokenizer.from_file(tokenizer_file)
         else:
-            raise ValueError(f'only support string, but got {vocab}')
+            raise ValueError(f'only support string, but got {tokenizer_file}')
+
         self.return_token = return_token
         self.implementation = Implementation.PY
 
@@ -67,7 +81,7 @@ class GPT2Tokenizer(PyTensorOperation, PreTrainedTokenizer):
         Execute method.
         """
         text_input = self._convert_to_unicode(text_input)
-        tokens = self.tokenizer.encode(text_input)
+        tokens = self._tokenizer.encode(text_input)
         if self.return_token is True:
             return np.array(tokens.tokens)
         return np.array(tokens.ids)

@@ -15,7 +15,7 @@
 # limitations under the License.
 # pylint: disable=too-many-instance-attributes
 """ XLM configuration"""
-from ...abc.backbones import PreTrainedConfig
+from mindnlp.abc import PreTrainedConfig
 
 class XLMConfig(PreTrainedConfig):
     """

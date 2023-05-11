@@ -16,9 +16,7 @@
 BertTokenizer
 """
 import os
-from typing import Union
 import numpy as np
-from mindspore.dataset.transforms.transforms import PyTensorOperation
 from mindspore.dataset.text.transforms import Implementation
 from mindspore.dataset.text import Vocab as msVocab
 from tokenizers import Tokenizer
@@ -26,10 +24,10 @@ from tokenizers.implementations import BertWordPieceTokenizer
 from mindnlp.abc import PreTrainedTokenizer
 from mindnlp.vocab import Vocab
 from mindnlp.models.bert.bert_config import BERT_SUPPORT_LIST
-from mindnlp.configs import HF_TOKENIZER_CONFIG_URL_BASE
+from mindnlp.configs import MINDNLP_TOKENIZER_CONFIG_URL_BASE
 
 PRETRAINED_VOCAB_MAP = {
-    model: HF_TOKENIZER_CONFIG_URL_BASE.format(model) for model in BERT_SUPPORT_LIST
+    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format('bert', model) for model in BERT_SUPPORT_LIST
 }
 
 
@@ -52,7 +50,7 @@ PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
 }
 
 
-class BertTokenizer(PyTensorOperation, PreTrainedTokenizer):
+class BertTokenizer(PreTrainedTokenizer):
     """
     Tokenizer used for Bert text process.
 
@@ -91,8 +89,31 @@ class BertTokenizer(PyTensorOperation, PreTrainedTokenizer):
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
-    def __init__(self, vocab: Union[msVocab, Vocab, str], **kwargs):
-        super().__init__()
+    def __init__(
+        self,
+        vocab=None,
+        tokenizer_file=None,
+        do_lower_case=True,
+        unk_token="[UNK]",
+        sep_token="[SEP]",
+        pad_token="[PAD]",
+        cls_token="[CLS]",
+        mask_token="[MASK]",
+        tokenize_chinese_chars=True,
+        strip_accents=None,
+        **kwargs
+    ):
+        super().__init__(
+            tokenizer_file=tokenizer_file,
+            unk_token=unk_token,
+            sep_token=sep_token,
+            pad_token=pad_token,
+            cls_token=cls_token,
+            mask_token=mask_token,
+            tokenize_chinese_chars=tokenize_chinese_chars,
+            strip_accents=strip_accents,
+            **kwargs,
+        )
         if isinstance(vocab, msVocab):
             vocab_dict = vocab.vocab()
         elif isinstance(vocab, Vocab):
@@ -103,13 +124,12 @@ class BertTokenizer(PyTensorOperation, PreTrainedTokenizer):
         else:
             raise ValueError(f'only support Vocab class from mindspore or mindnlp, but got {vocab}')
 
-        lower_case = kwargs.pop('lower_case', False)
         return_token = kwargs.pop('return_token', False)
 
         if isinstance(vocab, str):
-            self.tokenizer = Tokenizer.from_file(vocab)
+            self._tokenizer = Tokenizer.from_file(vocab)
         else:
-            self.tokenizer = BertWordPieceTokenizer(vocab=vocab_dict, lowercase=lower_case)
+            self._tokenizer = BertWordPieceTokenizer(vocab=vocab_dict, lowercase=do_lower_case)
 
         self.return_token = return_token
         self.implementation = Implementation.PY
@@ -136,7 +156,7 @@ class BertTokenizer(PyTensorOperation, PreTrainedTokenizer):
         Execute method.
         """
         text = self._convert_to_unicode(text_input)
-        output = self.tokenizer.encode(text)
+        output = self._tokenizer.encode(text)
         if self.return_token is True:
             return np.array(output.tokens)
         return np.array(output.ids)

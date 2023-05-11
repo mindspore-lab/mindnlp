@@ -20,8 +20,9 @@ import mindspore
 import mindspore.numpy as mnp
 from mindspore import nn
 from mindspore import ops
-from mindspore.common.initializer import TruncatedNormal
-from mindnlp.abc.backbones.pretrained import PreTrainedModel
+from mindspore.common.initializer import initializer, TruncatedNormal, Normal
+from mindnlp.abc import PreTrainedModel
+from .albert_config import AlbertConfig
 
 activation_map = {
     'relu': nn.ReLU(),
@@ -263,26 +264,36 @@ class AlbertPretrainedModel(PreTrainedModel):
     """ An abstract class to handle weights initialization and
         a simple interface for downloading and loading pretrained models.
     """
-    def get_input_embeddings(self):
-        """get input embeddings"""
+    config_class = AlbertConfig
+    base_model_prefix = "albert"
+
+    def _init_weights(self, cell):
+        """ Initialize the weights."""
+        if isinstance(cell, nn.Embedding):
+            cell.embedding_table.set_data(initializer(Normal(self.config.initializer_range),
+                                                      cell.embedding_table.shape,
+                                                      cell.embedding_table.dtype))
+        elif isinstance(cell, nn.Dense):
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+                                             cell.weight.shape,
+                                             cell.weight.dtype))
+            if cell.has_bias:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        elif isinstance(cell, nn.LayerNorm):
+            cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
+            cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
 
     def get_position_embeddings(self):
-        """get position embeddings"""
+        """
+        get the model position embeddings if necessary
+        """
+        return self.embeddings.position_embeddings
 
-    def init_model_weights(self):
-        """init model weights"""
-
-    def post_init(self):
-        """post init"""
-
-    def resize_position_embeddings(self):
-        """resize position embeddings"""
-
-    def save(self):
-        """save"""
-
-    def set_input_embeddings(self):
-        """set input embeddings"""
+    def resize_position_embeddings(self, new_num_position_embeddings):
+        """
+        resize the model position embeddings if necessary
+        """
+        self.embeddings.position_embeddings = new_num_position_embeddings
 
 
 class AlbertModel(AlbertPretrainedModel):
@@ -296,6 +307,25 @@ class AlbertModel(AlbertPretrainedModel):
         self.encoder = AlbertTransformer(config)
         self.pooler = nn.Dense(config.hidden_size, config.hidden_size)
         self.pooler_activation = nn.Tanh()
+        self.init_weights()
+
+    def get_input_embeddings(self):
+        return self.embeddings.word_embeddings
+
+    def get_position_embeddings(self):
+        """
+        get the model position embeddings if necessary
+        """
+        return self.embeddings.position_embeddings
+
+    def resize_position_embeddings(self, new_num_position_embeddings):
+        """
+        resize the model position embeddings if necessary
+        """
+        self.embeddings.position_embeddings = new_num_position_embeddings
+
+    def set_input_embeddings(self, value):
+        self.embeddings.word_embeddings = value
 
     def construct(
             self,
@@ -366,6 +396,18 @@ class AlbertForPretraining(AlbertPretrainedModel):
         super().__init__(config)
         self.albert = AlbertModel(config)
 
+    def get_position_embeddings(self):
+        """
+        get the model position embeddings if necessary
+        """
+        return self.embeddings.position_embeddings
+
+    def resize_position_embeddings(self, new_num_position_embeddings):
+        """
+        resize the model position embeddings if necessary
+        """
+        self.embeddings.position_embeddings = new_num_position_embeddings
+
     def construct(
             self,
             input_ids=None,
@@ -430,6 +472,18 @@ class AlbertMLMHead(nn.Cell):
         # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
         self.decoder.bias = self.bias
 
+    def get_position_embeddings(self):
+        """
+        get the model position embeddings if necessary
+        """
+        return self.embeddings.position_embeddings
+
+    def resize_position_embeddings(self, new_num_position_embeddings):
+        """
+        resize the model position embeddings if necessary
+        """
+        self.embeddings.position_embeddings = new_num_position_embeddings
+
     def construct(self, hidden_states):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.activation(hidden_states)
@@ -448,6 +502,18 @@ class AlbertSOPHead(nn.Cell):
         self.dropout = nn.Dropout(p=config.classifier_dropout_prob)
         self.classifier = nn.Dense(config.hidden_size, config.num_labels)
 
+    def get_position_embeddings(self):
+        """
+        get the model position embeddings if necessary
+        """
+        return self.embeddings.position_embeddings
+
+    def resize_position_embeddings(self, new_num_position_embeddings):
+        """
+        resize the model position embeddings if necessary
+        """
+        self.embeddings.position_embeddings = new_num_position_embeddings
+
     def construct(self, pooled_output):
         dropout_pooled_output = self.dropout(pooled_output)
         logits = self.classifier(dropout_pooled_output)
@@ -462,6 +528,18 @@ class AlbertForMaskedLM(AlbertPretrainedModel):
         super().__init__(config)
         self.albert = AlbertModel(config)
         self.predictions = AlbertMLMHead(config)
+
+    def get_position_embeddings(self):
+        """
+        get the model position embeddings if necessary
+        """
+        return self.embeddings.position_embeddings
+
+    def resize_position_embeddings(self, new_num_position_embeddings):
+        """
+        resize the model position embeddings if necessary
+        """
+        self.embeddings.position_embeddings = new_num_position_embeddings
 
     def construct(
             self,
@@ -517,6 +595,18 @@ class AlbertForSequenceClassification(AlbertPretrainedModel):
         self.dropout = nn.Dropout(p=config.classifier_dropout_prob)
         self.classifier = nn.Dense(config.hidden_size, self.config.num_labels)
 
+    def get_position_embeddings(self):
+        """
+        get the model position embeddings if necessary
+        """
+        return self.embeddings.position_embeddings
+
+    def resize_position_embeddings(self, new_num_position_embeddings):
+        """
+        resize the model position embeddings if necessary
+        """
+        self.embeddings.position_embeddings = new_num_position_embeddings
+
     def construct(
             self,
             input_ids=None,
@@ -568,6 +658,18 @@ class AlbertForTokenClassification(AlbertPretrainedModel):
         self.albert = AlbertModel(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.classifier = nn.Dense(config.hidden_size, self.config.num_labels)
+
+    def get_position_embeddings(self):
+        """
+        get the model position embeddings if necessary
+        """
+        return self.embeddings.position_embeddings
+
+    def resize_position_embeddings(self, new_num_position_embeddings):
+        """
+        resize the model position embeddings if necessary
+        """
+        self.embeddings.position_embeddings = new_num_position_embeddings
 
     def construct(
             self,
@@ -621,6 +723,18 @@ class AlbertForQuestionAnswering(AlbertPretrainedModel):
         self.num_labels = config.num_labels
         self.albert = AlbertModel(config)
         self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+
+    def get_position_embeddings(self):
+        """
+        get the model position embeddings if necessary
+        """
+        return self.embeddings.position_embeddings
+
+    def resize_position_embeddings(self, new_num_position_embeddings):
+        """
+        resize the model position embeddings if necessary
+        """
+        self.embeddings.position_embeddings = new_num_position_embeddings
 
     def construct(
             self,
@@ -683,6 +797,18 @@ class AlbertForMultipleChoice(AlbertPretrainedModel):
         self.albert = AlbertModel(config)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         self.classifier = nn.Dense(config.hidden_size, 1)
+
+    def get_position_embeddings(self):
+        """
+        get the model position embeddings if necessary
+        """
+        return self.embeddings.position_embeddings
+
+    def resize_position_embeddings(self, new_num_position_embeddings):
+        """
+        resize the model position embeddings if necessary
+        """
+        self.embeddings.position_embeddings = new_num_position_embeddings
 
     def construct(
             self,
