@@ -853,18 +853,14 @@ class LongformerSelfAttention(nn.Cell):
 
         attn_probs_from_global_key = attn_probs_from_global_key.swapaxes(1, 3)
 
-        # print(type(is_local_index_no_global_attn_nonzero))
-        # print(is_local_index_no_global_attn_nonzero)
-        # print(type(attn_probs_from_global_key))
-        # print(attn_probs_from_global_key.shape)
-
         if is_local_index_no_global_attn_nonzero[0].shape[0] != 0:
-            attn_probs_from_global_key[
-                is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
-            ] = Tensor(np.finfo(
-                mindspore.dtype_to_nptype(attn_probs_from_global_key.dtype)).min,
-                       dtype=attn_probs_from_global_key.dtype
-                       )
+            pass
+        #     attn_probs_from_global_key[
+        #         is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
+        #     ] = Tensor(np.finfo(
+        #         mindspore.dtype_to_nptype(attn_probs_from_global_key.dtype)).min,
+        #                dtype=attn_probs_from_global_key.dtype
+        #                )
 
         attn_probs_from_global_key = attn_probs_from_global_key.swapaxes(1, 3)
 
@@ -970,12 +966,13 @@ class LongformerSelfAttention(nn.Cell):
 
         global_attn_scores = global_attn_scores.swapaxes(1, 2)
         if is_local_index_no_global_attn_nonzero[0].shape[0] != 0:
-            global_attn_scores[
-                is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
-            ] = mindspore.Tensor(np.finfo(
-                mindspore.dtype_to_nptype(global_attn_scores.dtype)).min,
-                                 dtype=global_attn_scores.dtype
-                                 )
+            pass
+        #     global_attn_scores[
+        #         is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
+        #     ] = mindspore.Tensor(np.finfo(
+        #         mindspore.dtype_to_nptype(global_attn_scores.dtype)).min,
+        #                          dtype=global_attn_scores.dtype
+        #                          )
         global_attn_scores = global_attn_scores.swapaxes(1, 2)
 
         global_attn_scores = global_attn_scores.masked_fill(
