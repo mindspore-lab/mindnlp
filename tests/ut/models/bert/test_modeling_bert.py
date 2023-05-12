@@ -13,6 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """Test Bert"""
+import gc
 import unittest
 import pytest
 import numpy as np
@@ -61,3 +62,6 @@ class TestModelingBert(unittest.TestCase):
     def test_from_pretrained_from_pt(self):
         """test from pt"""
         _ = BertModel.from_pretrained('bert-base-uncased', from_pt=True)
+
+    def tearDown(self) -> None:
+        gc.collect()
