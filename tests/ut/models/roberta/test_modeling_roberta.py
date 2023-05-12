@@ -13,6 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """Test Roberta"""
+import gc
 import unittest
 import pytest
 import numpy as np
@@ -68,3 +69,6 @@ class TestModelingRoberta(unittest.TestCase):
     def test_from_pretrained(self):
         """test from pretrained"""
         _ = RobertaModel.from_pretrained('bert-base-uncased')
+
+    def tearDown(self) -> None:
+        gc.collect()

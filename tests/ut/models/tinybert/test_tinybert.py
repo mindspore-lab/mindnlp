@@ -16,6 +16,7 @@
 """
 Test TinyBert
 """
+import gc
 import unittest
 
 import numpy as np
@@ -361,3 +362,6 @@ class TestTinyBert(unittest.TestCase):
         assert logits.shape == (2, 2)
         assert att_output[0].shape == (2, 12, 3, 3)
         assert sequence_output[0].shape == (2, 3, 768)
+
+    def tearDown(self) -> None:
+        gc.collect()

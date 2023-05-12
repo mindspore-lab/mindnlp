@@ -13,6 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """Test GPT2"""
+import gc
 import unittest
 import pytest
 import numpy as np
@@ -157,3 +158,6 @@ class TestModelingGPT2(unittest.TestCase):
     def test_from_pretrained_from_pt(self):
         """test from pt"""
         _ = gpt2.GPT2Model.from_pretrained('gpt2', from_pt=True)
+
+    def tearDown(self) -> None:
+        gc.collect()
