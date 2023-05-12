@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Test GPTNeo"""
+import gc
 import unittest
 import numpy as np
 import mindspore
@@ -142,3 +143,6 @@ class TestModelingGPTNeo(unittest.TestCase):
         for i in range(len(outputs[1])):
             for j in range(len(outputs[1][i])):
                 assert outputs[1][i][j].shape == (1, 16, 128, 8)
+
+    def tearDown(self) -> None:
+        gc.collect()
