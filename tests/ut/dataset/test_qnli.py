@@ -38,7 +38,7 @@ class TestQNLI(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_qnli(self):
         """Test qnli"""
@@ -61,7 +61,7 @@ class TestQNLI(unittest.TestCase):
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_qnli_by_register(self):
         """test qnli by register"""
@@ -71,7 +71,7 @@ class TestQNLI(unittest.TestCase):
             split=("dev", "test"),
         )
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_qnli_process(self):
         r"""
@@ -89,7 +89,7 @@ class TestQNLI(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_qnli_process_by_register(self):
         """test qnli process by register"""

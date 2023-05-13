@@ -16,6 +16,7 @@
 """
 Test TinyBert
 """
+import gc
 import unittest
 
 import numpy as np
@@ -37,7 +38,9 @@ class TestTinyBert(unittest.TestCase):
         """
 
         cls.bert_config = tinybert.BertConfig(
-            vocab_size_or_config_json_file=200)
+            vocab_size_or_config_json_file=200,
+            num_attention_heads=12,
+            num_hidden_layers=2)
 
     def test_tiny_bert_embedding(self):
         """
@@ -359,3 +362,6 @@ class TestTinyBert(unittest.TestCase):
         assert logits.shape == (2, 2)
         assert att_output[0].shape == (2, 12, 3, 3)
         assert sequence_output[0].shape == (2, 3, 768)
+
+    def tearDown(self) -> None:
+        gc.collect()

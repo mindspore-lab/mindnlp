@@ -1,5 +1,6 @@
 # coding=utf-8
 # Copyright 2020 The Allen Institute for AI team and The HuggingFace Inc. team.
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,9 +20,9 @@
 # pylint: disable=too-many-arguments
 """ Longformer configuration"""
 from typing import List, Union
-from ...abc.backbones.pretrained import PretrainedConfig
+from mindnlp.abc import PreTrainedConfig
 
-class LongformerConfig(PretrainedConfig):
+class LongformerConfig(PreTrainedConfig):
     r"""
     Example:
 

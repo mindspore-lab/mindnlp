@@ -36,7 +36,7 @@ class TestIMDB(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_imdb(self):
         """Test imdb"""
         num_lines = {
@@ -54,7 +54,7 @@ class TestIMDB(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     def test_imdb_by_register(self):
         """test imdb by register"""
         _ = load_dataset(

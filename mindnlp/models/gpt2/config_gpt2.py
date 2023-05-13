@@ -14,13 +14,25 @@
 # ============================================================================
 """MindNLP gpt2 config"""
 
-from ...abc.backbones.pretrained import PretrainedConfig
+from mindnlp.abc import PreTrainedConfig
+from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
 
 
-class GPT2Config(PretrainedConfig):
+__all__ = ['GPT2Config']
+
+GPT2_SUPPORT_LIST = ["gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl", "distilgpt2"]
+
+CONFIG_ARCHIVE_MAP = {
+    model: MINDNLP_CONFIG_URL_BASE.format('gpt2', model) for model in GPT2_SUPPORT_LIST
+}
+
+class GPT2Config(PreTrainedConfig):
     """
     Configuration for gpt2-base
     """
+
+    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
+
     def __init__(
         self,
         vocab_size=50257,

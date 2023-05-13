@@ -15,12 +15,12 @@
 """
 ALBERT model config
 """
-from mindnlp.abc.backbones.pretrained import PretrainedConfig
+from mindnlp.abc import PreTrainedConfig
 
 __all__ = ['AlbertConfig']
 
 
-class AlbertConfig(PretrainedConfig):
+class AlbertConfig(PreTrainedConfig):
     """
     Configuration for Albert.
     """

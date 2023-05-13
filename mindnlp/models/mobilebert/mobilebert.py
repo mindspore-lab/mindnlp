@@ -29,7 +29,7 @@ import mindspore.numpy as mnp
 from mindspore import nn
 from mindspore import ops
 from mindspore.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
-from mindnlp.abc.backbones.pretrained import PretrainedModel
+from mindnlp.abc import PreTrainedModel
 from ..mobilebert.mobilebert_config import MobileBertConfig
 from ..utils.utils import find_pruneable_heads_and_indices, prune_conv1d_layer
 from ..utils.activations import ACT2FN
@@ -589,7 +589,7 @@ class MobileBertPreTrainingHeads(nn.Cell):
         return prediction_scores, seq_relationship_score
 
 
-class MobileBertPreTrainedModel(PretrainedModel):
+class MobileBertPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
@@ -616,12 +616,6 @@ class MobileBertPreTrainedModel(PretrainedModel):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
 
-    def post_init(self):
-        pass
-
-    def init_model_weights(self):
-        pass
-
     def get_input_embeddings(self):
         pass
 
@@ -632,9 +626,6 @@ class MobileBertPreTrainedModel(PretrainedModel):
         pass
 
     def get_position_embeddings(self):
-        pass
-
-    def save(self):
         pass
 
 

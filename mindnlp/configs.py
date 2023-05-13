@@ -18,3 +18,11 @@ Global configs
 import os
 
 DEFAULT_ROOT = os.path.join(os.path.expanduser('~'), ".mindnlp")
+# for huggingface url
+HF_CONFIG_URL_BASE = 'https://huggingface.co/{}/resolve/main/config.json'
+HF_TOKENIZER_CONFIG_URL_BASE = 'https://huggingface.co/{}/resolve/main/tokenizer.json'
+HF_MODEL_URL_BASE = 'https://huggingface.co/{}/resolve/main/pytorch_model.bin'
+# for mindnlp obs storage
+MINDNLP_CONFIG_URL_BASE =  "https://download.mindspore.cn/toolkits/mindnlp/models/{}/{}/config.json"
+MINDNLP_MODEL_URL_BASE =  "https://download.mindspore.cn/toolkits/mindnlp/models/{}/{}/mindspore.ckpt"
+MINDNLP_TOKENIZER_CONFIG_URL_BASE =  "https://download.mindspore.cn/toolkits/mindnlp/models/{}/{}/tokenizer.json"

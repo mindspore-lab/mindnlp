@@ -19,23 +19,23 @@
 """
 xlm module
 """
-import os
 import math
 import itertools
 import inspect
-from typing import List,Set,Tuple,Callable, Optional,Union
+from typing import List, Set, Tuple, Callable, Optional
 import mindspore
 import numpy as np
-from mindspore import ops,nn,Parameter
+from mindspore import ops, nn, Parameter
 from mindspore.common.initializer import Normal, initializer
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from mindnlp.models.utils.utils import SequenceSummary,SQuADHead
-from ...abc.backbones.pretrained import PretrainedModel
+from mindnlp.models.utils.utils import SequenceSummary, SQuADHead
+from mindnlp.abc import PreTrainedModel
 from .xlm_config import XLMConfig
 from ..utils import logging
 from ..utils.activations import get_activation
 
 logger = logging.get_logger(__name__)
+
 
 def create_sinusoidal_embeddings(n_pos, dim, out):
     """
@@ -43,8 +43,10 @@ def create_sinusoidal_embeddings(n_pos, dim, out):
     """
     position_enc = np.array(
         [[pos / np.power(10000, 2 * (j // 2) / dim) for j in range(dim)] for pos in range(n_pos)])
-    out[:, 0::2] = mindspore.Tensor(np.sin(position_enc[:, 0::2]),dtype = mindspore.float32)
-    out[:, 1::2] = mindspore.Tensor(np.cos(position_enc[:, 1::2]),dtype = np.float32)
+    out[:, 0::2] = mindspore.Tensor(
+        np.sin(position_enc[:, 0::2]), dtype=mindspore.float32)
+    out[:, 1::2] = mindspore.Tensor(
+        np.cos(position_enc[:, 1::2]), dtype=np.float32)
     out.detach_()
     out.requires_grad = False
 
@@ -56,13 +58,15 @@ def find_pruneable_heads_and_indices(
     find_pruneable_heads_and_indices
     """
     mask = ops.ones(n_heads, head_size)
-    heads = set(heads) - already_pruned_heads  # Convert to set and remove already pruned heads
+    # Convert to set and remove already pruned heads
+    heads = set(heads) - already_pruned_heads
     for head in heads:
         # Compute how many pruned heads are before the head and move the index accordingly
         head = head - sum(1 if h < head else 0 for h in already_pruned_heads)
         mask[head] = 0
     mask = mask.view(-1).equal(1)
-    index: mindspore.Tensor(dtype = mindspore.int64) = mindspore.numpy.arange(len(mask))[mask].astype(mindspore.int64)
+    index: mindspore.Tensor(dtype=mindspore.int64) = mindspore.numpy.arange(
+        len(mask))[mask].astype(mindspore.int64)
     return heads, index
 
 
@@ -70,7 +74,7 @@ def get_masks(slen, lengths, causal, padding_mask=None):
     """
     Generate hidden states mask, and optionally an attention mask.
     """
-    alen = mindspore.numpy.arange(slen,dtype = mindspore.int64)
+    alen = mindspore.numpy.arange(slen, dtype=mindspore.int64)
     if padding_mask is not None:
         mask = padding_mask
     else:
@@ -80,7 +84,8 @@ def get_masks(slen, lengths, causal, padding_mask=None):
     # attention mask is the same as mask, or triangular inferior attention (causal)
     bs = lengths.shape[0]
     if causal:
-        attn_mask = alen[None, None, :].repeat(bs, slen, 1) <= alen[None, :, None]
+        attn_mask = alen[None, None, :].repeat(
+            bs, slen, 1) <= alen[None, :, None]
     else:
         attn_mask = mask
 
@@ -117,11 +122,13 @@ def apply_chunking_to_forward(
     apply_chunking_to_forward
     """
 
-    assert len(input_tensors) > 0, f"{input_tensors} has to be a tuple/list of tensors"
+    assert len(
+        input_tensors) > 0, f"{input_tensors} has to be a tuple/list of tensors"
 
     # inspect.signature exist since python 3.5 and is a python method
     # -> no problem with backward compatibility
-    num_args_in_forward_chunk_fn = len(inspect.signature(forward_fn).parameters)
+    num_args_in_forward_chunk_fn = len(
+        inspect.signature(forward_fn).parameters)
     if num_args_in_forward_chunk_fn != len(input_tensors):
         raise ValueError(
             f"forward_chunk_fn expects {num_args_in_forward_chunk_fn} arguments, but only {len(input_tensors)} input "
@@ -146,13 +153,16 @@ def apply_chunking_to_forward(
         num_chunks = input_tensors[0].shape[chunk_dim] // chunk_size
 
         # chunk input tensor into tuples
-        input_tensors_chunks = tuple(input_tensor.split(num_chunks, axis=chunk_dim) for input_tensor in input_tensors)
+        input_tensors_chunks = tuple(input_tensor.split(
+            num_chunks, axis=chunk_dim) for input_tensor in input_tensors)
         # apply forward fn to every tuple
-        output_chunks = tuple(forward_fn(*input_tensors_chunk) for input_tensors_chunk in zip(*input_tensors_chunks))
+        output_chunks = tuple(forward_fn(*input_tensors_chunk)
+                              for input_tensors_chunk in zip(*input_tensors_chunks))
         # concatenate output at same dimension
         return ops.cat(output_chunks, axis=chunk_dim)
 
     return forward_fn(*input_tensors)
+
 
 class MultiHeadAttention(nn.Cell):
     """
@@ -181,7 +191,8 @@ class MultiHeadAttention(nn.Cell):
         attention_head_size = self.dim // self.n_heads
         if len(heads) == 0:
             return
-        heads, index = find_pruneable_heads_and_indices(heads, self.n_heads, attention_head_size, self.pruned_heads)
+        heads, index = find_pruneable_heads_and_indices(
+            heads, self.n_heads, attention_head_size, self.pruned_heads)
         # Prune linear layers
         self.q_lin = prune_linear_layer(self.q_lin, index)
         self.k_lin = prune_linear_layer(self.k_lin, index)
@@ -198,7 +209,7 @@ class MultiHeadAttention(nn.Cell):
         """
         # Input is (bs, qlen, dim)
         # Mask is (bs, klen) (non-causal) or (bs, klen, klen)
-        bs, qlen, _ = input.shape #bs,qlen,dim
+        bs, qlen, _ = input.shape  # bs,qlen,dim
         if kv is None:
             klen = qlen if cache is None else cache["slen"] + qlen
         else:
@@ -206,15 +217,16 @@ class MultiHeadAttention(nn.Cell):
         # assert dim == self.dim, f'Dimensions do not match: {dim} input vs {self.dim} configured'
         n_heads = self.n_heads
         dim_per_head = self.dim // n_heads
-        mask_reshape = (bs, 1, qlen, klen) if mask.ndim == 3 else (bs, 1, 1, klen)
+        mask_reshape = (bs, 1, qlen, klen) if mask.ndim == 3 else (
+            bs, 1, 1, klen)
 
         def shape(x):
             """projection"""
-            return x.view(bs, -1, self.n_heads, dim_per_head).transpose(0,2,1,3)
+            return x.view(bs, -1, self.n_heads, dim_per_head).transpose(0, 2, 1, 3)
 
         def unshape(x):
             """compute context"""
-            return x.transpose(0,2,1,3).view(bs, -1, self.n_heads * dim_per_head)
+            return x.transpose(0, 2, 1, 3).view(bs, -1, self.n_heads * dim_per_head)
 
         q = shape(self.q_lin(input))  # (bs, n_heads, qlen, dim_per_head)
 
@@ -230,26 +242,33 @@ class MultiHeadAttention(nn.Cell):
             if self.layer_id in cache:
                 if kv is None:
                     k_, v_ = cache[self.layer_id]
-                    k = mindspore.ops.cat([k_, k], axis=2)  # (bs, n_heads, klen, dim_per_head)
-                    v = mindspore.ops.cat([v_, v], axis=2)  # (bs, n_heads, klen, dim_per_head)
+                    # (bs, n_heads, klen, dim_per_head)
+                    k = mindspore.ops.cat([k_, k], axis=2)
+                    # (bs, n_heads, klen, dim_per_head)
+                    v = mindspore.ops.cat([v_, v], axis=2)
                 else:
                     k, v = cache[self.layer_id]
             cache[self.layer_id] = (k, v)
 
-        scores = mindspore.ops.matmul(q, k.transpose(0,1,3,2)) / math.sqrt(dim_per_head)  # (bs, n_heads, qlen, klen)
-        mask = (mask == 0).view(mask_reshape).expand_as(scores)  # (bs, n_heads, qlen, klen)
-        scores.masked_fill(mask,mindspore.Tensor(
+        scores = mindspore.ops.matmul(q, k.transpose(
+            0, 1, 3, 2)) / math.sqrt(dim_per_head)  # (bs, n_heads, qlen, klen)
+        mask = (mask == 0).view(mask_reshape).expand_as(
+            scores)  # (bs, n_heads, qlen, klen)
+        scores.masked_fill(mask, mindspore.Tensor(
                            np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min))  # (bs, n_heads, qlen, klen)
 
-        weights = ops.softmax(scores.float(), axis=-1).astype(scores.dtype)  # (bs, n_heads, qlen, klen)
+        # (bs, n_heads, qlen, klen)
+        weights = ops.softmax(scores.float(), axis=-1).astype(scores.dtype)
         if self.training:
-            weights = ops.dropout(weights, p=self.dropout)# (bs, n_heads, qlen, klen)
+            # (bs, n_heads, qlen, klen)
+            weights = ops.dropout(weights, p=self.dropout)
 
         # Mask heads if we want to
         if head_mask is not None:
             weights = weights * head_mask
 
-        context = mindspore.ops.matmul(weights, v)  # (bs, n_heads, qlen, dim_per_head)
+        # (bs, n_heads, qlen, dim_per_head)
+        context = mindspore.ops.matmul(weights, v)
         context = unshape(context)  # (bs, qlen, dim)
 
         outputs = (self.out_lin(context),)
@@ -262,12 +281,14 @@ class TransformerFFN(nn.Cell):
     """
     TransformerFFN
     """
+
     def __init__(self, in_dim, dim_hidden, out_dim, config):
         super().__init__()
         self.dropout = config.dropout
         self.lin1 = nn.Dense(in_dim, dim_hidden)
         self.lin2 = nn.Dense(dim_hidden, out_dim)
-        self.act = get_activation("gelu") if config.gelu_activation else ops.relu
+        self.act = get_activation(
+            "gelu") if config.gelu_activation else ops.relu
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
 
@@ -287,77 +308,63 @@ class TransformerFFN(nn.Cell):
         return x
 
 
-class XLMPreTrainedModel(PretrainedModel):
+class XLMPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-    # TODO
-    def get_input_embeddings(self):
-        pass
 
-    #TODO
+    # TODO
     def get_position_embeddings(self):
         pass
 
-    #TODO
-    def init_model_weights(self):
+    # TODO
+    def resize_position_embeddings(self, new_num_position_embeddings: int):
         pass
 
-    #TODO
-    def resize_position_embeddings(self,new_num_position_embeddings: int):
-        pass
-
-    #TODO
-    def save(self,save_dir: Union[str, os.PathLike]):
-        pass
-
-    #TODO
+    # TODO
     def set_input_embeddings(self, value: "nn.Cell"):
-        pass
-
-    #TODO
-    def post_init(self):
         pass
 
     config_class = XLMConfig
     load_tf_weights = None
     base_model_prefix = "transformer"
 
-
-
     @property
     def dummy_inputs(self):
         """
         dummy_inputs
         """
-        inputs_list = mindspore.Tensor([[7, 6, 0, 0, 1], [1, 2, 3, 0, 0], [0, 0, 0, 4, 5]])
-        attns_list = mindspore.Tensor([[1, 1, 0, 0, 1], [1, 1, 1, 0, 0], [1, 0, 0, 1, 1]])
+        inputs_list = mindspore.Tensor(
+            [[7, 6, 0, 0, 1], [1, 2, 3, 0, 0], [0, 0, 0, 4, 5]])
+        attns_list = mindspore.Tensor(
+            [[1, 1, 0, 0, 1], [1, 1, 1, 0, 0], [1, 0, 0, 1, 1]])
         if self.config.use_lang_emb and self.config.n_langs > 1:
-            langs_list = mindspore.Tensor([[1, 1, 0, 0, 1], [1, 1, 1, 0, 0], [1, 0, 0, 1, 1]])
+            langs_list = mindspore.Tensor(
+                [[1, 1, 0, 0, 1], [1, 1, 1, 0, 0], [1, 0, 0, 1, 1]])
         else:
             langs_list = None
         return {"input_ids": inputs_list, "attention_mask": attns_list, "langs": langs_list}
 
-    def _init_weights(self, module):
-        """Initialize the weights."""
-        if isinstance(module, nn.Embedding):
-            if self.config is not None and self.config.embed_init_std is not None:
-                initializer(Normal(sigma=self.config.embed_init_std, mean=0),
-                            shape=module.weight.shape,
-                            dtype=mindspore.float32)
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
-        if isinstance(module, nn.Dense):
-            if self.config is not None and self.config.init_std is not None:
-                initializer(Normal(sigma=self.config.init_std, mean=0),
-                                   shape=module.weight.shape,
-                                   dtype=mindspore.float32)
-                if module.bias is not None:
-                    mindspore.common.initializer.Constant(0.0)(module.bias)
-        if isinstance(module, nn.LayerNorm):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
+    def _init_weights(self, cell):
+        """Initialize the weights"""
+        if isinstance(cell, nn.Dense):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            cell.weight.set_data(initializer(Normal(self.config.init_std),
+                                                    cell.weight.shape, cell.weight.dtype))
+            if cell.has_bias:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        elif isinstance(cell, nn.Embedding):
+            embedding_table = initializer(Normal(self.config.embed_init_std),
+                                                 cell.embedding_table.shape,
+                                                 cell.embedding_table.dtype)
+            if cell.padding_idx is not None:
+                embedding_table[cell.padding_idx] = 0
+            cell.embedding_table.set_data(embedding_table)
+        elif isinstance(cell, nn.LayerNorm):
+            cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
+            cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
 
 
 class XLMModel(XLMPreTrainedModel):
@@ -373,7 +380,8 @@ class XLMModel(XLMPreTrainedModel):
         self.is_encoder = config.is_encoder
         self.is_decoder = not config.is_encoder
         if self.is_decoder:
-            raise NotImplementedError("Currently XLM can only be used as an encoder")
+            raise NotImplementedError(
+                "Currently XLM can only be used as an encoder")
         # self.with_output = with_output
         self.causal = config.causal
 
@@ -399,7 +407,8 @@ class XLMModel(XLMPreTrainedModel):
         assert self.dim % self.n_heads == 0, "transformer dim must be a multiple of n_heads"
 
         # embeddings
-        self.position_embeddings = nn.Embedding(config.max_position_embeddings, self.dim)
+        self.position_embeddings = nn.Embedding(
+            config.max_position_embeddings, self.dim)
         if config.sinusoidal_embeddings:
             create_sinusoidal_embeddings(config.max_position_embeddings,
                                          self.dim,
@@ -407,9 +416,10 @@ class XLMModel(XLMPreTrainedModel):
         if config.n_langs > 1 and config.use_lang_emb:
             self.lang_embeddings = nn.Embedding(self.n_langs, self.dim)
 
-        self.embeddings = nn.Embedding(self.n_words, self.dim, padding_idx=self.pad_index)
-        self.layer_norm_emb = nn.LayerNorm((self.dim,), epsilon=config.layer_norm_eps)
-
+        self.embeddings = nn.Embedding(
+            self.n_words, self.dim, padding_idx=self.pad_index)
+        self.layer_norm_emb = nn.LayerNorm(
+            (self.dim,), epsilon=config.layer_norm_eps)
 
         # transformer layers
         self.attentions = nn.CellList()
@@ -421,11 +431,14 @@ class XLMModel(XLMPreTrainedModel):
         #     self.encoder_attn = nn.ModuleList()
 
         for _ in range(self.n_layers):
-            self.attentions.append(MultiHeadAttention(self.n_heads, self.dim, config=config))
-            self.layer_norm1.append(nn.LayerNorm((self.dim,), epsilon=config.layer_norm_eps))
-            self.ffns.append(TransformerFFN(self.dim, self.hidden_dim, self.dim, config=config))
-            self.layer_norm2.append(nn.LayerNorm((self.dim,), epsilon=config.layer_norm_eps))
-
+            self.attentions.append(MultiHeadAttention(
+                self.n_heads, self.dim, config=config))
+            self.layer_norm1.append(nn.LayerNorm(
+                (self.dim,), epsilon=config.layer_norm_eps))
+            self.ffns.append(TransformerFFN(
+                self.dim, self.hidden_dim, self.dim, config=config))
+            self.layer_norm2.append(nn.LayerNorm(
+                (self.dim,), epsilon=config.layer_norm_eps))
 
         if hasattr(config, "pruned_heads"):
             pruned_heads = config.pruned_heads.copy().items()
@@ -436,9 +449,8 @@ class XLMModel(XLMPreTrainedModel):
 
         # Initialize weights and apply final processing
         self.post_init()
-        self.position_ids = Parameter(ops.BroadcastTo(shape=(1,-1))
-                                     (ops.arange(config.max_position_embeddings)))
-
+        self.position_ids = Parameter(ops.BroadcastTo(shape=(1, -1))
+                                      (ops.arange(config.max_position_embeddings)))
 
     def get_input_embeddings(self):
         return self.embeddings
@@ -454,17 +466,19 @@ class XLMModel(XLMPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.attentions[layer].prune_heads(heads)
 
-
     def _convert_head_mask_to_5d(self, head_mask, num_hidden_layers):
         """-> [num_hidden_layers x batch x num_heads x seq_length x seq_length]"""
         if head_mask.ndim == 1:
-            head_mask = head_mask.expand_dims(0).expand_dims(0).expand_dims(-1).expand_dims(-1)
+            head_mask = head_mask.expand_dims(0).expand_dims(
+                0).expand_dims(-1).expand_dims(-1)
             head_mask = head_mask.expand(num_hidden_layers, -1, -1, -1, -1)
         elif head_mask.ndim == 2:
-            head_mask = head_mask.expand_dims(1).expand_dims(-1).expand_dims(-1)
+            head_mask = head_mask.expand_dims(
+                1).expand_dims(-1).expand_dims(-1)
             # We can specify head_mask for each layer
         assert head_mask.ndim == 5, f"head_mask.dim != 5, instead {head_mask.ndim}"
-        head_mask = head_mask.astype(dtype=self.dtype)  # switch to float if need + fp16 compatibility
+        # switch to float if need + fp16 compatibility
+        head_mask = head_mask.astype(dtype=self.dtype)
         return head_mask
 
     def get_head_mask(
@@ -472,7 +486,8 @@ class XLMModel(XLMPreTrainedModel):
     ) -> mindspore.Tensor:
         """get_head_mask"""
         if head_mask is not None:
-            head_mask = self._convert_head_mask_to_5d(head_mask, num_hidden_layers)
+            head_mask = self._convert_head_mask_to_5d(
+                head_mask, num_hidden_layers)
             if is_attention_chunked is True:
                 head_mask = head_mask.expand_dims(-1)
         else:
@@ -482,18 +497,18 @@ class XLMModel(XLMPreTrainedModel):
 
     def construct(
         self,
-        input_ids = None,
-        attention_mask = None,
-        langs = None,
-        token_type_ids = None,
-        position_ids = None,
-        lengths = None,
-        cache = None,
-        head_mask = None,
-        inputs_embeds = None,
-        output_attentions = None,
-        output_hidden_states = None,
-        return_dict = None,
+        input_ids=None,
+        attention_mask=None,
+        langs=None,
+        token_type_ids=None,
+        position_ids=None,
+        lengths=None,
+        cache=None,
+        head_mask=None,
+        inputs_embeds=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
     ) -> Tuple:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -508,7 +523,8 @@ class XLMModel(XLMPreTrainedModel):
 
         if lengths is None:
             if input_ids is not None:
-                lengths = (input_ids != self.pad_index).sum(axis=1).astype(mindspore.int64)
+                lengths = (input_ids != self.pad_index).sum(
+                    axis=1).astype(mindspore.int64)
             else:
                 lengths = mindspore.Tensor([slen] * bs)
 
@@ -523,7 +539,8 @@ class XLMModel(XLMPreTrainedModel):
         #     assert src_enc.size(0) == bs
 
         # generate masks
-        mask, attn_mask = get_masks(slen, lengths, self.causal, padding_mask=attention_mask)
+        mask, attn_mask = get_masks(
+            slen, lengths, self.causal, padding_mask=attention_mask)
 
         # position_ids
         if position_ids is None:
@@ -554,7 +571,8 @@ class XLMModel(XLMPreTrainedModel):
         if inputs_embeds is None:
             inputs_embeds = self.embeddings(input_ids)
 
-        tensor = inputs_embeds + self.position_embeddings(position_ids).expand_as(inputs_embeds)
+        tensor = inputs_embeds + \
+            self.position_embeddings(position_ids).expand_as(inputs_embeds)
 
         if langs is not None and self.use_lang_emb and self.n_langs > 1:
             tensor = tensor + self.lang_embeddings(langs)
@@ -563,10 +581,9 @@ class XLMModel(XLMPreTrainedModel):
         tensor = self.layer_norm_emb(tensor)
 
         if self.training:
-            tensor = ops.dropout(tensor, p = self.dropout)
+            tensor = ops.dropout(tensor, p=self.dropout)
 
-        tensor *= ops.expand_dims(mask,axis = -1).astype(tensor.dtype)
-
+        tensor *= ops.expand_dims(mask, axis=-1).astype(tensor.dtype)
 
         # transformer layers
         hidden_states = () if output_hidden_states else None
@@ -602,7 +619,7 @@ class XLMModel(XLMPreTrainedModel):
             # FFN
             tensor = tensor + self.ffns[i](tensor)
             tensor = self.layer_norm2[i](tensor)
-            tensor *= ops.expand_dims(mask,axis=-1).astype(tensor.dtype)
+            tensor *= ops.expand_dims(mask, axis=-1).astype(tensor.dtype)
 
         # Add last hidden state
         if output_hidden_states:
@@ -621,6 +638,7 @@ class XLMPredLayer(nn.Cell):
     """
     Prediction layer (cross_entropy or adaptive_softmax).
     """
+
     def __init__(self, config):
         super().__init__()
         self.asm = config.asm
@@ -630,10 +648,9 @@ class XLMPredLayer(nn.Cell):
 
         if config.asm is False:
             self.proj = nn.Dense(dim, config.n_words, has_bias=True)
-        ## else :TO DO nn.AdaptiveLogSoftmaxWithLoss
+        # else :TO DO nn.AdaptiveLogSoftmaxWithLoss
 
-        #TODO:def AdaptiveLogSoftmaxWithLoss():
-
+        # TODO:def AdaptiveLogSoftmaxWithLoss():
 
     def construct(self, x, y=None):
         """Compute the loss, and optionally the scores."""
@@ -644,8 +661,8 @@ class XLMPredLayer(nn.Cell):
 
             if y is not None:
                 loss = ops.cross_entropy(scores.view(-1, self.n_words),
-                                        y.view(-1),
-                                        reduction="mean")
+                                         y.view(-1),
+                                         reduction="mean")
                 outputs = (loss,) + outputs
 
         else:
@@ -684,7 +701,8 @@ class XLMWithLMHeadModel(XLMPreTrainedModel):
         """
         self.pred_layer.proj = new_embeddings
 
-    def prepare_inputs_for_generation(self, input_ids):   #TODO(self, input_ids, **kwargs)
+    # TODO(self, input_ids, **kwargs)
+    def prepare_inputs_for_generation(self, input_ids):
         """
         prepare_inputs_for_generation
         """
@@ -692,7 +710,8 @@ class XLMWithLMHeadModel(XLMPreTrainedModel):
         lang_id = self.config.lang_id
 
         effective_batch_size = input_ids.shape[0]
-        mask_token = mindspore.ops.full((effective_batch_size, 1), mask_token_id, dtype=mindspore.int64)
+        mask_token = mindspore.ops.full(
+            (effective_batch_size, 1), mask_token_id, dtype=mindspore.int64)
         input_ids = ops.cat([input_ids, mask_token], axis=1)
         if lang_id is not None:
             langs = mindspore.ops.full_like(input_ids, lang_id)
@@ -700,22 +719,21 @@ class XLMWithLMHeadModel(XLMPreTrainedModel):
             langs = None
         return {"input_ids": input_ids, "langs": langs}
 
-
     def construct(
         self,
-        input_ids = None,
-        attention_mask = None,
-        langs = None,
-        token_type_ids = None,
-        position_ids = None,
-        lengths = None,
-        cache = None,
-        head_mask = None,
-        inputs_embeds = None,
-        labels = None,
-        output_attentions = None,
-        output_hidden_states = None,
-        return_dict = None,
+        input_ids=None,
+        attention_mask=None,
+        langs=None,
+        token_type_ids=None,
+        position_ids=None,
+        lengths=None,
+        cache=None,
+        head_mask=None,
+        inputs_embeds=None,
+        labels=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
     ) -> Tuple:
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -736,8 +754,8 @@ class XLMWithLMHeadModel(XLMPreTrainedModel):
         )
 
         output = transformer_outputs[0]
-        outputs = self.pred_layer(output, labels)  # (loss, logits) or (logits,) depending on if labels are provided.
-
+        # (loss, logits) or (logits,) depending on if labels are provided.
+        outputs = self.pred_layer(output, labels)
 
         return outputs + transformer_outputs[1:]
 
@@ -746,6 +764,7 @@ class XLMForSequenceClassification(XLMPreTrainedModel):
     """
     XLMForSequenceClassification
     """
+
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -757,22 +776,21 @@ class XLMForSequenceClassification(XLMPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-
     def construct(
         self,
-        input_ids = None,
-        attention_mask = None,
-        langs = None,
-        token_type_ids = None,
-        position_ids = None,
-        lengths = None,
-        cache = None,
-        head_mask = None,
-        inputs_embeds = None,
-        labels = None,
-        output_attentions = None,
-        output_hidden_states = None,
-        return_dict = None,
+        input_ids=None,
+        attention_mask=None,
+        langs=None,
+        token_type_ids=None,
+        position_ids=None,
+        lengths=None,
+        cache=None,
+        head_mask=None,
+        inputs_embeds=None,
+        labels=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
     ) -> Tuple:
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -813,7 +831,8 @@ class XLMForSequenceClassification(XLMPreTrainedModel):
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
                 loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = loss_fct(
+                    logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
@@ -826,6 +845,7 @@ class XLMForQuestionAnsweringSimple(XLMPreTrainedModel):
     """
     XLMForQuestionAnsweringSimple
     """
+
     def __init__(self, config):
         super().__init__(config)
 
@@ -837,20 +857,20 @@ class XLMForQuestionAnsweringSimple(XLMPreTrainedModel):
 
     def construct(
         self,
-        input_ids = None,
-        attention_mask = None,
-        langs = None,
-        token_type_ids = None,
-        position_ids = None,
-        lengths = None,
-        cache = None,
-        head_mask = None,
-        inputs_embeds = None,
-        start_positions = None,
-        end_positions = None,
-        output_attentions = None,
-        output_hidden_states = None,
-        return_dict = None,
+        input_ids=None,
+        attention_mask=None,
+        langs=None,
+        token_type_ids=None,
+        position_ids=None,
+        lengths=None,
+        cache=None,
+        head_mask=None,
+        inputs_embeds=None,
+        start_positions=None,
+        end_positions=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
     ) -> Tuple:
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -881,9 +901,9 @@ class XLMForQuestionAnsweringSimple(XLMPreTrainedModel):
         if start_positions is not None and end_positions is not None:
             # If we are on multi-GPU, split add a dimension
             if len(start_positions.shape) > 1:
-                start_positions = ops.squeeze(start_positions,axis=-1)
+                start_positions = ops.squeeze(start_positions, axis=-1)
             if len(end_positions.shape) > 1:
-                end_positions = ops.squeeze(end_positions,axis=-1)
+                end_positions = ops.squeeze(end_positions, axis=-1)
             # sometimes the start/end positions are outside our model inputs, we ignore these terms
             ignored_index = start_logits.shape[1]
             start_positions = start_positions.clamp(0, ignored_index)
@@ -894,7 +914,6 @@ class XLMForQuestionAnsweringSimple(XLMPreTrainedModel):
             end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
-
         output = (start_logits, end_logits) + transformer_outputs[1:]
         return ((total_loss,) + output) if total_loss is not None else output
 
@@ -903,6 +922,7 @@ class XLMForQuestionAnswering(XLMPreTrainedModel):
     """
     XLMForQuestionAnswering
     """
+
     def __init__(self, config):
         super().__init__(config)
 
@@ -912,26 +932,25 @@ class XLMForQuestionAnswering(XLMPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-
     def construct(
         self,
-        input_ids = None,
-        attention_mask = None,
-        langs = None,
-        token_type_ids = None,
-        position_ids = None,
-        lengths = None,
-        cache = None,
-        head_mask = None,
-        inputs_embeds = None,
-        start_positions = None,
-        end_positions = None,
-        is_impossible = None,
-        cls_index = None,
-        p_mask = None,
-        output_attentions = None,
-        output_hidden_states = None,
-        return_dict = None,
+        input_ids=None,
+        attention_mask=None,
+        langs=None,
+        token_type_ids=None,
+        position_ids=None,
+        lengths=None,
+        cache=None,
+        head_mask=None,
+        inputs_embeds=None,
+        start_positions=None,
+        end_positions=None,
+        is_impossible=None,
+        cls_index=None,
+        p_mask=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
     ) -> Tuple:
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -961,7 +980,6 @@ class XLMForQuestionAnswering(XLMPreTrainedModel):
             # return_dict=return_dict,
         )
 
-
         return outputs + transformer_outputs[1:]
 
 
@@ -969,6 +987,7 @@ class XLMForTokenClassification(XLMPreTrainedModel):
     """
     XLMForTokenClassification
     """
+
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -980,22 +999,21 @@ class XLMForTokenClassification(XLMPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-
     def construct(
         self,
-        input_ids = None,
-        attention_mask = None,
-        langs = None,
-        token_type_ids = None,
-        position_ids = None,
-        lengths = None,
-        cache = None,
-        head_mask = None,
-        inputs_embeds = None,
-        labels = None,
-        output_attentions = None,
-        output_hidden_states = None,
-        return_dict = None,
+        input_ids=None,
+        attention_mask=None,
+        langs=None,
+        token_type_ids=None,
+        position_ids=None,
+        lengths=None,
+        cache=None,
+        head_mask=None,
+        inputs_embeds=None,
+        labels=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
     ) -> Tuple:
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -1033,6 +1051,7 @@ class XLMForMultipleChoice(XLMPreTrainedModel):
     """
     XLMForMultipleChoice
     """
+
     def __init__(self, config, *inputs, **kwargs):
         super().__init__(config, *inputs, **kwargs)
 
@@ -1043,33 +1062,37 @@ class XLMForMultipleChoice(XLMPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-
     def construct(
         self,
-        input_ids = None,
-        attention_mask = None,
-        langs = None,
-        token_type_ids = None,
-        position_ids = None,
-        lengths = None,
-        cache = None,
-        head_mask = None,
-        inputs_embeds = None,
-        labels = None,
-        output_attentions = None,
-        output_hidden_states = None,
-        return_dict = None,
+        input_ids=None,
+        attention_mask=None,
+        langs=None,
+        token_type_ids=None,
+        position_ids=None,
+        lengths=None,
+        cache=None,
+        head_mask=None,
+        inputs_embeds=None,
+        labels=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
     ) -> Tuple:
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
 
-        input_ids = input_ids.view(-1, input_ids.shape[-1]) if input_ids is not None else None
-        attention_mask = attention_mask.view(-1, attention_mask.shape[-1]) if attention_mask is not None else None
-        token_type_ids = token_type_ids.view(-1, token_type_ids.shape[-1]) if token_type_ids is not None else None
-        position_ids = position_ids.view(-1, position_ids.shape[-1]) if position_ids is not None else None
+        input_ids = input_ids.view(-1,
+                                   input_ids.shape[-1]) if input_ids is not None else None
+        attention_mask = attention_mask.view(
+            -1, attention_mask.shape[-1]) if attention_mask is not None else None
+        token_type_ids = token_type_ids.view(
+            -1, token_type_ids.shape[-1]) if token_type_ids is not None else None
+        position_ids = position_ids.view(
+            -1, position_ids.shape[-1]) if position_ids is not None else None
         langs = langs.view(-1, langs.shape[-1]) if langs is not None else None
         inputs_embeds = (
-            inputs_embeds.view(-1, inputs_embeds.shape[-2], inputs_embeds.shape[-1])
+            inputs_embeds.view(-1,
+                               inputs_embeds.shape[-2], inputs_embeds.shape[-1])
             if inputs_embeds is not None
             else None
         )
@@ -1106,7 +1129,6 @@ class XLMForMultipleChoice(XLMPreTrainedModel):
         if labels is not None:
             loss_fct = CrossEntropyLoss()
             loss = loss_fct(reshaped_logits, labels)
-
 
         output = (reshaped_logits,) + transformer_outputs[1:]
         return ((loss,) + output) if loss is not None else output

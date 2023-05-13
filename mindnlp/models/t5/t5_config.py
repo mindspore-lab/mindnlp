@@ -16,11 +16,23 @@
 T5 Model config
 """
 
-from mindnlp.abc.backbones.pretrained import PretrainedConfig
-class T5Config(PretrainedConfig):
+from mindnlp.abc import PreTrainedConfig
+from mindnlp.configs import HF_CONFIG_URL_BASE
+
+__all__ = ['T5Config']
+
+T5_SUPPORT_LIST = ["t5-small", "t5-base", "t5-large", "t5-3b", "t5-11b"]
+
+CONFIG_ARCHIVE_MAP = {
+    model: HF_CONFIG_URL_BASE.format(model) for model in T5_SUPPORT_LIST
+}
+
+class T5Config(PreTrainedConfig):
     """
     Configuration for T5
     """
+
+    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     def __init__(
         self,

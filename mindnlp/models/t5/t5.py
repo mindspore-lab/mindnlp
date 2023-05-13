@@ -13,10 +13,14 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=C0103
+# pylint: disable=C0415
+
 """
 T5 model
 """
 
+import os
+import logging
 import math
 import copy
 import mindspore
@@ -24,18 +28,59 @@ import numpy as np
 from mindspore import nn
 from mindspore import ops
 from mindspore import Parameter, Tensor
-from mindnlp.abc.backbones.pretrained import PretrainedModel
 
 from mindnlp._legacy.nn import Dropout
 from mindnlp._legacy.functional import arange
+from mindnlp.configs import MINDNLP_MODEL_URL_BASE
 from ..utils.activations import ACT2FN
-from ..utils.mixin import CellUtilMixin
-from ..utils import logging
+from ...abc import PreTrainedModel
 
-from .t5_config import T5Config
+from .t5_config import T5Config, T5_SUPPORT_LIST
 
-logger = logging.get_logger(__name__)
 
+__all__ = ['T5Attention', 'T5DenseActDense', 'T5DenseGatedActDense', 'T5EncoderModel',
+           'T5ForConditionalGeneration', 'T5LayerCrossAttention', 'T5Stack', 'T5LayerSelfAttention',
+           'T5LayerNorm', 'T5Model', 'T5LayerFF', 'T5Block', 'T5PreTrainedModel']
+
+PRETRAINED_MODEL_ARCHIVE_MAP = {
+    model: MINDNLP_MODEL_URL_BASE.format('t5', model) for model in T5_SUPPORT_LIST
+}
+
+def torch_to_mindspore(pth_file, **kwargs):
+    """torch to mindspore."""
+    prefix = kwargs.get("prefix", "")
+
+    try:
+        import torch
+    except Exception as exc:
+        raise ImportError("'import torch' failed, please install torch by "
+                          "`pip install torch` or instructions from 'https://pytorch.org'") \
+        from exc
+
+    from mindspore.train.serialization import save_checkpoint
+
+    logging.info('Starting checkpoint conversion.')
+    ms_ckpt = []
+    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
+
+    for k, v in state_dict.items():
+        if 'shared.weight' in k:
+            k = k.replace('shared.weight', 'decoder.embed_tokens.embedding_table')
+        if 'relative_attention_bias.weight' in k:
+            k = k.replace('relative_attention_bias.weight', 'relative_attention_bias.embedding_table')
+        if prefix:
+            k = prefix + "." + k
+        ms_ckpt.append({'name': k, 'data': Tensor(v.numpy())})
+
+    ms_ckpt_path = pth_file.replace('pytorch_model.bin','mindspore.ckpt')
+    if not os.path.exists(ms_ckpt_path):
+        try:
+            save_checkpoint(ms_ckpt, ms_ckpt_path)
+        except Exception as exc:
+            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, please checkout the path.') \
+            from exc
+
+    return ms_ckpt_path
 
 class T5LayerNorm(nn.Cell):
     """T5LayerNorm"""
@@ -416,7 +461,7 @@ class T5Block(nn.Cell):
 
         if past_key_value is not None:
             if not self.is_decoder:
-                logger.warning("`past_key_values` is passed to the encoder. Please make sure this is intended.")
+                logging.warning("`past_key_values` is passed to the encoder. Please make sure this is intended.")
             expected_num_past_key_values = 2 if encoder_hidden_states is None else 4
 
             if len(past_key_value) != expected_num_past_key_values:
@@ -502,13 +547,15 @@ class T5Block(nn.Cell):
         # (self-attention weights), (cross-attention position bias),(cross-attention weights)
 
 
-class T5PreTrainedModel(PretrainedModel, CellUtilMixin):
+class T5PreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
     config_class = T5Config
     base_model_prefix = "transformer"
+    convert_torch_to_mindspore = torch_to_mindspore
+    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
     is_parallelizable = True
     supports_gradient_checkpointing = True
     _no_split_modules = ["T5Block"]
@@ -523,15 +570,7 @@ class T5PreTrainedModel(PretrainedModel, CellUtilMixin):
         pass
 
     #TODO
-    def init_model_weights(self):
-        pass
-
-    #TODO
     def resize_position_embeddings(self):
-        pass
-
-    #TODO
-    def save(self):
         pass
 
     #TODO
@@ -1006,7 +1045,7 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
         # if decoder past is not included in output
         # speedy decoding is disabled and no need to reorder
         if past is None:
-            logger.warning("You might want to consider setting `use_cache=True` to speed up decoding")
+            logging.warning("You might want to consider setting `use_cache=True` to speed up decoding")
             return past
 
         reordered_decoder_past = ()

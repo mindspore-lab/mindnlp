@@ -17,21 +17,30 @@
 """
 Trainer for training.
 """
+from typing import Optional, List, Union
 from inspect import signature
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
+from mindspore import nn, Tensor
 from mindspore import log, mutable
 from mindspore.ops import value_and_grad
+from mindspore.dataset.engine import Dataset, TakeDataset
 from mindnlp import ms_jit
-from mindnlp.abc.callback import Callback
+from mindnlp.abc import Callback, Metric
 from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContext
 from mindnlp.engine.callbacks.earlystop_callback import EarlyStopCallback
 from mindnlp.engine.callbacks.best_model_callback import BestModelCallback
 from mindnlp.engine.evaluator import Evaluator
+from mindnlp._legacy.amp import NoLossScaler
+
+from mindnlp.utils import less_min_pynative_first
+if less_min_pynative_first:
+    from mindnlp._legacy.amp import auto_mixed_precision, StaticLossScaler, all_finite
+else:
+    from mindspore.amp import auto_mixed_precision, StaticLossScaler, all_finite
 
 class Trainer:
     r"""
     Trainer to train the model.
-
 
     Args:
         network (Cell): A training network.
@@ -60,11 +69,36 @@ class Trainer:
 
     """
 
-    def __init__(self, network=None, train_dataset=None, eval_dataset=None, metrics=None, epochs=10,
-                 loss_fn=None, optimizer=None, callbacks=None, jit=False):
+    def __init__(self,
+                 network,
+                 args=None,
+                 loss_fn: Optional[nn.Cell] = None,
+                 optimizer: Optional[nn.Cell] = None,
+                 train_dataset: Optional[Dataset] = None,
+                 eval_dataset: Optional[Dataset] = None,
+                 metrics: Optional[Metric] = None,
+                 callbacks: Optional[Union[Callback, List]] = None,
+                 **kwargs):
+
+        self.args = args
+        epochs = kwargs.pop('epochs', None)
+        jit = kwargs.pop('jit', False)
+        check_gradients = kwargs.pop('check_gradients', False)
+
         self.network = network
+        if isinstance(train_dataset, TakeDataset):
+            log.warning("The `train_dataset` is split after the 'batch' operation, "
+                        "which will slow down the training speed and recompile the neural network"
+                        "please split it first, and then use 'map' operation.")
+
         self.train_dataset = train_dataset
         self.epochs = epochs
+
+        self.loss_scaler = NoLossScaler()
+        if loss_fn is None:
+            self.obj_network = True
+        else:
+            self.obj_network = False
 
         self.cur_epoch_nums = 0
         self.cur_step_nums = 0
@@ -74,11 +108,11 @@ class Trainer:
         self._prepare_eval(eval_dataset, metrics, callbacks, jit)
 
         self.callback_manager = CallbackManager(callbacks)
-        self.train_fn = self._prepare_train_func(network, loss_fn, optimizer, jit)
+        self.train_fn = self._prepare_train_func(network, loss_fn, optimizer, self.loss_scaler, check_gradients, jit)
 
-    def _prepare_train_func(self, network, loss_fn, optimizer, jit):
+    def _prepare_train_func(self, network, loss_fn, optimizer, loss_scaler, check_gradients, jit):
         # forward function
-        def forward_fn(inputs, labels):
+        def default_forward_fn(inputs, labels):
             logits_list = ()
             logits = network(*inputs)
             if isinstance(logits, tuple):
@@ -86,30 +120,40 @@ class Trainer:
             else:
                 logits_list += (logits,)
 
-            loss = loss_fn(*logits_list, *labels)
+            loss = loss_fn(logits_list[0], *labels)
+            loss = loss_scaler.scale(loss)
             return_list = (loss,) + logits_list
             return return_list
 
-        def forward_without_loss_fn(inputs, labels):
-            loss_and_logits = network(*inputs, *labels)
-            return loss_and_logits
-
-        if loss_fn is None:
-            grad_fn = value_and_grad(forward_without_loss_fn, None, optimizer.parameters, has_aux=True)
-        else:
-            grad_fn = value_and_grad(forward_fn, None, optimizer.parameters, has_aux=True)
+        grad_fn = value_and_grad(default_forward_fn, None, optimizer.parameters, has_aux=True)
 
         def _run_step(inputs, labels):
             """Core process of each step, including the forward propagation process and back propagation of data."""
             (loss, *_), grads = grad_fn(inputs, labels)
-            optimizer(grads)
+            loss = loss_scaler.unscale(loss)
+            if check_gradients:
+                status = all_finite(grads)
+                if status:
+                    grads = loss_scaler.unscale(grads)
+                    optimizer(grads)
+            else:
+                optimizer(grads)
             return loss
+
         @ms_jit
         def _run_step_graph(inputs, labels):
             """Core process of each step, including the forward propagation process and back propagation of data."""
             (loss, _), grads = grad_fn(inputs, labels)
-            optimizer(grads)
+            loss = loss_scaler.unscale(loss)
+            if check_gradients:
+                status = all_finite(grads)
+                if status:
+                    grads = loss_scaler.unscale(grads)
+                    optimizer(grads)
+            else:
+                optimizer(grads)
             return loss
+
         if jit:
             return _run_step_graph
         return _run_step
@@ -134,7 +178,7 @@ class Trainer:
     def _prepare_eval(self, eval_dataset, metrics, callbacks, jit):
         if eval_dataset is not None and metrics is not None:
             self.evaluator = Evaluator(network=self.network, eval_dataset=eval_dataset, metrics=metrics,
-                                        callbacks=callbacks, jit=jit)
+                                       callbacks=callbacks, jit=jit)
         elif eval_dataset is None and metrics is None:
             if callbacks:
                 self._check_callbacks_type(callbacks)
@@ -170,6 +214,8 @@ class Trainer:
             tgt_columns (Optional[list[str], str]): Target label column names for loss function.
 
         """
+        if self.obj_network and tgt_columns is not None:
+            log.warning("'tgt_columns' does not take effect when 'loss_fn' is `None`.")
 
         args_dict = vars(self)
         run_context = RunContext(args_dict)
@@ -256,7 +302,11 @@ class Trainer:
             if arg not in data.keys():
                 if str(net_args[arg])[-4:] == 'None':
                     continue
-            inputs = inputs + (data[arg],)
+            else:
+                inputs = inputs + (data[arg],)
+
+        if self.obj_network:
+            return inputs
         # process target dataset.
         tgt_columns = self._prepare_tgt_columns(tgt_columns)
         tgts = ()
@@ -281,3 +331,56 @@ class Trainer:
         else:
             raise TypeError(f"Expect tgt_columns to be list or str. Got {type(tgt_columns)}.")
         return out_columns
+
+    def add_callback(self):
+        """add callback"""
+
+    def remove_callback(self, name_or_type):
+        """remove callback"""
+
+    def set_forward_fn(self, forward_fn):
+        """set forward function"""
+
+    def set_step_fn(self, step_fn):
+        """set step function"""
+        self.train_fn = step_fn
+
+    def set_amp(self, level='O1', loss_scaler=None):
+        """set amp"""
+        self.network = auto_mixed_precision(self.network, level)
+        if loss_scaler is None:
+            log.warning("Trainer will use 'StaticLossScaler' when `loss_scaler` is None.")
+            self.loss_scaler = StaticLossScaler(1e10)
+        else:
+            self.loss_scaler = loss_scaler
+
+    def set_optimizer(self, optimizer):
+        """set optimizer"""
+
+    def train(self, target_columns):
+        """train"""
+        return self.run(target_columns)
+
+    def train_step(self, inputs):
+        """train step"""
+        if isinstance(inputs, Tensor):
+            inputs = (inputs,)
+        return self.train_fn(*inputs)
+
+    def train_loop(self, train_dataset):
+        """train loop"""
+
+    def evaluate(self):
+        """evalute"""
+
+    def evaluate_loop(self):
+        """evaluate loop"""
+
+    def predict(self, test_dataset):
+        """predict"""
+
+    def predict_step(self, inputs, return_loss_only=False):
+        """predict step"""
+
+    def predict_loop(self):
+        """predict loop"""

@@ -23,6 +23,7 @@ from mindspore import ops
 from mindspore import Tensor, Parameter, context, ms_class
 import mindspore.common.dtype as mstype
 from mindnlp.modules import StaticGRU, StaticLSTM
+from mindnlp._legacy.nn import Matmul
 
 # For AMP white list
 AMP_WHITE_LIST = (
@@ -41,7 +42,8 @@ AMP_WHITE_LIST = (
     nn.GRU,
     nn.PReLU,
     StaticGRU,
-    StaticLSTM
+    StaticLSTM,
+    Matmul
 )
 
 AMP_BLACK_LIST = (
@@ -81,6 +83,7 @@ def auto_mixed_precision(network, amp_level='O1'):
         network.to_float(mstype.float16)
     else:
         raise ValueError(f"the amp_level '{amp_level}' is not supported.")
+    return network
 
 def auto_white_list(network, white_list=None):
     """auto cast based on white list"""

@@ -15,9 +15,9 @@
 # limitations under the License.
 # pylint: disable=too-many-instance-attributes
 """ XLM configuration"""
-from ...abc.backbones import PretrainedConfig
+from mindnlp.abc import PreTrainedConfig
 
-class XLMConfig(PretrainedConfig):
+class XLMConfig(PreTrainedConfig):
     """
     This is the configuration class to store the configuration of a [`XLMModel`] or a [`TFXLMModel`]. It is used to
     instantiate a XLM model according to the specified arguments, defining the model architecture. Instantiating a

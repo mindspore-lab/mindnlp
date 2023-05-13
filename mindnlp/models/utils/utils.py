@@ -24,9 +24,9 @@ from mindspore import nn, ops, Parameter, Tensor
 from mindspore.nn import CrossEntropyLoss
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp._legacy.functional import addmm
+from mindnlp.abc import PreTrainedConfig
+from mindnlp._legacy.nn import Dropout, Matmul
 from ..utils.activations import get_activation
-from ...abc.backbones.pretrained import PretrainedConfig
 
 try:
     from mindspore.nn import Identity
@@ -56,12 +56,13 @@ class Conv1D(nn.Cell):
     def __init__(self, n_out, n_in):
         super().__init__()
         self.n_out = n_out
-        self.gamma = Parameter(initializer(Normal(sigma=0.02), (n_in, n_out), mindspore.float32))
-        self.beta = Parameter(ops.zeros(n_out, mindspore.float32))
+        self.weight = Parameter(initializer(Normal(sigma=0.02), (n_in, n_out), mindspore.float32))
+        self.bias = Parameter(ops.zeros(n_out, mindspore.float32))
+        self.matmul = Matmul()
 
     def construct(self, x):
         size_out = x.shape[:-1] + (self.n_out,)
-        x = addmm(self.beta, x.view(-1, x.shape[-1]), self.gamma)
+        x = self.matmul(x.view(-1, x.shape[-1]), self.weight) + self.bias
         x = x.view(size_out)
         return x
 
@@ -81,20 +82,20 @@ def prune_conv1d_layer(layer, index, axis=1):
     Returns:
         [`~mindspore_utils.Conv1D`]: The pruned layer as a new layer with `requires_grad=True`.
     """
-    gama_l = layer.gamma.index_select(axis, index)
+    gama_l = layer.weight.index_select(axis, index)
     if axis == 0:
-        beta_l = layer.beta
+        beta_l = layer.bias
     else:
-        beta_l = layer.beta[index]
-    new_size = list(layer.gamma.shape())
+        beta_l = layer.bias[index]
+    new_size = list(layer.weight.shape())
     new_size[axis] = len(index)
     new_layer = Conv1D(new_size[1], new_size[0])
-    new_layer.gamma.requires_grad = False
-    new_layer.gamma = gama_l.copy()
-    new_layer.gamma.requires_grad = True
-    new_layer.beta.requires_grad = False
-    new_layer.beta = beta_l.copy()
-    new_layer.beta.requires_grad = True
+    new_layer.weight.requires_grad = False
+    new_layer.weight = gama_l.copy()
+    new_layer.weight.requires_grad = True
+    new_layer.bias.requires_grad = False
+    new_layer.bias = beta_l.copy()
+    new_layer.bias.requires_grad = True
     return new_layer
 
 
@@ -146,11 +147,11 @@ class SequenceSummary(nn.Cell):
 
         self.first_dropout = Identity()
         if hasattr(config, "summary_first_dropout") and config.summary_first_dropout > 0:
-            self.first_dropout = nn.Dropout(p=config.summary_first_dropout)
+            self.first_dropout = Dropout(p=config.summary_first_dropout)
 
         self.last_dropout = Identity()
         if hasattr(config, "summary_last_dropout") and config.summary_last_dropout > 0:
-            self.last_dropout = nn.Dropout(p=config.summary_last_dropout)
+            self.last_dropout = Dropout(p=config.summary_last_dropout)
 
     def construct(self, hidden_states: Tensor, cls_index: Optional[Tensor] = None) -> Tensor:
         if self.summary_type == "last":
@@ -170,8 +171,8 @@ class SequenceSummary(nn.Cell):
                 cls_index = cls_index.expand_dims(-1).expand_dims(-1)
                 cls_index = cls_index.expand((-1,) * (cls_index.ndim - 1) + (hidden_states.shape[-1],))
             output = hidden_states.gather_elements(-2, cls_index).squeeze(-2)  # shape (bsz, XX, hidden_size)
-        elif self.summary_type == "attn":
-            raise NotImplementedError
+        else:
+            output = hidden_states
 
         output = self.first_dropout(output)
         output = self.summary(output)
@@ -184,11 +185,11 @@ class PoolerStartLogits(nn.Cell):
     Compute SQuAD start logits from sequence hidden states.
 
     Args:
-        config ([`PretrainedConfig`]):
+        config ([`PreTrainedConfig`]):
             The config used by the model, will be used to grab the `hidden_size` of the model.
     """
 
-    def __init__(self, config: PretrainedConfig):
+    def __init__(self, config: PreTrainedConfig):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, 1)
 
@@ -224,7 +225,7 @@ class SQuADHead(nn.Cell):
     A SQuAD head inspired by XLNet.
 
     Args:
-        config ([`PretrainedConfig`]):
+        config ([`PreTrainedConfig`]):
             The config used by the model, will be used to grab the `hidden_size` of the model and the `layer_norm_eps`
             to use.
     """
@@ -323,12 +324,12 @@ class PoolerEndLogits(nn.Cell):
     Compute SQuAD end logits from sequence hidden states.
 
     Args:
-        config ([`PretrainedConfig`]):
+        config ([`PreTrainedConfig`]):
             The config used by the model, will be used to grab the `hidden_size` of the model and the `layer_norm_eps`
             to use.
     """
 
-    def __init__(self, config: PretrainedConfig):
+    def __init__(self, config: PreTrainedConfig):
         super().__init__()
         self.dense_0 = nn.Dense(config.hidden_size * 2, config.hidden_size)
         self.activation = nn.Tanh()
@@ -372,7 +373,7 @@ class PoolerAnswerClass(nn.Cell):
     Compute SQuAD 2.0 answer class from classification and start tokens hidden states.
 
     Args:
-        config ([`PretrainedConfig`]):
+        config ([`PreTrainedConfig`]):
             The config used by the model, will be used to grab the `hidden_size` of the model.
     """
 

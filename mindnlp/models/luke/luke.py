@@ -21,19 +21,18 @@ MindNlp LUKE model
 """
 import inspect
 import math
-import os
-from typing import Callable, Union, Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 import mindspore
 import numpy as np
 from mindspore import nn
 from mindspore import ops, Tensor
+from mindspore.common.initializer import Normal, initializer
 
-from mindnlp.abc.backbones.pretrained import PretrainedModel
 from mindnlp.models.luke.luke_config import LukeConfig
 from ..utils import logging
 from ..utils.activations import ACT2FN
-from ..utils.mixin import CellUtilMixin
+from ...abc import PreTrainedModel
 
 logger = logging.get_logger(__name__)
 
@@ -584,7 +583,7 @@ class EntityPredictionHead(nn.Cell):
         return hidden_states
 
 
-class LukePreTrainedModel(PretrainedModel, CellUtilMixin):
+class LukePreTrainedModel(PreTrainedModel):
     """
     LukePreTrainedModel
     """
@@ -593,12 +592,6 @@ class LukePreTrainedModel(PretrainedModel, CellUtilMixin):
     base_model_prefix = "luke"
     supports_gradient_checkpointing = True
     _no_split_modules = ["LukeAttention", "LukeEntityEmbeddings"]
-
-    def post_init(self):
-        pass
-
-    def init_model_weights(self):
-        pass
 
     def get_input_embeddings(self) -> "nn.Cell":
         pass
@@ -612,29 +605,28 @@ class LukePreTrainedModel(PretrainedModel, CellUtilMixin):
     def get_position_embeddings(self):
         pass
 
-    def save(self, save_dir: Union[str, os.PathLike]):
-        pass
-
-    def _init_weights(self, module: nn.Cell):
+    def _init_weights(self, cell: nn.Cell):
         """Initialize the weights"""
-        if isinstance(module, nn.Dense):
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if module.bias is not None:
-                module.bias.data.zero_()
-        elif isinstance(module, nn.Embedding):
-            if module.embedding_dim == 1:  # embedding for bias parameters
-                module.weight.data.zero_()
+        if isinstance(cell, nn.Dense):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+                                                    cell.weight.shape, cell.weight.dtype))
+            if cell.has_bias:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        elif isinstance(cell, nn.Embedding):
+            if cell.embedding_size == 1:  # embedding for bias parameters
+                cell.embedding_table.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
             else:
-                module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
-        elif isinstance(module, nn.LayerNorm):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
-
-    def _set_gradient_checkpointing(self, module, value=False):
-        if isinstance(module, LukeEncoder):
-            module.gradient_checkpointing = value
+                embedding_table = initializer(Normal(self.config.initializer_range),
+                                                        cell.embedding_table.shape,
+                                                        cell.embedding_table.dtype)
+                if cell.padding_idx is not None:
+                    embedding_table[cell.padding_idx] = 0
+                cell.embedding_table.set_data(embedding_table)
+        elif isinstance(cell, nn.LayerNorm):
+            cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
+            cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
 
 
 class LukeModel(LukePreTrainedModel):

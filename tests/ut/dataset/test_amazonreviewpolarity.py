@@ -39,7 +39,7 @@ class TestAmazonReviewPolarity(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.root)
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_amazonreviewpolarity(self):
         """Test amazonreviewpolarity"""
@@ -58,7 +58,7 @@ class TestAmazonReviewPolarity(unittest.TestCase):
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_amazonreviewpolarity_by_register(self):
         """test amazonreviewpolarity by register"""
@@ -69,7 +69,7 @@ class TestAmazonReviewPolarity(unittest.TestCase):
         )
 
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_amazonreviewpolarity_process(self):
         r"""
@@ -86,7 +86,7 @@ class TestAmazonReviewPolarity(unittest.TestCase):
             assert isinstance(value, int)
             break
 
-    @pytest.mark.dataset
+    @pytest.mark.download
     @pytest.mark.local
     def test_amazonreviewpolarity_process_by_register(self):
         """test AmazonReviewPolarity process by register"""

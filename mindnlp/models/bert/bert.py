@@ -12,22 +12,69 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=C0415
+# pylint: disable=W0223
+
 """MindNLP bert model"""
+import os
+import logging
 import mindspore.numpy as mnp
 import mindspore.common.dtype as mstype
-from mindspore import nn
-from mindspore import ops
+from mindspore import nn, ops
 from mindspore import Parameter, Tensor
-from mindspore.common.initializer import initializer, TruncatedNormal
+from mindspore.common.initializer import initializer, TruncatedNormal, Normal
 from mindnlp._legacy.nn import Dropout, Matmul
+from mindnlp.abc import PreTrainedModel
+from mindnlp.configs import MINDNLP_MODEL_URL_BASE
+from ..utils.activations import ACT2FN
+from .bert_config import BertConfig, BERT_SUPPORT_LIST
 
-activation_map = {
-    'relu': nn.ReLU(),
-    'gelu': nn.GELU(False),
-    'gelu_approximate': nn.GELU(),
-    'swish':nn.SiLU()
+
+PRETRAINED_MODEL_ARCHIVE_MAP = {
+    model: MINDNLP_MODEL_URL_BASE.format('bert', model) for model in BERT_SUPPORT_LIST
 }
 
+
+def torch_to_mindspore(pth_file, **kwargs):
+    """convert torch checkpoint to mindspore"""
+    _ = kwargs.get('prefix', '')
+
+    try:
+        import torch
+    except Exception as exc:
+        raise ImportError("'import torch' failed, please install torch by "
+                          "`pip install torch` or instructions from 'https://pytorch.org'") \
+                          from exc
+
+    from mindspore.train.serialization import save_checkpoint
+
+    logging.info('Starting checkpoint conversion.')
+    ms_ckpt = []
+    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
+
+    for key, value in state_dict.items():
+        if 'LayerNorm' in key:
+            key = key.replace('LayerNorm', 'layer_norm')
+        if 'layer_norm' in key:
+            if '.weight' in key:
+                key = key.replace('.weight', '.gamma')
+            if '.bias' in key:
+                key = key.replace('.bias', '.beta')
+        if 'embeddings' in key:
+            key = key.replace('weight', 'embedding_table')
+        if 'self' in key:
+            key = key.replace('self', 'self_attn')
+        ms_ckpt.append({'name': key, 'data': Tensor(value.numpy())})
+
+    ms_ckpt_path = pth_file.replace('pytorch_model.bin','mindspore.ckpt')
+    if not os.path.exists(ms_ckpt_path):
+        try:
+            save_checkpoint(ms_ckpt, ms_ckpt_path)
+        except Exception as exc:
+            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, '
+                               f'please checkout the path.') from exc
+
+    return ms_ckpt_path
 
 class BertEmbeddings(nn.Cell):
     """
@@ -59,6 +106,7 @@ class BertEmbeddings(nn.Cell):
         embeddings = self.layer_norm(embeddings)
         embeddings = self.dropout(embeddings)
         return embeddings
+
 
 class BertSelfAttention(nn.Cell):
     """
@@ -161,6 +209,7 @@ class BertAttention(nn.Cell):
         outputs = (attention_output,) + self_outputs[1:]
         return outputs
 
+
 class BertIntermediate(nn.Cell):
     r"""
     Bert Intermediate
@@ -169,7 +218,7 @@ class BertIntermediate(nn.Cell):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size, \
             weight_init=TruncatedNormal(config.initializer_range))
-        self.intermediate_act_fn = activation_map.get(config.hidden_act, nn.GELU(False))
+        self.intermediate_act_fn = ACT2FN[config.hidden_act]
 
     def construct(self, hidden_states):
         hidden_states = self.dense(hidden_states)
@@ -193,6 +242,7 @@ class BertOutput(nn.Cell):
         hidden_states = self. layer_norm(hidden_states + input_tensor)
         return hidden_states
 
+
 class BertLayer(nn.Cell):
     r"""
     Bert Layer
@@ -210,6 +260,7 @@ class BertLayer(nn.Cell):
         layer_output = self.output(intermediate_output, attention_output)
         outputs = (layer_output,) + attention_outputs[1:]
         return outputs
+
 
 class BertEncoder(nn.Cell):
     r"""
@@ -244,6 +295,7 @@ class BertEncoder(nn.Cell):
             outputs += (all_attentions,)
         return outputs
 
+
 class BertPooler(nn.Cell):
     r"""
     Bert Pooler
@@ -268,7 +320,7 @@ class BertPredictionHeadTransform(nn.Cell):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size, \
             weight_init=TruncatedNormal(config.initializer_range))
-        self.transform_act_fn = activation_map.get(config.hidden_act, nn.GELU(False))
+        self.transform_act_fn = ACT2FN[config.hidden_act]
         self.layer_norm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
 
     def construct(self, hidden_states):
@@ -303,6 +355,7 @@ class BertLMPredictionHead(nn.Cell):
         hidden_states = self.decoder(hidden_states) + self.bias
         return hidden_states
 
+
 class BertPreTrainingHeads(nn.Cell):
     r"""
     Bert PreTraining Heads
@@ -319,16 +372,50 @@ class BertPreTrainingHeads(nn.Cell):
         return prediction_scores, seq_relationship_score
 
 
-class BertModel(nn.Cell):
+class BertPreTrainedModel(PreTrainedModel):
+    """BertPretrainedModel"""
+    convert_torch_to_mindspore = torch_to_mindspore
+    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+    config_class = BertConfig
+    base_model_prefix = 'bert'
+
+    def _init_weights(self, cell):
+        """Initialize the weights"""
+        if isinstance(cell, nn.Dense):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+                                                    cell.weight.shape, cell.weight.dtype))
+            if cell.has_bias:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        elif isinstance(cell, nn.Embedding):
+            embedding_table = initializer(Normal(self.config.initializer_range),
+                                                 cell.embedding_table.shape,
+                                                 cell.embedding_table.dtype)
+            if cell.padding_idx is not None:
+                embedding_table[cell.padding_idx] = 0
+            cell.embedding_table.set_data(embedding_table)
+        elif isinstance(cell, nn.LayerNorm):
+            cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
+            cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
+
+
+class BertModel(BertPreTrainedModel):
     r"""
     Bert Model
     """
     def __init__(self, config):
-        super().__init__()
+        super().__init__(config)
         self.embeddings = BertEmbeddings(config)
         self.encoder = BertEncoder(config)
         self.pooler = BertPooler(config)
         self.num_hidden_layers = config.num_hidden_layers
+
+    def get_input_embeddings(self):
+        return self.embeddings.word_embeddings
+
+    def set_input_embeddings(self, value):
+        self.embeddings.word_embeddings = value
 
     def construct(self, input_ids, attention_mask=None, token_type_ids=None, \
         position_ids=None, head_mask=None):
@@ -359,10 +446,10 @@ class BertModel(nn.Cell):
 
         outputs = (sequence_output, pooled_output,) + encoder_outputs[1:]
         # add hidden_states and attentions if they are here
-        return outputs
-        # sequence_output, pooled_output, (hidden_states), (attentions)
+        return outputs # sequence_output, pooled_output, (hidden_states), (attentions)
 
-class BertForPretraining(nn.Cell):
+
+class BertForPretraining(BertPreTrainedModel):
     r"""
     Bert For Pretraining
     """
@@ -395,7 +482,64 @@ class BertForPretraining(nn.Cell):
 
         return outputs
 
+class BertForSequenceClassification(BertPreTrainedModel):
+    """Bert Model for classification tasks"""
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+        self.config = config
+
+        self.bert = BertModel(config)
+        classifier_dropout = (
+            config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
+        )
+        self.classifier = nn.Dense(config.hidden_size, self.num_labels)
+        self.dropout = Dropout(classifier_dropout)
+
+        problem_type = config.problem_type
+        if problem_type is None:
+            self.loss = None
+        else:
+            if self.num_labels == 1:
+                self.problem_type = "regression"
+                self.loss = nn.MSELoss()
+            elif self.num_labels > 1:
+                self.problem_type = "single_label_classification"
+                self.loss = nn.CrossEntropyLoss()
+            else:
+                self.problem_type = "multi_label_classification"
+                self.loss = nn.BCEWithLogitsLoss()
+
+    def construct(self, input_ids, attention_mask=None, token_type_ids=None,
+                  position_ids=None, head_mask=None, labels=None):
+        outputs = self.bert(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask
+        )
+        pooled_output = outputs[1]
+
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+
+        output = (logits,) + outputs[2:]
+
+        if labels is not None:
+            if self.num_labels == 1:
+                loss = self.loss(logits.squeeze(), labels.squeeze())
+            elif self.num_labels > 1:
+                loss = self.loss(logits.view(-1, self.num_labels), labels.view(-1))
+            else:
+                loss = self.loss(logits, labels)
+
+            return (loss,) + output
+
+        return output
+
 __all__ = [
     'BertEmbeddings', 'BertAttention', 'BertEncoder', 'BertIntermediate', 'BertLayer',
-    'BertModel', 'BertForPretraining', 'BertLMPredictionHead'
+    'BertModel', 'BertForPretraining', 'BertLMPredictionHead', 'BertForSequenceClassification'
 ]

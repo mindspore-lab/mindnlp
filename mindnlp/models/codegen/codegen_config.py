@@ -16,13 +16,22 @@
 # ============================================================================
 """ CodeGen model configuration"""
 
-from ...abc.backbones.pretrained import PretrainedConfig
+from mindnlp.abc import PreTrainedConfig
+from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
+
+__all__ = ['CodeGenConfig']
+
+CODEGEN_SUPPORT_LIST = ["Salesforce/codegen-350M-mono"]
+
+CONFIG_ARCHIVE_MAP = {
+    model: MINDNLP_CONFIG_URL_BASE.format('codegen', model) for model in CODEGEN_SUPPORT_LIST}
 
 
-class CodeGenConfig(PretrainedConfig):
+class CodeGenConfig(PreTrainedConfig):
     r"""
     CodeGen config
     """
+    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     model_type = "codegen"
     attribute_map = {
@@ -33,26 +42,26 @@ class CodeGenConfig(PretrainedConfig):
     }
 
     def __init__(
-        self,
-        vocab_size=50400,
-        n_positions=2048,
-        n_ctx=2048,
-        n_embd=4096,
-        n_layer=28,
-        n_head=16,
-        rotary_dim=64,
-        n_inner=None,
-        activation_function="gelu_new",
-        resid_pdrop=0.01,
-        embd_pdrop=0.0,
-        attn_pdrop=0.0,
-        layer_norm_epsilon=1e-5,
-        initializer_range=0.02,
-        use_cache=True,
-        bos_token_id=50256,
-        eos_token_id=50256,
-        tie_word_embeddings=False,
-        **kwargs,
+            self,
+            vocab_size=504,
+            n_positions=512,
+            n_ctx=512,
+            n_embd=512,
+            n_layer=28,
+            n_head=16,
+            rotary_dim=64,
+            n_inner=None,
+            activation_function="gelu_new",
+            resid_pdrop=0.01,
+            embd_pdrop=0.01,
+            attn_pdrop=0.0,
+            layer_norm_epsilon=1e-5,
+            initializer_range=0.02,
+            use_cache=True,
+            bos_token_id=502,
+            eos_token_id=502,
+            tie_word_embeddings=False,
+            **kwargs,
     ):
         self.vocab_size = vocab_size
         self.n_ctx = n_ctx

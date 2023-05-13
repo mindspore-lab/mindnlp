@@ -20,10 +20,9 @@ import mindspore
 from mindspore import nn
 from mindspore import ops
 from mindspore import Tensor, Parameter
-from mindnlp.abc.backbones.pretrained import PretrainedModel
 from .nezha_config import NezhaConfig
 from ..utils import logging
-from ..utils.mixin import CellUtilMixin
+from ...abc import PreTrainedModel
 from ..utils.utils import prune_linear_layer, find_pruneable_heads_and_indices, apply_chunking_to_forward
 from ..utils.activations import ACT2FN
 
@@ -582,7 +581,7 @@ class NezhaPreTrainingHeads(nn.Cell):
         return prediction_scores, seq_relationship_score
 
 
-class NezhaPreTrainedModel(PretrainedModel):
+class NezhaPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
@@ -602,15 +601,7 @@ class NezhaPreTrainedModel(PretrainedModel):
         pass
 
     # TODO
-    def init_model_weights(self):
-        pass
-
-    # TODO
     def resize_position_embeddings(self):
-        pass
-
-    # TODO
-    def save(self):
         pass
 
     # TODO
@@ -622,7 +613,7 @@ class NezhaPreTrainedModel(PretrainedModel):
         pass
 
 
-class NezhaModel(NezhaPreTrainedModel, CellUtilMixin):
+class NezhaModel(NezhaPreTrainedModel):
     """Nezha Model"""
 
     def __init__(self, config, add_pooling_layer=True):

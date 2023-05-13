@@ -21,10 +21,9 @@ import os
 from typing import Union
 import mindspore
 from mindspore import nn, ops
-from mindnlp.abc.backbones.pretrained import PretrainedModel
+from mindnlp.abc import PreTrainedModel
 from .tinybert_config import BertConfig
-
-ACT2FN = {"gelu": ops.gelu, "relu": ops.relu}
+from ..utils.activations import ACT2FN
 
 
 class TinyBertEmbeddings(nn.Cell):
@@ -36,7 +35,6 @@ class TinyBertEmbeddings(nn.Cell):
         """
         init BertEmbeddings
         """
-
         super().__init__()
         self.word_embeddings = nn.Embedding(
             config.vocab_size, config.hidden_size, padding_idx=0)
@@ -52,7 +50,6 @@ class TinyBertEmbeddings(nn.Cell):
         """
         Construct the embeddings from word, position and token_type embeddings.
         """
-
         seq_length = input_ids.shape[1]
         position_ids = ops.arange(seq_length, dtype=mindspore.int64)
         position_ids = position_ids.expand_dims(0).expand_as(input_ids)
@@ -369,7 +366,7 @@ class TinyBertPreTrainingHeads(nn.Cell):
         return prediction_scores, seq_relationship_score
 
 
-class TinyBertPreTrainedModel(PretrainedModel):
+class TinyBertPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization.
     """
@@ -438,7 +435,7 @@ class TinyBertPreTrainedModel(PretrainedModel):
 
     #TODO
     def post_init(self):
-        pass
+        """post init."""
 
 
 class TinyBertModel(TinyBertPreTrainedModel):
@@ -455,7 +452,7 @@ class TinyBertModel(TinyBertPreTrainedModel):
 
     def construct(self, input_ids, token_type_ids=None, attention_mask=None,
                   output_all_encoded_layers=True, output_att=True):
-
+        """construct."""
         if attention_mask is None:
             attention_mask = ops.ones_like(input_ids)
         if token_type_ids is None:
@@ -510,6 +507,7 @@ class TinyBertForPreTraining(TinyBertPreTrainedModel):
 
     def construct(self, input_ids, token_type_ids=None, attention_mask=None,
                   masked_lm_labels=None, next_sentence_label=None):
+        """construct."""
         sequence_output, pooled_output = self.bert(input_ids, token_type_ids, attention_mask,
                                                    output_all_encoded_layers=False, output_att=False)
         prediction_scores, seq_relationship_score = self.cls(
@@ -545,8 +543,8 @@ class TinyBertFitForPreTraining(TinyBertPreTrainedModel):
         self.fit_dense = nn.Dense(config.hidden_size, fit_size)
         self.apply(self.init_model_weights)
 
-    def construct(self, input_ids, token_type_ids=None,
-                  attention_mask=None):
+    def construct(self, input_ids, token_type_ids=None, attention_mask=None):
+        """construct."""
         sequence_output, att_output, _ = self.bert(
             input_ids, token_type_ids, attention_mask)
         tmp = []
@@ -572,6 +570,7 @@ class TinyBertForMaskedLM(TinyBertPreTrainedModel):
 
     def construct(self, input_ids, token_type_ids=None, attention_mask=None, masked_lm_labels=None,
                   output_att=False):
+        """construct."""
         sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask,
                                        output_all_encoded_layers=True, output_att=output_att)
 
@@ -606,6 +605,7 @@ class TinyBertForNextSentencePrediction(TinyBertPreTrainedModel):
         self.apply(self.init_model_weights)
 
     def construct(self, input_ids, token_type_ids=None, attention_mask=None, next_sentence_label=None):
+        """construct."""
         _, pooled_output = self.bert(input_ids, token_type_ids, attention_mask,
                                      output_all_encoded_layers=False, output_att=False)
         seq_relationship_score = self.cls(pooled_output)
@@ -634,6 +634,7 @@ class TinyBertForSentencePairClassification(TinyBertPreTrainedModel):
 
     def construct(self, a_input_ids, b_input_ids, a_token_type_ids=None, b_token_type_ids=None,
                   a_attention_mask=None, b_attention_mask=None, labels=None):
+        """construct."""
         _, a_pooled_output = self.bert(
             a_input_ids, a_token_type_ids, a_attention_mask, output_all_encoded_layers=False, output_att=False)
         # a_pooled_output = self.dropout(a_pooled_output)
@@ -668,7 +669,7 @@ class TinyBertForSequenceClassification(TinyBertPreTrainedModel):
 
     def construct(self, input_ids, token_type_ids=None, attention_mask=None,
                   is_student=False):
-
+        """construct"""
         sequence_output, att_output, pooled_output = self.bert(input_ids, token_type_ids, attention_mask,
                                                                output_all_encoded_layers=True, output_att=True)
 
