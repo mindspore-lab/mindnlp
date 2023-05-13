@@ -70,7 +70,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             if getattr(self, 'apply', None):
                 self.apply(self._initialize_weights)
             else:
-                for _, cell in self.name_cells():
+                for _, cell in self.name_cells().items():
                     self._initialize_weights(cell)
 
             # Tie weights should be skipped when not initializing all weights
