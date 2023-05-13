@@ -67,7 +67,11 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
         if _init_weights:
             # Initialize weights
-            self.apply(self._initialize_weights)
+            if getattr(self, 'apply', None):
+                self.apply(self._initialize_weights)
+            else:
+                for _, cell in self.name_cells():
+                    self._initialize_weights(cell)
 
             # Tie weights should be skipped when not initializing all weights
             # since from_pretrained(...) calls tie weights anyways
@@ -107,7 +111,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         """
         base_model = getattr(self, self.base_model_prefix, self)
         if base_model is not self:
-            base_model.set_input_embeddings(value)
+            return base_model.set_input_embeddings(value)
         raise NotImplementedError
 
     def resize_position_embeddings(self, new_num_position_embeddings: int):

@@ -24,6 +24,7 @@ import mindspore
 import numpy as np
 from mindspore import nn, ops, Tensor, dtype_to_nptype
 from mindspore import log as logger
+from mindspore.common.initializer import initializer, Normal
 from mindnlp.abc import PreTrainedModel
 from mindnlp._legacy.functional import split, where, arange, softmax
 from mindnlp._legacy.nn import Dropout, Matmul
@@ -164,9 +165,8 @@ class GPT2Attention(nn.Cell):
             # if only "normal" attention layer implements causal mask
             query_length, key_length = query.shape[-2], key.shape[-2]
             causal_mask = self.bias[:, :, key_length - query_length: key_length, :key_length]
-            mask_value = Tensor(np.finfo(np.float32).min, dtype=mindspore.float32)
             multiplu_out = Tensor(1.0, mindspore.float32) - causal_mask
-            adder = multiplu_out * mask_value
+            adder = multiplu_out * self.masked_bias
             attn_weights = ops.add(attn_weights, adder)
 
         if attention_mask is not None:
@@ -436,6 +436,28 @@ class GPT2PreTrainedModel(PreTrainedModel):
         return head_mask
 
 
+    def _init_weights(self, cell):
+        """Initialize the weights"""
+        if isinstance(cell, (nn.Dense, Conv1D)):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+                                                    cell.weight.shape, cell.weight.dtype))
+            if cell.bias is not None:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        elif isinstance(cell, nn.Embedding):
+            embedding_table = initializer(Normal(self.config.initializer_range),
+                                                 cell.embedding_table.shape,
+                                                 cell.embedding_table.dtype)
+            if cell.padding_idx is not None:
+                embedding_table[cell.padding_idx] = 0
+            cell.embedding_table.set_data(embedding_table)
+        elif isinstance(cell, nn.LayerNorm):
+            cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
+            cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
+
+
+
 class GPT2Model(GPT2PreTrainedModel):
     r"""
     gpt2 Model
@@ -459,6 +481,9 @@ class GPT2Model(GPT2PreTrainedModel):
         self.output_attentions = self.config.output_attentions
         self.output_hidden_states = self.config.output_hidden_states
         self.use_cache = self.config.use_cache
+
+        # Initialize weights and apply final processing
+        self.post_init()
 
     def get_input_embeddings(self):
         """
@@ -605,6 +630,9 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
 
         ignore_index = kwargs.pop('ignore_index', -1)
         self.loss_fct = nn.CrossEntropyLoss(ignore_index=ignore_index)
+        # Initialize weights and apply final processing
+        self.post_init()
+
 
     def get_output_embeddings(self):
         """
@@ -704,7 +732,7 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
         )
 
 
-class GPT2DoubleHeadsModel(nn.Cell):
+class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
     r"""
     GPT2 Double Heads Model
     """
@@ -716,6 +744,9 @@ class GPT2DoubleHeadsModel(nn.Cell):
         self.transformer = GPT2Model(config)
         self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
         self.multiple_choice_head = SequenceSummary(config)
+        # Initialize weights and apply final processing
+        self.post_init()
+
 
     def get_output_embeddings(self):
         """
@@ -814,6 +845,9 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
         self.num_labels = config.num_labels
         self.transformer = GPT2Model(config)
         self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        # Initialize weights and apply final processing
+        self.post_init()
+
 
     def construct(
             self,
@@ -905,6 +939,9 @@ class GPT2ForTokenClassification(GPT2PreTrainedModel):
             classifier_dropout = 0.1
         self.dropout = Dropout(p=classifier_dropout)
         self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+
+        # Initialize weights and apply final processing
+        self.post_init()
 
     def construct(self, input_ids=None, past_key_values=None, attention_mask=None, token_type_ids=None,
                   position_ids=None, head_mask=None, inputs_embeds=None, labels=None):
