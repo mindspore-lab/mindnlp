@@ -18,7 +18,7 @@ import mindspore as ms
 from mindspore.dataset import GeneratorDataset
 from mindnlp.transforms import LongformerTokenizer
 
-def test_Longformer_tokenizer_op():
+def test_longformer_tokenizer_op():
     """test T5Tokenizer from pretrained."""
     texts = ['i make a small mistake when i\'m working!']
     test_dataset = GeneratorDataset(texts, 'text')
