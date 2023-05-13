@@ -20,6 +20,7 @@
 from typing import Optional, Tuple
 
 import os
+import math
 import mindspore
 import numpy as np
 from mindspore import nn, ops, Tensor, dtype_to_nptype
@@ -456,6 +457,17 @@ class GPT2PreTrainedModel(PreTrainedModel):
             cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
             cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
 
+        # Reinitialize selected weights subject to the OpenAI GPT-2 Paper Scheme:
+        #   > A modified initialization which accounts for the accumulation on the residual path with model depth. Scale
+        #   > the weights of residual layers at initialization by a factor of 1/√N where N is the # of residual layers.
+        #   >   -- GPT-2 :: https://openai.com/blog/better-language-models/
+        #
+        # Reference (Megatron-LM): https://github.com/NVIDIA/Megatron-LM/blob/main/megatron/model/gpt_model.py
+        for name, p in cell.parameters_and_names():
+            if name == "c_proj.weight":
+                # Special Scaled Initialization --> There are 2 Layer Norms per Transformer Block
+                p.set_data(initializer(Normal((self.config.initializer_range / math.sqrt(2 * self.config.n_layer))),
+                                              p.shape, p.dtype))
 
 
 class GPT2Model(GPT2PreTrainedModel):
