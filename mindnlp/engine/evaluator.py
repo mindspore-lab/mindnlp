@@ -16,7 +16,7 @@
 Evaluator for testing.
 """
 from inspect import signature
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 from mindspore import log, mutable
 from mindnlp import ms_jit
 from mindnlp.abc import Metric
@@ -153,8 +153,9 @@ class Evaluator:
 
     def _update_metrics(self, outputs, *tgts):
         """Update metrics values."""
+        logits = outputs[0] if isinstance(outputs, tuple) else outputs
         for metric in self.metrics:
-            metric.update(outputs, *tgts)
+            metric.update(logits, *tgts)
         return True
 
     def _data_process(self, data, tgt_columns):

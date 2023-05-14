@@ -13,55 +13,43 @@
 # limitations under the License.
 # ============================================================================
 """Test Bert"""
+import gc
 import unittest
 import pytest
 import numpy as np
+from ddt import ddt, data
 
 import mindspore
-
 from mindspore import Tensor
-from mindspore import context
-
+from mindnlp import ms_jit
 from mindnlp.models import BertConfig, BertModel
 
 
+@ddt
 class TestModelingBert(unittest.TestCase):
     r"""
     Test model bert
     """
-    def setUp(self):
-        """
-        Set up.
-        """
-        self.input = None
-
-    def test_modeling_bert_pynative(self):
+    @data(True, False)
+    def test_modeling_bert(self, jit):
         r"""
-        Test model bert with pynative mode
+        Test model bert
         """
 
-        context.set_context(mode=context.PYNATIVE_MODE)
         config = BertConfig(num_hidden_layers=2)
         model = BertModel(config)
 
         input_ids = Tensor(np.random.randn(1, 512), mindspore.int32)
 
-        outputs, pooled = model(input_ids)
-        assert outputs.shape == (1, 512, 768)
-        assert pooled.shape == (1, 768)
+        def forward(input_ids):
+            outputs, pooled = model(input_ids)
+            return outputs, pooled
 
-    def test_modeling_bert_graph(self):
-        r"""
-        Test model bert with graph mode
-        """
+        if jit:
+            forward = ms_jit(forward)
 
-        context.set_context(mode=context.GRAPH_MODE)
-        config = BertConfig(num_hidden_layers=2)
-        model = BertModel(config)
+        outputs, pooled = forward(input_ids)
 
-        input_ids = Tensor(np.random.randn(1, 512), mindspore.int32)
-
-        outputs, pooled = model(input_ids)
         assert outputs.shape == (1, 512, 768)
         assert pooled.shape == (1, 768)
 
@@ -74,3 +62,6 @@ class TestModelingBert(unittest.TestCase):
     def test_from_pretrained_from_pt(self):
         """test from pt"""
         _ = BertModel.from_pretrained('bert-base-uncased', from_pt=True)
+
+    def tearDown(self) -> None:
+        gc.collect()

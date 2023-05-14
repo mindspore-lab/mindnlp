@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """Test Ernie"""
-
+import gc
 import unittest
 import numpy as np
 import mindspore
@@ -31,7 +31,7 @@ class TestModelingErnie(unittest.TestCase):
         """
         Set up.
         """
-        self.input = None
+        self.config = UIEConfig(num_hidden_layers=2)
 
     def test_ernie_model(self):
         """
@@ -42,10 +42,13 @@ class TestModelingErnie(unittest.TestCase):
         """
         Test UIEModel
         """
-        config = UIEConfig()
-        model = UIE(config)
+
+        model = UIE(self.config)
         input_ids = Tensor(np.random.randint(
             0, 100, (1, 20)), dtype=mindspore.int32)
         outputs = model(input_ids=input_ids)
         assert outputs[0].shape == (1, 20)
         assert outputs[1].shape == (1, 20)
+
+    def tearDown(self) -> None:
+        gc.collect()

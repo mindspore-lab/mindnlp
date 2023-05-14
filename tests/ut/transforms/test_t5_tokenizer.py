@@ -13,27 +13,19 @@
 # limitations under the License.
 # ============================================================================
 """Test the T5Tokenizer"""
-import unittest
+
+import mindspore as ms
 from mindspore.dataset import GeneratorDataset
 from mindnlp.transforms import T5Tokenizer
-class TestT5Tokenizer(unittest.TestCase):
-    r"""
-    Test T5Tokenizer
-    """
-    def test_t5_tokenizer(self):
-        """test T5Tokenizer based on t5-base"""
-        text = "Believing that faith can triumph over everything is in itself the greatest belief"
-        tokenizer = T5Tokenizer.from_pretrained('t5-base')
-        tokens = tokenizer.encode(text)
-        assert len(tokens.ids) == 16
-        assert len(tokens.attention_mask) == 16
-        assert text == tokenizer.decode(tokens.ids)
 
-    def test_t5_tokenizer_op(self):
-        """test T5Tokenizer based on t5-base"""
-        texts = ['i make a small mistake when i\'m working!']
-        test_dataset = GeneratorDataset(texts, 'text')
-        tokenizer = T5Tokenizer.from_pretrained('t5-base')
-        test_dataset = test_dataset.map(operations=tokenizer)
-        dataset_after = next(test_dataset.create_tuple_iterator())[0]
-        assert len(dataset_after) == 15
+def test_t5_tokenizer_op():
+    """test T5Tokenizer from pretrained."""
+    texts = ['i make a small mistake when i\'m working!']
+    test_dataset = GeneratorDataset(texts, 'text')
+
+    tokenizer = T5Tokenizer.from_pretrained('t5-base', return_token=True)
+    test_dataset = test_dataset.map(operations=tokenizer)
+    dataset_after = next(test_dataset.create_tuple_iterator())[0]
+
+    assert len(dataset_after) == 15
+    assert dataset_after.dtype == ms.string

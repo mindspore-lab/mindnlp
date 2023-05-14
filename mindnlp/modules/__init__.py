@@ -16,7 +16,8 @@
 
 from mindnlp.utils import less_min_pynative_first
 from mindnlp._legacy.nn import transformer
-from mindnlp.modules import encoder, decoder, embeddings, loss, attentions, crf, rnns
+from mindnlp.modules import encoder, decoder, embeddings, loss, attentions, crf, rnns, \
+    accumulator
 from mindnlp.modules.attentions import ScaledDotAttention, SelfAttention, \
     BinaryAttention, AdditiveAttention, CosineAttention, LocationAwareAttention, \
     LinearAttention
@@ -26,6 +27,8 @@ from mindnlp.modules.embeddings import Fasttext, Glove
 from mindnlp.modules.crf import CRF
 from mindnlp.modules.loss import RDropLoss, CMRC2018Loss
 from mindnlp.modules.rnns import *
+from mindnlp.modules.generation import *
+from mindnlp.modules.accumulator import *
 
 if less_min_pynative_first:
     from mindnlp._legacy.nn.transformer import Transformer, TransformerDecoder, TransformerEncoder, \
@@ -44,3 +47,4 @@ __all__.extend(attentions.__all__)
 __all__.extend(crf.__all__)
 __all__.extend(loss.__all__)
 __all__.extend(rnns.__all__)
+__all__.extend(accumulator.__all__)

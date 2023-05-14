@@ -29,10 +29,10 @@ import mindspore
 import numpy as np
 from mindspore import nn, ops, Parameter, numpy, Tensor
 from mindspore.common.initializer import initializer, Normal
+from mindnlp.abc import PreTrainedModel
 from mindnlp.models.utils import logging
 from .llama_hf_config import LlamaConfig
 from ..utils.activations import ACT2FN
-from ...abc.backbones.pretrained import PreTrainedModel
 
 logger = logging.get_logger(__name__)
 
@@ -50,7 +50,7 @@ def _make_causal_mask(
     mask = mask.astype(dtype)
     if past_key_values_length > 0:
         mask = ops.cat([numpy.zeros((tgt_len, past_key_values_length), dtype=dtype), mask], axis=-1)
-    return ops.expand(mask[None, None, :, :], Tensor([bsz, 1, tgt_len, tgt_len + past_key_values_length]))
+    return ops.broadcast_to(mask[None, None, :, :], (bsz, 1, tgt_len, tgt_len + past_key_values_length))
 
 def _expand_mask(mask: Tensor, dtype: mindspore.dtype, tgt_len: Optional[int] = None):
     """
@@ -58,8 +58,8 @@ def _expand_mask(mask: Tensor, dtype: mindspore.dtype, tgt_len: Optional[int] = 
     """
     bsz, src_len = mask.shape
     tgt_len = tgt_len if tgt_len is not None else src_len
-    expanded_mask = ops.expand((mask[:, None, None, :]).astype(mindspore.float32),
-                               Tensor([bsz, 1, tgt_len, src_len])).astype(dtype)
+    expanded_mask = ops.broadcast_to((mask[:, None, None, :]).astype(mindspore.float32),
+                                     (bsz, 1, tgt_len, src_len)).astype(dtype)
 
     inverted_mask = 1.0 - expanded_mask
 

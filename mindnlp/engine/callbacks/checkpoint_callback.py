@@ -16,7 +16,7 @@
 Callback for saving checkpoint.
 """
 import os
-
+from pathlib import Path
 import mindspore
 from mindnlp.abc import Callback
 
@@ -28,21 +28,29 @@ class CheckpointCallback(Callback):
     Continue training a sample code using the most recent epoch
 
     Args:
-        save_path (str): The path to save the state. A specific path needs to be specified,
-            such as 'checkpoints/chtp.pt'. Default: None.
+        save_path (str, Path): The path to save the state. A specific path needs to be specified,
+            such as 'checkpoints/'.
+        ckpt_name (str): Checkpoint name to store. It will set model class name when not specified.
+            Default: None.
         epochs (int): Save a checkpoint file every n epochs.
         keep_checkpoint_max (int): Save checkpoint files at most. Default:5.
 
     """
-    def __init__(self, save_path=None, epochs=None, keep_checkpoint_max=5):
-        if save_path is not None:
-            os.makedirs(save_path, exist_ok=True)
+    def __init__(self, save_path, ckpt_name=None, epochs=None, keep_checkpoint_max=5):
+        if isinstance(save_path, str):
+            self.save_path = Path(save_path)
+        elif isinstance(save_path, Path):
+            self.save_path = save_path
         else:
-            os.makedirs(os.path.expanduser('~'), exist_ok=True)
-        self.save_path = save_path
+            raise ValueError(f"the 'save_path' argument must be str or Path, but got {type(save_path)}.")
+
+        if not self.save_path.exists():
+            os.makedirs(str(self.save_path))
+
         self.epochs = epochs
         self.keep_checkpoint_max = keep_checkpoint_max
-        self.checkpoint_nums = 0
+        self.ckpt_name = ckpt_name
+        self.cached_ckpts = []
 
         # to do
 
@@ -63,8 +71,8 @@ class CheckpointCallback(Callback):
 
         """
         if self.epochs is None:
-            print('For saving checkpoints, epoch cannont be `None` !')
-        print(f"\nThe train will start from the checkpoint saved in {self.save_path}.\n")
+            raise ValueError('For saving checkpoints, epoch cannont be `None` !')
+        print(f"The train will start from the checkpoint saved in '{self.save_path}'.")
 
     def train_epoch_end(self, run_context):
         """
@@ -74,15 +82,21 @@ class CheckpointCallback(Callback):
             run_context (RunContext): Information about the model.
 
         """
-        if self.checkpoint_nums == self.keep_checkpoint_max:
-            print('The maximum number of stored checkpoints has been reached.')
-            return
         if self.epochs is None:
             return
         if (run_context.cur_epoch_nums % self.epochs != 0) & (run_context.cur_epoch_nums != run_context.epochs):
             return
         model = run_context.network
-        ckpt_name = type(model).__name__ + '_epoch_' + str(run_context.cur_epoch_nums-1) + '.ckpt'
-        mindspore.save_checkpoint(model, self.save_path + '/' + ckpt_name)
-        self.checkpoint_nums += 1
-        print(f"Checkpoint: {ckpt_name} has been saved in epoch:{run_context.cur_epoch_nums - 1}.")
+        if self.ckpt_name is None:
+            self.ckpt_name = type(model).__name__
+        ckpt_name = self.ckpt_name + '_epoch_' + str(run_context.cur_epoch_nums-1) + '.ckpt'
+        if len(self.cached_ckpts) == self.keep_checkpoint_max:
+            print('The maximum number of stored checkpoints has been reached.')
+            del_ckpt = self.cached_ckpts.pop(0)
+            del_file = self.save_path.joinpath(del_ckpt)
+            del_file.chmod(0o777)
+            del_file.unlink()
+
+        mindspore.save_checkpoint(model, str(self.save_path.joinpath(ckpt_name).resolve()))
+        self.cached_ckpts.append(ckpt_name)
+        print(f"Checkpoint: '{ckpt_name}' has been saved in epoch: {run_context.cur_epoch_nums - 1}.")
