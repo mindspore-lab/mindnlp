@@ -16,7 +16,6 @@
 BertTokenizer
 """
 import os
-from typing import Union
 import numpy as np
 from mindspore.dataset.text.transforms import Implementation
 from mindspore.dataset.text import Vocab as msVocab
@@ -25,10 +24,10 @@ from tokenizers.implementations import BertWordPieceTokenizer
 from mindnlp.abc import PreTrainedTokenizer
 from mindnlp.vocab import Vocab
 from mindnlp.models.bert.bert_config import BERT_SUPPORT_LIST
-from mindnlp.configs import HF_TOKENIZER_CONFIG_URL_BASE
+from mindnlp.configs import MINDNLP_TOKENIZER_CONFIG_URL_BASE
 
 PRETRAINED_VOCAB_MAP = {
-    model: HF_TOKENIZER_CONFIG_URL_BASE.format(model) for model in BERT_SUPPORT_LIST
+    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format('bert', model) for model in BERT_SUPPORT_LIST
 }
 
 
@@ -90,7 +89,31 @@ class BertTokenizer(PreTrainedTokenizer):
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
-    def __init__(self, vocab: Union[msVocab, Vocab, str], **kwargs):
+    def __init__(
+        self,
+        vocab=None,
+        tokenizer_file=None,
+        do_lower_case=True,
+        unk_token="[UNK]",
+        sep_token="[SEP]",
+        pad_token="[PAD]",
+        cls_token="[CLS]",
+        mask_token="[MASK]",
+        tokenize_chinese_chars=True,
+        strip_accents=None,
+        **kwargs
+    ):
+        super().__init__(
+            tokenizer_file=tokenizer_file,
+            unk_token=unk_token,
+            sep_token=sep_token,
+            pad_token=pad_token,
+            cls_token=cls_token,
+            mask_token=mask_token,
+            tokenize_chinese_chars=tokenize_chinese_chars,
+            strip_accents=strip_accents,
+            **kwargs,
+        )
         if isinstance(vocab, msVocab):
             vocab_dict = vocab.vocab()
         elif isinstance(vocab, Vocab):
@@ -101,14 +124,12 @@ class BertTokenizer(PreTrainedTokenizer):
         else:
             raise ValueError(f'only support Vocab class from mindspore or mindnlp, but got {vocab}')
 
-        lower_case = kwargs.pop('lower_case', False)
         return_token = kwargs.pop('return_token', False)
-        super().__init__(**kwargs)
 
         if isinstance(vocab, str):
             self._tokenizer = Tokenizer.from_file(vocab)
         else:
-            self._tokenizer = BertWordPieceTokenizer(vocab=vocab_dict, lowercase=lower_case)
+            self._tokenizer = BertWordPieceTokenizer(vocab=vocab_dict, lowercase=do_lower_case)
 
         self.return_token = return_token
         self.implementation = Implementation.PY

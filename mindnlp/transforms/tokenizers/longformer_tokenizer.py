@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,53 +13,53 @@
 # limitations under the License.
 # ============================================================================
 """
-GPTTokenizer
+T5Tokenizer
 """
+
 import numpy as np
 from mindspore.dataset.text.transforms import Implementation
 from tokenizers import Tokenizer
 from mindnlp.abc import PreTrainedTokenizer
-from mindnlp.models.gpt.gpt_config import GPT_SUPPORT_LIST
-from mindnlp.configs import MINDNLP_TOKENIZER_CONFIG_URL_BASE
+from mindnlp.models.longformer.longformer_config import LONGFORMER_SUPPORT_LIST
+from mindnlp.configs import HF_TOKENIZER_CONFIG_URL_BASE
 
 PRETRAINED_VOCAB_MAP = {
-    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format('gpt', model) for model in GPT_SUPPORT_LIST
+    model: HF_TOKENIZER_CONFIG_URL_BASE.format(model) for model in LONGFORMER_SUPPORT_LIST
 }
-
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
-    "openai-gpt": 512,
+    "t5-small": 512,
+    "t5-base": 512,
+    "t5-large": 512,
+    "t5-3b": 512,
+    "t5-11b": 512,
 }
 
-
-class GPTTokenizer(PreTrainedTokenizer):
+class LongformerTokenizer(PreTrainedTokenizer):
     """
-    Tokenizer used for Bert text process.
-
-    Args:
-        vocab (Vocab): Vocabulary used to look up words.
-        return_token (bool): Whether to return token. If True: return tokens. False: return ids. Default: True.
-
+        Tokenizer used for T5 text process.
+        Args:
+            vocab (Vocab): Vocabulary used to look up words.
+            return_token (bool): Whether to return token. If True: return tokens. False: return ids. Default: True.
+        Examples:
+            >>> from mindspore.dataset import text
+            >>> from mindnlp.transforms import T5Tokenizer
+            >>> text = "Believing that faith can triumph over everything is in itself the greatest belief"
+            >>> tokenizer = T5Tokenizer.from_pretrained('t5-base')
+            >>> tokens = tokenizer.encode(text)
     """
 
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
-    def __init__(
-        self,
-        tokenizer_file=None,
-        unk_token="<unk>",
-        **kwargs
-    ):
-        super().__init__(unk_token=unk_token, **kwargs)
-
+    def __init__(self, vocab: str, **kwargs):
+        super().__init__()
         return_token = kwargs.pop('return_token', False)
 
-        if isinstance(tokenizer_file, str):
-            self._tokenizer = Tokenizer.from_file(tokenizer_file)
+        if isinstance(vocab, str):
+            self.tokenizer = Tokenizer.from_file(vocab)
         else:
-            raise ValueError(f'only support string, but got {tokenizer_file}')
-
+            raise ValueError(f'only support string, but got {vocab}')
         self.return_token = return_token
         self.implementation = Implementation.PY
 
@@ -84,11 +84,11 @@ class GPTTokenizer(PreTrainedTokenizer):
         """
         Execute method.
         """
-        text = self._convert_to_unicode(text_input)
-        output = self._tokenizer.encode(text)
+        text_input = self._convert_to_unicode(text_input)
+        tokens = self.tokenizer.encode(text_input)
         if self.return_token is True:
-            return np.array(output.tokens)
-        return np.array(output.ids)
+            return np.array(tokens.tokens)
+        return np.array(tokens.ids)
 
     def _convert_to_unicode(self, text_input):
         """Converts `text` to Unicode (if it's not already), assuming utf-8 input."""
@@ -101,3 +101,4 @@ class GPTTokenizer(PreTrainedTokenizer):
                 text_input = np.char.decode(text_input, "utf-8")
             return str(text_input)
         raise ValueError(f"Unsupported string type: {type(text_input)}, {text_input.dtype}")
+        

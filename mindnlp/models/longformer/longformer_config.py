@@ -22,6 +22,8 @@
 from typing import List, Union
 from mindnlp.abc import PreTrainedConfig
 
+LONGFORMER_SUPPORT_LIST = ["allenai/longformer-base-4096"]
+
 class LongformerConfig(PreTrainedConfig):
     r"""
     Example:

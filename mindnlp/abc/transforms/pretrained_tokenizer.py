@@ -32,17 +32,6 @@ class PreTrainedTokenizer(SpecialTokensMixin, PyTensorOperation):
     Pretrained Tokenizer abstract class.
     """
 
-    SPECIAL_TOKENS_ATTRIBUTES = [
-        "bos_token",
-        "eos_token",
-        "unk_token",
-        "sep_token",
-        "pad_token",
-        "cls_token",
-        "mask_token",
-        "additional_special_tokens",
-    ]
-
     _tokenizer: Tokenizer = None
 
     def __init__(self, **kwargs):
@@ -159,3 +148,9 @@ class PreTrainedTokenizer(SpecialTokensMixin, PyTensorOperation):
 
     def tokenize(self):
         """tokenize."""
+
+    def __len__(self) -> int:
+        """
+        Size of the full vocabulary with the added tokens.
+        """
+        return self._tokenizer.get_vocab_size(with_added_tokens=True)

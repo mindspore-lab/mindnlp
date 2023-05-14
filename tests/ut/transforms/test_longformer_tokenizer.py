@@ -12,36 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test the GPTTokenizer"""
+"""Test the T5Tokenizer"""
 
 import mindspore as ms
 from mindspore.dataset import GeneratorDataset
-from mindnlp.transforms import GPTTokenizer
+from mindnlp.transforms import LongformerTokenizer
 
-def test_gpt_tokenizer_from_pretrained():
-    """test GPTTokenizer from pretrained."""
-    texts = ['i make a small mistake when i\'m working! 床前明月光']
+def test_longformer_tokenizer_op():
+    """test T5Tokenizer from pretrained."""
+    texts = ['i make a small mistake when i\'m working!']
     test_dataset = GeneratorDataset(texts, 'text')
 
-    bert_tokenizer = GPTTokenizer.from_pretrained('openai-gpt', return_token=True)
-    test_dataset = test_dataset.map(operations=bert_tokenizer)
+    tokenizer = LongformerTokenizer.from_pretrained('allenai/longformer-base-4096', return_token=True)
+    test_dataset = test_dataset.map(operations=tokenizer)
     dataset_after = next(test_dataset.create_tuple_iterator())[0]
 
-    assert len(dataset_after) == 16
+    assert len(dataset_after) == 12
     assert dataset_after.dtype == ms.string
-
-def test_gpt_tokenizer_add_special_tokens():
-    """test add special tokens."""
-    gpt_tokenizer = GPTTokenizer.from_pretrained('openai-gpt')
-    cls_id = gpt_tokenizer.token_to_id("[CLS]")
-
-    assert cls_id == gpt_tokenizer.unk_token_id
-
-    add_num = gpt_tokenizer.add_special_tokens({
-        'cls_token': "[CLS]"
-    })
-
-    assert add_num == 1
-
-    cls_id = gpt_tokenizer.token_to_id("[CLS]")
-    assert cls_id == 40478
