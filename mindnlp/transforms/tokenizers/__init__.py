@@ -24,7 +24,8 @@ from .gpt_tokenizer import GPTTokenizer
 from .codegen_tokenizer import CodeGenTokenizer
 from .roberta_tokenizer import RobertaTokenizer
 from .longformer_tokenizer import LongformerTokenizer
+from .nezha_tokenizer import NezhaTokenizer
 
 __all__ = ['BasicTokenizer', 'BertTokenizer', 'T5Tokenizer', 'GPTTokenizer', 'GPT2Tokenizer', 'CodeGenTokenizer',
-           'RobertaTokenizer', 'LongformerTokenizer'
+           'RobertaTokenizer', 'LongformerTokenizer', 'NezhaTokenizer'
            ]

@@ -22,6 +22,7 @@ DEFAULT_ROOT = os.path.join(os.path.expanduser('~'), ".mindnlp")
 HF_CONFIG_URL_BASE = 'https://huggingface.co/{}/resolve/main/config.json'
 HF_TOKENIZER_CONFIG_URL_BASE = 'https://huggingface.co/{}/resolve/main/tokenizer.json'
 HF_MODEL_URL_BASE = 'https://huggingface.co/{}/resolve/main/pytorch_model.bin'
+HF_VOCAB_URL_BASE = 'https://huggingface.co/{}/resolve/main/vocab.txt'
 # for mindnlp obs storage
 MINDNLP_CONFIG_URL_BASE =  "https://download.mindspore.cn/toolkits/mindnlp/models/{}/{}/config.json"
 MINDNLP_MODEL_URL_BASE =  "https://download.mindspore.cn/toolkits/mindnlp/models/{}/{}/mindspore.ckpt"
