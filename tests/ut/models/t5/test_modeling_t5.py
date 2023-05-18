@@ -14,6 +14,7 @@
 # ============================================================================
 # pylint:disable=W0212
 """Test T5"""
+import gc
 import unittest
 import pytest
 import numpy as np
@@ -45,7 +46,7 @@ class TestModelingT5(unittest.TestCase):
         """
         Set up.
         """
-        self.input = None
+        self.config = T5Config(num_layers=2)
 
     def test_t5_layer_norm(self):
         r"""
@@ -63,44 +64,40 @@ class TestModelingT5(unittest.TestCase):
         r"""
         Test T5DenseActDense
         """
-        config = T5Config()
-        model = T5DenseActDense(config)
+        model = T5DenseActDense(self.config)
 
-        input_ids = Tensor(np.random.randn(2, config.d_model), mindspore.float32)
+        input_ids = Tensor(np.random.randn(2, self.config.d_model), mindspore.float32)
 
         outputs = model(input_ids)
-        assert outputs.shape == (2, config.d_model)
+        assert outputs.shape == (2, self.config.d_model)
 
     def test_t5_dense_gated_act_dense(self):
         r"""
         Test T5DenseGatedActDense
         """
-        config = T5Config()
-        model = T5DenseGatedActDense(config)
+        model = T5DenseGatedActDense(self.config)
 
-        input_ids = Tensor(np.random.randn(2, config.d_model), mindspore.float32)
+        input_ids = Tensor(np.random.randn(2, self.config.d_model), mindspore.float32)
 
         outputs = model(input_ids)
-        assert outputs.shape == (2, config.d_model)
+        assert outputs.shape == (2, self.config.d_model)
 
     def test_t5_layer_ff(self):
         r"""
         Test T5LayerFF
         """
-        config = T5Config()
-        model = T5LayerFF(config)
+        model = T5LayerFF(self.config)
 
-        input_ids = Tensor(np.random.randn(2, config.d_model), mindspore.float32)
+        input_ids = Tensor(np.random.randn(2, self.config.d_model), mindspore.float32)
 
         outputs = model(input_ids)
-        assert outputs.shape == (2, config.d_model)
+        assert outputs.shape == (2, self.config.d_model)
 
     def test_t5_attention(self):
         r"""
         Test T5Attention
         """
-        config = T5Config()
-        model = T5Attention(config)
+        model = T5Attention(self.config)
 
         input_ids = Tensor(np.random.randn(4, 64, 512), mindspore.float32)
 
@@ -112,8 +109,7 @@ class TestModelingT5(unittest.TestCase):
         r"""
         Test T5LayerSelfAttention
         """
-        config = T5Config()
-        model = T5LayerSelfAttention(config)
+        model = T5LayerSelfAttention(self.config)
 
         input_ids = Tensor(np.random.randn(4, 64, 512), mindspore.float32)
 
@@ -125,8 +121,7 @@ class TestModelingT5(unittest.TestCase):
         r"""
         Test T5LayerCrossAttention
         """
-        config = T5Config()
-        model = T5LayerCrossAttention(config)
+        model = T5LayerCrossAttention(self.config)
 
         input_ids = Tensor(np.random.randn(4, 64, 512), mindspore.float32)
 
@@ -138,8 +133,7 @@ class TestModelingT5(unittest.TestCase):
         r"""
         Test T5Block
         """
-        config = T5Config()
-        model = T5Block(config)
+        model = T5Block(self.config)
 
         input_ids = Tensor(np.random.randn(4, 64, 512), mindspore.float32)
 
@@ -152,7 +146,7 @@ class TestModelingT5(unittest.TestCase):
         Test T5PreTrainedModel._shift_right
         """
         decoder_start_token_id = 0
-        config = T5Config(decoder_start_token_id = decoder_start_token_id)
+        config = T5Config(num_layers=2, decoder_start_token_id = decoder_start_token_id)
         model = T5PreTrainedModel(config)
         input_ids = Tensor([[1, 2, 3, -100, -100, -100], [1, 2, 3, -100, -100, -100]])
 
@@ -163,7 +157,7 @@ class TestModelingT5(unittest.TestCase):
         r"""
         Test T5Stack
         """
-        config = T5Config(dropout_rate=0, return_dict = False)
+        config = T5Config(num_layers=2, dropout_rate=0, return_dict = False)
         embed = nn.Embedding(1024, 512)
         model = T5Stack(config, embed_tokens=embed)
         input_ids = Tensor(np.random.randint(0, 100, (1, 4)), dtype=mindspore.int64)
@@ -227,3 +221,6 @@ class TestModelingT5(unittest.TestCase):
     def test_from_pretrained_from_pt(self):
         """test from pt"""
         _ = T5Model.from_pretrained('t5-small', from_pt=True)
+
+    def tearDown(self) -> None:
+        gc.collect()

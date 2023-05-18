@@ -16,7 +16,7 @@
 # limitations under the License.
 # ============================================================================
 """Test GPT"""
-
+import gc
 import unittest
 import pytest
 import numpy as np
@@ -156,3 +156,6 @@ class TestModelingGPT(unittest.TestCase):
     def test_from_pretrained_from_pt(self):
         """test from pt"""
         _ = GPTModel.from_pretrained('openai-gpt', from_pt=True)
+
+    def tearDown(self) -> None:
+        gc.collect()

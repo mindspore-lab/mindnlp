@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=W0212
+# pylint: disable=no-name-in-module, ungrouped-imports
 """
-model nezha init
+Trainer for training tasks.
 """
 
-from . import nezha_config
-from .nezha import *
-from .nezha_config import *
+from .base import Trainer
 
-__all__ = []
-__all__.extend(nezha_config.__all__)
+__all__ = ['Trainer']
