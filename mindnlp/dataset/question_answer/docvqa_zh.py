@@ -22,7 +22,7 @@ import json
 
 from mindspore.dataset import GeneratorDataset
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load_dataset
+from mindnlp.dataset.register import load_dataset, process
 from mindnlp.configs import DEFAULT_ROOT
 
 from mindnlp.utils import ungz
