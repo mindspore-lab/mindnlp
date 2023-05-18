@@ -227,7 +227,7 @@ def _compute_global_attention_mask(input_ids, sep_token_id, before_sep_token=Tru
     question_end_index = _get_question_end_index(input_ids, sep_token_id)
     question_end_index = question_end_index.unsqueeze(dim=1)  # size: batch_size x 1
     # bool attention mask with True in locations of global attention
-    attention_mask = mindspore.numpy.arange(input_ids.shape[1])  # qbh delete device
+    attention_mask = ops.arange(input_ids.shape[1])  # qbh delete device
     if before_sep_token is True:
         attention_mask = (attention_mask.expand_as(input_ids) < question_end_index).to(mindspore.uint8)
     else:
@@ -317,7 +317,7 @@ class LongformerEmbeddings(nn.Cell):
         input_shape = inputs_embeds.size()[:-1]
         sequence_length = input_shape[1]
 
-        position_ids = mindspore.numpy.arange(
+        position_ids = ops.arange(
             self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=mindspore.int64  # delete device
         )
         return position_ids.unsqueeze(0).broadcast_to(input_shape)
@@ -637,7 +637,7 @@ class LongformerSelfAttention(nn.Cell):
             window_overlap * 2,
             hidden_states.size(2),
         ]
-        overlapping_chunks = mindspore.numpy.empty(chunk_size)
+        overlapping_chunks = ops.zeros(chunk_size)
         for chunk in range(chunk_size[1]):
             overlapping_chunks[:, chunk, :, :] = hidden_states[
                                                  :, chunk * window_overlap: chunk * window_overlap + 2 * window_overlap,
@@ -654,7 +654,7 @@ class LongformerSelfAttention(nn.Cell):
         beginning_input = input_tensor[:, :affected_seq_len, :, : affected_seq_len + 1]
         beginning_mask = ops.broadcast_to(beginning_mask, beginning_input.shape)
 
-        input_tensor[:, :affected_seq_len, :, : affected_seq_len + 1] = mindspore.numpy.full_like(
+        input_tensor[:, :affected_seq_len, :, : affected_seq_len + 1] = ops.full_like(
             beginning_input, -float("inf")
         ).where(beginning_mask.bool(), beginning_input)
 
@@ -807,7 +807,7 @@ class LongformerSelfAttention(nn.Cell):
         is_index_global_attn_nonzero = is_index_global_attn.nonzero()  # as_tuple=True
         is_index_global_attn_nonzero = tensor_to_tuple(is_index_global_attn_nonzero)
         # helper variable
-        is_local_index_global_attn = mindspore.numpy.arange(
+        is_local_index_global_attn = ops.arange(
             max_num_global_attn_indices
         ) < num_global_attn_indices.unsqueeze(dim=-1)
         # location of the non-padding values within global attention indices
