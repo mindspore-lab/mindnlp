@@ -15,7 +15,7 @@
 """
 Bert Model config
 """
-from mindnlp.abc.backbones.pretrained import PreTrainedConfig
+from mindnlp.abc import PreTrainedConfig
 from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
 
 

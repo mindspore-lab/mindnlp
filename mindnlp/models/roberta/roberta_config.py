@@ -14,12 +14,18 @@
 # ============================================================================
 """roberta config"""
 from mindnlp.models.bert import BertConfig
+from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
+
+ROBERTA_SUPPORT_LIST = [
+    'roberta-base',
+    'roberta-large',
+    'roberta-large-mnli',
+]
 
 CONFIG_ARCHIVE_MAP = {
-    'roberta-base': "https://s3.amazonaws.com/models.huggingface.co/bert/roberta-base-config.json",
-    'roberta-large': "https://s3.amazonaws.com/models.huggingface.co/bert/roberta-large-config.json",
-    'roberta-large-mnli': "https://s3.amazonaws.com/models.huggingface.co/bert/roberta-large-mnli-config.json",
+    model: MINDNLP_CONFIG_URL_BASE.format('roberta', model) for model in ROBERTA_SUPPORT_LIST
 }
+
 
 class RobertaConfig(BertConfig):
     """Roberta Config."""
