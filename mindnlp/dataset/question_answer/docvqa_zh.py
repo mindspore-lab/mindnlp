@@ -12,178 +12,130 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-
+"""
+Hugging Face docvqa_zh load function
+"""
 
 import os
 from typing import Union, Tuple
 import json
 import hashlib
 
-import datasets
-from datasets import load_dataset as hf_load
-from mindnlp.dataset.register import load_dataset, process
+import mindspore
+import mindspore.dataset as ds
+from mindspore.dataset import GeneratorDataset, transforms
+from mindnlp.utils.download import cache_file
+from mindnlp.dataset.register import load_dataset
 from mindnlp.configs import DEFAULT_ROOT
 
-logger = datasets.logging.get_logger(__name__)
-
-_DESCRIPTION = """\
-The training set from the competition of Insurance DocVQA organized by China Pacific Insurance. \
-The submission is now closed so we split original dataset into three parts for model evluation. \
-There are 4,187 training images, 500 validation images, and 500 test images.
-"""
-
-_URL = "https://bj.bcebos.com/paddlenlp/datasets/docvqa_zh.tar.gz"
+from mindnlp.utils import ungz
 
 
-def _get_md5(string):
-    """Get md5 value for string"""
-    hl = hashlib.md5()
-    hl.update(string.encode(encoding="utf-8"))
-    return hl.hexdigest()
-
-
-class DocVQAZhConfig(datasets.BuilderConfig):
-    """funsd dataset config"""
-
-    target_size: int = 1000
-    max_size: int = 1000
-
-    def __init__(self, **kwargs):
-
-        super(DocVQAZhConfig, self).__init__(**kwargs)
-
-
-class DocVQAZh(datasets.GeneratorBasedBuilder):
-    """funsd dataset builder"""
-
-    BUILDER_CONFIGS = [
-        DocVQAZhConfig(
-            name="docvqa_zh",
-            version=datasets.Version("1.0.0", ""),
-            description="Plain text",
-        ),
-    ]
-
-    def _info(self):
-        return datasets.DatasetInfo(
-            description=_DESCRIPTION,
-            features=datasets.Features(
-                {
-                    "name": datasets.Value("string"),
-                    "page_no": datasets.Value("int32"),
-                    "text": datasets.features.Sequence(datasets.Value("string")),
-                    "bbox": datasets.features.Sequence(datasets.features.Sequence(datasets.Value("int32"))),
-                    "segment_bbox": datasets.features.Sequence(datasets.features.Sequence(datasets.Value("int32"))),
-                    "segment_id": datasets.features.Sequence(datasets.Value("int32")),
-                    "image": datasets.Value("string"),
-                    "width": datasets.Value("int32"),
-                    "height": datasets.Value("int32"),
-                    "md5sum": datasets.Value("string"),
-                    "qas": datasets.features.Sequence(
-                        {
-                            "question_id": datasets.Value("int32"),
-                            "question": datasets.Value("string"),
-                            "answers": datasets.features.Sequence(
-                                {
-                                    "text": datasets.Value("string"),
-                                    "answer_start": datasets.Value("int32"),
-                                    "answer_end": datasets.Value("int32"),
-                                }
-                            ),
-                        }
-                    ),
-                }
-            ),
-            supervised_keys=None,
-            homepage="http://ailab.aiwin.org.cn/competitions/49",
-        )
-
-    def _split_generators(self, dl_manager):
-        dl_dir = dl_manager.download_and_extract(_URL)
-
-        return [
-            datasets.SplitGenerator(
-                name=datasets.Split.TRAIN,
-                gen_kwargs={"filepath": os.path.join(dl_dir, "docvqa_zh", "train.json")},
-            ),
-            datasets.SplitGenerator(
-                name=datasets.Split.VALIDATION,
-                gen_kwargs={"filepath": os.path.join(dl_dir, "docvqa_zh", "dev.json")},
-            ),
-            datasets.SplitGenerator(
-                name=datasets.Split.TEST,
-                gen_kwargs={"filepath": os.path.join(dl_dir, "docvqa_zh", "test.json")},
-            ),
-        ]
-
-    def _generate_examples(self, filepath):
-        """This function returns the examples in the raw (text) form."""
-        logger.info("Generating examples from = {}".format(filepath))
-        idx = 0
-        with open(filepath, "r") as fin:
-            for line in fin:
-                data = json.loads(line)
-                if "page_no" not in data:
-                    data["page_no"] = 0
-                for item in data["qas"]:
-                    if "question_id" not in item:
-                        item["question_id"] = -1
-                data["md5sum"] = _get_md5(data["image"])
-                yield idx, data
-                idx += 1
-
+URL = "https://bj.bcebos.com/paddlenlp/datasets/docvqa_zh.tar.gz"
                 
-                
-                
- class HFdocvqa_zh:
+class HFdocvqa_zh:
     """
     Hugging Face docvqa_zh dataset source
     """
-    def __init__(self, dataset_list) -> None:
-        self.dataset_list = dataset_list
-        self._label, self._text = [], []
+    def __init__(self, path):
+        self.path = path
+        self._id = []
+        self._name = []
+        self._page_no = []
+        self._text = []
+        self._bbox = []
+        self._segment_bbox = []
+        self._segment_id = []
+        self._image = []
+        self._width = []
+        self._height = []
+        self._md5sum = []
+        self._question = []
+        self._anwsers = []
+        self._s_idex = []
         self._load()
 
     def _load(self):
-        for every_dict in self.dataset_list:
-            self._label.append(every_dict['label'])
-            self._text.append(every_dict['text'])
+        idx = 0
+        with open(self.path, 'r', encoding="utf-8") as f:
+            for line in f:
+                example = json.loads(line)
+
+                if "page_no" not in example:
+                    example["page_no"] = 0
+                
+                name = example["name"]
+                page_no = example["page_no"]
+                text = example["text"]
+                bbox = example["bbox"]
+                segment_bbox = example["segment_bbox"]
+                segment_id = example["segment_id"]
+                image = example["image"]
+                width = example["width"]
+                height = example["height"]
+
+                qas = example["qas"]
+
+                for qa in qas:
+                    if "question_id" not in qa:
+                        qa["question_id"] = -1
+                    question_id = qa["question_id"]
+                    question = qa["question"]
+                    for ans in qa['answers']:
+                            self._id.append(question_id)
+                            self._name.append(name)
+                            self._page_no.append(page_no)
+                            self._text.append(text)
+                            self._bbox.append(bbox)
+                            self._segment_bbox.append(segment_bbox)
+                            self._segment_id.append(segment_id)
+                            self._image.append(image)
+                            self._width.append(width)
+                            self._height.append(height)
+
+                            self._text.append(text)
+                            self._question.append(question)
+                            answer = ans['text']
+                            self._anwsers.append(answer)
+                            s_idx = ans['answer_start']
+                            self._s_idex.append(s_idx)
+                            idx += 1
+                            break
+
 
     def __getitem__(self, index):
-        return self._text[index], self._label[index]
+        return self._id[index], self._text[index], self._question[index],\
+            self._anwsers[index], self._s_idex[index]
 
     def __len__(self):
-        return len(self._label)
+        return len(self._anwsers)
 
 
 @load_dataset.register
 def HF_Docvqa_zh(
     root: str = DEFAULT_ROOT,
-    split: Union[Tuple[str], str] = ("train", "dev", "test"),
-    shuffle=True,
+    split: Union[Tuple[str], str] = ('train', 'test', 'dev'),
+    proxies=None
 ):
-    r"""
-    Load the huggingface docvqa_zh dataset.
-
-    """
-
-    cache_dir = os.path.join(root, "datasets", "hf_datasets", "IMDB")
-    column_names = ["text", "label"]
-    datasets_list = []
-    mode_list = []
-
+    cache_dir = os.path.join(root, "datasets", "DocVQAZh")
+    file_list = [] 
+    datasets_list = [] 
     if isinstance(split, str):
-        mode_list.append(split)
-    else:
-        for s in split:
-            mode_list.append(s)
+        split = split.split()
+    
+    file_path, _ = cache_file(None, cache_dir=cache_dir, url=URL, md5sum=MD5,
+                              download_file_name="docvqa_zh.tar.gz", proxies=proxies)
+    ungz(file_path)
+    for s in split:
 
-    ds_list = hf_load("docvqa_zh")
-    for every_ds in ds_list:
-        datasets_list.append(GeneratorDataset(
-            source=HFimdb(every_ds),
-            column_names=column_names, shuffle=shuffle)
-        )
-    if len(mode_list) == 1:
+        file_list.append(file_path + s)
+     
+    for _, file in enumerate(file_list):
+        dataset = GeneratorDataset(source=docvqazh(file),
+                                   column_names=[
+                                       "id" ,"text", "question", "answers", "answer_start"],
+                                   shuffle=False)
+        datasets_list.append(dataset)
+    if len(file_list) == 1:
         return datasets_list[0]
     return datasets_list
