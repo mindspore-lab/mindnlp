@@ -29,7 +29,7 @@ from mindnlp.utils import ungz
 
 URL = "https://bj.bcebos.com/paddlenlp/datasets/docvqa_zh.tar.gz"
 
-class HFdocvqa_zh:
+class docvqazh:
     """
     Hugging Face docvqa_zh dataset source
     """
@@ -112,11 +112,11 @@ def HF_Docvqa_zh(
     proxies=None
 ):
     cache_dir = os.path.join(root, "datasets", "DocVQAZh")
-    file_list = [] 
-    datasets_list = [] 
+    file_list = []
+    datasets_list = []
     if isinstance(split, str):
         split = split.split()
-    file_path, _ = cache_file(None, cache_dir=cache_dir, url=URL, md5sum=MD5,
+    file_path, _ = cache_file(None, cache_dir=cache_dir, url=URL,
                               download_file_name="docvqa_zh.tar.gz", proxies=proxies)
     ungz(file_path)
     for s in split:
