@@ -14,9 +14,11 @@
 # ============================================================================
 """Test Glove Vocab"""
 
+import pytest
 from mindnlp import Vocab
 
 
+@pytest.mark.download
 def test_vocab_glove_from_pretrained():
     """test glove vocab from URL"""
 

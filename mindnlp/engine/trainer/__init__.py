@@ -1,4 +1,4 @@
-# Copyright 2023 Huawei Technologies Co., Ltd
+# Copyright 2022 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,17 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Fasttext Vocab"""
-import pytest
-from mindnlp import Vocab
+# pylint: disable=W0212
+# pylint: disable=no-name-in-module, ungrouped-imports
+"""
+Trainer for training tasks.
+"""
 
+from .base import Trainer
 
-@pytest.mark.download
-def test_vocab_fasttext_from_pretrained():
-    """test fasttext vocab from URL"""
-
-    vocab = Vocab.from_pretrained("fasttext")
-    vocab_subword = Vocab.from_pretrained("fasttext-subword")
-
-    assert len(vocab) == 999994 + 2
-    assert len(vocab_subword) == 999994 + 2
+__all__ = ['Trainer']
