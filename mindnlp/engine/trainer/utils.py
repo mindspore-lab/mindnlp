@@ -16,10 +16,11 @@
 utils for trainer.
 """
 
+from mindspore import ops
 from mindspore.ops import value_and_grad
 
 from mindnlp import ms_jit
-from mindnlp._legacy.amp import all_finite
+from mindnlp._legacy.amp import all_finite, init_status
 
 def get_default_forward_fn_with_loss_fn(network, loss_fn, loss_scaler):
     """get default forward function with loss function"""
@@ -59,28 +60,34 @@ def get_default_train_step_fn(forward_fn, optimizer, loss_scaler, check_gradient
 
     def default_run_step(inputs, labels):
         """Core process of each step, including the forward propagation process and back propagation of data."""
+        status = init_status()
+        inputs = ops.depend(inputs, status)
         loss, grads = grad_fn(inputs, labels)
         loss = loss_scaler.unscale(loss)
         if check_gradients:
-            status = all_finite(grads)
-            if status:
+            is_finite = all_finite(grads, status)
+            if is_finite:
                 grads = loss_scaler.unscale(grads)
-                optimizer(grads)
+                loss = ops.depend(loss, optimizer(grads))
+            loss = ops.depend(loss, loss_scaler.adjust(is_finite))
         else:
-            optimizer(grads)
+            loss = ops.depend(loss, optimizer(grads))
         return loss
 
     def default_run_step_for_obj_net(inputs):
         """Core process of each step, including the forward propagation process and back propagation of data."""
+        status = init_status()
+        inputs = ops.depend(inputs, status)
         loss, grads = grad_fn(inputs)
         loss = loss_scaler.unscale(loss)
         if check_gradients:
-            status = all_finite(grads)
-            if status:
+            is_finite = all_finite(grads, status)
+            if is_finite:
                 grads = loss_scaler.unscale(grads)
-                optimizer(grads)
+                loss = ops.depend(loss, optimizer(grads))
+            loss = ops.depend(loss, loss_scaler.adjust(is_finite))
         else:
-            optimizer(grads)
+            loss = ops.depend(loss, optimizer(grads))
         return loss
 
     run_step = default_run_step_for_obj_net if for_object_net else default_run_step

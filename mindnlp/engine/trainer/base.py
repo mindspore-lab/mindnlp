@@ -28,15 +28,9 @@ from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContex
 from mindnlp.engine.callbacks.earlystop_callback import EarlyStopCallback
 from mindnlp.engine.callbacks.best_model_callback import BestModelCallback
 from mindnlp.engine.evaluator import Evaluator
-from mindnlp._legacy.amp import NoLossScaler
+from mindnlp._legacy.amp import auto_mixed_precision, StaticLossScaler, NoLossScaler
 from mindnlp.engine.trainer.utils import get_default_forward_fn_with_loss_fn, \
     get_default_forward_fn_without_loss_fn, get_default_train_step_fn
-
-from mindnlp.utils import less_min_pynative_first
-if less_min_pynative_first:
-    from mindnlp._legacy.amp import auto_mixed_precision, StaticLossScaler
-else:
-    from mindspore.amp import auto_mixed_precision, StaticLossScaler
 
 
 class Trainer:
