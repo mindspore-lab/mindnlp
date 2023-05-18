@@ -20,7 +20,7 @@ import os
 import unittest
 import shutil
 import pytest
-from mindnlp.dataset import HF_Docvqa_zh
+from mindnlp.dataset import HF_DOCVQAZH
 
 
 class TestHFDocvqazh(unittest.TestCase):
@@ -41,18 +41,18 @@ class TestHFDocvqazh(unittest.TestCase):
     def test_docvqa_zh(self):
         """Test HF_Docvqa_zh"""
         num_lines = {
-            "train": 4,187,
+            "train": 4187,
             "dev": 500,
             "test": 500,
         }
-        dataset_train, dataset_dev, dataset_test = HF_Docvqa_zh(root=self.root, split=('train', 'dev', 'test'))
+        dataset_train, dataset_dev, dataset_test = HF_DOCVQAZH(root=self.root, split=('train', 'dev', 'test'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = HF_Docvqa_zh(root=self.root, split='train')
-        dataset_dev = HF_Docvqa_zh(root=self.root, split='dev')
-        dataset_test = HF_Docvqa_zh(root=self.root, split='test')
+        dataset_train = HF_DOCVQAZH(root=self.root, split='train')
+        dataset_dev = HF_DOCVQAZH(root=self.root, split='dev')
+        dataset_test = HF_DOCVQAZH(root=self.root, split='test')
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
