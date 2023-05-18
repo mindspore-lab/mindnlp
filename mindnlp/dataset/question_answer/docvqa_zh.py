@@ -19,20 +19,16 @@ Hugging Face docvqa_zh load function
 import os
 from typing import Union, Tuple
 import json
-import hashlib
 
-import mindspore
-import mindspore.dataset as ds
-from mindspore.dataset import GeneratorDataset, transforms
+from mindspore.dataset import GeneratorDataset
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.register import load_dataset
 from mindnlp.configs import DEFAULT_ROOT
 
 from mindnlp.utils import ungz
 
-
 URL = "https://bj.bcebos.com/paddlenlp/datasets/docvqa_zh.tar.gz"
-                
+
 class HFdocvqa_zh:
     """
     Hugging Face docvqa_zh dataset source
@@ -63,7 +59,6 @@ class HFdocvqa_zh:
 
                 if "page_no" not in example:
                     example["page_no"] = 0
-                
                 name = example["name"]
                 page_no = example["page_no"]
                 text = example["text"]
@@ -82,26 +77,25 @@ class HFdocvqa_zh:
                     question_id = qa["question_id"]
                     question = qa["question"]
                     for ans in qa['answers']:
-                            self._id.append(question_id)
-                            self._name.append(name)
-                            self._page_no.append(page_no)
-                            self._text.append(text)
-                            self._bbox.append(bbox)
-                            self._segment_bbox.append(segment_bbox)
-                            self._segment_id.append(segment_id)
-                            self._image.append(image)
-                            self._width.append(width)
-                            self._height.append(height)
+                        self._id.append(question_id)
+                        self._name.append(name)
+                        self._page_no.append(page_no)
+                        self._text.append(text)
+                        self._bbox.append(bbox)
+                        self._segment_bbox.append(segment_bbox)
+                        self._segment_id.append(segment_id)
+                        self._image.append(image)
+                        self._width.append(width)
+                        self._height.append(height)
 
-                            self._text.append(text)
-                            self._question.append(question)
-                            answer = ans['text']
-                            self._anwsers.append(answer)
-                            s_idx = ans['answer_start']
-                            self._s_idex.append(s_idx)
-                            idx += 1
-                            break
-
+                        self._text.append(text)
+                        self._question.append(question)
+                        answer = ans['text']
+                        self._anwsers.append(answer)
+                        s_idx = ans['answer_start']
+                        self._s_idex.append(s_idx)
+                        idx += 1
+                        break
 
     def __getitem__(self, index):
         return self._id[index], self._text[index], self._question[index],\
@@ -122,14 +116,11 @@ def HF_Docvqa_zh(
     datasets_list = [] 
     if isinstance(split, str):
         split = split.split()
-    
     file_path, _ = cache_file(None, cache_dir=cache_dir, url=URL, md5sum=MD5,
                               download_file_name="docvqa_zh.tar.gz", proxies=proxies)
     ungz(file_path)
     for s in split:
-
         file_list.append(file_path + s)
-     
     for _, file in enumerate(file_list):
         dataset = GeneratorDataset(source=docvqazh(file),
                                    column_names=[
