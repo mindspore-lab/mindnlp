@@ -18,6 +18,7 @@
 # pylint: disable=C0103
 # pylint: disable=C0415
 # pylint: disable=W0223
+# pylint: disable=E0401
 
 """MindNLP gpt model"""
 import os
