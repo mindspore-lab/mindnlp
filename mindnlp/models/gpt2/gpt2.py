@@ -15,6 +15,7 @@
 # pylint: disable=W0223
 # pylint: disable=C0103
 # pylint: disable=C0415
+# pylint: disable=E0401
 """MindNLP gpt2 model"""
 
 from typing import Optional, Tuple

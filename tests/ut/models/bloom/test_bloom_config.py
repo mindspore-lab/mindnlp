@@ -12,17 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Fasttext Vocab"""
+"""Test Bloom Config"""
+
+import gc
+import unittest
 import pytest
-from mindnlp import Vocab
+
+from mindnlp.models.bloom import BloomConfig
 
 
-@pytest.mark.download
-def test_vocab_fasttext_from_pretrained():
-    """test fasttext vocab from URL"""
+class TestBloomConfig(unittest.TestCase):
+    r"""
+    Test Bloom Config
+    """
+    @pytest.mark.download
+    def test_bloom_config(self):
+        r"""
+        Test Bloom Config from_pretrained
+        """
 
-    vocab = Vocab.from_pretrained("fasttext")
-    vocab_subword = Vocab.from_pretrained("fasttext-subword")
+        config = BloomConfig.from_pretrained('bigscience/bloom-560m')
+        assert config.n_layer == 24
 
-    assert len(vocab) == 999994 + 2
-    assert len(vocab_subword) == 999994 + 2
+    def tearDown(self) -> None:
+        gc.collect()

@@ -12,17 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Fasttext Vocab"""
-import pytest
-from mindnlp import Vocab
+"""
+Bloom Model.
+"""
+from . import bloom, bloom_config
+from .bloom import *
+from .bloom_config import *
 
-
-@pytest.mark.download
-def test_vocab_fasttext_from_pretrained():
-    """test fasttext vocab from URL"""
-
-    vocab = Vocab.from_pretrained("fasttext")
-    vocab_subword = Vocab.from_pretrained("fasttext-subword")
-
-    assert len(vocab) == 999994 + 2
-    assert len(vocab_subword) == 999994 + 2
+__all__ = []
+__all__.extend(bloom.__all__)
+__all__.extend(bloom_config.__all__)
