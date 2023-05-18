@@ -106,7 +106,7 @@ class HFdocvqazh:
 
 
 @load_dataset.register
-def HF_DOCVQAZH(
+def HFDocVQAZh(
     root: str = DEFAULT_ROOT,
     split: Union[Tuple[str], str] = ('train', 'test', 'dev'),
     proxies=None
