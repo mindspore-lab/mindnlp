@@ -65,3 +65,11 @@ def test_bert_tokenizer_from_pretrained():
 
     assert len(dataset_after) == 21
     assert dataset_after.dtype == ms.string
+
+
+def test_bert_tokenizer_add_special_tokens():
+    """test add special tokens."""
+    bert_tokenizer = BertTokenizer.from_pretrained('bert-base-chinese')
+    cls_id = bert_tokenizer.token_to_id("[CLS]")
+
+    assert cls_id is not None

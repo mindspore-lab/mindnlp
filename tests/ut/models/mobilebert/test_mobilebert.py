@@ -18,6 +18,7 @@
 """
 Test MobileBert
 """
+import gc
 import unittest
 
 import mindspore
@@ -336,3 +337,6 @@ class TestMobileBert(unittest.TestCase):
         assert outputs[0].shape == (2, 8, 2)
         outputs = model(input_ids, return_dict=True)
         assert outputs[1].shape == (2, 8, 2)
+
+    def tearDown(self) -> None:
+        gc.collect()

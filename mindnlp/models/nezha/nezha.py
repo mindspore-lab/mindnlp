@@ -601,15 +601,7 @@ class NezhaPreTrainedModel(PreTrainedModel):
         pass
 
     # TODO
-    def init_model_weights(self):
-        pass
-
-    # TODO
     def resize_position_embeddings(self):
-        pass
-
-    # TODO
-    def save(self):
         pass
 
     # TODO

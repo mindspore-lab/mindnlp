@@ -13,6 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """Test CodeGen"""
+import gc
 import unittest
 
 import mindspore
@@ -88,3 +89,6 @@ class TestModelingCodeGen(unittest.TestCase):
 
         input_ids = model(input_ids)
         assert input_ids[0].shape == (2, 2, 512, 504)
+
+    def tearDown(self) -> None:
+        gc.collect()

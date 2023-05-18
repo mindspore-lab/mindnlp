@@ -16,6 +16,9 @@
 model nezha init
 """
 
-
+from . import nezha_config
 from .nezha import *
 from .nezha_config import *
+
+__all__ = []
+__all__.extend(nezha_config.__all__)

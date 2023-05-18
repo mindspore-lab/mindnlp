@@ -16,6 +16,7 @@
 # ============================================================================
 # pylint:disable=R0904
 """Test LUKE"""
+import gc
 import unittest
 
 import mindspore
@@ -34,14 +35,13 @@ class TestModelingLUKE(unittest.TestCase):
         """
         Set up.
         """
-        self.input = None
+        self.config = luke_config.LukeConfig(num_hidden_layers=2)
 
     def test_luke_embeddings(self):
         r"""
         Test LukeEmbeddings
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeEmbeddings(config)
+        model = luke.LukeEmbeddings(self.config)
         input_ids = Tensor(np.random.randn(1, 2), mindspore.int32)
         outputs = model(input_ids)
         assert outputs.shape == (1, 2, 128)
@@ -50,8 +50,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukeEntityEmbeddings
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeEmbeddings(config)
+        model = luke.LukeEmbeddings(self.config)
         entity_ids = Tensor(np.random.randn(1, ), mindspore.int32)
         position_ids = Tensor(np.random.randn(1, 2), mindspore.int32)
         outputs = model(entity_ids, position_ids)
@@ -61,8 +60,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukeSelfAttention
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeSelfAttention(config)
+        model = luke.LukeSelfAttention(self.config)
         word_hidden_states = Tensor(np.random.randn(1, 2, 128), mindspore.float32)
         entity_hidden_states = Tensor(np.random.randn(1, 4, 128), mindspore.float32)
         outputs = model(word_hidden_states, entity_hidden_states)
@@ -73,8 +71,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukeSelfOutput
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeSelfOutput(config)
+        model = luke.LukeSelfOutput(self.config)
         hidden_states = Tensor(np.random.randn(2, 128), mindspore.float32)
         input_tensor = Tensor(np.random.randn(2, 128), mindspore.float32)
         outputs = model(hidden_states, input_tensor)
@@ -84,8 +81,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukeAttention
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeAttention(config)
+        model = luke.LukeAttention(self.config)
         word_hidden_states = Tensor(np.random.randn(1, 2, 128), mindspore.float32)
         entity_hidden_states = Tensor(np.random.randn(1, 4, 128), mindspore.float32)
         outputs = model(word_hidden_states, entity_hidden_states)
@@ -96,8 +92,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukeIntermediate
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeIntermediate(config)
+        model = luke.LukeIntermediate(self.config)
         hidden_states = Tensor(np.random.randn(1, 128), mindspore.float32)
         output = model(hidden_states)
         assert output.shape == (1, 3072)
@@ -106,8 +101,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukeOutput
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeOutput(config)
+        model = luke.LukeOutput(self.config)
         hidden_states = Tensor(np.random.randn(1, 3072), mindspore.float32)
         input_tensor = Tensor(np.random.rand(2, 128), mindspore.float32)
         output = model(hidden_states, input_tensor)
@@ -117,8 +111,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukeLayer
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeLayer(config)
+        model = luke.LukeLayer(self.config)
         word_hidden_states = Tensor(np.random.randn(1, 2, 128), mindspore.float32)
         entity_hidden_states = Tensor(np.random.randn(1, 4, 128), mindspore.float32)
         outputs = model(word_hidden_states, entity_hidden_states)
@@ -129,8 +122,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         test_LukeEncoder
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeEncoder(config)
+        model = luke.LukeEncoder(self.config)
         word_hidden_states = Tensor(np.random.randn(1, 2, 128), mindspore.float32)
         entity_hidden_states = Tensor(np.random.randn(1, 4, 128), mindspore.float32)
         outputs = model(word_hidden_states, entity_hidden_states, return_dict=False)
@@ -141,8 +133,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukePooler
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukePooler(config)
+        model = luke.LukePooler(self.config)
         hidden_states = Tensor(np.random.randn(128, 128, 128), mindspore.float32)
         output = model(hidden_states)
         assert output.shape == (128, 128)
@@ -151,8 +142,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test EntityPredictionHeadTransform
         """
-        config = luke_config.LukeConfig()
-        model = luke.EntityPredictionHeadTransform(config)
+        model = luke.EntityPredictionHeadTransform(self.config)
         hidden_states = Tensor(np.random.randn(2, 128), mindspore.float32)
         output = model(hidden_states)
         assert output.shape == (2, 256)
@@ -161,8 +151,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test EntityPredictionHead
         """
-        config = luke_config.LukeConfig()
-        model = luke.EntityPredictionHead(config)
+        model = luke.EntityPredictionHead(self.config)
         hidden_states = Tensor(np.random.randn(2, 128), dtype=mindspore.float32)
         output = model(hidden_states)
         assert output.shape == (2, 500)
@@ -171,8 +160,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukeModel
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeModel(config)
+        model = luke.LukeModel(self.config)
         input_ids = Tensor(np.random.randint(0, 10, (2, 4)), dtype=mindspore.int32)
         outputs = model(input_ids, return_dict=False)
         assert outputs[0].shape == (2, 4, 128)
@@ -181,8 +169,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukeLMHead
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeLMHead(config)
+        model = luke.LukeLMHead(self.config)
         features = Tensor(np.random.randn(2, 128), mindspore.float32)
         output = model(features)
         assert output.shape == (2, 100)
@@ -191,8 +178,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukeForMaskedLM
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeForMaskedLM(config)
+        model = luke.LukeForMaskedLM(self.config)
         input_ids = Tensor(np.random.randint(0, 10, (2, 4)), mindspore.int32)
         outputs = model(input_ids)
         assert outputs[0].shape == (2, 4, 100)
@@ -201,8 +187,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukeForEntityClassification
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeForEntityClassification(config)
+        model = luke.LukeForEntityClassification(self.config)
         input_ids = Tensor(np.random.randint(0, 10, (2, 128)), mindspore.int32)
         entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
         position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
@@ -213,8 +198,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukeForEntityPairClassification
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeForEntityPairClassification(config)
+        model = luke.LukeForEntityPairClassification(self.config)
         input_ids = Tensor(np.random.randint(0, 10, (2, 128)), mindspore.int32)
         entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
         position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
@@ -225,8 +209,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukeForEntitySpanClassification
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeForEntitySpanClassification(config)
+        model = luke.LukeForEntitySpanClassification(self.config)
         input_ids = Tensor(np.random.randint(0, 5, (2, 5)), mindspore.int32)
         entity_ids = Tensor(np.random.randint(0, 5, (2, 2)), mindspore.int32)
         position_ids = Tensor(np.random.randint(0, 5, (2, 2)), mindspore.int32)
@@ -240,8 +223,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukeForSequenceClassification
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeForSequenceClassification(config)
+        model = luke.LukeForSequenceClassification(self.config)
         input_ids = Tensor(np.random.randint(0, 10, (2, 5)), mindspore.int32)
         entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
         position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
@@ -252,8 +234,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukeForTokenClassification
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeForTokenClassification(config)
+        model = luke.LukeForTokenClassification(self.config)
         input_ids = Tensor(np.random.randint(0, 10, (2, 5)), mindspore.int32)
         entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
         position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
@@ -264,8 +245,7 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukeForQuestionAnswering
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeForQuestionAnswering(config)
+        model = luke.LukeForQuestionAnswering(self.config)
         input_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
         entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
         position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
@@ -276,10 +256,12 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukeForMultipleChoice
         """
-        config = luke_config.LukeConfig()
-        model = luke.LukeForMultipleChoice(config)
+        model = luke.LukeForMultipleChoice(self.config)
         input_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
         entity_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
         position_ids = Tensor(np.random.randint(0, 10, (2, 2)), mindspore.int32)
         outputs = model(input_ids=input_ids, entity_ids=entity_ids, entity_position_ids=position_ids)
         assert outputs[0].shape == (1, 2)
+
+    def tearDown(self) -> None:
+        gc.collect()

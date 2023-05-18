@@ -84,7 +84,7 @@ def kl_div(inputs, target, reduction='none', log_target=False):
 def split(x, size, axis=0):
     """inner split"""
     if less_min_api_compatible:
-        num = int(x.shape[axis] / size)
+        num = x.shape[axis] // size
         return ops.split(x, axis, num)
     return ops.split(x, split_size_or_sections=size, axis=axis)
 

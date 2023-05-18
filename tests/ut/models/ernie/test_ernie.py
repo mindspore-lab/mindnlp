@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """Test Ernie"""
-
+import gc
 import unittest
 import numpy as np
 import mindspore
@@ -49,3 +49,6 @@ class TestModelingErnie(unittest.TestCase):
         outputs = model(input_ids=input_ids)
         assert outputs[0].shape == (1, 20)
         assert outputs[1].shape == (1, 20)
+
+    def tearDown(self) -> None:
+        gc.collect()

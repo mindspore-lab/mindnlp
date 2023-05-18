@@ -12,56 +12,44 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Sequence-to-vector basic model"""
+"""Sequence-to-sequence basic model"""
 # pylint: disable=abstract-method
 # pylint: disable=arguments-differ
-from mindspore import ops
-from mindnlp.abc.backbones.base import BaseModel
-from mindnlp._legacy.nn import Dropout
+from .base_model import BaseModel
 
-class Seq2vecModel(BaseModel):
+
+class Seq2seqModel(BaseModel):
     r"""
-    Basic class for seq2vec models
+    Basic class for seq2seq models
 
     Args:
         encoder (EncoderBase): The encoder.
-        head (nn.Cell): The module to process encoder output.
-        dropout (float): The drop out rate, greater than 0 and less equal than 1.
-            If None, not dropping out input units. Drfault: None.
+        decoder (DecoderBase): The decoder.
     """
 
-    def __init__(self, encoder, head, dropout: float = None):
+    def __init__(self, encoder, decoder):
         super().__init__()
         self.encoder = encoder
-        self.head = head
-        if dropout is None:
-            self.dropout = None
-        else:
-            self.dropout = Dropout(p=dropout)
+        self.decoder = decoder
 
-    def construct(self, src_tokens, mask=None):
+    def construct(self, src_tokens, tgt_tokens, src_length, mask=None):
         """
         Construct method.
 
         Args:
             src_tokens (Tensor): Tokens of source sentences with shape [batch, src_len].
+            tgt_tokens (Tensor): Tokens of targets with shape [batch, src_len].
+            src_length (Tensor): Lengths of each source sentence with shape [batch].
             mask (Tensor): Its elements identify whether the corresponding input token is padding or not.
                 If True, not padding token. If False, padding token. Defaults to None.
 
         Returns:
-            Tensor, the result vector of seq2vec model with shape [batch, label_num].
+            Tensor, The result vector of seq2seq model with shape [batch, max_len, vocab_size].
         """
-        if mask is None:
-            mask = self._gen_mask(src_tokens)
+        encoder_out = self.encoder(src_tokens, src_length=src_length, mask=mask)
 
-        context = self.get_context(src_tokens, mask)
-
-        if self.dropout is not None:
-            context = self.dropout(context)
-
-        result = self.head(context)
-        # TODO: Whether to add reduction
-        return result
+        decoder_out = self.decoder(tgt_tokens, encoder_out=encoder_out)
+        return decoder_out
 
     def get_context(self, src_tokens, mask=None):
         """
@@ -75,10 +63,32 @@ class Seq2vecModel(BaseModel):
         Returns:
             Union[Tensor, tuple], the output of encoder.
         """
-        if mask is None:
-            mask = self._gen_mask(src_tokens)
         return self.encoder(src_tokens, mask=mask)
 
-    def _gen_mask(self, inputs):
-        """Generate mask tensor"""
-        return ops.ones_like(inputs)
+    def extract_features(self, src_tokens, tgt_tokens, src_length):
+        """
+        Extract features of encoder output.
+
+        Args:
+            src_tokens (Tensor): Tokens of source sentences with shape [batch, src_len].
+            tgt_tokens (Tensor): Tokens of targets with shape [batch, src_len].
+            src_length (Tensor): Lengths of each source sentence with shape [batch].
+
+        Returns:
+            Tensor, the extracted features.
+        """
+        encoder_out = self.encoder(src_tokens, src_length=src_length)
+        features = self.decoder.extract_features(tgt_tokens, encoder_out=encoder_out)
+        return features
+
+    def output_layer(self, features):
+        """
+        Project features to the default output size.
+
+        Args:
+            features (Tensor): The extracted features.
+
+        Returns:
+            Tensor, the output of decoder.
+        """
+        return self.decoder.output_layer(features)

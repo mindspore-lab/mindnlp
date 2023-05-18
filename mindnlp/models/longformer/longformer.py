@@ -1,5 +1,6 @@
 # coding=utf-8
 # Copyright 2020 The Allen Institute for AI team and The HuggingFace Inc. team.
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch Longformer model."""
+"""MindSpore Longformer model."""
 # pylint: disable=relative-beyond-top-level
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=too-many-locals
@@ -22,7 +23,6 @@
 # pylint: disable=C0302
 import inspect
 import math
-import os
 from typing import List, Set, Tuple, Callable, Optional, Union
 
 import numpy as np
@@ -853,18 +853,14 @@ class LongformerSelfAttention(nn.Cell):
 
         attn_probs_from_global_key = attn_probs_from_global_key.swapaxes(1, 3)
 
-        # print(type(is_local_index_no_global_attn_nonzero))
-        # print(is_local_index_no_global_attn_nonzero)
-        # print(type(attn_probs_from_global_key))
-        # print(attn_probs_from_global_key.shape)
-
         if is_local_index_no_global_attn_nonzero[0].shape[0] != 0:
-            attn_probs_from_global_key[
-                is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
-            ] = Tensor(np.finfo(
-                mindspore.dtype_to_nptype(attn_probs_from_global_key.dtype)).min,
-                       dtype=attn_probs_from_global_key.dtype
-                       )
+            pass
+        #     attn_probs_from_global_key[
+        #         is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
+        #     ] = Tensor(np.finfo(
+        #         mindspore.dtype_to_nptype(attn_probs_from_global_key.dtype)).min,
+        #                dtype=attn_probs_from_global_key.dtype
+        #                )
 
         attn_probs_from_global_key = attn_probs_from_global_key.swapaxes(1, 3)
 
@@ -970,12 +966,13 @@ class LongformerSelfAttention(nn.Cell):
 
         global_attn_scores = global_attn_scores.swapaxes(1, 2)
         if is_local_index_no_global_attn_nonzero[0].shape[0] != 0:
-            global_attn_scores[
-                is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
-            ] = mindspore.Tensor(np.finfo(
-                mindspore.dtype_to_nptype(global_attn_scores.dtype)).min,
-                                 dtype=global_attn_scores.dtype
-                                 )
+            pass
+        #     global_attn_scores[
+        #         is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
+        #     ] = mindspore.Tensor(np.finfo(
+        #         mindspore.dtype_to_nptype(global_attn_scores.dtype)).min,
+        #                          dtype=global_attn_scores.dtype
+        #                          )
         global_attn_scores = global_attn_scores.swapaxes(1, 2)
 
         global_attn_scores = global_attn_scores.masked_fill(
@@ -1345,9 +1342,6 @@ class LongformerPreTrainedModel(PreTrainedModel):
     models.
     """
 
-    def init_model_weights(self):
-        pass
-
     def get_input_embeddings(self) -> "nn.Cell":
         pass
 
@@ -1358,9 +1352,6 @@ class LongformerPreTrainedModel(PreTrainedModel):
         pass
 
     def get_position_embeddings(self):
-        pass
-
-    def save(self, save_dir: Union[str, os.PathLike]):
         pass
 
     config_class = LongformerConfig

@@ -22,21 +22,22 @@ from inspect import signature
 from tqdm.autonotebook import tqdm
 from mindspore import nn, Tensor
 from mindspore import log, mutable
-from mindspore.ops import value_and_grad
-from mindspore.dataset.engine import Dataset
-from mindnlp import ms_jit
+from mindspore.dataset.engine import Dataset, TakeDataset
 from mindnlp.abc import Callback, Metric
 from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContext
 from mindnlp.engine.callbacks.earlystop_callback import EarlyStopCallback
 from mindnlp.engine.callbacks.best_model_callback import BestModelCallback
 from mindnlp.engine.evaluator import Evaluator
 from mindnlp._legacy.amp import NoLossScaler
+from mindnlp.engine.trainer.utils import get_default_forward_fn_with_loss_fn, \
+    get_default_forward_fn_without_loss_fn, get_default_train_step_fn
 
 from mindnlp.utils import less_min_pynative_first
 if less_min_pynative_first:
-    from mindnlp._legacy.amp import auto_mixed_precision, StaticLossScaler, all_finite
+    from mindnlp._legacy.amp import auto_mixed_precision, StaticLossScaler
 else:
-    from mindspore.amp import auto_mixed_precision, StaticLossScaler, all_finite
+    from mindspore.amp import auto_mixed_precision, StaticLossScaler
+
 
 class Trainer:
     r"""
@@ -83,17 +84,36 @@ class Trainer:
         self.args = args
         epochs = kwargs.pop('epochs', None)
         jit = kwargs.pop('jit', False)
-        check_gradients = kwargs.pop('check_gradients', True)
+        check_gradients = kwargs.pop('check_gradients', False)
 
+        # deprecated args
+        self.jit = jit
+        self.check_gradients = check_gradients
+
+        if isinstance(train_dataset, TakeDataset):
+            log.warning("The `train_dataset` is split after the 'batch' operation, "
+                        "which will slow down the training speed and recompile the neural network"
+                        "please split it first, and then use 'map' operation.")
+
+        # model components
         self.network = network
-        self.train_dataset = train_dataset
-        self.epochs = epochs
+        self.loss_fn = loss_fn
+        self.optimizer = optimizer
+        self.forward_fn = None
+        self.train_fn = None
 
-        self.loss_scaler = NoLossScaler()
         if loss_fn is None:
             self.obj_network = True
         else:
             self.obj_network = False
+
+        # dataset
+        self.train_dataset = train_dataset
+        self.epochs = epochs
+
+        # amp settings
+        self.amp_level = 'O0'
+        self.loss_scaler = NoLossScaler()
 
         self.cur_epoch_nums = 0
         self.cur_step_nums = 0
@@ -103,55 +123,15 @@ class Trainer:
         self._prepare_eval(eval_dataset, metrics, callbacks, jit)
 
         self.callback_manager = CallbackManager(callbacks)
-        self.train_fn = self._prepare_train_func(network, loss_fn, optimizer, self.loss_scaler, check_gradients, jit)
 
-    def _prepare_train_func(self, network, loss_fn, optimizer, loss_scaler, check_gradients, jit):
-        # forward function
-        def default_forward_fn(inputs, labels):
-            logits_list = ()
-            logits = network(*inputs)
-            if isinstance(logits, tuple):
-                logits_list += logits
-            else:
-                logits_list += (logits,)
+    def _prepare_train_func(self):
+        if self.forward_fn is None:
+            self.forward_fn = get_default_forward_fn_with_loss_fn(self.network, self.loss_fn, self.loss_scaler) \
+                if not self.obj_network else get_default_forward_fn_without_loss_fn(self.network, self.loss_scaler)
 
-            loss = loss_fn(*logits_list, *labels)
-            loss = loss_scaler.scale(loss)
-            return_list = (loss,) + logits_list
-            return return_list
-
-        grad_fn = value_and_grad(default_forward_fn, None, optimizer.parameters, has_aux=True)
-
-        def _run_step(inputs, labels):
-            """Core process of each step, including the forward propagation process and back propagation of data."""
-            (loss, *_), grads = grad_fn(inputs, labels)
-            loss = loss_scaler.unscale(loss)
-            if check_gradients:
-                status = all_finite(grads)
-                if status:
-                    grads = loss_scaler.unscale(grads)
-                    optimizer(grads)
-            else:
-                optimizer(grads)
-            return loss
-
-        @ms_jit
-        def _run_step_graph(inputs, labels):
-            """Core process of each step, including the forward propagation process and back propagation of data."""
-            (loss, _), grads = grad_fn(inputs, labels)
-            loss = loss_scaler.unscale(loss)
-            if check_gradients:
-                status = all_finite(grads)
-                if status:
-                    grads = loss_scaler.unscale(grads)
-                    optimizer(grads)
-            else:
-                optimizer(grads)
-            return loss
-
-        if jit:
-            return _run_step_graph
-        return _run_step
+        if self.train_fn is None:
+            self.train_fn = get_default_train_step_fn(self.forward_fn, self.optimizer, self.loss_scaler,
+                                                      self.check_gradients or self.amp_level != 'O0', self.jit, self.obj_network)
 
     def _prepare_callbacks(self, callbacks):
         if isinstance(callbacks, Callback):
@@ -212,7 +192,11 @@ class Trainer:
         if self.obj_network and tgt_columns is not None:
             log.warning("'tgt_columns' does not take effect when 'loss_fn' is `None`.")
 
+        self._prepare_train_func()
+
+
         args_dict = vars(self)
+
         run_context = RunContext(args_dict)
         self.callback_manager.train_begin(run_context)
         self._run(run_context, tgt_columns)
@@ -243,7 +227,10 @@ class Trainer:
                     run_context.cur_step_nums += 1
                     self.cur_step_nums += 1
                     self.callback_manager.train_step_begin(run_context)
-                    loss = self.train_fn(inputs, tgts)
+                    if self.obj_network:
+                        loss = self.train_fn(inputs)
+                    else:
+                        loss = self.train_fn(inputs, tgts)
                     loss_total += loss
                     run_context.loss = loss_total/self.cur_step_nums
                     progress.set_postfix(loss=loss_total/self.cur_step_nums)
@@ -291,6 +278,8 @@ class Trainer:
         sig = signature(self.network.construct)
         net_args = sig.parameters
         inputs = ()
+        tgts = ()
+
         for arg in net_args:
             if arg == 'self':
                 continue
@@ -301,10 +290,9 @@ class Trainer:
                 inputs = inputs + (data[arg],)
 
         if self.obj_network:
-            return inputs
+            return inputs, tgts
         # process target dataset.
         tgt_columns = self._prepare_tgt_columns(tgt_columns)
-        tgts = ()
         for tgt_column in tgt_columns:
             tgts = tgts + (data[tgt_column],)
         return mutable(inputs), mutable(tgts)
@@ -335,6 +323,7 @@ class Trainer:
 
     def set_forward_fn(self, forward_fn):
         """set forward function"""
+        self.forward_fn = forward_fn
 
     def set_step_fn(self, step_fn):
         """set step function"""
@@ -344,13 +333,14 @@ class Trainer:
         """set amp"""
         self.network = auto_mixed_precision(self.network, level)
         if loss_scaler is None:
-            log.warning("Trainer will use 'StaticLossScaler' when `loss_scaler` is None.")
-            self.loss_scaler = StaticLossScaler(1e10)
+            log.warning("Trainer will use 'StaticLossScaler' with `scale_value=2 ** 10` when `loss_scaler` is None.")
+            self.loss_scaler = StaticLossScaler(2 ** 10)
         else:
             self.loss_scaler = loss_scaler
 
     def set_optimizer(self, optimizer):
         """set optimizer"""
+        self.optimizer = optimizer
 
     def train(self, target_columns):
         """train"""

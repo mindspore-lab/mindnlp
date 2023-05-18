@@ -13,6 +13,9 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=C0415
+# pylint: disable=W0223
+# pylint: disable=E0401
+
 """MindNLP bert model"""
 import os
 import logging
@@ -20,7 +23,7 @@ import mindspore.numpy as mnp
 import mindspore.common.dtype as mstype
 from mindspore import nn, ops
 from mindspore import Parameter, Tensor
-from mindspore.common.initializer import initializer, TruncatedNormal
+from mindspore.common.initializer import initializer, TruncatedNormal, Normal
 from mindnlp._legacy.nn import Dropout, Matmul
 from mindnlp.abc import PreTrainedModel
 from mindnlp.configs import MINDNLP_MODEL_URL_BASE
@@ -375,28 +378,27 @@ class BertPreTrainedModel(PreTrainedModel):
     convert_torch_to_mindspore = torch_to_mindspore
     pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
     config_class = BertConfig
-    name = 'bert'
+    base_model_prefix = 'bert'
 
-    def get_input_embeddings(self):
-        """get input embeddings"""
-
-    def get_position_embeddings(self):
-        """get position embeddings"""
-
-    def init_model_weights(self):
-        """init model weights"""
-
-    def post_init(self):
-        """post init"""
-
-    def resize_position_embeddings(self):
-        """resize position embeddings"""
-
-    def save(self):
-        """save"""
-
-    def set_input_embeddings(self):
-        """set input embeddings"""
+    def _init_weights(self, cell):
+        """Initialize the weights"""
+        if isinstance(cell, nn.Dense):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+                                                    cell.weight.shape, cell.weight.dtype))
+            if cell.has_bias:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        elif isinstance(cell, nn.Embedding):
+            embedding_table = initializer(Normal(self.config.initializer_range),
+                                                 cell.embedding_table.shape,
+                                                 cell.embedding_table.dtype)
+            if cell.padding_idx is not None:
+                embedding_table[cell.padding_idx] = 0
+            cell.embedding_table.set_data(embedding_table)
+        elif isinstance(cell, nn.LayerNorm):
+            cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
+            cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
 
 
 class BertModel(BertPreTrainedModel):
@@ -409,6 +411,12 @@ class BertModel(BertPreTrainedModel):
         self.encoder = BertEncoder(config)
         self.pooler = BertPooler(config)
         self.num_hidden_layers = config.num_hidden_layers
+
+    def get_input_embeddings(self):
+        return self.embeddings.word_embeddings
+
+    def set_input_embeddings(self, value):
+        self.embeddings.word_embeddings = value
 
     def construct(self, input_ids, attention_mask=None, token_type_ids=None, \
         position_ids=None, head_mask=None):

@@ -13,10 +13,11 @@
 # limitations under the License.
 # ============================================================================
 """Test Fasttext Vocab"""
-
+import pytest
 from mindnlp import Vocab
 
 
+@pytest.mark.download
 def test_vocab_fasttext_from_pretrained():
     """test fasttext vocab from URL"""
 
