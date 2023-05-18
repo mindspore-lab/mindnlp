@@ -13,15 +13,17 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=C0415
+# pylint: disable=W0223
+# pylint: disable=E0401
+
 """MindNLP bert model"""
 import os
 import logging
 import mindspore.numpy as mnp
 import mindspore.common.dtype as mstype
-from mindspore import nn
-from mindspore import ops
+from mindspore import nn, ops
 from mindspore import Parameter, Tensor
-from mindspore.common.initializer import initializer, TruncatedNormal
+from mindspore.common.initializer import initializer, TruncatedNormal, Normal
 from mindnlp._legacy.nn import Dropout, Matmul
 from mindnlp.abc import PreTrainedModel
 from mindnlp.configs import MINDNLP_MODEL_URL_BASE
@@ -34,8 +36,10 @@ PRETRAINED_MODEL_ARCHIVE_MAP = {
 }
 
 
-def torch_to_mindspore(pth_file):
+def torch_to_mindspore(pth_file, **kwargs):
     """convert torch checkpoint to mindspore"""
+    _ = kwargs.get('prefix', '')
+
     try:
         import torch
     except Exception as exc:
@@ -369,36 +373,35 @@ class BertPreTrainingHeads(nn.Cell):
         return prediction_scores, seq_relationship_score
 
 
-class BertPretrainedModel(PreTrainedModel):
+class BertPreTrainedModel(PreTrainedModel):
     """BertPretrainedModel"""
     convert_torch_to_mindspore = torch_to_mindspore
     pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
     config_class = BertConfig
-    name = 'bert'
+    base_model_prefix = 'bert'
 
-    def get_input_embeddings(self):
-        """get input embeddings"""
+    def _init_weights(self, cell):
+        """Initialize the weights"""
+        if isinstance(cell, nn.Dense):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+                                                    cell.weight.shape, cell.weight.dtype))
+            if cell.has_bias:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        elif isinstance(cell, nn.Embedding):
+            embedding_table = initializer(Normal(self.config.initializer_range),
+                                                 cell.embedding_table.shape,
+                                                 cell.embedding_table.dtype)
+            if cell.padding_idx is not None:
+                embedding_table[cell.padding_idx] = 0
+            cell.embedding_table.set_data(embedding_table)
+        elif isinstance(cell, nn.LayerNorm):
+            cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
+            cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
 
-    def get_position_embeddings(self):
-        """get position embeddings"""
 
-    def init_model_weights(self):
-        """init model weights"""
-
-    def post_init(self):
-        """post init"""
-
-    def resize_position_embeddings(self):
-        """resize position embeddings"""
-
-    def save(self):
-        """save"""
-
-    def set_input_embeddings(self):
-        """set input embeddings"""
-
-
-class BertModel(BertPretrainedModel):
+class BertModel(BertPreTrainedModel):
     r"""
     Bert Model
     """
@@ -408,6 +411,12 @@ class BertModel(BertPretrainedModel):
         self.encoder = BertEncoder(config)
         self.pooler = BertPooler(config)
         self.num_hidden_layers = config.num_hidden_layers
+
+    def get_input_embeddings(self):
+        return self.embeddings.word_embeddings
+
+    def set_input_embeddings(self, value):
+        self.embeddings.word_embeddings = value
 
     def construct(self, input_ids, attention_mask=None, token_type_ids=None, \
         position_ids=None, head_mask=None):
@@ -441,7 +450,7 @@ class BertModel(BertPretrainedModel):
         return outputs # sequence_output, pooled_output, (hidden_states), (attentions)
 
 
-class BertForPretraining(BertPretrainedModel):
+class BertForPretraining(BertPreTrainedModel):
     r"""
     Bert For Pretraining
     """
@@ -474,7 +483,64 @@ class BertForPretraining(BertPretrainedModel):
 
         return outputs
 
+class BertForSequenceClassification(BertPreTrainedModel):
+    """Bert Model for classification tasks"""
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+        self.config = config
+
+        self.bert = BertModel(config)
+        classifier_dropout = (
+            config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
+        )
+        self.classifier = nn.Dense(config.hidden_size, self.num_labels)
+        self.dropout = Dropout(classifier_dropout)
+
+        problem_type = config.problem_type
+        if problem_type is None:
+            self.loss = None
+        else:
+            if self.num_labels == 1:
+                self.problem_type = "regression"
+                self.loss = nn.MSELoss()
+            elif self.num_labels > 1:
+                self.problem_type = "single_label_classification"
+                self.loss = nn.CrossEntropyLoss()
+            else:
+                self.problem_type = "multi_label_classification"
+                self.loss = nn.BCEWithLogitsLoss()
+
+    def construct(self, input_ids, attention_mask=None, token_type_ids=None,
+                  position_ids=None, head_mask=None, labels=None):
+        outputs = self.bert(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask
+        )
+        pooled_output = outputs[1]
+
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+
+        output = (logits,) + outputs[2:]
+
+        if labels is not None:
+            if self.num_labels == 1:
+                loss = self.loss(logits.squeeze(), labels.squeeze())
+            elif self.num_labels > 1:
+                loss = self.loss(logits.view(-1, self.num_labels), labels.view(-1))
+            else:
+                loss = self.loss(logits, labels)
+
+            return (loss,) + output
+
+        return output
+
 __all__ = [
     'BertEmbeddings', 'BertAttention', 'BertEncoder', 'BertIntermediate', 'BertLayer',
-    'BertModel', 'BertForPretraining', 'BertLMPredictionHead'
+    'BertModel', 'BertForPretraining', 'BertLMPredictionHead', 'BertForSequenceClassification'
 ]

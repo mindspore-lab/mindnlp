@@ -15,6 +15,7 @@
 """
 Test Nezha
 """
+import gc
 import unittest
 import random
 import numpy as np
@@ -51,7 +52,7 @@ class TestNezhaBasicModule(unittest.TestCase):
     Test Nezha Basic Module
     """
     def setUp(self):
-        self.inputs = None
+        self.config = NezhaConfig(num_hidden_layers=2, hidden_size=48, intermediate_size=192, vocab_size=64)
 
     def test_nezha_relative_positions_encoding(self):
         r"""
@@ -68,8 +69,7 @@ class TestNezhaBasicModule(unittest.TestCase):
         r"""
         Test NezhaEmbeddings
         """
-        config = NezhaConfig(hidden_size=48)
-        model = NezhaEmbeddings(config)
+        model = NezhaEmbeddings(self.config)
         inputs = Tensor(np.random.randn(4, 16), mindspore.int64)
         outputs = model(inputs)
         assert outputs.shape == (4, 16, 48)
@@ -78,8 +78,7 @@ class TestNezhaBasicModule(unittest.TestCase):
         r"""
         Test NezhaSelfAttention
         """
-        config = NezhaConfig(hidden_size=48)
-        model = NezhaSelfAttention(config)
+        model = NezhaSelfAttention(self.config)
         inputs = Tensor(np.random.randn(4, 16, 48), mindspore.float32)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 16, 48)
@@ -88,8 +87,7 @@ class TestNezhaBasicModule(unittest.TestCase):
         r"""
         Test NezhaSelfOutput
         """
-        config = NezhaConfig(hidden_size=48)
-        model = NezhaSelfOutput(config)
+        model = NezhaSelfOutput(self.config)
         inputs = Tensor(np.random.randn(4, 16, 48), mindspore.float32)
         outputs = model(inputs, inputs)
         assert outputs.shape == (4, 16, 48)
@@ -98,8 +96,7 @@ class TestNezhaBasicModule(unittest.TestCase):
         r"""
         Test NezhaAttention
         """
-        config = NezhaConfig(hidden_size=48)
-        model = NezhaAttention(config)
+        model = NezhaAttention(self.config)
         inputs = Tensor(np.random.randn(4, 16, 48), mindspore.float32)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 16, 48)
@@ -108,8 +105,7 @@ class TestNezhaBasicModule(unittest.TestCase):
         r"""
         Test NezhaIntermediate
         """
-        config = NezhaConfig(hidden_size=48, intermediate_size=192)
-        model = NezhaIntermediate(config)
+        model = NezhaIntermediate(self.config)
         inputs = Tensor(np.random.randn(4, 16, 48), mindspore.float32)
         outputs = model(inputs)
         assert outputs.shape == (4, 16, 192)
@@ -118,8 +114,7 @@ class TestNezhaBasicModule(unittest.TestCase):
         r"""
         Test NezhaOutput
         """
-        config = NezhaConfig(hidden_size=48, intermediate_size=192)
-        model = NezhaOutput(config)
+        model = NezhaOutput(self.config)
         inputs1 = Tensor(np.random.randn(4, 16, 192), mindspore.float32)
         inputs2 = Tensor(np.random.randn(4, 16, 48), mindspore.float32)
         outputs = model(inputs1, inputs2)
@@ -129,8 +124,7 @@ class TestNezhaBasicModule(unittest.TestCase):
         r"""
         Test NezhaLayer
         """
-        config = NezhaConfig(hidden_size=48)
-        model = NezhaLayer(config)
+        model = NezhaLayer(self.config)
         inputs = Tensor(np.random.randn(4, 16, 48), mindspore.float32)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 16, 48)
@@ -139,8 +133,7 @@ class TestNezhaBasicModule(unittest.TestCase):
         r"""
         Test NezhaEncoder
         """
-        config = NezhaConfig(hidden_size=48)
-        model = NezhaEncoder(config)
+        model = NezhaEncoder(self.config)
         inputs = Tensor(np.random.randn(4, 16, 48), mindspore.float32)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 16, 48)
@@ -149,8 +142,7 @@ class TestNezhaBasicModule(unittest.TestCase):
         r"""
         Test NezhaPooler
         """
-        config = NezhaConfig(hidden_size=48)
-        model = NezhaPooler(config)
+        model = NezhaPooler(self.config)
         inputs = Tensor(np.random.randn(4, 16, 48), mindspore.float32)
         outputs = model(inputs)
         assert outputs.shape == (4, 48)
@@ -159,8 +151,7 @@ class TestNezhaBasicModule(unittest.TestCase):
         r"""
         Test NezhaPredictionHeadTransform
         """
-        config = NezhaConfig(hidden_size=48)
-        model = NezhaPredictionHeadTransform(config)
+        model = NezhaPredictionHeadTransform(self.config)
         inputs = Tensor(np.random.randn(4, 16, 48), mindspore.float32)
         outputs = model(inputs)
         assert outputs.shape == (4, 16, 48)
@@ -169,8 +160,7 @@ class TestNezhaBasicModule(unittest.TestCase):
         r"""
         Test NezhaLMPredictionHead
         """
-        config = NezhaConfig(hidden_size=48, vocab_size=64)
-        model = NezhaLMPredictionHead(config)
+        model = NezhaLMPredictionHead(self.config)
         inputs = Tensor(np.random.randn(4, 16, 48), mindspore.float32)
         outputs = model(inputs)
         assert outputs.shape == (4, 16, 64)
@@ -179,8 +169,7 @@ class TestNezhaBasicModule(unittest.TestCase):
         r"""
         Test NezhaOnlyMLMHead
         """
-        config = NezhaConfig(hidden_size=48, vocab_size=64)
-        model = NezhaOnlyMLMHead(config)
+        model = NezhaOnlyMLMHead(self.config)
         inputs = Tensor(np.random.randn(4, 16, 48), mindspore.float32)
         outputs = model(inputs)
         assert outputs.shape == (4, 16, 64)
@@ -189,8 +178,7 @@ class TestNezhaBasicModule(unittest.TestCase):
         r"""
         Test NezhaOnlyNSPHead
         """
-        config = NezhaConfig(hidden_size=48)
-        model = NezhaOnlyNSPHead(config)
+        model = NezhaOnlyNSPHead(self.config)
         inputs = Tensor(np.random.randn(4, 16, 48), mindspore.float32)
         outputs = model(inputs)
         assert outputs.shape == (4, 16, 2)
@@ -199,8 +187,7 @@ class TestNezhaBasicModule(unittest.TestCase):
         r"""
         Test NezhaPreTrainingHeads
         """
-        config = NezhaConfig(hidden_size=48, vocab_size=64)
-        model = NezhaPreTrainingHeads(config)
+        model = NezhaPreTrainingHeads(self.config)
         inputs = Tensor(np.random.randn(4, 16, 48), mindspore.float32)
         outputs = model(inputs, inputs)
         assert outputs[0].shape == (4, 16, 64)
@@ -212,14 +199,13 @@ class TestModelingNezha(unittest.TestCase):
     Test Nezha Model
     """
     def setUp(self):
-        self.inputs = None
+        self.config = NezhaConfig(num_hidden_layers=2, hidden_size=48, intermediate_size=192, vocab_size=64)
 
     def test_nezha_model(self):
         r"""
         Test NezhaModel
         """
-        config = NezhaConfig(hidden_size=48)
-        model = NezhaModel(config)
+        model = NezhaModel(self.config)
         inputs = Tensor(np.random.randn(4, 16), mindspore.int64)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 16, 48)
@@ -229,8 +215,7 @@ class TestModelingNezha(unittest.TestCase):
         r"""
         Test NezhaForPreTraining
         """
-        config = NezhaConfig(hidden_size=48, vocab_size=64)
-        model = NezhaForPreTraining(config)
+        model = NezhaForPreTraining(self.config)
         inputs= Tensor(np.random.randn(4, 16), mindspore.int64)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 16, 64)
@@ -240,8 +225,7 @@ class TestModelingNezha(unittest.TestCase):
         r"""
         Test NezhaForMaskedLM
         """
-        config = NezhaConfig(hidden_size=48, vocab_size=64)
-        model = NezhaForMaskedLM(config)
+        model = NezhaForMaskedLM(self.config)
         inputs= Tensor(np.random.randn(4, 16), mindspore.int64)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 16, 64)
@@ -250,8 +234,7 @@ class TestModelingNezha(unittest.TestCase):
         r"""
         Test NezhaForNextSentencePrediction
         """
-        config = NezhaConfig(hidden_size=48, vocab_size=64)
-        model = NezhaForNextSentencePrediction(config)
+        model = NezhaForNextSentencePrediction(self.config)
         inputs= Tensor(np.random.randn(4, 16), mindspore.int64)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 2)
@@ -260,8 +243,7 @@ class TestModelingNezha(unittest.TestCase):
         r"""
         Test NezhaForSequenceClassification
         """
-        config = NezhaConfig(hidden_size=48, vocab_size=64)
-        model = NezhaForSequenceClassification(config)
+        model = NezhaForSequenceClassification(self.config)
         inputs= Tensor(np.random.randn(4, 16), mindspore.int64)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 2)
@@ -270,8 +252,7 @@ class TestModelingNezha(unittest.TestCase):
         r"""
         Test NezhaForMultipleChoice
         """
-        config = NezhaConfig(hidden_size=48, vocab_size=64)
-        model = NezhaForMultipleChoice(config)
+        model = NezhaForMultipleChoice(self.config)
         inputs= Tensor(np.random.randn(4, 4, 16), mindspore.int64)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 4)
@@ -280,8 +261,7 @@ class TestModelingNezha(unittest.TestCase):
         r"""
         Test NezhaforTokenClassification
         """
-        config = NezhaConfig(hidden_size=48, vocab_size=64)
-        model = NezhaForTokenClassification(config)
+        model = NezhaForTokenClassification(self.config)
         inputs= Tensor(np.random.randn(4, 16), mindspore.int64)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 16, 2)
@@ -290,9 +270,11 @@ class TestModelingNezha(unittest.TestCase):
         r"""
         Test NezhaForQuestionAnswering
         """
-        config = NezhaConfig(hidden_size=48, vocab_size=64)
-        model = NezhaForQuestionAnswering(config)
+        model = NezhaForQuestionAnswering(self.config)
         inputs = Tensor(np.random.randn(4, 16), mindspore.int64)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 16)
         assert outputs[1].shape == (4, 16)
+
+    def tearDown(self) -> None:
+        gc.collect()

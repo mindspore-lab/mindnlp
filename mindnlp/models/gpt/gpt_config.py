@@ -17,7 +17,16 @@
 # ============================================================================
 """MindNLP gpt config"""
 
-from ...abc.backbones.pretrained import PreTrainedConfig
+from mindnlp.abc import PreTrainedConfig
+from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
+
+__all__ = ['GPTConfig']
+
+GPT_SUPPORT_LIST = ["openai-gpt"]
+
+CONFIG_ARCHIVE_MAP = {
+    model: MINDNLP_CONFIG_URL_BASE.format('gpt', model) for model in GPT_SUPPORT_LIST
+}
 
 class GPTConfig(PreTrainedConfig):
     r"""
@@ -30,6 +39,8 @@ class GPTConfig(PreTrainedConfig):
         "num_attention_heads": "n_head",
         "num_hidden_layers": "n_layer",
     }
+
+    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     def __init__(
         self,

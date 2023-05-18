@@ -29,10 +29,10 @@ import mindspore
 import numpy as np
 from mindspore import nn, ops, Parameter, numpy, Tensor
 from mindspore.common.initializer import initializer, Normal
+from mindnlp.abc import PreTrainedModel
 from mindnlp.models.utils import logging
 from .llama_hf_config import LlamaConfig
 from ..utils.activations import ACT2FN
-from ...abc.backbones.pretrained import PreTrainedModel
 
 logger = logging.get_logger(__name__)
 
