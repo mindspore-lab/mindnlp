@@ -29,7 +29,7 @@ from mindnlp.utils import ungz
 
 URL = "https://bj.bcebos.com/paddlenlp/datasets/docvqa_zh.tar.gz"
 
-class docvqazh:
+class HFdocvqazh:
     """
     Hugging Face docvqa_zh dataset source
     """
@@ -106,7 +106,7 @@ class docvqazh:
 
 
 @load_dataset.register
-def HF_Docvqa_zh(
+def HF_DOCVQAZH(
     root: str = DEFAULT_ROOT,
     split: Union[Tuple[str], str] = ('train', 'test', 'dev'),
     proxies=None
@@ -122,7 +122,7 @@ def HF_Docvqa_zh(
     for s in split:
         file_list.append(file_path + s)
     for _, file in enumerate(file_list):
-        dataset = GeneratorDataset(source=docvqazh(file),
+        dataset = GeneratorDataset(source=HFdocvqazh(file),
                                    column_names=[
                                        "id" ,"text", "question", "answers", "answer_start"],
                                    shuffle=False)
