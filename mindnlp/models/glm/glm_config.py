@@ -19,7 +19,7 @@
 GLM Model Config
 """
 
-from mindnlp.abc.backbones.pretrained import PreTrainedConfig
+from mindnlp.abc import PreTrainedConfig
 
 
 class GLMConfig(PreTrainedConfig):

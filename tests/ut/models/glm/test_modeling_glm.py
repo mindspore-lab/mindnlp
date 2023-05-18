@@ -29,7 +29,7 @@ class TestModelingGlm(unittest.TestCase):
         """
         Set up.
         """
-        self.config = glm_config.GLMConfig()
+        self.config = glm_config.GLMConfig(num_layers=2)
 
     def test_position_embedding(self):
         """
