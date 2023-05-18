@@ -15,11 +15,10 @@
 """Test Trainer run function"""
 # pylint: disable=C0103
 # pylint: disable=W0621
-
 import unittest
 import numpy as np
 from ddt import ddt, data
-from mindspore import nn
+from mindspore import nn, Tensor
 import mindspore.dataset as ds
 
 from mindnlp.engine.trainer import Trainer
@@ -60,6 +59,18 @@ class MyModel2(nn.Cell):
         output = self.fc(data)
         label = label + label + length
         return output
+
+
+class MyModelWithLoss(nn.Cell):
+    """Model"""
+    def __init__(self):
+        super().__init__()
+        self.fc = nn.Dense(3, 1)
+        self.loss = nn.MSELoss()
+    def construct(self, data, label) -> Tensor:
+        output = self.fc(data)
+        loss = self.loss(output, label)
+        return loss
 
 @ddt
 class TestTrainerRun(unittest.TestCase):
@@ -148,3 +159,11 @@ class TestTrainerRun(unittest.TestCase):
         trainer = Trainer(network=self.net, train_dataset=self.train_dataset, epochs=2,
                           optimizer=self.optimizer, loss_fn=self.loss_fn, jit=jit)
         trainer.run(tgt_columns='length')
+
+    @data(True, False)
+    def test_train_object_netword(self, jit):
+        """test_eval_in_trainer"""
+        net = MyModelWithLoss()
+        trainer = Trainer(network=net, train_dataset=self.train_dataset, epochs=2,
+                          optimizer=self.optimizer, jit=jit)
+        trainer.run()
