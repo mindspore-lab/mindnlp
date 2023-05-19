@@ -22,10 +22,10 @@ import json
 
 from mindspore.dataset import GeneratorDataset
 from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load_dataset, process
+from mindnlp.dataset.register import load_dataset
 from mindnlp.configs import DEFAULT_ROOT
 
-from mindnlp.utils import ungz
+from mindnlp.utils import untar
 
 URL = "https://bj.bcebos.com/paddlenlp/datasets/docvqa_zh.tar.gz"
 
@@ -106,11 +106,14 @@ class HFdocvqazh:
 
 
 @load_dataset.register
-def HFDocVQAZh(
+def HF_DOCVQAZH(
     root: str = DEFAULT_ROOT,
     split: Union[Tuple[str], str] = ('train', 'test', 'dev'),
     proxies=None
 ):
+    r"""
+    Load the huggingface docvqa_zh dataset.
+    """
     cache_dir = os.path.join(root, "datasets", "DocVQAZh")
     file_list = []
     datasets_list = []
@@ -118,9 +121,9 @@ def HFDocVQAZh(
         split = split.split()
     file_path, _ = cache_file(None, cache_dir=cache_dir, url=URL,
                               download_file_name="docvqa_zh.tar.gz", proxies=proxies)
-    ungz(file_path)
+    untar(file_path, cache_dir)
     for s in split:
-        file_list.append(file_path + s)
+        file_list.append(cache_dir + s + '.json')
     for _, file in enumerate(file_list):
         dataset = GeneratorDataset(source=HFdocvqazh(file),
                                    column_names=[
