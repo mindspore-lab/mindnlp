@@ -37,157 +37,124 @@ class TestModelingBart(unittest.TestCase):
         self.input_ids = np.array([
                 [71, 82, 18, 33, 46, 91, 2],
                 [68, 34, 26, 58, 30, 82, 2],
-                [5, 97, 17, 39, 94, 40, 2],
-                [76, 83, 94, 25, 70, 78, 2],
-                [87, 59, 41, 35, 48, 66, 2],
-                [55, 13, 16, 58, 5, 2, 1],  # note padding
-                [64, 27, 31, 51, 12, 75, 2],
-                [52, 64, 86, 17, 83, 39, 2],
-                [48, 61, 9, 24, 71, 82, 2],
-                [26, 1, 60, 48, 22, 13, 2],
-                [21, 5, 62, 28, 14, 76, 2],
-                [45, 98, 37, 86, 59, 48, 2],
-                [70, 70, 50, 9, 28, 0, 2],
-                [70, 70, 50, 9, 28, 0, 2],
-                [70, 70, 50, 9, 28, 0, 2],
-                [70, 70, 50, 9, 28, 0, 2],
-                [70, 70, 50, 9, 28, 0, 2],
-                [70, 70, 50, 9, 28, 0, 2],
-                [70, 70, 50, 9, 28, 0, 2],
-                [70, 70, 50, 9, 28, 0, 2],
-                [70, 70, 50, 9, 28, 0, 2],
-                [70, 70, 50, 9, 28, 0, 2],
-                [70, 70, 50, 9, 28, 0, 2],
-                [70, 70, 50, 9, 28, 0, 2],
             ])
+        self.config = BartConfig(vocab_size=1024,max_position_embeddings=128,d_model=128)
 
     def test_bart_learned_positional_embedding(self):
         """
         Test BartLearnedPositionalEmbedding
         """
-        config = BartConfig()
-        model = bart.BartLearnedPositionalEmbedding(config.max_position_embeddings,config.d_model)
+        model = bart.BartLearnedPositionalEmbedding(self.config.max_position_embeddings,self.config.d_model)
         input_ids = Tensor(np.random.randn(1, 10), mindspore.int32)
         outputs = model(input_ids)
-        assert outputs.shape == (1, 10, 1024)
+        assert outputs.shape == (1, 10, self.config.max_position_embeddings)
 
     def test_bart_attention(self):
         """
         Test BartAttention
         """
-        config = BartConfig()
         model = bart.BartAttention(
-            embed_dim=config.d_model,
-            num_heads=config.encoder_attention_heads,
-            dropout=config.attention_dropout,
+            embed_dim=self.config.d_model,
+            num_heads=self.config.encoder_attention_heads,
+            dropout=self.config.attention_dropout,
         )
-        hidden_states = Tensor(np.random.randn(1, 2, 1024), mindspore.float32)
+        hidden_states = Tensor(np.random.randn(1, 2, self.config.d_model), mindspore.float32)
         outputs = model(hidden_states)
-        assert outputs[0].shape == (1, 2, 1024)
+        assert outputs[0].shape == (1, 2, self.config.d_model)
 
     def test_bart_encoder_layer(self):
-        r"""
+        """
         Test BartEncoderLayer
         """
-        config = BartConfig()
-        model = bart.BartEncoderLayer(config)
-        hidden_states = Tensor(np.random.randn(1, 2, 1024), mindspore.float32)
+        model = bart.BartEncoderLayer(self.config)
+        hidden_states = Tensor(np.random.randn(1, 2, self.config.d_model), mindspore.float32)
         attention_mask = Tensor(np.random.randn(1, 1, 2, 2) > 0, mindspore.bool_)
         layer_head_mask = Tensor(np.random.randn(16) > 0, mindspore.bool_)
         outputs = model(hidden_states,attention_mask,layer_head_mask)
-        assert outputs[0].shape == (1, 2, 1024)
+        assert outputs[0].shape == (1, 2, self.config.d_model)
 
     def test_bart_decoder_layer(self):
-        r"""
+        """
         Test BartDecoderLayer
         """
-        config = BartConfig()
-        model = bart.BartDecoderLayer(config)
-        hidden_states = Tensor(np.random.randn(1, 2, 1024), mindspore.float32)
+        model = bart.BartDecoderLayer(self.config)
+        hidden_states = Tensor(np.random.randn(1, 2, self.config.d_model), mindspore.float32)
         outputs = model(hidden_states)
-        assert outputs[0].shape == (1, 2, 1024)
+        assert outputs[0].shape == (1, 2, self.config.d_model)
 
     def test_bart_classification_head(self):
-        r"""
+        """
         Test BartClassificationHead
         """
-        config = BartConfig()
         model = bart.BartClassificationHead(
-            config.d_model,
-            config.d_model,
-            config.num_labels,
-            config.classifier_dropout,
+            self.config.d_model,
+            self.config.d_model,
+            self.config.num_labels,
+            self.config.classifier_dropout,
         )
-        hidden_states = Tensor(np.random.randn(1, 2, 1024), mindspore.float32)
+        hidden_states = Tensor(np.random.randn(1, 2, self.config.d_model), mindspore.float32)
         outputs = model(hidden_states)
         assert outputs.shape == (1, 2, 3)
 
     def test_bart_encoder(self):
-        r"""
+        """
         Test BartEncoder
         """
-        config = BartConfig()
-        model = bart.BartEncoder(config)
-        input_ids = Tensor(np.random.randn(1, 10), mindspore.int32)
+        model = bart.BartEncoder(self.config)
+        input_ids = Tensor(np.random.randn(1, 2), mindspore.int32)
         outputs = model(input_ids)
-        assert outputs[0].shape == (1, 10, 1024)
+        assert outputs[0].shape == (1, 2, self.config.d_model)
 
     def test_bart_decoder(self):
-        r"""
+        """
         Test BartDecoder
         """
-        config = BartConfig()
-        model = bart.BartDecoder(config)
-        input_ids = Tensor(np.random.randn(1, 10), mindspore.int32)
+        model = bart.BartDecoder(self.config)
+        input_ids = Tensor(np.random.randn(1, 2), mindspore.int32)
         outputs = model(input_ids)
-        assert outputs[0].shape == (1, 10, 1024)
+        assert outputs[0].shape == (1, 2, self.config.d_model)
 
     def test_bart_model(self):
-        r"""
+        """
         Test BartModel
         """
-        config = BartConfig()
-        model = bart.BartModel(config)
-        input_ids = Tensor(np.random.randn(1, 10), mindspore.int32)
+        model = bart.BartModel(self.config)
+        input_ids = Tensor(np.random.randn(1, 2), mindspore.int32)
         outputs = model(input_ids)
-        assert outputs[0].shape == (1, 10, 1024)
+        assert outputs[0].shape == (1, 2, self.config.d_model)
 
     def test_bart_for_conditional_generation(self):
-        r"""
+        """
         Test BartForConditionalGeneration
         """
-        config = BartConfig()
-        model = bart.BartForConditionalGeneration(config)
-        input_ids = Tensor(np.random.randn(1, 10), mindspore.int32)
+        model = bart.BartForConditionalGeneration(self.config)
+        input_ids = Tensor(np.random.randn(1, 2), mindspore.int32)
         outputs = model(input_ids)
-        assert outputs[0].shape == (1, 10, 50265)
+        assert outputs[0].shape == (1, 2, self.config.vocab_size)
 
     def test_bart_for_sequence_classification(self):
-        r"""
+        """
         Test BartForSequenceClassification
         """
-        config = BartConfig()
-        model = bart.BartForSequenceClassification(config)
+        model = bart.BartForSequenceClassification(self.config)
         input_ids = Tensor(self.input_ids, mindspore.int32)
         outputs = model(input_ids)
-        assert outputs[0].shape == (24, 3)
+        assert outputs[0].shape == (2, 3)
 
     def test_bart_for_question_answering(self):
-        r"""
+        """
         Test BartForQuestionAnswering
         """
-        config = BartConfig()
-        model = bart.BartForQuestionAnswering(config)
+        model = bart.BartForQuestionAnswering(self.config)
         input_ids = Tensor(self.input_ids, mindspore.int32)
         outputs = model(input_ids)
-        assert outputs[0].shape == (24, 7)
+        assert outputs[0].shape == (2, 7)
 
     def test_bart_for_causal_lm(self):
-        r"""
+        """
         Test BartForCausalLM
         """
-        config = BartConfig()
-        model = bart.BartForCausalLM(config)
+        model = bart.BartForCausalLM(self.config)
         input_ids = Tensor(self.input_ids, mindspore.int32)
         outputs = model(input_ids)
-        assert outputs[0].shape == (24, 7, 50265)
+        assert outputs[0].shape == (2, 7, self.config.vocab_size)
