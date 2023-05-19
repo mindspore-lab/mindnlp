@@ -183,8 +183,8 @@ class CLIPConfig(PreTrainedConfig):
             vision_config = {}
             logging.info("`vision_config` is `None`. initializing the `CLIPVisionConfig` with default values.")
 
-        self.text_config = CLIPTextConfig(**text_config)
-        self.vision_config = CLIPVisionConfig(**vision_config)
+        self.text_config = text_config if text_config else CLIPTextConfig(**text_config)
+        self.vision_config = vision_config if vision_config else CLIPVisionConfig(**vision_config)
 
         self.projection_dim = projection_dim
         self.logit_scale_init_value = logit_scale_init_value
