@@ -13,13 +13,14 @@
 # limitations under the License.
 # ============================================================================
 """
-Test HF_GLUE
+Test HF_DOCVQAZH
 """
 
 import os
 import unittest
 import shutil
 import pytest
+from mindnlp import load_dataset
 from mindnlp.dataset import HF_DOCVQAZH
 
 
@@ -60,7 +61,7 @@ class TestHFDocvqazh(unittest.TestCase):
     @pytest.mark.download
     def test_docvqa_zh_by_register(self):
         """test docvqa_zh by register"""
-        _ = load_dataset('docvqa_zh',
+        _ = load_dataset('HF_DOCVQAZH',
                  root=self.root,
                  split=('dev')
                  )
