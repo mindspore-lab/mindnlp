@@ -30,14 +30,18 @@ class TestModelingBert(unittest.TestCase):
     r"""
     Test model bert
     """
+    def setUp(self) -> None:
+        self.config = BertConfig(vocab_size=1000,
+                                 hidden_size=128,
+                                 num_hidden_layers=2,
+                                 num_attention_heads=8,
+                                 intermediate_size=256)
     @data(True, False)
     def test_modeling_bert(self, jit):
         r"""
         Test model bert
         """
-
-        config = BertConfig(num_hidden_layers=2)
-        model = BertModel(config)
+        model = BertModel(self.config)
 
         input_ids = Tensor(np.random.randn(1, 512), mindspore.int32)
 
@@ -50,8 +54,8 @@ class TestModelingBert(unittest.TestCase):
 
         outputs, pooled = forward(input_ids)
 
-        assert outputs.shape == (1, 512, 768)
-        assert pooled.shape == (1, 768)
+        assert outputs.shape == (1, 512, self.config.hidden_size)
+        assert pooled.shape == (1, self.config.hidden_size)
 
     @pytest.mark.download
     def test_from_pretrained(self):
