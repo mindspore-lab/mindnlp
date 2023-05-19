@@ -15,6 +15,7 @@
 """
 Hugging Face docvqa_zh load function
 """
+# pylint: disable=C0103
 
 import os
 from typing import Union, Tuple
