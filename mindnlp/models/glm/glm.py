@@ -171,6 +171,7 @@ class GlmMLP(nn.Cell):
             out_channels=config.hidden_size * 4,
             weight_init=init_method,
         )
+
         # Project back to h.
         self.dense_4h_to_h = Dense(
             in_channels=config.hidden_size * 4,
