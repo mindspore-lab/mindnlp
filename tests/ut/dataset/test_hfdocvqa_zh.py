@@ -42,9 +42,9 @@ class TestHFDocvqazh(unittest.TestCase):
     def test_docvqa_zh(self):
         """Test HF_Docvqa_zh"""
         num_lines = {
-            "train": 4187,
-            "dev": 500,
-            "test": 500,
+            "train": 32806,
+            "dev": 3929,
+            "test": 3904,
         }
         dataset_train, dataset_dev, dataset_test = HF_DOCVQAZH(root=self.root, split=('train', 'dev', 'test'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
