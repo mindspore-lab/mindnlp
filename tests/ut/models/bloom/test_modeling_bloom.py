@@ -33,7 +33,11 @@ class TestModelingBloom(unittest.TestCase):
         """
         Set up.
         """
-        self.config = BloomConfig()
+        self.config = BloomConfig(vocab_size=1000,
+                                 hidden_size=128,
+                                 n_layer=2,
+                                 n_head=8,
+                                 intermediate_size=256)
 
     def test_bloom_model(self):
         r"""
