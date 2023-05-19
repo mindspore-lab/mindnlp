@@ -32,7 +32,11 @@ class TestModelingCodeGen(unittest.TestCase):
         """
         Set up.
         """
-        self.config = codegen_config.CodeGenConfig(n_layer=2)
+        self.config = codegen_config.CodeGenConfig(vocab_size=1000,
+                                                   hidden_size=128,
+                                                   n_layer=2,
+                                                   n_head=8,
+                                                   )
 
     def test_codegen_attention(self):
         r"""
