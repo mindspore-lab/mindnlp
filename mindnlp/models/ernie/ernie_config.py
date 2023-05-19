@@ -19,6 +19,10 @@ UIE config
 from typing import Dict
 from mindnlp.abc import PreTrainedConfig
 
+ERNIE_SUPPORT_LIST = ["uie-base", "uie-medium", "uie-mini", "uie-micro", "uie-nano", "uie-base-en",
+                      "uie-senta-base","uie-senta-medium", "uie-senta-mini", "uie-senta-micro", 
+                      "uie-senta-nano", "uie-base-answer-extractor", "uie-base-qa-filter"]
+
 ERNIE_PRETRAINED_INIT_CONFIGURATION = {
     "uie-base": {
         "attention_probs_dropout_prob": 0.1,
