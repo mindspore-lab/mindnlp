@@ -122,9 +122,9 @@ def HF_DOCVQAZH(
         split = split.split()
     file_path, _ = cache_file(None, cache_dir=cache_dir, url=URL,
                               download_file_name="docvqa_zh.tar.gz", proxies=proxies)
-    untar(file_path, cache_dir)
+    out = untar(file_path, cache_dir)
     for s in split:
-        file_list.append(cache_dir + s + '.json')
+        file_list.append(cache_dir + '/docvqa_zh/' + s + '.json')
     for _, file in enumerate(file_list):
         dataset = GeneratorDataset(source=HFdocvqazh(file),
                                    column_names=[
