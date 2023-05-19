@@ -27,7 +27,7 @@ class TestModelingGlm(unittest.TestCase):
     """
     def setUp(self):
         """
-        Set up.
+        Set up test
         """
         self.config = glm_config.GLMConfig(num_layers=2)
 
