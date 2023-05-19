@@ -27,3 +27,4 @@ HF_VOCAB_URL_BASE = 'https://huggingface.co/{}/resolve/main/vocab.txt'
 MINDNLP_CONFIG_URL_BASE =  "https://download.mindspore.cn/toolkits/mindnlp/models/{}/{}/config.json"
 MINDNLP_MODEL_URL_BASE =  "https://download.mindspore.cn/toolkits/mindnlp/models/{}/{}/mindspore.ckpt"
 MINDNLP_TOKENIZER_CONFIG_URL_BASE =  "https://download.mindspore.cn/toolkits/mindnlp/models/{}/{}/tokenizer.json"
+MINDNLP_VOCAB_URL_BASE =  "https://download.mindspore.cn/toolkits/mindnlp/models/{}/{}/vocab.txt"
