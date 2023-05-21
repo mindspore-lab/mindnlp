@@ -15,11 +15,14 @@
 """Test Ernie"""
 import gc
 import unittest
+import pytest
 import numpy as np
 import mindspore
 from mindspore import Tensor
-from mindnlp.models import (UIEConfig,
-                            UIE,)
+from mindnlp.models import (
+    UIEConfig,
+    UIE,
+)
 
 
 class TestModelingErnie(unittest.TestCase):
@@ -31,7 +34,14 @@ class TestModelingErnie(unittest.TestCase):
         """
         Set up.
         """
-        self.config = UIEConfig(num_hidden_layers=2)
+        self.config = UIEConfig(
+            vocab_size=1000,
+            num_hidden_layers=2,
+            hidden_size=128,
+            num_hidden_layers2=2,
+            num_attention_heads=2,
+            intermediate_size=256,
+        )
 
     def test_ernie_model(self):
         """
@@ -44,11 +54,15 @@ class TestModelingErnie(unittest.TestCase):
         """
 
         model = UIE(self.config)
-        input_ids = Tensor(np.random.randint(
-            0, 100, (1, 20)), dtype=mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, 100, (1, 20)), dtype=mindspore.int32)
         outputs = model(input_ids=input_ids)
         assert outputs[0].shape == (1, 20)
         assert outputs[1].shape == (1, 20)
+
+    @pytest.mark.download
+    def test_from_pretrained(self):
+        """test from pretrained"""
+        _ = UIE.from_pretrained("uie-base")
 
     def tearDown(self) -> None:
         gc.collect()
