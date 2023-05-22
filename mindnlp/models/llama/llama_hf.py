@@ -29,12 +29,12 @@ import mindspore
 import numpy as np
 from mindspore import nn, ops, Parameter, numpy, Tensor
 from mindspore.common.initializer import initializer, Normal
+from mindspore import log as logger
+
 from mindnlp.abc import PreTrainedModel
-from mindnlp.models.utils import logging
 from .llama_hf_config import LlamaConfig
 from ..utils.activations import ACT2FN
 
-logger = logging.get_logger(__name__)
 
 
 def _make_causal_mask(

@@ -19,16 +19,16 @@
 import os
 from typing import Union, Optional, Tuple
 from functools import partial
-import mindspore
 import numpy as np
+import mindspore
 from mindspore import ops, nn, Parameter, Tensor, dtype_to_nptype
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.models.utils import logging
+from mindspore import log as logger
+
 from mindnlp.models.utils.activations import ACT2FN
 from mindnlp.models.gpt_neo.gpt_neo_config import GPTNeoConfig
 from ...abc import PreTrainedModel
 
-logger = logging.get_logger(__name__)
 
 
 class GPTNeoSelfAttention(nn.Cell):

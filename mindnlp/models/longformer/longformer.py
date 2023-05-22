@@ -31,12 +31,11 @@ from mindspore import nn
 from mindspore import Tensor
 from mindspore import ops
 from mindspore.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
+from mindspore import log as logger
 
 from ..utils.activations import ACT2FN
 from .longformer_config import LongformerConfig
-from ..utils import logging
 from ...abc import PreTrainedModel
-logger = logging.get_logger(__name__)
 
 def apply_chunking_to_forward(
     forward_fn: Callable[..., mindspore.Tensor], chunk_size: int, chunk_dim: int, *input_tensors

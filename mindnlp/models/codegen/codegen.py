@@ -23,12 +23,10 @@ from mindspore import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import Normal, initializer
 
-from mindnlp.models.utils import logging
 from mindnlp.models.utils.activations import ACT2FN
 from mindnlp.models.codegen.codegen_config import CodeGenConfig
 from mindnlp.abc import PreTrainedModel
 
-logger = logging.get_logger(__name__)
 
 _CHECKPOINT_FOR_DOC = "Salesforce/codegen-2B-mono"
 _CONFIG_FOR_DOC = "CodeGenConfig"
