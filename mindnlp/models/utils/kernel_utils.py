@@ -24,7 +24,7 @@ def _find_cuda_home():
     cuda_home = os.environ.get('CUDA_HOME') or os.environ.get('CUDA_PATH')
     if cuda_home is None:
         try:
-            nvcc = subprocess.check_output(['where', 'nvcc']).decode().rstrip('\r\n')
+            nvcc = subprocess.check_output(['which', 'nvcc']).decode().rstrip('\r\n')
             cuda_home = os.path.dirname(os.path.dirname(nvcc))
         except subprocess.CalledProcessError as exc:
             raise RuntimeError('NVCC Not Available') from exc
