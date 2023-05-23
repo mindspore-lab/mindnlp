@@ -12,23 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=W0613
 
 """
 Generation mixin.
 """
 import copy
 import inspect
-import mindspore
 import warnings
 from typing import Optional, List, Callable, Dict, Any
+import mindspore
 
 
 class GenerationMixin:
     """
+    class GenerationMixin
     A class containing all functions for auto-regressive text generation, to be used as a mixin in [`PreTrainedModel`].
     """
-
     def prepare_inputs_for_generation(self, *args, **kwargs):
+        """
+        prepare_inputs_for_generation
+        """
         raise NotImplementedError(
             "A model class needs to define a `prepare_inputs_for_generation` method in order to use `generate`."
         )
@@ -93,8 +97,8 @@ class GenerationMixin:
         if generation_config is None:
             # legacy: users may modify the model configuration to control generation -- update the generation config
             # model attribute accordingly, if it was created from the model config
-            if self.generation_config._from_model_config:
-                new_generation_config = GenerationConfig.from_model_config(self.config)
+            if self.generation_config.from_model_config:
+                new_generation_config = self.generation_config.from_model_config
                 if new_generation_config.__dict__ != self.generation_config.__dict__:
                     warnings.warn(
                         "You have modified the pretrained model configuration to control generation. This is a"
