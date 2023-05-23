@@ -110,6 +110,7 @@ setup(
     license='Apache 2.0',
     packages=find_packages(exclude=("example")),
     include_package_data=True,
+    package_data={"": ["**/*.cu", "**/*.cpp", "**/*.cuh", "**/*.h", "**/*.pyx"]},
     cmdclass={
         'egg_info': EggInfo,
         'build_py': BuildPy,
