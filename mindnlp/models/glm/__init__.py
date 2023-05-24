@@ -1,3 +1,4 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 # Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,8 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+
+# This software may be used and distributed according to the terms of the GNU General Public License version 3.
 """
-Bart Model.
+Glm Model init
 """
-from mindnlp.models.bart.bart import *
-from mindnlp.models.bart.bart_config import *
+from .glm import *
+from .glm_config import *

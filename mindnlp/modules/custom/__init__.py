@@ -12,8 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""
-Bart Model.
-"""
-from mindnlp.models.bart.bart import *
-from mindnlp.models.bart.bart_config import *
+"""Custom operators for MindNLP"""

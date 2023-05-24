@@ -12,8 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""
-Bart Model.
-"""
-from mindnlp.models.bart.bart import *
-from mindnlp.models.bart.bart_config import *
+"""Test Bloom Config"""
+
+import gc
+import unittest
+import pytest
+
+from mindnlp.models.bloom import BloomConfig
+
+
+class TestBloomConfig(unittest.TestCase):
+    r"""
+    Test Bloom Config
+    """
+    @pytest.mark.download
+    def test_bloom_config(self):
+        r"""
+        Test Bloom Config from_pretrained
+        """
+
+        config = BloomConfig.from_pretrained('bigscience/bloom-560m')
+        assert config.n_layer == 24
+
+    def tearDown(self) -> None:
+        gc.collect()

@@ -13,7 +13,12 @@
 # limitations under the License.
 # ============================================================================
 """
-Bart Model.
+Bloom Model.
 """
-from mindnlp.models.bart.bart import *
-from mindnlp.models.bart.bart_config import *
+from . import bloom, bloom_config
+from .bloom import *
+from .bloom_config import *
+
+__all__ = []
+__all__.extend(bloom.__all__)
+__all__.extend(bloom_config.__all__)

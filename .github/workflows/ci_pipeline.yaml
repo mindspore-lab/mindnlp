@@ -78,7 +78,7 @@ jobs:
         pip install -r download.txt
     - name: Test with pytest
       run: |
-        pytest -m 'not download' tests/ut
+        pytest -m 'not download and not gpu_only' tests/ut
 
   release-test:
     needs: pylint-check
@@ -102,7 +102,7 @@ jobs:
         pip install mindspore==${{matrix.ms_version}}
     - name: Test with pytest
       run: |
-        pytest -m 'not download' --ignore=tests/ut/models tests/ut 
+        pytest -m 'not download and not gpu_only' --ignore=tests/ut/models tests/ut 
 
   st-test:
     needs: ut-test
