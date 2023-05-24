@@ -24,28 +24,6 @@ from typing import Optional
 import mindspore
 
 
-
-STOPPING_CRITERIA_INPUTS_DOCSTRING = r"""
-    Args:
-        input_ids (`torch.LongTensor` of shape `(batch_size, sequence_length)`):
-            Indices of input sequence tokens in the vocabulary.
-
-            Indices can be obtained using [`BertTokenizer`]. See [`PreTrainedTokenizer.encode`] and
-            [`PreTrainedTokenizer.__call__`] for details.
-
-            [What are input IDs?](../glossary#input-ids)
-        scores (`torch.FloatTensor` of shape `(batch_size, config.vocab_size)`):
-            Prediction scores of a language modeling head. These can be scores for each vocabulary token before SoftMax
-            or scores for each vocabulary token after SoftMax.
-        kwargs:
-            Additional stopping criteria specific kwargs.
-
-    Return:
-        `bool`. `False` indicates we should continue, `True` indicates we should stop.
-
-"""
-
-
 class StoppingCriteria():
     """Abstract base class for all stopping criteria that can be applied during generation."""
 

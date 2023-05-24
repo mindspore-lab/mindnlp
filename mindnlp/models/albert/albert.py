@@ -324,8 +324,8 @@ class AlbertModel(AlbertPretrainedModel):
         """
         self.embeddings.position_embeddings = new_num_position_embeddings
 
-    def set_input_embeddings(self, value):
-        self.embeddings.word_embeddings = value
+    def set_input_embeddings(self, new_embeddings):
+        self.embeddings.word_embeddings = new_embeddings
 
     def construct(
             self,

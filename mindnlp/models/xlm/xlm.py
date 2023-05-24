@@ -321,7 +321,7 @@ class XLMPreTrainedModel(PreTrainedModel):
         pass
 
     # TODO
-    def set_input_embeddings(self, value: "nn.Cell"):
+    def set_input_embeddings(self, new_embeddings: "nn.Cell"):
         pass
 
     @property
@@ -449,8 +449,8 @@ class XLMModel(XLMPreTrainedModel):
     def get_input_embeddings(self):
         return self.embeddings
 
-    def set_input_embeddings(self, value: "nn.Cell"):
-        self.embeddings = value
+    def set_input_embeddings(self, new_embeddings: "nn.Cell"):
+        self.embeddings = new_embeddings
 
     def _prune_heads(self, heads_to_prune):
         """

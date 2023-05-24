@@ -746,9 +746,9 @@ class MobileBertForPreTraining(MobileBertPreTrainedModel):
         """get_output_embeddings"""
         return self.cls.predictions.decoder
 
-    def set_output_embeddings(self, new_embeddigs):
+    def set_output_embeddings(self, new_embeddings):
         """set_output_embeddings"""
-        self.cls.predictions.decoder = new_embeddigs
+        self.cls.predictions.decoder = new_embeddings
 
     def resize_token_embeddings(self, new_num_tokens: Optional[int] = None) -> nn.Embedding:
         """resize_token_embeddings"""
@@ -851,9 +851,9 @@ class MobileBertForMaskedLM(MobileBertPreTrainedModel):
         """get_output_embeddings"""
         return self.cls.predictions.decoder
 
-    def set_output_embeddings(self, new_embeddigs):
+    def set_output_embeddings(self, new_embeddings):
         """set_output_embeddings"""
-        self.cls.predictions.decoder = new_embeddigs
+        self.cls.predictions.decoder = new_embeddings
 
     def resize_token_embeddings(self, new_num_tokens: Optional[int] = None) -> nn.Embedding:
         """ resize_token_embeddings"""

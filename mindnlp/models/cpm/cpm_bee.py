@@ -234,8 +234,8 @@ class CpmBeeModel(CpmAntPreTrainedModel):
     def get_input_embeddings(self):
         return self.input_embedding
 
-    def set_input_embeddings(self, value):
-        self.input_embedding = value
+    def set_input_embeddings(self, new_embeddings):
+        self.input_embedding = new_embeddings
 
     def _prepare_attention_mask(self, input_ids, span, context, length, sample_ids):
         batch = input_ids.shape[0]

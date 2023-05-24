@@ -521,11 +521,11 @@ class CLIPTextModel(CLIPPreTrainedModel):
         """
         return self.text_model.embeddings.token_embedding
 
-    def set_input_embeddings(self, value):
+    def set_input_embeddings(self, new_embeddings):
         """
         Set input embeddings
         """
-        self.text_model.embeddings.token_embedding = value
+        self.text_model.embeddings.token_embedding = new_embeddings
 
     def construct(
         self,
@@ -798,11 +798,11 @@ class CLIPTextModelWithProjection(CLIPPreTrainedModel):
         """
         return self.text_model.embeddings.token_embedding
 
-    def set_input_embeddings(self, value):
+    def set_input_embeddings(self, new_embeddings):
         """
         Set input embeddings
         """
-        self.text_model.embeddings.token_embedding = value
+        self.text_model.embeddings.token_embedding = new_embeddings
 
     def construct(
         self,

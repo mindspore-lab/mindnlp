@@ -44,6 +44,7 @@ class LogitsWarper:
             f"{self.__class__} is an abstract class. Only classes inheriting this class can be called."
         )
 
+
 class LogitsProcessorList(list):
     """
     This class can be used to create a list of [`LogitsProcessor`] or [`LogitsWarper`] to subsequently process a

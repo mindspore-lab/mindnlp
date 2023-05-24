@@ -328,7 +328,7 @@ class GPTNeoPreTrainedModel(PreTrainedModel):
         Returns the model's input embeddings.
         """
 
-    def set_input_embeddings(self, value: "nn.Cell"):
+    def set_input_embeddings(self, new_embeddings: "nn.Cell"):
         """
         Set model's input embeddings.
         """
@@ -405,11 +405,11 @@ class GPTNeoModel(GPTNeoPreTrainedModel):
         """
         return self.wte
 
-    def set_input_embeddings(self, value):
+    def set_input_embeddings(self, new_embeddings):
         """
         set the input embeddings layer
         """
-        self.wte = value
+        self.wte = new_embeddings
 
     def construct(
         self,

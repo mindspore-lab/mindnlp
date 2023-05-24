@@ -494,8 +494,8 @@ class BloomModel(BloomPreTrainedModel):
 
         return combined_attention_mask
 
-    def set_input_embeddings(self, value: mindspore.Tensor):
-        self.word_embeddings = value
+    def set_input_embeddings(self, new_embeddings: mindspore.Tensor):
+        self.word_embeddings = new_embeddings
 
     def construct(
         self,

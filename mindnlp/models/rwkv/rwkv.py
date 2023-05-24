@@ -371,8 +371,8 @@ class RwkvModel(RwkvPreTrainedModel):
     def get_input_embeddings(self):
         return self.embeddings
 
-    def set_input_embeddings(self, value):
-        self.embeddings = value
+    def set_input_embeddings(self, new_embeddings):
+        self.embeddings = new_embeddings
 
     def __call__(self, *args, **kwargs):
         if self.training == self.layers_are_rescaled:
