@@ -39,7 +39,8 @@ class TestModelingLlama(unittest.TestCase):
         """
         Set up.
         """
-        self.config = LlamaConfig(num_hidden_layers=2, num_attention_heads=8, hidden_size=128)
+        self.config = LlamaConfig(num_hidden_layers=2, num_attention_heads=8, hidden_size=128,
+                                  vocab_size=1000, intermediate_size=256)
 
 
     def test_llama_rms_norm(self):
@@ -118,7 +119,7 @@ class TestModelingLlama(unittest.TestCase):
 
         outputs = model(input_ids)
 
-        assert outputs[0].shape == (2, 128, 32000)
+        assert outputs[0].shape == (2, 128, self.config.vocab_size)
         for i in range(len(outputs[1])):
             for j in range(len(outputs[1][i])):
                 assert outputs[1][i][j].shape == (2, 8, 128, 16)

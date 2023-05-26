@@ -30,11 +30,8 @@ from mindspore import ops, Tensor
 from mindspore.common.initializer import Normal, initializer
 
 from mindnlp.models.luke.luke_config import LukeConfig
-from ..utils import logging
 from ..utils.activations import ACT2FN
 from ...abc import PreTrainedModel
-
-logger = logging.get_logger(__name__)
 
 
 class LukeEmbeddings(nn.Cell):

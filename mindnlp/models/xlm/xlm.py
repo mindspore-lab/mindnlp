@@ -29,6 +29,8 @@ import numpy as np
 from mindspore import ops, nn, Parameter
 from mindspore.common.initializer import Normal, initializer
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from mindspore import log as logger
+
 from mindnlp.models.utils.utils import SequenceSummary, SQuADHead
 from mindnlp.abc import PreTrainedModel
 from mindnlp.configs import MINDNLP_MODEL_URL_BASE
@@ -86,6 +88,7 @@ def torch_to_mindspore(pth_file, size:str=None):
             from exc
 
     return ms_ckpt_path
+
 
 def create_sinusoidal_embeddings(n_pos, dim, out):
     """

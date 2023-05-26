@@ -16,7 +16,20 @@
 model nezha config
 """
 from mindnlp.abc import PreTrainedConfig
+from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
 
+__all__ = ["NezhaConfig"]
+
+NEZHA_SUPPORT_LIST = [
+    "sijunhe/nezha-cn-base",
+    "sijunhe/nezha-cn-large",
+    "sijunhe/nezha-base-wwm",
+    "sijunhe/nezha-large-wwm"
+]
+
+CONFIG_ARCHIVE_MAP = {
+    model: MINDNLP_CONFIG_URL_BASE.format('nezha', model) for model in NEZHA_SUPPORT_LIST
+}
 
 class NezhaConfig(PreTrainedConfig):
     """

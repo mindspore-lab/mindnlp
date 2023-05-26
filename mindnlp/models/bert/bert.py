@@ -14,6 +14,7 @@
 # ============================================================================
 # pylint: disable=C0415
 # pylint: disable=W0223
+# pylint: disable=E0401
 
 """MindNLP bert model"""
 import os
