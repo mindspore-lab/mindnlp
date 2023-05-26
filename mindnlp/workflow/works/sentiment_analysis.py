@@ -48,7 +48,7 @@ class SentimentAnalysisWork(Work):
     """
 
     resource_files_names = {
-        "model_state": "mbert_for_senta_model_state.ckpt", "vocab": "vbert_for_senta_vocab.txt"}
+        "model_state": "mbert_for_senta_model_state.ckpt", "vocab": "bert_for_senta_vocab.txt"}
     resource_files_urls = {
         "bert": {
             "vocab": [

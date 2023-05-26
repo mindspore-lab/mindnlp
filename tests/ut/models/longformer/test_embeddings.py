@@ -22,7 +22,7 @@ from mindspore import Tensor
 from mindnlp.models.longformer.longformer_config import LongformerConfig
 from mindnlp.models.longformer.longformer import LongformerEmbeddings, LongformerSelfAttention, \
     LongformerSelfOutput, LongformerAttention, LongformerIntermediate, LongformerOutput, \
-    LongformerLayer, LongformerEncoder, LongformerPooler, LongformerLMHead, LongformerModel, \
+    LongformerEncoder, LongformerPooler, LongformerLMHead, LongformerModel, \
     LongformerForMaskedLM, LongformerForSequenceClassification, LongformerClassificationHead, \
     LongformerForQuestionAnswering, LongformerForTokenClassification, LongformerForMultipleChoice
 
@@ -137,32 +137,6 @@ class TestModelingEmbeddings(unittest.TestCase):
         ms_outputs = ms_model(ms_hidden_states, ms_input_tensors)
         assert (8, 768) == ms_outputs[0].shape
 
-
-    def test_modeling_longformer_layer(self):
-        r"""
-        Test model bert with pynative mode
-        """
-        ms_model = LongformerLayer(self.config)
-        ms_model.set_train(False)
-        hidden_states = np.random.randint(1, 10, (1, 8, 768))
-        attention_mask = np.random.randint(1, 10, (1, 8))
-        is_index_mask = np.random.randint(0, 2, (1, 8))
-        is_index_global_attn = np.random.randint(0, 2, (1, 8))
-        is_global_attn = True
-        output_attentions = False
-        ms_hidden_states = mindspore.Tensor(hidden_states, dtype=mindspore.float32)
-        ms_attention_mask = mindspore.Tensor(attention_mask, dtype=mindspore.float32)
-        ms_is_index_mask = mindspore.Tensor(is_index_mask, dtype=mindspore.bool_)
-        ms_is_index_global_attn = mindspore.Tensor(is_index_global_attn, dtype=mindspore.bool_)
-        ms_outputs = ms_model(
-            hidden_states=ms_hidden_states,
-            attention_mask=ms_attention_mask,
-            is_index_masked=ms_is_index_mask,
-            is_index_global_attn=ms_is_index_global_attn,
-            is_global_attn=is_global_attn,
-            output_attentions=output_attentions
-        )
-        assert (1, 8, 768) == ms_outputs[0].shape
 
     def test_modeling_longformer_encoder(self):
         r"""

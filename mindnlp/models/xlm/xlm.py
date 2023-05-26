@@ -28,13 +28,12 @@ import numpy as np
 from mindspore import ops, nn, Parameter
 from mindspore.common.initializer import Normal, initializer
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from mindspore import log as logger
+
 from mindnlp.models.utils.utils import SequenceSummary, SQuADHead
 from mindnlp.abc import PreTrainedModel
 from .xlm_config import XLMConfig
-from ..utils import logging
 from ..utils.activations import get_activation
-
-logger = logging.get_logger(__name__)
 
 
 def create_sinusoidal_embeddings(n_pos, dim, out):

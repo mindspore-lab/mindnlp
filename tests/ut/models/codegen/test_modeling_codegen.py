@@ -32,7 +32,11 @@ class TestModelingCodeGen(unittest.TestCase):
         """
         Set up.
         """
-        self.config = codegen_config.CodeGenConfig(n_layer=2)
+        self.config = codegen_config.CodeGenConfig(vocab_size=1000,
+                                                   hidden_size=128,
+                                                   n_layer=2,
+                                                   n_head=8,
+                                                   )
 
     def test_codegen_attention(self):
         r"""
@@ -88,7 +92,8 @@ class TestModelingCodeGen(unittest.TestCase):
         input_ids = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.int32)
 
         input_ids = model(input_ids)
-        assert input_ids[0].shape == (2, 2, 512, 504)
+        assert input_ids[0].shape == (2, 2, 512, 1000)
+
 
     def tearDown(self) -> None:
         gc.collect()
