@@ -233,6 +233,7 @@ class PreTrainedConfig:
         """Serializes this instance to a JSON string."""
         return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
 
+    attribute_map: Dict[str, str] = {}
     def __setattr__(self, key, value):
         if key in super().__getattribute__("attribute_map"):
             key = super().__getattribute__("attribute_map")[key]
