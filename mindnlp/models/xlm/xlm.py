@@ -23,22 +23,19 @@ import os
 import math
 import itertools
 import inspect
-from typing import List, Set, Tuple, Callable, Optional
+from typing import Tuple, Callable, Optional
+import logging
 import mindspore
 import numpy as np
 from mindspore import ops, nn, Parameter
 from mindspore.common.initializer import Normal, initializer
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from mindspore import log as logger
-
 from mindnlp.models.utils.utils import SequenceSummary, SQuADHead
 from mindnlp.abc import PreTrainedModel
 from mindnlp.configs import MINDNLP_MODEL_URL_BASE
 from .xlm_config import XLMConfig,XLM_SUPPORT_LIST
-from ..utils import logging
 from ..utils.activations import get_activation
 
-logger = logging.get_logger(__name__)
 
 PRETRAINED_MODEL_ARCHIVE_MAP = {
     model: MINDNLP_MODEL_URL_BASE.format('xlm', model) for model in XLM_SUPPORT_LIST
@@ -46,11 +43,13 @@ PRETRAINED_MODEL_ARCHIVE_MAP = {
 
 
 def torch_to_mindspore(pth_file, size:str=None):
+    """torch to mindspore."""
     try:
         import torch
-    except:
-        raise ImportError(f"'import torch' failed, please install torch by "
-                          f"`pip install torch` or instructions from 'https://pytorch.org'")
+    except Exception as exc:
+        raise ImportError("'import torch' failed, please install torch by "
+                          "`pip install torch` or instructions from 'https://pytorch.org'") \
+        from exc
 
     size = "mindspore" if not size else size # rename ckpt
 
@@ -1094,7 +1093,7 @@ class XLMForMultipleChoice(XLMPreTrainedModel):
         )
 
         if lengths is not None:
-            logger.warning(
+            logging.warning(
                 "The `lengths` parameter cannot be used with the XLM multiple choice models. Please use the "
                 "attention mask instead."
             )
