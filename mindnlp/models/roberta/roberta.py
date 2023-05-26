@@ -51,8 +51,8 @@ class RobertaPreTrainedModel(BertPreTrainedModel):
 
 class RobertaModel(BertModel):
     """Roberta Model"""
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, config, add_pooling_layer=True):
+        super().__init__(config, add_pooling_layer=add_pooling_layer)
         self.embeddings = RobertaEmbeddings(config)
 
 class RobertaLMHead(nn.Cell):
@@ -123,7 +123,7 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
     def __init__(self, config, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
         self.num_labels = config.num_labels
-        self.roberta = RobertaModel(config)
+        self.roberta = RobertaModel(config, add_pooling_layer=False)
         self.classifier = RobertaClassificationHead(config)
 
     def construct(self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None,
