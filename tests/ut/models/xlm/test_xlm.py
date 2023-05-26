@@ -34,7 +34,7 @@ class TestXlm(unittest.TestCase):
         Set up.
         """
         self.config = xlm_config.XLMConfig(n_layers=2,
-                                           n_words=22, n_heads=24, emb_dim=24, batch_size=1, seq_len=128, vocab_size=100)
+                                           vocab_size=22, n_heads=24, emb_dim=24, batch_size=1, seq_len=128)
 
     def test_xlm_predlayer(self):
         """
