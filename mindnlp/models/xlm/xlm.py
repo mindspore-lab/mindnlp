@@ -13,27 +13,81 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=C0415
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=C0103
 # pylint: disable=W0622
 """
 xlm module
 """
+import os
 import math
 import itertools
 import inspect
-from typing import List, Set, Tuple, Callable, Optional
+from typing import Tuple, Callable, Optional
+import logging
 import mindspore
 import numpy as np
 from mindspore import ops, nn, Parameter
 from mindspore.common.initializer import Normal, initializer
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from mindspore import log as logger
-
 from mindnlp.models.utils.utils import SequenceSummary, SQuADHead
 from mindnlp.abc import PreTrainedModel
-from .xlm_config import XLMConfig
+from mindnlp.configs import MINDNLP_MODEL_URL_BASE
+from .xlm_config import XLMConfig,XLM_SUPPORT_LIST
 from ..utils.activations import get_activation
+
+
+PRETRAINED_MODEL_ARCHIVE_MAP = {
+    model: MINDNLP_MODEL_URL_BASE.format('xlm', model) for model in XLM_SUPPORT_LIST
+}
+
+
+def torch_to_mindspore(pth_file, size:str=None):
+    """torch to mindspore."""
+    try:
+        import torch
+    except Exception as exc:
+        raise ImportError("'import torch' failed, please install torch by "
+                          "`pip install torch` or instructions from 'https://pytorch.org'") \
+        from exc
+
+    size = "mindspore" if not size else size # rename ckpt
+
+    from mindspore import Tensor
+    from mindspore.train.serialization import save_checkpoint
+
+    logging.info('Starting checkpoint conversion.')
+    ms_ckpt = []
+    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
+
+    for k, v in state_dict.items():
+        if 'embeddings.weight' in k:
+            print(k)
+            k = k.replace('embeddings.weight', 'embeddings.embedding_table')
+        if 'layer_norm_emb.weight' in k:
+            print(k)
+            k = k.replace('layer_norm_emb.weight', 'layer_norm_emb.gamma')
+        if 'layer_norm_emb.bias' in k:
+            print(k)
+            k = k.replace('layer_norm_emb.bias', 'layer_norm_emb.beta')
+        if 'weight' in k and 'layer_norm' in k:
+            print(k)
+            k = k.replace('weight', 'gamma')
+        if 'bias' in k and 'layer_norm' in k:
+            print(k)
+            k = k.replace('bias', 'beta')
+        ms_ckpt.append({'name': k, 'data': Tensor(v.numpy())})
+
+    ms_ckpt_path = pth_file.replace('pytorch_model.bin','mindspore.ckpt')
+    if not os.path.exists(ms_ckpt_path):
+        try:
+            save_checkpoint(ms_ckpt, ms_ckpt_path)
+        except Exception as exc:
+            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, please checkout the path.') \
+            from exc
+
+    return ms_ckpt_path
 
 
 def create_sinusoidal_embeddings(n_pos, dim, out):
@@ -46,27 +100,6 @@ def create_sinusoidal_embeddings(n_pos, dim, out):
         np.sin(position_enc[:, 0::2]), dtype=mindspore.float32)
     out[:, 1::2] = mindspore.Tensor(
         np.cos(position_enc[:, 1::2]), dtype=np.float32)
-    out.detach_()
-    out.requires_grad = False
-
-
-def find_pruneable_heads_and_indices(
-    heads: List[int], n_heads: int, head_size: int, already_pruned_heads: Set[int]
-) -> Tuple[Set[int], mindspore.Tensor]:
-    """
-    find_pruneable_heads_and_indices
-    """
-    mask = ops.ones(n_heads, head_size)
-    # Convert to set and remove already pruned heads
-    heads = set(heads) - already_pruned_heads
-    for head in heads:
-        # Compute how many pruned heads are before the head and move the index accordingly
-        head = head - sum(1 if h < head else 0 for h in already_pruned_heads)
-        mask[head] = 0
-    mask = mask.view(-1).equal(1)
-    index: mindspore.Tensor(dtype=mindspore.int64) = mindspore.numpy.arange(
-        len(mask))[mask].astype(mindspore.int64)
-    return heads, index
 
 
 def get_masks(slen, lengths, causal, padding_mask=None):
@@ -93,25 +126,6 @@ def get_masks(slen, lengths, causal, padding_mask=None):
     assert causal is False or attn_mask.shape == (bs, slen, slen)
 
     return mask, attn_mask
-
-
-def prune_linear_layer(layer: nn.Dense, index: mindspore.int64, dim: int = 0) -> nn.Dense:
-    """
-    prune_linear_layer
-    """
-    new_size = list(layer.weight.shape)
-    new_size[dim] = len(index)
-    new_layer = nn.Dense(new_size[1],
-                         new_size[0],
-                         has_bias=layer.bias is not None)
-    new_layer.weight.requires_grad = False
-    new_layer.weight.copy()
-    new_layer.weight.requires_grad = True
-    if layer.bias is not None:
-        new_layer.bias.requires_grad = False
-        new_layer.bias.copy()
-        new_layer.bias.requires_grad = True
-    return new_layer
 
 
 def apply_chunking_to_forward(
@@ -182,25 +196,6 @@ class MultiHeadAttention(nn.Cell):
         self.v_lin = nn.Dense(dim, dim)
         self.out_lin = nn.Dense(dim, dim)
         self.pruned_heads = set()
-
-    def prune_heads(self, heads):
-        """
-        prune_heads
-        """
-        attention_head_size = self.dim // self.n_heads
-        if len(heads) == 0:
-            return
-        heads, index = find_pruneable_heads_and_indices(
-            heads, self.n_heads, attention_head_size, self.pruned_heads)
-        # Prune linear layers
-        self.q_lin = prune_linear_layer(self.q_lin, index)
-        self.k_lin = prune_linear_layer(self.k_lin, index)
-        self.v_lin = prune_linear_layer(self.v_lin, index)
-        self.out_lin = prune_linear_layer(self.out_lin, index, dim=1)
-        # Update hyper params
-        self.n_heads = self.n_heads - len(heads)
-        self.dim = attention_head_size * self.n_heads
-        self.pruned_heads = self.pruned_heads.union(heads)
 
     def construct(self, input, mask, kv=None, cache=None, head_mask=None, output_attentions=False):
         """
@@ -312,6 +307,12 @@ class XLMPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
+    config_class = XLMConfig
+    load_tf_weights = None
+    base_model_prefix = "transformer"
+    convert_torch_to_mindspore = torch_to_mindspore
+    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
 
     # TODO
     def get_position_embeddings(self):
@@ -324,10 +325,6 @@ class XLMPreTrainedModel(PreTrainedModel):
     # TODO
     def set_input_embeddings(self, value: "nn.Cell"):
         pass
-
-    config_class = XLMConfig
-    load_tf_weights = None
-    base_model_prefix = "transformer"
 
     @property
     def dummy_inputs(self):
@@ -1097,7 +1094,7 @@ class XLMForMultipleChoice(XLMPreTrainedModel):
         )
 
         if lengths is not None:
-            logger.warning(
+            logging.warning(
                 "The `lengths` parameter cannot be used with the XLM multiple choice models. Please use the "
                 "attention mask instead."
             )
