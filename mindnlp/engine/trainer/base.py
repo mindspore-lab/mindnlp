@@ -21,7 +21,7 @@ from typing import Optional, List, Union
 from inspect import signature
 from tqdm.autonotebook import tqdm
 from mindspore import nn, Tensor
-from mindspore import log, mutable
+from mindspore import log, mutable, context
 from mindspore.dataset.engine import Dataset, TakeDataset
 from mindnlp.abc import Callback, Metric
 from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContext
@@ -188,11 +188,10 @@ class Trainer:
 
         self._prepare_train_func()
 
-
         args_dict = vars(self)
-
         run_context = RunContext(args_dict)
         self.callback_manager.train_begin(run_context)
+
         self._run(run_context, tgt_columns)
         self.callback_manager.train_end(run_context)
 
@@ -200,6 +199,11 @@ class Trainer:
         """
         Training process for non-data sinking mode. The data would be passed to network directly.
         """
+
+        # set mindspore mode to GRAPH_MODE, since jit mode with
+        # control flow will slow down the training speed.
+        if self.jit:
+            context.set_context(mode=context.GRAPH_MODE)
 
         total = self.train_dataset.get_dataset_size()
         # train epoch begin
@@ -237,6 +241,9 @@ class Trainer:
             # do epoch evaluation
             if self.evaluator is not None:
                 self._do_eval_epoch(run_context, tgt_columns)
+
+        # restore PYNATIVE_MODE after training.
+        context.set_context(mode=context.PYNATIVE_MODE)
 
     def _run_ds_sink(self, train_dataset, eval_dataset, list_callback,
                      cb_params, print_steps, eval_steps):

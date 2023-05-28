@@ -17,6 +17,7 @@ Test XLM
 """
 import gc
 import unittest
+import pytest
 import numpy as np
 import mindspore
 from mindnlp.models.xlm import xlm_config
@@ -33,7 +34,7 @@ class TestXlm(unittest.TestCase):
         Set up.
         """
         self.config = xlm_config.XLMConfig(n_layers=2,
-                                           n_words=22, n_heads=24, emb_dim=24, batch_size=1, seq_len=128, vocab_size=100)
+                                           vocab_size=22, n_heads=24, emb_dim=24, batch_size=1, seq_len=128)
 
     def test_xlm_predlayer(self):
         """
@@ -163,6 +164,16 @@ class TestXlm(unittest.TestCase):
             p_mask=input_mask,
         )
         assert output[0].shape == ()
+
+    @pytest.mark.download
+    def test_from_pretrained(self):
+        """test from pretrained"""
+        _ = xlm.XLMModel.from_pretrained('xlm-clm-enfr-1024')
+
+    @pytest.mark.download
+    def test_from_pretrained_from_pt(self):
+        """test from pt"""
+        _ = xlm.XLMModel.from_pretrained('xlm-mlm-en-2048', from_pt=True)
 
     def tearDown(self) -> None:
         gc.collect()
