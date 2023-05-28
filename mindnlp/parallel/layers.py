@@ -12,17 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=W0613
 """Tensor Parallel Layers"""
 
-from typing import Callable, Optional
-import numpy as np
+from typing import Optional, Union
 
-import mindspore
-from mindspore import nn
-from mindspore import ops
-from mindspore import numpy as mnp
+from mindspore import nn, ops
+from mindspore import Parameter, Tensor
+from mindspore.common.initializer import Initializer, initializer
 
 from mindspore.communication import get_rank, get_group_size
+
 
 from .mappings import (
     copy_to_model_parallel_region,
@@ -31,47 +31,6 @@ from .mappings import (
     scatter_to_model_parallel_region,
 )
 from .utils import VocabUtility, divide_and_check_no_remainder
-
-
-def _initialize_affine_weight(
-    weight: mindspore.Tensor,
-    out_features: int,
-    in_features: int,
-    per_partition_size: int,
-    partition_dim: int,
-    init_method: Callable[[mindspore.Tensor], mindspore.Tensor],
-    stride: int = 1,
-    return_master_weight: bool = False,
-) -> Optional[mindspore.Tensor]:
-    """Initialize affine weight for model parallel.
-
-    Build the master weight on all processes and scatter
-    the relevant chunk."""
-
-    # If we only use 1 process for model parallelism, bypass scatter.
-    rank_size = get_group_size()
-    if rank_size == 1:
-        init_method(weight)
-        if return_master_weight:
-            return weight
-        return None
-
-    # Initialize master weight
-    master_weight = mnp.empty((out_features, in_features), dtype=weight.dtype)
-    init_method(master_weight)
-
-    # Split and copy
-    per_partition_per_stride_size = divide_and_check_no_remainder(per_partition_size, stride)
-    weight_list = ops.split(master_weight, per_partition_per_stride_size, axis=partition_dim)
-    rank_id = get_rank()
-    my_weight_list = weight_list[rank_id::rank_size]
-
-    weight = ops.concat(my_weight_list, axis=partition_dim)
-    ops.stop_gradient(weight)
-
-    if return_master_weight:
-        return master_weight
-    return None
 
 
 class VocabParallelEmbedding(nn.Cell):
@@ -90,7 +49,7 @@ class VocabParallelEmbedding(nn.Cell):
         vocab_size: int,
         embedding_size: int,
         padding_idx: Optional[int] = None,
-        init_method: Callable[[mindspore.Tensor], mindspore.Tensor] = mindspore.common.initializer.XavierNormal,
+        init_method: Union[str, Initializer] = "normal",
     ) -> None:
         super().__init__()
         # Keep the input dimensions.
@@ -98,37 +57,39 @@ class VocabParallelEmbedding(nn.Cell):
         self.embedding_size = embedding_size
         self.padding_idx = padding_idx
         # Divide the weight matrix along the vocaburaly dimension.
-        self.vocab_start_index, self.vocab_end_index = VocabUtility.vocab_range_from_global_vocab_size(
+        (
+            self.vocab_start_index,
+            self.vocab_end_index,
+        ) = VocabUtility.vocab_range_from_global_vocab_size(
             self.vocab_size, get_rank(), get_group_size()
         )
         self.vocab_size_per_partition = self.vocab_end_index - self.vocab_start_index
 
         # Allocate weights.
-        self.weight = mindspore.Parameter(mindspore.Tensor(
-            np.random.randn(self.vocab_size_per_partition, self.embedding_size).astype(np.float32)
-        ))
-        # And initialize.
-        _initialize_affine_weight(
-            self.weight, self.vocab_size, self.embedding_size, self.vocab_size_per_partition, 0, init_method
+        self.weight = Parameter(
+            initializer(
+                init_method, (self.vocab_size_per_partition, self.embedding_size)
+            ),
+            "weight",
         )
-        self.embedding = nn.Embedding(
-            self.vocab_size_per_partition,
-            self.embedding_size,
-            padding_idx=self.padding_idx
-        )
-        for _, param in self.embedding.parameters_and_names():
-            param.set_data(self.weight)
 
-    def construct(self, input_: mindspore.Tensor) -> mindspore.Tensor:  # type: ignore
+    def construct(self, input_: Tensor) -> Tensor:  # type: ignore
         # Build the mask.
-        input_mask = (input_ < self.vocab_start_index) | (input_ >= self.vocab_end_index)
+        input_mask = (input_ < self.vocab_start_index) | (
+            input_ >= self.vocab_end_index
+        )
         # Mask the input.
         masked_input = input_ - self.vocab_start_index
         masked_input = ops.masked_fill(masked_input, input_mask, 0)
         # Get the embeddings.
-        output_parallel = self.embedding(masked_input)
+        ori_shape = masked_input.shape
+        output_parallel = ops.gather(self.weight, masked_input.view(-1), 0).view(
+            ori_shape + (self.embedding_size)
+        )
         # Mask the output embedding.
-        output_parallel = ops.masked_fill(output_parallel, input_mask.unsqueeze(-1), 0.0)
+        output_parallel = ops.masked_fill(
+            output_parallel, input_mask.unsqueeze(-1), 0.0
+        )
         # Reduce across all the model parallel GPUs.
         output = reduce_from_model_parallel_region(output_parallel)
         return output
@@ -150,7 +111,7 @@ class ParallelEmbedding(nn.Cell):
         vocab_size: int,
         embedding_size: int,
         padding_idx: Optional[int] = None,
-        init_method: Callable[[mindspore.Tensor], mindspore.Tensor] = mindspore.common.initializer.XavierNormal
+        init_method: Union[str, Initializer] = "normal",
     ) -> None:
         super().__init__()
         # Keep the input dimensions.
@@ -159,34 +120,24 @@ class ParallelEmbedding(nn.Cell):
         self.padding_idx = padding_idx
         # Divide the weight matrix along the embedding dimension.
         rank_size = get_group_size()
-        self.embedding_size_per_partition = divide_and_check_no_remainder(self.embedding_size, rank_size)
+        self.embedding_size_per_partition = divide_and_check_no_remainder(
+            self.embedding_size, rank_size
+        )
 
         # Allocate weights.
-        self.weight = mindspore.Parameter(mindspore.Tensor(
-            np.random.randn(self.vocab_size, self.embedding_size_per_partition).astype(np.float32)
-        ))
-        # And initialize.
-        _initialize_affine_weight(
-            self.weight,
-            self.vocab_size,
-            self.embedding_size,
-            self.embedding_size_per_partition,
-            1,
-            init_method,
-            stride=1,
-            return_master_weight=False,
+        self.weight = Parameter(
+            initializer(
+                init_method, (self.vocab_size, self.embedding_size_per_partition)
+            ),
+            "weight",
         )
-        self.embedding = nn.Embedding(
-            self.vocab_size,
-            self.embedding_size_per_partition,
-            padding_idx=self.padding_idx
-        )
-        for _, param in self.embedding.parameters_and_names():
-            param.set_data(self.weight)
 
-    def construct(self, input_: mindspore.Tensor) -> mindspore.Tensor:  # type: ignore
+    def construct(self, input_: Tensor) -> Tensor:  # type: ignore
         input_parallel = copy_to_model_parallel_region(input_)
-        output_parallel = self.embedding(input_parallel)
+        ori_shape = input_parallel.shape
+        output_parallel = ops.gather(self.weight, input_parallel.view(-1), 0).view(
+            ori_shape + (self.embedding_size)
+        )
         output = gather_from_model_parallel_region(output_parallel)
         return output
 
@@ -218,7 +169,7 @@ class ColumnParallelLinear(nn.Cell):
         out_features: int,
         bias: bool = True,
         gather_output: bool = True,
-        init_method: Callable[[mindspore.Tensor], mindspore.Tensor] = mindspore.common.initializer.XavierNormal,
+        init_method: Union[str, Initializer] = "normal",
         stride: int = 1,
         keep_master_weight_for_test: bool = False,
     ) -> None:
@@ -230,33 +181,30 @@ class ColumnParallelLinear(nn.Cell):
         self.gather_output = gather_output
         # Divide the weight matrix along the last dimension.
         rank_size = get_group_size()
-        self.output_size_per_partition = divide_and_check_no_remainder(out_features, rank_size)
+        self.output_size_per_partition = divide_and_check_no_remainder(
+            out_features, rank_size
+        )
 
         # Parameters.
-        self.weight = mindspore.Parameter(mindspore.Tensor(np.random.randn(self.in_features, self.output_size_per_partition)))
+        self.weight = Parameter(
+            initializer(
+                init_method, (self.in_features, self.output_size_per_partition)
+            ),
+            "weight",
+        )
         if bias:
             # Always initialize bias to zero.
-            self.bias = mindspore.Parameter(mindspore.Tensor(np.zeros((self.output_size_per_partition), dtype=np.float32)))
+            self.bias = Parameter(
+                initializer("zeros", (self.output_size_per_partition,)), "bias"
+            )
         else:
             self.bias = None
 
-        # Initialize weight.
-        self.master_weight = _initialize_affine_weight(
-            self.weight,
-            self.out_features,
-            self.in_features,
-            self.output_size_per_partition,
-            0,
-            init_method,
-            stride=stride,
-            return_master_weight=keep_master_weight_for_test,
-        )
-
-    def get_master_weight(self) -> mindspore.Tensor:
+    def get_master_weight(self) -> Tensor:
         """get master weight of ColumnParallelLinear"""
-        return gather_from_model_parallel_region(self.weight.data).transpose_(0, 1)
+        return gather_from_model_parallel_region(self.weight).swapaxes(0, 1)
 
-    def construct(self, input_: mindspore.Tensor) -> mindspore.Tensor:  # type: ignore
+    def construct(self, input_: Tensor) -> Tensor:  # type: ignore
         # Set up backprop all-reduce.
         input_parallel = copy_to_model_parallel_region(input_)
         # Matrix multiply.
@@ -304,7 +252,7 @@ class RowParallelLinear(nn.Cell):
         out_features: int,
         bias: bool = True,
         input_is_parallel: bool = False,
-        init_method: Callable[[mindspore.Tensor], mindspore.Tensor] = mindspore.common.initializer.XavierNormal,
+        init_method: Union[str, Initializer] = "normal",
         stride: int = 1,
         keep_master_weight_for_test: bool = False,
     ):
@@ -316,34 +264,29 @@ class RowParallelLinear(nn.Cell):
         self.input_is_parallel = input_is_parallel
         # Divide the weight matrix along the last dimension.
         rank_size = get_group_size()
-        self.input_size_per_partition = divide_and_check_no_remainder(in_features, rank_size)
+        self.input_size_per_partition = divide_and_check_no_remainder(
+            in_features, rank_size
+        )
 
         # Parameters.
         # we allocate the transpose.
-        self.weight = mindspore.Parameter(mindspore.Tensor(np.random.randn(self.input_size_per_partition, self.out_features)))
+        self.weight = Parameter(
+            initializer(
+                init_method, (self.input_size_per_partition, self.out_features)
+            ),
+            "weight",
+        )
         if bias:
             # Always initialize bias to zero.
-            self.bias = mindspore.Parameter(mindspore.Tensor(np.zeros((self.out_features), dtype=np.float32)))
+            self.bias = Parameter(initializer("zeros", (self.out_features,)), "bias")
         else:
             self.bias = None
 
-        # Initialize weight.
-        self.master_weight = _initialize_affine_weight(
-            self.weight,
-            self.out_features,
-            self.in_features,
-            self.input_size_per_partition,
-            1,
-            init_method,
-            stride=stride,
-            return_master_weight=keep_master_weight_for_test,
-        )
-
-    def get_master_weight(self) -> mindspore.Tensor:
+    def get_master_weight(self) -> Tensor:
         """get master weight of RowParallelLinear"""
-        return gather_from_model_parallel_region(self.weight.data).transpose_(0, 1)
+        return gather_from_model_parallel_region(self.weight).swapaxes(0, 1)
 
-    def construct(self, input_: mindspore.Tensor) -> mindspore.Tensor:  # type:ignore
+    def construct(self, input_: Tensor) -> Tensor:  # type:ignore
         # Set up backprop all-reduce.
         if self.input_is_parallel:
             input_parallel = input_
@@ -358,3 +301,11 @@ class RowParallelLinear(nn.Cell):
         else:
             output = output_
         return output
+
+
+__all__ = [
+    "ColumnParallelLinear",
+    "RowParallelLinear",
+    "VocabParallelEmbedding",
+    "ParallelEmbedding",
+]
