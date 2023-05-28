@@ -27,7 +27,6 @@ from mindnlp.modules.embeddings import Fasttext, Glove
 from mindnlp.modules.crf import CRF
 from mindnlp.modules.loss import RDropLoss, CMRC2018Loss
 from mindnlp.modules.rnns import *
-from mindnlp.modules.generation import *
 from mindnlp.modules.accumulator import *
 
 if less_min_pynative_first:

@@ -14,10 +14,15 @@
 # ============================================================================
 
 """
-Config classes
+Beam constraints
 """
 
-from .pretrained_config import PreTrainedConfig
-from .generation_config import GenerationConfig
+class DisjunctiveConstraint:
+    """DisjunctiveConstraint"""
+    def __init__(self) -> None:
+        pass
 
-__all__ = ['PreTrainedConfig', 'GenerationConfig']
+class PhrasalConstraint:
+    """PhrasalConstraint"""
+    def __init__(self) -> None:
+        pass

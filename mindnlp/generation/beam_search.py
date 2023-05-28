@@ -14,10 +14,20 @@
 # ============================================================================
 
 """
-Config classes
+Beam search
 """
 
-from .pretrained_config import PreTrainedConfig
-from .generation_config import GenerationConfig
+class BeamScorer:
+    """BeamScorer"""
+    def __init__(self) -> None:
+        pass
 
-__all__ = ['PreTrainedConfig', 'GenerationConfig']
+class BeamSearchScorer:
+    """BeamSearchScorer"""
+    def __init__(self) -> None:
+        pass
+
+class ConstrainedBeamSearchScorer:
+    """ConstrainedBeamSearchScorer"""
+    def __init__(self) -> None:
+        pass
