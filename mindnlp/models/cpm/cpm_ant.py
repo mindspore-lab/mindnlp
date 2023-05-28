@@ -15,7 +15,7 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=C0103
-""" MindNLP CPMAnt"""
+""" MindNLP CPM Ant"""
 
 
 import math
