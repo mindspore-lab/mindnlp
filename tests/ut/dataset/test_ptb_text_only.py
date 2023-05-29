@@ -76,7 +76,6 @@ class TestPtbTextOnly(unittest.TestCase):
 
         train_dataset, _, _ = HF_Ptb_text_only()
         train_dataset, vocab = HF_Ptb_text_only_Process(train_dataset)
-
         train_dataset = train_dataset.create_tuple_iterator()
 
         for _, value in vocab.vocab().items():
