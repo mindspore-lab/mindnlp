@@ -116,7 +116,7 @@ class RwkvLinearAttention(nn.Cell):
             value = value.astype(mindspore.float32)
         # The CUDA kernel will fill this tensor.
 
-        if self.return_state or state is not None:
+        if self.return_state:
             if state is None:
                 state = ops.zeros((batch_size, hidden_size, 3), dtype=mindspore.float32)
                 state[:, :, 2] -= 1e38
@@ -132,13 +132,17 @@ class RwkvLinearAttention(nn.Cell):
         return output.astype(input_dtype), state
 
     # g stands for grad
-    def bprop(self, w, u, k, v, y, gy):
+    def bprop(self, w, u, k, v, s, y, gy):
         """bporp for wkv"""
+        dtype = k.dtype
+        k = k.astype(mindspore.float32)
+        v = v.astype(mindspore.float32)
+        gy = gy.astype(mindspore.float32)
         gw, gu, gk, gv = self.wkv_backward(w, u, k, v, gy)
-        gw = ops.sum(gw, 1)
-        gu = ops.sum(gu, 1)
+        gw = ops.sum(gw, 0)
+        gu = ops.sum(gu, 0)
 
-        return (gw, gu, gk, gv)
+        return (gw, gu, gk.astype(dtype), gv.astype(dtype))
 
 
 class RwkvSelfAttention(nn.Cell):
