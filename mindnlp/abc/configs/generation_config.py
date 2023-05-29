@@ -18,7 +18,6 @@ GenerationConfig
 """
 
 from typing import Dict, Any
-from mindnlp.abc import PreTrainedConfig
 
 class GenerationConfig:
     """
@@ -145,7 +144,7 @@ class GenerationConfig:
         return config
 
     @classmethod
-    def from_model_config(cls, model_config: PreTrainedConfig) -> "GenerationConfig":
+    def from_model_config(cls, model_config) -> "GenerationConfig":
         """
         Instantiates a [`GenerationConfig`] from a [`PretrainedConfig`]. This function is useful to convert legacy
         [`PretrainedConfig`] objects, which may contain generation parameters, into a stand-alone [`GenerationConfig`].
