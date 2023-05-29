@@ -28,7 +28,7 @@ from typing import Tuple, Callable, Optional
 import logging
 import mindspore
 import numpy as np
-from mindspore import ops, nn, Parameter
+from mindspore import ops, nn, Parameter,Tensor
 from mindspore.common.initializer import Normal, initializer
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindnlp.models.utils.utils import SequenceSummary, SQuADHead
@@ -42,19 +42,17 @@ PRETRAINED_MODEL_ARCHIVE_MAP = {
     model: MINDNLP_MODEL_URL_BASE.format('xlm', model) for model in XLM_SUPPORT_LIST
 }
 
+def torch_to_mindspore(pth_file, **kwargs):
+    """convert torch checkpoint to mindspore"""
+    _ = kwargs.get('prefix', '')
 
-def torch_to_mindspore(pth_file, size:str=None):
-    """torch to mindspore."""
     try:
         import torch
     except Exception as exc:
         raise ImportError("'import torch' failed, please install torch by "
                           "`pip install torch` or instructions from 'https://pytorch.org'") \
-        from exc
+                          from exc
 
-    size = "mindspore" if not size else size # rename ckpt
-
-    from mindspore import Tensor
     from mindspore.train.serialization import save_checkpoint
 
     logging.info('Starting checkpoint conversion.')
@@ -84,8 +82,8 @@ def torch_to_mindspore(pth_file, size:str=None):
         try:
             save_checkpoint(ms_ckpt, ms_ckpt_path)
         except Exception as exc:
-            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, please checkout the path.') \
-            from exc
+            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, '
+                               f'please checkout the path.') from exc
 
     return ms_ckpt_path
 
