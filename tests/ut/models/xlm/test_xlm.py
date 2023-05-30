@@ -169,15 +169,15 @@ class TestXlm(unittest.TestCase):
         )
         assert output[0].shape == ()
 
-    # @pytest.mark.download
-    # def test_from_pretrained(self):
-    #     """test from pretrained"""
-    #     _ = xlm.XLMModel.from_pretrained('xlm-clm-enfr-1024')
+    @pytest.mark.download
+    def test_from_pretrained(self):
+        """test from pretrained"""
+        _ = xlm.XLMModel.from_pretrained('xlm-clm-enfr-1024')
 
-    # @pytest.mark.download
-    # def test_from_pretrained_from_pt(self):
-    #     """test from pt"""
-    #     _ = xlm.XLMModel.from_pretrained('xlm-mlm-en-2048', from_pt=True)
+    @pytest.mark.download
+    def test_from_pretrained_from_pt(self):
+        """test from pt"""
+        _ = xlm.XLMModel.from_pretrained('xlm-mlm-en-2048', from_pt=True)
 
-    # def tearDown(self) -> None:
-    #     gc.collect()
+    def tearDown(self) -> None:
+        gc.collect()
