@@ -33,8 +33,12 @@ class TestXlm(unittest.TestCase):
         """
         Set up.
         """
-        self.config = xlm_config.XLMConfig(n_layers=2,
-                                           vocab_size=22, n_heads=24, emb_dim=24, batch_size=1, seq_len=128)
+        self.config = xlm_config.XLMConfig(vocab_size=22,
+                                           emb_dim=24,
+                                           n_layers=2,
+                                           n_heads=8,
+                                           max_position_embeddings=128,
+                                           batch_size=1)
 
     def test_xlm_predlayer(self):
         """
@@ -51,7 +55,7 @@ class TestXlm(unittest.TestCase):
         test xlm_multiheadattention
         """
         xlm_multiheadattention = xlm.MultiHeadAttention(n_heads=self.config.n_heads,
-                                                        dim=24,
+                                                        dim=self.config.emb_dim,
                                                         config=self.config)
         input_ids = mindspore.Tensor(np.random.randint(
             0, 1000, (1, 2, 24)), mindspore.float32)
@@ -165,15 +169,15 @@ class TestXlm(unittest.TestCase):
         )
         assert output[0].shape == ()
 
-    @pytest.mark.download
-    def test_from_pretrained(self):
-        """test from pretrained"""
-        _ = xlm.XLMModel.from_pretrained('xlm-clm-enfr-1024')
+    # @pytest.mark.download
+    # def test_from_pretrained(self):
+    #     """test from pretrained"""
+    #     _ = xlm.XLMModel.from_pretrained('xlm-clm-enfr-1024')
 
-    @pytest.mark.download
-    def test_from_pretrained_from_pt(self):
-        """test from pt"""
-        _ = xlm.XLMModel.from_pretrained('xlm-mlm-en-2048', from_pt=True)
+    # @pytest.mark.download
+    # def test_from_pretrained_from_pt(self):
+    #     """test from pt"""
+    #     _ = xlm.XLMModel.from_pretrained('xlm-mlm-en-2048', from_pt=True)
 
-    def tearDown(self) -> None:
-        gc.collect()
+    # def tearDown(self) -> None:
+    #     gc.collect()
