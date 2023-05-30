@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+"""MindNLP Parallel modules, which is ported from Megatron."""
 
-"""
-Config classes
-"""
+from . import layers
+from .layers import *
 
-from .pretrained_config import PreTrainedConfig
-from .generation_config import GenerationConfig
-
-__all__ = ['PreTrainedConfig', 'GenerationConfig']
+__all__ = []
+__all__.extend(layers.__all__)

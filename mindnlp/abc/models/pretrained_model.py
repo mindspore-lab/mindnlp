@@ -28,7 +28,7 @@ from mindspore import log as logger
 
 from mindnlp.configs import HF_MODEL_URL_BASE
 from mindnlp.utils.download import cached_path
-from mindnlp.abc.configs import PreTrainedConfig
+from mindnlp.abc.configs import PreTrainedConfig, GenerationConfig
 from mindnlp.abc.mixins import CellUtilMixin, GenerationMixin
 
 _init_weights = True
@@ -42,11 +42,13 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
     config_class = None
     pretrained_model_archive_map = {}
     base_model_prefix = ""
+    main_input_name = "input_ids"
 
     def __init__(self, config):
         super().__init__(config)
         # Save config in model
         self.config = config
+        self.generation_config = GenerationConfig.from_model_config(config) if self.can_generate() else None
 
     def post_init(self):
         """

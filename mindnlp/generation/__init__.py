@@ -1,4 +1,4 @@
-# Copyright 2023 Huawei Technologies Co., Ltd
+# Copyright 2022 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-
 """
-Config classes
+Generation
 """
-
-from .pretrained_config import PreTrainedConfig
-from .generation_config import GenerationConfig
-
-__all__ = ['PreTrainedConfig', 'GenerationConfig']
+from .beam_constraints import *
+from .beam_search import *
+from .logits_process import *
+from .stopping_criteria import *
+from .utils import *

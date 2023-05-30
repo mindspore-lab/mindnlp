@@ -12,12 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+"""Parallel Operators"""
+from mindspore import Parameter
+from mindspore.ops import AllGather as msAllGather
+from mindspore.ops.primitive import _run_op
 
-"""
-Config classes
-"""
+class AllGather(msAllGather):
+    """AllGather op."""
+    def __call__(self, *args):
+        should_elim, output = self.check_elim(*args)
+        for arg in args:
+            if isinstance(arg, Parameter) and arg.has_init:
+                arg.init_data()
+        if should_elim:
+            return output
+        return _run_op(self, self.name, args)
 
-from .pretrained_config import PreTrainedConfig
-from .generation_config import GenerationConfig
-
-__all__ = ['PreTrainedConfig', 'GenerationConfig']
+__all__ = ['AllGather']

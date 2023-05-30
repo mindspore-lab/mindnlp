@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+"""MindNLP CPM config"""
+from ..gpt2 import GPT2Config
 
-"""
-Config classes
-"""
+__all__ = ['CpmConfig']
 
-from .pretrained_config import PreTrainedConfig
-from .generation_config import GenerationConfig
+CONFIG_ARCHIVE_MAP = {
+    "TsinghuaAI/CPM-Generate": "https://huggingface.co/TsinghuaAI/CPM-Generate/raw/main/config.json"
+}
 
-__all__ = ['PreTrainedConfig', 'GenerationConfig']
+class CpmConfig(GPT2Config):
+    """Cpm Config"""
+    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
