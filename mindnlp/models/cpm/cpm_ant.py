@@ -863,12 +863,3 @@ class CpmAntForCausalLM(CpmAntPreTrainedModel):
             "use_cache": kwargs["use_cache"],
             "past_key_values": kwargs.get("past_key_values", None),
         }
-
-    def _reorder_cache(self, past_key_values, beam_idx):
-        past_key_values = [
-            list(each) if each is not None else each for each in past_key_values
-        ]
-        for key_value_layer in past_key_values:
-            key_value_layer[0] = key_value_layer[0][beam_idx]
-            key_value_layer[1] = key_value_layer[1][beam_idx]
-        return past_key_values
