@@ -130,6 +130,7 @@ def HF_Ptb_text_only_Process(dataset, column="sentence", tokenizer=BasicTokenize
         >>> train_iter = dataset_train.create_tuple_iterator()
         >>> print(next(train_iter))
     """
+
     if vocab is None:
         dataset, vocab = common_process(dataset, column, tokenizer, vocab)
     else:
@@ -140,7 +141,8 @@ def HF_Ptb_text_only_Process(dataset, column="sentence", tokenizer=BasicTokenize
     dataset = dataset.map([trancate_op], column)
     if bucket_boundaries is not None:
         if not isinstance(bucket_boundaries, list):
-            raise ValueError(f"'bucket_boundaries' must be a list of int, but get {type(bucket_boundaries)}")
+            raise ValueError(
+                f"'bucket_boundaries' must be a list of int, but get {type(bucket_boundaries)}")
         if bucket_boundaries[-1] < max_len + 1:
             bucket_boundaries.append(max_len + 1)
         bucket_batch_sizes = [batch_size] * (len(bucket_boundaries) + 1)

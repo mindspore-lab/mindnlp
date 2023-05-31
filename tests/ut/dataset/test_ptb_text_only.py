@@ -92,7 +92,6 @@ class TestPtbTextOnly(unittest.TestCase):
                                        tokenizer=BasicTokenizer(),
                                        vocab=None
                                        )
-
         train_dataset = train_dataset.create_tuple_iterator()
 
         for _, value in vocab.vocab().items():
