@@ -68,9 +68,9 @@ def torch_to_mindspore(pth_file, **kwargs):
             k = k.replace('.weight', '.embedding_table')
         if 'wpe.' in k:
             k = k.replace('.weight', '.embedding_table')
-        if 'weight' in k and 'lm_head.weight' not in k:
-            k = k.replace('weight', 'gamma')
-        if '.bias' in k and '.attn.bias' not in k:
+        if 'weight' in k and not any(e in k for e in ['lm_head.weight', '.c_attn', '.q_attn', '.c_proj', '.c_fc']):
+            k = k.replace('.weight', '.gamma')
+        if '.bias' in k and not any(e in k for e in ['.attn.bias', '.c_attn', '.q_attn', '.c_proj', '.c_fc']):
             k = k.replace('.bias', '.beta')
         if prefix:
             k = prefix + "." + k
