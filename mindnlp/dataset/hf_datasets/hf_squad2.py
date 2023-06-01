@@ -21,14 +21,13 @@ import os
 from typing import Union, Tuple
 from datasets import load_dataset as hf_load
 from mindspore.dataset import GeneratorDataset
-from mindnlp.dataset.text_classification.imdb import IMDB_Process
-from mindnlp.dataset.register import load_dataset, process
+from mindnlp.dataset.register import load_dataset
 from mindnlp.configs import DEFAULT_ROOT
 
 
 class HFsquad2:
     """
-    Hugging Face IMDB dataset source
+    Hugging Face squad_v2 dataset source
     """
     def __init__(self, dataset_list) -> None:
         self.dataset_list = dataset_list
@@ -107,4 +106,3 @@ def HF_SQuAD2(
     if len(mode_list) == 1:
         return datasets_list[0]
     return datasets_list
-
