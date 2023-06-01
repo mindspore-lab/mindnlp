@@ -19,4 +19,3 @@ Directly load huggingface datasets
 from .hf_imdb import HF_IMDB, HF_IMDB_Process
 from .hf_glue import HF_GLUE
 from .hf_msra_ner import HF_Msra_ner, HF_Msra_ner_Process
-from .hf_ptb_text_only import HF_Ptb_text_only, HF_Ptb_text_only_Process
