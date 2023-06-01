@@ -19,6 +19,7 @@
 Test MobileBert
 """
 import gc
+import os
 import unittest
 
 import mindspore
@@ -340,3 +341,8 @@ class TestMobileBert(unittest.TestCase):
 
     def tearDown(self) -> None:
         gc.collect()
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.exists("~/.mindnlp"):
+            os.removedirs("~/.mindnlp")
