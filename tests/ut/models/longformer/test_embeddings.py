@@ -14,28 +14,17 @@
 # limitations under the License.
 # ============================================================================
 """Test Longformer"""
+import gc
 import unittest
 import numpy as np
 import mindspore
 from mindspore import Tensor
 from mindnlp.models.longformer.longformer_config import LongformerConfig
-from mindnlp.models.longformer.longformer import LongformerEmbeddings
-from mindnlp.models.longformer.longformer import LongformerSelfAttention
-from mindnlp.models.longformer.longformer import LongformerSelfOutput
-from mindnlp.models.longformer.longformer import LongformerAttention
-from mindnlp.models.longformer.longformer import LongformerIntermediate
-from mindnlp.models.longformer.longformer import LongformerOutput
-from mindnlp.models.longformer.longformer import LongformerLayer
-from mindnlp.models.longformer.longformer import LongformerEncoder
-from mindnlp.models.longformer.longformer import LongformerPooler
-from mindnlp.models.longformer.longformer import LongformerLMHead
-from mindnlp.models.longformer.longformer import LongformerModel
-from mindnlp.models.longformer.longformer import LongformerForMaskedLM
-from mindnlp.models.longformer.longformer import LongformerForSequenceClassification
-from mindnlp.models.longformer.longformer import LongformerClassificationHead
-from mindnlp.models.longformer.longformer import LongformerForQuestionAnswering
-from mindnlp.models.longformer.longformer import LongformerForTokenClassification
-from mindnlp.models.longformer.longformer import LongformerForMultipleChoice
+from mindnlp.models.longformer.longformer import LongformerEmbeddings, LongformerSelfAttention, \
+    LongformerSelfOutput, LongformerAttention, LongformerIntermediate, LongformerOutput, \
+    LongformerEncoder, LongformerPooler, LongformerLMHead, LongformerModel, \
+    LongformerForMaskedLM, LongformerForSequenceClassification, LongformerClassificationHead, \
+    LongformerForQuestionAnswering, LongformerForTokenClassification, LongformerForMultipleChoice
 
 
 class TestModelingEmbeddings(unittest.TestCase):
@@ -46,37 +35,26 @@ class TestModelingEmbeddings(unittest.TestCase):
         """
         Set up.
         """
-        self.input = None
+        self.config = LongformerConfig(num_hidden_layers=2,
+                                       attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+                                       intermediate_size=768)
 
     def test_modeling_longformer_embedding(self):
         r"""
         Test model bert with pynative mode
         """
-        ms_config = LongformerConfig()
-        ms_model = LongformerEmbeddings(ms_config)
+        ms_model = LongformerEmbeddings(self.config)
         ms_model.set_train(False)
         tensor = np.random.randint(1, 10, (2, 2))
         ms_input_ids = Tensor.from_numpy(tensor)
         ms_outputs = ms_model(ms_input_ids)
         assert (2, 2, 768) == ms_outputs.shape
 
-
-class TestModelingSelfAttention(unittest.TestCase):
-    r"""
-    Test model bert
-    """
-    def setUp(self):
-        """
-        Set up.
-        """
-        self.input = None
-
-    def test_modeling_longformer_embedding(self):
+    def test_modeling_longformer_self_attention(self):
         r"""
         Test model bert with pynative mode
         """
-        ms_config = LongformerConfig(attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8])
-        ms_model = LongformerSelfAttention(ms_config, 1)
+        ms_model = LongformerSelfAttention(self.config, 1)
         ms_model.set_train(False)
         tensor = np.random.randint(1, 10, (1, 64, 768))
         tensor_attention_mask = np.random.randint(0, 10, (1, 64))
@@ -91,23 +69,11 @@ class TestModelingSelfAttention(unittest.TestCase):
                               output_attentions=False)
         assert (1, 64, 768) == ms_outputs[0].shape
 
-
-class TestModelingSelfOutput(unittest.TestCase):
-    r"""
-    Test model bert
-    """
-    def setUp(self):
-        """
-        Set up.
-        """
-        self.input = None
-
-    def test_modeling_longformer_embedding(self):
+    def test_modeling_longformer_self_output(self):
         r"""
         Test model bert with pynative mode
         """
-        ms_config = LongformerConfig()
-        ms_model = LongformerSelfOutput(ms_config)
+        ms_model = LongformerSelfOutput(self.config)
         ms_model.set_train(False)
         hidden_states = np.random.randint(1, 10, (1, 8, 768))
         input_tensor = np.random.randint(1, 10, (1, 8, 768))
@@ -118,22 +84,11 @@ class TestModelingSelfOutput(unittest.TestCase):
         assert (1, 8, 768) == ms_outputs.shape
 
 
-class TestModelingAttention(unittest.TestCase):
-    r"""
-    Test model bert
-    """
-    def setUp(self):
-        """
-        Set up.
-        """
-        self.input = None
-
-    def test_modeling_longformer_embedding(self):
+    def test_modeling_longformer_attention(self):
         r"""
         Test model bert with pynative mode
         """
-        ms_config = LongformerConfig(attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8])
-        ms_model = LongformerAttention(ms_config)
+        ms_model = LongformerAttention(self.config)
         ms_model.set_train(False)
         hidden_states = np.random.randint(1, 10, (1, 8, 768))
         attention_mask = np.random.randint(1, 10, (1, 8))
@@ -156,46 +111,23 @@ class TestModelingAttention(unittest.TestCase):
         assert (1, 8, 768) == ms_outputs[0].shape
 
 
-class TestModelingIntermediate(unittest.TestCase):
-    r"""
-    Test model bert
-    """
-    def setUp(self):
-        """
-        Set up.
-        """
-        self.input = None
-
-    def test_modeling_longformer_embedding(self):
+    def test_modeling_longformer_intermidiate(self):
         r"""
         Test model bert with pynative mode
         """
-        ms_config = LongformerConfig(intermediate_size=10)
-        ms_model = LongformerIntermediate(ms_config)
+        ms_model = LongformerIntermediate(self.config)
         hidden_states = np.random.randint(1, 10, (1, 8, 768))
         ms_hidden_states = mindspore.Tensor(hidden_states, dtype=mindspore.float32)
         ms_outputs = ms_model(
             hidden_states=ms_hidden_states
         )
-        assert (1, 8, 10) == ms_outputs.shape
+        assert (1, 8, 768) == ms_outputs.shape
 
-
-class TestModelingOutput(unittest.TestCase):
-    r"""
-    Test model bert
-    """
-    def setUp(self):
-        """
-        Set up.
-        """
-        self.input = None
-
-    def test_modeling_longformer_embedding(self):
+    def test_modeling_longformer_output(self):
         r"""
         Test model bert with pynative mode
         """
-        ms_config = LongformerConfig(intermediate_size=768)
-        ms_model = LongformerOutput(ms_config)
+        ms_model = LongformerOutput(self.config)
         ms_model.set_train(False)
         hidden_states = np.random.randint(1, 10, (1, 8, 768))
         input_tensor = np.random.randint(1, 10, (1, 8, 768))
@@ -206,60 +138,11 @@ class TestModelingOutput(unittest.TestCase):
         assert (8, 768) == ms_outputs[0].shape
 
 
-class TestModelingLayer(unittest.TestCase):
-    r"""
-    Test model bert
-    """
-    def setUp(self):
-        """
-        Set up.
-        """
-        self.input = None
-
-    def test_modeling_longformer_embedding(self):
+    def test_modeling_longformer_encoder(self):
         r"""
         Test model bert with pynative mode
         """
-        ms_config = LongformerConfig(attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8])
-        ms_model = LongformerLayer(ms_config)
-        ms_model.set_train(False)
-        hidden_states = np.random.randint(1, 10, (1, 8, 768))
-        attention_mask = np.random.randint(1, 10, (1, 8))
-        is_index_mask = np.random.randint(0, 2, (1, 8))
-        is_index_global_attn = np.random.randint(0, 2, (1, 8))
-        is_global_attn = True
-        output_attentions = False
-        ms_hidden_states = mindspore.Tensor(hidden_states, dtype=mindspore.float32)
-        ms_attention_mask = mindspore.Tensor(attention_mask, dtype=mindspore.float32)
-        ms_is_index_mask = mindspore.Tensor(is_index_mask, dtype=mindspore.bool_)
-        ms_is_index_global_attn = mindspore.Tensor(is_index_global_attn, dtype=mindspore.bool_)
-        ms_outputs = ms_model(
-            hidden_states=ms_hidden_states,
-            attention_mask=ms_attention_mask,
-            is_index_masked=ms_is_index_mask,
-            is_index_global_attn=ms_is_index_global_attn,
-            is_global_attn=is_global_attn,
-            output_attentions=output_attentions
-        )
-        assert (1, 8, 768) == ms_outputs[0].shape
-
-
-class TestModelingEncoder(unittest.TestCase):
-    r"""
-    Test model bert
-    """
-    def setUp(self):
-        """
-        Set up.
-        """
-        self.input = None
-
-    def test_modeling_longformer_embedding(self):
-        r"""
-        Test model bert with pynative mode
-        """
-        ms_config = LongformerConfig(attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8])
-        ms_model = LongformerEncoder(ms_config)
+        ms_model = LongformerEncoder(self.config)
         ms_model.set_train(False)
         hidden_states = np.random.randint(1, 10, (1, 8, 768))
         attention_mask = np.random.randint(1, 10, (1, 8))
@@ -273,23 +156,11 @@ class TestModelingEncoder(unittest.TestCase):
         )
         assert (1, 0, 768) == ms_outputs[0].shape
 
-
-class TestModelingPooler(unittest.TestCase):
-    r"""
-    Test model bert
-    """
-    def setUp(self):
-        """
-        Set up.
-        """
-        self.input = None
-
-    def test_modeling_longformer_embedding(self):
+    def test_modeling_longformer_pooler(self):
         r"""
         Test model bert with pynative mode
         """
-        ms_config = LongformerConfig(attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8])
-        ms_model = LongformerPooler(ms_config)
+        ms_model = LongformerPooler(self.config)
         ms_model.set_train(False)
         hidden_states = np.random.randint(1, 10, (1, 8, 768))
         ms_hidden_states = mindspore.Tensor(hidden_states, dtype=mindspore.float32)
@@ -298,23 +169,11 @@ class TestModelingPooler(unittest.TestCase):
         )
         assert (1, 768) == ms_outputs.shape
 
-
-class TestModelingLMHead(unittest.TestCase):
-    r"""
-    Test model bert
-    """
-    def setUp(self):
-        """
-        Set up.
-        """
-        self.input = None
-
-    def test_modeling_longformer_embedding(self):
+    def test_modeling_longformer_lm_head(self):
         r"""
         Test model bert with pynative mode
         """
-        ms_config = LongformerConfig(attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8])
-        ms_model = LongformerLMHead(ms_config)
+        ms_model = LongformerLMHead(self.config)
         ms_model.set_train(False)
         features = np.random.randint(1, 10, (1, 8, 768))
         ms_features = mindspore.Tensor(features, dtype=mindspore.float32)
@@ -324,23 +183,14 @@ class TestModelingLMHead(unittest.TestCase):
         assert (1, 8, 30522) == ms_outputs.shape
 
 
-class TestModelingLongformerModel(unittest.TestCase):
-    r"""
-    Test model bert
-    """
-    def setUp(self):
-        """
-        Set up.
-        """
-        self.input = None
-
-    def test_modeling_longformer_embedding(self):
+    def test_modeling_longformer_model(self):
         r"""
         Test model bert with pynative mode
         """
         ms_config = LongformerConfig(
-            attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            attention_window=[8, 8],
             max_position_embeddings=40,
+            num_hidden_layers=2
         )
         ms_model = LongformerModel(ms_config)
         ms_model.set_train(False)
@@ -359,25 +209,15 @@ class TestModelingLongformerModel(unittest.TestCase):
         assert (1, 10, 768) == ms_outputs[0].shape
         assert (1, 768) == ms_outputs[1].shape
 
-
-class TestModelingLongformerForMaskedLM(unittest.TestCase):
-    r"""
-    Test model bert
-    """
-    def setUp(self):
-        """
-        Set up.
-        """
-        self.input = None
-
-    def test_modeling_longformer_embedding(self):
+    def test_modeling_longformer_masked_lm(self):
         r"""
         Test model bert with pynative mode
         """
         ms_config = LongformerConfig(
-            attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            attention_window=[8, 8],
             max_position_embeddings=40,
             vocab_size=30,
+            num_hidden_layers=2
         )
         ms_model = LongformerForMaskedLM(ms_config)
         ms_model.set_train(False)
@@ -395,25 +235,15 @@ class TestModelingLongformerForMaskedLM(unittest.TestCase):
         )
         assert (1, 10, 30) == ms_outputs[0].shape
 
-
-class TestModelingLongformerForSequenceClassification(unittest.TestCase):
-    r"""
-    Test model bert
-    """
-    def setUp(self):
-        """
-        Set up.
-        """
-        self.input = None
-
-    def test_modeling_longformer_embedding(self):
+    def test_modeling_longformer_sequence_classification(self):
         r"""
         Test model bert with pynative mode
         """
         ms_config = LongformerConfig(
-            attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            attention_window=[8, 8],
             max_position_embeddings=40,
             vocab_size=30,
+            num_hidden_layers=2
         )
         ms_model = LongformerForSequenceClassification(ms_config)
         ms_model.set_train(False)
@@ -431,25 +261,15 @@ class TestModelingLongformerForSequenceClassification(unittest.TestCase):
         )
         assert (1, 2) == ms_outputs[0].shape
 
-
-class TestModelingLongformerClassificationHead(unittest.TestCase):
-    r"""
-    Test model bert
-    """
-    def setUp(self):
-        """
-        Set up.
-        """
-        self.input = None
-
-    def test_modeling_longformer_embedding(self):
+    def test_modeling_longformer_classification_head(self):
         r"""
         Test model bert with pynative mode
         """
         ms_config = LongformerConfig(
-            attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            attention_window=[8, 8],
             max_position_embeddings=40,
             vocab_size=30,
+            num_hidden_layers=2
         )
         ms_model = LongformerClassificationHead(ms_config)
         ms_model.set_train(False)
@@ -458,28 +278,17 @@ class TestModelingLongformerClassificationHead(unittest.TestCase):
         ms_outputs = ms_model(
             hidden_states=ms_hidden_states,
         )
-        print(ms_outputs[0].shape)
         assert (2,) == ms_outputs[0].shape
 
-
-class TestModelingLongformerForQuestionAnswering(unittest.TestCase):
-    r"""
-    Test model bert
-    """
-    def setUp(self):
-        """
-        Set up.
-        """
-        self.input = None
-
-    def test_modeling_longformer_embedding(self):
+    def test_modeling_longformer_qa(self):
         r"""
         Test model bert with pynative mode
         """
         ms_config = LongformerConfig(
-            attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            attention_window=[8, 8],
             max_position_embeddings=40,
             vocab_size=30,
+            num_hidden_layers=2
         )
         ms_model = LongformerForQuestionAnswering(ms_config)
         ms_model.set_train(False)
@@ -497,25 +306,15 @@ class TestModelingLongformerForQuestionAnswering(unittest.TestCase):
         )
         assert (1, 10) == ms_outputs[0].shape
 
-
-class TestModelingLongformerForTokenClassification(unittest.TestCase):
-    r"""
-    Test model bert
-    """
-    def setUp(self):
-        """
-        Set up.
-        """
-        self.input = None
-
-    def test_modeling_longformer_embedding(self):
+    def test_modeling_longformer_token_classification(self):
         r"""
         Test model bert with pynative mode
         """
         ms_config = LongformerConfig(
-            attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            attention_window=[8, 8],
             max_position_embeddings=40,
             vocab_size=30,
+            num_hidden_layers=2
         )
         ms_model = LongformerForTokenClassification(ms_config)
         ms_model.set_train(False)
@@ -533,25 +332,15 @@ class TestModelingLongformerForTokenClassification(unittest.TestCase):
         )
         assert (1, 10, 2) == ms_outputs[0].shape
 
-
-class TestModelingLongformerForMultipleChoice(unittest.TestCase):
-    r"""
-    Test model bert
-    """
-    def setUp(self):
-        """
-        Set up.
-        """
-        self.input = None
-
-    def test_modeling_longformer_embedding(self):
+    def test_modeling_longformer_multiple_choice(self):
         r"""
         Test model bert with pynative mode
         """
         ms_config = LongformerConfig(
-            attention_window=[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+            attention_window=[8, 8],
             max_position_embeddings=40,
             vocab_size=30,
+            num_hidden_layers=2
         )
         ms_model = LongformerForMultipleChoice(ms_config)
         ms_model.set_train(False)
@@ -568,3 +357,6 @@ class TestModelingLongformerForMultipleChoice(unittest.TestCase):
             global_attention_mask=ms_global_attention_mask,
         )
         assert (1, 10) == ms_outputs[0].shape
+
+    def tearDown(self) -> None:
+        gc.collect()

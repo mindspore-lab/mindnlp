@@ -20,14 +20,12 @@ import mindspore
 from mindspore import nn
 from mindspore import ops
 from mindspore import Tensor, Parameter
+from mindspore import log as logger
 from .nezha_config import NezhaConfig
-from ..utils import logging
-from ...abc import CellUtilMixin, PreTrainedModel
+from ...abc import PreTrainedModel
 from ..utils.utils import prune_linear_layer, find_pruneable_heads_and_indices, apply_chunking_to_forward
 from ..utils.activations import ACT2FN
 
-
-logger = logging.get_logger(__name__)
 
 class NezhaRelativePositionsEncoding(nn.Cell):
     """Implement the Functional Relative Position Encoding"""
@@ -601,15 +599,7 @@ class NezhaPreTrainedModel(PreTrainedModel):
         pass
 
     # TODO
-    def init_model_weights(self):
-        pass
-
-    # TODO
     def resize_position_embeddings(self):
-        pass
-
-    # TODO
-    def save(self):
         pass
 
     # TODO
@@ -621,7 +611,7 @@ class NezhaPreTrainedModel(PreTrainedModel):
         pass
 
 
-class NezhaModel(NezhaPreTrainedModel, CellUtilMixin):
+class NezhaModel(NezhaPreTrainedModel):
     """Nezha Model"""
 
     def __init__(self, config, add_pooling_layer=True):

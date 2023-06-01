@@ -21,7 +21,7 @@ import os
 from typing import Union
 import mindspore
 from mindspore import nn, ops
-from mindnlp.abc.backbones.pretrained import PreTrainedModel
+from mindnlp.abc import PreTrainedModel
 from .tinybert_config import BertConfig
 from ..utils.activations import ACT2FN
 

@@ -13,6 +13,7 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=C0103
+# pylint: disable=W0223
 
 """roberta model, base on bert."""
 import mindspore
@@ -20,13 +21,14 @@ from mindspore import nn, ops
 from mindspore import Parameter
 from mindspore.common.initializer import initializer
 
-from mindnlp.models.bert.bert import BertEmbeddings, BertModel, BertPretrainedModel
-from .roberta_config import RobertaConfig
+from mindnlp.configs import MINDNLP_MODEL_URL_BASE
+from mindnlp._legacy.nn import Dropout
+from mindnlp.models.bert.bert import BertEmbeddings, BertModel, BertPreTrainedModel
+from .roberta_config import RobertaConfig, ROBERTA_SUPPORT_LIST
+
 
 PRETRAINED_MODEL_ARCHIVE_MAP = {
-    "roberta-base": "https://huggingface.co/lvyufeng/roberta/resolve/main/roberta-base.ckpt",
-    "roberta-large": "https://huggingface.co/lvyufeng/roberta/resolve/main/roberta-large.ckpt",
-    "roberta-large-mnli": "https://huggingface.co/lvyufeng/roberta/resolve/main/roberta-large-mnli.ckpt",
+    model: MINDNLP_MODEL_URL_BASE.format('roberta', model) for model in ROBERTA_SUPPORT_LIST
 }
 
 class RobertaEmbeddings(BertEmbeddings):
@@ -42,15 +44,15 @@ class RobertaEmbeddings(BertEmbeddings):
             position_ids = position_ids.expand_dims(0).expand_as(input_ids)
         return super().construct(input_ids, token_type_ids, position_ids)
 
-class RobertaPreTrainedModel(BertPretrainedModel):
+class RobertaPreTrainedModel(BertPreTrainedModel):
     """Roberta Pretrained Model."""
     pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
     config_class = RobertaConfig
 
 class RobertaModel(BertModel):
     """Roberta Model"""
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, config, add_pooling_layer=True):
+        super().__init__(config, add_pooling_layer=add_pooling_layer)
         self.embeddings = RobertaEmbeddings(config)
 
 class RobertaLMHead(nn.Cell):
@@ -77,7 +79,7 @@ class RobertaClassificationHead(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size, activation='tanh')
-        self.dropout = nn.Dropout(p=1-config.hidden_dropout_prob)
+        self.dropout = Dropout(p=1-config.hidden_dropout_prob)
         self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
 
     def construct(self, features):
@@ -121,7 +123,7 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
     def __init__(self, config, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
         self.num_labels = config.num_labels
-        self.roberta = RobertaModel(config)
+        self.roberta = RobertaModel(config, add_pooling_layer=False)
         self.classifier = RobertaClassificationHead(config)
 
     def construct(self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None,
@@ -150,7 +152,7 @@ class RobertaForMultipleChoice(RobertaPreTrainedModel):
     def __init__(self, config, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
         self.roberta = RobertaModel(config)
-        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
+        self.dropout = Dropout(p=config.hidden_dropout_prob)
         self.classifier = nn.Dense(config.hidden_size, 1)
 
     def construct(self, input_ids, token_type_ids=None, attention_mask=None, labels=None,

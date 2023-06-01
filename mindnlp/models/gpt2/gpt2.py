@@ -12,29 +12,80 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""MindNLP gpt2 model"""
+# pylint: disable=W0223
 # pylint: disable=C0103
+# pylint: disable=C0415
+# pylint: disable=E0401
+"""MindNLP gpt2 model"""
 
 from typing import Optional, Tuple
 
+import os
+import math
 import mindspore
 import numpy as np
-from mindspore import nn, ops, Parameter, Tensor, dtype_to_nptype
-
-from mindnlp._legacy.functional import tril, split, where, arange
-from mindnlp._legacy.nn import Dropout
-from mindnlp.models.gpt2.config_gpt2 import GPT2Config
-from ..utils import logging
+from mindspore import nn, ops, Tensor, dtype_to_nptype
+from mindspore import log as logger
+from mindspore.common.initializer import initializer, Normal
+from mindnlp.abc import PreTrainedModel
+from mindnlp._legacy.functional import split, where, arange, softmax
+from mindnlp._legacy.nn import Dropout, Matmul
+from mindnlp.configs import MINDNLP_MODEL_URL_BASE
 from ..utils.activations import ACT2FN
 from ..utils.utils import SequenceSummary
 from ..utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
-from ...abc.backbones.pretrained import PreTrainedModel
+from .config_gpt2 import GPT2Config, GPT2_SUPPORT_LIST
 
-logger = logging.get_logger(__name__)
+
+PRETRAINED_MODEL_ARCHIVE_MAP = {
+    model: MINDNLP_MODEL_URL_BASE.format('gpt2', model) for model in GPT2_SUPPORT_LIST
+}
 
 
 __all__ = ['GPT2Attention', 'GPT2DoubleHeadsModel', 'GPT2ForSequenceClassification',
            'GPT2ForTokenClassification', 'GPT2LMHeadModel', 'GPT2Model', 'GPT2MLP']
+
+def torch_to_mindspore(pth_file, **kwargs):
+    """torch to mindspore."""
+    prefix = kwargs.get("prefix", "")
+
+    import logging
+    try:
+        import torch
+    except Exception as exc:
+        raise ImportError("'import torch' failed, please install torch by "
+                          "`pip install torch` or instructions from 'https://pytorch.org'") \
+            from exc
+
+    from mindspore.train.serialization import save_checkpoint
+
+    logging.info('Starting checkpoint conversion.')
+    ms_ckpt = []
+    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
+
+    for k, v in state_dict.items():
+        if 'wte.' in k:
+            k = k.replace('.weight', '.embedding_table')
+        if 'wpe.' in k:
+            k = k.replace('.weight', '.embedding_table')
+        if 'weight' in k and not any(e in k for e in ['lm_head.weight', '.c_attn', '.q_attn', '.c_proj', '.c_fc']):
+            k = k.replace('.weight', '.gamma')
+        if '.bias' in k and not any(e in k for e in ['.attn.bias', '.c_attn', '.q_attn', '.c_proj', '.c_fc']):
+            k = k.replace('.bias', '.beta')
+        if prefix:
+            k = prefix + "." + k
+        ms_ckpt.append({'name': k, 'data': Tensor(v.numpy())})
+
+    ms_ckpt_path = pth_file.replace('pytorch_model.bin', 'mindspore.ckpt')
+    if not os.path.exists(ms_ckpt_path):
+        try:
+            save_checkpoint(ms_ckpt, ms_ckpt_path)
+        except Exception as exc:
+            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, please checkout the path.') \
+                from exc
+
+    return ms_ckpt_path
+
 
 class GPT2Attention(nn.Cell):
     r"""
@@ -45,9 +96,10 @@ class GPT2Attention(nn.Cell):
         super().__init__()
 
         max_positions = config.max_position_embeddings
-        self.bias = Parameter(tril(ops.ones((max_positions, max_positions), mindspore.float32)).view(
-            1, 1, max_positions, max_positions), requires_grad=False)
-        self.masked_bias = Parameter(Tensor(-1e4), requires_grad=False)
+        self.bias = Tensor(np.tril(np.ones((max_positions, max_positions))).reshape(
+                (1, 1, max_positions, max_positions)
+            ), mindspore.bool_)
+        self.masked_bias = Tensor(-1e4, mindspore.float32)
 
         self.embed_dim = config.hidden_size
         self.num_heads = config.num_attention_heads
@@ -78,6 +130,10 @@ class GPT2Attention(nn.Cell):
         self.resid_dropout = Dropout(p=config.resid_pdrop)
 
         self.pruned_heads = set()
+        self.output_attentions = config.output_attentions
+        self.matmul = Matmul()
+        self.mask_value = Tensor(np.finfo(np.float32).min, dtype=mindspore.float32)
+
 
     def prune_heads(self, heads):
         """
@@ -98,10 +154,10 @@ class GPT2Attention(nn.Cell):
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
-        attn_weights = ops.matmul(query, key.swapaxes(-1, -2))
+        attn_weights = self.matmul(query, key.swapaxes(-1, -2))
 
         if self.scale_attn_weights:
-            attn_weights = attn_weights / Tensor(value.shape[-1] ** 0.5, dtype=attn_weights.dtype)
+            attn_weights = attn_weights / ops.sqrt(ops.scalar_to_tensor(value.shape[-1]))
 
         # Layer-wise attention scaling
         if self.scale_attn_by_inverse_layer_idx:
@@ -110,15 +166,16 @@ class GPT2Attention(nn.Cell):
         if not self.is_cross_attention:
             # if only "normal" attention layer implements causal mask
             query_length, key_length = query.shape[-2], key.shape[-2]
-            causal_mask = self.bias[:, :, key_length - query_length: key_length, :key_length].astype(mindspore.bool_)
-            mask_value = Tensor(np.finfo(dtype_to_nptype(attn_weights.dtype)).min, dtype=attn_weights.dtype)
-            attn_weights = where(causal_mask, attn_weights.astype(attn_weights.dtype), mask_value)
+            causal_mask = self.bias[:, :, key_length - query_length: key_length, :key_length]
+            multiplu_out = Tensor(1.0, mindspore.float32) - causal_mask
+            adder = multiplu_out * self.masked_bias
+            attn_weights = ops.add(attn_weights, adder)
 
         if attention_mask is not None:
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = softmax(attn_weights, axis=-1)
 
         # Downcast (if necessary) back to V's dtype (if in mixed-precision) -- No-Op otherwise
         attn_weights = attn_weights.astype(value.dtype)
@@ -128,7 +185,7 @@ class GPT2Attention(nn.Cell):
         if head_mask is not None:
             attn_weights = attn_weights * head_mask
 
-        attn_output = ops.matmul(attn_weights, value)
+        attn_output = self.matmul(attn_weights, value)
 
         return attn_output, attn_weights
 
@@ -158,7 +215,7 @@ class GPT2Attention(nn.Cell):
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
 
-        attn_weights = ops.softmax(attn_weights, axis=-1)
+        attn_weights = softmax(attn_weights, axis=-1)
 
         # Downcast (if necessary) back to V's dtype (if in mixed-precision) -- No-Op if otherwise
         if attn_weights.dtype != mindspore.float32:
@@ -170,7 +227,7 @@ class GPT2Attention(nn.Cell):
         if head_mask is not None:
             attn_weights = attn_weights * head_mask
 
-        attn_output = ops.matmul(attn_weights, value)
+        attn_output = self.matmul(attn_weights, value)
 
         return attn_output, attn_weights
 
@@ -199,7 +256,6 @@ class GPT2Attention(nn.Cell):
             encoder_hidden_states: Optional[Tensor] = None,
             encoder_attention_mask: Optional[Tensor] = None,
             use_cache: Optional[bool] = False,
-            output_attentions: Optional[bool] = False,
     ):
         if encoder_hidden_states is not None:
             if not hasattr(self, "q_attn"):
@@ -238,7 +294,7 @@ class GPT2Attention(nn.Cell):
         attn_output = self.resid_dropout(attn_output)
 
         outputs = (attn_output, present)
-        if output_attentions:
+        if self.output_attentions:
             outputs += (attn_weights,)
 
         return outputs  # a, present, (attentions)
@@ -294,7 +350,6 @@ class GPT2Block(nn.Cell):
             encoder_hidden_states: Optional[Tensor] = None,
             encoder_attention_mask: Optional[Tensor] = None,
             use_cache: Optional[bool] = False,
-            output_attentions: Optional[bool] = False,
     ):
         residual = hidden_states
         hidden_states = self.ln_1(hidden_states)
@@ -304,7 +359,6 @@ class GPT2Block(nn.Cell):
             attention_mask=attention_mask,
             head_mask=head_mask,
             use_cache=use_cache,
-            output_attentions=output_attentions,
         )
         attn_output = attn_outputs[0]  # output_attn: a, present, (attentions)
         outputs = attn_outputs[1:]
@@ -326,7 +380,6 @@ class GPT2Block(nn.Cell):
                 head_mask=head_mask,
                 encoder_hidden_states=encoder_hidden_states,
                 encoder_attention_mask=encoder_attention_mask,
-                output_attentions=output_attentions,
             )
             attn_output = cross_attn_outputs[0]
             # residual connection
@@ -353,13 +406,12 @@ class GPT2PreTrainedModel(PreTrainedModel):
     models.
     """
     config_class = GPT2Config
+    convert_torch_to_mindspore = torch_to_mindspore
+    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
     base_model_prefix = "transformer"
     is_parallelizable = True
     supports_gradient_checkpointing = True
     _no_split_modules = ["GPT2Block"]
-
-    # def __init__(self, config):
-    #     super().__init__(config)
 
     def get_head_mask(self, head_mask, num_hidden_layers, is_attention_chunked=False):
         """
@@ -385,30 +437,38 @@ class GPT2PreTrainedModel(PreTrainedModel):
         head_mask = head_mask.astype(dtype=self.dtype)  # switch to float if need + fp16 compatibility
         return head_mask
 
-    def _set_gradient_checkpointing(self, module, value=False):
-        if isinstance(module, GPT2Model):
-            module.gradient_checkpointing = value
 
-    def get_input_embeddings(self):
-        pass
+    def _init_weights(self, cell):
+        """Initialize the weights"""
+        if isinstance(cell, (nn.Dense, Conv1D)):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+                                                    cell.weight.shape, cell.weight.dtype))
+            if cell.bias is not None:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        elif isinstance(cell, nn.Embedding):
+            embedding_table = initializer(Normal(self.config.initializer_range),
+                                                 cell.embedding_table.shape,
+                                                 cell.embedding_table.dtype)
+            if cell.padding_idx is not None:
+                embedding_table[cell.padding_idx] = 0
+            cell.embedding_table.set_data(embedding_table)
+        elif isinstance(cell, nn.LayerNorm):
+            cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
+            cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
 
-    def get_position_embeddings(self):
-        pass
-
-    def init_model_weights(self):
-        pass
-
-    def post_init(self):
-        pass
-
-    def resize_position_embeddings(self):
-        pass
-
-    def save(self):
-        pass
-
-    def set_input_embeddings(self):
-        pass
+        # Reinitialize selected weights subject to the OpenAI GPT-2 Paper Scheme:
+        #   > A modified initialization which accounts for the accumulation on the residual path with model depth. Scale
+        #   > the weights of residual layers at initialization by a factor of 1/√N where N is the # of residual layers.
+        #   >   -- GPT-2 :: https://openai.com/blog/better-language-models/
+        #
+        # Reference (Megatron-LM): https://github.com/NVIDIA/Megatron-LM/blob/main/megatron/model/gpt_model.py
+        for name, p in cell.parameters_and_names():
+            if name == "c_proj.weight":
+                # Special Scaled Initialization --> There are 2 Layer Norms per Transformer Block
+                p.set_data(initializer(Normal((self.config.initializer_range / math.sqrt(2 * self.config.n_layer))),
+                                              p.shape, p.dtype))
 
 
 class GPT2Model(GPT2PreTrainedModel):
@@ -429,17 +489,26 @@ class GPT2Model(GPT2PreTrainedModel):
         self.h = nn.CellList([GPT2Block(config, layer_idx=i) for i in range(config.num_hidden_layers)])
         self.ln_f = nn.LayerNorm((self.embed_dim,), epsilon=config.layer_norm_epsilon)
 
+        self.add_cross_attention = self.config.add_cross_attention
+        self.num_hidden_layers = self.config.num_hidden_layers
+        self.output_attentions = self.config.output_attentions
+        self.output_hidden_states = self.config.output_hidden_states
+        self.use_cache = self.config.use_cache
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
     def get_input_embeddings(self):
         """
         return the input embeddings layer
         """
         return self.wte
 
-    def set_input_embeddings(self, new_embeddings):
+    def set_input_embeddings(self, value):
         """
         set the input embeddings layer
         """
-        self.wte = new_embeddings
+        self.wte = value
 
     def _prune_heads(self, heads_to_prune):
         """
@@ -459,16 +528,7 @@ class GPT2Model(GPT2PreTrainedModel):
             inputs_embeds: Optional[Tensor] = None,
             encoder_hidden_states: Optional[Tensor] = None,
             encoder_attention_mask: Optional[Tensor] = None,
-            use_cache: Optional[bool] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
     ):
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
-        )
-        use_cache = use_cache if use_cache is not None else self.config.use_cache
-
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
 
@@ -505,7 +565,7 @@ class GPT2Model(GPT2PreTrainedModel):
             attention_mask = attention_mask.astype(dtype=self.dtype)  # fp16 compatibility
             attention_mask = (1.0 - attention_mask) * Tensor(np.finfo(dtype_to_nptype(self.dtype)).min, self.dtype)
 
-        if self.config.add_cross_attention and encoder_hidden_states is not None:
+        if self.add_cross_attention and encoder_hidden_states is not None:
             encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.shape
             encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
             if encoder_attention_mask is None:
@@ -514,7 +574,7 @@ class GPT2Model(GPT2PreTrainedModel):
         else:
             encoder_attention_mask = None
 
-        head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
+        head_mask = self.get_head_mask(head_mask, self.num_hidden_layers)
 
         if inputs_embeds is None:
             inputs_embeds = self.wte(input_ids)
@@ -529,47 +589,46 @@ class GPT2Model(GPT2PreTrainedModel):
 
         output_shape = input_shape + (hidden_states.shape[-1],)
 
-        presents = () if use_cache else None
-        all_self_attentions = () if output_attentions else None
-        all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
-        all_hidden_states = () if output_hidden_states else None
-        for i, (block, layer_past) in enumerate(zip(self.h, past_key_values)):
-
-            if output_hidden_states:
+        presents = () if self.use_cache else None
+        all_self_attentions = ()
+        all_cross_attentions = ()
+        all_hidden_states = ()
+        for i, block in enumerate(self.h):
+            if self.output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
             outputs = block(
                 hidden_states,
-                layer_past=layer_past,
+                layer_past=past_key_values[i],
                 attention_mask=attention_mask,
                 head_mask=head_mask[i],
                 encoder_hidden_states=encoder_hidden_states,
                 encoder_attention_mask=encoder_attention_mask,
-                use_cache=use_cache,
-                output_attentions=output_attentions,
+                use_cache=self.use_cache,
             )
 
             hidden_states = outputs[0]
-            if use_cache is True:
+            if self.use_cache:
                 presents = presents + (outputs[1],)
 
-            if output_attentions:
-                all_self_attentions = all_self_attentions + (outputs[2 if use_cache else 1],)
-                if self.config.add_cross_attention:
-                    all_cross_attentions = all_cross_attentions + (outputs[3 if use_cache else 2],)
+            if self.output_attentions:
+                all_self_attentions = all_self_attentions + (outputs[2 if self.use_cache else 1],)
+                if self.add_cross_attention:
+                    all_cross_attentions = all_cross_attentions + (outputs[3 if self.use_cache else 2],)
 
         hidden_states = self.ln_f(hidden_states)
 
         hidden_states = hidden_states.view(output_shape)
         # Add last hidden state
-        if output_hidden_states:
+        if self.output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)
 
-        return tuple(
-            v
-            for v in [hidden_states, presents, all_hidden_states, all_self_attentions, all_cross_attentions]
-            if v is not None
-        )
+        outputs = (hidden_states, presents)
+        if self.output_attentions:
+            outputs += (all_hidden_states, all_self_attentions)
+            if self.add_cross_attention:
+                outputs += (all_cross_attentions,)
+        return outputs
 
 
 class GPT2LMHeadModel(GPT2PreTrainedModel):
@@ -577,10 +636,16 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
     gpt2 LMHead Model
     """
 
-    def __init__(self, config):
+    def __init__(self, config, **kwargs):
         super().__init__(config)
         self.transformer = GPT2Model(config)
         self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+
+        ignore_index = kwargs.pop('ignore_index', -1)
+        self.loss_fct = nn.CrossEntropyLoss(ignore_index=ignore_index)
+        # Initialize weights and apply final processing
+        self.post_init()
+
 
     def get_output_embeddings(self):
         """
@@ -637,9 +702,6 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
             encoder_hidden_states: Optional[Tensor] = None,
             encoder_attention_mask: Optional[Tensor] = None,
             labels: Optional[Tensor] = None,
-            use_cache: Optional[bool] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
     ):
 
         transformer_outputs = self.transformer(
@@ -652,9 +714,6 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
             inputs_embeds=inputs_embeds,
             encoder_hidden_states=encoder_hidden_states,
             encoder_attention_mask=encoder_attention_mask,
-            use_cache=use_cache,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
         )
         hidden_states = transformer_outputs[0]
 
@@ -666,11 +725,12 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss_fct = nn.CrossEntropyLoss()
-            loss = loss_fct(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            loss = self.loss_fct(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
 
         output = (lm_logits,) + transformer_outputs[1:]
-        return ((loss,) + output) if loss is not None else output
+        if loss is not None:
+            output = (loss,) + output
+        return output
 
     @staticmethod
     def _reorder_cache(past, beam_idx):
@@ -685,7 +745,7 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
         )
 
 
-class GPT2DoubleHeadsModel(nn.Cell):
+class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
     r"""
     GPT2 Double Heads Model
     """
@@ -697,6 +757,9 @@ class GPT2DoubleHeadsModel(nn.Cell):
         self.transformer = GPT2Model(config)
         self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
         self.multiple_choice_head = SequenceSummary(config)
+        # Initialize weights and apply final processing
+        self.post_init()
+
 
     def get_output_embeddings(self):
         """
@@ -743,8 +806,7 @@ class GPT2DoubleHeadsModel(nn.Cell):
         }
 
     def construct(self, input_ids, past_key_values=None, attention_mask=None, token_type_ids=None,
-                  position_ids=None, head_mask=None, inputs_embeds=None, mc_token_ids=None, labels=None, mc_labels=None,
-                  use_cache=None, output_attentions=None, output_hidden_states=None, **kwargs):
+                  position_ids=None, head_mask=None, inputs_embeds=None, mc_token_ids=None, labels=None, mc_labels=None):
 
         transformer_outputs = self.transformer(
             input_ids,
@@ -754,9 +816,6 @@ class GPT2DoubleHeadsModel(nn.Cell):
             position_ids=position_ids,
             head_mask=head_mask,
             inputs_embeds=inputs_embeds,
-            use_cache=use_cache,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
         )
 
         hidden_states = transformer_outputs[0]
@@ -799,6 +858,9 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
         self.num_labels = config.num_labels
         self.transformer = GPT2Model(config)
         self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        # Initialize weights and apply final processing
+        self.post_init()
+
 
     def construct(
             self,
@@ -810,9 +872,6 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
             head_mask: Optional[Tensor] = None,
             inputs_embeds: Optional[Tensor] = None,
             labels: Optional[Tensor] = None,
-            use_cache: Optional[bool] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
     ):
 
         transformer_outputs = self.transformer(
@@ -823,9 +882,6 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
             position_ids=position_ids,
             head_mask=head_mask,
             inputs_embeds=inputs_embeds,
-            use_cache=use_cache,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
         )
         hidden_states = transformer_outputs[0]
         logits = self.score(hidden_states)
@@ -894,12 +950,14 @@ class GPT2ForTokenClassification(GPT2PreTrainedModel):
             classifier_dropout = config.hidden_dropout
         else:
             classifier_dropout = 0.1
-        self.dropout = nn.Dropout(p=classifier_dropout)
+        self.dropout = Dropout(p=classifier_dropout)
         self.classifier = nn.Dense(config.hidden_size, config.num_labels)
 
+        # Initialize weights and apply final processing
+        self.post_init()
+
     def construct(self, input_ids=None, past_key_values=None, attention_mask=None, token_type_ids=None,
-                  position_ids=None, head_mask=None, inputs_embeds=None, labels=None, use_cache=None,
-                  output_attentions=None, output_hidden_states=None):
+                  position_ids=None, head_mask=None, inputs_embeds=None, labels=None):
 
         transformer_outputs = self.transformer(
             input_ids,
@@ -909,9 +967,6 @@ class GPT2ForTokenClassification(GPT2PreTrainedModel):
             position_ids=position_ids,
             head_mask=head_mask,
             inputs_embeds=inputs_embeds,
-            use_cache=use_cache,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
         )
 
         hidden_states = transformer_outputs[0]

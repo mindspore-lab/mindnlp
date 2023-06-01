@@ -13,6 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """Test Llama"""
+import gc
 import unittest
 import numpy as np
 import mindspore
@@ -38,7 +39,9 @@ class TestModelingLlama(unittest.TestCase):
         """
         Set up.
         """
-        self.input = None
+        self.config = LlamaConfig(num_hidden_layers=2, num_attention_heads=8, hidden_size=128,
+                                  vocab_size=1000, intermediate_size=256)
+
 
     def test_llama_rms_norm(self):
         r"""
@@ -69,78 +72,63 @@ class TestModelingLlama(unittest.TestCase):
         r"""
         Test Llama attention
         """
-        config = LlamaConfig()
-        config.max_position_embeddings = 128
-        config.hidden_size = 64
-        config.num_attention_heads = 8
+        model = LlamaAttention(self.config)
 
-        model = LlamaAttention(config)
-
-        input_ids = Tensor(np.random.randn(2, config.max_position_embeddings, 64), mindspore.float32)
-        position_ids = Tensor([np.arange(0, config.max_position_embeddings)
-                               , np.arange(0, config.max_position_embeddings)], mindspore.int64)
+        input_ids = Tensor(np.random.randn(2, self.config.max_position_embeddings, 128), mindspore.float32)
+        position_ids = Tensor([np.arange(0, self.config.max_position_embeddings)
+                               , np.arange(0, self.config.max_position_embeddings)], mindspore.int64)
         outputs = model(input_ids, position_ids=position_ids)
-        assert outputs[0].shape == (2, config.max_position_embeddings, 64)
+        assert outputs[0].shape == (2, self.config.max_position_embeddings, 128)
 
     def test_llama_decoderlayer(self):
         r"""
         test_llama_decoderlayer
         """
-        config = LlamaConfig()
-        config.max_position_embeddings = 128
-        config.hidden_size = 64
-        config.num_attention_heads = 8
+        model = LlamaDecoderLayer(self.config)
 
-        model = LlamaDecoderLayer(config)
-
-        input_ids = Tensor(np.random.randn(2, config.max_position_embeddings, 64), mindspore.float32)
-        position_ids = Tensor([np.arange(0, config.max_position_embeddings)
-                               , np.arange(0, config.max_position_embeddings)], mindspore.int64)
+        input_ids = Tensor(np.random.randn(2, self.config.max_position_embeddings, 128), mindspore.float32)
+        position_ids = Tensor([np.arange(0, self.config.max_position_embeddings)
+                               , np.arange(0, self.config.max_position_embeddings)], mindspore.int64)
         outputs = model(input_ids, position_ids=position_ids)
-        assert outputs[0].shape == (2, config.max_position_embeddings, 64)
+        assert outputs[0].shape == (2, self.config.max_position_embeddings, 128)
 
     def test_llama_model(self):
         """
         Test Llama Model.
         """
-        config = LlamaConfig()
-        config.max_position_embeddings = 128
-        config.hidden_size = 64
-        config.num_attention_heads = 8
-        model = LlamaModel(config=config)
+        model = LlamaModel(self.config)
 
         input_ids = Tensor(np.random.randint(
             0, 100, (2, 128)))
 
         outputs = model(input_ids)
 
-        assert outputs[0].shape == (2, 128, 64)
+        assert outputs[0].shape == (2, 128, 128)
         for i in range(len(outputs[1])):
             for j in range(len(outputs[1][i])):
-                assert outputs[1][i][j].shape == (2, 8, 128, 8)
+                assert outputs[1][i][j].shape == (2, 8, 128, 16)
+
     def test_llama_for_causal_lm(self):
         """
         test_llama_for_causal_lm
         """
-        config = LlamaConfig(vocab_size=100, hidden_size=128, num_attention_heads=16)
-        model = LlamaForCausalLM(config=config)
+        model = LlamaForCausalLM(self.config)
 
         input_ids = Tensor(np.random.randint(
             0, 100, (2, 128)))
 
         outputs = model(input_ids)
 
-        assert outputs[0].shape == (2, 128, 100)
+        assert outputs[0].shape == (2, 128, self.config.vocab_size)
         for i in range(len(outputs[1])):
             for j in range(len(outputs[1][i])):
-                assert outputs[1][i][j].shape == (2, 16, 128, 8)
+                assert outputs[1][i][j].shape == (2, 8, 128, 16)
 
     def test_llama_for_sequence_classification(self):
         """
         test_llama_for_sequence_classification
         """
-        config = LlamaConfig(vocab_size=100, hidden_size=128, num_attention_heads=16)
-        model = LlamaForSequenceClassification(config=config)
+        model = LlamaForSequenceClassification(self.config)
 
         input_ids = Tensor(np.random.randint(
             0, 10, (2, 128)))
@@ -150,4 +138,7 @@ class TestModelingLlama(unittest.TestCase):
         assert outputs[0].shape == (2, 2)
         for i in range(len(outputs[1])):
             for j in range(len(outputs[1][i])):
-                assert outputs[1][i][j].shape == (2, 16, 128, 8)
+                assert outputs[1][i][j].shape == (2, 8, 128, 16)
+
+    def tearDown(self) -> None:
+        gc.collect()

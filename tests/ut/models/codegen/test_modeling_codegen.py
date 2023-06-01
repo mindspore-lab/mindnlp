@@ -13,6 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """Test CodeGen"""
+import gc
 import unittest
 
 import mindspore
@@ -31,14 +32,17 @@ class TestModelingCodeGen(unittest.TestCase):
         """
         Set up.
         """
-        self.input = None
+        self.config = codegen_config.CodeGenConfig(vocab_size=1000,
+                                                   hidden_size=128,
+                                                   n_layer=2,
+                                                   n_head=8,
+                                                   )
 
     def test_codegen_attention(self):
         r"""
         Test CodeGen Attention
         """
-        config = codegen_config.CodeGenConfig()
-        model = codegen.CodeGenAttention(config)
+        model = codegen.CodeGenAttention(self.config)
 
         hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.float32)
 
@@ -50,8 +54,7 @@ class TestModelingCodeGen(unittest.TestCase):
         Test CodeGen MLP
         """
         intermediate_size = 100
-        config = codegen_config.CodeGenConfig()
-        model = codegen.CodeGenMLP(intermediate_size, config)
+        model = codegen.CodeGenMLP(intermediate_size, self.config)
 
         hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.float32)
 
@@ -62,8 +65,7 @@ class TestModelingCodeGen(unittest.TestCase):
         r"""
             Test CodeGen BLOCK
         """
-        config = codegen_config.CodeGenConfig()
-        model = codegen.CodeGenBlock(config)
+        model = codegen.CodeGenBlock(self.config)
 
         hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.float32)
 
@@ -74,8 +76,7 @@ class TestModelingCodeGen(unittest.TestCase):
         r"""
             Test CodeGen MODEL
         """
-        config = codegen_config.CodeGenConfig()
-        model = codegen.CodeGenModel(config)
+        model = codegen.CodeGenModel(self.config)
 
         input_ids = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.int32)
 
@@ -86,10 +87,13 @@ class TestModelingCodeGen(unittest.TestCase):
         r"""
             Test CodeGen FORCAUSALLM
         """
-        config = codegen_config.CodeGenConfig()
-        model = codegen.CodeGenForCausalLM(config)
+        model = codegen.CodeGenForCausalLM(self.config)
 
         input_ids = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.int32)
 
         input_ids = model(input_ids)
-        assert input_ids[0].shape == (2, 2, 512, 504)
+        assert input_ids[0].shape == (2, 2, 512, 1000)
+
+
+    def tearDown(self) -> None:
+        gc.collect()
