@@ -17,6 +17,7 @@
 # pylint:disable=R0904
 """Test LUKE"""
 import gc
+import os
 import unittest
 
 import mindspore
@@ -265,3 +266,8 @@ class TestModelingLUKE(unittest.TestCase):
 
     def tearDown(self) -> None:
         gc.collect()
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.exists("~/.mindnlp"):
+            os.removedirs("~/.mindnlp")

@@ -13,6 +13,8 @@
 # limitations under the License.
 # ============================================================================
 """Test CLIP"""
+import gc
+import os
 import unittest
 import numpy as np
 import mindspore
@@ -234,3 +236,11 @@ class TestModelingCLIP(unittest.TestCase):
 
         assert outputs[0].shape == (1, self.text_config.hidden_size)
         assert outputs[1].shape == (1, 50, self.vision_config.hidden_size)
+
+    def tearDown(self) -> None:
+        gc.collect()
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.exists("~/.mindnlp"):
+            os.removedirs("~/.mindnlp")
