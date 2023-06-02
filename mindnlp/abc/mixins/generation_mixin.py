@@ -35,7 +35,24 @@ from mindspore import ops
 from mindnlp.abc.configs import GenerationConfig
 
 from mindnlp.generation.logits_process import (
-    LogitsProcessorList
+    LogitsProcessorList,
+    EncoderRepetitionPenaltyLogitsProcessor,
+    HammingDiversityLogitsProcessor,
+    RepetitionPenaltyLogitsProcessor,
+    NoRepeatNGramLogitsProcessor,
+    EncoderNoRepeatNGramLogitsProcessor,
+    NoBadWordsLogitsProcessor,
+    MinLengthLogitsProcessor,
+    MinNewTokensLengthLogitsProcessor,
+    PrefixConstrainedLogitsProcessor,
+    ForcedBOSTokenLogitsProcessor,
+    ForcedEOSTokenLogitsProcessor,
+    InfNanRemoveLogitsProcessor,
+    ExponentialDecayLengthPenalty,
+    SuppressTokensLogitsProcessor,
+    SuppressTokensAtBeginLogitsProcessor,
+    ForceTokensLogitsProcessor,
+    LogitNormalization
 )
 
 from mindnlp.generation.beam_search import BeamScorer, BeamSearchScorer, ConstrainedBeamSearchScorer
@@ -261,9 +278,114 @@ class GenerationMixin:
         prefix_allowed_tokens_fn: Callable[[int, mindspore.Tensor], List[int]],
         logits_processor: Optional[LogitsProcessorList],
     ) -> LogitsProcessorList:
-        raise NotImplementedError(
-            "TODO: You need to implement this function."
-        )
+        """
+        This class returns a [`LogitsProcessorList`] list object that contains all relevant [`LogitsProcessor`]
+        instances used to modify the scores of the language model head.
+        """
+        # instantiate processors list
+        processors = LogitsProcessorList()
+
+        # the following idea is largely copied from this PR: https://github.com/huggingface/transformers/pull/5420/files
+        # all samplers can be found in `generation_utils_samplers.py`
+        if generation_config.diversity_penalty is not None and generation_config.diversity_penalty > 0.0:
+            processors.append(
+                HammingDiversityLogitsProcessor(
+                    diversity_penalty=generation_config.diversity_penalty,
+                    num_beams=generation_config.num_beams,
+                    num_beam_groups=generation_config.num_beam_groups,
+                )
+            )
+        if (
+            generation_config.encoder_repetition_penalty is not None
+            and generation_config.encoder_repetition_penalty != 1.0
+        ):
+            processors.append(
+                EncoderRepetitionPenaltyLogitsProcessor(
+                    penalty=generation_config.encoder_repetition_penalty, encoder_input_ids=encoder_input_ids
+                )
+            )
+        if generation_config.repetition_penalty is not None and generation_config.repetition_penalty != 1.0:
+            processors.append(RepetitionPenaltyLogitsProcessor(penalty=generation_config.repetition_penalty))
+        if generation_config.no_repeat_ngram_size is not None and generation_config.no_repeat_ngram_size > 0:
+            processors.append(NoRepeatNGramLogitsProcessor(generation_config.no_repeat_ngram_size))
+        if (
+            generation_config.encoder_no_repeat_ngram_size is not None
+            and generation_config.encoder_no_repeat_ngram_size > 0
+        ):
+            if self.config.is_encoder_decoder:
+                processors.append(
+                    EncoderNoRepeatNGramLogitsProcessor(
+                        generation_config.encoder_no_repeat_ngram_size, encoder_input_ids
+                    )
+                )
+            else:
+                raise ValueError(
+                    "It's impossible to use `encoder_no_repeat_ngram_size` with decoder-only architecture"
+                )
+        if generation_config.bad_words_ids is not None:
+            processors.append(
+                NoBadWordsLogitsProcessor(generation_config.bad_words_ids, generation_config.eos_token_id)
+            )
+        if (
+            generation_config.min_length is not None
+            and generation_config.eos_token_id is not None
+            and generation_config.min_length > 0
+        ):
+            processors.append(MinLengthLogitsProcessor(generation_config.min_length, generation_config.eos_token_id))
+        if (
+            generation_config.min_new_tokens is not None
+            and generation_config.eos_token_id is not None
+            and generation_config.min_new_tokens > 0
+        ):
+            processors.append(
+                MinNewTokensLengthLogitsProcessor(
+                    input_ids_seq_length, generation_config.min_new_tokens, generation_config.eos_token_id
+                )
+            )
+        if prefix_allowed_tokens_fn is not None:
+            processors.append(
+                PrefixConstrainedLogitsProcessor(
+                    prefix_allowed_tokens_fn, generation_config.num_beams // generation_config.num_beam_groups
+                )
+            )
+        if generation_config.forced_bos_token_id is not None:
+            processors.append(ForcedBOSTokenLogitsProcessor(generation_config.forced_bos_token_id))
+        if generation_config.forced_eos_token_id is not None:
+            processors.append(
+                ForcedEOSTokenLogitsProcessor(generation_config.max_length, generation_config.forced_eos_token_id)
+            )
+        if generation_config.remove_invalid_values is True:
+            processors.append(InfNanRemoveLogitsProcessor())
+        if generation_config.exponential_decay_length_penalty is not None:
+            processors.append(
+                ExponentialDecayLengthPenalty(
+                    generation_config.exponential_decay_length_penalty,
+                    generation_config.eos_token_id,
+                    generation_config.input_ids_seq_length,
+                )
+            )
+        if generation_config.suppress_tokens is not None:
+            processors.append(SuppressTokensLogitsProcessor(generation_config.suppress_tokens))
+        if generation_config.begin_suppress_tokens is not None:
+            begin_index = input_ids_seq_length
+            begin_index = (
+                begin_index
+                if (input_ids_seq_length > 1 or generation_config.forced_bos_token_id is None)
+                else begin_index + 1
+            )
+            if generation_config.forced_decoder_ids is not None:
+                # generation starts after the last token that is forced
+                begin_index += generation_config.forced_decoder_ids[-1][0]
+            processors.append(
+                SuppressTokensAtBeginLogitsProcessor(generation_config.begin_suppress_tokens, begin_index)
+            )
+        if generation_config.forced_decoder_ids is not None:
+            processors.append(ForceTokensLogitsProcessor(generation_config.forced_decoder_ids))
+        processors = self._merge_criteria_processor_list(processors, logits_processor)
+        # `LogitNormalization` should always be the last logit processor, when present
+        if generation_config.renormalize_logits is True:
+            processors.append(LogitNormalization())
+        return processors
 
     def _get_stopping_criteria(
         self, generation_config: GenerationConfig, stopping_criteria: Optional[StoppingCriteriaList]
