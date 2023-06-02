@@ -6,8 +6,8 @@ GPT2Tokenizer
 import os
 import numpy as np
 from mindspore.dataset.text.transforms import Implementation
-from mindnlp.abc import PreTrainedTokenizer
 from tokenizers import Tokenizer
+from mindnlp.abc import PreTrainedTokenizer
 
 PRETRAINED_VOCAB_MAP = {
     "TsinghuaAI/CPM-Generate": "https://huggingface.co/TsinghuaAI/CPM-Generate/resolve/main/tokenizer.json"
