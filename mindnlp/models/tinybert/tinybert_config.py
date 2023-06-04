@@ -17,6 +17,9 @@ TinyBert Models config
 """
 
 import json
+
+TINYBERT_SUPPORT_LIST = ['tinybert_4L_zh', 'tinybert_6L_zh']
+
 class BertConfig():
     """
     Configuration class to store the configuration of a `BertModel`.

@@ -14,6 +14,7 @@
 # ============================================================================
 """Test GPT2"""
 import gc
+import os
 import unittest
 import pytest
 import numpy as np
@@ -152,3 +153,8 @@ class TestModelingGPT2(unittest.TestCase):
 
     def tearDown(self) -> None:
         gc.collect()
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.exists("~/.mindnlp"):
+            os.removedirs("~/.mindnlp")

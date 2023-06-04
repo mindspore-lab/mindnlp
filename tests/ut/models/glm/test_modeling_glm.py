@@ -13,6 +13,8 @@
 # limitations under the License.
 # ============================================================================
 """Test GLM"""
+import gc
+import os
 import unittest
 import numpy as np
 
@@ -137,3 +139,11 @@ class TestModelingGlm(unittest.TestCase):
         output_tuple = model(input_ids_input, position_ids_input, attention_mask_input, mems)
         output = output_tuple[0]
         assert output.shape == (batch_size, max_sequence_length, hidden_size)
+
+    def tearDown(self) -> None:
+        gc.collect()
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.exists("~/.mindnlp"):
+            os.removedirs("~/.mindnlp")
