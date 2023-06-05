@@ -50,7 +50,8 @@ AMP_WHITE_LIST = (
 
 AMP_BLACK_LIST = (
     nn.BatchNorm1d,
-    nn.BatchNorm2d
+    nn.BatchNorm2d,
+    nn.LayerNorm
 )
 
 class _OutputTo32(nn.Cell):

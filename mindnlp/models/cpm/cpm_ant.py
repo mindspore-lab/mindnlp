@@ -646,8 +646,8 @@ class CpmAntModel(CpmAntPreTrainedModel):
     def get_input_embeddings(self):
         return self.input_embedding
 
-    def set_input_embeddings(self, value):
-        self.input_embedding = value
+    def set_input_embeddings(self, new_embeddings):
+        self.input_embedding = new_embeddings
 
     def _prepare_attention_mask(self, input_ids, span, context, length):
         batch = input_ids.shape[0]
@@ -841,8 +841,8 @@ class CpmAntForCausalLM(CpmAntPreTrainedModel):
     def get_input_embeddings(self):
         return self.cpmant.input_embedding
 
-    def set_input_embeddings(self, value):
-        self.cpmant.input_embedding = value
+    def set_input_embeddings(self, new_embeddings):
+        self.cpmant.input_embedding = new_embeddings
 
     def get_output_embeddings(self):
         return self.lm_head
