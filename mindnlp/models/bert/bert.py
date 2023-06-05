@@ -415,8 +415,8 @@ class BertModel(BertPreTrainedModel):
     def get_input_embeddings(self):
         return self.embeddings.word_embeddings
 
-    def set_input_embeddings(self, value):
-        self.embeddings.word_embeddings = value
+    def set_input_embeddings(self, new_embeddings):
+        self.embeddings.word_embeddings = new_embeddings
 
     def construct(self, input_ids, attention_mask=None, token_type_ids=None, \
         position_ids=None, head_mask=None):

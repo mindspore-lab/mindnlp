@@ -18,7 +18,7 @@ Cell mixin
 """
 
 import os
-from typing import Union, List, Optional
+from typing import Union, List, Optional, Dict
 from mindspore import log as logger
 from mindspore.dataset.transforms.transforms import PyTensorOperation
 
@@ -37,6 +37,16 @@ class PreTrainedTokenizer(SpecialTokensMixin, PyTensorOperation):
     def __init__(self, **kwargs):
        # We call this after having initialized the backend tokenizer because we update it.
         super().__init__(**kwargs)
+        # Added tokens - We store this for both slow and fast tokenizers
+        # until the serialization of Fast tokenizers is updated
+        self.added_tokens_encoder: Dict[str, int] = {}
+        self.added_tokens_decoder: Dict[int, str] = {}
+        self.unique_no_split_tokens: List[str] = []
+
+        self._decode_use_source_tokenizer = False
+
+        # By default, cleaning tokenization spaces for both fast and slow tokenizers
+        self.clean_up_tokenization_spaces = kwargs.pop("clean_up_tokenization_spaces", True)
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *init_inputs, **kwargs):
@@ -106,9 +116,86 @@ class PreTrainedTokenizer(SpecialTokensMixin, PyTensorOperation):
         tokens = self._tokenizer.encode(text_input)
         return tokens
 
-    def decode(self, ids:list):
-        """decode function"""
-        return self._tokenizer.decode(ids)
+    def decode(
+        self,
+        token_ids,
+        skip_special_tokens: bool = False,
+        clean_up_tokenization_spaces: bool = None,
+        **kwargs,
+    ) -> str:
+        """
+        Converts a sequence of ids in a string, using the tokenizer and vocabulary with options to remove special
+        tokens and clean up tokenization spaces.
+
+        Similar to doing `self.convert_tokens_to_string(self.convert_ids_to_tokens(token_ids))`.
+
+        Args:
+            token_ids (`Union[int, List[int], np.ndarray, torch.Tensor, tf.Tensor]`):
+                List of tokenized input ids. Can be obtained using the `__call__` method.
+            skip_special_tokens (`bool`, *optional*, defaults to `False`):
+                Whether or not to remove special tokens in the decoding.
+            clean_up_tokenization_spaces (`bool`, *optional*):
+                Whether or not to clean up the tokenization spaces. If `None`, will default to
+                `self.clean_up_tokenization_spaces`.
+            kwargs (additional keyword arguments, *optional*):
+                Will be passed to the underlying model specific decode method.
+
+        Returns:
+            `str`: The decoded sentence.
+        """
+        # Convert inputs to python lists
+
+        return self._decode(
+            token_ids=token_ids,
+            skip_special_tokens=skip_special_tokens,
+            clean_up_tokenization_spaces=clean_up_tokenization_spaces,
+            **kwargs,
+        )
+
+    def _decode(
+        self,
+        token_ids: List[int],
+        skip_special_tokens: bool = False,
+        clean_up_tokenization_spaces: bool = None,
+        spaces_between_special_tokens: bool = True,
+        **kwargs,
+    ) -> str:
+        self._decode_use_source_tokenizer = kwargs.pop("use_source_tokenizer", False)
+
+        filtered_tokens = self.convert_ids_to_tokens(token_ids, skip_special_tokens=skip_special_tokens)
+
+        # To avoid mixing byte-level and unicode for byte-level BPT
+        # we need to build string separately for added tokens and byte-level tokens
+        # cf. https://github.com/huggingface/transformers/issues/1133
+        sub_texts = []
+        current_sub_text = []
+        for token in filtered_tokens:
+            if skip_special_tokens and token in self.all_special_ids:
+                continue
+            if token in self.added_tokens_encoder:
+                if current_sub_text:
+                    sub_texts.append(self.convert_tokens_to_string(current_sub_text))
+                    current_sub_text = []
+                sub_texts.append(token)
+            else:
+                current_sub_text.append(token)
+        if current_sub_text:
+            sub_texts.append(self.convert_tokens_to_string(current_sub_text))
+
+        if spaces_between_special_tokens:
+            text = " ".join(sub_texts)
+        else:
+            text = "".join(sub_texts)
+
+        clean_up_tokenization_spaces = (
+            clean_up_tokenization_spaces
+            if clean_up_tokenization_spaces is not None
+            else self.clean_up_tokenization_spaces
+        )
+        if clean_up_tokenization_spaces:
+            clean_text = self.clean_up_tokenization(text)
+            return clean_text
+        return text
 
     def id_to_token(self, index: int) -> Optional[str]:
         """index to token."""
@@ -117,6 +204,10 @@ class PreTrainedTokenizer(SpecialTokensMixin, PyTensorOperation):
     def token_to_id(self, token: str):
         """token to index."""
         return self._convert_token_to_id_with_added_voc(token)
+
+    def convert_tokens_to_string(self, tokens: List[str]) -> str:
+        """convert tokens to string."""
+        return " ".join(tokens)
 
     def convert_tokens_to_ids(self, tokens: Union[str, List[str]]) -> Union[int, List[int]]:
         """
@@ -140,11 +231,50 @@ class PreTrainedTokenizer(SpecialTokensMixin, PyTensorOperation):
             ids.append(self._convert_token_to_id_with_added_voc(token))
         return ids
 
-    def _convert_token_to_id_with_added_voc(self, token: str) -> int:
-        index = self._tokenizer.token_to_id(token)
-        if index is None:
-            return self.unk_token_id
-        return index
+    def convert_ids_to_tokens(
+        self, ids: Union[int, List[int]], skip_special_tokens: bool = False
+    ) -> Union[str, List[str]]:
+        """
+        Converts a single index or a sequence of indices in a token or a sequence of tokens, using the vocabulary and
+        added tokens.
+
+        Args:
+            ids (`int` or `List[int]`):
+                The token id (or token ids) to convert to tokens.
+            skip_special_tokens (`bool`, *optional*, defaults to `False`):
+                Whether or not to remove special tokens in the decoding.
+
+        Returns:
+            `str` or `List[str]`: The decoded token(s).
+        """
+        if isinstance(ids, int):
+            if ids in self.added_tokens_decoder:
+                return self.added_tokens_decoder[ids]
+            return self._convert_id_to_token(ids)
+        tokens = []
+        for index in ids:
+            index = int(index)
+            if skip_special_tokens and index in self.all_special_ids:
+                continue
+            if index in self.added_tokens_decoder:
+                tokens.append(self.added_tokens_decoder[index])
+            else:
+                tokens.append(self._convert_id_to_token(index))
+        return tokens
+
+    def _convert_id_to_token(self, index: int) -> str:
+        raise NotImplementedError
+
+    def _convert_token_to_id_with_added_voc(self, token):
+        if token is None:
+            return None
+
+        if token in self.added_tokens_encoder:
+            return self.added_tokens_encoder[token]
+        return self._convert_token_to_id(token)
+
+    def _convert_token_to_id(self, token):
+        raise NotImplementedError
 
     def tokenize(self):
         """tokenize."""
@@ -154,3 +284,28 @@ class PreTrainedTokenizer(SpecialTokensMixin, PyTensorOperation):
         Size of the full vocabulary with the added tokens.
         """
         return self._tokenizer.get_vocab_size(with_added_tokens=True)
+
+    @staticmethod
+    def clean_up_tokenization(out_string: str) -> str:
+        """
+        Clean up a list of simple English tokenization artifacts like spaces before punctuations and abbreviated forms.
+
+        Args:
+            out_string (`str`): The text to clean up.
+
+        Returns:
+            `str`: The cleaned-up string.
+        """
+        out_string = (
+            out_string.replace(" .", ".")
+            .replace(" ?", "?")
+            .replace(" !", "!")
+            .replace(" ,", ",")
+            .replace(" ' ", "'")
+            .replace(" n't", "n't")
+            .replace(" 'm", "'m")
+            .replace(" 's", "'s")
+            .replace(" 've", "'ve")
+            .replace(" 're", "'re")
+        )
+        return out_string
