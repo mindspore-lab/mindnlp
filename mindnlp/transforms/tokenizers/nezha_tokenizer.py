@@ -24,14 +24,14 @@ from mindnlp.models.nezha.nezha_config import NEZHA_SUPPORT_LIST
 from mindnlp.configs import HF_VOCAB_URL_BASE
 
 PRETRAINED_VOCAB_MAP = {
-    model: HF_VOCAB_URL_BASE.format(model) for model in NEZHA_SUPPORT_LIST
+    model: HF_VOCAB_URL_BASE.format("sijunhe/" + model) for model in NEZHA_SUPPORT_LIST
 }
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
-    "sijunhe/nezha-cn-base": 512,
-    "sijunhe/nezha-cn-large": 512,
-    "sijunhe/nezha-base-wwm": 512,
-    "sijunhe/nezha-large-wwm": 512
+    "nezha-cn-base": 512,
+    "nezha-cn-large": 512,
+    "nezha-base-wwm": 512,
+    "nezha-large-wwm": 512
 }
 
 class NezhaTokenizer(PreTrainedTokenizer):

@@ -21,10 +21,10 @@ from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
 __all__ = ["NezhaConfig"]
 
 NEZHA_SUPPORT_LIST = [
-    "sijunhe/nezha-cn-base",
-    "sijunhe/nezha-cn-large",
-    "sijunhe/nezha-base-wwm",
-    "sijunhe/nezha-large-wwm"
+    "nezha-cn-base",
+    "nezha-cn-large",
+    "nezha-base-wwm",
+    "nezha-large-wwm"
 ]
 
 CONFIG_ARCHIVE_MAP = {
@@ -35,6 +35,9 @@ class NezhaConfig(PreTrainedConfig):
     """
     Configuration for Nezha
     """
+
+    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
+
     def __init__(
         self,
         vocab_size=21128,
