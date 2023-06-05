@@ -13,19 +13,33 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=C0103
+# pylint: disable=E0401
+
 """nezha model"""
 import math
-
 import mindspore
 from mindspore import nn
 from mindspore import ops
 from mindspore import Tensor, Parameter
 from mindspore import log as logger
-from .nezha_config import NezhaConfig
+from mindspore.common.initializer import initializer, Normal
+from mindnlp.configs import MINDNLP_MODEL_URL_BASE
+from .nezha_config import NezhaConfig, NEZHA_SUPPORT_LIST
 from ...abc import PreTrainedModel
 from ..utils.utils import prune_linear_layer, find_pruneable_heads_and_indices, apply_chunking_to_forward
 from ..utils.activations import ACT2FN
 
+PRETRAINED_MODEL_ARCHIVE_MAP = {
+    model: MINDNLP_MODEL_URL_BASE.format('nezha', model) for model in NEZHA_SUPPORT_LIST
+}
+
+__all__ = ['NezhaRelativePositionsEncoding', 'NezhaEmbeddings', 'NezhaSelfAttention',
+           'NezhaSelfOutput', 'NezhaAttention', 'NezhaIntermediate', 'NezhaOutput',
+           'NezhaLayer', 'NezhaEncoder', 'NezhaPooler', 'NezhaPredictionHeadTransform',
+           'NezhaLMPredictionHead', 'NezhaOnlyMLMHead', 'NezhaOnlyNSPHead', 'NezhaModel',
+           'NezhaPreTrainingHeads', 'NezhaForPreTraining', 'NezhaForMaskedLM',
+           'NezhaForNextSentencePrediction', 'NezhaForSequenceClassification',
+           'NezhaForMultipleChoice', 'NezhaForTokenClassification', 'NezhaForQuestionAnswering']
 
 class NezhaRelativePositionsEncoding(nn.Cell):
     """Implement the Functional Relative Position Encoding"""
@@ -588,7 +602,26 @@ class NezhaPreTrainedModel(PreTrainedModel):
     config_class = NezhaConfig
     base_model_prefix = "nezha"
     supports_gradient_checkpointing = True
+    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
     _keys_to_ignore_on_load_missing = [r"positions_encoding"]
+
+    def _init_weights(self, cell):
+        """Initialize the weights"""
+        if isinstance(cell, nn.Dense):
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+                                                    cell.weight.shape, cell.weight.dtype))
+            if cell.has_bias:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        elif isinstance(cell, nn.Embedding):
+            embedding_table = initializer(Normal(self.config.initializer_range),
+                                                 cell.embedding_table.shape,
+                                                 cell.embedding_table.dtype)
+            if cell.padding_idx is not None:
+                embedding_table[cell.padding_idx] = 0
+            cell.embedding_table.set_data(embedding_table)
+        elif isinstance(cell, nn.LayerNorm):
+            cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
+            cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
 
     # TODO
     def get_input_embeddings(self):

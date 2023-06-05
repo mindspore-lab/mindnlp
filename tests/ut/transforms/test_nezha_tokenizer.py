@@ -24,7 +24,7 @@ def test_nezha_tokenizer_from_pretrained():
     texts = ['i make a small mistake when i\'m working! 床前明月光']
     test_dataset = GeneratorDataset(texts, 'text')
 
-    bert_tokenizer = NezhaTokenizer.from_pretrained('sijunhe/nezha-cn-base', return_token=True)
+    bert_tokenizer = NezhaTokenizer.from_pretrained('nezha-cn-base', return_token=True)
     test_dataset = test_dataset.map(operations=bert_tokenizer)
     dataset_after = next(test_dataset.create_tuple_iterator())[0]
 
@@ -33,7 +33,7 @@ def test_nezha_tokenizer_from_pretrained():
 
 def test_nezha_tokenizer_add_special_tokens():
     """test add special tokens."""
-    nezha_tokenizer = NezhaTokenizer.from_pretrained('sijunhe/nezha-cn-base')
+    nezha_tokenizer = NezhaTokenizer.from_pretrained('nezha-cn-base')
     cls_id = nezha_tokenizer.token_to_id("[CLS]")
 
     assert cls_id is not None
