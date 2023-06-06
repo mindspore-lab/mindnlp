@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=C0103
 """
 Download functions
 """
@@ -20,10 +21,12 @@ import os
 import shutil
 import hashlib
 import re
+import json
+from typing import Union, Optional
 from pathlib import Path
 from urllib.parse import urlparse
 import requests
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 from mindnlp.configs import DEFAULT_ROOT
 
 def get_cache_path():
@@ -339,9 +342,7 @@ def match_file(filename: str, cache_dir: str) -> str:
     files = os.listdir(cache_dir)
     matched_filenames = []
     for file_name in files:
-        if re.match(filename + "$", file_name) or re.match(
-            filename + "\\..*", file_name
-        ):
+        if re.match(filename + "$", file_name):
             matched_filenames.append(file_name)
     if not matched_filenames:
         return ""
@@ -399,6 +400,112 @@ def get_from_cache(
     cache_path = cache_dir / dir_name
     if cache_path.exists() and check_md5(cache_path, md5sum):
         return get_filepath(cache_path), filename
-    path = http_get(url, cache_dir, md5sum,
-                    download_file_name=download_file_name, proxies=proxies)[1]
-    return Path(path), filename
+    try:
+        path = http_get(url, cache_dir, md5sum,
+                        download_file_name=download_file_name, proxies=proxies)[1]
+        return Path(path), filename
+    except (RuntimeError, OSError):
+        return None, filename
+    except Exception as exc:
+        raise exc
+
+def try_to_load_from_cache(
+    repo_id: str,
+    filename: str,
+    cache_dir: Union[str, Path, None] = None,
+) -> Optional[str]:
+    """
+    Explores the cache to return the latest cached file for a given revision if found.
+
+    This function will not raise any exception if the file in not cached.
+
+    Args:
+        cache_dir (`str` or `os.PathLike`):
+            The folder where the cached files lie.
+        repo_id (`str`):
+            The ID of the repo on huggingface.co.
+        filename (`str`):
+            The filename to look for inside `repo_id`.
+
+    Returns:
+        `Optional[str]` or `_CACHED_NO_EXIST`:
+            Will return `None` if the file was not cached. Otherwise:
+            - The exact path to the cached file if it's found in the cache
+            - A special value `_CACHED_NO_EXIST` if the file does not exist at the given commit hash and this fact was
+              cached.
+    """
+    if cache_dir is None:
+        cache_dir = DEFAULT_ROOT
+
+    repo_cache = os.path.join(cache_dir, repo_id)
+    if not os.path.isdir(repo_cache):
+        # No cache for this model
+        return None
+
+    cached_file = os.path.join(repo_cache, filename)
+
+    return cached_file if os.path.isfile(cached_file) else None
+
+
+def get_checkpoint_shard_files(
+    pretrained_model_name_or_path,
+    index_filename,
+    cache_dir=None,
+    url=None,
+    force_download=False,
+    proxies=None,
+    subfolder="",
+):
+    """
+    For a given model:
+
+    - download and cache all the shards of a sharded checkpoint if `pretrained_model_name_or_path` is a model ID on the
+      Hub
+    - returns the list of paths to all the shards, as well as some metadata.
+
+    For the description of each arg, see [`PreTrainedModel.from_pretrained`]. `index_filename` is the full path to the
+    index (downloaded and cached if `pretrained_model_name_or_path` is a model ID on the Hub).
+    """
+    if not os.path.isfile(index_filename):
+        raise ValueError(f"Can't find a checkpoint index ({index_filename}) in {pretrained_model_name_or_path}.")
+
+    with open(index_filename, "r", encoding='utf-8') as f:
+        index = json.loads(f.read())
+
+    shard_filenames = sorted(set(index["weight_map"].values()))
+    sharded_metadata = index["metadata"]
+    sharded_metadata["all_checkpoint_keys"] = list(index["weight_map"].keys())
+    sharded_metadata["weight_map"] = index["weight_map"].copy()
+
+    # First, let's deal with local folder.
+    if os.path.isdir(pretrained_model_name_or_path):
+        shard_filenames = [os.path.join(pretrained_model_name_or_path, subfolder, f) for f in shard_filenames]
+        return shard_filenames, sharded_metadata
+
+    # At this stage pretrained_model_name_or_path is a model identifier on the Hub
+    cached_filenames = []
+    # Check if the model is already cached or not. We only try the last checkpoint, this should cover most cases of
+    # downloaded (if interrupted).
+    last_shard = try_to_load_from_cache(
+        pretrained_model_name_or_path, shard_filenames[-1], cache_dir=cache_dir
+    )
+    show_progress_bar = last_shard is None or force_download
+    for shard_filename in tqdm(shard_filenames, desc="Downloading shards", disable=not show_progress_bar):
+            # Load from URL
+        cached_filename, _ = cached_path(
+            '/'.join([url, shard_filename]),
+            cache_dir,
+            pretrained_model_name_or_path,
+            proxies=proxies
+        )
+        # We have already dealt with RepositoryNotFoundError and RevisionNotFoundError when getting the index, so
+        # we don't have to catch them here.
+        if cached_filename is None:
+            raise EnvironmentError(
+                f"{pretrained_model_name_or_path} does not appear to have a file named {shard_filename} which is "
+                "required according to the checkpoint index."
+            )
+
+        cached_filenames.append(cached_filename)
+
+    return cached_filenames, sharded_metadata

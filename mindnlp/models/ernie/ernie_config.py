@@ -13,219 +13,33 @@
 # limitations under the License.
 # ============================================================================
 """
-UIE config
+Ernie config
 """
 
-from typing import Dict
-from mindnlp.abc import PreTrainedConfig
+import re
 
-ERNIE_PRETRAINED_INIT_CONFIGURATION = {
-    "uie-base": {
-        "attention_probs_dropout_prob": 0.1,
-        "hidden_act": "gelu",
-        "hidden_dropout_prob": 0.1,
-        "hidden_size": 768,
-        "initializer_range": 0.02,
-        "max_position_embeddings": 2048,
-        "num_attention_heads": 12,
-        "num_hidden_layers": 12,
-        "task_type_vocab_size": 3,
-        "type_vocab_size": 4,
-        "use_task_id": True,
-        "vocab_size": 40000,
-    },
-    "uie-medium": {
-        "attention_probs_dropout_prob": 0.1,
-        "hidden_act": "gelu",
-        "hidden_dropout_prob": 0.1,
-        "hidden_size": 768,
-        "intermediate_size": 3072,
-        "initializer_range": 0.02,
-        "max_position_embeddings": 2048,
-        "num_attention_heads": 12,
-        "num_hidden_layers": 6,
-        "task_type_vocab_size": 16,
-        "type_vocab_size": 4,
-        "use_task_id": True,
-        "vocab_size": 40000,
-    },
-    "uie-mini": {
-        "attention_probs_dropout_prob": 0.1,
-        "hidden_act": "gelu",
-        "hidden_dropout_prob": 0.1,
-        "hidden_size": 384,
-        "intermediate_size": 1536,
-        "initializer_range": 0.02,
-        "max_position_embeddings": 2048,
-        "num_attention_heads": 12,
-        "num_hidden_layers": 6,
-        "task_type_vocab_size": 16,
-        "type_vocab_size": 4,
-        "use_task_id": True,
-        "vocab_size": 40000,
-    },
-    "uie-micro": {
-        "attention_probs_dropout_prob": 0.1,
-        "hidden_act": "gelu",
-        "hidden_dropout_prob": 0.1,
-        "hidden_size": 384,
-        "intermediate_size": 1536,
-        "initializer_range": 0.02,
-        "max_position_embeddings": 2048,
-        "num_attention_heads": 12,
-        "num_hidden_layers": 4,
-        "task_type_vocab_size": 16,
-        "type_vocab_size": 4,
-        "use_task_id": True,
-        "vocab_size": 40000,
-    },
-    "uie-nano": {
-        "attention_probs_dropout_prob": 0.1,
-        "hidden_act": "gelu",
-        "hidden_dropout_prob": 0.1,
-        "hidden_size": 312,
-        "intermediate_size": 1248,
-        "initializer_range": 0.02,
-        "max_position_embeddings": 2048,
-        "num_attention_heads": 12,
-        "num_hidden_layers": 4,
-        "task_type_vocab_size": 16,
-        "type_vocab_size": 4,
-        "use_task_id": True,
-        "vocab_size": 40000,
-    },
-    "uie-base-en": {
-        "attention_probs_dropout_prob": 0.1,
-        "hidden_act": "gelu",
-        "hidden_dropout_prob": 0.1,
-        "hidden_size": 768,
-        "initializer_range": 0.02,
-        "max_position_embeddings": 512,
-        "num_attention_heads": 12,
-        "num_hidden_layers": 12,
-        "type_vocab_size": 4,
-        "vocab_size": 30522,
-        "pad_token_id": 0,
-    },
-    "uie-senta-base": {
-        "attention_probs_dropout_prob": 0.1,
-        "hidden_act": "gelu",
-        "hidden_dropout_prob": 0.1,
-        "hidden_size": 768,
-        "initializer_range": 0.02,
-        "max_position_embeddings": 2048,
-        "num_attention_heads": 12,
-        "num_hidden_layers": 12,
-        "task_type_vocab_size": 3,
-        "type_vocab_size": 4,
-        "use_task_id": True,
-        "vocab_size": 40000,
-    },
-    "uie-senta-medium": {
-        "attention_probs_dropout_prob": 0.1,
-        "hidden_act": "gelu",
-        "hidden_dropout_prob": 0.1,
-        "hidden_size": 768,
-        "intermediate_size": 3072,
-        "initializer_range": 0.02,
-        "max_position_embeddings": 2048,
-        "num_attention_heads": 12,
-        "num_hidden_layers": 6,
-        "task_type_vocab_size": 16,
-        "type_vocab_size": 4,
-        "use_task_id": True,
-        "vocab_size": 40000,
-    },
-    "uie-senta-mini": {
-        "attention_probs_dropout_prob": 0.1,
-        "hidden_act": "gelu",
-        "hidden_dropout_prob": 0.1,
-        "hidden_size": 384,
-        "intermediate_size": 1536,
-        "initializer_range": 0.02,
-        "max_position_embeddings": 2048,
-        "num_attention_heads": 12,
-        "num_hidden_layers": 6,
-        "task_type_vocab_size": 16,
-        "type_vocab_size": 4,
-        "use_task_id": True,
-        "vocab_size": 40000,
-    },
-    "uie-senta-micro": {
-        "attention_probs_dropout_prob": 0.1,
-        "hidden_act": "gelu",
-        "hidden_dropout_prob": 0.1,
-        "hidden_size": 384,
-        "intermediate_size": 1536,
-        "initializer_range": 0.02,
-        "max_position_embeddings": 2048,
-        "num_attention_heads": 12,
-        "num_hidden_layers": 4,
-        "task_type_vocab_size": 16,
-        "type_vocab_size": 4,
-        "use_task_id": True,
-        "vocab_size": 40000,
-    },
-    "uie-senta-nano": {
-        "attention_probs_dropout_prob": 0.1,
-        "hidden_act": "gelu",
-        "hidden_dropout_prob": 0.1,
-        "hidden_size": 312,
-        "intermediate_size": 1248,
-        "initializer_range": 0.02,
-        "max_position_embeddings": 2048,
-        "num_attention_heads": 12,
-        "num_hidden_layers": 4,
-        "task_type_vocab_size": 16,
-        "type_vocab_size": 4,
-        "use_task_id": True,
-        "vocab_size": 40000,
-    },
-    "uie-base-answer-extractor": {
-        "attention_probs_dropout_prob": 0.1,
-        "hidden_act": "gelu",
-        "hidden_dropout_prob": 0.1,
-        "hidden_size": 768,
-        "initializer_range": 0.02,
-        "max_position_embeddings": 2048,
-        "num_attention_heads": 12,
-        "num_hidden_layers": 12,
-        "task_type_vocab_size": 3,
-        "type_vocab_size": 4,
-        "use_task_id": True,
-        "vocab_size": 40000,
-    },
-    "uie-base-qa-filter": {
-        "attention_probs_dropout_prob": 0.1,
-        "hidden_act": "gelu",
-        "hidden_dropout_prob": 0.1,
-        "hidden_size": 768,
-        "initializer_range": 0.02,
-        "max_position_embeddings": 2048,
-        "num_attention_heads": 12,
-        "num_hidden_layers": 12,
-        "task_type_vocab_size": 3,
-        "type_vocab_size": 4,
-        "use_task_id": True,
-        "vocab_size": 40000,
-    }
-}
-ERNIE_PRETRAINED_RESOURCE_FILES_MAP = {
-    "model_state": {
-        "uie-base": "",
-        "uie-medium": "",
-        "uie-mini": "",
-        "uie-micro": "",
-        "uie-nano": "",
-        "uie-base-en": "",
-        "uie-senta-base": "",
-        "uie-senta-medium": "",
-        "uie-senta-mini": "",
-        "uie-senta-micro": "",
-        "uie-senta-nano": "",
-        "uie-base-answer-extractor": "",
-        "uie-base-qa-filter": "",
-    }
+from mindnlp.abc import PreTrainedConfig
+from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
+
+ERNIE_SUPPORT_LIST = [
+    "uie-base",
+    "uie-medium",
+    "uie-mini",
+    "uie-micro",
+    "uie-nano",
+    "uie-base-en",
+    "uie-senta-base",
+    "uie-senta-medium",
+    "uie-senta-mini",
+    "uie-senta-micro",
+    "uie-senta-nano",
+    "uie-base-answer-extractor",
+    "uie-base-qa-filter",
+]
+
+CONFIG_ARCHIVE_MAP = {
+    model: MINDNLP_CONFIG_URL_BASE.format(re.search(r"^[^-]*", model).group(), model)
+    for model in ERNIE_SUPPORT_LIST
 }
 
 
@@ -233,10 +47,8 @@ class ErnieConfig(PreTrainedConfig):
     """
     Configuration for Ernie.
     """
-    model_type = "ernie"
-    attribute_map: Dict[str, str] = {
-        "dropout": "classifier_dropout", "num_classes": "num_labels"}
-    pretrained_init_configuration = ERNIE_PRETRAINED_INIT_CONFIGURATION
+
+    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     def __init__(
         self,
@@ -282,14 +94,14 @@ class ErnieConfig(PreTrainedConfig):
         self.use_cache = use_cache
         self.use_task_id = use_task_id
         self.enable_recompute = enable_recompute
+
+
 class UIEConfig(PreTrainedConfig):
     """
     Configuration for UIE.
     """
-    model_type = "ernie"
-    attribute_map: Dict[str, str] = {
-        "dropout": "classifier_dropout", "num_classes": "num_labels"}
-    pretrained_init_configuration = ERNIE_PRETRAINED_INIT_CONFIGURATION
+
+    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     def __init__(
         self,
@@ -335,5 +147,6 @@ class UIEConfig(PreTrainedConfig):
         self.use_cache = use_cache
         self.use_task_id = use_task_id
         self.enable_recompute = enable_recompute
+
 
 __all__ = ["ErnieConfig", "UIEConfig"]

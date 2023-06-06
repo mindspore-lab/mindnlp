@@ -21,10 +21,9 @@ import os
 from typing import Union
 import mindspore
 from mindspore import nn, ops
-from mindnlp.abc.backbones.pretrained import PreTrainedModel
+from mindnlp.abc import PreTrainedModel
 from .tinybert_config import BertConfig
-
-ACT2FN = {"gelu": ops.gelu, "relu": ops.relu}
+from ..utils.activations import ACT2FN
 
 
 class TinyBertEmbeddings(nn.Cell):
@@ -36,7 +35,6 @@ class TinyBertEmbeddings(nn.Cell):
         """
         init BertEmbeddings
         """
-
         super().__init__()
         self.word_embeddings = nn.Embedding(
             config.vocab_size, config.hidden_size, padding_idx=0)
@@ -52,7 +50,6 @@ class TinyBertEmbeddings(nn.Cell):
         """
         Construct the embeddings from word, position and token_type embeddings.
         """
-
         seq_length = input_ids.shape[1]
         position_ids = ops.arange(seq_length, dtype=mindspore.int64)
         position_ids = position_ids.expand_dims(0).expand_as(input_ids)
@@ -415,7 +412,7 @@ class TinyBertPreTrainedModel(PreTrainedModel):
             :obj:`nn.Cell`: A mindspore cell mapping vocabulary to hidden states.
         """
 
-    def set_input_embeddings(self, value: "nn.Cell"):
+    def set_input_embeddings(self, new_embeddings: "nn.Cell"):
         """
         Set model's input embeddings.
 

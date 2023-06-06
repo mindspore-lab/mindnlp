@@ -15,13 +15,29 @@
 """
 model nezha config
 """
-from mindnlp.abc.backbones.pretrained import PreTrainedConfig
+from mindnlp.abc import PreTrainedConfig
+from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
 
+__all__ = ["NezhaConfig"]
+
+NEZHA_SUPPORT_LIST = [
+    "nezha-cn-base",
+    "nezha-cn-large",
+    "nezha-base-wwm",
+    "nezha-large-wwm"
+]
+
+CONFIG_ARCHIVE_MAP = {
+    model: MINDNLP_CONFIG_URL_BASE.format('nezha', model) for model in NEZHA_SUPPORT_LIST
+}
 
 class NezhaConfig(PreTrainedConfig):
     """
     Configuration for Nezha
     """
+
+    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
+
     def __init__(
         self,
         vocab_size=21128,

@@ -18,11 +18,14 @@
 Auto mixed precision api.
 """
 
-from mindspore import nn
-from mindspore import ops
+import mindspore
+from mindspore import nn, ops
 from mindspore import Tensor, Parameter, context, ms_class
+from mindspore.ops import constexpr
 import mindspore.common.dtype as mstype
 from mindnlp.modules import StaticGRU, StaticLSTM
+from mindnlp._legacy.nn import Matmul
+from mindnlp.utils import less_min_pynative_first
 
 # For AMP white list
 AMP_WHITE_LIST = (
@@ -41,12 +44,14 @@ AMP_WHITE_LIST = (
     nn.GRU,
     nn.PReLU,
     StaticGRU,
-    StaticLSTM
+    StaticLSTM,
+    Matmul
 )
 
 AMP_BLACK_LIST = (
     nn.BatchNorm1d,
-    nn.BatchNorm2d
+    nn.BatchNorm2d,
+    nn.LayerNorm
 )
 
 class _OutputTo32(nn.Cell):
@@ -81,6 +86,7 @@ def auto_mixed_precision(network, amp_level='O1'):
         network.to_float(mstype.float16)
     else:
         raise ValueError(f"the amp_level '{amp_level}' is not supported.")
+    return network
 
 def auto_white_list(network, white_list=None):
     """auto cast based on white list"""
@@ -121,28 +127,22 @@ def auto_black_list(network, black_list=None):
     if isinstance(network, nn.SequentialCell) and change:
         network.cell_list = list(network.cells())
 
-# For Loss Scaler
-_ascend_target = context.get_context("device_target") == "Ascend"
-_gpu_target = context.get_context("device_target") == "GPU"
-_reciprocal = ops.Reciprocal()
-
-_gpu_float_status = ops.FloatStatus()
-_npu_alloc_float_status = ops.NPUAllocFloatStatus()
-_npu_clear_float_status = ops.NPUClearFloatStatus()
-_npu_get_float_status = ops.NPUGetFloatStatus()
-if _ascend_target:
-    _status = _npu_alloc_float_status()
-    _ = _npu_clear_float_status(_status)
-else:
-    _status = None
 
 _hypermap = ops.HyperMap()
 _partial = ops.Partial()
 
+@constexpr
+def _ascend_target():
+    return context.get_context("device_target") == "Ascend"
+
+
+@constexpr
+def _gpu_target():
+    return context.get_context("device_target") == "GPU"
 
 def _grad_unscale(scale, grad):
     """grad unscale."""
-    return grad * _reciprocal(scale).astype(grad.dtype)
+    return grad * ops.Reciprocal()(scale).astype(grad.dtype)
 
 def _grad_scale(scale, grad):
     """grad scale."""
@@ -150,23 +150,39 @@ def _grad_scale(scale, grad):
 
 def _is_finite(inputs):
     """whether input tensor is finite."""
-    if _gpu_target:
-        return _gpu_float_status(inputs)[0] == 0
+    if _gpu_target():
+        return ops.FloatStatus()(inputs)[0] == 0
     status = ops.isfinite(inputs)
     return status.all()
 
-def all_finite(inputs):
+def init_status():
+    r"""
+    Returns a Tensor indicating initialized status for overflow detection.
+    """
+    if _ascend_target() and less_min_pynative_first:
+        status = ops.NPUAllocFloatStatus()()
+        clear_status = ops.NPUClearFloatStatus()(status)
+        status = ops.depend(status, clear_status)
+    else:
+        status = Tensor([0, 0, 0, 0, 0, 0, 0, 0], mstype.float32)
+
+    return status
+
+def all_finite(inputs, status=None):
     """whether all inputs tensor are finite."""
-    if _ascend_target:
-        _status = ops.depend(_status, inputs)
-        get_status = _npu_get_float_status(_status)
-        _status = ops.depend(_status, get_status)
-        status_finite = _status.sum() == 0
-        _ = _npu_clear_float_status(_status)
+    if _ascend_target():
+        if not less_min_pynative_first:
+            return mindspore.amp.all_finite(inputs)
+        if status is None:
+            raise ValueError("The status must be initialized on Ascend, but get 'None'.")
+        status = ops.depend(status, inputs)
+        get_status = ops.NPUGetFloatStatus()(status)
+        status = ops.depend(status, get_status)
+        status_finite = status.sum() == 0
+        _ = ops.NPUClearFloatStatus()(status)
         return status_finite
     outputs = _hypermap(_partial(_is_finite), inputs)
     return ops.stack(outputs).all()
-
 
 @ms_class
 class LossScaler():

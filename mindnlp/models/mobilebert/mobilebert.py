@@ -29,7 +29,7 @@ import mindspore.numpy as mnp
 from mindspore import nn
 from mindspore import ops
 from mindspore.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
-from mindnlp.abc.backbones.pretrained import PreTrainedModel
+from mindnlp.abc import PreTrainedModel
 from ..mobilebert.mobilebert_config import MobileBertConfig
 from ..utils.utils import find_pruneable_heads_and_indices, prune_conv1d_layer
 from ..utils.activations import ACT2FN
@@ -616,12 +616,6 @@ class MobileBertPreTrainedModel(PreTrainedModel):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
 
-    def post_init(self):
-        pass
-
-    def init_model_weights(self):
-        pass
-
     def get_input_embeddings(self):
         pass
 
@@ -632,9 +626,6 @@ class MobileBertPreTrainedModel(PreTrainedModel):
         pass
 
     def get_position_embeddings(self):
-        pass
-
-    def save(self):
         pass
 
 
@@ -755,9 +746,9 @@ class MobileBertForPreTraining(MobileBertPreTrainedModel):
         """get_output_embeddings"""
         return self.cls.predictions.decoder
 
-    def set_output_embeddings(self, new_embeddigs):
+    def set_output_embeddings(self, new_embeddings):
         """set_output_embeddings"""
-        self.cls.predictions.decoder = new_embeddigs
+        self.cls.predictions.decoder = new_embeddings
 
     def resize_token_embeddings(self, new_num_tokens: Optional[int] = None) -> nn.Embedding:
         """resize_token_embeddings"""
@@ -860,9 +851,9 @@ class MobileBertForMaskedLM(MobileBertPreTrainedModel):
         """get_output_embeddings"""
         return self.cls.predictions.decoder
 
-    def set_output_embeddings(self, new_embeddigs):
+    def set_output_embeddings(self, new_embeddings):
         """set_output_embeddings"""
-        self.cls.predictions.decoder = new_embeddigs
+        self.cls.predictions.decoder = new_embeddings
 
     def resize_token_embeddings(self, new_num_tokens: Optional[int] = None) -> nn.Embedding:
         """ resize_token_embeddings"""

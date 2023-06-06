@@ -18,6 +18,8 @@
 """
 Test MobileBert
 """
+import gc
+import os
 import unittest
 
 import mindspore
@@ -43,13 +45,13 @@ class TestMobileBert(unittest.TestCase):
         Set up config
         """
 
-        self.input = None
+        self.config = MobileBertConfig(num_hidden_layers=2)
 
     def test_mobilebert_embedding(self):
         """
         Test MobileBertEmbeddings
         """
-        model = MobileBertEmbeddings(MobileBertConfig())
+        model = MobileBertEmbeddings(self.config)
         input_ids = Tensor(np.random.randint(0, 1000, (2, 128)))
 
         output = model(input_ids)
@@ -59,7 +61,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertEmbeddings
         """
-        model = MobileBertSelfAttention(MobileBertConfig())
+        model = MobileBertSelfAttention(self.config)
         query_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 128)), mindspore.float32)
         key_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 128)), mindspore.float32)
         value_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 512)), mindspore.float32)
@@ -71,7 +73,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertSelfOutput
         """
-        model = MobileBertSelfOutput(MobileBertConfig())
+        model = MobileBertSelfOutput(self.config)
         hidden_states = Tensor(np.random.randint(0, 1000, (2, 128)), mindspore.float32)
         residual_tensor = Tensor(np.random.randint(0, 1000, (2, 128)))
 
@@ -83,7 +85,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertAttention
         """
-        model = MobileBertAttention(MobileBertConfig())
+        model = MobileBertAttention(self.config)
         query_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 128)), mindspore.float32)
         key_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 128)), mindspore.float32)
         value_tensor = Tensor(np.random.randint(0, 1000, (2, 8, 512)), mindspore.float32)
@@ -96,7 +98,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertIntermediate
         """
-        model = MobileBertIntermediate(MobileBertConfig())
+        model = MobileBertIntermediate(self.config)
         hidden_states = Tensor(np.random.randint(0, 1000, (512, 128)), mindspore.float32)
 
         output = model(hidden_states)
@@ -106,7 +108,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test OutputBottleneck
         """
-        model = OutputBottleneck(MobileBertConfig())
+        model = OutputBottleneck(self.config)
         hidden_states = Tensor(np.random.randint(0, 1000, (512, 128)), mindspore.float32)
         residual_tensor = Tensor(np.random.randint(0, 1000, (512, 512)), mindspore.float32)
 
@@ -117,7 +119,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertOutput
         """
-        model = MobileBertOutput(MobileBertConfig())
+        model = MobileBertOutput(self.config)
         intermediate_states = Tensor(np.random.randint(0, 1000, (128, 512)), mindspore.float32)
         residual_tensor_1 = Tensor(np.random.randint(0, 1000, (128, 128)), mindspore.float32)
         residual_tensor_2 = Tensor(np.random.randint(0, 1000, (128, 512)), mindspore.float32)
@@ -129,7 +131,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test BottleneckLayer
         """
-        model = BottleneckLayer(MobileBertConfig())
+        model = BottleneckLayer(self.config)
         hidden_states = Tensor(np.random.randint(0, 1000, (128, 512)), mindspore.float32)
 
         output = model(hidden_states)
@@ -139,7 +141,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test Bottleneck
         """
-        model = Bottleneck(MobileBertConfig())
+        model = Bottleneck(self.config)
         hidden_states = Tensor(np.random.randint(0, 1000, (128, 512)), mindspore.float32)
 
         output = model(hidden_states)
@@ -152,7 +154,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test FFNOutput
         """
-        model = FFNOutput(MobileBertConfig())
+        model = FFNOutput(self.config)
         hidden_states = Tensor(np.random.randint(0, 1000, (128, 512)), mindspore.float32)
         residual_tensor = Tensor(np.random.randint(0, 1000, (128, 128)), mindspore.float32)
 
@@ -163,7 +165,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test FFNLayer
         """
-        model = FFNLayer(MobileBertConfig())
+        model = FFNLayer(self.config)
         hidden_states = Tensor(np.random.randint(0, 1000, (512, 128)), mindspore.float32)
 
         output = model(hidden_states)
@@ -173,7 +175,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertLayer
         """
-        model = MobileBertLayer(MobileBertConfig())
+        model = MobileBertLayer(self.config)
         hidden_states = Tensor(np.random.randint(0, 1000, (2, 128, 512)), mindspore.float32)
 
         output = model(hidden_states)
@@ -189,7 +191,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertEncoder
         """
-        model = MobileBertEncoder(MobileBertConfig())
+        model = MobileBertEncoder(self.config)
         hidden_states = Tensor(np.random.randint(0, 1000, (2, 128, 512)), mindspore.float32)
         head_mask = Tensor(np.random.randint(0, 1000, (128, 128, 128)), mindspore.float32)
 
@@ -200,7 +202,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertPooler
         """
-        model = MobileBertPooler(MobileBertConfig())
+        model = MobileBertPooler(self.config)
         hidden_states = Tensor(np.random.randint(0, 1000, (512, 128, 512)), mindspore.float32)
 
         output = model(hidden_states)
@@ -210,7 +212,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertPredictionHeadTransform
         """
-        model = MobileBertPredictionHeadTransform(MobileBertConfig())
+        model = MobileBertPredictionHeadTransform(self.config)
         hidden_states = Tensor(np.random.randint(0, 1000, (2, 512, 512)), mindspore.float32)
         output = model(hidden_states)
         assert output.shape == (2, 512, 512)
@@ -219,7 +221,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertLMPredictionHead
         """
-        model = MobileBertLMPredictionHead(MobileBertConfig())
+        model = MobileBertLMPredictionHead(self.config)
         hidden_states = Tensor(np.random.randint(0, 1000, (2, 256, 512)), mindspore.float32)
 
         output = model(hidden_states)
@@ -229,7 +231,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertModel
         """
-        model = MobileBertModel(MobileBertConfig())
+        model = MobileBertModel(self.config)
         input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
@@ -243,7 +245,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertForPreTraining
         """
-        model = MobileBertForPreTraining(MobileBertConfig())
+        model = MobileBertForPreTraining(self.config)
         input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
@@ -257,7 +259,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertForMaskedLM
         """
-        model = MobileBertForMaskedLM(MobileBertConfig())
+        model = MobileBertForMaskedLM(self.config)
         input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
@@ -269,7 +271,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertOnlyNSPHead
         """
-        model = MobileBertOnlyNSPHead(MobileBertConfig())
+        model = MobileBertOnlyNSPHead(self.config)
         pooled_output = Tensor(np.random.randint(0, 1000, (2, 512)), mindspore.float32)
 
         outputs = model(pooled_output)
@@ -279,7 +281,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertForNextSentencePrediction
         """
-        model = MobileBertForNextSentencePrediction(MobileBertConfig())
+        model = MobileBertForNextSentencePrediction(self.config)
         input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
@@ -291,7 +293,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertForSequenceClassification
         """
-        model = MobileBertForSequenceClassification(MobileBertConfig())
+        model = MobileBertForSequenceClassification(self.config)
         input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
@@ -303,7 +305,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertForQuestionAnswering
         """
-        model = MobileBertForQuestionAnswering(MobileBertConfig())
+        model = MobileBertForQuestionAnswering(self.config)
         input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
@@ -317,7 +319,7 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertForMultipleChoice
         """
-        model = MobileBertForMultipleChoice(MobileBertConfig())
+        model = MobileBertForMultipleChoice(self.config)
         input_ids = Tensor(np.random.randint(0, 1000, (2, 8, 256)), mindspore.int32)
 
         outputs = model(input_ids)
@@ -329,10 +331,18 @@ class TestMobileBert(unittest.TestCase):
         """
         Test MobileBertForTokenClassification
         """
-        model = MobileBertForTokenClassification(MobileBertConfig())
+        model = MobileBertForTokenClassification(self.config)
         input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
         assert outputs[0].shape == (2, 8, 2)
         outputs = model(input_ids, return_dict=True)
         assert outputs[1].shape == (2, 8, 2)
+
+    def tearDown(self) -> None:
+        gc.collect()
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.exists("~/.mindnlp"):
+            os.removedirs("~/.mindnlp")

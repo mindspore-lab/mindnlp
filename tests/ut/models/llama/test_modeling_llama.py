@@ -13,6 +13,8 @@
 # limitations under the License.
 # ============================================================================
 """Test Llama"""
+import gc
+import os
 import unittest
 import numpy as np
 import mindspore
@@ -28,7 +30,7 @@ class TestModelingLlama(unittest.TestCase):
         """
         Set up.
         """
-        self.config = llama_config.LlamaConfig()
+        self.config = llama_config.LlamaConfig(n_layers=2)
         self.config.max_batch_size = 2
         self.config.dim = 128
         self.config.max_seq_len = 256
@@ -105,3 +107,11 @@ class TestModelingLlama(unittest.TestCase):
         output = model(tokens, 0)
 
         assert output.shape == (config.max_batch_size, config.max_seq_len)
+
+    def tearDown(self) -> None:
+        gc.collect()
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.exists("~/.mindnlp"):
+            os.removedirs("~/.mindnlp")

@@ -18,4 +18,17 @@ tokenizers init
 
 from .basic_tokenizer import BasicTokenizer
 from .bert_tokenizer import BertTokenizer
+from .gpt2_tokenizer import GPT2Tokenizer
 from .t5_tokenizer import T5Tokenizer
+from .gpt_tokenizer import GPTTokenizer
+from .codegen_tokenizer import CodeGenTokenizer
+from .roberta_tokenizer import RobertaTokenizer
+from .longformer_tokenizer import LongformerTokenizer
+from .nezha_tokenizer import NezhaTokenizer
+from .ernie_tokenizer import ErnieTokenizer
+from .tinybert_tokenizer import TinyBertTokenizer
+from .chatglm_tokenizer import ChatGLMTokenizer
+
+__all__ = ['BasicTokenizer', 'BertTokenizer', 'T5Tokenizer', 'GPTTokenizer', 'GPT2Tokenizer', 'ErnieTokenizer', 'CodeGenTokenizer',
+           'RobertaTokenizer', 'LongformerTokenizer', 'NezhaTokenizer', 'TinyBertTokenizer', 'ChatGLMTokenizer'
+           ]

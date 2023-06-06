@@ -13,7 +13,10 @@
 # limitations under the License.
 # ============================================================================
 """Test GPT2"""
+import gc
+import os
 import unittest
+import pytest
 import numpy as np
 
 import mindspore
@@ -32,112 +35,126 @@ class TestModelingGPT2(unittest.TestCase):
         """
         Set up.
         """
-        self.input = None
+        self.config = config_gpt2.GPT2Config(n_layer=2, n_embd=128, n_head=8, n_inner=256, pad_token_id=0)
 
     def test_gpt2_attention(self):
         r"""
         Test GPT2 Attention
         """
-        config = config_gpt2.GPT2Config()
-        model = gpt2.GPT2Attention(config)
+        model = gpt2.GPT2Attention(self.config)
 
-        hidden_states = Tensor(np.random.randint(0, 10, (2, 512, 768)), mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512, self.config.n_embd)), mindspore.float32)
 
         attn_output, _ = model(hidden_states)
-        assert attn_output.shape == (2, 512, 768)
+        assert attn_output.shape == (2, 512, self.config.n_embd)
 
     def test_gpt2_mlp(self):
         r"""
         Test GPT2 MLP
         """
-        intermediate_size = 3072
-        config = config_gpt2.GPT2Config()
-        model = gpt2.GPT2MLP(intermediate_size, config)
+        model = gpt2.GPT2MLP(self.config.n_inner, self.config)
 
-        hidden_states = Tensor(np.random.randint(0, 10, (2, 512, 768)), mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512, self.config.n_embd)), mindspore.float32)
 
         hidden_states = model(hidden_states)
-        assert hidden_states.shape == (2, 512, 768)
+        assert hidden_states.shape == (2, 512, self.config.n_embd)
 
     def test_gpt2_block(self):
         r"""
         Test GPT2 Block
         """
         layer_idx = 0
-        config = config_gpt2.GPT2Config()
-        model = gpt2.GPT2Block(config, layer_idx)
+        model = gpt2.GPT2Block(self.config, layer_idx)
 
-        hidden_states = Tensor(np.random.randint(0, 10, (2, 512, 768)), mindspore.float32)
+        hidden_states = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512, self.config.n_embd)), mindspore.float32)
 
         outputs = model(hidden_states)
-        assert outputs[0].shape == (2, 512, 768)
+        assert outputs[0].shape == (2, 512, self.config.n_embd)
 
     def test_gpt2_model(self):
         r"""
         Test GPT2 Model
         """
-        config = config_gpt2.GPT2Config()
-        model = gpt2.GPT2Model(config)
+        model = gpt2.GPT2Model(self.config)
 
-        input_ids = Tensor(np.random.randint(0, 10, (2, 512)))
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512)))
 
         hidden_states, presents = model(input_ids)
-        assert hidden_states.shape == (2, 512, 768)
-        assert presents[0][0].shape == (2, 12, 512, 64)
-        assert presents[0][1].shape == (2, 12, 512, 64)
+        assert hidden_states.shape == (2, 512, self.config.n_embd)
+        assert presents[0][0].shape == (2, self.config.n_head, 512, self.config.n_embd // self.config.n_head)
+        assert presents[0][1].shape == (2, self.config.n_head, 512, self.config.n_embd // self.config.n_head)
 
     def test_gpt2_lmhead_model(self):
         r"""
         Test GPT2 LMHead Model
         """
-        config = config_gpt2.GPT2Config()
-        model = gpt2.GPT2LMHeadModel(config)
+        model = gpt2.GPT2LMHeadModel(self.config)
 
-        input_ids = Tensor(np.random.randint(0, 10, (2, 512)))
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512)))
 
         lm_logits, transformer_outputs = model(input_ids)
-        assert lm_logits.shape == (2, 512, 50257)
-        assert transformer_outputs[0][0].shape == (2, 12, 512, 64)
-        assert transformer_outputs[0][1].shape == (2, 12, 512, 64)
+        assert lm_logits.shape == (2, 512, self.config.vocab_size)
+        assert transformer_outputs[0][0].shape == (2, self.config.n_head, 512, self.config.n_embd // self.config.n_head)
+        assert transformer_outputs[0][1].shape == (2, self.config.n_head, 512, self.config.n_embd // self.config.n_head)
 
     def test_gpt2_double_heads_model(self):
         r"""
         Test model GPT2 Model with pynative mode
         """
-        config = config_gpt2.GPT2Config()
-        model = gpt2.GPT2DoubleHeadsModel(config)
+        model = gpt2.GPT2DoubleHeadsModel(self.config)
 
-        input_ids = Tensor(np.random.randint(0, 10, (2, 512)))
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512)))
 
         logits, mc_logits, past_key_values = model(input_ids)
 
-        assert logits.shape == (2, 512, 50257)
+        assert logits.shape == (2, 512, self.config.vocab_size)
         assert mc_logits.shape == (2,)
-        assert past_key_values[0][0].shape == (2, 12, 512, 64)
-        assert past_key_values[0][1].shape == (2, 12, 512, 64)
+        assert past_key_values[0][0].shape == (2, self.config.n_head, 512, self.config.n_embd // self.config.n_head)
+        assert past_key_values[0][1].shape == (2, self.config.n_head, 512, self.config.n_embd // self.config.n_head)
 
     def test_gpt2_for_sequence_classification(self):
         r"""
         Test GPT2 For Sequence Classification
         """
-        config = config_gpt2.GPT2Config()
-        model = gpt2.GPT2ForSequenceClassification(config)
+        model = gpt2.GPT2ForSequenceClassification(self.config)
 
-        input_ids = Tensor(np.random.randint(0, 10, (1, 512)))
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512)))
 
         pooled_logits, transformer_outputs = model(input_ids)
-        assert pooled_logits.shape == (1, 2)
-        assert transformer_outputs[0][0].shape == (1, 12, 512, 64)
-        assert transformer_outputs[0][1].shape == (1, 12, 512, 64)
+        assert pooled_logits.shape == (2, 2, 2)
+        assert transformer_outputs[0][0].shape == (2, self.config.n_head, 512, self.config.n_embd // self.config.n_head)
+        assert transformer_outputs[0][1].shape == (2, self.config.n_head, 512, self.config.n_embd // self.config.n_head)
 
     def test_gpt2_for_token_classification(self):
         r"""
         Test model GPT2 Model with pynative mode
         """
-        config = config_gpt2.GPT2Config()
-        model = gpt2.GPT2ForTokenClassification(config)
+        model = gpt2.GPT2ForTokenClassification(self.config)
 
-        input_ids = Tensor(np.random.randint(0, 10, (2, 512)))
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512)))
 
         logits = model(input_ids)
         assert logits[0].shape == (2, 512, 2)
+
+    @pytest.mark.download
+    def test_from_pretrained(self):
+        """test from pretrained"""
+        _ = gpt2.GPT2Model.from_pretrained('gpt2')
+
+    @pytest.mark.download
+    def test_gpt2_lm_head_model_from_pretrained(self):
+        """test from pretrained"""
+        _ = gpt2.GPT2LMHeadModel.from_pretrained('gpt2', from_pt=True)
+
+    @pytest.mark.download
+    def test_from_pretrained_from_pt(self):
+        """test from pt"""
+        _ = gpt2.GPT2Model.from_pretrained('gpt2', from_pt=True)
+
+    def tearDown(self) -> None:
+        gc.collect()
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.exists("~/.mindnlp"):
+            os.removedirs("~/.mindnlp")

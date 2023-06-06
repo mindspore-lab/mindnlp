@@ -19,16 +19,16 @@
 import os
 from typing import Union, Optional, Tuple
 from functools import partial
-import mindspore
 import numpy as np
+import mindspore
 from mindspore import ops, nn, Parameter, Tensor, dtype_to_nptype
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.models.utils import logging
+from mindspore import log as logger
+
 from mindnlp.models.utils.activations import ACT2FN
 from mindnlp.models.gpt_neo.gpt_neo_config import GPTNeoConfig
-from ...abc import CellUtilMixin, PreTrainedModel
+from ...abc import PreTrainedModel
 
-logger = logging.get_logger(__name__)
 
 
 class GPTNeoSelfAttention(nn.Cell):
@@ -278,7 +278,7 @@ class GPTNeoBlock(nn.Cell):
         return outputs
 
 
-class GPTNeoPreTrainedModel(PreTrainedModel, CellUtilMixin):
+class GPTNeoPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
@@ -328,7 +328,7 @@ class GPTNeoPreTrainedModel(PreTrainedModel, CellUtilMixin):
         Returns the model's input embeddings.
         """
 
-    def set_input_embeddings(self, value: "nn.Cell"):
+    def set_input_embeddings(self, new_embeddings: "nn.Cell"):
         """
         Set model's input embeddings.
         """
@@ -405,11 +405,11 @@ class GPTNeoModel(GPTNeoPreTrainedModel):
         """
         return self.wte
 
-    def set_input_embeddings(self, value):
+    def set_input_embeddings(self, new_embeddings):
         """
         set the input embeddings layer
         """
-        self.wte = value
+        self.wte = new_embeddings
 
     def construct(
         self,

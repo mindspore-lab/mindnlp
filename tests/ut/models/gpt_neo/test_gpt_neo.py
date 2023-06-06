@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Test GPTNeo"""
+import gc
+import os
 import unittest
 import numpy as np
 import mindspore
@@ -32,15 +34,19 @@ class TestModelingGPTNeo(unittest.TestCase):
         """
         Set up.
         """
-        self.input = None
+        self.config = gpt_neo_config.GPTNeoConfig(
+            vocab_size=100,
+            hidden_size=128,
+            num_layers=4,
+            attention_types=[[["global", "local"], 2]]
+            )
 
     def test_gptneo_self_attention(self):
         """
         Test GPTNeo Self Attention.
         """
-        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=128)
         model = gpt_neo.GPTNeoSelfAttention(
-            config=config, attention_type=config.attention_types)
+            config=self.config, attention_type=self.config.attention_types)
 
         hidden_states = Tensor(np.random.randint(
             0, 10, (1, 128, 128)), mindspore.float32)
@@ -53,8 +59,7 @@ class TestModelingGPTNeo(unittest.TestCase):
         """
         Test GPTNeo Attention.
         """
-        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=128)
-        model = gpt_neo.GPTNeoAttention(config=config)
+        model = gpt_neo.GPTNeoAttention(config=self.config)
 
         hidden_states = Tensor(np.random.randint(
             0, 10, (1, 128, 128)), mindspore.float32)
@@ -68,9 +73,8 @@ class TestModelingGPTNeo(unittest.TestCase):
         Test GPTNeo MLP.
         """
         intermediate_size = 512
-        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=128)
         model = gpt_neo.GPTNeoMLP(
-            intermediate_size=intermediate_size, config=config)
+            intermediate_size=intermediate_size, config=self.config)
 
         hidden_states = Tensor(np.random.randint(
             0, 10, (1, 128, 128)), mindspore.float32)
@@ -83,9 +87,8 @@ class TestModelingGPTNeo(unittest.TestCase):
         """
         Test GPTNeo Block.
         """
-        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=128)
         model = gpt_neo.GPTNeoBlock(
-            layer_id=0, config=config)
+            layer_id=0, config=self.config)
 
         hidden_states = Tensor(np.random.randint(
             0, 10, (1, 128, 128)), mindspore.float32)
@@ -98,8 +101,7 @@ class TestModelingGPTNeo(unittest.TestCase):
         """
         Test GPTNeo Model.
         """
-        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=128)
-        model = gpt_neo.GPTNeoModel(config=config)
+        model = gpt_neo.GPTNeoModel(config=self.config)
 
         input_ids = Tensor(np.random.randint(
             0, 10, (1, 128)))
@@ -115,8 +117,7 @@ class TestModelingGPTNeo(unittest.TestCase):
         """
         Test GPTNeo For CausalLM.
         """
-        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=128)
-        model = gpt_neo.GPTNeoForCausalLM(config=config)
+        model = gpt_neo.GPTNeoForCausalLM(config=self.config)
 
         input_ids = Tensor(np.random.randint(
             0, 10, (1, 128)))
@@ -132,8 +133,7 @@ class TestModelingGPTNeo(unittest.TestCase):
         """
         Test GPTNeo For Sequence Classification.
         """
-        config = gpt_neo_config.GPTNeoConfig(vocab_size=100, hidden_size=128)
-        model = gpt_neo.GPTNeoForSequenceClassification(config=config)
+        model = gpt_neo.GPTNeoForSequenceClassification(config=self.config)
 
         input_ids = Tensor(np.random.randint(
             0, 10, (1, 128)))
@@ -144,3 +144,11 @@ class TestModelingGPTNeo(unittest.TestCase):
         for i in range(len(outputs[1])):
             for j in range(len(outputs[1][i])):
                 assert outputs[1][i][j].shape == (1, 16, 128, 8)
+
+    def tearDown(self) -> None:
+        gc.collect()
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.exists("~/.mindnlp"):
+            os.removedirs("~/.mindnlp")
