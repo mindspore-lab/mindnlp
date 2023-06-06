@@ -40,13 +40,12 @@ from mindnlp.generation.logits_process import LogitsProcessor, LogitsProcessorLi
 from mindnlp.generation.stopping_criteria import StoppingCriteriaList
 from mindnlp.abc import GenerationConfig
 from mindnlp.modules import functional as F
+from mindnlp.configs import MINDNLP_MODEL_URL_BASE
 from .chatglm_config import ChatGLMConfig
 
-
-CHATGLM_6B_PRETRAINED_MODEL_ARCHIVE_LIST = [
-    "THUDM/chatglm-6b",
-    # See all ChatGLM-6B models at https://huggingface.co/models?filter=chatglm
-]
+PRETRAINED_MODEL_ARCHIVE_MAP = {
+    'chatglm-6b': MINDNLP_MODEL_URL_BASE.format('glm', 'chatglm-6b')
+}
 
 
 def torch_to_mindspore(pth_file, **kwargs):
@@ -590,7 +589,7 @@ class ChatGLMPreTrainedModel(PreTrainedModel):
     config_class = ChatGLMConfig
     base_model_prefix = "transformer"
     _no_split_modules = ["GLMBlock"]
-    pretrained_model_archive_map = CHATGLM_6B_PRETRAINED_MODEL_ARCHIVE_LIST
+    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
     convert_torch_to_mindspore = torch_to_mindspore
 
     def _init_weights(self, cell: nn.Cell):
