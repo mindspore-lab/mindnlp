@@ -53,8 +53,8 @@ def ids_tensor(shape, vocab_size):
 
 def get_model_and_tokenizer():
     """get model and tokenizer"""
-    model = ChatGLMForConditionalGeneration.from_pretrained("THUDM/chatglm-6b", from_pt=True)
-    tokenizer = ChatGLMTokenizer.from_pretrained("THUDM/chatglm-6b")
+    model = ChatGLMForConditionalGeneration.from_pretrained("chatglm-6b")
+    tokenizer = ChatGLMTokenizer.from_pretrained("chatglm-6b")
     return model, tokenizer
 
 

@@ -15,7 +15,11 @@
 """ ChatGLM model configuration """
 
 from mindnlp.abc import PreTrainedConfig
+from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
 
+CONFIG_ARCHIVE_MAP = {
+    'chatglm-6b': MINDNLP_CONFIG_URL_BASE.format('glm', 'chatglm-6b')
+}
 
 class ChatGLMConfig(PreTrainedConfig):
     r"""
@@ -66,6 +70,7 @@ class ChatGLMConfig(PreTrainedConfig):
     ```
 """
     model_type = "chatglm"
+    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     def __init__(
             self,
