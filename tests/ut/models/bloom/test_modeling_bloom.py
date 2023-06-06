@@ -15,6 +15,7 @@
 """Test Bloom"""
 
 import gc
+import os
 import unittest
 import pytest
 import numpy as np
@@ -57,3 +58,8 @@ class TestModelingBloom(unittest.TestCase):
 
     def tearDown(self) -> None:
         gc.collect()
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.exists("~/.mindnlp"):
+            os.removedirs("~/.mindnlp")

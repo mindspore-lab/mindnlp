@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,14 +13,20 @@
 # limitations under the License.
 # ============================================================================
 """
-model nezha init
+MindNLP defined functional methods
 """
 
-from . import nezha
-from . import nezha_config
-from .nezha import *
-from .nezha_config import *
+from mindspore import ops
 
-__all__ = []
-__all__.extend(nezha_config.__all__)
-__all__.extend(nezha.__all__)
+def embedding(inputs, weight):
+    """
+    args:
+        input: (batch_size, seq_length)
+        weight: (vocab_size, hidden_size)
+    
+    output:
+        output: (batch_size, seq_length, hidden_size)
+    """
+    input_shape = inputs.shape
+    output = ops.gather(weight, inputs, 0)
+    return output.reshape(input_shape + (weight.shape[1],))

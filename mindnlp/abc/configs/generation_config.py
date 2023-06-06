@@ -171,3 +171,5 @@ class GenerationConfig:
 
         config.set_from_model_config(True)
         return config
+
+__all__ = ['GenerationConfig']

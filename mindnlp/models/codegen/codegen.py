@@ -393,8 +393,8 @@ class CodeGenModel(CodeGenPreTrainedModel):
     def get_input_embeddings(self):
         return self.wte
 
-    def set_input_embeddings(self, value):
-        self.wte = value
+    def set_input_embeddings(self, new_embeddings):
+        self.wte = new_embeddings
 
     def construct(
             self,

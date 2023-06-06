@@ -15,6 +15,7 @@
 # pylint:disable=W0212
 """Test T5"""
 import gc
+import os
 import unittest
 import pytest
 import numpy as np
@@ -224,3 +225,8 @@ class TestModelingT5(unittest.TestCase):
 
     def tearDown(self) -> None:
         gc.collect()
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.exists("~/.mindnlp"):
+            os.removedirs("~/.mindnlp")

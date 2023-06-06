@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,15 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""
-model nezha init
-"""
+"""functional modules init"""
 
-from . import nezha
-from . import nezha_config
-from .nezha import *
-from .nezha_config import *
-
-__all__ = []
-__all__.extend(nezha_config.__all__)
-__all__.extend(nezha.__all__)
+from .neural_network import embedding

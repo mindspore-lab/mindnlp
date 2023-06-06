@@ -14,6 +14,7 @@
 # ============================================================================
 """Test Llama"""
 import gc
+import os
 import unittest
 import numpy as np
 import mindspore
@@ -142,3 +143,8 @@ class TestModelingLlama(unittest.TestCase):
 
     def tearDown(self) -> None:
         gc.collect()
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.exists("~/.mindnlp"):
+            os.removedirs("~/.mindnlp")
