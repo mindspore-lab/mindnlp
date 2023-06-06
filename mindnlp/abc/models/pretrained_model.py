@@ -366,7 +366,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
                 if resolved_archive_file is None:
                     base_url = '/'.join(archive_file.split('/')[:-1])
-                    archive_file = base_url + '/' + HF_WEIGHTS_INDEX_NAME
+                    archive_file = base_url + '/' + HF_WEIGHTS_INDEX_NAME if from_pt else \
+                        base_url + '/' + WEIGHTS_INDEX_NAME
 
                     resolved_archive_file = str(cached_path(
                         archive_file,
@@ -385,22 +386,11 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                             subfolder=folder_name
                         )
                         is_sharded = True
+                    else:
+                        raise EnvironmentError(f"Couldn't reach server at '{archive_file}' to download pretrained weights.")
 
             except EnvironmentError as exc:
-                if pretrained_model_name_or_path in cls.pretrained_model_archive_map:
-                    msg = f"Couldn't reach server at '{archive_file}' to download pretrained weights."
-                else:
-                    format1 = ", ".join(
-                        cls.pretrained_model_archive_map.keys())
-                    format2 = ["mindspore.ckpt"]
-                    msg = (
-                        f"Model name '{pretrained_model_name_or_path}' "
-                        f"was not found in model name list ({format1}). "
-                        f"We assumed '{archive_file}' "
-                        f"was a path or url to model weight files named one of {format2} but "
-                        f"couldn't find any such file at this path or url."
-                    )
-                raise EnvironmentError(msg) from exc
+                raise exc
 
             if resolved_archive_file == archive_file:
                 logger.info("loading weights file %s", archive_file)
@@ -424,6 +414,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             else:
                 resolved_archive_file = cls.convert_torch_to_mindspore(
                     str(resolved_archive_file), prefix=cls.base_model_prefix)
+        else:
+            converted_filenames = cached_filenames
 
         def load_ckpt(resolved_archive_file):
             try:

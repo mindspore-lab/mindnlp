@@ -119,7 +119,8 @@ setup(
         'tqdm',
         'requests',
         'datasets',
-        'tokenizers'
+        'tokenizers',
+        'sentencepiece'
     ],
     classifiers=[
         'License :: OSI Approved :: Apache Software License'
