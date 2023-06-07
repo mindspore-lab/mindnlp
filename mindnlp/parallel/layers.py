@@ -17,6 +17,7 @@
 
 from typing import Optional, Union
 
+import mindspore
 from mindspore import nn, ops
 from mindspore import Parameter, Tensor
 from mindspore.common.initializer import Initializer, initializer
@@ -50,6 +51,7 @@ class VocabParallelEmbedding(nn.Cell):
         embedding_size: int,
         padding_idx: Optional[int] = None,
         init_method: Union[str, Initializer] = "normal",
+        dtype: mindspore.dtype = mindspore.float32,
     ) -> None:
         super().__init__()
         # Keep the input dimensions.
@@ -68,7 +70,7 @@ class VocabParallelEmbedding(nn.Cell):
         # Allocate weights.
         self.weight = Parameter(
             initializer(
-                init_method, (self.vocab_size_per_partition, self.embedding_size)
+                init_method, (self.vocab_size_per_partition, self.embedding_size), dtype
             ),
             "weight",
         )
@@ -84,7 +86,7 @@ class VocabParallelEmbedding(nn.Cell):
         # Get the embeddings.
         ori_shape = masked_input.shape
         output_parallel = ops.gather(self.weight, masked_input.view(-1), 0).view(
-            ori_shape + (self.embedding_size)
+            ori_shape + (self.embedding_size, )
         )
         # Mask the output embedding.
         output_parallel = ops.masked_fill(
@@ -112,6 +114,7 @@ class ParallelEmbedding(nn.Cell):
         embedding_size: int,
         padding_idx: Optional[int] = None,
         init_method: Union[str, Initializer] = "normal",
+        dtype: mindspore.dtype = mindspore.float32,
     ) -> None:
         super().__init__()
         # Keep the input dimensions.
@@ -127,7 +130,7 @@ class ParallelEmbedding(nn.Cell):
         # Allocate weights.
         self.weight = Parameter(
             initializer(
-                init_method, (self.vocab_size, self.embedding_size_per_partition)
+                init_method, (self.vocab_size, self.embedding_size_per_partition), dtype
             ),
             "weight",
         )
@@ -136,7 +139,7 @@ class ParallelEmbedding(nn.Cell):
         input_parallel = copy_to_model_parallel_region(input_)
         ori_shape = input_parallel.shape
         output_parallel = ops.gather(self.weight, input_parallel.view(-1), 0).view(
-            ori_shape + (self.embedding_size)
+            ori_shape + (self.embedding_size_per_partition, )
         )
         output = gather_from_model_parallel_region(output_parallel)
         return output
@@ -170,6 +173,7 @@ class ColumnParallelLinear(nn.Cell):
         bias: bool = True,
         gather_output: bool = True,
         init_method: Union[str, Initializer] = "normal",
+        dtype: mindspore.dtype = mindspore.float32,
         stride: int = 1,
         keep_master_weight_for_test: bool = False,
     ) -> None:
@@ -188,14 +192,14 @@ class ColumnParallelLinear(nn.Cell):
         # Parameters.
         self.weight = Parameter(
             initializer(
-                init_method, (self.in_features, self.output_size_per_partition)
+                init_method, (self.in_features, self.output_size_per_partition), dtype
             ),
             "weight",
         )
         if bias:
             # Always initialize bias to zero.
             self.bias = Parameter(
-                initializer("zeros", (self.output_size_per_partition,)), "bias"
+                initializer("zeros", (self.output_size_per_partition,), dtype), "bias"
             )
         else:
             self.bias = None
@@ -253,6 +257,7 @@ class RowParallelLinear(nn.Cell):
         bias: bool = True,
         input_is_parallel: bool = False,
         init_method: Union[str, Initializer] = "normal",
+        dtype: mindspore.dtype = mindspore.float32,
         stride: int = 1,
         keep_master_weight_for_test: bool = False,
     ):
@@ -272,13 +277,13 @@ class RowParallelLinear(nn.Cell):
         # we allocate the transpose.
         self.weight = Parameter(
             initializer(
-                init_method, (self.input_size_per_partition, self.out_features)
+                init_method, (self.input_size_per_partition, self.out_features), dtype
             ),
             "weight",
         )
         if bias:
             # Always initialize bias to zero.
-            self.bias = Parameter(initializer("zeros", (self.out_features,)), "bias")
+            self.bias = Parameter(initializer("zeros", (self.out_features,), dtype), "bias")
         else:
             self.bias = None
 
