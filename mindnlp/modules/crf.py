@@ -191,7 +191,7 @@ class CRF(nn.Cell):
         # mask: (seq_length, batch_size)
 
         seq_length = emissions.shape[0]
-
+        mask = mask.astype(emissions.dtype)
         # Start transition score and first emission; score has size of
         # (batch_size, num_tags) where for each batch, the j-th column stores
         # the score that the first timestep has tag j
@@ -224,7 +224,7 @@ class CRF(nn.Cell):
 
             # Set score to the next score if this timestep is valid (mask == 1)
             # shape: (batch_size, num_tags)
-            score = where(mask[i].expand_dims(1), next_score, score)
+            score = where(mask[i].astype(mindspore.bool_).expand_dims(1), next_score, score)
             i += 1
 
         # End transition score
