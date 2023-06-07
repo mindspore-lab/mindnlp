@@ -404,6 +404,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         # Instantiate model.
         model = cls(config, *model_args, **model_kwargs)
 
+
         if from_pt:
             if is_sharded:
                 converted_filenames = []
@@ -415,7 +416,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 resolved_archive_file = cls.convert_torch_to_mindspore(
                     str(resolved_archive_file), prefix=cls.base_model_prefix)
         else:
-            converted_filenames = cached_filenames
+            if is_sharded:
+                converted_filenames = cached_filenames
 
         def load_ckpt(resolved_archive_file):
             try:

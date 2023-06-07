@@ -291,7 +291,7 @@ class Trainer:
                 inputs = inputs + (data[arg],)
 
         if self.obj_network:
-            return inputs, tgts
+            return mutable(inputs), mutable(tgts)
         # process target dataset.
         tgt_columns = self._prepare_tgt_columns(tgt_columns)
         for tgt_column in tgt_columns:
