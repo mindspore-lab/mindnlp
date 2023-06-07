@@ -20,7 +20,7 @@ from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
 
 __all__ = ['BartConfig']
 
-BART_SUPPORT_LIST = ["bart-large", "bart-base"]
+BART_SUPPORT_LIST = ["facebook/bart-large", "facebook/bart-base", "facebook/bart-large-mnli", "facebook/bart-large-cnn", "facebook/bart-large-xsum", "yjernite/bart_eli5"]
 
 CONFIG_ARCHIVE_MAP = {
     model: MINDNLP_CONFIG_URL_BASE.format('bart', model) for model in BART_SUPPORT_LIST
