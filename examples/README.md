@@ -6,6 +6,6 @@ In the exmaples catalogue maily provodes rich application examples covering main
  
 - [x] Sentiment Analysis
 - [x] Language Model
-- [x] Machine Traslation
+- [x] Machine Translation
 - [x] Question Answer
 - [x] Sequence Labeling
