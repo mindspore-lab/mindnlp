@@ -28,7 +28,8 @@ from .nezha_tokenizer import NezhaTokenizer
 from .ernie_tokenizer import ErnieTokenizer
 from .tinybert_tokenizer import TinyBertTokenizer
 from .chatglm_tokenizer import ChatGLMTokenizer
+from .bart_tokenizer import BartTokenizer
 
 __all__ = ['BasicTokenizer', 'BertTokenizer', 'T5Tokenizer', 'GPTTokenizer', 'GPT2Tokenizer', 'ErnieTokenizer', 'CodeGenTokenizer',
-           'RobertaTokenizer', 'LongformerTokenizer', 'NezhaTokenizer', 'TinyBertTokenizer', 'ChatGLMTokenizer'
+           'RobertaTokenizer', 'LongformerTokenizer', 'NezhaTokenizer', 'TinyBertTokenizer', 'ChatGLMTokenizer', 'BartTokenizer'
            ]
