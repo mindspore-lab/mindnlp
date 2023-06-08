@@ -1,19 +1,27 @@
 """
 opt model configuration
 """
-from mindnlp.abc.backbones.pretrained import PretrainedConfig
+from mindnlp.abc import PreTrainedConfig
+from mindnlp.configs import HF_CONFIG_URL_BASE
 
-class OPTConfig(PretrainedConfig):
+__all__ = ['OPTConfig']
+OPT_SUPPORT_LIST = ["opt-125m", "opt-350m", "opt-1.3b", "opt-2.7b", "opt-6.7b", "opt-13b", "opt-30b", "opt-66b"]
+
+CONFIG_ARCHIVE_MAP = {
+    model: HF_CONFIG_URL_BASE.format(model) for model in OPT_SUPPORT_LIST
+}
+class OPTConfig(PreTrainedConfig):
     """
     using PretrainedConfig class
     """
     model_type = "opt"
     keys_to_ignore_at_inference = ["past_key_values"]
-
     def __init__(
         self,
         vocab_size=50272,
         hidden_size=768,
+        num_hidden_layers=12,
+        ffn_dim=3072,
         max_position_embeddings=2048,
         do_layer_norm_before=True,
         _remove_final_layer_norm=False,
@@ -38,8 +46,8 @@ class OPTConfig(PretrainedConfig):
             eos_token_id=eos_token_id,
             **kwargs,
         )
-        num_hidden_layers=12
-        ffn_dim=3072
+        #num_hidden_layers=12
+
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.num_attention_heads = num_attention_heads

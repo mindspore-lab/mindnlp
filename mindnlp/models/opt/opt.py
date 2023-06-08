@@ -1,3 +1,20 @@
+# Copyright 2022 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+# pylint: disable=W0237
+# pylint: disable=E0401
+# pylint: disable=R1714
 """
 mindspore opt model
 """
@@ -7,20 +24,18 @@ import numpy as np
 from mindspore import nn
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 #from mindnlp.abc.backbones.pretrained import PreTrainedModel
-from ...abc import CellUtilMixin, PreTrainedModel
 
-from mindnlp._legacy.nn import Dropout
-from mindnlp._legacy.functional import arange
 from ..utils.activations import ACT2FN
-#from ..utils.mixin import CellUtilMixin
-from ..utils import logging
-from dataclasses import dataclass
-from collections import OrderedDict
-from dataclasses import fields
 
+from ...abc import PreTrainedModel
+#from ..utils.mixin import CellUtilMixin
+#from ..utils import logging
+#from dataclasses import dataclass
+#from collections import OrderedDict
+#from dataclasses import fields
 from .opt_config import OPTConfig
 
-logger = logging.get_logger(__name__)
+#logger = logging.get_logger(__name__)
 
 
 _CHECKPOINT_FOR_DOC = "facebook/opt-350m"
@@ -68,14 +83,6 @@ def _make_causal_mask(input_ids_shape, dtype: mindspore.dtype, past_key_values_l
     #print("mask2 of ms is ", mask)
     if past_key_values_length > 0:
         mask = mindspore.ops.Concat([mindspore.ops.Zeros((tgt_len, past_key_values_length), dtype),mask], dim=-1)
-    """
-    print("this is mask shape",mindspore.ops.shape(mask))
-    print("tag_len is ", tgt_len)
-    print("bsz is ", bsz)
-    print("tgt_len + past_key_values_length", tgt_len + past_key_values_length)
-    #return mask[None, None, :, :].expand((bsz, 1, tgt_len, tgt_len + past_key_values_length))
-    #problem expand的处理
-    """
     multiples = (bsz, 1, 1, 1)
     return mindspore.ops.tile(mask[None, None, :, :], multiples)
 
@@ -88,7 +95,7 @@ def _expand_mask(mask: mindspore.Tensor, dtype: mindspore.dtype, tgt_len = None)
     #print(mindspore.ops.shape(mask))
     #print(mask)
     #print(type(mask))#这里都能出错<class 'mindspore.common.tensor.Tensor'> <class 'mindspore.common._stub_tensor.StubTensor'>
-    bsz, src_len = mindspore.ops.shape(mask)
+    _, src_len = mindspore.ops.shape(mask)
     tgt_len = tgt_len if tgt_len is not None else src_len
     #print(tgt_len)
     #出错原因在于expand不支持在GPU上运行?
@@ -108,15 +115,7 @@ def _expand_mask(mask: mindspore.Tensor, dtype: mindspore.dtype, tgt_len = None)
     #expanded_mask = mindspore.Tensor(mask[:, None, None, :])
     #print(expanded_mask)
     expanded_mask = mindspore.ops.tile(mindspore.Tensor(mask),multiples)
-   
     inverted_mask = 1.0 - expanded_mask
-    #mask = mindspore.numpy.full((tgt_len,tgt_len),mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min))
-    #return inverted_mask.masked_fill(inverted_mask.to(mindspore.Tensor.bool), np.finfo(mindspore.dtype_to_nptype(dtype)).min)
-    #return mindspore.ops.masked_fill(inverted_mask,inverted_mask.to(mindspore.Tensor.bool), np.finfo(mindspore.dtype_to_nptype(dtype)).min)
-    #return mindspore.ops.masked_fill(inverted_mask,mindspore.Tensor.bool(inverted_mask), mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min))
-    #print("dtype is ",dtype)
-    #print("shape of mask is", mindspore.ops.shape(inverted_mask))
-    #print(inverted_mask)
     mask_bool = inverted_mask.astype(mindspore.bool_)
     #print(mask_bool)
     return mindspore.ops.masked_fill(inverted_mask, mask_bool, mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min))
@@ -174,11 +173,7 @@ class OPTAttention(nn.Cell):
                 f" and `num_heads`: {num_heads})."
             )
         self.scaling = self.head_dim**-0.5
-        """
-        scaling是指
-        **是求幂运算
-        scaling = 1/sqrt(dim) 应该是指attention算完后中除以维度的一个scale操作
-        """
+
         self.is_decoder = is_decoder
 
         self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)#QKV的投影都只是一个线性层
@@ -190,11 +185,10 @@ class OPTAttention(nn.Cell):
         #return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
         return mindspore.ops.transpose(tensor.view(bsz, seq_len, self.num_heads, self.head_dim),(0,2,1,3))
     #problem
-    """这里trasnpose的区别非常关键
-    相当于torch.permute算子
-    https://www.mindspore.cn/docs/zh-CN/r2.0.0-alpha/migration_guide/typical_api_comparision.html?highlight=transpose
-    同时不管contiguous
-    """
+    #这里trasnpose的区别非常关键
+    #相当于torch.permute算子
+    #https://www.mindspore.cn/docs/zh-CN/r2.0.0-alpha/migration_guide/typical_api_comparision.html?highlight=transpose
+    #同时不管contiguous
     #batch表示有批量中的句子数量，seqlen表示句子中的单词数量，numheads表示头的数量，head_dim表示每个头下单词特征向量的维度
     #这里如果传入一个QKV矩阵，相当于直接通过view被拆分为了多头！！！
     def construct(
@@ -208,28 +202,13 @@ class OPTAttention(nn.Cell):
     ):
         """Input shape: Batch x Time x Channel"""
 
-        # if key_value_states are provided this layer is used as a cross-attention layer
-        # for the decoder
-        """
-        为什么decoder会有cross attention,encoder应该不会传过来啊
-        """
         is_cross_attention = key_value_states is not None
 
-        #bsz, tgt_len, _ = hidden_states.size()
-        #bsz, tgt_len, _ = hidden_states.shape()
-        """非常奇怪的问题 只能通过ops调用
-        https://www.mindspore.cn/docs/zh-CN/r2.0.0-alpha/api_python/ops/mindspore.ops.shape.html#mindspore.ops.shape
-        """
         bsz, tgt_len, _ = mindspore.ops.shape(hidden_states)
-        """
-        hidden_state 是指隐藏状态,其实也就是attention的输入,QKV都基于这个计算
-        """
+
         # get query proj
         query_states = self.q_proj(hidden_states) * self.scaling
-        """
-        出错 因为要求乘法两端数据类型一致 但这里前者为Float64 后者为Float32
-        """
-        #直接经过Q的线形层投射，然后乘以scaling
+
         # get key, value proj
         if is_cross_attention and past_key_value is not None:
             # reuse k,v, cross_attentions
@@ -262,45 +241,28 @@ class OPTAttention(nn.Cell):
             #这里解释了上面的past_key_value是个什么东西，相当于把之前的KV存下来?而past_key_value[0]，past_key_value[1]相当于直接使用之前的KV state
         proj_shape = (bsz * self.num_heads, -1, self.head_dim)
         query_states = self._shape(query_states, tgt_len, bsz).view(*proj_shape)
-        #这里再把query转为多头  
 
         key_states = key_states.view(*proj_shape)
         value_states = value_states.view(*proj_shape)
-        # *arg是python语法，表示一种传参的方式
 
-        #src_len = key_states.size(1)
         src_len = mindspore.ops.shape(key_states)[1]
         #attn_weights = mindspore.ops.bmm(query_states, key_states.transpose(1, 2))
         attn_weights = mindspore.ops.bmm(query_states, mindspore.ops.transpose(key_states,(0,2,1)))
         #problem 检查这里是不是3个维度
         #bmm是指batch matrix-matrix product，三维张量b*n*m 与b*m*p,其实就是对每个batch中的 n*m m*p矩阵进行乘法运算
 
-        """if attn_weights.shape() != (bsz * self.num_heads, tgt_len, src_len):
-            raise ValueError(
-                f"Attention weights should be of size {(bsz * self.num_heads, tgt_len, src_len)}, but is"
-                f" {attn_weights.shape()}"
-            )
-        """    
         if mindspore.ops.shape(attn_weights) != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
                 f"Attention weights should be of size {(bsz * self.num_heads, tgt_len, src_len)}, but is"
                 f" {mindspore.ops.shape(attn_weights)}"
             )
-        """
-        attention_mask,一个construct中传入的参数,可以看作之前mask机制中返回的一个张量,在这里如果mask不是None的话,就进行mask相关的操作
-        这是因为这个attention类是attention is all you need paper中所有的实现方法,所以包括了各种attention情况
-        """
         if attention_mask is not None:
             #if attention_mask.size() != (bsz, 1, tgt_len, src_len):
             if mindspore.ops.shape(attention_mask) != (bsz, 1, tgt_len, src_len):
                 raise ValueError(
                     f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.size()}"
                 )
-            #print("dtype of aw is ", attn_weights.dtype)
-            #print("test min", mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min))
-            attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask#直接加上mask即可
-            #print("shape of atten_weights is ", mindspore.ops.shape(attn_weights))
-            #attn_weights = mindspore.ops.max(attn_weights, mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min))#problem pytorch与mindspore完全对不上
+            attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = mindspore.ops.maximum(attn_weights, mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min))
             #print("test max", mindspore.Tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min))
             #attn_weights = torch.max(attn_weights, torch.tensor(torch.finfo(attn_weights.dtype).min))
@@ -314,10 +276,6 @@ class OPTAttention(nn.Cell):
             #problem官方文档中没有dtype选项
         else:
             attn_weights = mindspore.ops.softmax(attn_weights, axis=-1)
-        """
-        前面通过QK的矩阵乘法计算出的结果为attention weight,视为之后对V使用注意力机制的权重
-        这里如果layer_head_mask is not None,也就是调用attention的时候用到了mask机制，则将会mask掉
-        """
         if layer_head_mask is not None:
             if layer_head_mask.size() != (self.num_heads,):
                 raise ValueError(
@@ -325,9 +283,6 @@ class OPTAttention(nn.Cell):
                     f" {layer_head_mask.size()}"
                 )
             attn_weights = layer_head_mask.view(1, -1, 1, 1) * attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
-            """
-            mask机制起作用的地方在这里
-            """
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         if output_attentions:
@@ -366,6 +321,7 @@ class OPTAttention(nn.Cell):
 
 
 class OPTDecoderLayer(nn.Cell):
+    """OPTDecoderLayer"""
     def __init__(self, config: OPTConfig): #调用了config
         super().__init__()
         self.embed_dim = config.hidden_size #embed_dim使用config中的参数
@@ -381,7 +337,7 @@ class OPTDecoderLayer(nn.Cell):
         self.activation_fn = ACT2FN[config.activation_function]#设置激活函数
         #pytorch 中 layernorm可以传入一个数 但是mindspore中只能传入一个tuple或者list
         """
-        self.self_attn_layer_norm = nn.LayerNorm(#设置layernorm，直接调用LayerNorm 相比于pytorch中的nn.LayerNorm函数，没有elementwise_affine参数
+        self.self_attn_layer_norm = nn.LayerNorm(#设置layernorm 直接调用LayerNorm 相比于pytorch中的nn.LayerNorm函数，没有elementwise_affine参数
             [self.embed_dim], begin_norm_axis = -1, begin_params_axis = -1
         )
         """
@@ -412,14 +368,11 @@ class OPTDecoderLayer(nn.Cell):
         
         """
         residual = hidden_states
-        """
-        与之前self.do_layer_norm_before相关,这里opt在大模型中要先使用layernorm
-        """
         # 125m, 1.7B, ..., 175B applies layer norm BEFORE attention
         if self.do_layer_norm_before:
             hidden_states = self.self_attn_layer_norm(hidden_states)
-        print("hidden states of mindspore after layer norm")
-        print(hidden_states)
+        #print("hidden states of mindspore after layer norm")
+        #print(hidden_states)
         # Self Attention
         #这里的selfattention就是上面的OPTAttention,mask也在这个过程中完成？
         hidden_states, self_attn_weights, present_key_value = self.self_attn(
@@ -429,8 +382,8 @@ class OPTDecoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,#这里传入layer_head_mask
             output_attentions=output_attentions,
         )
-        print("hidden state of mindspore after attention!")
-        print(hidden_states)
+        #print("hidden state of mindspore after attention!")
+        #print(hidden_states)
         hidden_states = mindspore.ops.dropout(hidden_states, p=self.dropout, training=self.training)
         #print("hidden state of mindspore after dropout!")
         #print(hidden_states)
@@ -446,9 +399,6 @@ class OPTDecoderLayer(nn.Cell):
         hidden_states_shape = hidden_states.shape
         hidden_states = hidden_states.reshape(-1, hidden_states.shape[-1])
         residual = hidden_states
-        """
-        这里已经完成了第一次attention
-        """
         # 125m, 1.7B, ..., 175B applies layer norm BEFORE attention
         if self.do_layer_norm_before:
             hidden_states = self.final_layer_norm(hidden_states)
@@ -465,9 +415,6 @@ class OPTDecoderLayer(nn.Cell):
 
         if not self.do_layer_norm_before:
             hidden_states = self.final_layer_norm(hidden_states)
-        """
-        以上就是attention结束之后在投影一次
-        """
         outputs = (hidden_states,)
 
         if output_attentions:
@@ -477,8 +424,7 @@ class OPTDecoderLayer(nn.Cell):
             outputs += (present_key_value,)
 
         return outputs
-    
-class OPTPreTrainedModel(PreTrainedModel):#没太看懂
+class OPTPreTrainedModel(PreTrainedModel):
     """name changed PreTrainedModel->PretrainedModel,CHANGED BACK"""
     config_class = OPTConfig
     base_model_prefix = "model"
@@ -500,7 +446,7 @@ class OPTPreTrainedModel(PreTrainedModel):#没太看懂
     def _set_gradient_checkpointing(self, module, value=False):
         if isinstance(module, (OPTDecoder)):
             module.gradient_checkpointing = value
-    
+
     def post_init(self):
         pass
     #self added
@@ -541,11 +487,9 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
         # Note that the only purpose of `config._remove_final_layer_norm` is to keep backward compatibility
         # with checkpoints that have been fine-tuned before transformers v4.20.1
         # see https://github.com/facebookresearch/metaseq/pull/164
-        """
-        注意mindspore与pytorch两者的差异
-        OPTconfig中 layer_norm_elementwise_affine=True
-        https://www.mindspore.cn/docs/zh-CN/r2.0.0-alpha/note/api_mapping/pytorch_diff/LayerNorm.html?highlight=layernorm
-        """
+        #注意mindspore与pytorch两者的差异
+        #OPTconfig中 layer_norm_elementwise_affine=True
+        #https://www.mindspore.cn/docs/zh-CN/r2.0.0-alpha/note/api_mapping/pytorch_diff/LayerNorm.html?highlight=layernorm
         if config.do_layer_norm_before and not config._remove_final_layer_norm:
             self.final_layer_norm = nn.LayerNorm(
                 #[config.hidden_size], begin_norm_axis = -1, begin_params_axis = -1
@@ -611,6 +555,7 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
         output_hidden_states = None,
         return_dict = None,
     ):
+        """forward"""
         #problem
         #print("this is input_ids", input_ids)
         #print("this is attention", attention_mask)
@@ -625,7 +570,7 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
         # retrieve input_ids and inputs_embeds
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both decoder_input_ids and decoder_inputs_embeds at the same time")
-        elif input_ids is not None:
+        if input_ids is not None:
             #input_shape = input_ids.shape()
             input_shape = mindspore.ops.shape(input_ids)
             input_ids = input_ids.view(-1, input_shape[-1])
@@ -644,7 +589,6 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
             #attention_mask = mindspore.ops.ones(inputs_embeds.shape[:2], dtype=mindspore.bool, device=inputs_embeds.device)
             #attention_mask = mindspore.ops.ones(inputs_embeds.shape[:2], dtype=mindspore.int64)
             attention_mask = mindspore.ops.ones(inputs_embeds.shape[:2], dtype=mindspore.bool_)
-            """这里之前调试的时候dtyoe改为了int64"""
         #print("attention mask is",attention_mask)    #pass
         #problem1 None->StubTensor,是否应该通过dtype来修正
         #print("this is attention mask changed",attention_mask)
@@ -666,9 +610,9 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
-                logger.warning_once(
-                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
-                )
+                #logger.warning_once(
+                #    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
+                #)
                 use_cache = False
 
         # decoder layers
@@ -700,21 +644,9 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
             #print("attentionmask before mslayer ", attention_mask)#FAIL
             #print("past key values:", past_key_value)
             if self.gradient_checkpointing and self.training:
-
-                def create_custom_forward(module):
-                    def custom_forward(*inputs):
-                        # None for past_key_value
-                        return module(*inputs, output_attentions, None)
-
-                    return custom_forward
+                #checkpoint
                 print("Training = true???")
-                """layer_outputs = mindspore.utils.checkpoint.checkpoint(
-                    create_custom_forward(decoder_layer),
-                    hidden_states,
-                    attention_mask,
-                    head_mask[idx] if head_mask is not None else None,
-                    None,
-                )"""#不需要checkpoint，应该可以直接删除？
+
             else:
                 layer_outputs = decoder_layer(#经过decoder层，其中每个decoder_layer是从self.layers中取出来的
                     hidden_states,
@@ -747,17 +679,12 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
         next_cache = next_decoder_cache if use_cache else None
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
-        """return BaseModelOutputWithPast(#problem 缺少BaseModelOutputWithPast 来自from ...modeling_outputs import
-            last_hidden_state=hidden_states,
-            past_key_values=next_cache,
-            hidden_states=all_hidden_states,
-            attentions=all_self_attns,
-        )"""
         output = (hidden_states,)+(next_cache,)+\
             (all_hidden_states,)+(all_self_attns,)
         return output
-    
+
 class OPTModel(OPTPreTrainedModel):
+    """opt model"""
     def __init__(self, config: OPTConfig):
         super().__init__(config)
         self.decoder = OPTDecoder(config)#调用上面定义好的整个optdecoder
@@ -771,15 +698,9 @@ class OPTModel(OPTPreTrainedModel):
         self.decoder.embed_tokens = value
 
     def get_decoder(self):
+        """decoder"""
         return self.decoder
 
-    #@add_start_docstrings_to_model_forward(OPT_INPUTS_DOCSTRING)
-    """@add_code_sample_docstrings(
-        checkpoint=_CHECKPOINT_FOR_DOC,
-        output_type=BaseModelOutputWithPast,
-        config_class=_CONFIG_FOR_DOC,
-        expected_output=_EXPECTED_OUTPUT_SHAPE,
-    )"""
     def construct(
         self,
         input_ids = None,
@@ -792,6 +713,7 @@ class OPTModel(OPTPreTrainedModel):
         output_hidden_states = None,
         return_dict = None,
     ):
+        """forward"""
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -815,17 +737,12 @@ class OPTModel(OPTPreTrainedModel):
         if not return_dict:
             return decoder_outputs
 
-        """return BaseModelOutputWithPast(
-            last_hidden_state=decoder_outputs.last_hidden_state,
-            past_key_values=decoder_outputs.past_key_values,
-            hidden_states=decoder_outputs.hidden_states,
-            attentions=decoder_outputs.attentions,#这些参数都会被optdecoder返回的decoder_outputs更新
-        )"""
         output = (decoder_outputs.last_hidden_state,)+(decoder_outputs.past_key_values,)+\
             (decoder_outputs.hidden_states,)+(decoder_outputs.attentions,)
         return output
 
 class OPTForCausalLM(OPTPreTrainedModel):
+    """task"""
     _keys_to_ignore_on_load_missing = [r"lm_head.weight"]
 
     def __init__(self, config):
@@ -851,9 +768,11 @@ class OPTForCausalLM(OPTPreTrainedModel):
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
+        """set decoder"""
         self.model.decoder = decoder
 
     def get_decoder(self):
+        """use decoder"""
         return self.model.decoder
 
     #@replace_return_docstrings(output_type=CausalLMOutputWithPast, config_class=_CONFIG_FOR_DOC)
@@ -870,6 +789,7 @@ class OPTForCausalLM(OPTPreTrainedModel):
         output_hidden_states = None,
         return_dict = None,
     ):
+        """forward"""
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -904,17 +824,10 @@ class OPTForCausalLM(OPTPreTrainedModel):
             output = (logits,) + outputs[1:]
             return (loss,) + output if loss is not None else output
 
-        """return CausalLMOutputWithPast(
-            loss=loss,
-            logits=logits,
-            past_key_values=outputs.past_key_values,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
-        )"""
         output = (loss,)+(logits,)+\
             (outputs.past_key_values,)+(outputs.hidden_states,)+(outputs.attentions,)
         return output
-    
+
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
@@ -944,6 +857,7 @@ class OPTForCausalLM(OPTPreTrainedModel):
         return reordered_past
 
 class OPTForSequenceClassification(OPTPreTrainedModel):
+    """tasks"""
     _keys_to_ignore_on_load_missing = [r"lm_head.weight"]
 
     def __init__(self, config: OPTConfig):
@@ -955,14 +869,6 @@ class OPTForSequenceClassification(OPTPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    """@add_start_docstrings_to_model_forward(OPT_INPUTS_DOCSTRING)
-    @add_code_sample_docstrings(
-        checkpoint=_CHECKPOINT_FOR_SEQUENCE_CLASSIFICATION,
-        output_type=SequenceClassifierOutputWithPast,
-        config_class=_CONFIG_FOR_DOC,
-        expected_output=_SEQ_CLASS_EXPECTED_OUTPUT,
-        expected_loss=_SEQ_CLASS_EXPECTED_LOSS,
-    )"""
     def construct(
         self,
         input_ids = None,
@@ -976,6 +882,7 @@ class OPTForSequenceClassification(OPTPreTrainedModel):
         output_hidden_states = None,
         return_dict = None,
     ):
+        """forward"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.model(
@@ -993,24 +900,19 @@ class OPTForSequenceClassification(OPTPreTrainedModel):
         logits = self.score(hidden_states)
 
         if input_ids is not None:
-            batch_size, sequence_length = input_ids.shape[:2]
+            batch_size, sequence_lengths = input_ids.shape[:2]
         else:
-            batch_size, sequence_length = inputs_embeds.shape[:2]
+            batch_size, sequence_lengths = inputs_embeds.shape[:2]
 
         if self.config.pad_token_id is None:
             sequence_lengths = -1
         else:
             if input_ids is not None:
                 #sequence_lengths = (torch.ne(input_ids, self.config.pad_token_id).sum(-1) - 1).to(logits.device)
-                sequence_lengths = (mindspore.ops.ne(input_ids, self.config.pad_token_id).sum(-1) - 1)#.to(logits.device)
+                sequence_lengths = mindspore.ops.ne(input_ids, self.config.pad_token_id).sum(-1) - 1
             else:
                 sequence_lengths = -1
-                logger.warning(
-                    f"{self.__class__.__name__} will not detect padding tokens in `inputs_embeds`. Results may be "
-                    "unexpected if using padding tokens in conjunction with `inputs_embeds.`"
-                )
 
-        #pooled_logits = logits[torch.arange(batch_size, device=logits.device), sequence_lengths]
         pooled_logits = logits[mindspore.ops.arange(batch_size), sequence_lengths]
 
         loss = None
@@ -1039,16 +941,10 @@ class OPTForSequenceClassification(OPTPreTrainedModel):
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output
 
-        """return SequenceClassifierOutputWithPast(
-            loss=loss,
-            logits=pooled_logits,
-            past_key_values=transformer_outputs.past_key_values,
-            hidden_states=transformer_outputs.hidden_states,
-            attentions=transformer_outputs.attentions,
-        )# problem output函数"""
 
-        output = (loss,) + (pooled_logits,) + (transformer_outputs.past_key_values,) + (transformer_outputs.hidden_states,) + (transformer_outputs.attentions,)
-        return output       
+        output = (loss,) + (pooled_logits,) + (transformer_outputs.past_key_values,) + (transformer_outputs.hidden_states,)\
+            + (transformer_outputs.attentions,)
+        return output
 
     def get_input_embeddings(self):
         return self.model.decoder.embed_tokens
@@ -1057,6 +953,7 @@ class OPTForSequenceClassification(OPTPreTrainedModel):
         self.model.decoder.embed_tokens = value
 
 class OPTForQuestionAnswering(OPTPreTrainedModel):
+    """tasks"""
     _keys_to_ignore_on_load_missing = [r"lm_head.weight"]
 
     def __init__(self, config: OPTConfig):
@@ -1083,6 +980,7 @@ class OPTForQuestionAnswering(OPTPreTrainedModel):
         output_hidden_states = None,
         return_dict = None,
     ):
+        """forward"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.model(
@@ -1124,13 +1022,7 @@ class OPTForQuestionAnswering(OPTPreTrainedModel):
             output = (start_logits, end_logits) + transformer_outputs[2:]
             return ((total_loss,) + output) if total_loss is not None else output
 
-        """return QuestionAnsweringModelOutput(
-            loss=total_loss,
-            start_logits=start_logits,
-            end_logits=end_logits,
-            hidden_states=transformer_outputs.hidden_states,
-            attentions=transformer_outputs.attentions,
-        )#problem"""
+
         output = (total_loss,) + (start_logits,) + (end_logits,) + (transformer_outputs.hidden_states,) + (transformer_outputs.attentions,)
         return output
     def get_input_embeddings(self):
