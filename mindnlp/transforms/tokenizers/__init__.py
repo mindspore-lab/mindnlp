@@ -32,5 +32,6 @@ from .bart_tokenizer import BartTokenizer
 from .mobilebert_tokenizer import MobileBertTokenizer
 
 __all__ = ['BasicTokenizer', 'BertTokenizer', 'T5Tokenizer', 'GPTTokenizer', 'GPT2Tokenizer', 'ErnieTokenizer', 'CodeGenTokenizer',
-           'RobertaTokenizer', 'LongformerTokenizer', 'NezhaTokenizer', 'TinyBertTokenizer', 'ChatGLMTokenizer', 'BartTokenizer', 'MobileBertTokenizer'
+           'RobertaTokenizer', 'LongformerTokenizer', 'NezhaTokenizer', 'TinyBertTokenizer', 'ChatGLMTokenizer', 'BartTokenizer',
+           'MobileBertTokenizer'
            ]
