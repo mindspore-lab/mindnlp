@@ -30,14 +30,14 @@ def download_and_extract_zip(url, file_path)->None:
     """
     Download and extract file
     """
-    response = requests.get(url,timeout=100)
+    response = requests.get(url,timeout=1000)
     with open(file_path, "wb") as file:
         file.write(response.content)
     with zipfile.ZipFile(file_path, "r") as zip_ref:
         zip_ref.extractall(os.path.dirname(file_path))
     os.remove(file_path)
 
-ZIP_PATH = "/home/frank6200/project_mindspore/dataset/DuConv.zip"
+ZIP_PATH = os.path.join(DEFAULT_ROOT,"datasets","DuConv.zip")
 download_and_extract_zip(URL, ZIP_PATH)
 
 
