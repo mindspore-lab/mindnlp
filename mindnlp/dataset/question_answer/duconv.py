@@ -19,49 +19,29 @@ import os
 import json
 from typing import Tuple, Union
 import zipfile
-import numpy as np
-import datasets
 import requests
 
-import mindspore
-import mindspore.dataset as ds
-from mindspore.dataset import GeneratorDataset, transforms
-
-from mindnlp.vocab import Vocab
-from mindnlp.utils.download import cache_file
-from mindnlp.dataset.register import load_dataset, process
-from mindnlp.transforms import BasicTokenizer, Lookup
+from mindspore.dataset import GeneratorDataset
 from mindnlp.configs import DEFAULT_ROOT
 
+URL = "https://bj.bcebos.com/paddlenlp/datasets/DuConv.zip"
 
-
-
-URL = "https://bj.bcebos.com/paddlenlp/datasets/DuConv.zip"       
-
-def download_and_extract_zip(url, file_path):
-    # Download the zip file
-    response = requests.get(url)
+def download_and_extract_zip(url, file_path)->None:
+    """
+    Download and extract file
+    """
+    response = requests.get(url,timeout=100)
     with open(file_path, "wb") as file:
         file.write(response.content)
-    
-    # Extract the contents of the zip file
     with zipfile.ZipFile(file_path, "r") as zip_ref:
         zip_ref.extractall(os.path.dirname(file_path))
-    
-    # Remove the downloaded zip file
     os.remove(file_path)
 
-# Specify the URL of the zip file to download
-zip_url = URL 
+ZIP_PATH = "/home/frank6200/project_mindspore/dataset/DuConv.zip"
+download_and_extract_zip(URL, ZIP_PATH)
 
-# Specify the file path to save the downloaded zip file and extract its contents
-zip_file_path = "/home/frank6200/project_mindspore/dataset/DuConv.zip"
-# Redefine the zip_file_path
-# Download and extract the zip file
-download_and_extract_zip(zip_url, zip_file_path)
 
-class Duconv():
-    
+class Duconv:
     """
     DUconV dataset source
     """
@@ -73,7 +53,7 @@ class Duconv():
         self._conversation = []
         self._history = []
         self._response = []
-        self._load() 
+        self._load()
 
     def _load(self):
         with open(self.path, 'r',encoding="utf-8") as f:
@@ -101,9 +81,10 @@ class Duconv():
             self._conversation[index], self._history[index], self._response[index]
 
     def __len__(self):
-        return len(self._response)   
-    
-def DuConv(root, split: Union[Tuple[str], str] = ('train', 'dev','test_1','test_2'), proxies=None):
+        return len(self._response)
+def hf_duconv(root=DEFAULT_ROOT, \
+              split: Union[Tuple[str], str] = ('train', 'dev','test_1','test_2'), \
+              proxies=None):
     r'''
     Load the DuConv dataset
 
@@ -133,19 +114,15 @@ def DuConv(root, split: Union[Tuple[str], str] = ('train', 'dev','test_1','test_
 
     file_list = []
     datasets_list = []
-    
     if isinstance(split, str):
-       split = split.split()
-  
-
-    for s in split:
-          file_list.append(os.path.join(root,"datasets","DuConv",s))
-
+        split = split.split()
+    for s_name in split:
+        file_list.append(os.path.join(root,"datasets","DuConv",s_name))
     for _, file in enumerate(file_list):
-            dataset = GeneratorDataset(source =Duconv(file),\
-                                   column_names=["id" ,"goal", "knowledge", "conversation", "history","response"],\
+        dataset = GeneratorDataset(source =Duconv(file),\
+        column_names=["id" ,"goal", "knowledge", "conversation", "history","response"],\
                                    shuffle=False)
-            datasets_list.append(dataset)
+        datasets_list.append(dataset)
     if len(file_list) == 1:
-            return datasets_list[0]
+        return datasets_list[0]
     return datasets_list

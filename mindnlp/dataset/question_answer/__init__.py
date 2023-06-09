@@ -18,4 +18,4 @@ QuestionAnswer dataset init
 
 from .squad1 import SQuAD1, SQuAD1_Process
 from .squad2 import SQuAD2
-from .Duconv import DuConv
+from .duconv import hf_duconv
