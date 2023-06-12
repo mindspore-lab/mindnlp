@@ -19,7 +19,3 @@ download
    :show-inheritance:
 
 
-.. automodule:: mindnlp.utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
