@@ -1,13 +1,6 @@
 Transforms
 ========================================
 
-seq\_process
---------------------------------------------------
-
-.. automodule:: mindnlp.transforms.seq_process
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 tokenizers
 --------------------------------------------------
