@@ -19,7 +19,3 @@ udpos
    :show-inheritance:
 
 
-.. automodule:: mindnlp.dataset.sequence_tagging
-   :members:
-   :undoc-members:
-   :show-inheritance:

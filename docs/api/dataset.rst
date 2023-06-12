@@ -10,3 +10,4 @@ Dataset
    dataset/sequence_tagging
    dataset/text_classification
    dataset/text_generation
+   dataset/hf_datasets

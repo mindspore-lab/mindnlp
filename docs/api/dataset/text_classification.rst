@@ -147,7 +147,3 @@ yelpreviewpolarity
    :show-inheritance:
 
 
-.. automodule:: mindnlp.dataset.text_classification
-   :members:
-   :undoc-members:
-   :show-inheritance:
