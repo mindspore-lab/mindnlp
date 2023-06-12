@@ -10,6 +10,9 @@ Modules
    modules/decoder
    modules/attentions
    modules/loss
+   modules/rnns
+   modules/crf
+   modules/accumulator
 
 
 
