@@ -54,5 +54,7 @@ What is MindNLP
    api/models
    api/transforms
    api/utils
+   api/vocab
    api/workflow
+   api/parallel
    api/generation

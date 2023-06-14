@@ -1,4 +1,4 @@
-workflow
+Workflow
 ========================
 
 works

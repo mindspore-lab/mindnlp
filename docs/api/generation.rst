@@ -1,7 +1,7 @@
 Generation
 ================
 
-accuracy
+logits_process
 ---------------------------------------
 
 .. automodule:: mindnlp.generation.logits_process
