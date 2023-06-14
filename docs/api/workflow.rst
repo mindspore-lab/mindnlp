@@ -4,9 +4,7 @@ workflow
 works
 -------------------------------------------
 
-.. automodule:: mindnlp.workflow.works.sentiment_analysis
-   :members:
-   :show-inheritance:
+.. autoclass:: mindnlp.workflow.SentimentAnalysisWork
 
 work
 --------------------------------
@@ -18,6 +16,4 @@ work
 downstream
 ----------------------------
 
-.. automodule:: mindnlp.workflow.downstream.sentiment_analysis_model
-   :members:
-   :show-inheritance:
+.. autoclass:: mindnlp.workflow.BertForSentimentAnalysis
