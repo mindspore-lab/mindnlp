@@ -54,3 +54,4 @@ What is MindNLP
    api/models
    api/transforms
    api/utils
+   api/workflow
