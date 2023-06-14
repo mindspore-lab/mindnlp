@@ -4,9 +4,8 @@ workflow
 works
 -------------------------------------------
 
-.. automodule:: mindnlp.workflow.works
+.. autoclass:: mindnlp.workflow.works.sentiment_analysis
    :members:
-   :undoc-members:
    :show-inheritance:
 
 work
@@ -14,13 +13,11 @@ work
 
 .. automodule:: mindnlp.workflow.work
    :members:
-   :undoc-members:
    :show-inheritance:
 
 downstream
 ----------------------------
 
-.. automodule:: mindnlp.workflow.downstream
+.. autoclass:: mindnlp.workflow.downstream.sentiment_analysis_model
    :members:
-   :undoc-members:
    :show-inheritance:

@@ -7,7 +7,6 @@ bert
 
 .. automodule:: mindnlp.models.bert
    :members:
-   :undoc-members:
    :show-inheritance:
 
 gpt
@@ -15,7 +14,6 @@ gpt
 
 .. automodule:: mindnlp.models.gpt
    :members:
-   :undoc-members:
    :show-inheritance:
 
 gpt2
@@ -23,7 +21,6 @@ gpt2
 
 .. automodule:: mindnlp.models.gpt2
    :members:
-   :undoc-members:
    :show-inheritance:
 
 t5
@@ -31,7 +28,6 @@ t5
 
 .. automodule:: mindnlp.models.t5
    :members:
-   :undoc-members:
    :show-inheritance:
 
 ernie
@@ -39,7 +35,6 @@ ernie
 
 .. automodule:: mindnlp.models.ernie
    :members:
-   :undoc-members:
    :show-inheritance:
 
 roberta
@@ -47,5 +42,4 @@ roberta
 
 .. automodule:: mindnlp.models.roberta
    :members:
-   :undoc-members:
    :show-inheritance:
