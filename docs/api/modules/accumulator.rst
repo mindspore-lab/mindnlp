@@ -1,5 +1,5 @@
 accumulator
-=====
+===============
 
 .. automodule:: mindnlp.modules.accumulator
    :members:
