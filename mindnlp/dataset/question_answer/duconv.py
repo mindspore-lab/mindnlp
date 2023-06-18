@@ -56,9 +56,9 @@ class Duconv:
         self._load()
 
     def _load(self):
-        with open(self.path, 'r',encoding="utf-8") as f:
+        with open(self.path, 'r',encoding="utf-8") as f_file:
             key=0
-            for line in f:
+            for line in f_file:
                 json_data = json.loads(line)
                 duconv = json_data
 
@@ -83,8 +83,7 @@ class Duconv:
     def __len__(self):
         return len(self._response)
 def hf_duconv(root=DEFAULT_ROOT, \
-              split: Union[Tuple[str], str] = ('train', 'dev','test_1','test_2'), \
-              proxies=None):
+              split: Union[Tuple[str], str] = ('train', 'dev','test_1','test_2')):
     r'''
     Load the DuConv dataset
 
