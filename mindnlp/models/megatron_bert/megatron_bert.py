@@ -15,11 +15,10 @@
 from typing import Tuple, Union
 import os
 import mindspore
-from mindspore import nn, ops, Tensor, numpy
+from mindspore import nn, ops, Tensor, numpy, log as logger
 from mindspore.common.initializer import Normal, initializer
 from mindspore.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
 from mindnlp.abc import PreTrainedModel
-from mindspore import log as logger
 from mindnlp.models.utils.utils import find_pruneable_heads_and_indices, prune_linear_layer, \
     apply_chunking_to_forward
 from mindnlp.models.utils.activations import ACT2FN
@@ -792,7 +791,7 @@ class MegatronBertPreTrainedModel(PreTrainedModel):
         rewrite abstract method
         """
 
-    def set_input_embeddings(self, value: "nn.Cell"):
+    def set_input_embeddings(self, new_embeddings: "nn.Cell"):
         """
         rewrite abstract method
         """
@@ -880,11 +879,11 @@ class MegatronBertModel(MegatronBertPreTrainedModel):
         """
         return self.embeddings.word_embeddings
 
-    def set_input_embeddings(self, value):
+    def set_input_embeddings(self, new_embeddings):
         """
         set word-embeddings
         """
-        self.embeddings.word_embeddings = value
+        self.embeddings.word_embeddings = new_embeddings
 
     def _prune_heads(self, heads_to_prune):
         """
