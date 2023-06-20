@@ -7,3 +7,4 @@ datasets
 tokenizers
 torch
 sentencepiece
+bz2file
