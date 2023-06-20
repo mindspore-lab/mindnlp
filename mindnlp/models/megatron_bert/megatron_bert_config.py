@@ -1,9 +1,5 @@
 """ MEGATRON_BERT model configuration"""
-# pylint: disable=line-too-long
-# pylint: disable=too-many-instance-attributes
-# pylint: disable=too-many-arguments
-# pylint: disable=too-many-locals
-# pylint: disable=too-few-public-methods
+
 from mindnlp.abc import PreTrainedConfig
 
 

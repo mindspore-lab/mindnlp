@@ -1,15 +1,7 @@
 """ MindSpore MegatronBERT model."""
-# pylint: disable=too-many-lines
-# pylint: disable=too-many-branches
-# pylint: disable=too-many-arguments
-# pylint: disable=too-many-statements
-# pylint: disable=too-many-locals
-# pylint: disable=too-many-instance-attributes
-# pylint: disable=import-outside-toplevel
-# pylint: disable=arguments-differ
-# pylint: disable=logging-fstring-interpolation
-# pylint: disable=relative-beyond-top-level
-# pylint: disable=no-else-raise
+# pylint: disable=C0302
+# pylint: disable=C0415
+# pylint: disable=R1720
 
 
 from typing import Tuple, Union
