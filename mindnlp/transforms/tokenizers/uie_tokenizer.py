@@ -13,13 +13,14 @@
 # limitations under the License.
 # ============================================================================
 """
-Ernie Tokenizer
+UIE Tokenizer
 """
 
 import re
+from typing import Optional
 import numpy as np
-from mindspore.dataset.text.transforms import Implementation
 from tokenizers import Tokenizer
+from mindspore.dataset.text.transforms import Implementation
 from mindnlp.abc import PreTrainedTokenizer
 from mindnlp.models.ernie.ernie_config import ERNIE_SUPPORT_LIST
 from mindnlp.configs import MINDNLP_TOKENIZER_CONFIG_URL_BASE
@@ -49,9 +50,9 @@ PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
 }
 
 
-class ErnieTokenizer(PreTrainedTokenizer):
+class UIETokenizer(PreTrainedTokenizer):
     """
-    Tokenizer used for Ernie text process.
+    Tokenizer used for UIE text process.
 
     Args:
         vocab (Vocab): Vocabulary used to look up words.
@@ -74,7 +75,18 @@ class ErnieTokenizer(PreTrainedTokenizer):
 
         super().__init__(**kwargs)
 
-    def __call__(self, text_input):
+    def __call__(
+        self,
+        text_input,
+        pair=None,
+        max_length: Optional[int] = None,
+        truncation: bool = None,
+        padding: bool = False,
+        return_token_type_ids: Optional[bool] = None,
+        return_attention_mask: Optional[bool] = None,
+        return_offsets_mapping: bool = False,
+        return_position_ids: bool = False,
+    ):
         """
         Call method for input conversion for eager mode with C++ implementation.
         """
@@ -84,23 +96,89 @@ class ErnieTokenizer(PreTrainedTokenizer):
             raise TypeError(
                 f"Input should be a text line in 1-D NumPy format, got {type(text_input)}."
             )
-        return super().__call__(text_input)
+        return self._execute_py(
+            text_input,
+            pair,
+            max_length,
+            truncation,
+            padding,
+            return_token_type_ids,
+            return_attention_mask,
+            return_offsets_mapping,
+            return_position_ids,
+        )
 
-    def execute_py(self, text_input):
+    def execute_py(
+        self,
+        text_input,
+        pair,
+        max_length,
+        truncation,
+        padding,
+        return_token_type_ids,
+        return_attention_mask,
+        return_offsets_mapping,
+        return_position_ids,
+    ):
         """
         Execute method.
         """
-        return self._execute_py(text_input)
+        return self._execute_py(
+            text_input,
+            pair,
+            max_length,
+            truncation,
+            padding,
+            return_token_type_ids,
+            return_attention_mask,
+            return_offsets_mapping,
+            return_position_ids,
+        )
 
-    def _execute_py(self, text_input):
+    def _execute_py(
+        self,
+        text_input,
+        pair,
+        max_length,
+        truncation,
+        padding,
+        return_token_type_ids,
+        return_attention_mask,
+        return_offsets_mapping,
+        return_position_ids,
+    ):
         """
         Execute method.
         """
+
+        encoded_inputs = {}
+
         text_input = self._convert_to_unicode(text_input)
-        tokens = self._tokenizer.encode(text_input)
-        if self.return_token is True:
-            return np.array(tokens.tokens)
-        return np.array(tokens.ids)
+        pair = self._convert_to_unicode(pair)
+        if return_position_ids is True:
+            self._tokenizer.no_padding()
+            self._tokenizer.no_truncation()
+            ids = self._tokenizer.encode(text_input, pair=pair).ids
+            pos_ids = list(range(len(ids))) + [0] * (max_length - len(ids))
+            encoded_inputs["position_ids"] = np.array(pos_ids)
+
+        if padding is True:
+            self._tokenizer.enable_padding(length=max_length)
+        if truncation is True:
+            self._tokenizer.enable_truncation(max_length=max_length)
+
+        tokens = self._tokenizer.encode(text_input, pair=pair)
+
+        if return_token_type_ids is True:
+            encoded_inputs["token_type_ids"] = np.array(tokens.type_ids)
+        if return_attention_mask is True:
+            encoded_inputs["attention_mask"] = np.array(tokens.attention_mask)
+        if return_offsets_mapping is True:
+            encoded_inputs["offset_mapping"] = np.array(tokens.offsets)
+
+        encoded_inputs["input_ids"] = np.array(tokens.ids)
+
+        return encoded_inputs
 
     def _convert_to_unicode(self, text_input):
         """Converts `text` to Unicode (if it's not already), assuming utf-8 input."""
@@ -113,8 +191,7 @@ class ErnieTokenizer(PreTrainedTokenizer):
                 text_input = np.char.decode(text_input, "utf-8")
             return str(text_input)
         raise ValueError(
-            f"Unsupported string type: {type(text_input)}, {text_input.dtype}"
-        )
+            f"Unsupported string type: {type(text_input)}, {text_input.dtype}")
 
     def _convert_token_to_id(self, token):
         index = self._tokenizer.token_to_id(token)
