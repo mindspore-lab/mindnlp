@@ -25,7 +25,7 @@ from typing import List
 
 import mindspore.dataset as ds
 from mindnlp.workflow.work import Work
-from mindnlp.transforms.tokenizers import ErnieTokenizer
+from mindnlp.transforms.tokenizers import UIETokenizer
 from mindnlp.models import UIE
 from mindnlp.workflow.utils import (
     SchemaTree,
@@ -252,7 +252,7 @@ class UIEWork(Work):
         """
         Construct the tokenizer.
         """
-        self._tokenizer = ErnieTokenizer.from_pretrained(model)
+        self._tokenizer = UIETokenizer.from_pretrained(model)
 
     def _preprocess(self, inputs):
         """
