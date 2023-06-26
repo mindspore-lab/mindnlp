@@ -504,11 +504,11 @@ class GPT2Model(GPT2PreTrainedModel):
         """
         return self.wte
 
-    def set_input_embeddings(self, value):
+    def set_input_embeddings(self, new_embeddings):
         """
         set the input embeddings layer
         """
-        self.wte = value
+        self.wte = new_embeddings
 
     def _prune_heads(self, heads_to_prune):
         """

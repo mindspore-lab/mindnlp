@@ -412,7 +412,7 @@ class TinyBertPreTrainedModel(PreTrainedModel):
             :obj:`nn.Cell`: A mindspore cell mapping vocabulary to hidden states.
         """
 
-    def set_input_embeddings(self, value: "nn.Cell"):
+    def set_input_embeddings(self, new_embeddings: "nn.Cell"):
         """
         Set model's input embeddings.
 

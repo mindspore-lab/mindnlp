@@ -1,59 +1,59 @@
-# Copyright 2023 Huawei Technologies Co., Ltd
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ============================================================================
 """
-NezhaTokenizer
+BartTokenizer
 """
-
 import numpy as np
 from mindspore.dataset.text.transforms import Implementation
-from tokenizers.implementations import BertWordPieceTokenizer
+from tokenizers import Tokenizer
 from mindnlp.abc import PreTrainedTokenizer
-from mindnlp.models.nezha.nezha_config import NEZHA_SUPPORT_LIST
-from mindnlp.configs import HF_VOCAB_URL_BASE
+from mindnlp.models.bart.bart_config import BART_SUPPORT_LIST
+from mindnlp.configs import HF_TOKENIZER_CONFIG_URL_BASE
 
 PRETRAINED_VOCAB_MAP = {
-    model: HF_VOCAB_URL_BASE.format("sijunhe/" + model) for model in NEZHA_SUPPORT_LIST
+    model: HF_TOKENIZER_CONFIG_URL_BASE.format(model) for model in BART_SUPPORT_LIST
 }
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
-    "nezha-cn-base": 512,
-    "nezha-cn-large": 512,
-    "nezha-base-wwm": 512,
-    "nezha-large-wwm": 512
+    "facebook/bart-base": 1024,
+    "facebook/bart-large": 1024,
+    "facebook/bart-large-mnli": 1024,
+    "facebook/bart-large-cnn": 1024,
+    "facebook/bart-large-xsum": 1024,
+    "yjernite/bart_eli5": 1024,
 }
 
-class NezhaTokenizer(PreTrainedTokenizer):
+class BartTokenizer(PreTrainedTokenizer):
     """
-    Tokenizer used for Nezha text process.
-
-    Args:
-        vocab (Vocab): Vocabulary used to look up words.
-        return_token (bool): Whether to return token. If True: return tokens. False: return ids. Default: True.
+        Tokenizer used for Bart text process.
+        Args:
+            vocab (Vocab): Vocabulary used to look up words.
+            return_token (bool): Whether to return token. If True: return tokens. False: return ids. Default: True.
     """
-
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
-    def __init__(self, vocab: str, **kwargs):
-        super().__init__()
+    def __init__(
+        self,
+        tokenizer_file=None,
+        unk_token="<unk>",
+        bos_token="<s>",
+        eos_token="</s>",
+        add_prefix_space=False,
+        **kwargs
+    ):
+        super().__init__(
+            unk_token=unk_token,
+            bos_token=bos_token,
+            eos_token=eos_token,
+            add_prefix_space=add_prefix_space,
+            **kwargs)
+
         return_token = kwargs.pop('return_token', False)
 
-        if isinstance(vocab, str):
-            self._tokenizer = BertWordPieceTokenizer.from_file(vocab)
+        if isinstance(tokenizer_file, str):
+            self._tokenizer = Tokenizer.from_file(tokenizer_file)
         else:
-            raise ValueError(f'only support string, but got {vocab}')
+            raise ValueError(f'only support string, but got {tokenizer_file}')
+
         self.return_token = return_token
         self.implementation = Implementation.PY
 
@@ -78,11 +78,11 @@ class NezhaTokenizer(PreTrainedTokenizer):
         """
         Execute method.
         """
-        text = self._convert_to_unicode(text_input)
-        output = self._tokenizer.encode(text)
+        text_input = self._convert_to_unicode(text_input)
+        tokens = self._tokenizer.encode(text_input)
         if self.return_token is True:
-            return np.array(output.tokens)
-        return np.array(output.ids)
+            return np.array(tokens.tokens)
+        return np.array(tokens.ids)
 
     def _convert_to_unicode(self, text_input):
         """Converts `text` to Unicode (if it's not already), assuming utf-8 input."""
@@ -97,4 +97,7 @@ class NezhaTokenizer(PreTrainedTokenizer):
         raise ValueError(f"Unsupported string type: {type(text_input)}, {text_input.dtype}")
 
     def _convert_token_to_id(self, token):
-        return self._tokenizer.token_to_id(token)
+        index = self._tokenizer.token_to_id(token)
+        if index is None:
+            return self.unk_token_id
+        return index

@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=C0103
 """
-BertTokenizer
+MobileBertTokenizer
 """
 import os
 import numpy as np
@@ -23,36 +24,20 @@ from tokenizers import Tokenizer
 from tokenizers.implementations import BertWordPieceTokenizer
 from mindnlp.abc import PreTrainedTokenizer
 from mindnlp.vocab import Vocab
-from mindnlp.models.bert.bert_config import BERT_SUPPORT_LIST
+from mindnlp.models.mobilebert.mobilebert_config import MOBILEBERT_SUPPORT_LIST
 from mindnlp.configs import MINDNLP_TOKENIZER_CONFIG_URL_BASE
 
 PRETRAINED_VOCAB_MAP = {
-    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format('bert', model) for model in BERT_SUPPORT_LIST
+    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format('mobilebert', model) for model in MOBILEBERT_SUPPORT_LIST
 }
 
 
-PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
-    "bert-base-uncased": 512,
-    "bert-large-uncased": 512,
-    "bert-base-cased": 512,
-    "bert-large-cased": 512,
-    "bert-base-multilingual-uncased": 512,
-    "bert-base-multilingual-cased": 512,
-    "bert-base-chinese": 512,
-    "bert-base-german-cased": 512,
-    "bert-large-uncased-whole-word-masking": 512,
-    "bert-large-cased-whole-word-masking": 512,
-    "bert-large-uncased-whole-word-masking-finetuned-squad": 512,
-    "bert-large-cased-whole-word-masking-finetuned-squad": 512,
-    "bert-base-cased-finetuned-mrpc": 512,
-    "bert-base-german-dbmdz-cased": 512,
-    "bert-base-german-dbmdz-uncased": 512,
-}
+PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {"mobilebert-uncased": 512}
 
 
-class BertTokenizer(PreTrainedTokenizer):
+class MobileBertTokenizer(PreTrainedTokenizer):
     """
-    Tokenizer used for Bert text process.
+    Tokenizer used for MobileBert text process.
 
     Args:
         vocab (Vocab): Vocabulary used to look up words.
@@ -67,14 +52,14 @@ class BertTokenizer(PreTrainedTokenizer):
 
     Examples:
         >>> from mindspore.dataset import text
-        >>> from mindnlp.transforms import BertTokenizer
+        >>> from mindnlp.transforms import MobileBertTokenizer
         >>> vocab_list = ["床", "前", "明", "月", "光", "疑", "是", "地", "上", "霜", "举", "头", "望", "低",
               "思", "故", "乡","繁", "體", "字", "嘿", "哈", "大", "笑", "嘻", "i", "am", "mak",
               "make", "small", "mistake", "##s", "during", "work", "##ing", "hour", "😀", "😃",
               "😄", "😁", "+", "/", "-", "=", "12", "28", "40", "16", " ", "I", "[CLS]", "[SEP]",
               "[UNK]", "[PAD]", "[MASK]", "[unused1]", "[unused10]"]
         >>> vocab = text.Vocab.from_list(vocab_list)
-        >>> tokenizer_op = BertTokenizer(vocab=vocab, lower_case=True)
+        >>> tokenizer_op = MobileBertTokenizer(vocab=vocab, lower_case=True)
         >>> text = "i make a small mistake when i\'m working! 床前明月光😀"
         >>> test_dataset = ['A small mistake was made when I was working.']
         >>> dataset = GeneratorDataset(test_dataset, 'text')
