@@ -19,7 +19,8 @@ Workflow Class
 import sys
 import mindspore
 
-from mindnlp.workflow import SentimentAnalysisWork
+from .works.sentiment_analysis import SentimentAnalysisWork
+from .works.information_extraction import UIEWork
 
 
 WORKS = {
@@ -32,12 +33,78 @@ WORKS = {
         },
         "default": {"model": "bert"},
     },
+    "information_extraction": {
+        "models": {
+            "uie-base": {
+                "work_class": UIEWork,
+                "hidden_size": 768,
+                "work_flag": "information_extraction-uie-base",
+            },
+            "uie-medium": {
+                "work_class": UIEWork,
+                "hidden_size": 768,
+                "work_flag": "information_extraction-uie-medium",
+            },
+            "uie-mini": {
+                "work_class": UIEWork,
+                "hidden_size": 384,
+                "work_flag": "information_extraction-uie-mini",
+            },
+            "uie-micro": {
+                "work_class": UIEWork,
+                "hidden_size": 384,
+                "work_flag": "information_extraction-uie-micro",
+            },
+            "uie-nano": {
+                "work_class": UIEWork,
+                "hidden_size": 312,
+                "work_flag": "information_extraction-uie-nano",
+            },
+            "uie-tiny": {
+                "work_class": UIEWork,
+                "hidden_size": 768,
+                "work_flag": "information_extraction-uie-tiny",
+            },
+            "uie-medical-base": {
+                "work_class": UIEWork,
+                "hidden_size": 768,
+                "work_flag": "information_extraction-uie-medical-base",
+            },
+            "uie-base-en": {
+                "work_class": UIEWork,
+                "hidden_size": 768,
+                "work_flag": "information_extraction-uie-base-en",
+            },
+        },
+        "default": {"model": "uie-base"},
+    },
 }
 
-support_schema_list = []
+support_schema_list = [
+    "uie-base",
+    "uie-medium",
+    "uie-mini",
+    "uie-micro",
+    "uie-nano",
+    "uie-tiny",
+    "uie-base-en",
+    "uie-senta-base",
+    "uie-senta-medium",
+    "uie-senta-mini",
+    "uie-senta-micro",
+    "uie-senta-nano",
+]
 
-support_argument_list = []
-
+support_argument_list = [
+    "uie-base",
+    "uie-medium",
+    "uie-mini",
+    "uie-micro",
+    "uie-nano",
+    "uie-tiny",
+    "uie-medical-base",
+    "uie-base-en",
+]
 
 
 class Workflow:
@@ -56,8 +123,12 @@ class Workflow:
         kwargs (dict, optional): Additional keyword arguments passed along to the specific work.
     """
 
-    def __init__(self, work, model=None, mode=None, device_id=0, from_hf_hub=False, **kwargs):
-        assert work in WORKS, f"The work name:{work} is not in Workflow list, \
+    def __init__(
+        self, work, model=None, mode=None, device_id=0, from_hf_hub=False, **kwargs
+    ):
+        assert (
+            work in WORKS
+        ), f"The work name:{work} is not in Workflow list, \
             please check your work name."
         self.work = work
 
@@ -77,8 +148,9 @@ class Workflow:
             self.model = model
 
         if self.model is not None:
-            assert self.model in set(WORKS[work][tag].keys()),\
-                f"The {tag} name: {model} is not in work:[{work}]"
+            assert self.model in set(
+                WORKS[work][tag].keys()
+            ), f"The {tag} name: {model} is not in work:[{work}]"
         else:
             self.model = WORKS[work]["default"][ind_tag]
 
@@ -88,8 +160,7 @@ class Workflow:
         self.kwargs = kwargs
         work_class = WORKS[self.work][tag][self.model]["work_class"]
         self.work_instance = work_class(
-            model=self.model, work=self.work,
-            from_hf_hub=from_hf_hub, **self.kwargs
+            model=self.model, work=self.work, from_hf_hub=from_hf_hub, **self.kwargs
         )
         work_list = WORKS.keys()
         Workflow.work_list = work_list

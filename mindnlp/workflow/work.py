@@ -19,11 +19,13 @@ The meta classs of work in Workflow.
 # pylint: disable=no-member
 
 import abc
+import math
 import os
 from abc import abstractmethod
 
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import cache_file
+from mindnlp.workflow.utils import cut_chinese_sent
 
 
 class Work(metaclass=abc.ABCMeta):
@@ -43,9 +45,14 @@ class Work(metaclass=abc.ABCMeta):
         self.kwargs = kwargs
         self._usage = ""
         self._model = None
+        self._init_class = None
         # The root directory for storing Workflow related files, default to ~/.mindnlp.
-        self._home_path = self.kwargs["home_path"] if "home_path" in self.kwargs else DEFAULT_ROOT
-        self._work_flag = self.kwargs["work_flag"] if "work_flag" in self.kwargs else self.model
+        self._home_path = (
+            self.kwargs["home_path"] if "home_path" in self.kwargs else DEFAULT_ROOT
+        )
+        self._work_flag = (
+            self.kwargs["work_flag"] if "work_flag" in self.kwargs else self.model
+        )
         self.from_hf_hub = kwargs.pop("from_hf_hub", False)
 
         if "work_path" in self.kwargs:
@@ -53,7 +60,8 @@ class Work(metaclass=abc.ABCMeta):
             self._custom_model = True
         else:
             self._work_path = os.path.join(
-                self._home_path, "workflow", self.work, self.model)
+                self._home_path, "workflow", self.work, self.model
+            )
 
         if not self.from_hf_hub:
             pass
@@ -95,7 +103,7 @@ class Work(metaclass=abc.ABCMeta):
         """
         Get the graph model name.
         """
-        return ''
+        return ""
 
     def _check_work_files(self):
         """
@@ -111,8 +119,7 @@ class Work(metaclass=abc.ABCMeta):
             if not os.path.exists(path=path):
                 downloaded = False
             if not downloaded:
-                cache_file(filename=file_name, cache_dir=cache_dir,
-                           url=url, md5sum=md5)
+                cache_file(filename=file_name, cache_dir=cache_dir, url=url, md5sum=md5)
 
     def _check_predictor_type(self):
         """
@@ -141,8 +148,10 @@ class Work(metaclass=abc.ABCMeta):
         inputs = inputs[0]
         if isinstance(inputs, str):
             if len(inputs) == 0:
-                raise ValueError("Invalid inputs, input text should not be empty text, \
-                    please check your input.")
+                raise ValueError(
+                    "Invalid inputs, input text should not be empty text, \
+                    please check your input."
+                )
             inputs = [inputs]
         elif isinstance(inputs, list):
             if not (isinstance(inputs[0], str) and len(inputs[0].strip()) > 0):
@@ -157,12 +166,48 @@ class Work(metaclass=abc.ABCMeta):
             )
         return inputs
 
-    def _auto_splitter(self, input_texts, max_text_len, bbox_list=None, split_sentence=False):
+    def _auto_splitter(self, input_texts, max_text_len, split_sentence=False):
         """
         Split the raw texts automatically for model inference.
-        """
 
-    def _auto_joiner(self, short_results, input_mapping, is_dict=False):
+        Args:
+            input_texts (List[str]): input raw texts.
+            max_text_len (int): cutting length.
+            split_sentence (bool): If True, sentence-level split will be performed.
+                `split_sentence` will be set to False if bbox_list is not None since sentence-level split is not support for document.
+        Return:
+            short_input_texts (List[str]): the short input texts for model inference.
+            input_mapping (dict): mapping between raw text and short input texts.
+        """
+        input_mapping = {}
+        short_input_texts = []
+        cnt_org = 0
+        cnt_short = 0
+
+        for _, text in enumerate(input_texts):
+            if not split_sentence:
+                sens = [text]
+            else:
+                sens = cut_chinese_sent(text)
+            for sen in sens:
+                lens = len(sen)
+                if lens <= max_text_len:
+                    short_input_texts.append(sen)
+                    input_mapping.setdefault(cnt_org, []).append(cnt_short)
+                    cnt_short += 1
+                else:
+                    temp_text_list = [
+                        sen[i : i + max_text_len] for i in range(0, lens, max_text_len)
+                    ]
+                    short_input_texts.extend(temp_text_list)
+                    short_idx = cnt_short
+                    cnt_short += math.ceil(lens / max_text_len)
+                    temp_text_id = [short_idx + i for i in range(cnt_short - short_idx)]
+                    input_mapping.setdefault(cnt_org, []).extend(temp_text_id)
+            cnt_org += 1
+        return short_input_texts, input_mapping
+
+    def _auto_joiner(self, short_results, short_inputs, input_mapping, is_dict=False):
         """
         Join the short results automatically and generate
         the final results to match with the user inputs.
