@@ -19,9 +19,21 @@ Test cmrc2018
 import os
 import shutil
 import unittest
+
+import mindspore as ms
 import pytest
-from mindnlp import load_dataset
-from mindnlp.dataset import CMRC2018
+
+from mindnlp import load_dataset, process, Vocab
+from mindnlp.dataset import CMRC2018, CMRC2018_Process
+
+char_dic = {"<unk>": 0, "<pad>": 1, "e": 2, "t": 3, "a": 4, "i": 5, "n": 6, \
+            "o": 7, "s": 8, "r": 9, "h": 10, "l": 11, "d": 12, "c": 13, "u": 14, \
+            "m": 15, "f": 16, "p": 17, "g": 18, "w": 19, "y": 20, "b": 21, ",": 22, \
+            "v": 23, ".": 24, "k": 25, "1": 26, "0": 27, "x": 28, "2": 29, "\"": 30, \
+            "-": 31, "j": 32, "9": 33, "'": 34, ")": 35, "(": 36, "?": 37, "z": 38, \
+            "5": 39, "8": 40, "q": 41, "3": 42, "4": 43, "7": 44, "6": 45, ";": 46, \
+            ":": 47, "\u2013": 48, "%": 49, "/": 50, "]": 51, "[": 52}
+char_vocab = Vocab(char_dic)
 
 
 class Testcmrc2018(unittest.TestCase):
@@ -38,7 +50,6 @@ class Testcmrc2018(unittest.TestCase):
         shutil.rmtree(cls.root)
 
     @pytest.mark.download
-    @pytest.mark.local
     def test_cmrc2018(self):
         """Test cmrc2018"""
         num_lines = {
@@ -46,7 +57,8 @@ class Testcmrc2018(unittest.TestCase):
             "validation": 3219,
             "test": 1002,
         }
-        dataset_train, dataset_validation, dataset_test = CMRC2018(root=self.root, split=('train', 'validation', 'test'))
+        dataset_train, dataset_validation, dataset_test = CMRC2018(root=self.root,
+                                                                   split=('train', 'validation', 'test'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_validation.get_dataset_size() == num_lines["validation"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
@@ -58,11 +70,52 @@ class Testcmrc2018(unittest.TestCase):
         assert dataset_validation.get_dataset_size() == num_lines["validation"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-
     @pytest.mark.download
     def test_cmrc2018_by_register(self):
         """test cmrc2018 by register"""
         _ = load_dataset('cmrc2018',
-                 root=self.root,
-                 split=('validation')
-                 )
+                         root=self.root,
+                         split=('train', 'validation', 'test')
+                         )
+
+    @pytest.mark.download
+    def test_CMRC2018_Process(self):
+        """
+        Test CMRC2018_Process
+        """
+        dataset_validation = CMRC2018(split='validation')
+        dataset_validation = CMRC2018_Process(dataset=dataset_validation, char_vocab=char_vocab)
+        dataset_validation = dataset_validation.create_tuple_iterator()
+        assert (next(dataset_validation)[1]).dtype == ms.int32
+        assert (next(dataset_validation)[1]).shape == (64, 768)
+        assert (next(dataset_validation)[2]).dtype == ms.int32
+        assert (next(dataset_validation)[2]).shape == (64, 64)
+        assert (next(dataset_validation)[3]).dtype == ms.int32
+        assert (next(dataset_validation)[3]).shape == (64, 768, 48)
+        assert (next(dataset_validation)[4]).dtype == ms.int32
+        assert (next(dataset_validation)[4]).shape == (64, 64, 48)
+        assert (next(dataset_validation)[5]).dtype == ms.int32
+        assert (next(dataset_validation)[6]).dtype == ms.int32
+        assert (next(dataset_validation)[7]).dtype == ms.int32
+        assert (next(dataset_validation)[8]).dtype == ms.int32
+
+    @pytest.mark.download
+    def test_CMRC2018_Process_by_register(self):
+        """
+        Test CMRC2018_Process by register
+        """
+        dataset_validation = CMRC2018(split='validation')
+        dataset_validation = process('CMRC2018', dataset=dataset_validation, char_vocab=char_vocab)
+        dataset_validation = dataset_validation.create_tuple_iterator()
+        assert (next(dataset_validation)[1]).dtype == ms.int32
+        assert (next(dataset_validation)[1]).shape == (64, 768)
+        assert (next(dataset_validation)[2]).dtype == ms.int32
+        assert (next(dataset_validation)[2]).shape == (64, 64)
+        assert (next(dataset_validation)[3]).dtype == ms.int32
+        assert (next(dataset_validation)[3]).shape == (64, 768, 48)
+        assert (next(dataset_validation)[4]).dtype == ms.int32
+        assert (next(dataset_validation)[4]).shape == (64, 64, 48)
+        assert (next(dataset_validation)[5]).dtype == ms.int32
+        assert (next(dataset_validation)[6]).dtype == ms.int32
+        assert (next(dataset_validation)[7]).dtype == ms.int32
+        assert (next(dataset_validation)[8]).dtype == ms.int32
