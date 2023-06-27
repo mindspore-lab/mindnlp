@@ -18,4 +18,4 @@ QuestionAnswer dataset init
 
 from .squad1 import SQuAD1, SQuAD1_Process
 from .squad2 import SQuAD2
-from .cmrc2018 import CMRC2018, CMRC2018_Process
+from .cmrc2018 import CMRC2018
