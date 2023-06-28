@@ -79,7 +79,7 @@ class Testcmrc2018(unittest.TestCase):
                          )
 
     @pytest.mark.download
-    def test_CMRC2018_Process(self):
+    def test_cmrc2018_process(self):
         """
         Test CMRC2018_Process
         """
@@ -100,7 +100,7 @@ class Testcmrc2018(unittest.TestCase):
         assert (next(dataset_validation)[8]).dtype == ms.int32
 
     @pytest.mark.download
-    def test_CMRC2018_Process_by_register(self):
+    def test_cmrc2018_process_by_register(self):
         """
         Test CMRC2018_Process by register
         """
