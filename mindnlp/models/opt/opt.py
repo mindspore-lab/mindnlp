@@ -15,6 +15,7 @@
 # pylint: disable=W0237
 # pylint: disable=E0401
 # pylint: disable=R1714
+# pylint: disable=E1121
 """
 mindspore opt model
 """
@@ -645,6 +646,7 @@ class OPTDecoder(OPTPreTrainedModel):#这里继承的是OPTPreTrainedModel?
             #print("past key values:", past_key_value)
             if self.gradient_checkpointing and self.training:
                 #checkpoint
+                layer_outputs = None
                 print("Training = true???")
 
             else:
