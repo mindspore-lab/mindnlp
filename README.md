@@ -53,7 +53,7 @@ The master branch works with **MindSpore master**.
 ## Quick Links
 
 - [Documentation](https://mindnlp.cqu.ai/en/latest/)
-- [Examples](https://github.com/mindspore-ecosystem/mindnlp/tree/master/examples)
+- [Examples](https://github.com/mindspore-lab/mindnlp/tree/master/examples)
 - ...
 
 ## Installation
@@ -67,7 +67,7 @@ The master branch works with **MindSpore master**.
 To install MindNLP from source, please run:
 
 ```bash
-pip install git+https://github.com/mindspore-ecosystem/mindnlp.git
+pip install git+https://github.com/mindspore-lab/mindnlp.git
 ```
 
 ## Get Started
@@ -77,10 +77,7 @@ We will next quickly implement a sentiment classification task by using mindnlp.
 ### Define Model
 
 ```python
-import math
-from mindspore import nn
 from mindspore import ops
-from mindspore.common.initializer import Uniform, HeUniform
 from mindnlp.abc import Seq2vecModel
 
 class SentimentClassification(Seq2vecModel):
@@ -108,18 +105,18 @@ The dataset was downloaded and preprocessed by calling the interface of dataset 
 
 Load dataset:
 ```python
-from mindnlp.dataset import load
+from mindnlp import load_dataset
 
-imdb_train, imdb_test = load('imdb', shuffle=True)
+imdb_train, imdb_test = load_dataset('imdb', shuffle=True)
 ```
 
 Initializes the vocab and tokenizer for preprocessing:
 ```python
-from mindnlp.modules import Glove
+from mindnlp import Vocab
 from mindnlp.transforms import BasicTokenizer
 
-embedding, vocab = Glove.from_pretrained('6B', 100, special_tokens=["<unk>", "<pad>"], dropout=drop)
 tokenizer = BasicTokenizer(True)
+vocab = Vocab.from_pretrained(name="glove.6B.100d")
 ```
 
 The loaded dataset is preprocessed and divided into training and validation:
@@ -134,8 +131,9 @@ imdb_test = process('imdb', imdb_test, tokenizer=tokenizer, vocab=vocab, \
 
 ### Instantiate Model
 ```python
-from mindnlp.modules import RNNEncoder
+from mindnlp.modules import RNNEncoder, Glove
 
+embedding = Glove.from_pretrained('6B', 100, special_tokens=["<unk>", "<pad>"])
 # build encoder
 lstm_layer = nn.LSTM(100, hidden_size, num_layers=num_layers, batch_first=True,
                      dropout=dropout, bidirectional=bidirectional)
@@ -167,10 +165,9 @@ from mindnlp.engine.trainer import Trainer
 metric = Accuracy()
 
 # define trainer
-trainer = Trainer(network=net, train_dataset=imdb_train, eval_dataset=imdb_valid, metrics=metric,
+trainer = Trainer(network=network, train_dataset=imdb_train, eval_dataset=imdb_test, metrics=metric,
                   epochs=5, loss_fn=loss, optimizer=optimizer)
 trainer.run(tgt_columns="label")
-print("end train")
 ```
 
 <!-- ## Tutorials

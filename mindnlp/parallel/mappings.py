@@ -44,9 +44,9 @@ def _reduce(input_: mindspore.Tensor) -> mindspore.Tensor:
 
     # All-reduce.
     _all_reduce = ops.AllReduce()
-    _all_reduce(input_)
+    output = _all_reduce(input_)
 
-    return input_
+    return output
 
 def _split(input_: mindspore.Tensor) -> mindspore.Tensor:
     """Split the tensor along its last dimension and keep the
