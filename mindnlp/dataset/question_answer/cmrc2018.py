@@ -37,7 +37,7 @@ class cmrc2018():
     cmrc2018 dataset source
     """
 
-    def __init__(self, dataset_list):
+    def __init__(self, dataset_list) -> None:
         self.dataset_list = dataset_list
         self._id = []
         self._context = []

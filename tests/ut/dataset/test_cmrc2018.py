@@ -50,6 +50,7 @@ class Testcmrc2018(unittest.TestCase):
         shutil.rmtree(cls.root)
 
     @pytest.mark.download
+    @pytest.mark.local
     def test_cmrc2018(self):
         """Test cmrc2018"""
         num_lines = {
