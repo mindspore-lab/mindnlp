@@ -20,6 +20,10 @@ MobileBERT model configuration
 
 from mindnlp.abc import PreTrainedConfig
 
+MOBILEBERT_SUPPORT_LIST = [
+    "mobilebert-uncased",
+]
+
 class MobileBertConfig(PreTrainedConfig):
     """
     MobileBertConfig

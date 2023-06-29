@@ -25,11 +25,12 @@ from mindnlp.abc import PreTrainedTokenizer
 from mindnlp.utils.generic import PaddingStrategy
 
 PRETRAINED_VOCAB_MAP = {
-    "THUDM/chatglm-6b": "https://huggingface.co/THUDM/chatglm-6b/resolve/main/ice_text.model"
+    'chatglm-6b': 'https://download.mindspore.cn/toolkits/mindnlp/models/glm/chatglm-6b/ice_text.model'
 }
 
+
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
-    "THUDM/chatglm-6b": 2048,
+    "chatglm-6b": 2048,
 }
 
 class TextTokenizer:

@@ -17,3 +17,4 @@ Works
 """
 
 from .sentiment_analysis import SentimentAnalysisWork
+from .information_extraction import UIEWork

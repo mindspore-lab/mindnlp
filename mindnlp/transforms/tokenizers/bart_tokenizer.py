@@ -1,64 +1,51 @@
-# pylint: disable=C0301
-# pylint: disable=R0913
 """
-GPT2Tokenizer
+BartTokenizer
 """
-import os
 import numpy as np
 from mindspore.dataset.text.transforms import Implementation
 from tokenizers import Tokenizer
 from mindnlp.abc import PreTrainedTokenizer
+from mindnlp.models.bart.bart_config import BART_SUPPORT_LIST
+from mindnlp.configs import HF_TOKENIZER_CONFIG_URL_BASE
 
 PRETRAINED_VOCAB_MAP = {
-    "TsinghuaAI/CPM-Generate": "https://huggingface.co/TsinghuaAI/CPM-Generate/resolve/main/tokenizer.json"
+    model: HF_TOKENIZER_CONFIG_URL_BASE.format(model) for model in BART_SUPPORT_LIST
 }
 
+PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
+    "facebook/bart-base": 1024,
+    "facebook/bart-large": 1024,
+    "facebook/bart-large-mnli": 1024,
+    "facebook/bart-large-cnn": 1024,
+    "facebook/bart-large-xsum": 1024,
+    "yjernite/bart_eli5": 1024,
+}
 
-class CPMTokenizer(PreTrainedTokenizer):
+class BartTokenizer(PreTrainedTokenizer):
     """
-        Tokenizer used for GPT2 text process.
+        Tokenizer used for Bart text process.
         Args:
             vocab (Vocab): Vocabulary used to look up words.
             return_token (bool): Whether to return token. If True: return tokens. False: return ids. Default: True.
-
-        """
-
+    """
+    max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
     def __init__(
-            self,
-            tokenizer_file=None,
-            bos_token="<s>",
-            eos_token="</s>",
-            unk_token="<unk>",
-            sep_token="<sep>",
-            pad_token="<pad>",
-            cls_token="<cls>",
-            mask_token="<mask>",
-            eop_token="<eop>",
-            eod_token="<eod>",
-            add_prefix_space=False,
-            **kwargs
+        self,
+        tokenizer_file=None,
+        unk_token="<unk>",
+        bos_token="<s>",
+        eos_token="</s>",
+        add_prefix_space=False,
+        **kwargs
     ):
         super().__init__(
-            tokenizer_file=tokenizer_file,
             unk_token=unk_token,
-            sep_token=sep_token,
-            pad_token=pad_token,
-            cls_token=cls_token,
-            mask_token=mask_token,
-            eop_token=eop_token,
-            eod_token=eod_token,
             bos_token=bos_token,
             eos_token=eos_token,
             add_prefix_space=add_prefix_space,
             **kwargs)
-
-        if isinstance(tokenizer_file, str):
-            if not os.path.isfile(tokenizer_file):
-                raise ValueError(f"{tokenizer_file} is not a file.")
-        else:
-            raise ValueError(f'only support tokenizer class from mindspore or mindnlp, but got {tokenizer_file}')
 
         return_token = kwargs.pop('return_token', False)
 
@@ -110,7 +97,7 @@ class CPMTokenizer(PreTrainedTokenizer):
         raise ValueError(f"Unsupported string type: {type(text_input)}, {text_input.dtype}")
 
     def _convert_token_to_id(self, token):
-        return self._tokenizer.token_to_id(token)
-
-    def _convert_id_to_token(self, index):
-        return self._tokenizer.id_to_token(index)
+        index = self._tokenizer.token_to_id(token)
+        if index is None:
+            return self.unk_token_id
+        return index
