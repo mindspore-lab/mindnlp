@@ -34,6 +34,7 @@ from mindnlp.transforms.tokenizers import BertTokenizer
 
 usage = r"""
     from mindnlp import Workflow
+    
     senta = Workflow("sentiment_analysis")
     senta("个产品用起来真的很流畅，我非常喜欢")
     ...
@@ -48,16 +49,18 @@ class SentimentAnalysisWork(Work):
     """
 
     resource_files_names = {
-        "model_state": "mbert_for_senta_model_state.ckpt", "vocab": "bert_for_senta_vocab.txt"}
+        "model_state": "mbert_for_senta_model_state.ckpt",
+        "vocab": "bert_for_senta_vocab.txt",
+    }
     resource_files_urls = {
         "bert": {
             "vocab": [
                 "https://download.mindspore.cn/toolkits/mindnlp/workflow/sentiment_analysis/bert_for_senta_vocab.txt",
-                "3b5b76c4aef48ecf8cb3abaafe960f09"
+                "3b5b76c4aef48ecf8cb3abaafe960f09",
             ],
             "model_state": [
                 "https://download.mindspore.cn/toolkits/mindnlp/workflow/sentiment_analysis/bert_for_senta_model_state.ckpt",
-                "7dba7b0371d2fcbb053e28c8bdfb1050"
+                "7dba7b0371d2fcbb053e28c8bdfb1050",
             ],
         }
     }
@@ -65,11 +68,10 @@ class SentimentAnalysisWork(Work):
     def __init__(self, work, model, **kwargs):
         super().__init__(model, work, **kwargs)
         self._label_map = {0: "negative", 1: "neutral", 2: "positive"}
-        self ._check_work_files()
+        self._check_work_files()
         self._construct_tokenizer(model)
         self._construct_model(model)
         self._usage = usage
-        self._construct_model(self._work_path)
 
     def _construct_model(self, model):
         """
@@ -82,7 +84,8 @@ class SentimentAnalysisWork(Work):
         model_instance = BertForSentimentAnalysis(config)
 
         model_path = os.path.join(
-            self._work_path, "model_state", "bert_for_senta_model_state.ckpt")
+            self._work_path, "model_state", "bert_for_senta_model_state.ckpt"
+        )
         state_dict = mindspore.load_checkpoint(model_path)
         mindspore.load_param_into_net(model_instance, state_dict)
 
@@ -93,8 +96,7 @@ class SentimentAnalysisWork(Work):
         """
         Construct the tokenizer.
         """
-        vocab_path = os.path.join(
-            self._work_path, "vocab", "bert_for_senta_vocab.txt")
+        vocab_path = os.path.join(self._work_path, "vocab", "bert_for_senta_vocab.txt")
         vocab = text.Vocab.from_file(vocab_path)
 
         vocab_size = len(vocab.vocab())
@@ -122,8 +124,10 @@ class SentimentAnalysisWork(Work):
             lens = len(ids)
             examples.append((ids, lens))
 
-        batches = [examples[idx: idx + batch_size]
-                   for idx in range(0, len(examples), batch_size)]
+        batches = [
+            examples[idx : idx + batch_size]
+            for idx in range(0, len(examples), batch_size)
+        ]
         outputs = {}
         outputs["text"] = filter_inputs
         outputs["data_loader"] = batches
@@ -134,8 +138,9 @@ class SentimentAnalysisWork(Work):
         seq_list = [sample[1] for sample in samples]
         max_length = max(seq_list)
         outputs = []
-        pader = PadTransform(max_length=max_length,
-                             pad_value=self.kwargs["pad_token_id"])
+        pader = PadTransform(
+            max_length=max_length, pad_value=self.kwargs["pad_token_id"]
+        )
         for sample in samples:
             outputs.append(pader(sample[0]))
         return Tensor(outputs)
@@ -167,7 +172,9 @@ class SentimentAnalysisWork(Work):
         Postprocess the outputs.
         """
         final_results = []
-        for _text, label, score in zip(inputs["text"], inputs["result"], inputs["score"]):
+        for _text, label, score in zip(
+            inputs["text"], inputs["result"], inputs["score"]
+        ):
             result = {}
             result["text"] = _text
             result["label"] = label
