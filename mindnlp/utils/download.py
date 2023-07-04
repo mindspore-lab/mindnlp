@@ -404,8 +404,6 @@ def get_from_cache(
         path = http_get(url, cache_dir, md5sum,
                         download_file_name=download_file_name, proxies=proxies)[1]
         return Path(path), filename
-    except (RuntimeError, OSError):
-        return None, filename
     except Exception as exc:
         raise exc
 
