@@ -1,14 +1,16 @@
 import torch
 import mindspore
 import numpy as np
-import transformers
 from transformers.models.opt import modeling_opt as opt_pt, configuration_opt
 from mindnlp.models.opt import opt as opt_ms
 
-class OPT_test():
+class OPT_Test():
+    """
+    test parameters
+    """
     def __init__(self):
         print("this is OPT model test")
-    def test_OPTLearnedPositionalEmbedding(self):
+    def Test_OPTLearnedPositionalEmbedding(self):
         print(">===========test_OPTLearnedPositionalEmbedding_begin")
         # model instance
         num_embeddings = 30000
@@ -17,14 +19,6 @@ class OPT_test():
         model_pt = opt_pt.OPTLearnedPositionalEmbedding(num_embeddings, embedding_dim)
         #load the parameters of pytorch network to mindspore
         params_pt = model_pt.state_dict()
-        ''' print to check the pytorch model's parameter name
-        for key in params_pt.keys():
-            print(key)
-        #'''
-        ''' print to check the mindspore model's parameter name
-        for key, _ in model_ms.parameters_and_names():
-            print(key)
-        #'''
         #pytorch: weight, mindspore: embedding_table
         for key, param in model_ms.parameters_and_names():
             if 'embedding_table' in key:
@@ -42,21 +36,13 @@ class OPT_test():
         assert np.allclose(output_ms.asnumpy(), output_pt.detach().numpy(), 1e-5, 1e-5)
         print("PASS!")
 
-    def test_OPTAttention(self):
+    def Test_OPTAttention(self):
         print(">===========test_OPTAttention_begin")
         # model instance
         model_ms = opt_ms.OPTAttention(embed_dim=768,num_heads=12,dropout=0,is_decoder=True,bias=True)
         model_pt = opt_pt.OPTAttention(embed_dim=768,num_heads=12,dropout=0,is_decoder=True,bias=True)
         #load the parameters of pytorch network to mindspore
         params_pt = model_pt.state_dict()
-        ''' print to check the pytorch model's parameter name
-        for key in params_pt.keys():
-            print(key)
-        #'''
-        ''' print to check the mindspore model's parameter name
-        for key, _ in model_ms.parameters_and_names():
-            print(key)
-        #'''
         # checked, no difference
         for key, param in model_ms.parameters_and_names():
             param.set_data(mindspore.Tensor(params_pt.get(key).detach().numpy()))
@@ -82,7 +68,7 @@ class OPT_test():
         assert np.allclose(output_ms[2][1].asnumpy(), output_pt[2][1].detach().numpy(), 1e-5, 1e-5)
         print("PASS!")    
          
-    def test_OPTDecoderLayer(self):
+    def Test_OPTDecoderLayer(self):
         print(">===========test_OPTDecoderLayer_begin")
         # model instance
         config_pytorch = configuration_opt.OPTConfig()
@@ -91,15 +77,6 @@ class OPT_test():
         model_pt = opt_pt.OPTDecoderLayer(config_pytorch)
         #load the parameters of pytorch network to mindspore
         params_pt = model_pt.state_dict()
-        ''' print to check the pytorch model's parameter name
-        for key in params_pt.keys():
-            print(key)
-        #'''
-        #print("---")
-        ''' print to check the mindspore model's parameter name
-        for key, _ in model_ms.parameters_and_names():
-            print(key)
-        #'''
         # self_attn_layer_norm.weight self_attn_layer_norm.bias ->self_attn_layer_norm.gamma self_attn_layer_norm.beta
         #final_layer_norm.weight final_layer_norm.bias -> final_layer_norm.gamma final_layer_norm.beta
         for key, param in model_ms.parameters_and_names():
@@ -126,7 +103,7 @@ class OPT_test():
         assert np.allclose(output_ms[0].asnumpy(), output_pt[0].detach().numpy(), 1e-5, 1e-5)
         print("PASS!")    
 
-    def test_OPTDecoder(self):
+    def Test_OPTDecoder(self):
         print(">===========test_OPTDecoder_begin")
         # model instance
         config_pytorch = configuration_opt.OPTConfig(num_hidden_layers = 12)
@@ -135,15 +112,6 @@ class OPT_test():
         model_pt = opt_pt.OPTDecoder(config_pytorch)
         #load the parameters of pytorch network to mindspore
         params_pt = model_pt.state_dict()
-        ''' print to check the pytorch model's parameter name
-        for key in params_pt.keys():
-            print(key)
-        #'''
-        print("---")
-        ''' print to check the mindspore model's parameter name
-        for key, _ in model_ms.parameters_and_names():
-            print(key)
-        #'''
         # self_attn_layer_norm.weight self_attn_layer_norm.bias ->self_attn_layer_norm.gamma self_attn_layer_norm.beta
         #final_layer_norm.weight final_layer_norm.bias -> final_layer_norm.gamma final_layer_norm.beta
         for key, param in model_ms.parameters_and_names():
@@ -168,8 +136,8 @@ class OPT_test():
         print("PASS!")
 
 if __name__ == "__main__":
-    test = OPT_test()
-    test.test_OPTLearnedPositionalEmbedding()
-    test.test_OPTAttention()
-    test.test_OPTDecoderLayer()
-    test.test_OPTDecoder()
+    test = OPT_Test()
+    test.Test_OPTLearnedPositionalEmbedding()
+    test.Test_OPTAttention()
+    test.Test_OPTDecoderest_OPTDecoderLayer()
+    test.Test_OPTDecoder()
