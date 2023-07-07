@@ -26,7 +26,13 @@ from .roberta_tokenizer import RobertaTokenizer
 from .longformer_tokenizer import LongformerTokenizer
 from .nezha_tokenizer import NezhaTokenizer
 from .ernie_tokenizer import ErnieTokenizer
+from .tinybert_tokenizer import TinyBertTokenizer
+from .chatglm_tokenizer import ChatGLMTokenizer
+from .bart_tokenizer import BartTokenizer
+from .mobilebert_tokenizer import MobileBertTokenizer
+from .uie_tokenizer import  UIETokenizer
 
 __all__ = ['BasicTokenizer', 'BertTokenizer', 'T5Tokenizer', 'GPTTokenizer', 'GPT2Tokenizer', 'ErnieTokenizer', 'CodeGenTokenizer',
-           'RobertaTokenizer', 'LongformerTokenizer', 'NezhaTokenizer'
+           'RobertaTokenizer', 'LongformerTokenizer', 'NezhaTokenizer', 'TinyBertTokenizer', 'ChatGLMTokenizer', 'BartTokenizer',
+           'MobileBertTokenizer', 'UIETokenizer'
            ]

@@ -24,14 +24,14 @@ from mindnlp.models.nezha.nezha_config import NEZHA_SUPPORT_LIST
 from mindnlp.configs import HF_VOCAB_URL_BASE
 
 PRETRAINED_VOCAB_MAP = {
-    model: HF_VOCAB_URL_BASE.format(model) for model in NEZHA_SUPPORT_LIST
+    model: HF_VOCAB_URL_BASE.format("sijunhe/" + model) for model in NEZHA_SUPPORT_LIST
 }
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
-    "sijunhe/nezha-cn-base": 512,
-    "sijunhe/nezha-cn-large": 512,
-    "sijunhe/nezha-base-wwm": 512,
-    "sijunhe/nezha-large-wwm": 512
+    "nezha-cn-base": 512,
+    "nezha-cn-large": 512,
+    "nezha-base-wwm": 512,
+    "nezha-large-wwm": 512
 }
 
 class NezhaTokenizer(PreTrainedTokenizer):
@@ -95,3 +95,6 @@ class NezhaTokenizer(PreTrainedTokenizer):
                 text_input = np.char.decode(text_input, "utf-8")
             return str(text_input)
         raise ValueError(f"Unsupported string type: {type(text_input)}, {text_input.dtype}")
+
+    def _convert_token_to_id(self, token):
+        return self._tokenizer.token_to_id(token)

@@ -25,7 +25,10 @@ from mindnlp.models.ernie.ernie_config import ERNIE_SUPPORT_LIST
 from mindnlp.configs import MINDNLP_TOKENIZER_CONFIG_URL_BASE
 
 PRETRAINED_VOCAB_MAP = {
-    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format(re.search(r'^[^-]*', model).group(), model) for model in ERNIE_SUPPORT_LIST
+    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format(
+        re.search(r"^[^-]*", model).group(), model
+    )
+    for model in ERNIE_SUPPORT_LIST
 }
 
 
@@ -60,12 +63,12 @@ class ErnieTokenizer(PreTrainedTokenizer):
     pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
     def __init__(self, vocab: str, **kwargs):
-        return_token = kwargs.pop('return_token', False)
+        return_token = kwargs.pop("return_token", False)
 
         if isinstance(vocab, str):
             self._tokenizer = Tokenizer.from_file(vocab)
         else:
-            raise ValueError(f'only support string, but got {vocab}')
+            raise ValueError(f"only support string, but got {vocab}")
         self.return_token = return_token
         self.implementation = Implementation.PY
 
@@ -79,7 +82,8 @@ class ErnieTokenizer(PreTrainedTokenizer):
             text_input = np.array(text_input)
         elif not isinstance(text_input, np.ndarray):
             raise TypeError(
-                f"Input should be a text line in 1-D NumPy format, got {type(text_input)}.")
+                f"Input should be a text line in 1-D NumPy format, got {type(text_input)}."
+            )
         return super().__call__(text_input)
 
     def execute_py(self, text_input):
@@ -109,4 +113,11 @@ class ErnieTokenizer(PreTrainedTokenizer):
                 text_input = np.char.decode(text_input, "utf-8")
             return str(text_input)
         raise ValueError(
-            f"Unsupported string type: {type(text_input)}, {text_input.dtype}")
+            f"Unsupported string type: {type(text_input)}, {text_input.dtype}"
+        )
+
+    def _convert_token_to_id(self, token):
+        index = self._tokenizer.token_to_id(token)
+        if index is None:
+            return self.unk_token_id
+        return index

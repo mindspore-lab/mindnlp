@@ -281,11 +281,11 @@ class GPTModel(GPTPreTrainedModel):
         """
         return self.tokens_embed
 
-    def set_input_embeddings(self, value):
+    def set_input_embeddings(self, new_embeddings):
         """
         set the input embeddings layer
         """
-        self.tokens_embed = value
+        self.tokens_embed = new_embeddings
 
     def _prune_heads(self, heads_to_prune):
         """

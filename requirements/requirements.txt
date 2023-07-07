@@ -6,3 +6,4 @@ ddt
 datasets
 tokenizers
 torch
+sentencepiece

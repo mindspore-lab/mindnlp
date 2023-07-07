@@ -140,3 +140,5 @@ download.txt
 *hf*.py
 *torch*.py
 *.txt
+cmp/
+*.zip

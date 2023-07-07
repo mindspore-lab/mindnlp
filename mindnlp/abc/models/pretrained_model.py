@@ -14,6 +14,7 @@
 # ============================================================================
 # pylint: disable=E1128
 # pylint: disable=C0103
+# pylint: disable=C0412
 # pylint: disable=W0642
 # pylint: disable=W0212
 # pylint: disable=W0201
@@ -21,18 +22,28 @@
 Abstract class for Pretrained models.
 """
 import os
+import gc
 from typing import Union, Optional
-from mindspore.train.serialization import load_checkpoint, load_param_into_net, save_checkpoint
+from tqdm.autonotebook import tqdm
+
 from mindspore import nn, ops
 from mindspore import log as logger
+from mindspore.train.serialization import save_checkpoint
 
 from mindnlp.configs import HF_MODEL_URL_BASE
-from mindnlp.utils.download import cached_path
+from mindnlp.utils.download import cached_path, get_checkpoint_shard_files
 from mindnlp.abc.configs import PreTrainedConfig, GenerationConfig
 from mindnlp.abc.mixins import CellUtilMixin, GenerationMixin
+from mindnlp.utils import less_min_pynative_first
+if less_min_pynative_first:
+    from mindspore import load_checkpoint
+else:
+    from mindnlp._legacy.utils import load_checkpoint
 
 _init_weights = True
 WEIGHTS_NAME = "mindspore.ckpt"
+WEIGHTS_INDEX_NAME = "mindspore.ckpt.index.json"
+HF_WEIGHTS_INDEX_NAME = "pytorch_model.bin.index.json"
 
 
 class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
@@ -104,7 +115,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             return base_model.get_input_embeddings()
         raise NotImplementedError
 
-    def set_input_embeddings(self, value: nn.Cell):
+    def set_input_embeddings(self, new_embeddings: nn.Cell):
         """
         Set model's input embeddings.
 
@@ -113,7 +124,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         """
         base_model = getattr(self, self.base_model_prefix, self)
         if base_model is not self:
-            return base_model.set_input_embeddings(value)
+            return base_model.set_input_embeddings(new_embeddings)
         raise NotImplementedError
 
     def resize_position_embeddings(self, new_num_position_embeddings: int):
@@ -130,6 +141,18 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             Return None if the model doesn't have output embeddings
         """
         return None  # Overwrite for models with output embeddings
+
+    def set_output_embeddings(self, new_embeddings: nn.Cell):
+        """
+        Set model's output embeddings.
+
+        Args:
+            value (:obj:`nn.Cell`): A mindspore cell mapping vocabulary to hidden states.
+        """
+        base_model = getattr(self, self.base_model_prefix, self)
+        if base_model is not self:
+            return base_model.set_output_embeddings(new_embeddings)
+        raise NotImplementedError
 
     def get_position_embeddings(self):
         """
@@ -295,6 +318,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         proxies = kwargs.pop("proxies", None)
         local_files_only = kwargs.pop("local_files_only", False)
 
+        is_sharded = False
         # Load config if we don't provide a configuration
         if not isinstance(config, PreTrainedConfig):
             config_path = config if config is not None else pretrained_model_name_or_path
@@ -316,9 +340,9 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         folder_name = None
         # Load model
         if pretrained_model_name_or_path is not None:
+            folder_name = pretrained_model_name_or_path
             if pretrained_model_name_or_path in cls.pretrained_model_archive_map and not from_pt:
                 archive_file = cls.pretrained_model_archive_map[pretrained_model_name_or_path]
-                folder_name = pretrained_model_name_or_path
             elif os.path.isdir(pretrained_model_name_or_path):
                 archive_file = os.path.join(
                     pretrained_model_name_or_path, "mindspore_model.ckpt")
@@ -327,34 +351,46 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             elif from_pt:
                 archive_file = HF_MODEL_URL_BASE.format(
                     pretrained_model_name_or_path)
-                folder_name = pretrained_model_name_or_path
             else:
                 raise ValueError(
                     f'not found model of {pretrained_model_name_or_path}.')
 
             # redirect to the cache, if necessary
             try:
-                resolved_archive_file = str(cached_path(
+                resolved_archive_file = cached_path(
                     archive_file,
                     cache_dir=cache_dir,
                     proxies=proxies,
                     folder_name=folder_name
-                )[0])
+                )[0]
+
+                if resolved_archive_file is None:
+                    base_url = '/'.join(archive_file.split('/')[:-1])
+                    archive_file = base_url + '/' + HF_WEIGHTS_INDEX_NAME if from_pt else \
+                        base_url + '/' + WEIGHTS_INDEX_NAME
+
+                    resolved_archive_file = str(cached_path(
+                        archive_file,
+                        cache_dir=cache_dir,
+                        proxies=proxies,
+                        folder_name=folder_name
+                    )[0])
+
+                    if resolved_archive_file is not None:
+                        cached_filenames, _ = get_checkpoint_shard_files(
+                            pretrained_model_name_or_path=folder_name,
+                            index_filename=resolved_archive_file,
+                            cache_dir=cache_dir,
+                            url=base_url,
+                            proxies=proxies,
+                            subfolder=folder_name
+                        )
+                        is_sharded = True
+                    else:
+                        raise EnvironmentError(f"Couldn't reach server at '{archive_file}' to download pretrained weights.")
+
             except EnvironmentError as exc:
-                if pretrained_model_name_or_path in cls.pretrained_model_archive_map:
-                    msg = f"Couldn't reach server at '{archive_file}' to download pretrained weights."
-                else:
-                    format1 = ", ".join(
-                        cls.pretrained_model_archive_map.keys())
-                    format2 = ["mindspore.ckpt"]
-                    msg = (
-                        f"Model name '{pretrained_model_name_or_path}' "
-                        f"was not found in model name list ({format1}). "
-                        f"We assumed '{archive_file}' "
-                        f"was a path or url to model weight files named one of {format2} but "
-                        f"couldn't find any such file at this path or url."
-                    )
-                raise EnvironmentError(msg) from exc
+                raise exc
 
             if resolved_archive_file == archive_file:
                 logger.info("loading weights file %s", archive_file)
@@ -368,19 +404,60 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         # Instantiate model.
         model = cls(config, *model_args, **model_kwargs)
 
-        if from_pt:
-            resolved_archive_file = cls.convert_torch_to_mindspore(
-                resolved_archive_file, prefix=cls.base_model_prefix)
 
-        if state_dict is None:
+        if from_pt:
+            if is_sharded:
+                converted_filenames = []
+                for name in cached_filenames:
+                    converted = cls.convert_torch_to_mindspore(
+                        str(name), prefix=cls.base_model_prefix)
+                    converted_filenames.append(converted)
+            else:
+                resolved_archive_file = cls.convert_torch_to_mindspore(
+                    str(resolved_archive_file), prefix=cls.base_model_prefix)
+        else:
+            if is_sharded:
+                converted_filenames = cached_filenames
+
+        def load_ckpt(resolved_archive_file):
             try:
-                state_dict = load_checkpoint(resolved_archive_file)
+                state_dict = load_checkpoint(str(resolved_archive_file))
             except Exception as exc:
                 raise OSError(
                     f"Unable to load weights from mindspore checkpoint file '{resolved_archive_file}'. "
                 ) from exc
+            return state_dict
 
-        load_param_into_net(model, state_dict)
+        def load_param_into_net(model: nn.Cell, param_dict: dict, prefix: str):
+            not_loaded = list(param_dict.keys())
+            for _, param in model.parameters_and_names():
+                if param.name in param_dict:
+                    param_name = param.name
+                else:
+                    param_name = prefix + '.' + param.name
+                new_param = param_dict.get(param_name)
+                if new_param is not None:
+                    param.set_dtype(new_param.dtype)
+                    param.assign_value(new_param)
+                    not_loaded.remove(param_name)
+
+            return not_loaded
+
+        if state_dict is None:
+            if is_sharded:
+                not_loaded = []
+                for name in tqdm(converted_filenames, desc="Loading checkpoint shards"):
+                    state_dict = load_ckpt(name)
+                    not_loaded.extend(load_param_into_net(model, state_dict, cls.base_model_prefix))
+                    del state_dict
+                    gc.collect()
+            else:
+                state_dict = load_ckpt(resolved_archive_file)
+                not_loaded = load_param_into_net(model, state_dict, cls.base_model_prefix)
+
+        if not_loaded:
+            logger.warning(f'The following parameters in checkpoint files are not loaded:\n'
+                           f'{not_loaded}')
 
         return model
 
@@ -407,3 +484,16 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         save_checkpoint(model_to_save, output_model_file)
 
         logger.info(f"Model weights saved in {output_model_file}")
+
+
+    def can_generate(self) -> bool:
+        """
+        Returns whether this model can generate sequences with `.generate()`.
+
+        Returns:
+            `bool`: Whether this model can generate sequences with `.generate()`.
+        """
+        # Detects whether `prepare_inputs_for_generation` has been overwritten, which is a requirement for generation
+        if "GenerationMixin" in str(self.prepare_inputs_for_generation.__func__):
+            return False
+        return True

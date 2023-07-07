@@ -22,9 +22,9 @@ from mindspore import Parameter
 from mindspore.common.initializer import initializer, Uniform
 from mindnlp.utils import less_min_pynative_first
 if less_min_pynative_first:
-    from mindnlp._legacy.functional import full, arange, where, tensor_split
+    from mindnlp._legacy.functional import full, arange, where
 else:
-    from mindspore.ops import full, arange, where, tensor_split
+    from mindspore.ops import full, arange, where
 
 def sequence_mask(seq_length, max_length, batch_first=False):
     """generate mask matrix by seq_length"""
@@ -191,7 +191,7 @@ class CRF(nn.Cell):
         # mask: (seq_length, batch_size)
 
         seq_length = emissions.shape[0]
-
+        mask = mask.astype(emissions.dtype)
         # Start transition score and first emission; score has size of
         # (batch_size, num_tags) where for each batch, the j-th column stores
         # the score that the first timestep has tag j
@@ -224,7 +224,7 @@ class CRF(nn.Cell):
 
             # Set score to the next score if this timestep is valid (mask == 1)
             # shape: (batch_size, num_tags)
-            score = where(mask[i].expand_dims(1), next_score, score)
+            score = where(mask[i].astype(mindspore.bool_).expand_dims(1), next_score, score)
             i += 1
 
         # End transition score
@@ -254,10 +254,7 @@ class CRF(nn.Cell):
 
         # Viterbi algorithm recursive case: we compute the score of the best tag sequence
         # for every possible next tag
-        i = Tensor(1, mindspore.int32)
-        history = ops.zeros(emissions.shape, mindspore.int32)
-        while i < seq_length:
-        # for i in range(1, seq_length):
+        for i in range(1, seq_length):
             # Broadcast viterbi score for every possible next tag
             # shape: (batch_size, num_tags, 1)
             broadcast_score = score.expand_dims(2)
@@ -280,25 +277,21 @@ class CRF(nn.Cell):
             # and save the index that produces the next score
             # shape: (batch_size, num_tags)
             score = where(mask[i].expand_dims(1), next_score, score)
-            history[i - 1] = indices
-            i += 1
-
+            history += (indices,)
         # End transition score
         # shape: (batch_size, num_tags)
         score += self.end_transitions
 
         return score, history
 
-    def post_decode(self, score, history, seq_length):
+    @staticmethod
+    def post_decode(score, history, seq_length):
         """Trace back the best tag sequence based on the score and history tensors."""
         # Now, compute the best path for each sample
         batch_size = seq_length.shape[0]
         seq_ends = seq_length - 1
         # shape: (batch_size,)
         best_tags_list = []
-
-        history = tensor_split(history, history.shape[0], 0)
-        history = [hist.squeeze() for hist in history]
 
         for idx in range(batch_size):
             # Find the tag which maximizes the score at the last timestep; this is our best tag

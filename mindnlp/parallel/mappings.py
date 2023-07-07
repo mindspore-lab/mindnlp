@@ -20,35 +20,46 @@ from mindspore import nn
 from mindspore import ops
 
 from mindspore.communication import get_rank, get_group_size
+from mindspore.ops import constexpr
 
 from mindnlp._legacy.ops import AllGather
 from .utils import divide_and_check_no_remainder, split_tensor_along_last_dim
 
 
+@constexpr
+def _get_rank():
+    return get_rank()
+
+
+@constexpr
+def _get_group_size():
+    return get_group_size()
+
+
 def _reduce(input_: mindspore.Tensor) -> mindspore.Tensor:
     """All-reduce the the input tensor across model parallel group."""
     # Bypass the function if we are using only 1 GPU.
-    if get_group_size() == 1:
+    if _get_group_size() == 1:
         return input_
 
     # All-reduce.
     _all_reduce = ops.AllReduce()
-    _all_reduce(input_)
+    output = _all_reduce(input_)
 
-    return input_
+    return output
 
 def _split(input_: mindspore.Tensor) -> mindspore.Tensor:
     """Split the tensor along its last dimension and keep the
     corresponding slice."""
     # Bypass the function if we are using only 1 GPU.
-    if get_group_size() == 1:
+    if _get_group_size() == 1:
         return input_
 
     # Split along last dimension.
-    rank_size = get_group_size()
+    rank_size = _get_group_size()
     input_list = split_tensor_along_last_dim(input_, rank_size)
 
-    rank = get_rank()
+    rank = _get_rank()
     output = input_list[rank]
 
     return output
@@ -56,7 +67,7 @@ def _split(input_: mindspore.Tensor) -> mindspore.Tensor:
 def _gather(input_: mindspore.Tensor) -> mindspore.Tensor:
     """Gather tensors and concatinate along the last dimension."""
     # Bypass the function if we are using only 1 GPU.
-    rank_size = get_group_size()
+    rank_size = _get_group_size()
     if rank_size == 1:
         return input_
 

@@ -79,3 +79,9 @@ class CodeGenTokenizer(PreTrainedTokenizer):
                 text_input = np.char.decode(text_input, "utf-8")
             return str(text_input)
         raise ValueError(f"Unsupported string type: {type(text_input)}, {text_input.dtype}")
+
+    def _convert_token_to_id(self, token):
+        index = self._tokenizer.token_to_id(token)
+        if index is None:
+            return self.unk_token_id
+        return index

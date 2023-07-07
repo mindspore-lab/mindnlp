@@ -593,7 +593,7 @@ class LukePreTrainedModel(PreTrainedModel):
     def get_input_embeddings(self) -> "nn.Cell":
         pass
 
-    def set_input_embeddings(self, value: "nn.Cell"):
+    def set_input_embeddings(self, new_embeddings: "nn.Cell"):
         pass
 
     def resize_position_embeddings(self, new_num_position_embeddings: int):
@@ -645,16 +645,16 @@ class LukeModel(LukePreTrainedModel):
     def get_input_embeddings(self):
         return self.embeddings.word_embeddings
 
-    def set_input_embeddings(self, value):
-        self.embeddings.word_embeddings = value
+    def set_input_embeddings(self, new_embeddings):
+        self.embeddings.word_embeddings = new_embeddings
 
     def get_entity_embeddings(self):
         """get_entity_embeddings"""
         return self.entity_embeddings.entity_embeddings
 
-    def set_entity_embeddings(self, value):
+    def set_entity_embeddings(self, new_embeddings):
         """set_entity_embeddings"""
-        self.entity_embeddings.entity_embeddings = value
+        self.entity_embeddings.entity_embeddings = new_embeddings
 
     def _prune_heads(self, heads_to_prune):
         raise NotImplementedError("LUKE does not support the pruning of attention heads")

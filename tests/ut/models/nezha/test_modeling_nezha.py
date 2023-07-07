@@ -16,6 +16,7 @@
 Test Nezha
 """
 import gc
+import os
 import unittest
 import random
 import numpy as np
@@ -278,3 +279,8 @@ class TestModelingNezha(unittest.TestCase):
 
     def tearDown(self) -> None:
         gc.collect()
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.exists("~/.mindnlp"):
+            os.removedirs("~/.mindnlp")

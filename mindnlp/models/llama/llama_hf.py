@@ -371,7 +371,7 @@ class LlamaPreTrainedModel(PreTrainedModel):
         Returns the model's input embeddings.
         """
 
-    def set_input_embeddings(self, value: "nn.Cell"):
+    def set_input_embeddings(self, new_embeddings: "nn.Cell"):
         """
         Set model's input embeddings.
         """
@@ -442,8 +442,8 @@ class LlamaModel(LlamaPreTrainedModel):
     def get_input_embeddings(self):
         return self.embed_tokens
 
-    def set_input_embeddings(self, value):
-        self.embed_tokens = value
+    def set_input_embeddings(self, new_embeddings):
+        self.embed_tokens = new_embeddings
 
     def _prepare_decoder_attention_mask(self, attention_mask, input_shape, inputs_embeds, past_key_values_length):
         # create causal mask
@@ -603,11 +603,11 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         '''
         return self.model.embed_tokens
 
-    def set_input_embeddings(self, value):
+    def set_input_embeddings(self, new_embeddings):
         '''
         set_input_embeddings
         '''
-        self.model.embed_tokens = value
+        self.model.embed_tokens = new_embeddings
 
     def get_output_embeddings(self):
         '''
@@ -758,8 +758,8 @@ class LlamaForSequenceClassification(LlamaPreTrainedModel):
     def get_input_embeddings(self):
         return self.model.embed_tokens
 
-    def set_input_embeddings(self, value):
-        self.model.embed_tokens = value
+    def set_input_embeddings(self, new_embeddings):
+        self.model.embed_tokens = new_embeddings
 
     def construct(
         self,
