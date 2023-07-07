@@ -20,26 +20,24 @@
 # pylint: disable=R1721
 """ MindSpore ChatGLM model. """
 
-import math
 import copy
 import os
 import warnings
 import re
-
 from typing import Optional, Tuple, List, Callable, Dict, Any
 import numpy as np
 import mindspore
+
 from mindspore import nn, ops
-from mindspore.nn import CrossEntropyLoss, LayerNorm
+from mindspore.nn import LayerNorm
 from mindspore import log as logger
 from mindspore import Parameter, Tensor
-
+from mindspore.common.initializer import initializer
 
 from mindnlp.abc import PreTrainedModel
 from mindnlp.generation.logits_process import LogitsProcessor, LogitsProcessorList
 from mindnlp.generation.stopping_criteria import StoppingCriteriaList
 from mindnlp.abc import GenerationConfig
-from mindnlp.modules import functional as F
 from mindnlp.configs import MINDNLP_MODEL_URL_BASE
 from .chatglm_config import ChatGLMConfig
 
@@ -95,6 +93,10 @@ class InvalidScoreLogitsProcessor(LogitsProcessor):
             scores[..., 5] = 5e4
         return scores
 
+    def construct(self, ids):
+        """construct"""
+        output = ops.gather(self.embedding_table, ids, 0)
+        return output
 
 class PrefixEncoder(nn.Cell):
     """
@@ -125,183 +127,40 @@ class PrefixEncoder(nn.Cell):
             past_key_values = self.embedding(prefix)
         return past_key_values
 
-
 class RotaryEmbedding(nn.Cell):
     """Rotary Embedding."""
-    def __init__(self, dim, base=10000, precision=mindspore.float16, learnable=False):
+    def __init__(self, dim, base=10000, precision=mindspore.float16, max_seq_len=2048):
         super().__init__()
         inv_freq = 1. / (base ** (np.arange(0, dim, 2) / dim))
-        inv_freq = Tensor(inv_freq, mindspore.float16)
-        self.learnable = learnable
-        if learnable:
-            self.inv_freq = Parameter(inv_freq, 'inv_freq')
-            self.max_seq_len_cached = None
-        else:
-            self.inv_freq = Parameter(inv_freq, 'inv_freq', requires_grad=False)
-            self.max_seq_len_cached = None
-            self.cos_cached = None
-            self.sin_cached = None
-        self.precision = precision
+        t = np.arange(max_seq_len, dtype=inv_freq.dtype)
+        freqs = np.outer(t, inv_freq)
+        emb = np.concatenate((freqs, freqs), axis=-1)
+        self.cos_cached = np.expand_dims(np.cos(emb), 1)
+        self.sin_cached = np.expand_dims(np.sin(emb), 1)
+        self.cos_cached = Tensor(self.cos_cached, precision)
+        self.sin_cached = Tensor(self.sin_cached, precision)
 
-    def construct(self, x, seq_dim=1, seq_len=None):
-        if seq_len is None:
-            seq_len = x.shape[seq_dim]
-        if self.max_seq_len_cached is None or (seq_len > self.max_seq_len_cached):
-            self.max_seq_len_cached = None if self.learnable else seq_len
-            t = ops.arange(seq_len, dtype=self.inv_freq.dtype)
-            # freqs = ops.einsum('i,j->ij', t, self.inv_freq)
-            freqs = ops.matmul(t.expand_dims(-1), self.inv_freq.expand_dims(0))
-            # Different from paper, but it uses a different permutation in order to obtain the same calculation
-            emb = ops.cat((freqs, freqs), axis=-1)
-
-            # [sx, 1 (b * np), hn]
-            cos_cached = ops.cos(emb)[:, None, :]
-            sin_cached = ops.sin(emb)[:, None, :]
-            if self.learnable:
-                return cos_cached, sin_cached
-            self.cos_cached, self.sin_cached = cos_cached, sin_cached
-        return self.cos_cached[:seq_len, ...], self.sin_cached[:seq_len, ...]
-
-    def _apply(self, fn):
-        if self.cos_cached is not None:
-            self.cos_cached = fn(self.cos_cached)
-        if self.sin_cached is not None:
-            self.sin_cached = fn(self.sin_cached)
-        return super()._apply(fn)
-
+    def construct(self):
+        return self.cos_cached, self.sin_cached
 
 def rotate_half(x):
     """rotate half tensor."""
-    x1, x2 = x[..., :x.shape[-1] // 2], x[..., x.shape[-1] // 2:]
-    return ops.cat((-x2, x1), axis=x1.ndim - 1)  # dim=-1 triggers a bug in earlier torch versions
-
+    x1, x2 = ops.chunk(x, 2, -1)
+    return ops.cat((-x2, x1), axis=-1)
 
 def apply_rotary_pos_emb_index(q, k, cos, sin, position_id):
     """apply rotary pos"""
     # position_id: [sq, b], q, k: [sq, b, np, hn], cos: [sq, 1, hn] -> [sq, b, 1, hn]
-    cos, sin = F.embedding(position_id, cos.squeeze(1)).unsqueeze(2), \
-        F.embedding(position_id, sin.squeeze(1)).unsqueeze(2)
-
-    q, k = (q * cos) + (rotate_half(q) * sin), (k * cos) + (rotate_half(k) * sin)
+    cos = cos.squeeze(1)[position_id].unsqueeze(2)
+    sin = sin.squeeze(1)[position_id].unsqueeze(2)
+    q = (q * cos) + (rotate_half(q) * sin)
+    k = (k * cos) + (rotate_half(k) * sin)
     return q, k
-
-
-def attention_fn(
-        self,
-        query_layer,
-        key_layer,
-        value_layer,
-        attention_mask,
-        hidden_size_per_partition,
-        layer_id,
-        layer_past=None,
-        scaling_attention_score=True,
-        use_cache=False,
-):
-    """attention function."""
-    if layer_past is not None:
-        past_key, past_value = layer_past[0], layer_past[1]
-        key_layer = ops.cat((past_key, key_layer), axis=0)
-        value_layer = ops.cat((past_value, value_layer), axis=0)
-
-    # seqlen, batch, num_attention_heads, hidden_size_per_attention_head
-    hidden_size = key_layer.shape[-1]
-
-    if use_cache:
-        present = (key_layer, value_layer)
-    else:
-        present = None
-
-    query_key_layer_scaling_coeff = float(layer_id + 1)
-    # print(query_key_layer_scaling_coeff)
-    if scaling_attention_score:
-        query_layer = query_layer / (math.sqrt(hidden_size) * query_key_layer_scaling_coeff)
-
-    # ===================================
-    # Raw attention scores. [b, np, s, s]
-    # ===================================
-
-    # [b, np, sq, sk]
-    output_size = (query_layer.shape[1], query_layer.shape[2], query_layer.shape[0], key_layer.shape[0])
-
-    # [sq, b, np, hn] -> [sq, b * np, hn]
-    query_layer = query_layer.view((output_size[2], output_size[0] * output_size[1], -1))
-    # [sk, b, np, hn] -> [sk, b * np, hn]
-    key_layer = key_layer.view((output_size[3], output_size[0] * output_size[1], -1))
-
-    matmul_result = ops.zeros(
-        (1, 1, 1),
-        dtype=query_layer.dtype
-    )
-
-    matmul_result = ops.baddbmm(
-        matmul_result,
-        query_layer.swapaxes(0, 1),  # [b * np, sq, hn]
-        key_layer.transpose(1, 2, 0),  # [b * np, hn, sk]
-        beta=0.0,
-        alpha=1.0,
-    )
-
-    # change view to [b, np, sq, sk]
-    attention_scores = matmul_result.view(output_size)
-
-    if self.scale_mask_softmax:
-        self.scale_mask_softmax.scale = query_key_layer_scaling_coeff
-        attention_probs = self.scale_mask_softmax(attention_scores, attention_mask)
-    else:
-        if not (attention_mask == 0).all():
-            # if auto-regressive, skip
-            attention_scores = attention_scores.masked_fill(attention_mask, -10000.0)
-        dtype = attention_scores.dtype
-        attention_scores = attention_scores.float()
-        attention_scores = attention_scores * query_key_layer_scaling_coeff
-
-        attention_probs = ops.softmax(attention_scores, axis=-1)
-
-        attention_probs = attention_probs.astype(dtype)
-
-    # =========================
-    # Context layer. [sq, b, hp]
-    # =========================
-
-    # value_layer -> context layer.
-    # [sk, b, np, hn] --> [b, np, sq, hn]
-
-    # context layer shape: [b, np, sq, hn]
-    output_size = (value_layer.shape[1], value_layer.shape[2], query_layer.shape[0], value_layer.shape[3])
-
-    # change view [sk, b * np, hn]
-    value_layer = value_layer.view(value_layer.shape[0], output_size[0] * output_size[1], -1)
-
-    # change view [b * np, sq, sk]
-    attention_probs = attention_probs.view(output_size[0] * output_size[1], output_size[2], -1)
-
-    # matmul: [b * np, sq, hn]
-    context_layer = ops.bmm(attention_probs, value_layer.swapaxes(0, 1))
-
-    # change view [b, np, sq, hn]
-    context_layer = context_layer.view(output_size)
-
-    # [b, np, sq, hn] --> [sq, b, np, hn]
-    context_layer = context_layer.transpose(2, 0, 1, 3)
-
-    # [sq, b, np, hn] --> [sq, b, hp]
-    new_context_layer_shape = context_layer.shape[:-2] + (hidden_size_per_partition,)
-    context_layer = context_layer.view(new_context_layer_shape)
-
-    outputs = (context_layer, present, attention_probs)
-
-    return outputs
-
-
-def default_init(cls, *args, **kwargs):
-    """default init"""
-    return cls(*args, **kwargs)
 
 
 class SelfAttention(nn.Cell):
     """Self Attention."""
-    def __init__(self, hidden_size, num_attention_heads,
+    def __init__(self, config, hidden_size, num_attention_heads,
                  layer_id, hidden_size_per_attention_head=None, bias=True,
                  params_dtype=mindspore.float32, position_encoding_2d=True):
 
@@ -313,16 +172,19 @@ class SelfAttention(nn.Cell):
         self.num_attention_heads = num_attention_heads
         self.num_attention_heads_per_partition = num_attention_heads
         self.position_encoding_2d = position_encoding_2d
+
+        self.output_attentions = config.output_attentions
+        self.scaling_attention_score = True
+        self.use_cache = config.use_cache
+
         self.rotary_emb = RotaryEmbedding(
             self.hidden_size // (self.num_attention_heads * 2)
             if position_encoding_2d
             else self.hidden_size // self.num_attention_heads,
             base=10000,
             precision=mindspore.float16,
-            learnable=False,
+            max_seq_len=config.max_sequence_length
         )
-
-        self.scale_mask_softmax = None
 
         if hidden_size_per_attention_head is None:
             self.hidden_size_per_attention_head = hidden_size // num_attention_heads
@@ -334,6 +196,18 @@ class SelfAttention(nn.Cell):
         # Strided linear layer.
         self.query_key_value = nn.Dense(hidden_size, 3 * self.inner_hidden_size, has_bias=bias).to_float(params_dtype)
         self.dense = nn.Dense(self.inner_hidden_size, hidden_size, has_bias=bias).to_float(params_dtype)
+
+        max_batch_size = getattr(config, 'max_batch_size', 1)
+        self.bucket_size = getattr(config, 'bucket_size', 512)
+        self.max_seq_len = config.max_sequence_length
+
+        self.cache_k = Parameter(initializer('zeros',
+                                (self.max_seq_len, max_batch_size, self.num_attention_heads, self.hidden_size_per_attention_head),
+                                params_dtype), 'cache_k', requires_grad=False)
+
+        self.cache_v = Parameter(initializer('zeros',
+                                (self.max_seq_len, max_batch_size, self.num_attention_heads, self.hidden_size_per_attention_head),
+                                params_dtype), 'cache_v', requires_grad=False)
 
     @staticmethod
     def attention_mask_func(attention_scores, attention_mask):
@@ -353,7 +227,6 @@ class SelfAttention(nn.Cell):
         last_dim_size = tensor.shape[last_dim] // num_partitions
         # Split.
         tensor_list = ops.split(tensor, last_dim_size, axis=last_dim)
-        # Note: torch.split does not create contiguous tensors by default.
 
         return tensor_list
 
@@ -363,9 +236,7 @@ class SelfAttention(nn.Cell):
             position_ids,
             attention_mask: mindspore.Tensor,
             layer_id,
-            layer_past: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,
-            use_cache: bool = False,
-            output_attentions: bool = False,
+            start_pos,
     ):
         """
         hidden_states: [seq_len, batch, hidden_size]
@@ -384,44 +255,133 @@ class SelfAttention(nn.Cell):
         (query_layer, key_layer, value_layer) = self.split_tensor_along_last_dim(mixed_raw_layer, 3)
 
         if self.position_encoding_2d:
-            q1, q2 = query_layer.chunk(2, axis=(query_layer.ndim - 1))
-            k1, k2 = key_layer.chunk(2, axis=(key_layer.ndim - 1))
-            # return (k1,)
-            cos, sin = self.rotary_emb(q1, seq_len=position_ids.max() + 1)
+            q1, q2 = query_layer.chunk(2, axis=3)
+            k1, k2 = key_layer.chunk(2, axis=3)
+            cos, sin = self.rotary_emb()
             position_ids, block_position_ids = position_ids[:, 0, :].swapaxes(0, 1), \
                 position_ids[:, 1, :].swapaxes(0, 1)
+
             q1, k1 = apply_rotary_pos_emb_index(q1, k1, cos, sin, position_ids)
             q2, k2 = apply_rotary_pos_emb_index(q2, k2, cos, sin, block_position_ids)
-            query_layer = ops.concat([q1, q2], axis=(q1.ndim - 1))
-            key_layer = ops.concat([k1, k2], axis=(k1.ndim - 1))
+
+            query_layer = ops.concat([q1, q2], axis=3)
+            key_layer = ops.concat([k1, k2], axis=3)
         else:
             position_ids = position_ids.swapaxes(0, 1)
-            cos, sin = self.rotary_emb(value_layer, seq_len=position_ids.max() + 1)
+            cos, sin = self.rotary_emb()
             # [seq_len, batch, num_attention_heads, hidden_size_per_attention_head]
             query_layer, key_layer = apply_rotary_pos_emb_index(query_layer, key_layer, cos, sin, position_ids)
         # [seq_len, batch, hidden_size]
-
-        context_layer, present, attention_probs = attention_fn(
-            self=self,
+        context_layer, attention_probs = self.attention_fn(
             query_layer=query_layer,
             key_layer=key_layer,
             value_layer=value_layer,
             attention_mask=attention_mask,
             hidden_size_per_partition=self.hidden_size_per_partition,
             layer_id=layer_id,
-            layer_past=layer_past,
-            use_cache=use_cache
+            start_pos=start_pos
         )
 
         output = self.dense(context_layer)
 
-        outputs = (output, present)
+        outputs = (output,)
 
-        if output_attentions:
+        if self.output_attentions:
             outputs += (attention_probs,)
 
-        return outputs  # output, present, attention_probs
+        return outputs  # output, attention_probs
 
+    def attention_fn(
+            self,
+            query_layer,
+            key_layer,
+            value_layer,
+            attention_mask,
+            hidden_size_per_partition,
+            layer_id,
+            start_pos
+    ):
+        """attention function."""
+        seq_len = query_layer.shape[0]
+
+        if seq_len > 1:
+            indices = ops.arange(start_pos, seq_len, dtype=mindspore.int64)
+        else:
+            indices = start_pos.expand_dims(0)
+        ops.scatter_update(self.cache_k, indices, key_layer)
+        ops.scatter_update(self.cache_v, indices, value_layer)
+
+        key_layer = self.cache_k
+        value_layer = self.cache_v
+
+        # seqlen, batch, num_attention_heads, hidden_size_per_attention_head
+        hidden_size = key_layer.shape[-1]
+
+        query_key_layer_scaling_coeff = ops.cast(layer_id + 1, query_layer.dtype)
+
+        if self.scaling_attention_score:
+            query_layer = query_layer / (ops.sqrt(ops.cast(hidden_size, query_layer.dtype)) * query_key_layer_scaling_coeff)
+
+        # ===================================
+        # Raw attention scores. [b, np, s, s]
+        # ===================================
+
+        # [b, np, sq, sk]
+        output_size = (query_layer.shape[1], query_layer.shape[2], query_layer.shape[0], key_layer.shape[0])
+
+        # [sq, b, np, hn] -> [sq, b * np, hn]
+        query_layer = query_layer.view((output_size[2], output_size[0] * output_size[1], -1))
+        # [sk, b, np, hn] -> [sk, b * np, hn]
+        key_layer = key_layer.view((output_size[3], output_size[0] * output_size[1], -1))
+
+        matmul_result = ops.bmm(
+            query_layer.swapaxes(0, 1),  # [b * np, sq, hn]
+            key_layer.transpose(1, 2, 0)  # [b * np, hn, sk]
+        )
+
+        # change view to [b, np, sq, sk]
+        attention_scores = matmul_result.view(output_size)
+
+        attention_mask = (ops.arange(self.max_seq_len) > start_pos + seq_len).reshape((1, 1, 1, -1))
+        attention_scores = attention_scores.masked_fill(attention_mask, -10000.0)
+        dtype = attention_scores.dtype
+        attention_scores = attention_scores * query_key_layer_scaling_coeff
+
+        attention_scores = attention_scores.float()
+        attention_probs = ops.softmax(attention_scores, axis=-1)
+
+        attention_probs = attention_probs.astype(dtype)
+        # =========================
+        # Context layer. [sq, b, hp]
+        # =========================
+
+        # value_layer -> context layer.
+        # [sk, b, np, hn] --> [b, np, sq, hn]
+
+        # context layer shape: [b, np, sq, hn]
+        output_size = (value_layer.shape[1], value_layer.shape[2], query_layer.shape[0], value_layer.shape[3])
+
+        # change view [sk, b * np, hn]
+        value_layer = value_layer.view(value_layer.shape[0], output_size[0] * output_size[1], -1)
+
+        # change view [b * np, sq, sk]
+        attention_probs = attention_probs.view(output_size[0] * output_size[1], output_size[2], -1)
+
+        # matmul: [b * np, sq, hn]
+        context_layer = ops.bmm(attention_probs, value_layer.swapaxes(0, 1))
+        # change view [b, np, sq, hn]
+        context_layer = context_layer.view(output_size)
+
+        # [b, np, sq, hn] --> [sq, b, np, hn]
+        context_layer = context_layer.transpose(2, 0, 1, 3)
+
+        # [sq, b, np, hn] --> [sq, b, hp]
+        new_context_layer_shape = context_layer.shape[:-2] + (hidden_size_per_partition,)
+        context_layer = context_layer.view(new_context_layer_shape)
+
+        outputs = (context_layer, attention_probs)
+
+        return outputs
 
 def gelu(x):
     """OpenAI's gelu implementation."""
@@ -432,7 +392,7 @@ class GEGLU(nn.Cell):
     """GEGLU"""
     def __init__(self):
         super().__init__()
-        self.activation_fn = gelu
+        self.activation_fn = ops.gelu
 
     def construct(self, x):
         # dim=-1 breaks in jit for pt<1.10
@@ -443,7 +403,7 @@ class GEGLU(nn.Cell):
 class GLU(nn.Cell):
     """GLU"""
     def __init__(self, hidden_size, inner_hidden_size=None,
-                 layer_id=None, bias=True, activation_func=gelu, params_dtype=mindspore.float32):
+                 layer_id=None, bias=True, activation_func=ops.gelu, params_dtype=mindspore.float32):
         super().__init__()
         self.layer_id = layer_id
         self.activation_func = activation_func
@@ -466,7 +426,7 @@ class GLU(nn.Cell):
         # [seq_len, batch, inner_hidden_size]
         intermediate_parallel = self.dense_h_to_4h(hidden_states)
 
-        intermediate_parallel = self.activation_func(intermediate_parallel)
+        intermediate_parallel = self.activation_func(intermediate_parallel, approximate='tanh')
 
         output = self.dense_4h_to_h(intermediate_parallel)
 
@@ -477,6 +437,7 @@ class GLMBlock(nn.Cell):
     """GLM Block."""
     def __init__(
             self,
+            config,
             hidden_size,
             num_attention_heads,
             layernorm_epsilon,
@@ -500,6 +461,7 @@ class GLMBlock(nn.Cell):
 
         # Self attention.
         self.attention = SelfAttention(
+            config,
             hidden_size,
             num_attention_heads,
             layer_id,
@@ -509,6 +471,7 @@ class GLMBlock(nn.Cell):
             position_encoding_2d=self.position_encoding_2d,
         )
 
+        self.use_cache = config.use_cache
         # Layernorm on the input data.
         self.post_attention_layernorm = nn.LayerNorm([hidden_size], epsilon=layernorm_epsilon)
 
@@ -529,9 +492,7 @@ class GLMBlock(nn.Cell):
             position_ids,
             attention_mask: mindspore.Tensor,
             layer_id,
-            layer_past: Optional[Tuple[mindspore.Tensor, mindspore.Tensor]] = None,
-            use_cache: bool = False,
-            output_attentions: bool = False,
+            start_pos
     ):
         """
         hidden_states: [seq_len, batch, hidden_size]
@@ -548,11 +509,9 @@ class GLMBlock(nn.Cell):
             position_ids,
             attention_mask=attention_mask,
             layer_id=layer_id,
-            layer_past=layer_past,
-            use_cache=use_cache,
-            output_attentions=output_attentions
+            start_pos=start_pos
         )
-        # return attention_outputs
+        # output, attention_probs
 
         attention_output = attention_outputs[0]
 
@@ -570,12 +529,9 @@ class GLMBlock(nn.Cell):
         # Second residual connection.
         output = mlp_input * alpha + mlp_output
 
-        if use_cache:
-            outputs = (output,) + outputs
-        else:
-            outputs = (output,) + outputs[1:]
+        outputs = (output,) + outputs
 
-        return outputs  # hidden_states, present, attentions
+        return outputs  # hidden_states, attentions
 
 
 class ChatGLMPreTrainedModel(PreTrainedModel):
@@ -598,14 +554,13 @@ class ChatGLMPreTrainedModel(PreTrainedModel):
     def get_masks(self, input_ids):
         """get masks"""
         batch_size, seq_length = input_ids.shape
-        context_lengths = [seq.asnumpy().tolist().index(self.config.bos_token_id) for seq in input_ids]
-        attention_mask = ops.ones((batch_size, seq_length, seq_length))
-        attention_mask = attention_mask.tril()
+        context_lengths = [seq.tolist().index(self.config.bos_token_id) for seq in input_ids]
+        attention_mask = np.ones((batch_size, seq_length, seq_length))
+        attention_mask = np.tril(attention_mask)
         for i, context_length in enumerate(context_lengths):
             attention_mask[i, :, :context_length] = 1
-        attention_mask = attention_mask.unsqueeze(1)
-        attention_mask = (attention_mask < 0.5).bool()
-
+        attention_mask = np.expand_dims(attention_mask, 1)
+        attention_mask = (attention_mask < 0.5).astype(np.bool_)
         return attention_mask
 
     def get_position_ids(self, input_ids, mask_positions, use_gmasks=None):
@@ -613,19 +568,21 @@ class ChatGLMPreTrainedModel(PreTrainedModel):
         batch_size, seq_length = input_ids.shape
         if use_gmasks is None:
             use_gmasks = [False] * batch_size
-        context_lengths = [seq.asnumpy().tolist().index(self.config.bos_token_id) for seq in input_ids]
+        context_lengths = [seq.tolist().index(self.config.bos_token_id) for seq in input_ids]
         if self.position_encoding_2d:
-            position_ids = ops.arange(seq_length, dtype=mindspore.int32).unsqueeze(0).tile((batch_size, 1))
+            position_ids = np.tile(np.expand_dims(np.arange(seq_length, dtype=np.int64), 0),
+                                   (batch_size, 1))
             for i, context_length in enumerate(context_lengths):
                 position_ids[i, context_length:] = mask_positions[i]
-            block_position_ids = [ops.cat((
-                ops.zeros(context_length, dtype=mindspore.int32),
-                ops.arange(seq_length - context_length, dtype=mindspore.int32) + 1
+            block_position_ids = [np.concatenate((
+                np.zeros(context_length, dtype=np.int64),
+                np.arange(seq_length - context_length, dtype=np.int64) + 1
             )) for context_length in context_lengths]
-            block_position_ids = ops.stack(block_position_ids, axis=0)
-            position_ids = ops.stack((position_ids, block_position_ids), axis=1)
+            block_position_ids = np.stack(block_position_ids, axis=0)
+            position_ids = np.stack((position_ids, block_position_ids), axis=1)
         else:
-            position_ids = ops.arange(seq_length, dtype=mindspore.int32).unsqueeze(0).tile((batch_size, 1))
+            position_ids = np.tile(np.expand_dims(np.arange(seq_length, dtype=np.int64), 0),
+                                   (batch_size, 1))
             for i, context_length in enumerate(context_lengths):
                 if not use_gmasks[i]:
                     position_ids[i, context_length:] = mask_positions[i]
@@ -665,11 +622,16 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
         self.pre_seq_len = config.pre_seq_len
         self.prefix_projection = config.prefix_projection
 
+        self.output_attentions = config.output_attentions
+        self.output_hidden_states = config.output_hidden_states
+        self.use_cache = config.use_cache
+
         self.word_embeddings = nn.Embedding(
             vocab_size=self.vocab_size, embedding_size=self.hidden_size).to_float(self.params_dtype)
 
         def get_layer(layer_id):
             return GLMBlock(
+                config,
                 self.hidden_size,
                 self.num_attention_heads,
                 self.layernorm_epsilon,
@@ -688,15 +650,9 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
         self.final_layernorm = LayerNorm([self.hidden_size], epsilon=self.layernorm_epsilon)
 
         if self.pre_seq_len is not None:
-            # for param in self.parameters():
-            #     param.requires_grad = False
             self.prefix_tokens = Tensor(np.arange(self.pre_seq_len))
             self.prefix_encoder = PrefixEncoder(config)
             self.dropout = nn.Dropout(p=0.1)
-
-            # total_params = sum(p.numel() for p in self.parameters())
-            # trainable_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
-            # print("Using p-tuning v2: # trainable_params = {} / {}".format(trainable_params, total_params))
 
     def get_input_embeddings(self):
         return self.word_embeddings
@@ -724,23 +680,12 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
 
     def construct(
             self,
-            input_ids: Optional[mindspore.Tensor] = None,
-            position_ids: Optional[mindspore.Tensor] = None,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None,
-            inputs_embeds: Optional[mindspore.Tensor] = None,
-            use_cache: Optional[bool] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            return_dict: Optional[bool] = None,
+            input_ids,
+            position_ids = None,
+            attention_mask = None,
+            start_pos = None,
+            inputs_embeds = None
     ) -> Tuple[mindspore.Tensor, ...]:
-
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
-        )
-        use_cache = use_cache if use_cache is not None else self.config.use_cache
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
@@ -751,41 +696,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
         else:
             raise ValueError("You have to specify either input_ids or inputs_embeds")
 
-        if inputs_embeds is None:
-            inputs_embeds = self.word_embeddings(input_ids)
-
-        # print(inputs_embeds.dtype)
-        # return (inputs_embeds,)
-
-        if past_key_values is None:
-            if self.pre_seq_len is not None:
-                past_key_values = self.get_prompt(batch_size=input_ids.shape[0],
-                                                  dtype=inputs_embeds.dtype)
-            else:
-                past_key_values = tuple([None] * len(self.layers))
-
-            if attention_mask is None:
-                attention_mask = self.get_masks(
-                    input_ids,
-                )
-
-
-            if position_ids is None:
-                MASK, gMASK = self.config.mask_token_id, self.config.gmask_token_id
-                seqs = input_ids.asnumpy().tolist()
-
-                mask_positions, use_gmasks = [], []
-                for seq in seqs:
-                    mask_token = gMASK if gMASK in seq else MASK
-                    use_gmask = mask_token == gMASK
-                    mask_positions.append(seq.index(mask_token))
-                    use_gmasks.append(use_gmask)
-
-                position_ids = self.get_position_ids(
-                    input_ids,
-                    mask_positions=mask_positions,
-                    use_gmasks=use_gmasks
-                )
+        inputs_embeds = self.word_embeddings(input_ids)
 
         if self.pre_seq_len is not None and attention_mask is not None:
             prefix_attention_mask = ops.ones((batch_size, 1, input_ids.shape[-1], self.pre_seq_len))
@@ -795,50 +706,39 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
         # [seq_len, batch, hidden_size]
         hidden_states = inputs_embeds.swapaxes(0, 1)
 
-        presents = () if use_cache else None
-        all_self_attentions = () if output_attentions else None
-        all_hidden_states = () if output_hidden_states else None
-
-        if attention_mask is None:
-            attention_mask = ops.zeros(1, 1).bool()
+        all_self_attentions = ()
+        all_hidden_states = ()
 
         for i, layer in enumerate(self.layers):
-            if output_hidden_states:
+            if self.output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
-            layer_past = past_key_values[i]
 
             layer_ret = layer(
                 hidden_states,
                 position_ids=position_ids,
                 attention_mask=attention_mask,
-                layer_id=mindspore.Tensor(i),
-                layer_past=layer_past,
-                use_cache=use_cache,
-                output_attentions=output_attentions
+                layer_id=i,
+                start_pos=start_pos
             )
             hidden_states = layer_ret[0]
 
-            # if i == 0:
-            #     return (hidden_states,)
-
-            if use_cache:
-                presents = presents + (layer_ret[1],)
-
-            if output_attentions:
-                all_self_attentions = all_self_attentions + (layer_ret[2 if use_cache else 1],)
-
+            if self.output_attentions:
+                all_self_attentions = all_self_attentions + (layer_ret[1],)
         # Final layer norm.
-        # return (hidden_states,)
         hidden_states = self.final_layernorm(hidden_states)
 
-        if output_hidden_states:
+        if self.output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)
 
-        return tuple(v for v in [hidden_states, presents, all_hidden_states, all_self_attentions] if v is not None)
+        return (hidden_states, all_hidden_states, all_self_attentions)
 
 
 class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
     """ChatGLMForConditionalGeneration"""
+
+    _keys_to_ignore_on_load_missing = [
+        r"transformer.layers\.\d+\.attention\.masked_bias.rotary_emb.inv_freq"
+    ]
     def __init__(self, config: ChatGLMConfig):
         super().__init__(config)
 
@@ -863,14 +763,13 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
     def _update_model_kwargs_for_generation(
         self,
         outputs,
+        start_pos,
         model_kwargs: Dict[str, Any],
         is_encoder_decoder: bool = False,
         standardize_cache_format: bool = False,
     ) -> Dict[str, Any]:
         # update past_key_values
-        model_kwargs["past_key_values"] = self._extract_past_from_model_output(
-            outputs, standardize_cache_format=standardize_cache_format
-        )
+        model_kwargs["start_pos"] = start_pos
 
         # update attention mask
         if "attention_mask" in model_kwargs:
@@ -887,7 +786,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         # update position ids
         if "position_ids" in model_kwargs:
             position_ids = model_kwargs["position_ids"]
-            new_position_id = position_ids[..., -1:].clone()
+            new_position_id = position_ids[..., -1:]
             new_position_id[:, 1, :] += 1
             model_kwargs["position_ids"] = ops.cat(
                 [position_ids, new_position_id], axis=-1
@@ -897,16 +796,15 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
 
     def prepare_inputs_for_generation(
             self,
-            input_ids: mindspore.Tensor,
-            past: Optional[mindspore.Tensor] = None,
-            past_key_values: Optional[mindspore.Tensor] = None,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            position_ids: Optional[mindspore.Tensor] = None,
+            input_ids: np.ndarray,
+            attention_mask: Optional[np.ndarray] = None,
+            position_ids: Optional[np.ndarray] = None,
+            start_pos: int = None,
             **kwargs
     ) -> dict:
         _, seq_length = input_ids.shape
         MASK, gMASK = self.config.mask_token_id, self.config.gmask_token_id
-        seqs = input_ids.asnumpy().tolist()
+        seqs = input_ids.tolist()
         mask_positions, use_gmasks = [], []
         for seq in seqs:
             mask_token = gMASK if gMASK in seq else MASK
@@ -915,31 +813,31 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             use_gmasks.append(use_gmask)
 
         # only last token for input_ids if past is not None
-        if past is not None or past_key_values is not None:
-            last_token = input_ids[:, -1].unsqueeze(-1)
-            if attention_mask is not None and attention_mask.dtype == mindspore.bool_:
+        if start_pos is not None:
+            last_token = np.expand_dims(input_ids[:, -1], -1)
+            # print(attention_mask)
+            if attention_mask is not None and attention_mask.dtype == np.bool_:
                 attention_mask = attention_mask[:, :, -1:]
             else:
-                attention_mask = None
+                attention_mask = np.zeros((1, 1, 1, 1)).astype(np.bool_)
             if position_ids is not None:
                 position_ids = position_ids[..., -1:]
             else:
                 context_lengths = [seq.index(self.config.bos_token_id) for seq in seqs]
                 if self.position_encoding_2d:
-                    position_ids = mindspore.Tensor(
+                    position_ids = np.expand_dims(np.array(
                         [[mask_position, seq_length - context_length] for mask_position, context_length in
-                         zip(mask_positions, context_lengths)], dtype=mindspore.int32).unsqueeze(-1)
+                         zip(mask_positions, context_lengths)], dtype=np.int64), -1)
                 else:
-                    position_ids = mindspore.Tensor([mask_position for mask_position in mask_positions], dtype=mindspore.int32).unsqueeze(-1)
+                    position_ids = np.expand_dims(np.array(
+                        [mask_position for mask_position in mask_positions], dtype=np.int64), -1)
 
-            if past is None:
-                past = past_key_values
-            return {
-                "input_ids": last_token,
-                "past_key_values": past,
-                "position_ids": position_ids,
-                "attention_mask": attention_mask
-            }
+            last_token = Tensor(last_token)
+            attention_mask = Tensor(attention_mask)
+            position_ids = Tensor(position_ids)
+            start_pos = Tensor(start_pos)
+            return (last_token, position_ids, attention_mask, start_pos)
+
         if attention_mask is not None and attention_mask.dtype != mindspore.bool_:
             attention_mask = None
         if attention_mask is None:
@@ -947,48 +845,33 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         if position_ids is None:
             position_ids = self.get_position_ids(input_ids, mask_positions=mask_positions, use_gmasks=use_gmasks)
 
-        return {
-            "input_ids": input_ids,
-            "past_key_values": past,
-            "position_ids": position_ids,
-            "attention_mask": attention_mask
-        }
+        input_ids = Tensor(input_ids)
+        attention_mask = Tensor(attention_mask)
+        position_ids = Tensor(position_ids)
+        start_pos = Tensor(0)
+
+        return (input_ids, position_ids, attention_mask, start_pos)
 
     def construct(
             self,
-            input_ids: Optional[mindspore.Tensor] = None,
-            position_ids: Optional[mindspore.Tensor] = None,
-            attention_mask: Optional[mindspore.Tensor] = None,
-            past_key_values: Optional[Tuple[mindspore.Tensor]] = None,
-            inputs_embeds: Optional[mindspore.Tensor] = None,
-            labels: Optional[mindspore.Tensor] = None,
-            use_cache: Optional[bool] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            return_dict: Optional[bool] = None,
+            input_ids,
+            position_ids = None,
+            attention_mask = None,
+            start_pos = None,
+            labels = None,
     ):
-        use_cache = use_cache if use_cache is not None else self.config.use_cache
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
         transformer_outputs = self.transformer(
             input_ids=input_ids,
             position_ids=position_ids,
             attention_mask=attention_mask,
-            past_key_values=past_key_values,
-            inputs_embeds=inputs_embeds,
-            use_cache=use_cache,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
+            start_pos=start_pos
         )
-
 
         hidden_states = transformer_outputs[0]
 
-        # return (hidden_states,)
         lm_logits = self.lm_head(hidden_states).permute(1, 0, 2)
+        output = (lm_logits,) + transformer_outputs[1:]
 
-        loss = None
         if labels is not None:
             lm_logits = lm_logits.to(mindspore.float32)
 
@@ -996,14 +879,13 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss_fct = CrossEntropyLoss(ignore_index=-100)
-            loss = loss_fct(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))
+            loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1), ignore_index=-100)
 
             lm_logits = lm_logits.to(hidden_states.dtype)
             loss = loss.to(hidden_states.dtype)
+            return (loss,) + output
 
-        output = (lm_logits,) + transformer_outputs[1:]
-        return ((loss,) + output) if loss is not None else output
+        return output
 
 
     @staticmethod
@@ -1101,6 +983,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             **kwargs,
     ):
         """stream generate"""
+        jit = kwargs.get('jit', True)
         _, input_ids_seq_length = input_ids.shape[0], input_ids.shape[-1]
 
         if generation_config is None:
@@ -1158,18 +1041,18 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
 
         unfinished_sequences = input_ids.new(input_ids.shape[0]).fill(1)
         scores = None
+        first_step = True
 
         while True:
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
             # forward pass to get next token
-            outputs = self(
-                **model_inputs,
-                return_dict=True,
-                output_attentions=False,
-                output_hidden_states=False,
-            )
+            if jit and not first_step:
+                outputs = self.compile_and_run(*model_inputs)
+            else:
+                outputs = self.construct(*model_inputs)
+                first_step = False
 
-            next_token_logits = outputs.logits[:, -1, :]
+            next_token_logits = outputs[0].asnumpy()[:, -1, :]
 
             # pre-process distribution
             next_token_scores = logits_processor(input_ids, next_token_logits)
@@ -1184,8 +1067,9 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
 
             # update generated ids, model inputs, and length for next step
             input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
+            start_pos = input_ids.shape[-1]
             model_kwargs = self._update_model_kwargs_for_generation(
-                outputs, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
+                outputs, start_pos, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
             )
             unfinished_sequences = unfinished_sequences.mul((sum(next_tokens != i for i in eos_token_id)).long())
 
