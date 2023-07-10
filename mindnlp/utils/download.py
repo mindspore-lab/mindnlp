@@ -27,8 +27,10 @@ from pathlib import Path
 from urllib.parse import urlparse
 import requests
 from tqdm.autonotebook import tqdm
+from requests.exceptions import ProxyError, SSLError
+
 from mindnlp.configs import DEFAULT_ROOT
-from .errors import ModelNotFoundError, MSHTTPError
+from .errors import ModelNotFoundError
 
 def get_cache_path():
     r"""
@@ -107,10 +109,10 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None)
                 f"Download from {url} failed. " "Retry limit reached")
 
         req = requests.get(url, stream=True, timeout=10, proxies=proxies)
-        if req.status_code != 200:
-            raise RuntimeError(
-                f"Downloading from {url} failed with code {req.status_code}!"
-            )
+
+        status = req.status_code
+        if status == 404:
+            raise ModelNotFoundError(f"Can not found url: {url}")
 
         tmp_filename = filename + "_tmp"
         total_size = req.headers.get("content-length")
@@ -405,9 +407,9 @@ def get_from_cache(
         path = http_get(url, cache_dir, md5sum,
                         download_file_name=download_file_name, proxies=proxies)[1]
         return Path(path), filename
-    except ModelNotFoundError as exc:
+    except (ProxyError, SSLError) as exc:
         raise exc
-    except MSHTTPError:
+    except ModelNotFoundError:
         return None, filename
 
 def try_to_load_from_cache(
