@@ -88,6 +88,12 @@ def split(x, size, axis=0):
         return ops.split(x, axis, num)
     return ops.split(x, split_size_or_sections=size, axis=axis)
 
+def chunk(input, chunks, axis=0):
+    """inner chunk"""
+    if less_min_api_compatible:
+        return ops.split(input, axis, chunks)
+    return ops.chunk(input, chunks, axis)
+
 def addmm(x, mat1, mat2, *, beta=1, alpha=1):
     """inner addmm"""
     _matmul_op = _get_cache_prim(ops.MatMul)()

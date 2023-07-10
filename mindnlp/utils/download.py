@@ -109,10 +109,10 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None)
                 f"Download from {url} failed. " "Retry limit reached")
 
         req = requests.get(url, stream=True, timeout=10, proxies=proxies)
-        
+
         status = req.status_code
         if status == 404:
-            raise ModelNotFoundError(f"Can not found url: {url}") 
+            raise ModelNotFoundError(f"Can not found url: {url}")
 
         tmp_filename = filename + "_tmp"
         total_size = req.headers.get("content-length")
@@ -409,7 +409,7 @@ def get_from_cache(
         return Path(path), filename
     except (ProxyError, SSLError) as exc:
         raise exc
-    except ModelNotFoundError as exc:
+    except ModelNotFoundError:
         return None, filename
 
 def try_to_load_from_cache(
