@@ -26,7 +26,6 @@ from mindspore import Tensor
 from mindnlp.models.glm.chatglm import ChatGLMForConditionalGeneration
 from mindnlp.transforms.tokenizers import ChatGLMTokenizer
 
-
 def set_random_seed(seed):
     """set random seed"""
     random.seed(seed)
@@ -54,6 +53,7 @@ def ids_tensor(shape, vocab_size):
 def get_model_and_tokenizer():
     """get model and tokenizer"""
     model = ChatGLMForConditionalGeneration.from_pretrained("chatglm-6b")
+
     tokenizer = ChatGLMTokenizer.from_pretrained("chatglm-6b")
     return model, tokenizer
 
@@ -100,25 +100,27 @@ class ChatGLMGenerationTest(unittest.TestCase):
     def test_generation(self):
         """test_generation"""
         model, tokenizer = get_model_and_tokenizer()
-        sentence = "晚上睡不着怎么办"
-        parameters = [(False, 2048, 1),
-                      (False, 64, 1),
+        parameters = [
+                    ("晚上睡不着怎么办", False, 2048, 1),
+                    ("介绍一下清华大学", False, 64, 1),
                     #   (True, 2048, 1),
                     #   (True, 64, 1),
                     #   (True, 2048, 4)
                       ]
-        for do_sample, max_length, num_beams in parameters:
+
+        for sentence, do_sample, max_length, num_beams in parameters:
             set_random_seed(42)
             inputs = tokenizer(sentence)
-            inputs = Tensor([inputs])
+            inputs = np.array([inputs])
             outputs = model.generate(
                 inputs,
                 do_sample=do_sample,
                 max_length=max_length,
-                num_beams=num_beams
+                num_beams=num_beams,
+                jit=True
             )
 
-            outputs = outputs.asnumpy().tolist()[0]
+            outputs = outputs.tolist()[0]
             out_sentence = tokenizer.decode(outputs, skip_special_tokens=True)
             print(out_sentence)
 

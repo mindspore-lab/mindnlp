@@ -28,6 +28,7 @@ from urllib.parse import urlparse
 import requests
 from tqdm.autonotebook import tqdm
 from mindnlp.configs import DEFAULT_ROOT
+from .errors import ModelNotFoundError, MSHTTPError
 
 def get_cache_path():
     r"""
@@ -404,8 +405,10 @@ def get_from_cache(
         path = http_get(url, cache_dir, md5sum,
                         download_file_name=download_file_name, proxies=proxies)[1]
         return Path(path), filename
-    except Exception as exc:
+    except ModelNotFoundError as exc:
         raise exc
+    except MSHTTPError:
+        return None, filename
 
 def try_to_load_from_cache(
     repo_id: str,
