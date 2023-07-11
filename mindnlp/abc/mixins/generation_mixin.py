@@ -452,6 +452,8 @@ class GenerationMixin:
         stopping_criteria: Optional[StoppingCriteriaList] = None,
         prefix_allowed_tokens_fn: Optional[Callable[[int, mindspore.Tensor], List[int]]] = None,
         jit: bool = False,
+        use_bucket: bool = True,
+        bucket_num: int = 2,
         **kwargs,
     ):
         """Generates sequences of token ids for models with a language modeling head."""
@@ -657,16 +659,20 @@ class GenerationMixin:
                     " greedy search."
                 )
 
+            max_length = kwargs.get('max_length')
             # 11. run greedy search
             return self.greedy_search(
                 input_ids,
                 logits_processor=logits_processor,
                 stopping_criteria=stopping_criteria,
+                max_length=max_length,
                 pad_token_id=generation_config.pad_token_id,
                 eos_token_id=generation_config.eos_token_id,
                 output_scores=generation_config.output_scores,
                 return_dict_in_generate=generation_config.return_dict_in_generate,
                 jit=jit,
+                use_bucket=use_bucket,
+                bucket_num=bucket_num,
                 **model_kwargs,
             )
 
@@ -928,6 +934,8 @@ class GenerationMixin:
         output_scores: Optional[bool] = None,
         return_dict_in_generate: Optional[bool] = None,
         jit: bool = False,
+        use_bucket: bool = True,
+        bucket_num: int = 2,
         streamer: Optional["BaseStreamer"] = None,
         **model_kwargs,
     ) -> mindspore.Tensor:
@@ -935,11 +943,6 @@ class GenerationMixin:
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
         if max_length is not None:
-            warnings.warn(
-                "`max_length` is deprecated in this function, use"
-                " `stopping_criteria=StoppingCriteriaList([MaxLengthCriteria(max_length=max_length)])` instead.",
-                UserWarning,
-            )
             stopping_criteria = validate_stopping_criteria(stopping_criteria, max_length)
         pad_token_id = pad_token_id if pad_token_id is not None else self.generation_config.pad_token_id
         eos_token_id = eos_token_id if eos_token_id is not None else self.generation_config.eos_token_id
@@ -977,10 +980,24 @@ class GenerationMixin:
         unfinished_sequences = np.ones(input_ids.shape[0], dtype=np.int32)
         this_peer_finished = False
         first_step = True
+
+        if jit:
+            if use_bucket:
+                if max_length % bucket_num != 0:
+                    warnings.warn( "`max_length` not divided by `bucket_sizes", UserWarning,)
+                    bucket_num = bucket_num + 1
+                per_bucket_size = max_length // bucket_num
+                bucket_sizes = [(i + 1) * (max_length // bucket_num) for i in range(bucket_num)]
+                for i in bucket_sizes:
+                    self.compile(*self.make_compile_tensor(i))
+                model_kwargs['bucket_size'] = per_bucket_size
+            else:
+                self.compile(*self.make_compile_tensor(max_length))
+                model_kwargs['bucket_size'] = max_length
+
         while True:
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
-
             # forward pass to get next token
             if jit and not first_step:
                 outputs = self.compile_and_run(*model_inputs)
