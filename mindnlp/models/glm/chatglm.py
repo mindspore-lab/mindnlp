@@ -199,15 +199,14 @@ class SelfAttention(nn.Cell):
         self.dense = nn.Dense(self.inner_hidden_size, hidden_size, has_bias=bias).to_float(params_dtype)
 
         max_batch_size = getattr(config, 'max_batch_size', 1)
-        self.bucket_size = getattr(config, 'bucket_size', 512)
-        self.max_seq_len = config.max_sequence_length
+        max_seq_len = config.max_sequence_length
 
         self.cache_k = Parameter(initializer('zeros',
-                                (self.max_seq_len, max_batch_size, self.num_attention_heads, self.hidden_size_per_attention_head),
+                                (max_seq_len, max_batch_size, self.num_attention_heads, self.hidden_size_per_attention_head),
                                 params_dtype), 'cache_k', requires_grad=False)
 
         self.cache_v = Parameter(initializer('zeros',
-                                (self.max_seq_len, max_batch_size, self.num_attention_heads, self.hidden_size_per_attention_head),
+                                (max_seq_len, max_batch_size, self.num_attention_heads, self.hidden_size_per_attention_head),
                                 params_dtype), 'cache_v', requires_grad=False)
 
     @staticmethod
@@ -238,6 +237,7 @@ class SelfAttention(nn.Cell):
             attention_mask: mindspore.Tensor,
             layer_id,
             start_pos,
+            bucket_size,
     ):
         """
         hidden_states: [seq_len, batch, hidden_size]
@@ -280,7 +280,8 @@ class SelfAttention(nn.Cell):
             attention_mask=attention_mask,
             hidden_size_per_partition=self.hidden_size_per_partition,
             layer_id=layer_id,
-            start_pos=start_pos
+            start_pos=start_pos,
+            bucket_size=bucket_size
         )
 
         output = self.dense(context_layer)
@@ -300,20 +301,23 @@ class SelfAttention(nn.Cell):
             attention_mask,
             hidden_size_per_partition,
             layer_id,
-            start_pos
+            start_pos,
+            bucket_size
     ):
         """attention function."""
         seq_len = query_layer.shape[0]
 
         if seq_len > 1:
             indices = arange(seq_len, dtype=mindspore.int64)
+            ops.assign(self.cache_k, ops.zeros_like(self.cache_k))
+            ops.assign(self.cache_v, ops.zeros_like(self.cache_v))
         else:
             indices = start_pos.expand_dims(0)
         ops.scatter_update(self.cache_k, indices, key_layer)
         ops.scatter_update(self.cache_v, indices, value_layer)
 
-        key_layer = self.cache_k
-        value_layer = self.cache_v
+        key_layer = self.cache_k[:bucket_size]
+        value_layer = self.cache_v[:bucket_size]
 
         # seqlen, batch, num_attention_heads, hidden_size_per_attention_head
         hidden_size = key_layer.shape[-1]
@@ -342,8 +346,6 @@ class SelfAttention(nn.Cell):
 
         # change view to [b, np, sq, sk]
         attention_scores = matmul_result.view(output_size)
-
-        attention_mask = (arange(self.max_seq_len) > start_pos + seq_len).reshape((1, 1, 1, -1))
         attention_scores = attention_scores.masked_fill(attention_mask, -10000.0)
         dtype = attention_scores.dtype
         attention_scores = attention_scores * query_key_layer_scaling_coeff
@@ -493,7 +495,8 @@ class GLMBlock(nn.Cell):
             position_ids,
             attention_mask: mindspore.Tensor,
             layer_id,
-            start_pos
+            start_pos,
+            bucket_size
     ):
         """
         hidden_states: [seq_len, batch, hidden_size]
@@ -510,7 +513,8 @@ class GLMBlock(nn.Cell):
             position_ids,
             attention_mask=attention_mask,
             layer_id=layer_id,
-            start_pos=start_pos
+            start_pos=start_pos,
+            bucket_size=bucket_size
         )
         # output, attention_probs
 
@@ -685,6 +689,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
             position_ids = None,
             attention_mask = None,
             start_pos = None,
+            bucket_size = None,
             inputs_embeds = None
     ) -> Tuple[mindspore.Tensor, ...]:
 
@@ -704,6 +709,14 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
             prefix_attention_mask = (prefix_attention_mask < 0.5).bool()
             attention_mask = ops.concat((prefix_attention_mask, attention_mask), axis=3)
 
+        seq_len = input_ids.shape[1]
+        if seq_len > 1:
+            attention_mask = ops.concat(
+                [attention_mask, ops.ones((1, 1, seq_len, bucket_size - seq_len)).astype(mindspore.bool_)],
+                axis=-1)
+        else:
+            attention_mask = (arange(bucket_size) > start_pos + seq_len).reshape((1, 1, 1, -1))
+
         # [seq_len, batch, hidden_size]
         hidden_states = inputs_embeds.swapaxes(0, 1)
 
@@ -719,7 +732,8 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
                 position_ids=position_ids,
                 attention_mask=attention_mask,
                 layer_id=i,
-                start_pos=start_pos
+                start_pos=start_pos,
+                bucket_size=bucket_size
             )
             hidden_states = layer_ret[0]
 
@@ -801,6 +815,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             attention_mask: Optional[np.ndarray] = None,
             position_ids: Optional[np.ndarray] = None,
             start_pos: int = None,
+            bucket_size: int = 512,
             **kwargs
     ) -> dict:
         _, seq_length = input_ids.shape
@@ -813,10 +828,10 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             mask_positions.append(seq.index(mask_token))
             use_gmasks.append(use_gmask)
 
+        bucket_size = ((seq_length // bucket_size) + 1) * bucket_size
         # only last token for input_ids if past is not None
         if start_pos is not None:
             last_token = np.expand_dims(input_ids[:, -1], -1)
-            # print(attention_mask)
             if attention_mask is not None and attention_mask.dtype == np.bool_:
                 attention_mask = attention_mask[:, :, -1:]
             else:
@@ -837,7 +852,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             attention_mask = Tensor(attention_mask)
             position_ids = Tensor(position_ids)
             start_pos = Tensor(start_pos)
-            return (last_token, position_ids, attention_mask, start_pos)
+            return (last_token, position_ids, attention_mask, start_pos, bucket_size)
 
         if attention_mask is not None and attention_mask.dtype != mindspore.bool_:
             attention_mask = None
@@ -851,7 +866,16 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         position_ids = Tensor(position_ids)
         start_pos = Tensor(0)
 
-        return (input_ids, position_ids, attention_mask, start_pos)
+        return (input_ids, position_ids, attention_mask, start_pos, bucket_size)
+
+    def make_compile_tensor(self, bucket_size):
+        """make fake tensors for compile."""
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (1, 1)))
+        attention_mask = Tensor(np.zeros((1, 1, 1, 1)).astype(np.bool_))
+        position_ids = Tensor(np.zeros((1, 2, 1)).astype(np.int64))
+        start_pos = Tensor(0)
+
+        return (input_ids, position_ids, attention_mask, start_pos, bucket_size)
 
     def construct(
             self,
@@ -859,13 +883,15 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             position_ids = None,
             attention_mask = None,
             start_pos = None,
+            bucket_size = None,
             labels = None,
     ):
         transformer_outputs = self.transformer(
             input_ids=input_ids,
             position_ids=position_ids,
             attention_mask=attention_mask,
-            start_pos=start_pos
+            start_pos=start_pos,
+            bucket_size=bucket_size
         )
 
         hidden_states = transformer_outputs[0]

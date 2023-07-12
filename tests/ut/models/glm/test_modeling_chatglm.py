@@ -101,14 +101,15 @@ class ChatGLMGenerationTest(unittest.TestCase):
         """test_generation"""
         model, tokenizer = get_model_and_tokenizer()
         parameters = [
-                    ("晚上睡不着怎么办", False, 2048, 1),
-                    ("介绍一下清华大学", False, 64, 1),
+                    ("晚上睡不着怎么办", False, 2048, 1, True, 4),
+                    ("介绍一下清华大学", False, 64, 1, False, 1),
+                    ("推荐几个电影", False, 2048, 1, True, 4),
+                    ("怎么用Pytorch写一个模型？", False, 2048, 1, True, 4),
                     #   (True, 2048, 1),
                     #   (True, 64, 1),
                     #   (True, 2048, 4)
                       ]
-
-        for sentence, do_sample, max_length, num_beams in parameters:
+        for sentence, do_sample, max_length, num_beams, use_bucket, bucket_num in parameters:
             set_random_seed(42)
             inputs = tokenizer(sentence)
             inputs = np.array([inputs])
@@ -117,7 +118,9 @@ class ChatGLMGenerationTest(unittest.TestCase):
                 do_sample=do_sample,
                 max_length=max_length,
                 num_beams=num_beams,
-                jit=True
+                jit=True,
+                use_bucket=use_bucket,
+                bucket_num=bucket_num
             )
 
             outputs = outputs.tolist()[0]
