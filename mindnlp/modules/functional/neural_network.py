@@ -27,6 +27,4 @@ def embedding(inputs, weight):
     output:
         output: (batch_size, seq_length, hidden_size)
     """
-    input_shape = inputs.shape
-    output = ops.gather(weight, inputs, 0)
-    return output.reshape(input_shape + (weight.shape[1],))
+    return ops.gather(weight, inputs, 0)
