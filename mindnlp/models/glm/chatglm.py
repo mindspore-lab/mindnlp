@@ -717,7 +717,6 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
         else:
             attention_mask = (arange(bucket_size) > start_pos + seq_len).reshape((1, 1, 1, -1))
 
-
         # [seq_len, batch, hidden_size]
         hidden_states = inputs_embeds.swapaxes(0, 1)
 
