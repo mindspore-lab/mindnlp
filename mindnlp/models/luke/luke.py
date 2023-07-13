@@ -29,9 +29,9 @@ from mindspore import nn
 from mindspore import ops, Tensor
 from mindspore.common.initializer import Normal, initializer
 
-from mindnlp.models.luke.luke_config import LukeConfig
-from ..utils.activations import ACT2FN
-from ...abc import PreTrainedModel
+from mindnlp.abc import PreTrainedModel
+from .luke_config import LukeConfig
+from ..activations import ACT2FN
 
 
 class LukeEmbeddings(nn.Cell):

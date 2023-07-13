@@ -2,19 +2,18 @@
 # pylint: disable=C0302
 # pylint: disable=C0415
 # pylint: disable=R1720
-
-
 from typing import Tuple, Union
 import os
 import mindspore
 from mindspore import nn, ops, Tensor, numpy, log as logger
 from mindspore.common.initializer import Normal, initializer
 from mindspore.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
+
 from mindnlp.abc import PreTrainedModel
-from mindnlp.models.utils.utils import find_pruneable_heads_and_indices, prune_linear_layer, \
-    apply_chunking_to_forward
-from mindnlp.models.utils.activations import ACT2FN
 from .megatron_bert_config import MegatronBertConfig
+from ..utils import find_pruneable_heads_and_indices, prune_linear_layer, \
+    apply_chunking_to_forward
+from ..activations import ACT2FN
 
 
 def load_tf_weights_in_megatron_bert(model, tf_checkpoint_path):

@@ -31,9 +31,8 @@ from mindnlp.abc import PreTrainedModel
 from mindnlp._legacy.functional import split, where, arange, softmax
 from mindnlp._legacy.nn import Dropout, Matmul
 from mindnlp.configs import MINDNLP_MODEL_URL_BASE
-from ..utils.activations import ACT2FN
-from ..utils.utils import SequenceSummary
-from ..utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
+from ..activations import ACT2FN
+from ..utils import SequenceSummary, Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
 from .config_gpt2 import GPT2Config, GPT2_SUPPORT_LIST
 
 

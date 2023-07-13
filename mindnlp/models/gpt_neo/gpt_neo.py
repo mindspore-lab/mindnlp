@@ -25,10 +25,9 @@ from mindspore import ops, nn, Parameter, Tensor, dtype_to_nptype
 from mindspore.common.initializer import initializer, Normal
 from mindspore import log as logger
 
-from mindnlp.models.utils.activations import ACT2FN
-from mindnlp.models.gpt_neo.gpt_neo_config import GPTNeoConfig
-from ...abc import PreTrainedModel
-
+from mindnlp.abc import PreTrainedModel
+from .gpt_neo_config import GPTNeoConfig
+from ..activations import ACT2FN
 
 
 class GPTNeoSelfAttention(nn.Cell):

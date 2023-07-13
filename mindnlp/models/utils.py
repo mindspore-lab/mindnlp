@@ -26,7 +26,7 @@ from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.abc import PreTrainedConfig
 from mindnlp._legacy.nn import Dropout, Matmul
-from ..utils.activations import get_activation
+from .activations import get_activation
 
 try:
     from mindspore.nn import Identity

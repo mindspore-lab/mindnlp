@@ -33,8 +33,7 @@ from mindspore import log as logger
 
 from mindnlp.abc import PreTrainedModel
 from .llama_hf_config import LlamaConfig
-from ..utils.activations import ACT2FN
-
+from ..activations import ACT2FN
 
 
 def _make_causal_mask(

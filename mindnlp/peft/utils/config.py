@@ -12,22 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-
+# pylint: disable=W0613
+"""configs"""
 
 import enum
 import json
 import os
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, field
 from typing import Optional, Union
 
 from .other import CONFIG_NAME
 
 
 class PeftType(str, enum.Enum):
+    """Peft Type"""
     LORA = "LORA"
 
 
 class TaskType(str, enum.Enum):
+    """Task type"""
     SEQ_CLS = "SEQ_CLS"
     SEQ_2_SEQ_LM = "SEQ_2_SEQ_LM"
     CAUSAL_LM = "CAUSAL_LM"
@@ -52,6 +55,7 @@ class PeftConfigMixin():
         return asdict(self)
 
     def to_dict(self):
+        """to dict"""
         return self.__dict__
 
     def save_pretrained(self, save_directory, **kwargs):
@@ -74,7 +78,7 @@ class PeftConfigMixin():
         output_path = os.path.join(save_directory, CONFIG_NAME)
 
         # save it
-        with open(output_path, "w") as writer:
+        with open(output_path, "w", encoding='utf-8') as writer:
             writer.write(json.dumps(output_dict, indent=2, sort_keys=True))
 
     @classmethod
@@ -118,7 +122,7 @@ class PeftConfigMixin():
             path_json_file (`str`):
                 The path to the json file.
         """
-        with open(path_json_file, "r") as file:
+        with open(path_json_file, "r", encoding='utf-8') as file:
             json_object = json.load(file)
 
         return json_object
@@ -139,3 +143,25 @@ class PeftConfig(PeftConfigMixin):
     task_type: Union[str, TaskType] = field(default=None, metadata={"help": "Task type"})
     inference_mode: bool = field(default=False, metadata={"help": "Whether to use inference mode"})
 
+class PromptLearningConfig(PeftConfig):
+    """
+    This is the base configuration class to store the configuration of [`PrefixTuning`], [`PromptEncoder`], or
+    [`PromptTuning`].
+
+    Args:
+        num_virtual_tokens (`int`): The number of virtual tokens to use.
+        token_dim (`int`): The hidden embedding dimension of the base transformer model.
+        num_transformer_submodules (`int`): The number of transformer submodules in the base transformer model.
+        num_attention_heads (`int`): The number of attention heads in the base transformer model.
+        num_layers (`int`): The number of layers in the base transformer model.
+    """
+
+    num_virtual_tokens: int = field(default=None, metadata={"help": "Number of virtual tokens"})
+    token_dim: int = field(
+        default=None, metadata={"help": "The hidden embedding dimension of the base transformer model"}
+    )
+    num_transformer_submodules: Optional[int] = field(
+        default=None, metadata={"help": "Number of transformer submodules"}
+    )
+    num_attention_heads: Optional[int] = field(default=None, metadata={"help": "Number of attention heads"})
+    num_layers: Optional[int] = field(default=None, metadata={"help": "Number of transformer layers"})
