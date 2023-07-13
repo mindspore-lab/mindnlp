@@ -142,3 +142,6 @@ download.txt
 *.txt
 cmp/
 *.zip
+
+# mindnlp cache
+.mindnlp/
