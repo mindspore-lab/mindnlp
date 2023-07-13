@@ -12,6 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+"""utils for peft"""
 
-
-from .lora import *
+from .config import PeftConfig, PeftType, TaskType, PromptLearningConfig
+from .save_and_load import get_peft_model_state_dict, set_peft_model_state_dict
+from .other import (
+    CONFIG_NAME,
+    WEIGHTS_NAME,
+    _set_trainable,
+    transpose,
+    shift_tokens_right,
+    _get_submodules,
+    _set_adapter,
+    _freeze_adapter,
+    ModulesToSaveWrapper,
+    TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING
+)

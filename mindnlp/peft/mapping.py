@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+"""mappings"""
 
 from .peft_model import (
     PeftModel,
@@ -61,7 +62,7 @@ def get_peft_model(model, peft_config):
 
     peft_config.base_model_name_or_path = model.__dict__.get("name_or_path", None)
 
-    if peft_config.task_type not in MODEL_TYPE_TO_PEFT_MODEL_MAPPING.keys() and not isinstance(
+    if peft_config.task_type not in MODEL_TYPE_TO_PEFT_MODEL_MAPPING and not isinstance(
         peft_config
     ):
         return PeftModel(model, peft_config)

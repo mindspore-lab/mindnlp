@@ -17,7 +17,7 @@ Global configs
 """
 import os
 
-DEFAULT_ROOT = os.path.join(os.path.expanduser('~'), ".mindnlp")
+DEFAULT_ROOT = os.path.join(os.getcwd(), ".mindnlp")
 # for huggingface url
 HF_CONFIG_URL_BASE = 'https://huggingface.co/{}/resolve/main/config.json'
 HF_TOKENIZER_CONFIG_URL_BASE = 'https://huggingface.co/{}/resolve/main/tokenizer.json'

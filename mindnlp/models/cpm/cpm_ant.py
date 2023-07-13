@@ -29,7 +29,7 @@ from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.abc import PreTrainedModel
 from .cpm_ant_config import CpmAntConfig
-from ..utils.activations import ACT2FN
+from ..activations import ACT2FN
 
 CPMANT_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "openbmb/cpm-ant-10b",

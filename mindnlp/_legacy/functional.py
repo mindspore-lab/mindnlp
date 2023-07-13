@@ -147,11 +147,11 @@ def zeros_like(x, *, dtype=None):
     output = output.astype(_dtype)
     return output
 
-def linear(x, w, b):
+def linear(x, weight, bias):
     """inner linear"""
-    out = ops.matmul(x, w.swapaxes(-1, -2))
-    if b is not None:
-        out = out + b
+    out = ops.matmul(x, weight.swapaxes(-1, -2))
+    if bias is not None:
+        out = out + bias
     return out
 
 def _in_projection(
