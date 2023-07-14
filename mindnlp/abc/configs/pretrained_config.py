@@ -23,7 +23,7 @@ import os
 from typing import Optional, Tuple, Dict
 from mindspore import log as logger
 
-from mindnlp.configs import HF_CONFIG_URL_BASE
+from mindnlp.configs import HF_CONFIG_URL_BASE, DEFAULT_ROOT
 from mindnlp.utils.download import cached_path
 
 class PreTrainedConfig:
@@ -151,7 +151,7 @@ class PreTrainedConfig:
             :obj:`Tuple[Dict, Dict]`: The dictionary that will be used to instantiate the configuration object.
 
         """
-        cache_dir = kwargs.pop("cache_dir", None)
+        cache_dir = kwargs.pop("cache_dir", os.path.join(DEFAULT_ROOT, 'models'))
         _ = kwargs.pop("force_download", False)
         _ = kwargs.pop("resume_download", False)
         proxies = kwargs.pop("proxies", None)

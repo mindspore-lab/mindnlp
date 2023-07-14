@@ -30,7 +30,7 @@ from mindspore import nn, ops
 from mindspore import log as logger
 from mindspore.train.serialization import save_checkpoint
 
-from mindnlp.configs import HF_MODEL_URL_BASE
+from mindnlp.configs import HF_MODEL_URL_BASE, DEFAULT_ROOT
 from mindnlp.utils.download import cached_path, get_checkpoint_shard_files
 from mindnlp.abc.configs import PreTrainedConfig, GenerationConfig
 from mindnlp.abc.mixins import CellUtilMixin, GenerationMixin
@@ -311,7 +311,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         """from_pretrained"""
         config = kwargs.pop("config", None)
         state_dict = kwargs.pop("state_dict", None)
-        cache_dir = kwargs.pop("cache_dir", None)
+        cache_dir = kwargs.pop("cache_dir", os.path.join(DEFAULT_ROOT, 'models'))
         from_pt = kwargs.pop("from_pt", False)
         force_download = kwargs.pop("force_download", False)
         resume_download = kwargs.pop("resume_download", False)

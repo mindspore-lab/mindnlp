@@ -24,6 +24,7 @@ from mindspore.dataset.transforms.transforms import PyTensorOperation
 
 from tokenizers import AddedToken, Tokenizer
 
+from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils.download import cached_path
 from mindnlp.abc.mixins import SpecialTokensMixin
 
@@ -51,7 +52,7 @@ class PreTrainedTokenizer(SpecialTokensMixin, PyTensorOperation):
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *init_inputs, **kwargs):
         """from_pretrained"""
-        cache_dir = kwargs.pop("cache_dir", None)
+        cache_dir = kwargs.pop("cache_dir", os.path.join(DEFAULT_ROOT, 'models'))
         _ = kwargs.pop("force_download", False)
         proxies = kwargs.pop("proxies", None)
 
