@@ -62,4 +62,4 @@ jobs:
         pip install -r download.txt
     - name: Test with pytest
       run: |
-        pytest -m 'download and not local' tests/ut
+        pytest -m 'download and not local' --ignore=tests/ut/models tests/ut
