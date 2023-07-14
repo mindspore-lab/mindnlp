@@ -18,3 +18,4 @@ QuestionAnswer dataset init
 
 from .squad1 import SQuAD1, SQuAD1_Process
 from .squad2 import SQuAD2
+from .docvqa_zh import docvqa_zh
