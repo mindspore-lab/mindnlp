@@ -22,14 +22,14 @@ import numpy as np
 import mindspore
 import mindspore.dataset as ds
 from mindspore.dataset import GeneratorDataset, transforms
-from datasets import load_dataset as hf_load
+from mindnlp.utils.download import cache_file
 from mindnlp.dataset.register import load_dataset, process
 from mindnlp.vocab import Vocab
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.transforms import BasicTokenizer, Lookup
+from mindnlp.utils import unzip
 
-
-
+URL = "https://bj.bcebos.com/paddlenlp/datasets/DuConv.zip"
 
 class Duconv:
     """
@@ -75,7 +75,7 @@ class Duconv:
 
 @load_dataset.register
 def hf_duconv(root=DEFAULT_ROOT, \
-              split: Union[Tuple[str], str] = ('train', 'dev','test_1','test_2')):
+              split: Union[Tuple[str], str] = ('train', 'dev','test_1','test_2'),proxies=None):
     r'''
     Load the DuConv dataset
 
@@ -111,9 +111,13 @@ def hf_duconv(root=DEFAULT_ROOT, \
     else :
         for s_name in split:
             mode_list.append(s_name)
-    ds_list=hf_load('duconv',split=mode_list, cache_dir=cache_dir)
-    for every_ds in enumerate(ds_list):
-        dataset = GeneratorDataset(source =Duconv(every_ds),\
+    file_path, _ = cache_file(None, cache_dir=cache_dir, url=URL,
+                              download_file_name="DuConv.zip", proxies=proxies)
+    unzip(file_path,cache_dir)
+    for every_s in split:
+        mode_list.append(cache_dir + '/DuConv/' + every_s + '.txt')
+    for every_ds in enumerate(mode_list):
+        dataset = GeneratorDataset(source = Duconv(every_ds),\
         column_names=["id" ,"goal", "knowledge", "conversation", "history","response"],\
                                    shuffle=False)
         datasets_list.append(dataset)

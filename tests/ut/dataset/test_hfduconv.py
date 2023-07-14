@@ -76,7 +76,7 @@ class TestDuConv(unittest.TestCase):
     @pytest.mark.download
     def test_duconv_by_register(self):
         """test Duconv by register"""
-        _ = load_dataset('hf_duconv', root=self.root, split=('train', 'dev', 'test1', 'test2'))
+        _ = load_dataset('DuConv', root=self.root, split=('train', 'dev', 'test1', 'test2'))
     @pytest.mark.download
     def test_duconv_process(self):
         """
@@ -96,7 +96,7 @@ class TestDuConv(unittest.TestCase):
         assert (next(duconv_dev)[5]).dtype == ms.int32
 
     @pytest.mark.download
-    def test_squad1_process_by_register(self):
+    def test_hfduconv_process_by_register(self):
         """
         Test Duconv_Process by register
         """
