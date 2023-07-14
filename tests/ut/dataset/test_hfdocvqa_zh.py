@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-Test HF_DOCVQAZH
+Test docvqa_zh
 """
 
 import os
@@ -21,7 +21,7 @@ import unittest
 import shutil
 import pytest
 from mindnlp import load_dataset
-from mindnlp.dataset import HF_DOCVQAZH
+from mindnlp.dataset import docvqa_zh
 
 
 class TestHFDocvqazh(unittest.TestCase):
@@ -46,14 +46,14 @@ class TestHFDocvqazh(unittest.TestCase):
             "dev": 3929,
             "test": 3904,
         }
-        dataset_train, dataset_dev, dataset_test = HF_DOCVQAZH(root=self.root, split=('train', 'dev', 'test'))
+        dataset_train, dataset_dev, dataset_test = docvqa_zh(root=self.root, split=('train', 'dev', 'test'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = HF_DOCVQAZH(root=self.root, split='train')
-        dataset_dev = HF_DOCVQAZH(root=self.root, split='dev')
-        dataset_test = HF_DOCVQAZH(root=self.root, split='test')
+        dataset_train = docvqa_zh(root=self.root, split='train')
+        dataset_dev = docvqa_zh(root=self.root, split='dev')
+        dataset_test = docvqa_zh(root=self.root, split='test')
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
@@ -61,7 +61,7 @@ class TestHFDocvqazh(unittest.TestCase):
     @pytest.mark.download
     def test_docvqa_zh_by_register(self):
         """test docvqa_zh by register"""
-        _ = load_dataset('HF_DOCVQAZH',
+        _ = load_dataset('docvqa_zh',
                  root=self.root,
                  split=('dev')
                  )
