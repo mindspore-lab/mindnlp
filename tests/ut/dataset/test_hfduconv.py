@@ -48,7 +48,7 @@ class TestDuConv(unittest.TestCase):
             "test1":5000,
             "test2":10100,
         }
-        dataset_train, dataset_dev, dataset_test1, dataset_test2 = hf_duconv(root=self.root, split=('train', 'dev','test1','test2'))
+        dataset_train, dataset_dev, dataset_test1, dataset_test2 = hf_duconv(root=self.root, split=('train', 'dev','test_1','test_2'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
         assert dataset_test1.get_dataset_size() == num_lines["test1"]
@@ -56,8 +56,8 @@ class TestDuConv(unittest.TestCase):
 
         dataset_train = hf_duconv(root=self.root, split='train')
         dataset_dev = hf_duconv(root=self.root, split='dev')
-        dataset_test1 = hf_duconv(root=self.root, split='test1')
-        dataset_test2 = hf_duconv(root=self.root, split='test2')
+        dataset_test1 = hf_duconv(root=self.root, split='test_1')
+        dataset_test2 = hf_duconv(root=self.root, split='test_2')
 
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["dev"]
