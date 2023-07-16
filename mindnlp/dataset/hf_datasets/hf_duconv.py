@@ -46,26 +46,25 @@ class Duconv:
         self._load()
 
     def _load(self):
-        for every_dict in self.path:
-            with open(every_dict, 'r',encoding="utf-8") as f_file:
-                key=0
-                for line in f_file:
-                    json_data = json.loads(line)
-                    duconv = json_data
+        with open(self.path, 'r',encoding="utf-8") as f_file:
+            key=0
+            for line in f_file:
+                json_data = json.loads(line)
+                duconv = json_data
 
-                    goal = duconv.get("goal", [[]])
-                    knowledge = duconv.get("knowledge", [[]])
-                    conversation = duconv.get("conversation", [])
-                    history = duconv.get("history", [])
-                    response = duconv.get("response", "")
+                goal = duconv.get("goal", [[]])
+                knowledge = duconv.get("knowledge", [[]])
+                conversation = duconv.get("conversation", [])
+                history = duconv.get("history", [])
+                response = duconv.get("response", "")
 
-                    self._goal.append(goal)
-                    self._knowledge.append(knowledge)
-                    self._conversation.append(conversation)
-                    self._history.append(history)
-                    self._response.append(response)
-                    self._id.append(key)
-                    key += 1
+                self._goal.append(goal)
+                self._knowledge.append(knowledge)
+                self._conversation.append(conversation)
+                self._history.append(history)
+                self._response.append(response)
+                self._id.append(key)
+                key += 1
 
     def __getitem__(self, index):
         return self._id[index], self._goal[index], self._knowledge[index],\
