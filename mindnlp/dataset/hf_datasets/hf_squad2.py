@@ -19,16 +19,13 @@ Hugging Face SQuAD2 load function
 
 import os
 from typing import Union, Tuple
-
-import mindspore
 from datasets import load_dataset as hf_load
-from mindnlp.transforms import Lookup, Truncate
 from mindspore.dataset import GeneratorDataset, transforms
+
+from mindnlp.transforms import Lookup, Truncate
 from mindnlp.dataset.register import load_dataset, process
-from mindspore.dataset.text import Vocab
 from mindnlp.dataset.utils import make_bucket
 from mindnlp.configs import DEFAULT_ROOT
-import numpy as np
 
 
 class HFSquad2:
