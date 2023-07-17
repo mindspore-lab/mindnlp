@@ -19,8 +19,12 @@ Test SQuAD2
 import os
 import shutil
 import unittest
+
+import mindspore
 import pytest
-from mindnlp.dataset import HF_SQuAD2
+from mindnlp.dataset import HF_SQuAD2, HF_SQuAD2_Process
+from mindnlp.transforms import BasicTokenizer
+from mindspore.dataset import text
 
 
 class TestHFSQuAD2(unittest.TestCase):
@@ -30,7 +34,7 @@ class TestHFSQuAD2(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp_")
         os.mkdir(cls.root)
 
     @classmethod
@@ -52,3 +56,54 @@ class TestHFSQuAD2(unittest.TestCase):
         dataset_validation = HF_SQuAD2(root=self.root, split='validation')
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_validation.get_dataset_size() == num_lines["validation"]
+
+    @pytest.mark.download
+    def test_hf_squad2_process(self):
+        r"""
+        Test hf_squad2 process
+        """
+
+        train_dataset = HF_SQuAD2(
+            root=self.root,
+            split="train"
+        )
+
+        tokenizer = BasicTokenizer(True)
+        train_dataset = train_dataset.map([tokenizer], 'context')
+
+        vocab = text.Vocab.from_dataset(train_dataset, 'context', special_tokens=['<pad>', '<unk>'], special_first=True)
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break
+
+        train_dataset = HF_SQuAD2_Process(train_dataset, tokenizer=tokenizer, vocab=vocab)
+
+        for i in train_dataset.create_tuple_iterator():
+            assert i[0].shape == (64, 1000)
+            assert i[1].shape == (64, 30)
+            assert i[2].shape == (64, 30)
+            assert i[3].shape == (64,)
+            break
+
+    @pytest.mark.download
+    def test_hf_squad2_process_bucket_boundaries(self):
+        r"""
+                Test hf_squad2 process with bucket_boundaries
+                """
+
+        train_dataset = HF_SQuAD2(
+            root=self.root,
+            split="train"
+        )
+
+        tokenizer = BasicTokenizer(True)
+        train_dataset = train_dataset.map([tokenizer], 'context')
+
+        vocab = text.Vocab.from_dataset(train_dataset, 'context', special_tokens=['<pad>', '<unk>'], special_first=True)
+        dataset = HF_SQuAD2_Process(train_dataset, tokenizer=tokenizer, vocab=vocab,
+                                    bucket_boundaries=[400, 500], max_context_len=800, drop_remainder=True)
+
+        for i in dataset.create_tuple_iterator():
+            assert i[0].shape == (64, 400-1)
+            break
