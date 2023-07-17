@@ -19,12 +19,11 @@ Test SQuAD2
 import os
 import shutil
 import unittest
-
-import mindspore
 import pytest
-from mindnlp.dataset import HF_SQuAD2, HF_SQuAD2_Process
-from mindnlp.transforms import BasicTokenizer
+
 from mindspore.dataset import text
+from mindnlp.transforms import BasicTokenizer
+from mindnlp.dataset import HF_SQuAD2, HF_SQuAD2_Process
 
 
 class TestHFSQuAD2(unittest.TestCase):
