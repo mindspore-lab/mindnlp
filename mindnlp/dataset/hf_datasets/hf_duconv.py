@@ -108,11 +108,12 @@ def hf_duconv(root:str=DEFAULT_ROOT, \
     cache_dir=os.path.join(root, "datasets", "DuConv")
     if isinstance(split, str):
         mode_list.append(cache_dir + '/DuConv/' + split + '.txt')
+    else:
+        for split_item in split:
+            mode_list.append(cache_dir + '/DuConv/' + split_item + '.txt')
     file_path, _ = cache_file(None, cache_dir=cache_dir, url=URL,
                               download_file_name="DuConv.zip", proxies=proxies)
     unzip(file_path,cache_dir)
-    for split_item in split:
-        mode_list.append(cache_dir + '/DuConv/' + split_item + '.txt')
     for _, every_ds in enumerate(mode_list):
         dataset = GeneratorDataset(source = Duconv(every_ds),\
         column_names=["id" ,"goal", "knowledge", "conversation", "history","response"],\
