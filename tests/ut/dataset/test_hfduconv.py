@@ -20,9 +20,9 @@ import os
 import shutil
 import unittest
 import pytest
-from mindnlp import load_dataset, Vocab
-from mindnlp.dataset import hf_duconv
-
+from mindnlp.transforms import BasicTokenizer
+from mindnlp import load_dataset, Vocab, process
+from mindnlp.dataset import hf_duconv, hf_duconv_process
 
 char_dic = {"<unk>": 0, "<pad>": 1, "e": 2, "t": 3, "a": 4, "i": 5, "n": 6,\
                     "o": 7, "s": 8, "r": 9, "h": 10, "l": 11, "d": 12, "c": 13, "u": 14,\
@@ -77,3 +77,31 @@ class TestDuConv(unittest.TestCase):
     def test_duconv_by_register(self):
         """test hf_duconv by register"""
         _ = load_dataset('hf_duconv', root=self.root, split=('train','dev','test_1','test_2'))
+
+    @pytest.mark.download
+    def test_hf_duconv_process(self):
+        r"""
+        Test hf_duconv_process
+        """
+        train_dataset, _, _, _ = hf_duconv()
+        train_dataset, vocab = hf_duconv_process(train_dataset)
+        train_dataset = train_dataset.create_tuple_iterator()
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break
+    @pytest.mark.download
+    def test_hf_duconv_process_by_register(self):
+        """hf_duconv_process by register"""
+        train_dataset, _, _, _ = hf_duconv()
+        train_dataset, vocab = process('hf_duconv',
+                                       dataset=train_dataset,
+                                       column="response",
+                                       tokenizer=BasicTokenizer(),
+                                       vocab=None
+                                       )
+        train_dataset = train_dataset.create_tuple_iterator()
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break

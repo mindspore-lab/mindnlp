@@ -19,15 +19,17 @@ import os
 import json
 from typing import Tuple, Union
 
-from mindspore.dataset import GeneratorDataset, transforms
+from mindspore.dataset import GeneratorDataset
 from mindnlp.utils.download import cache_file
 from mindnlp.dataset.register import load_dataset, process
 
 from mindnlp.configs import DEFAULT_ROOT
-from mindnlp.transforms import Lookup, Truncate
+from mindnlp.transforms import Truncate,PadTransform,BasicTokenizer
 from mindnlp.utils import unzip
 
 from mindnlp.dataset.utils import make_bucket
+
+from mindnlp.dataset.process import common_process
 
 URL = "https://bj.bcebos.com/paddlenlp/datasets/DuConv.zip"
 
@@ -124,41 +126,32 @@ def hf_duconv(root:str=DEFAULT_ROOT, \
     return datasets_list
 
 @process.register
-def hf_duconv_process(dataset, tokenizer, vocab, batch_size=64, max_context_len=1000, max_qa_len=30,
-                      bucket_boundaries=None, drop_remainder=False)->None:
+def hf_duconv_process(dataset, tokenizer=BasicTokenizer(), vocab=None, column="response", batch_size=64, max_len=1000,\
+                      bucket_boundaries=None, drop_remainder=False):
     """
     the process of the duconv dataset
 
     """
-    pad_value = vocab.tokens_to_ids('<pad>')
-    lookup_op = Lookup(vocab, unk_token='<unk>')
+    if vocab is None:
+        dataset, vocab = common_process(dataset, column, tokenizer, vocab)
+    else:
+        dataset = common_process(dataset, column, tokenizer, vocab)
 
-    dataset = dataset.map([tokenizer, lookup_op], 'goal')
-    dataset = dataset.map([tokenizer, lookup_op], 'knowledge')
-    dataset = dataset.map([tokenizer, lookup_op], 'conversation')
-
-    pad_qa_op = transforms.PadEnd([max_qa_len], pad_value)
-    dataset = dataset.map([pad_qa_op], 'knowledge')
-    dataset = dataset.map([pad_qa_op], 'conversation')
-
+    pad_value = vocab.tokens_to_ids("<pad>")
+    trancate_op = Truncate(max_len)
+    dataset = dataset.map([trancate_op], column)
     if bucket_boundaries is not None:
         if not isinstance(bucket_boundaries, list):
-            raise ValueError(f"'bucket_boundaries' must be a list of int, but get {type(bucket_boundaries)}")
-        trancate_context_op = Truncate(max_context_len)
-        dataset = dataset.map([trancate_context_op], 'goal')
-        trancate_qa_op = Truncate(max_qa_len)
-        dataset = dataset.map([trancate_qa_op], 'knowledge')
-        dataset = dataset.map([trancate_qa_op], 'conversation')
-
-        if bucket_boundaries[-1] < max_context_len + 1:
-            bucket_boundaries.append(max_context_len + 1)
+            raise ValueError(
+                f"'bucket_boundaries' must be a list of int, but get {type(bucket_boundaries)}")
+        if bucket_boundaries[-1] < max_len + 1:
+            bucket_boundaries.append(max_len + 1)
         bucket_batch_sizes = [batch_size] * (len(bucket_boundaries) + 1)
-        dataset = make_bucket(dataset, 'goal', pad_value,
+        dataset = make_bucket(dataset, column, pad_value,
                               bucket_boundaries, bucket_batch_sizes, drop_remainder)
     else:
-        pad_context_op = transforms.PadEnd([max_context_len], pad_value)
-        dataset = dataset.map([pad_context_op], 'goal')
-
+        pad_op = PadTransform(max_len, pad_value)
+        dataset = dataset.map([pad_op], column)
         dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)
 
-    return dataset
+    return dataset, vocab
