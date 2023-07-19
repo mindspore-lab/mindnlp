@@ -17,7 +17,11 @@
 # pylint: disable=R0914
 # pylint: disable=C0321
 # pylint: disable=W0401
+# pylint: disable=C0103
 
+"""
+moss quantization
+"""
 
 import math
 import numpy as np
@@ -25,10 +29,10 @@ import triton
 import triton.language as tl
 import mindspore
 from mindspore import nn, ops, Tensor
-from .moss_custom_autotune import *
+from .moss_custom_autotune import autotune
 
 
-def find_layers(module, layers=[nn.Conv2d, nn.Dense], name=''):
+def find_layers(module, layers=None, name=''):
     """
     Recursively finds layers of specific types within a module.
 
@@ -41,6 +45,8 @@ def find_layers(module, layers=[nn.Conv2d, nn.Dense], name=''):
         - res: Dictionary of found layers with their corresponding names.
 
     """
+    if layers is None:
+        layers = [nn.Conv2d, nn.Dense]
     if type(module) in layers:
         return {name: module}
     res = {}
@@ -113,9 +119,9 @@ def matmul_248_kernel(a_ptr, b_ptr, c_ptr,
     num_pid_in_group = GROUP_SIZE_M * num_pid_n
     group_id = pid // num_pid_in_group
     first_pid_m = group_id * GROUP_SIZE_M
-    group_size_m = min(num_pid_m - first_pid_m, GROUP_SIZE_M)
-    pid_m = first_pid_m + (pid % group_size_m)
-    pid_n = (pid % num_pid_in_group) // group_size_m
+    GROUP_SIZE_M = min(num_pid_m - first_pid_m, GROUP_SIZE_M)
+    pid_m = first_pid_m + (pid % GROUP_SIZE_M)
+    pid_n = (pid % num_pid_in_group) // GROUP_SIZE_M
 
     offs_am = pid_m * BLOCK_SIZE_M + tl.arange(0, BLOCK_SIZE_M)
     offs_bn = pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N)
@@ -136,7 +142,7 @@ def matmul_248_kernel(a_ptr, b_ptr, c_ptr,
     zeros_shifter = (offs_bn % infearure_per_bits) * bits
     accumulator = tl.zeros((BLOCK_SIZE_M, BLOCK_SIZE_N), dtype=tl.float32)
 
-    for k in range(0, num_pid_k):
+    for _ in range(0, num_pid_k):
         g_idx = tl.load(g_ptrs)
 
         # Fetch scales and zeros; these are per-outfeature and thus reused in the inner loop
@@ -146,24 +152,24 @@ def matmul_248_kernel(a_ptr, b_ptr, c_ptr,
         zeros = tl.load(zeros_ptrs + g_idx[:, None] * stride_zeros)
 
         zeros = (zeros >> zeros_shifter[None, :]) & maxq
-        zeros = (zeros + 1)
+        zeros = zeros + 1
 
         # (BLOCK_SIZE_M, BLOCK_SIZE_K)
-        a = tl.load(a_ptrs, mask=a_mask, other=0.)
-        b = tl.load(b_ptrs)  # (BLOCK_SIZE_K, BLOCK_SIZE_N), but repeated
+        load_1 = tl.load(a_ptrs, mask=a_mask, other=0.)
+        load_2 = tl.load(b_ptrs)  # (BLOCK_SIZE_K, BLOCK_SIZE_N), but repeated
 
-        # Now we need to unpack b (which is N-bit values) into 32-bit values
-        b = (b >> shifter[:, None]) & maxq  # Extract the N-bit values
-        b = (b - zeros) * scales  # Scale and shift
+        # Now we need to unpack load_2 (which is N-bit values) into 32-bit values
+        load_2 = (load_2 >> shifter[:, None]) & maxq  # Extract the N-bit values
+        load_2 = (load_2 - zeros) * scales  # Scale and shift
 
-        accumulator += tl.dot(a, b)
+        accumulator += tl.dot(load_1, load_2)
         a_ptrs += BLOCK_SIZE_K
         b_ptrs += (BLOCK_SIZE_K // infearure_per_bits) * stride_bk
         g_ptrs += BLOCK_SIZE_K
 
     accumulator.to(tl.float16)
     c_ptrs = c_ptr + stride_cm * \
-        offs_am[:, None] + stride_cn * offs_bn[None, :]
+             offs_am[:, None] + stride_cn * offs_bn[None, :]
     c_mask = (offs_am[:, None] < M) & (offs_bn[None, :] < N)
     tl.store(c_ptrs, accumulator, mask=c_mask)
 
@@ -230,9 +236,9 @@ def trans_matmul_248_kernel(a_ptr, b_ptr, c_ptr,
     num_pid_in_group = GROUP_SIZE_M * num_pid_k
     group_id = pid // num_pid_in_group
     first_pid_m = group_id * GROUP_SIZE_M
-    group_size_m = min(num_pid_m - first_pid_m, GROUP_SIZE_M)
-    pid_m = first_pid_m + (pid % group_size_m)
-    pid_k = (pid % num_pid_in_group) // group_size_m
+    GROUP_SIZE_M = min(num_pid_m - first_pid_m, GROUP_SIZE_M)
+    pid_m = first_pid_m + (pid % GROUP_SIZE_M)
+    pid_k = (pid % num_pid_in_group) // GROUP_SIZE_M
 
     offs_am = pid_m * BLOCK_SIZE_M + tl.arange(0, BLOCK_SIZE_M)
     offs_bk = pid_k * BLOCK_SIZE_K + tl.arange(0, BLOCK_SIZE_K)
@@ -243,77 +249,86 @@ def trans_matmul_248_kernel(a_ptr, b_ptr, c_ptr,
     a_mask = (offs_am[:, None] < M)
     # b_ptrs is set up such that it repeats elements along the K axis 8 times
     b_ptrs = b_ptr + ((offs_bk[:, None] // infearure_per_bits) * stride_bk + offs_n[None,
-                                                                                    :] * stride_bn)  # (BLOCK_SIZE_K, BLOCK_SIZE_N)
+                                                                             :] * stride_bn)  # (BLOCK_SIZE_K, BLOCK_SIZE_N)
     g_ptrs = g_ptr + offs_bk
     g_idx = tl.load(g_ptrs)
 
     # shifter is used to extract the N bits of each element in the 32-bit word from B
     scales_ptrs = scales_ptr + offs_n[None, :] + g_idx[:, None] * stride_scales
     zeros_ptrs = zeros_ptr + \
-        (offs_n[None, :] // infearure_per_bits) + g_idx[:, None] * stride_zeros
+                 (offs_n[None, :] // infearure_per_bits) + g_idx[:, None] * stride_zeros
 
     shifter = (offs_bk % infearure_per_bits) * bits
     zeros_shifter = (offs_n % infearure_per_bits) * bits
     accumulator = tl.zeros((BLOCK_SIZE_M, BLOCK_SIZE_K), dtype=tl.float32)
 
-    for k in range(0, num_pid_n):
+    for _ in range(0, num_pid_n):
         # Fetch scales and zeros; these are per-outfeature and thus reused in the inner loop
         scales = tl.load(scales_ptrs)  # (BLOCK_SIZE_K, BLOCK_SIZE_N,)
         zeros = tl.load(zeros_ptrs)  # (BLOCK_SIZE_K, BLOCK_SIZE_N,)
 
         zeros = (zeros >> zeros_shifter[None, :]) & maxq
-        zeros = (zeros + 1)
+        zeros = zeros + 1
 
         # (BLOCK_SIZE_M, BLOCK_SIZE_N)
-        a = tl.load(a_ptrs, mask=a_mask, other=0.)
-        b = tl.load(b_ptrs)  # (BLOCK_SIZE_K, BLOCK_SIZE_N), but repeated
+        load_1 = tl.load(a_ptrs, mask=a_mask, other=0.)
+        load_2 = tl.load(b_ptrs)  # (BLOCK_SIZE_K, BLOCK_SIZE_N), but repeated
 
-        # Now we need to unpack b (which is N-bit values) into 32-bit values
-        b = (b >> shifter[:, None]) & maxq  # Extract the N-bit values
-        b = (b - zeros) * scales  # Scale and shift
-        b = tl.trans(b)
+        # Now we need to unpack load_2 (which is N-bit values) into 32-bit values
+        load_2 = (load_2 >> shifter[:, None]) & maxq  # Extract the N-bit values
+        load_2 = (load_2 - zeros) * scales  # Scale and shift
+        load_2 = tl.trans(load_2)
 
-        accumulator += tl.dot(a, b)
+        accumulator += tl.dot(load_1, load_2)
         a_ptrs += BLOCK_SIZE_N
         b_ptrs += BLOCK_SIZE_N
         scales_ptrs += BLOCK_SIZE_N
         zeros_ptrs += (BLOCK_SIZE_N // infearure_per_bits)
 
     accumulator.to(tl.float16)
-    c_ptrs = c_ptr + stride_cm * \
-        offs_am[:, None] + stride_cn * offs_bk[None, :]
+    c_ptrs = c_ptr + stride_cm * offs_am[:, None] + stride_cn * offs_bk[None, :]
     c_mask = (offs_am[:, None] < M) & (offs_bk[None, :] < K)
     tl.store(c_ptrs, accumulator, mask=c_mask)
 
 
-def matmul248(input, qweight, scales, qzeros, g_idx, bits, maxq):
+def matmul248(input_tensor, qweight, scales, qzeros, g_idx, bits, maxq):
+    """
+    Perform 248-bit matrix multiplication operation with quantization.
+    """
     output = mindspore.numpy.empty(
-        (input.shape[0], qweight.shape[1]), dtype=mindspore.float16)
-    def grid(META): return (
-        triton.cdiv(input.shape[0], META['BLOCK_SIZE_M']) * triton.cdiv(qweight.shape[1], META['BLOCK_SIZE_N']),)
-    matmul_248_kernel[grid](input, qweight, output,
+        (input_tensor.shape[0], qweight.shape[1]), dtype=mindspore.float16)
+
+    def grid(meta): return (
+        triton.cdiv(input_tensor.shape[0], meta['BLOCK_SIZE_M']) * triton.cdiv(qweight.shape[1], meta['BLOCK_SIZE_N']),)
+
+    matmul_248_kernel[grid](input_tensor, qweight, output,
                             scales, qzeros, g_idx,
-                            input.shape[0], qweight.shape[1], input.shape[1], bits, maxq,
-                            input.stride(0), input.stride(1),
+                            input_tensor.shape[0], qweight.shape[1], input_tensor.shape[1], bits, maxq,
+                            input_tensor.stride(0), input_tensor.stride(1),
                             qweight.stride(0), qweight.stride(1),
                             output.stride(0), output.stride(1),
                             scales.stride(0), qzeros.stride(0))
     return output
 
 
-def transpose_matmul248(input, qweight, scales, qzeros, g_idx, bits, maxq):
+def transpose_matmul248(input_tensor, qweight, scales, qzeros, g_idx, bits, maxq):
+    """
+    Calculate the output dimension based on the shape of 'qweight' and the number of bits.
+    """
     output_dim = (qweight.shape[0] * 32) // bits
-    output = mindspore.numpy.empty(
-        (input.shape[0], output_dim), dtype=mindspore.float16)
-    def grid(META): return (
-        triton.cdiv(input.shape[0], META['BLOCK_SIZE_M']) * triton.cdiv(output_dim, META['BLOCK_SIZE_K']),)
-    # transpose_matmul_248_kernel[grid](input, qweight, output,
-    #                                   scales, qzeros, g_idx,
-    #                                   input.shape[0], qweight.shape[1], output_dim, bits, maxq,
-    #                                   input.stride(0), input.stride(1),
-    #                                   qweight.stride(0), qweight.stride(1),
-    #                                   output.stride(0), output.stride(1),
-    #                                   scales.stride(0), qzeros.stride(0))
+    output = mindspore.numpy.empty((input_tensor.shape[0], output_dim), dtype=mindspore.float16)
+
+    def grid(meta):
+        return (
+            triton.cdiv(input_tensor.shape[0], meta['BLOCK_SIZE_M']) * triton.cdiv(output_dim, meta['BLOCK_SIZE_K']),)
+
+    trans_matmul_248_kernel[grid](input_tensor, qweight, output,
+                                  scales, qzeros, g_idx,
+                                  input_tensor.shape[0], qweight.shape[1], output_dim, bits, maxq,
+                                  input_tensor.stride(0), input_tensor.stride(1),
+                                  qweight.stride(0), qweight.stride(1),
+                                  output.stride(0), output.stride(1),
+                                  scales.stride(0), qzeros.stride(0))
     return output
 
 
@@ -323,18 +338,22 @@ class QuantLinearFunction(nn.Cell):
     """
     Quantized linear function implementation as a subclass of `nn.Cell`.
     """
+
     def __init__(self, keep_prob):
         super().__init__()
         self.keep_prob = keep_prob
         self.dropout2d = ops.Dropout2D(keep_prob)
 
-    def construct(self, ctx, input, qweight, scales, qzeros, g_idx, bits, maxq):
-        output = matmul248(input, qweight, scales, qzeros, g_idx, bits, maxq)
+    def construct(self, ctx, input_tensor, qweight, scales, qzeros, g_idx, bits, maxq):
+        output = matmul248(input_tensor, qweight, scales, qzeros, g_idx, bits, maxq)
         ctx.save_for_backward(qweight, scales, qzeros, g_idx)
         ctx.bits, ctx.maxq = bits, maxq
         return output
 
     def backward(self, ctx, grad_output):
+        """
+        Compute the backward pass for the custom autograd function.
+        """
         qweight, scales, qzeros, g_idx = ctx.saved_tensors
         bits, maxq = ctx.bits, ctx.maxq
         grad_input = None
@@ -349,6 +368,7 @@ class QuantLinear(nn.Cell):
     """
     Quantized linear layer implementation as a subclass of `nn.Cell`.
     """
+
     def __init__(self, bits, groupsize, infeatures, outfeatures, bias):
         super().__init__()
         if bits not in [2, 4, 8]:
@@ -373,8 +393,15 @@ class QuantLinear(nn.Cell):
                 outfeatures, dtype=mindspore.float16))
         else:
             self.bias = None
+        self.g_idx = None
+        self.scales = None
+        self.qweight = None
+        self.qzeros = None
 
     def pack(self, linear, scales, zeros, g_idx=None):
+        """
+        Pack the given 'linear', 'scales', and 'zeros' data into the class.
+        """
         self.g_idx = g_idx.clone() if g_idx is not None else self.g_idx
 
         scales = scales.t().contiguous()
@@ -457,10 +484,10 @@ def make_quant(module, names, bits, groupsize, name=''):
         if name1 in names:
             delattr(module, attr)
             setattr(module, attr, QuantLinear(bits, groupsize,
-                    tmp.in_features, tmp.out_features, tmp.bias is not None))
+                                              tmp.in_features, tmp.out_features, tmp.bias is not None))
     for name1, child in module.named_children():
         make_quant(child, names, bits, groupsize, name +
-                   '.' + name1 if name != '' else name1)
+                                                  '.' + name1 if name != '' else name1)
 
 
 def quantize_with_gptq(model, wbits, groupsize):
@@ -482,5 +509,4 @@ def quantize_with_gptq(model, wbits, groupsize):
         if name in layers:
             del layers[name]
     make_quant(model, layers, wbits, groupsize)
-    # model.load_state_dict(torch.load(checkpoint))
     return model

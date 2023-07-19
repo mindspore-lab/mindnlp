@@ -12,14 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-
+"""
+    Mostly the same as the autotuner in Triton, but with a few changes like using 40 runs instead of 100.
+"""
 
 
 import builtins
 import math
 import time
 from typing import Dict
-
 import triton
 
 
@@ -27,7 +28,7 @@ class Autotuner(triton.KernelInterface):
     """
     Mostly the same as the autotuner in Triton, but with a few changes like using 40 runs instead of 100.
     """
-    def __init__(self, fn, arg_names, configs, key, reset_to_zero, prune_configs_by: Dict = None,
+    def __init__(self, func, arg_names, configs, key, reset_to_zero, prune_configs_by: Dict = None,
                  nearest_power_of_two: bool = False):
         '''
         :param prune_configs_by: a dict of functions that are used to prune configs, fields:
@@ -65,7 +66,11 @@ class Autotuner(triton.KernelInterface):
             perf_model, top_k, early_config_prune = None, None, None
         self.perf_model, self.configs_top_k = perf_model, top_k
         self.early_config_prune = early_config_prune
-        self.fn = fn
+        self.func = func
+        self.nargs = None
+        self.bench_time = None
+        self.best_config = None
+        self.configs_timings = None
 
     def _bench(self, *args, config, **meta):
         # check for conflicts, i.e. meta-parameters both provided
@@ -83,11 +88,11 @@ class Autotuner(triton.KernelInterface):
             if config.pre_hook:
                 config.pre_hook(self.nargs)
             self.hook(args)
-            self.fn.run(*args, num_warps=config.num_warps, num_stages=config.num_stages, **current)
+            self.func.run(*args, num_warps=config.num_warps, num_stages=config.num_stages, **current)
 
         try:
-            # In testings using only 40 reps seems to be close enough and it appears to be what PyTorch uses
-            # PyTorch also sets fast_flush to True, but I didn't see any speedup so I'll leave the default
+            # In testings using only 40 reps seems to be close enough and it appears to be what MindSpore uses
+            # MindSpore also sets fast_flush to True, but I didn't see any speedup so I'll leave the default
             return triton.testing.do_bench(kernel_call, rep=40)
         except triton.compiler.OutOfResources:
             return float('inf')
@@ -103,7 +108,7 @@ class Autotuner(triton.KernelInterface):
             # This reduces the amount of autotuning by rounding the keys to the nearest power of two
             # In my testing this gives decent results, and greatly reduces the amount of tuning required
             if self.nearest_power_of_two:
-                key = tuple([2 ** int(math.log2(x) + 0.5) for x in key])
+                key = tuple(2 ** int(math.log2(x) + 0.5) for x in key)
 
             if key not in self.cache:
                 # prune configs
@@ -122,9 +127,13 @@ class Autotuner(triton.KernelInterface):
         self.best_config = config
         if config.pre_hook is not None:
             config.pre_hook(self.nargs)
-        return self.fn.run(*args, num_warps=config.num_warps, num_stages=config.num_stages, **kwargs, **config.kwargs)
+        return self.func.run(*args, num_warps=config.num_warps, num_stages=config.num_stages, **kwargs, **config.kwargs)
 
     def prune_configs(self, kwargs):
+        """
+        Function to prune the configuration list based on certain criteria.
+        """
+
         pruned_configs = self.configs
         if self.early_config_prune:
             pruned_configs = self.early_config_prune(self.configs, self.nargs)
@@ -142,9 +151,12 @@ class Autotuner(triton.KernelInterface):
         return pruned_configs
 
     def warmup(self, *args, **kwargs):
+        """
+        Function to perform warm-up runs for a specified computation task.
+        """
         self.nargs = dict(zip(self.arg_names, args))
         for config in self.prune_configs(kwargs):
-            self.fn.warmup(
+            self.func.warmup(
                 *args,
                 num_warps=config.num_warps,
                 num_stages=config.num_stages,
@@ -186,7 +198,7 @@ def autotune(configs, key, prune_configs_by=None, reset_to_zero=None, nearest_po
     :type reset_to_zero: list[str]
     """
 
-    def decorator(fn):
-        return Autotuner(fn, fn.arg_names, configs, key, reset_to_zero, prune_configs_by, nearest_power_of_two)
+    def decorator(func):
+        return Autotuner(func, func.arg_names, configs, key, reset_to_zero, prune_configs_by, nearest_power_of_two)
 
     return decorator
