@@ -1,24 +1,27 @@
-"""
-Copyright 2023 Huawei Technologies Co., Ltd
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
+# Copyright 2023 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # ============================================================================
 # pylint: disable=E1121
 # pylint: disable=R0913
 # pylint: disable=R0914
 # pylint: disable=C0321
 # pylint: disable=W0401
+# pylint: disable=C0103
+
+"""
+moss quantization
+"""
 
 import math
 import numpy as np
@@ -315,7 +318,8 @@ def transpose_matmul248(input_tensor, qweight, scales, qzeros, g_idx, bits, maxq
     output = mindspore.numpy.empty((input_tensor.shape[0], output_dim), dtype=mindspore.float16)
 
     def grid(meta):
-        return (triton.cdiv(input_tensor.shape[0], meta['BLOCK_SIZE_M']) * triton.cdiv(output_dim, meta['BLOCK_SIZE_K']),)
+        return (
+            triton.cdiv(input_tensor.shape[0], meta['BLOCK_SIZE_M']) * triton.cdiv(output_dim, meta['BLOCK_SIZE_K']),)
 
     trans_matmul_248_kernel[grid](input_tensor, qweight, output,
                                   scales, qzeros, g_idx,
