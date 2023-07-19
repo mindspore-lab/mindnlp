@@ -17,14 +17,15 @@ Test Moss functions
 """
 import unittest
 import numpy as np
-
+import pytest
 import mindspore
 
 from mindspore import Tensor
 
 from mindnlp.models.moss import MossConfig, moss
 
-
+# @pytest.mark.skip
+@pytest.mark.gpu_only
 class TestModelingMoss(unittest.TestCase):
     r"""
     Test Moss
