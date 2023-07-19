@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+"""
+moss model init
+"""
 from .moss import *
 from .moss_configuration import *
 from .moss_custom_autotune import *

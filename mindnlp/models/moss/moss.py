@@ -448,12 +448,9 @@ class MossModel(MossPreTrainedModel):
         self.vocab_size = config.vocab_size
         self.wte = nn.Embedding(config.vocab_size, self.embed_dim)
         self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.heads = nn.CellList([MossBlock(config)
-                              for _ in range(config.n_layer)])
-        self.ln_f = nn.LayerNorm(
-            [self.embed_dim], epsilon=config.layer_norm_epsilon)
-        self.rotary_dim = min(
-            config.rotary_dim, config.n_ctx // config.num_attention_heads)
+        self.h = nn.CellList([MossBlock(config) for _ in range(config.n_layer)])
+        self.ln_f = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_epsilon)
+        self.rotary_dim = min(config.rotary_dim, config.n_ctx // config.num_attention_heads)
 
         self.gradient_checkpointing = False
 
@@ -520,7 +517,7 @@ class MossModel(MossPreTrainedModel):
 
         if past_key_values is None:
             past_length = 0
-            past_key_values = tuple([None] * len(self.heads))
+            past_key_values = tuple([None] * len(self.h))
         else:
             past_length = past_key_values[0][0].size(-2)
 
@@ -582,7 +579,7 @@ class MossModel(MossPreTrainedModel):
         presents = () if use_cache else None
         all_self_attentions = () if output_attentions else None
         all_hidden_states = () if output_hidden_states else None
-        for i, (block, layer_past) in enumerate(zip(self.heads, past_key_values)):
+        for i, (block, layer_past) in enumerate(zip(self.h, past_key_values)):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 

@@ -44,7 +44,7 @@ else:
 WEIGHTS_NAME = "mindspore.ckpt"
 WEIGHTS_INDEX_NAME = "mindspore.ckpt.index.json"
 HF_WEIGHTS_INDEX_NAME = "pytorch_model.bin.index.json"
-
+_init_weights = True
 
 class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
     """
@@ -54,7 +54,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
     pretrained_model_archive_map = {}
     base_model_prefix = ""
     main_input_name = "input_ids"
-    _init_weights = True
+
 
     def __init__(self, config):
         super().__init__(config)
@@ -79,7 +79,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         if self.config.pruned_heads:
             self.prune_heads(self.config.pruned_heads)
 
-        if self._init_weights:
+        if _init_weights:
             # Initialize weights
             if getattr(self, 'apply', None):
                 self.apply(self._initialize_weights)
