@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Bert functions"""
+"""
+Test Moss functions
+"""
 import unittest
 import numpy as np
 
