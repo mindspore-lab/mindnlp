@@ -25,10 +25,11 @@ moss quantization
 
 import math
 import numpy as np
+import triton
 import triton.language as tl
 import mindspore
 from mindspore import nn, ops, Tensor
-from .moss_custom_autotune import *
+from .moss_custom_autotune import autotune
 
 
 def find_layers(module, layers=None, name=''):
