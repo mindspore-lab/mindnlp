@@ -79,7 +79,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         if self.config.pruned_heads:
             self.prune_heads(self.config.pruned_heads)
 
-        if _init_weights:
+        if self._init_weights:
             # Initialize weights
             if getattr(self, 'apply', None):
                 self.apply(self._initialize_weights)

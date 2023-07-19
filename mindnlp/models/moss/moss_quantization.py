@@ -1,16 +1,18 @@
-# Copyright 2023 Huawei Technologies Co., Ltd
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+"""
+Copyright 2023 Huawei Technologies Co., Ltd
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 # ============================================================================
 # pylint: disable=E1121
 # pylint: disable=R0913
@@ -18,17 +20,15 @@
 # pylint: disable=C0321
 # pylint: disable=W0401
 
-
 import math
 import numpy as np
-import triton
 import triton.language as tl
 import mindspore
 from mindspore import nn, ops, Tensor
 from .moss_custom_autotune import *
 
 
-def find_layers(module, layers=[nn.Conv2d, nn.Dense], name=''):
+def find_layers(module, layers=None, name=''):
     """
     Recursively finds layers of specific types within a module.
 
@@ -41,6 +41,8 @@ def find_layers(module, layers=[nn.Conv2d, nn.Dense], name=''):
         - res: Dictionary of found layers with their corresponding names.
 
     """
+    if layers is None:
+        layers = [nn.Conv2d, nn.Dense]
     if type(module) in layers:
         return {name: module}
     res = {}
@@ -54,32 +56,32 @@ def find_layers(module, layers=[nn.Conv2d, nn.Dense], name=''):
 # code based https://github.com/fpgaminer/GPTQ-triton
 @autotune(
     configs=[
-        triton.Config({'BLOCK_SIZE_M': 256, 'BLOCK_SIZE_N': 64, 'BLOCK_SIZE_K': 32, 'GROUP_SIZE_M': 8},
+        triton.Config({'block_size_m': 256, 'block_size_n': 64, 'block_size_k': 32, 'group_size_m': 8},
                       num_stages=4, num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 64, 'BLOCK_SIZE_N': 256, 'BLOCK_SIZE_K': 32, 'GROUP_SIZE_M': 8},
+        triton.Config({'block_size_m': 64, 'block_size_n': 256, 'block_size_k': 32, 'group_size_m': 8},
                       num_stages=4, num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 128, 'BLOCK_SIZE_N': 128, 'BLOCK_SIZE_K': 32, 'GROUP_SIZE_M': 8},
+        triton.Config({'block_size_m': 128, 'block_size_n': 128, 'block_size_k': 32, 'group_size_m': 8},
                       num_stages=4, num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 128, 'BLOCK_SIZE_N': 64, 'BLOCK_SIZE_K': 32, 'GROUP_SIZE_M': 8},
+        triton.Config({'block_size_m': 128, 'block_size_n': 64, 'block_size_k': 32, 'group_size_m': 8},
                       num_stages=4, num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 64, 'BLOCK_SIZE_N': 128, 'BLOCK_SIZE_K': 32, 'GROUP_SIZE_M': 8},
+        triton.Config({'block_size_m': 64, 'block_size_n': 128, 'block_size_k': 32, 'group_size_m': 8},
                       num_stages=4, num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 128, 'BLOCK_SIZE_N': 32, 'BLOCK_SIZE_K': 32, 'GROUP_SIZE_M': 8},
+        triton.Config({'block_size_m': 128, 'block_size_n': 32, 'block_size_k': 32, 'group_size_m': 8},
                       num_stages=4, num_warps=4),
         # These provided a benefit on a 3090
-        triton.Config({'BLOCK_SIZE_M': 64, 'BLOCK_SIZE_N': 64, 'BLOCK_SIZE_K': 32, 'GROUP_SIZE_M': 8}, num_stages=4,
+        triton.Config({'block_size_m': 64, 'block_size_n': 64, 'block_size_k': 32, 'group_size_m': 8}, num_stages=4,
                       num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 32, 'BLOCK_SIZE_N': 64, 'BLOCK_SIZE_K': 32, 'GROUP_SIZE_M': 8}, num_stages=4,
+        triton.Config({'block_size_m': 32, 'block_size_n': 64, 'block_size_k': 32, 'group_size_m': 8}, num_stages=4,
                       num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 64, 'BLOCK_SIZE_N': 32, 'BLOCK_SIZE_K': 32, 'GROUP_SIZE_M': 8}, num_stages=4,
+        triton.Config({'block_size_m': 64, 'block_size_n': 32, 'block_size_k': 32, 'group_size_m': 8}, num_stages=4,
                       num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 32, 'BLOCK_SIZE_N': 64, 'BLOCK_SIZE_K': 64, 'GROUP_SIZE_M': 8}, num_stages=4,
+        triton.Config({'block_size_m': 32, 'block_size_n': 64, 'block_size_k': 64, 'group_size_m': 8}, num_stages=4,
                       num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 64, 'BLOCK_SIZE_N': 64, 'BLOCK_SIZE_K': 64, 'GROUP_SIZE_M': 8}, num_stages=4,
+        triton.Config({'block_size_m': 64, 'block_size_n': 64, 'block_size_k': 64, 'group_size_m': 8}, num_stages=4,
                       num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 64, 'BLOCK_SIZE_N': 32, 'BLOCK_SIZE_K': 64, 'GROUP_SIZE_M': 8}, num_stages=4,
+        triton.Config({'block_size_m': 64, 'block_size_n': 32, 'block_size_k': 64, 'group_size_m': 8}, num_stages=4,
                       num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 32, 'BLOCK_SIZE_N': 64, 'BLOCK_SIZE_K': 128, 'GROUP_SIZE_M': 8},
+        triton.Config({'block_size_m': 32, 'block_size_n': 64, 'block_size_k': 128, 'group_size_m': 8},
                       num_stages=4, num_warps=4),
     ],
     key=['M', 'N'],
@@ -88,45 +90,45 @@ def find_layers(module, layers=[nn.Conv2d, nn.Dense], name=''):
 @triton.jit
 def matmul_248_kernel(a_ptr, b_ptr, c_ptr,
                       scales_ptr, zeros_ptr, g_ptr,
-                      M, N, K, bits, maxq,
+                      size_m, size_n, size_k, bits, maxq,
                       stride_am, stride_ak,
                       stride_bk, stride_bn,
                       stride_cm, stride_cn,
                       stride_scales, stride_zeros,
-                      BLOCK_SIZE_M: tl.constexpr, BLOCK_SIZE_N: tl.constexpr, BLOCK_SIZE_K: tl.constexpr,
-                      GROUP_SIZE_M: tl.constexpr):
+                      block_size_m: tl.constexpr, block_size_n: tl.constexpr, block_size_k: tl.constexpr,
+                      group_size_m: tl.constexpr):
     """
     Compute the matrix multiplication C = A x B.
-    A is of shape (M, K) float16
-    B is of shape (K//8, N) int32
-    C is of shape (M, N) float16
-    scales is of shape (G, N) float16
-    zeros is of shape (G, N) float16
-    g_ptr is of shape (K) int32
+    A is of shape (size_m, size_k) float16
+    B is of shape (size_k//8, size_n) int32
+    C is of shape (size_m, size_n) float16
+    scales is of shape (G, size_n) float16
+    zeros is of shape (G, size_n) float16
+    g_ptr is of shape (size_k) int32
     """
     infearure_per_bits = 32 // bits
 
     pid = tl.program_id(axis=0)
-    num_pid_m = tl.cdiv(M, BLOCK_SIZE_M)
-    num_pid_n = tl.cdiv(N, BLOCK_SIZE_N)
-    num_pid_k = tl.cdiv(K, BLOCK_SIZE_K)
-    num_pid_in_group = GROUP_SIZE_M * num_pid_n
+    num_pid_m = tl.cdiv(size_m, block_size_m)
+    num_pid_n = tl.cdiv(size_n, block_size_n)
+    num_pid_k = tl.cdiv(size_k, block_size_k)
+    num_pid_in_group = group_size_m * num_pid_n
     group_id = pid // num_pid_in_group
-    first_pid_m = group_id * GROUP_SIZE_M
-    group_size_m = min(num_pid_m - first_pid_m, GROUP_SIZE_M)
+    first_pid_m = group_id * group_size_m
+    group_size_m = min(num_pid_m - first_pid_m, group_size_m)
     pid_m = first_pid_m + (pid % group_size_m)
     pid_n = (pid % num_pid_in_group) // group_size_m
 
-    offs_am = pid_m * BLOCK_SIZE_M + tl.arange(0, BLOCK_SIZE_M)
-    offs_bn = pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N)
-    offs_k = tl.arange(0, BLOCK_SIZE_K)
-    # (BLOCK_SIZE_M, BLOCK_SIZE_K)
+    offs_am = pid_m * block_size_m + tl.arange(0, block_size_m)
+    offs_bn = pid_n * block_size_n + tl.arange(0, block_size_n)
+    offs_k = tl.arange(0, block_size_k)
+    # (block_size_m, block_size_k)
     a_ptrs = a_ptr + (offs_am[:, None] * stride_am +
                       offs_k[None, :] * stride_ak)
-    a_mask = (offs_am[:, None] < M)
+    a_mask = (offs_am[:, None] < size_m)
     # b_ptrs is set up such that it repeats elements along the K axis 8 times
     b_ptrs = b_ptr + ((offs_k[:, None] // infearure_per_bits) * stride_bk +
-                      offs_bn[None, :] * stride_bn)  # (BLOCK_SIZE_K, BLOCK_SIZE_N)
+                      offs_bn[None, :] * stride_bn)  # (block_size_k, block_size_n)
     g_ptrs = g_ptr + offs_k
     # shifter is used to extract the N bits of each element in the 32-bit word from B
     scales_ptrs = scales_ptr + offs_bn[None, :]
@@ -134,69 +136,69 @@ def matmul_248_kernel(a_ptr, b_ptr, c_ptr,
 
     shifter = (offs_k % infearure_per_bits) * bits
     zeros_shifter = (offs_bn % infearure_per_bits) * bits
-    accumulator = tl.zeros((BLOCK_SIZE_M, BLOCK_SIZE_N), dtype=tl.float32)
+    accumulator = tl.zeros((block_size_m, block_size_n), dtype=tl.float32)
 
-    for k in range(0, num_pid_k):
+    for _ in range(0, num_pid_k):
         g_idx = tl.load(g_ptrs)
 
         # Fetch scales and zeros; these are per-outfeature and thus reused in the inner loop
-        # (BLOCK_SIZE_K, BLOCK_SIZE_N,)
+        # (block_size_k, block_size_n,)
         scales = tl.load(scales_ptrs + g_idx[:, None] * stride_scales)
-        # (BLOCK_SIZE_K, BLOCK_SIZE_N,)
+        # (block_size_k, block_size_n,)
         zeros = tl.load(zeros_ptrs + g_idx[:, None] * stride_zeros)
 
         zeros = (zeros >> zeros_shifter[None, :]) & maxq
-        zeros = (zeros + 1)
+        zeros = zeros + 1
 
-        # (BLOCK_SIZE_M, BLOCK_SIZE_K)
-        a = tl.load(a_ptrs, mask=a_mask, other=0.)
-        b = tl.load(b_ptrs)  # (BLOCK_SIZE_K, BLOCK_SIZE_N), but repeated
+        # (block_size_m, block_size_k)
+        load_1 = tl.load(a_ptrs, mask=a_mask, other=0.)
+        load_2 = tl.load(b_ptrs)  # (block_size_k, block_size_n), but repeated
 
-        # Now we need to unpack b (which is N-bit values) into 32-bit values
-        b = (b >> shifter[:, None]) & maxq  # Extract the N-bit values
-        b = (b - zeros) * scales  # Scale and shift
+        # Now we need to unpack load_2 (which is N-bit values) into 32-bit values
+        load_2 = (load_2 >> shifter[:, None]) & maxq  # Extract the N-bit values
+        load_2 = (load_2 - zeros) * scales  # Scale and shift
 
-        accumulator += tl.dot(a, b)
-        a_ptrs += BLOCK_SIZE_K
-        b_ptrs += (BLOCK_SIZE_K // infearure_per_bits) * stride_bk
-        g_ptrs += BLOCK_SIZE_K
+        accumulator += tl.dot(load_1, load_2)
+        a_ptrs += block_size_k
+        b_ptrs += (block_size_k // infearure_per_bits) * stride_bk
+        g_ptrs += block_size_k
 
     accumulator.to(tl.float16)
     c_ptrs = c_ptr + stride_cm * \
-        offs_am[:, None] + stride_cn * offs_bn[None, :]
-    c_mask = (offs_am[:, None] < M) & (offs_bn[None, :] < N)
+             offs_am[:, None] + stride_cn * offs_bn[None, :]
+    c_mask = (offs_am[:, None] < size_m) & (offs_bn[None, :] < size_n)
     tl.store(c_ptrs, accumulator, mask=c_mask)
 
 
 # code based https://github.com/fpgaminer/GPTQ-triton
 @autotune(
     configs=[
-        triton.Config({'BLOCK_SIZE_M': 256, 'BLOCK_SIZE_K': 64, 'BLOCK_SIZE_N': 32, 'GROUP_SIZE_M': 8},
+        triton.Config({'block_size_m': 256, 'block_size_k': 64, 'block_size_n': 32, 'group_size_m': 8},
                       num_stages=4, num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 64, 'BLOCK_SIZE_K': 256, 'BLOCK_SIZE_N': 32, 'GROUP_SIZE_M': 8},
+        triton.Config({'block_size_m': 64, 'block_size_k': 256, 'block_size_n': 32, 'group_size_m': 8},
                       num_stages=4, num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 128, 'BLOCK_SIZE_K': 128, 'BLOCK_SIZE_N': 32, 'GROUP_SIZE_M': 8},
+        triton.Config({'block_size_m': 128, 'block_size_k': 128, 'block_size_n': 32, 'group_size_m': 8},
                       num_stages=4, num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 128, 'BLOCK_SIZE_K': 64, 'BLOCK_SIZE_N': 32, 'GROUP_SIZE_M': 8},
+        triton.Config({'block_size_m': 128, 'block_size_k': 64, 'block_size_n': 32, 'group_size_m': 8},
                       num_stages=4, num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 64, 'BLOCK_SIZE_K': 128, 'BLOCK_SIZE_N': 32, 'GROUP_SIZE_M': 8},
+        triton.Config({'block_size_m': 64, 'block_size_k': 128, 'block_size_n': 32, 'group_size_m': 8},
                       num_stages=4, num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 128, 'BLOCK_SIZE_K': 32, 'BLOCK_SIZE_N': 32, 'GROUP_SIZE_M': 8},
+        triton.Config({'block_size_m': 128, 'block_size_k': 32, 'block_size_n': 32, 'group_size_m': 8},
                       num_stages=4, num_warps=4),
         # These provided a benefit on a 3090
-        triton.Config({'BLOCK_SIZE_M': 64, 'BLOCK_SIZE_K': 64, 'BLOCK_SIZE_N': 32, 'GROUP_SIZE_M': 8}, num_stages=4,
+        triton.Config({'block_size_m': 64, 'block_size_k': 64, 'block_size_n': 32, 'group_size_m': 8}, num_stages=4,
                       num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 32, 'BLOCK_SIZE_K': 64, 'BLOCK_SIZE_N': 32, 'GROUP_SIZE_M': 8}, num_stages=4,
+        triton.Config({'block_size_m': 32, 'block_size_k': 64, 'block_size_n': 32, 'group_size_m': 8}, num_stages=4,
                       num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 64, 'BLOCK_SIZE_K': 32, 'BLOCK_SIZE_N': 32, 'GROUP_SIZE_M': 8}, num_stages=4,
+        triton.Config({'block_size_m': 64, 'block_size_k': 32, 'block_size_n': 32, 'group_size_m': 8}, num_stages=4,
                       num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 32, 'BLOCK_SIZE_K': 64, 'BLOCK_SIZE_N': 64, 'GROUP_SIZE_M': 8}, num_stages=4,
+        triton.Config({'block_size_m': 32, 'block_size_k': 64, 'block_size_n': 64, 'group_size_m': 8}, num_stages=4,
                       num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 64, 'BLOCK_SIZE_K': 64, 'BLOCK_SIZE_N': 64, 'GROUP_SIZE_M': 8}, num_stages=4,
+        triton.Config({'block_size_m': 64, 'block_size_k': 64, 'block_size_n': 64, 'group_size_m': 8}, num_stages=4,
                       num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 64, 'BLOCK_SIZE_K': 32, 'BLOCK_SIZE_N': 64, 'GROUP_SIZE_M': 8}, num_stages=4,
+        triton.Config({'block_size_m': 64, 'block_size_k': 32, 'block_size_n': 64, 'group_size_m': 8}, num_stages=4,
                       num_warps=4),
-        triton.Config({'BLOCK_SIZE_M': 32, 'BLOCK_SIZE_K': 64, 'BLOCK_SIZE_N': 128, 'GROUP_SIZE_M': 8},
+        triton.Config({'block_size_m': 32, 'block_size_k': 64, 'block_size_n': 128, 'group_size_m': 8},
                       num_stages=4, num_warps=4),
     ],
     key=['M', 'K'],
@@ -205,115 +207,123 @@ def matmul_248_kernel(a_ptr, b_ptr, c_ptr,
 @triton.jit
 def trans_matmul_248_kernel(a_ptr, b_ptr, c_ptr,
                             scales_ptr, zeros_ptr, g_ptr,
-                            M, N, K, bits, maxq,
+                            size_m, size_n, size_k, bits, maxq,
                             stride_am, stride_ak,
                             stride_bk, stride_bn,
                             stride_cm, stride_cn,
                             stride_scales, stride_zeros,
-                            BLOCK_SIZE_M: tl.constexpr, BLOCK_SIZE_N: tl.constexpr, BLOCK_SIZE_K: tl.constexpr,
-                            GROUP_SIZE_M: tl.constexpr):
+                            block_size_m: tl.constexpr, block_size_n: tl.constexpr, block_size_k: tl.constexpr,
+                            group_size_m: tl.constexpr):
     """
     Compute the matrix multiplication C = A x B.
-    A is of shape (M, N) float16
-    B is of shape (K//8, N) int32
-    C is of shape (M, K) float16
-    scales is of shape (G, N) float16
-    zeros is of shape (G, N) float16
-    g_ptr is of shape (K) int32
+    A is of shape (size_m, size_n) float16
+    B is of shape (size_k//8, size_n) int32
+    C is of shape (size_m, size_k) float16
+    scales is of shape (G, size_n) float16
+    zeros is of shape (G, size_n) float16
+    g_ptr is of shape (size_k) int32
     """
     infearure_per_bits = 32 // bits
 
     pid = tl.program_id(axis=0)
-    num_pid_m = tl.cdiv(M, BLOCK_SIZE_M)
-    num_pid_k = tl.cdiv(K, BLOCK_SIZE_K)
-    num_pid_n = tl.cdiv(N, BLOCK_SIZE_N)
-    num_pid_in_group = GROUP_SIZE_M * num_pid_k
+    num_pid_m = tl.cdiv(size_m, block_size_m)
+    num_pid_k = tl.cdiv(size_k, block_size_k)
+    num_pid_n = tl.cdiv(size_n, block_size_n)
+    num_pid_in_group = group_size_m * num_pid_k
     group_id = pid // num_pid_in_group
-    first_pid_m = group_id * GROUP_SIZE_M
-    group_size_m = min(num_pid_m - first_pid_m, GROUP_SIZE_M)
+    first_pid_m = group_id * group_size_m
+    group_size_m = min(num_pid_m - first_pid_m, group_size_m)
     pid_m = first_pid_m + (pid % group_size_m)
     pid_k = (pid % num_pid_in_group) // group_size_m
 
-    offs_am = pid_m * BLOCK_SIZE_M + tl.arange(0, BLOCK_SIZE_M)
-    offs_bk = pid_k * BLOCK_SIZE_K + tl.arange(0, BLOCK_SIZE_K)
-    offs_n = tl.arange(0, BLOCK_SIZE_N)
-    # (BLOCK_SIZE_M, BLOCK_SIZE_N)
+    offs_am = pid_m * block_size_m + tl.arange(0, block_size_m)
+    offs_bk = pid_k * block_size_k + tl.arange(0, block_size_k)
+    offs_n = tl.arange(0, block_size_n)
+    # (block_size_m, block_size_n)
     a_ptrs = a_ptr + (offs_am[:, None] * stride_am +
                       offs_n[None, :] * stride_ak)
-    a_mask = (offs_am[:, None] < M)
+    a_mask = (offs_am[:, None] < size_m)
     # b_ptrs is set up such that it repeats elements along the K axis 8 times
     b_ptrs = b_ptr + ((offs_bk[:, None] // infearure_per_bits) * stride_bk + offs_n[None,
-                                                                                    :] * stride_bn)  # (BLOCK_SIZE_K, BLOCK_SIZE_N)
+                                                                             :] * stride_bn)  # (block_size_k, block_size_n)
     g_ptrs = g_ptr + offs_bk
     g_idx = tl.load(g_ptrs)
 
     # shifter is used to extract the N bits of each element in the 32-bit word from B
     scales_ptrs = scales_ptr + offs_n[None, :] + g_idx[:, None] * stride_scales
     zeros_ptrs = zeros_ptr + \
-        (offs_n[None, :] // infearure_per_bits) + g_idx[:, None] * stride_zeros
+                 (offs_n[None, :] // infearure_per_bits) + g_idx[:, None] * stride_zeros
 
     shifter = (offs_bk % infearure_per_bits) * bits
     zeros_shifter = (offs_n % infearure_per_bits) * bits
-    accumulator = tl.zeros((BLOCK_SIZE_M, BLOCK_SIZE_K), dtype=tl.float32)
+    accumulator = tl.zeros((block_size_m, block_size_k), dtype=tl.float32)
 
-    for k in range(0, num_pid_n):
+    for _ in range(0, num_pid_n):
         # Fetch scales and zeros; these are per-outfeature and thus reused in the inner loop
-        scales = tl.load(scales_ptrs)  # (BLOCK_SIZE_K, BLOCK_SIZE_N,)
-        zeros = tl.load(zeros_ptrs)  # (BLOCK_SIZE_K, BLOCK_SIZE_N,)
+        scales = tl.load(scales_ptrs)  # (block_size_k, block_size_n,)
+        zeros = tl.load(zeros_ptrs)  # (block_size_k, block_size_n,)
 
         zeros = (zeros >> zeros_shifter[None, :]) & maxq
-        zeros = (zeros + 1)
+        zeros = zeros + 1
 
-        # (BLOCK_SIZE_M, BLOCK_SIZE_N)
-        a = tl.load(a_ptrs, mask=a_mask, other=0.)
-        b = tl.load(b_ptrs)  # (BLOCK_SIZE_K, BLOCK_SIZE_N), but repeated
+        # (block_size_m, block_size_n)
+        load_1 = tl.load(a_ptrs, mask=a_mask, other=0.)
+        load_2 = tl.load(b_ptrs)  # (block_size_k, block_size_n), but repeated
 
-        # Now we need to unpack b (which is N-bit values) into 32-bit values
-        b = (b >> shifter[:, None]) & maxq  # Extract the N-bit values
-        b = (b - zeros) * scales  # Scale and shift
-        b = tl.trans(b)
+        # Now we need to unpack load_2 (which is N-bit values) into 32-bit values
+        load_2 = (load_2 >> shifter[:, None]) & maxq  # Extract the N-bit values
+        load_2 = (load_2 - zeros) * scales  # Scale and shift
+        load_2 = tl.trans(load_2)
 
-        accumulator += tl.dot(a, b)
-        a_ptrs += BLOCK_SIZE_N
-        b_ptrs += BLOCK_SIZE_N
-        scales_ptrs += BLOCK_SIZE_N
-        zeros_ptrs += (BLOCK_SIZE_N // infearure_per_bits)
+        accumulator += tl.dot(load_1, load_2)
+        a_ptrs += block_size_n
+        b_ptrs += block_size_n
+        scales_ptrs += block_size_n
+        zeros_ptrs += (block_size_n // infearure_per_bits)
 
     accumulator.to(tl.float16)
-    c_ptrs = c_ptr + stride_cm * \
-        offs_am[:, None] + stride_cn * offs_bk[None, :]
-    c_mask = (offs_am[:, None] < M) & (offs_bk[None, :] < K)
+    c_ptrs = c_ptr + stride_cm * offs_am[:, None] + stride_cn * offs_bk[None, :]
+    c_mask = (offs_am[:, None] < size_m) & (offs_bk[None, :] < size_k)
     tl.store(c_ptrs, accumulator, mask=c_mask)
 
 
-def matmul248(input, qweight, scales, qzeros, g_idx, bits, maxq):
+def matmul248(input_tensor, qweight, scales, qzeros, g_idx, bits, maxq):
+    """
+    Perform 248-bit matrix multiplication operation with quantization.
+    """
     output = mindspore.numpy.empty(
-        (input.shape[0], qweight.shape[1]), dtype=mindspore.float16)
-    def grid(META): return (
-        triton.cdiv(input.shape[0], META['BLOCK_SIZE_M']) * triton.cdiv(qweight.shape[1], META['BLOCK_SIZE_N']),)
-    matmul_248_kernel[grid](input, qweight, output,
+        (input_tensor.shape[0], qweight.shape[1]), dtype=mindspore.float16)
+
+    def grid(meta): return (
+        triton.cdiv(input_tensor.shape[0], meta['block_size_m']) * triton.cdiv(qweight.shape[1], meta['block_size_n']),)
+
+    matmul_248_kernel[grid](input_tensor, qweight, output,
                             scales, qzeros, g_idx,
-                            input.shape[0], qweight.shape[1], input.shape[1], bits, maxq,
-                            input.stride(0), input.stride(1),
+                            input_tensor.shape[0], qweight.shape[1], input_tensor.shape[1], bits, maxq,
+                            input_tensor.stride(0), input_tensor.stride(1),
                             qweight.stride(0), qweight.stride(1),
                             output.stride(0), output.stride(1),
                             scales.stride(0), qzeros.stride(0))
     return output
 
 
-def transpose_matmul248(input, qweight, scales, qzeros, g_idx, bits, maxq):
+def transpose_matmul248(input_tensor, qweight, scales, qzeros, g_idx, bits, maxq):
+    """
+    Calculate the output dimension based on the shape of 'qweight' and the number of bits.
+    """
     output_dim = (qweight.shape[0] * 32) // bits
-    output = mindspore.numpy.empty(
-        (input.shape[0], output_dim), dtype=mindspore.float16)
-    def grid(META): return (
-        triton.cdiv(input.shape[0], META['BLOCK_SIZE_M']) * triton.cdiv(output_dim, META['BLOCK_SIZE_K']),)
-    # transpose_matmul_248_kernel[grid](input, qweight, output,
-    #                                   scales, qzeros, g_idx,
-    #                                   input.shape[0], qweight.shape[1], output_dim, bits, maxq,
-    #                                   input.stride(0), input.stride(1),
-    #                                   qweight.stride(0), qweight.stride(1),
-    #                                   output.stride(0), output.stride(1),
-    #                                   scales.stride(0), qzeros.stride(0))
+    output = mindspore.numpy.empty((input_tensor.shape[0], output_dim), dtype=mindspore.float16)
+
+    def grid(meta):
+        return (triton.cdiv(input_tensor.shape[0], meta['block_size_m']) * triton.cdiv(output_dim, meta['block_size_k']),)
+
+    trans_matmul_248_kernel[grid](input_tensor, qweight, output,
+                                  scales, qzeros, g_idx,
+                                  input_tensor.shape[0], qweight.shape[1], output_dim, bits, maxq,
+                                  input_tensor.stride(0), input_tensor.stride(1),
+                                  qweight.stride(0), qweight.stride(1),
+                                  output.stride(0), output.stride(1),
+                                  scales.stride(0), qzeros.stride(0))
     return output
 
 
@@ -323,18 +333,22 @@ class QuantLinearFunction(nn.Cell):
     """
     Quantized linear function implementation as a subclass of `nn.Cell`.
     """
+
     def __init__(self, keep_prob):
         super().__init__()
         self.keep_prob = keep_prob
         self.dropout2d = ops.Dropout2D(keep_prob)
 
-    def construct(self, ctx, input, qweight, scales, qzeros, g_idx, bits, maxq):
-        output = matmul248(input, qweight, scales, qzeros, g_idx, bits, maxq)
+    def construct(self, ctx, input_tensor, qweight, scales, qzeros, g_idx, bits, maxq):
+        output = matmul248(input_tensor, qweight, scales, qzeros, g_idx, bits, maxq)
         ctx.save_for_backward(qweight, scales, qzeros, g_idx)
         ctx.bits, ctx.maxq = bits, maxq
         return output
 
     def backward(self, ctx, grad_output):
+        """
+        Compute the backward pass for the custom autograd function.
+        """
         qweight, scales, qzeros, g_idx = ctx.saved_tensors
         bits, maxq = ctx.bits, ctx.maxq
         grad_input = None
@@ -349,6 +363,7 @@ class QuantLinear(nn.Cell):
     """
     Quantized linear layer implementation as a subclass of `nn.Cell`.
     """
+
     def __init__(self, bits, groupsize, infeatures, outfeatures, bias):
         super().__init__()
         if bits not in [2, 4, 8]:
@@ -373,8 +388,15 @@ class QuantLinear(nn.Cell):
                 outfeatures, dtype=mindspore.float16))
         else:
             self.bias = None
+        self.g_idx = None
+        self.scales = None
+        self.qweight = None
+        self.qzeros = None
 
     def pack(self, linear, scales, zeros, g_idx=None):
+        """
+        Pack the given 'linear', 'scales', and 'zeros' data into the class.
+        """
         self.g_idx = g_idx.clone() if g_idx is not None else self.g_idx
 
         scales = scales.t().contiguous()
@@ -457,10 +479,10 @@ def make_quant(module, names, bits, groupsize, name=''):
         if name1 in names:
             delattr(module, attr)
             setattr(module, attr, QuantLinear(bits, groupsize,
-                    tmp.in_features, tmp.out_features, tmp.bias is not None))
+                                              tmp.in_features, tmp.out_features, tmp.bias is not None))
     for name1, child in module.named_children():
         make_quant(child, names, bits, groupsize, name +
-                   '.' + name1 if name != '' else name1)
+                                                  '.' + name1 if name != '' else name1)
 
 
 def quantize_with_gptq(model, wbits, groupsize):
@@ -482,5 +504,4 @@ def quantize_with_gptq(model, wbits, groupsize):
         if name in layers:
             del layers[name]
     make_quant(model, layers, wbits, groupsize)
-    # model.load_state_dict(torch.load(checkpoint))
     return model

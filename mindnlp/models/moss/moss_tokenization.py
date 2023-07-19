@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-""" PyTorch Moss model."""
-from typing import Optional, Tuple, Union
-
-from .moss_configuration import MossConfig
+""" MindSpore Moss model."""
+# from typing import Optional, Tuple, Union
+#
+# from .moss_configuration import MossConfig
 
 _CHECKPOINT_FOR_DOC = "fnlp/moss-moon-003-base"
 _CONFIG_FOR_DOC = "MossConfig"

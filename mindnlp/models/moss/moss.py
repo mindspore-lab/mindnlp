@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+"""
+Moss model
+"""
 from typing import Optional, Tuple, Union
 import numpy as np
 import mindspore
@@ -21,7 +24,7 @@ from mindspore.common.initializer import initializer, Normal, Zero, One
 from mindnlp.abc import PreTrainedModel
 from mindnlp.models.activations import ACT2FN
 from .moss_configuration import MossConfig
-
+from .moss_quantization import quantize_with_gptq
 
 _CHECKPOINT_FOR_DOC = "fnlp/moss-moon-003-base"
 _CONFIG_FOR_DOC = "MossConfig"
@@ -109,9 +112,9 @@ class MossAttention(nn.Cell):
         self.embed_positions = create_sinusoidal_positions(
             max_positions, pos_embd_dim)
 
-    def _split_heads(self, x, n_head, dim_head, mp_num):
-        reshaped = x.reshape(x.shape[:-1] + (n_head // mp_num, dim_head))
-        reshaped = reshaped.reshape(x.shape[:-2] + (-1,) + reshaped.shape[-1:])
+    def _split_heads(self, input_tensor, n_head, dim_head, mp_num):
+        reshaped = input_tensor.reshape(input_tensor.shape[:-1] + (n_head // mp_num, dim_head))
+        reshaped = reshaped.reshape(input_tensor.shape[:-2] + (-1,) + reshaped.shape[-1:])
         return reshaped
 
     def _merge_heads(self, tensor, num_attention_heads, attn_head_size):
@@ -141,7 +144,7 @@ class MossAttention(nn.Cell):
         # compute causal mask from causal mask buffer
         query_length, key_length = query.shape[-2], key.shape[-2]
         causal_mask = self.causal_mask[:, :, key_length -
-                                       query_length: key_length, :key_length]
+                                             query_length: key_length, :key_length]
 
         # Keep the attention weights computation in fp32 to avoid overflow issues
         query = query.to(mindspore.float32)
@@ -185,7 +188,7 @@ class MossAttention(nn.Cell):
     ) -> Union[
         Tuple[Tensor, Tuple[Tensor]],
         Optional[Tuple[Tensor, Tuple[Tensor],
-                       Tuple[Tensor, ...]]],
+        Tuple[Tensor, ...]]],
     ]:
         qkv = self.qkv_proj(hidden_states)
         # TODO(enijkamp): factor out number of logical TPU-v4 cores or make forward pass agnostic
@@ -346,7 +349,7 @@ class MossPreTrainedModel(PreTrainedModel):
         """Initialize the embedding_table."""
         if isinstance(cell, (nn.Dense,)):
             # Slightly different from Mesh Transformer JAX which uses truncated_normal for initialization
-            # cf https://github.com/pytorch/pytorch/pull/5617
+            # cf https://github.com/MindSpore/MindSpore/pull/5617
             # cell.embedding_table.data.normal_(mean=0.0, std=self.config.initializer_range)
             # cell = ops.normal(cell.embedding_table.data.shape,mean=0.0,stddev=self.config.initializer_range)
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
@@ -373,8 +376,8 @@ class MossPreTrainedModel(PreTrainedModel):
 
 
 MOSS_START_DOCSTRING = r"""
-    This model is a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) sub-class. Use
-    it as a regular PyTorch Cell and refer to the PyTorch documentation for all matter related to general usage and
+    This model is a MindSpore [mindspore.nn.Cell](https://MindSpore.org/docs/stable/nn.html#mindspore.nn.Cell) sub-class. Use
+    it as a regular MindSpore Cell and refer to the MindSpore documentation for all matter related to general usage and
     behavior.
 
     Parameters:
@@ -445,8 +448,8 @@ class MossModel(MossPreTrainedModel):
         self.vocab_size = config.vocab_size
         self.wte = nn.Embedding(config.vocab_size, self.embed_dim)
         self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.h = nn.CellList([MossBlock(config)
-                             for _ in range(config.n_layer)])
+        self.heads = nn.CellList([MossBlock(config)
+                              for _ in range(config.n_layer)])
         self.ln_f = nn.LayerNorm(
             [self.embed_dim], epsilon=config.layer_norm_epsilon)
         self.rotary_dim = min(
@@ -458,9 +461,15 @@ class MossModel(MossPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
+        """
+        get input embeddings
+        """
         return self.wte
 
     def set_input_embeddings(self, new_embeddings):
+        """
+        set input embeddings
+        """
         self.wte = new_embeddings
 
     def construct(
@@ -477,6 +486,9 @@ class MossModel(MossPreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, Tuple]:
+        """
+        Construct moss model
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -487,7 +499,7 @@ class MossModel(MossPreTrainedModel):
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError(
                 "You cannot specify both input_ids and inputs_embeds at the same time")
-        elif input_ids is not None:
+        if input_ids is not None:
             input_shape = input_ids.shape
             input_ids = input_ids.view(-1, input_shape[-1])
             batch_size = input_ids.shape[0]
@@ -508,7 +520,7 @@ class MossModel(MossPreTrainedModel):
 
         if past_key_values is None:
             past_length = 0
-            past_key_values = tuple([None] * len(self.h))
+            past_key_values = tuple([None] * len(self.heads))
         else:
             past_length = past_key_values[0][0].size(-2)
 
@@ -538,7 +550,7 @@ class MossModel(MossPreTrainedModel):
             attention_mask = attention_mask.to(
                 dtype=self.dtype)  # fp16 compatibility
             attention_mask = (1.0 - attention_mask) * \
-                np.finfo(mindspore.dtype_to_nptype(self.dtype)).min
+                             np.finfo(mindspore.dtype_to_nptype(self.dtype)).min
 
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head
@@ -570,7 +582,7 @@ class MossModel(MossPreTrainedModel):
         presents = () if use_cache else None
         all_self_attentions = () if output_attentions else None
         all_hidden_states = () if output_hidden_states else None
-        for i, (block, layer_past) in enumerate(zip(self.h, past_key_values)):
+        for i, (block, layer_past) in enumerate(zip(self.heads, past_key_values)):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
@@ -607,7 +619,7 @@ class MossModel(MossPreTrainedModel):
 
             if output_attentions:
                 all_self_attentions = all_self_attentions + \
-                    (outputs[2 if use_cache else 1],)
+                                      (outputs[2 if use_cache else 1],)
 
         hidden_states = self.ln_f(hidden_states)
 
@@ -643,7 +655,7 @@ class MossForCausalLM(MossPreTrainedModel):
         # if config.wbits not in [4, 8, 32]:
         #     logger.warning(f'Specify `wbits` with 4, 8 or 32 to load the model. ')
         if config.wbits in [4, 8]:
-            def noop(*args, **kwargs):
+            def noop():
                 pass
 
             mindspore.common.initializer.HeUniform = noop
@@ -664,12 +676,21 @@ class MossForCausalLM(MossPreTrainedModel):
         self.post_init()
 
     def get_output_embeddings(self):
+        """
+        get output embeddings
+        """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
+        """
+        set output embeddings
+        """
         self.lm_head = new_embeddings
 
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, **kwargs):
+        """
+        Prepare inputs for the generation task.
+        """
         token_type_ids = kwargs.get("token_type_ids", None)
         # only last token for inputs_ids if past is defined in kwargs
         if past_key_values:
@@ -781,5 +802,4 @@ class MossForCausalLM(MossPreTrainedModel):
         """
         Function to quantize a model using GPTQ.
         """
-        from .moss_quantization import quantize_with_gptq
         return quantize_with_gptq(self, wbits, groupsize)
