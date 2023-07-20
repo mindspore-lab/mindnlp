@@ -943,7 +943,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             ["!", "！"],
             [":", "："],
             [";", "；"],
-            ["\?", "？"],
+            ["?", "？"],
         ]
         for item in punkts:
             response = re.sub(r"([\u4e00-\u9fff])%s" % item[0], r"\1%s" % item[1], response)

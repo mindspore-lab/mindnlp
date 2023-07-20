@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=C0103
+# pylint: disable=C0415
 """
 Test Moss functions
 """
@@ -21,8 +23,6 @@ import pytest
 import mindspore
 
 from mindspore import Tensor
-
-from mindnlp.models.moss import MossConfig, moss
 
 
 @pytest.mark.gpu_only
@@ -35,6 +35,12 @@ class TestModelingMoss(unittest.TestCase):
         """
         Set up.
         """
+        from mindnlp.models.moss import MossConfig, MossAttention, MossMLP, MossBlock, MossModel, MossForCausalLM
+        self.MossAttention = MossAttention
+        self.MossMLP = MossMLP
+        self.MossBlock = MossBlock
+        self.MossModel = MossModel
+        self.MossForCausalLM = MossForCausalLM
         self.config = MossConfig(vocab_size=1000,
                                  n_positions=512,
                                  n_layer=2,
@@ -45,7 +51,7 @@ class TestModelingMoss(unittest.TestCase):
         r"""
         Test MossAttention
         """
-        model = moss.MossAttention(self.config)
+        model = self.MossAttention(self.config)
 
         hidden_states = Tensor(np.random.randint(1, 16, (2, 512, self.config.n_embd)), dtype=mindspore.float32)
 
@@ -60,7 +66,7 @@ class TestModelingMoss(unittest.TestCase):
         """
         intermediate_size = 4096
 
-        model = moss.MossMLP(intermediate_size, self.config)
+        model = self.MossMLP(intermediate_size, self.config)
 
         hidden_states = Tensor(np.random.randint(1, 16, (2, 512, self.config.n_embd)), dtype=mindspore.float32)
 
@@ -72,7 +78,7 @@ class TestModelingMoss(unittest.TestCase):
         r"""
         Test MossBlock
         """
-        model = moss.MossBlock(self.config)
+        model = self.MossBlock(self.config)
 
         hidden_states = Tensor(np.random.randint(1, 16, (2, 512, self.config.n_embd)), dtype=mindspore.float32)
         position_ids = Tensor(np.random.randint(0, 1, (2, self.config.n_embd)), dtype=mindspore.int64)
@@ -85,7 +91,7 @@ class TestModelingMoss(unittest.TestCase):
         r"""
         Test MossModel
         """
-        model = moss.MossModel(self.config)
+        model = self.MossModel(self.config)
 
         ms_input = Tensor(np.random.randint(0, 512, (2, 512)))
 
@@ -97,7 +103,7 @@ class TestModelingMoss(unittest.TestCase):
         r"""
         Test MossForCausalLM
         """
-        model = moss.MossForCausalLM(self.config)
+        model = self.MossForCausalLM(self.config)
 
         ms_input = Tensor(np.random.randn(2), dtype=mindspore.int64)
 
