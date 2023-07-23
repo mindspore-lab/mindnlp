@@ -31,11 +31,12 @@ import numpy as np
 from mindspore import ops, nn, Parameter,Tensor
 from mindspore.common.initializer import Normal, initializer
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from mindnlp.models.utils.utils import SequenceSummary, SQuADHead
+
 from mindnlp.abc import PreTrainedModel
 from mindnlp.configs import MINDNLP_MODEL_URL_BASE
 from .xlm_config import XLMConfig,XLM_SUPPORT_LIST
-from ..utils.activations import get_activation
+from ..activations import get_activation
+from ..utils import SequenceSummary, SQuADHead
 
 
 PRETRAINED_MODEL_ARCHIVE_MAP = {

@@ -13,24 +13,25 @@
 # limitations under the License.
 # ============================================================================
 """
-Test IWSLT2016
+Test docvqa_zh
 """
+
 import os
-import shutil
 import unittest
+import shutil
 import pytest
 from mindnlp import load_dataset
-from mindnlp.dataset import IWSLT2016
+from mindnlp.dataset import docvqa_zh
 
 
-class TestIWSLT2016(unittest.TestCase):
+class TestHFDocvqazh(unittest.TestCase):
     r"""
-    Test IWSLT2016
+    Test HF_Docvqa_zh
     """
 
     @classmethod
     def setUpClass(cls):
-        cls.root = os.path.join(os.getcwd(), ".mindnlp")
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
 
     @classmethod
     def tearDownClass(cls):
@@ -38,29 +39,29 @@ class TestIWSLT2016(unittest.TestCase):
 
     @pytest.mark.download
     @pytest.mark.local
-    def test_iwslt2016(self):
-        """Test IWSLT2016"""
+    def test_docvqa_zh(self):
+        """Test HF_Docvqa_zh"""
         num_lines = {
-            "train": 196884,
+            "train": 32806,
+            "dev": 3929,
+            "test": 3904,
         }
-        dataset_train, _, _ = IWSLT2016(root=self.root,
-                                        split=(
-                                            'train', 'valid', 'test'),
-                                        language_pair=(
-                                            'de', 'en')
-                                        )
+        dataset_train, dataset_dev, dataset_test = docvqa_zh(root=self.root, split=('train', 'dev', 'test'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
+        assert dataset_dev.get_dataset_size() == num_lines["dev"]
+        assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = IWSLT2016(
-            root=self.root, split='train', language_pair=('de', 'en'))
+        dataset_train = docvqa_zh(root=self.root, split='train')
+        dataset_dev = docvqa_zh(root=self.root, split='dev')
+        dataset_test = docvqa_zh(root=self.root, split='test')
         assert dataset_train.get_dataset_size() == num_lines["train"]
+        assert dataset_dev.get_dataset_size() == num_lines["dev"]
+        assert dataset_test.get_dataset_size() == num_lines["test"]
 
     @pytest.mark.download
-    @pytest.mark.local
-    def test_iwslt2016_by_register(self):
-        """test iwslt2016 by register"""
-        _ = load_dataset('iwslt2016',
+    def test_docvqa_zh_by_register(self):
+        """test docvqa_zh by register"""
+        _ = load_dataset('docvqa_zh',
                  root=self.root,
-                 split=('train', 'valid', 'test'),
-                 language_pair=('de', 'en')
+                 split=('dev')
                  )

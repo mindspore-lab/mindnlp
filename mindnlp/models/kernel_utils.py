@@ -48,7 +48,7 @@ ENV_INFO['NVCC'] = _get_nvcc_info(CUDA_HOME)
 
 def compile_kernel(**kwargs):
     """compile kernel and return so file path"""
-    kernel_folder = Path(__file__).resolve().parent.parent.parent / "_csrc" / "cuda"
+    kernel_folder = Path(__file__).resolve().parent.parent / "_csrc" / "cuda"
     cuda_kernel_file = kernel_folder / "wkv.cu"
     cuda_so_file = kernel_folder / 'wkv.so'
     if cuda_so_file.exists():
@@ -74,6 +74,7 @@ def compile_kernel(**kwargs):
 
     nvcc_command = ' '.join(nvcc_args + flags)
     # Execute nvcc compilation command
+    print(nvcc_command)
     result = subprocess.run(nvcc_command, check=True, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if result.returncode == 0:
         logger.info('Compilation successful')
