@@ -366,6 +366,9 @@ class XLMTokenizer(PreTrainedTokenizer):
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     pretrained_vocab_map = PRETRAINED_VOCAB_MAP
     model_input_names: List[str] = ["input_ids", "token_type_ids", "attention_mask"]
+    padding_side: str = "right"
+    truncation_side: str = "right"
+    slow_tokenizer_class = None
 
     def __init__(
         self,
