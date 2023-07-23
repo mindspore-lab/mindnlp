@@ -27,6 +27,9 @@ XLMTokenizer
 # pylint: disable=W1505
 # pylint: disable=R1705
 # pylint: disable=R1723
+# pylint: disable=R1702
+# pylint: disable=R1724
+# pylint: disable=W0102
 import json
 import logging
 import re
@@ -46,10 +49,10 @@ PRETRAINED_VOCAB_MAP = {
     model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format('xlm', model) for model in XLM_SUPPORT_LIST
 }
 
-class MissingType:
-    "MissingType"
-    pass
-MISSING = MissingType()
+# class MissingType:
+#     "MissingType"
+#     pass
+# MISSING = MissingType()
 TextInput = str
 PreTokenizedInput = List[str]
 EncodedInput = List[int]
@@ -77,7 +80,7 @@ class ExplicitEnum(str, Enum):
     @classmethod
     def _missing_(cls, value):
         raise ValueError(
-            "{value} is not a valid"
+            f"{value} is not a valid"
         )
 
 
@@ -424,11 +427,11 @@ class XLMTokenizer(PreTrainedTokenizer):
         self._in_target_context_manager = False
         try:
             import sacremoses
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "You need to install sacremoses to use XLMTokenizer. "
                 "See https://pypi.org/project/sacremoses/ for installation."
-            )
+            )from e
 
         self.sm = sacremoses
 
