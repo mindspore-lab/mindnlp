@@ -21,14 +21,15 @@ import random
 import os
 from typing import List, Optional, Tuple, Union
 import numpy as np
-from mindspore import ops, Tensor, Parameter
-from mindspore import nn
-from mindspore import dtype as mstype
 import mindspore
+from mindspore import Tensor, Parameter
+from mindspore import nn, ops
+from mindspore import dtype as mstype
 from mindspore.common.initializer import initializer, Normal
+
 from mindnlp.abc import PreTrainedModel
-from mindnlp.models.utils.activations import ACT2FN
-from mindnlp.models.bart.bart_config import BartConfig
+from .bart_config import BartConfig
+from ..activations import ACT2FN
 
 def shift_tokens_right(input_ids: Tensor, pad_token_id: int, decoder_start_token_id: int):
     """

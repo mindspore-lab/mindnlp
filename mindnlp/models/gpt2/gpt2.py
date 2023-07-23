@@ -24,16 +24,15 @@ import os
 import math
 import mindspore
 import numpy as np
-from mindspore import nn, ops, Tensor, dtype_to_nptype
+from mindspore import nn, ops, Tensor, Parameter, dtype_to_nptype
 from mindspore import log as logger
 from mindspore.common.initializer import initializer, Normal
 from mindnlp.abc import PreTrainedModel
 from mindnlp._legacy.functional import split, where, arange, softmax
 from mindnlp._legacy.nn import Dropout, Matmul
 from mindnlp.configs import MINDNLP_MODEL_URL_BASE
-from ..utils.activations import ACT2FN
-from ..utils.utils import SequenceSummary
-from ..utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
+from ..activations import ACT2FN
+from ..utils import SequenceSummary, Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
 from .config_gpt2 import GPT2Config, GPT2_SUPPORT_LIST
 
 
@@ -68,9 +67,8 @@ def torch_to_mindspore(pth_file, **kwargs):
             k = k.replace('.weight', '.embedding_table')
         if 'wpe.' in k:
             k = k.replace('.weight', '.embedding_table')
-        if 'weight' in k and not any(e in k for e in ['lm_head.weight', '.c_attn', '.q_attn', '.c_proj', '.c_fc']):
+        if 'ln' in k:
             k = k.replace('.weight', '.gamma')
-        if '.bias' in k and not any(e in k for e in ['.attn.bias', '.c_attn', '.q_attn', '.c_proj', '.c_fc']):
             k = k.replace('.bias', '.beta')
         if prefix:
             k = prefix + "." + k
@@ -96,9 +94,9 @@ class GPT2Attention(nn.Cell):
         super().__init__()
 
         max_positions = config.max_position_embeddings
-        self.bias = Tensor(np.tril(np.ones((max_positions, max_positions))).reshape(
+        self.bias = Parameter(Tensor(np.tril(np.ones((max_positions, max_positions))).reshape(
                 (1, 1, max_positions, max_positions)
-            ), mindspore.bool_)
+            ), mindspore.bool_), requires_grad=False)
         self.masked_bias = Tensor(-1e4, mindspore.float32)
 
         self.embed_dim = config.hidden_size

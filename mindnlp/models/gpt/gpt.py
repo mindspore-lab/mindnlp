@@ -34,10 +34,9 @@ from mindnlp._legacy.nn import Dropout, Matmul
 from mindnlp._legacy.functional import split, softmax, arange
 from mindnlp.abc import PreTrainedModel
 from mindnlp.configs import MINDNLP_MODEL_URL_BASE
-from ..utils.utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
-from ..utils.utils import SequenceSummary
-from ..utils.activations import ACT2FN
 from .gpt_config import GPTConfig, GPT_SUPPORT_LIST
+from ..utils import Conv1D, SequenceSummary, prune_conv1d_layer, find_pruneable_heads_and_indices
+from ..activations import ACT2FN
 
 
 PRETRAINED_MODEL_ARCHIVE_MAP = {

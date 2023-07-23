@@ -27,7 +27,7 @@ from mindspore.common.initializer import initializer, TruncatedNormal, Normal
 from mindnlp._legacy.nn import Dropout, Matmul
 from mindnlp.abc import PreTrainedModel
 from mindnlp.configs import MINDNLP_MODEL_URL_BASE
-from ..utils.activations import ACT2FN
+from ..activations import ACT2FN
 from .bert_config import BertConfig, BERT_SUPPORT_LIST
 
 
