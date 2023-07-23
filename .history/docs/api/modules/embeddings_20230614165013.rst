@@ -12,4 +12,3 @@ word2vec\_embedding
 .. automodule:: mindnlp.modules.embeddings
    :members:
    :show-inheritance:
-   
