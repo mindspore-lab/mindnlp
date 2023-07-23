@@ -16,7 +16,7 @@
 # pylint: disable=too-many-instance-attributes
 """ XLM configuration"""
 from mindnlp.abc import PreTrainedConfig
-from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
+from mindnlp.configs import HF_CONFIG_URL_BASE
 XLM_SUPPORT_LIST = [
     "xlm-clm-ende-1024",
     "xlm-mlm-en-2048", 
@@ -30,7 +30,7 @@ XLM_SUPPORT_LIST = [
 ]
 
 CONFIG_ARCHIVE_MAP = {
-    model: MINDNLP_CONFIG_URL_BASE.format('xlm', model) for model in XLM_SUPPORT_LIST
+    model: HF_CONFIG_URL_BASE.format(model) for model in XLM_SUPPORT_LIST
 }
 
 class XLMConfig(PreTrainedConfig):
