@@ -30,11 +30,11 @@ from mindspore import nn
 from mindspore import ops
 from mindspore import Parameter, Tensor
 
+from mindnlp.abc import PreTrainedModel
 from mindnlp._legacy.nn import Dropout
 from mindnlp._legacy.functional import arange
 from mindnlp.configs import MINDNLP_MODEL_URL_BASE
-from ..utils.activations import ACT2FN
-from ...abc import PreTrainedModel
+from ..activations import ACT2FN
 
 from .t5_config import T5Config, T5_SUPPORT_LIST
 

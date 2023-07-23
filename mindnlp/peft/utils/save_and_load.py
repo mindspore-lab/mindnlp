@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-
-from .config import PeftType
+# pylint: disable=C0103
+"""save and load"""
 import mindspore
+from .config import PeftType
 
 def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
     """
@@ -95,4 +96,4 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
     else:
         raise NotImplementedError
 
-    param_not_load, ckpt_not_load  = mindspore.load_param_into_net(model, peft_model_state_dict)
+    _ = mindspore.load_param_into_net(model, peft_model_state_dict)

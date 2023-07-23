@@ -12,20 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint:disable=R0902
-
-import math
+# pylint: disable=C0103
+# pylint: disable=R1705
+# pylint: disable=R1702
+# pylint: disable=W0631
+# pylint: disable=W0613
+"""Lora."""
 import re
 import warnings
-from dataclasses import asdict, field, dataclass
+from dataclasses import asdict, dataclass, field, replace
 from enum import Enum
 from typing import List, Optional, Union
 import mindspore
-import mindspore.nn as nn
-import mindspore.ops as ops
-from mindspore.common.initializer import initializer, HeUniform
-from mindnlp.models.utils.utils import Conv1D
-from ..utils import (
+from mindspore import nn, ops
+
+import mindnlp._legacy.functional as F
+from mindnlp.models.utils import Conv1D
+from mindnlp.peft.utils import (
     TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING,
     PeftConfig,
     PeftType,
@@ -119,11 +122,12 @@ class LoraModel(mindspore.nn.Cell):
     def __init__(self, model, config, adapter_name):
         super().__init__()
         self.model = model
-        self.forward = self.model.construct
+        self.construct = self.model.construct
         self.peft_config = config
         self.add_adapter(adapter_name, self.peft_config[adapter_name])
 
     def add_adapter(self, adapter_name, config=None):
+        """add adapter"""
         if config is not None:
             model_config = self.model.config.to_dict() if hasattr(self.model.config, "to_dict") else self.model.config
             config = self._prepare_lora_config(config, model_config)
@@ -162,7 +166,7 @@ class LoraModel(mindspore.nn.Cell):
                     is_target_modules_in_base_model = True
 
                 parent, target, target_name = _get_submodules(self.model, key)
-                
+
                 if hasattr(target, "bias"):
                     bias = target.bias is not None
 
@@ -235,6 +239,7 @@ class LoraModel(mindspore.nn.Cell):
             return getattr(self.model, name)
 
     def get_peft_config_as_dict(self, inference: bool = False):
+        """get peft config as dict"""
         config_dict = {}
         for key, value in self.peft_config.items():
             config = {k: v.value if isinstance(v, Enum) else v for k, v in asdict(value).items()}
@@ -244,17 +249,19 @@ class LoraModel(mindspore.nn.Cell):
         return config
 
     def _set_adapter_layers(self, enabled=True):
-        for module in self.model.modules():
-            if isinstance(module, LoraLayer):
-                module.disable_adapters = False if enabled else True
+        for module in self.model.cells():
+            module.disable_adapters = not isinstance(module, LoraLayer)
 
     def enable_adapter_layers(self):
+        """enable_adapter_layers"""
         self._set_adapter_layers(enabled=True)
 
     def disable_adapter_layers(self):
+        """disable_adapter_layers"""
         self._set_adapter_layers(enabled=False)
 
     def set_adapter(self, adapter_name):
+        """set_adapter"""
         for module in self.model.modules():
             if isinstance(module, LoraLayer):
                 if module.merged:
@@ -263,11 +270,13 @@ class LoraModel(mindspore.nn.Cell):
                 module.active_adapter = adapter_name
 
     def merge_adapter(self):
+        """merge_adapter"""
         for module in self.model.modules():
             if isinstance(module, LoraLayer):
                 module.merge()
 
     def unmerge_adapter(self):
+        """unmerge_adapter"""
         for module in self.model.modules():
             if isinstance(module, LoraLayer):
                 module.unmerge()
@@ -278,10 +287,10 @@ class LoraModel(mindspore.nn.Cell):
             if model_config["model_type"] not in TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING:
                 raise ValueError("Please specify `target_modules` in `peft_config`")
             peft_config.target_modules = TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING[model_config["model_type"]]
-        
+
         if peft_config.inference_mode:
             peft_config.merge_weights = True
-        
+
         return peft_config
 
     def merge_and_unload(self):
@@ -302,8 +311,22 @@ class LoraModel(mindspore.nn.Cell):
             except AttributeError:
                 continue
             if isinstance(target, LoraLayer):
-                bias = target.bias is not None
-                new_module = mindspore.nn.Dense(target.in_features, target.out_features, bias=bias)
+                if isinstance(target, nn.Embedding):
+                    new_module = nn.Embedding(target.in_features, target.out_features)
+                elif isinstance(target, nn.Conv2d):
+                    new_module = nn.Conv2d(
+                        target.in_channels,
+                        target.out_channels,
+                        kernel_size=target.kernel_size,
+                        stride=target.stride,
+                        padding=target.padding,
+                        dilation=target.dilation,
+                    )
+                elif isinstance(target, nn.Dense):
+                    bias = target.bias is not None
+                    new_module = nn.Dense(target.in_features, target.out_features, has_bias=bias)
+                else:
+                    raise ValueError(f"Not support {type(target)}.")
                 target.merge()
                 self._replace_module(parent, target_name, new_module, target)
 
@@ -314,7 +337,40 @@ class LoraModel(mindspore.nn.Cell):
         return self.model
 
     def add_weighted_adapter(self, adapters, weights, adapter_name):
-        pass
+        """add_weighted_adapter"""
+        if len({self.peft_config[adapter].r for adapter in adapters}) != 1:
+            raise ValueError("All adapters must have the same r value")
+        self.peft_config[adapter_name] = replace(
+            self.peft_config[adapters[0]], lora_alpha=self.peft_config[adapters[0]].r
+        )
+        self._find_and_replace(adapter_name)
+        mark_only_lora_as_trainable(self.model, self.peft_config[adapter_name].bias)
+        _freeze_adapter(self.model, adapter_name)
+        key_list = [key for key, _ in self.model.named_modules() if "lora" not in key]
+        for key in key_list:
+            _, target, _ = _get_submodules(self.model, key)
+            if isinstance(target, LoraLayer):
+                if adapter_name in target.lora_A:
+                    target.lora_A[adapter_name].weight.data = target.lora_A[adapter_name].weight.data * 0.0
+                    target.lora_B[adapter_name].weight.data = target.lora_B[adapter_name].weight.data * 0.0
+                    for adapter, weight in zip(adapters, weights):
+                        if adapter not in target.lora_A:
+                            continue
+                        target.lora_A[adapter_name].weight.data += (
+                            target.lora_A[adapter].weight.data * weight * target.scaling[adapter]
+                        )
+                        target.lora_B[adapter_name].weight.data += target.lora_B[adapter].weight.data * weight
+
+                elif adapter_name in target.lora_embedding_A:
+                    target.lora_embedding_A[adapter_name].data = target.lora_embedding_A[adapter_name].data * 0.0
+                    target.lora_embedding_B[adapter_name].data = target.lora_embedding_B[adapter_name].data * 0.0
+                    for adapter, weight in zip(adapters, weights):
+                        if adapter not in target.lora_embedding_A:
+                            continue
+                        target.lora_embedding_A[adapter_name].data += (
+                            target.lora_embedding_A[adapter].data * weight * target.scaling[adapter]
+                        )
+                        target.lora_embedding_B[adapter_name].data += target.lora_embedding_B[adapter].data * weight
 
 # Below code is based on https://github.com/microsoft/LoRA/blob/main/loralib/layers.py
 # and modified to work with PyTorch FSDP
@@ -328,13 +384,30 @@ class LoraModel(mindspore.nn.Cell):
 
 # had to adapt it for `lora_only` to work
 def mark_only_lora_as_trainable(model: nn.Cell, bias: str = "none") -> None:
-    pass
+    """mark_only_lora_as_trainable"""
+    for n, p in model.parameters_and_names():
+        if 'lora_' not in n:
+            p.requires_grad = False
+
+        if bias == 'none':
+            return
+        elif bias == 'all':
+            for n, p in model.parameters_and_names():
+                if "bias" in n:
+                    p.requires_grad = True
+        elif bias == 'lora_only':
+            for c in model.cells():
+                if isinstance(c, LoraLayer) and hasattr(c, 'bias') and c.bias is not None:
+                    c.bias.requires_grad = True
+        else:
+            raise NotImplementedError
 
 
 class LoraLayer:
+    """Lora Layer"""
     def __init__(
         self,
-        in_features: int, 
+        in_features: int,
         out_features: int,
     ):
         self.r = {}
@@ -355,17 +428,17 @@ class LoraLayer:
         self.out_features = out_features
 
     def update_layer(self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights):
-        pass
+        """update_layer"""
 
     def update_layer_embedding(self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights):
-        pass
+        """update_layer_embedding"""
 
     def reset_lora_parameters(self, adapter_name):
-        pass
+        """reset_lora_parameters"""
 
 
 class Dense(nn.Dense, LoraLayer):
-    # Lora implemented in a dense layer
+    """Lora implemented in a dense layer"""
     def __init__(
         self,
         adapter_name: str,
@@ -374,14 +447,86 @@ class Dense(nn.Dense, LoraLayer):
         r: int = 0,
         lora_alpha: int = 1,
         lora_dropout: float = 0.0,
-        fan_in_fan_out: bool = False,  
+        fan_in_fan_out: bool = False,
         **kwargs,
     ):
-        pass
+        init_lora_weights = kwargs.pop("init_lora_weights", True)
 
+        nn.Dense.__init__(self, in_features, out_features, **kwargs)
+        LoraLayer.__init__(self, in_features=in_features, out_features=out_features)
+        # Freezing the pre-trained weight matrix
+        self.weight.requires_grad = False
+
+        self.fan_in_fan_out = fan_in_fan_out
+        if fan_in_fan_out:
+            self.weight.data = self.weight.data.T
+
+        # nn.Linear.reset_parameters(self)
+        self.update_layer(adapter_name, r, lora_alpha, lora_dropout, init_lora_weights)
+        self.active_adapter = adapter_name
+
+    def merge(self):
+        """merge"""
+        if self.active_adapter not in self.lora_A.keys():
+            return
+        if self.merged:
+            warnings.warn("Already merged. Nothing to do.")
+            return
+        if self.r[self.active_adapter] > 0:
+            self.weight.data += (
+                transpose(
+                    self.lora_B[self.active_adapter].weight @ self.lora_A[self.active_adapter].weight,
+                    self.fan_in_fan_out,
+                )
+                * self.scaling[self.active_adapter]
+            )
+            self.merged = True
+
+    def unmerge(self):
+        """unmerge"""
+        if self.active_adapter not in self.lora_A.keys():
+            return
+        if not self.merged:
+            warnings.warn("Already unmerged. Nothing to do.")
+            return
+        if self.r[self.active_adapter] > 0:
+            self.weight.data -= (
+                transpose(
+                    self.lora_B[self.active_adapter].weight @ self.lora_A[self.active_adapter].weight,
+                    self.fan_in_fan_out,
+                )
+                * self.scaling[self.active_adapter]
+            )
+            self.merged = False
+
+    def construct(self, x: mindspore.Tensor):
+        previous_dtype = x.dtype
+        if self.active_adapter not in self.lora_A.keys():
+            return F.linear(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
+        if self.disable_adapters:
+            if self.r[self.active_adapter] > 0 and self.merged:
+                self.unmerge()
+            result = F.linear(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
+        elif self.r[self.active_adapter] > 0 and not self.merged:
+            result = F.linear(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
+
+            x = x.to(self.lora_A[self.active_adapter].weight.dtype)
+
+            result += (
+                self.lora_B[self.active_adapter](
+                    self.lora_A[self.active_adapter](self.lora_dropout[self.active_adapter](x))
+                )
+                * self.scaling[self.active_adapter]
+            )
+        else:
+            result = F.linear(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
+
+        result = result.to(previous_dtype)
+
+        return result
 
 class Embedding(nn.Embedding, LoraLayer):
-    # LoRA implemented in a Embedding layer
+    """LoRA implemented in a Embedding layer"""
     def __init__(
         self,
         adapter_name: str,
@@ -392,6 +537,68 @@ class Embedding(nn.Embedding, LoraLayer):
         lora_dropout: float = 0.0,
         **kwargs,
     ):
-        pass
+        init_lora_weights = kwargs.pop("init_lora_weights", True)
 
+        nn.Embedding.__init__(self, num_embeddings, embedding_dim, **kwargs)
+        LoraLayer.__init__(self, in_features=num_embeddings, out_features=embedding_dim)
 
+        self.embedding_table.requires_grad = False
+
+        nn.Embedding.reset_parameters(self)
+        self.update_layer_embedding(adapter_name, r, lora_alpha, lora_dropout, init_lora_weights)
+        self.active_adapter = adapter_name
+
+    def unmerge(self, mode: bool = True):
+        """unmerge"""
+        if not self.merged:
+            warnings.warn("Already unmerged. Nothing to do.")
+            return
+        if self.r[self.active_adapter] > 0:
+            self.weight.data -= (
+                transpose(
+                    self.lora_embedding_B[self.active_adapter] @ self.lora_embedding_A[self.active_adapter], True
+                )
+                * self.scaling[self.active_adapter]
+            )
+            self.merged = False
+
+    def merge(self):
+        """merge"""
+        if self.merged:
+            warnings.warn("Already merged. Nothing to do.")
+            return
+        if self.r[self.active_adapter] > 0:
+            self.weight.data += (
+                transpose(
+                    self.lora_embedding_B[self.active_adapter] @ self.lora_embedding_A[self.active_adapter], True
+                )
+                * self.scaling[self.active_adapter]
+            )
+            self.merged = True
+
+    def construct(self, ids: mindspore.Tensor):
+        if self.disable_adapters:
+            if self.r[self.active.adapter] > 0 and self.merged:
+                self.weight.data -= (
+                    transpose(
+                        self.lora_embedding_B[self.active_adapter].weight
+                        @ self.lora_embedding_A[self.active_adapter].weight,
+                        True,
+                    )
+                    * self.scaling[self.active_adapter]
+                )
+                self.merged = False
+            return nn.Embedding.construct(self, ids)
+
+        elif self.r[self.active_adapter] > 0 and not self.merged:
+            result = nn.Embedding.construct(self, ids)
+            if self.r[self.active_adapter] > 0:
+                after_A = ops.gather(
+                    self.lora_embedding_A[self.active_adapter].T,
+                    ids,
+                    0
+                )
+                result += (after_A @ self.lora_embedding_B[self.active_adapter].T) * self.scaling[self.active_adapter]
+            return result
+        else:
+            return nn.Embedding.construct(self, ids)

@@ -29,6 +29,8 @@ import inspect
 import warnings
 import logging
 from typing import Optional, List, Callable, Dict, Any, Tuple, Union
+
+import numpy as np
 import mindspore
 from mindspore import ops
 
@@ -56,9 +58,7 @@ from mindnlp.generation.logits_process import (
 )
 
 from mindnlp.generation.beam_search import BeamScorer, BeamSearchScorer, ConstrainedBeamSearchScorer
-
 from mindnlp.generation.beam_constraints import DisjunctiveConstraint, PhrasalConstraint
-
 from mindnlp.generation.stopping_criteria import (
     MaxLengthCriteria,
     MaxTimeCriteria,
@@ -66,7 +66,6 @@ from mindnlp.generation.stopping_criteria import (
     StoppingCriteriaList,
     validate_stopping_criteria,
 )
-
 
 class GenerationMixin:
     """
@@ -83,7 +82,7 @@ class GenerationMixin:
 
     def _prepare_model_inputs(
         self,
-        inputs: Optional[mindspore.Tensor] = None,
+        inputs: Optional[np.ndarray] = None,
         bos_token_id: Optional[int] = None,
         model_kwargs: Optional[Dict[str, mindspore.Tensor]] = None,
     ) -> Tuple[mindspore.Tensor, Optional[str], Dict[str, mindspore.Tensor]]:
@@ -169,20 +168,20 @@ class GenerationMixin:
 
     def _prepare_attention_mask_for_generation(
         self,
-        inputs: mindspore.Tensor,
+        inputs: np.ndarray,
         pad_token_id: Optional[int],
         eos_token_id: Optional[Union[int, List[int]]],
     ) -> mindspore.Tensor:
-        is_input_ids = len(inputs.shape) == 2 and inputs.dtype in [mindspore.int64, mindspore.float32]
-        is_pad_token_in_inputs = (pad_token_id is not None) and (ops.any(inputs == pad_token_id))
+        is_input_ids = len(inputs.shape) == 2 and inputs.dtype in [np.int64, np.float32]
+        is_pad_token_in_inputs = (pad_token_id is not None) and (np.any(inputs == pad_token_id))
         if isinstance(eos_token_id, int):
             eos_token_id = [eos_token_id]
         is_pad_token_not_equal_to_eos_token_id = (eos_token_id is None) or (pad_token_id not in eos_token_id)
 
         # Check if input is input_ids and padded -> only then is attention_mask defined
         if is_input_ids and is_pad_token_in_inputs and is_pad_token_not_equal_to_eos_token_id:
-            return inputs.ne(pad_token_id).long()
-        return ops.ones(inputs.shape[:2], dtype=mindspore.float32)
+            return np.not_equal(inputs, pad_token_id).astype(np.int64)
+        return np.ones(inputs.shape[:2], dtype=np.int64)
 
     def _prepare_encoder_decoder_kwargs_for_generation(
         self, inputs_tensor: mindspore.Tensor, model_kwargs, model_input_name: Optional[str] = None
@@ -240,24 +239,10 @@ class GenerationMixin:
             "TODO: You need to implement this function."
         )
 
-    def _extract_past_from_model_output(self, outputs, standardize_cache_format: bool = False):
-        past_key_values = None
-        if "past_key_values" in outputs:
-            past_key_values = outputs.past_key_values
-        elif "mems" in outputs:
-            past_key_values = outputs.mems
-        elif "past_buckets_states" in outputs:
-            past_key_values = outputs.past_buckets_states
-
-        # Bloom fix: standardizes the cache format when requested
-        if standardize_cache_format and hasattr(self, "_convert_to_standard_cache"):
-            batch_size = outputs.logits.shape[0]
-            past_key_values = self._convert_to_standard_cache(past_key_values, batch_size=batch_size)
-        return past_key_values
-
     def _update_model_kwargs_for_generation(
         self,
         outputs,
+        start_pos,
         model_kwargs: Dict[str, Any],
         is_encoder_decoder: bool = False,
         standardize_cache_format: bool = False,
@@ -461,12 +446,14 @@ class GenerationMixin:
 
     def generate(
         self,
-        inputs: Optional[mindspore.Tensor] = None,
+        inputs: Optional[np.ndarray] = None,
         generation_config: Optional[GenerationConfig] = None,
         logits_processor: Optional[LogitsProcessorList] = None,
         stopping_criteria: Optional[StoppingCriteriaList] = None,
         prefix_allowed_tokens_fn: Optional[Callable[[int, mindspore.Tensor], List[int]]] = None,
-        synced_gpus: Optional[bool] = False,
+        jit: bool = False,
+        use_bucket: bool = True,
+        bucket_num: int = 2,
         **kwargs,
     ):
         """Generates sequences of token ids for models with a language modeling head."""
@@ -511,10 +498,10 @@ class GenerationMixin:
         # model_input_name is defined if model-specific keyword input is passed
         # otherwise model_input_name is None
         # all model-specific keyword inputs are removed from `model_kwargs`
-        inputs_tensor, model_input_name, model_kwargs = self._prepare_model_inputs(
+        inputs_array, model_input_name, model_kwargs = self._prepare_model_inputs(
             inputs, generation_config.bos_token_id, model_kwargs
         )
-        batch_size = inputs_tensor.shape[0]
+        batch_size = inputs_array.shape[0]
 
         # 4. Define other model kwargs
         model_kwargs["output_attentions"] = generation_config.output_attentions
@@ -526,14 +513,14 @@ class GenerationMixin:
 
         if model_kwargs.get("attention_mask", None) is None and requires_attention_mask and accepts_attention_mask:
             model_kwargs["attention_mask"] = self._prepare_attention_mask_for_generation(
-                inputs_tensor, generation_config.pad_token_id, generation_config.eos_token_id
+                inputs_array, generation_config.pad_token_id, generation_config.eos_token_id
             )
 
         # decoder-only models should use left-padding for generation
         if not self.config.is_encoder_decoder:
             if (
                 generation_config.pad_token_id is not None
-                and ops.sum(inputs_tensor[:, -1] == generation_config.pad_token_id) > 0
+                and np.sum(inputs_array[:, -1] == generation_config.pad_token_id) > 0
             ):
                 logging.warning(
                     "A decoder-only architecture is being used, but right-padding was detected! For correct "
@@ -544,7 +531,7 @@ class GenerationMixin:
             # if model is encoder decoder encoder_outputs are created
             # and added to `model_kwargs`
             model_kwargs = self._prepare_encoder_decoder_kwargs_for_generation(
-                inputs_tensor, model_kwargs, model_input_name
+                inputs_array, model_kwargs, model_input_name
             )
 
         # 5. Prepare `input_ids` which will be used for auto-regressive generation
@@ -557,7 +544,7 @@ class GenerationMixin:
             )
         else:
             # if decoder-only then inputs_tensor has to be `input_ids`
-            input_ids = inputs_tensor
+            input_ids = inputs_array
 
         # 6. Prepare `max_length` depending on other stopping criteria.
         input_ids_seq_length = input_ids.shape[-1]
@@ -654,7 +641,7 @@ class GenerationMixin:
         logits_processor = self._get_logits_processor(
             generation_config=generation_config,
             input_ids_seq_length=input_ids_seq_length,
-            encoder_input_ids=inputs_tensor,
+            encoder_input_ids=inputs_array,
             prefix_allowed_tokens_fn=prefix_allowed_tokens_fn,
             logits_processor=logits_processor,
         )
@@ -663,7 +650,8 @@ class GenerationMixin:
         stopping_criteria = self._get_stopping_criteria(
             generation_config=generation_config, stopping_criteria=stopping_criteria
         )
-        # 10. go into different generation modes
+
+        # 11. go into different generation modes
         if is_greedy_gen_mode:
             if generation_config.num_return_sequences > 1:
                 raise ValueError(
@@ -671,16 +659,20 @@ class GenerationMixin:
                     " greedy search."
                 )
 
+            max_length = kwargs.get('max_length')
             # 11. run greedy search
             return self.greedy_search(
                 input_ids,
                 logits_processor=logits_processor,
                 stopping_criteria=stopping_criteria,
+                max_length=max_length,
                 pad_token_id=generation_config.pad_token_id,
                 eos_token_id=generation_config.eos_token_id,
                 output_scores=generation_config.output_scores,
                 return_dict_in_generate=generation_config.return_dict_in_generate,
-                synced_gpus=synced_gpus,
+                jit=jit,
+                use_bucket=use_bucket,
+                bucket_num=bucket_num,
                 **model_kwargs,
             )
 
@@ -701,7 +693,6 @@ class GenerationMixin:
                 eos_token_id=generation_config.eos_token_id,
                 output_scores=generation_config.output_scores,
                 return_dict_in_generate=generation_config.return_dict_in_generate,
-                synced_gpus=synced_gpus,
                 **model_kwargs,
             )
 
@@ -727,7 +718,6 @@ class GenerationMixin:
                 eos_token_id=generation_config.eos_token_id,
                 output_scores=generation_config.output_scores,
                 return_dict_in_generate=generation_config.return_dict_in_generate,
-                synced_gpus=synced_gpus,
                 **model_kwargs,
             )
 
@@ -763,7 +753,6 @@ class GenerationMixin:
                 eos_token_id=generation_config.eos_token_id,
                 output_scores=generation_config.output_scores,
                 return_dict_in_generate=generation_config.return_dict_in_generate,
-                synced_gpus=synced_gpus,
                 **model_kwargs,
             )
 
@@ -800,7 +789,6 @@ class GenerationMixin:
                 eos_token_id=generation_config.eos_token_id,
                 output_scores=generation_config.output_scores,
                 return_dict_in_generate=generation_config.return_dict_in_generate,
-                synced_gpus=synced_gpus,
                 **model_kwargs,
             )
 
@@ -845,7 +833,6 @@ class GenerationMixin:
                 eos_token_id=generation_config.eos_token_id,
                 output_scores=generation_config.output_scores,
                 return_dict_in_generate=generation_config.return_dict_in_generate,
-                synced_gpus=synced_gpus,
                 **model_kwargs,
             )
 
@@ -931,13 +918,12 @@ class GenerationMixin:
                 eos_token_id=generation_config.eos_token_id,
                 output_scores=generation_config.output_scores,
                 return_dict_in_generate=generation_config.return_dict_in_generate,
-                synced_gpus=synced_gpus,
                 **model_kwargs,
             )
 
     def greedy_search(
         self,
-        input_ids: mindspore.Tensor,
+        input_ids: np.ndarray,
         logits_processor: Optional[LogitsProcessorList] = None,
         stopping_criteria: Optional[StoppingCriteriaList] = None,
         max_length: Optional[int] = None,
@@ -947,117 +933,23 @@ class GenerationMixin:
         output_hidden_states: Optional[bool] = None,
         output_scores: Optional[bool] = None,
         return_dict_in_generate: Optional[bool] = None,
-        synced_gpus: bool = False,
+        jit: bool = False,
+        use_bucket: bool = True,
+        bucket_num: int = 2,
         streamer: Optional["BaseStreamer"] = None,
         **model_kwargs,
     ) -> mindspore.Tensor:
-        r"""
-        Generates sequences of token ids for models with a language modeling head using **greedy decoding** and can be
-        used for text-decoder, text-to-text, speech-to-text, and vision-to-text models.
-
-        <Tip warning={true}>
-
-        In most cases, you do not need to call [`~generation.GenerationMixin.greedy_search`] directly. Use generate()
-        instead. For an overview of generation strategies and code examples, check the [following
-        guide](../generation_strategies).
-
-        </Tip>
-
-
-        Parameters:
-            input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
-                The sequence used as a prompt for the generation.
-            logits_processor (`LogitsProcessorList`, *optional*):
-                An instance of [`LogitsProcessorList`]. List of instances of class derived from [`LogitsProcessor`]
-                used to modify the prediction scores of the language modeling head applied at each generation step.
-            stopping_criteria (`StoppingCriteriaList`, *optional*):
-                An instance of [`StoppingCriteriaList`]. List of instances of class derived from [`StoppingCriteria`]
-                used to tell if the generation loop should stop.
-
-            max_length (`int`, *optional*, defaults to 20):
-                **DEPRECATED**. Use `logits_processor` or `stopping_criteria` directly to cap the number of generated
-                tokens. The maximum length of the sequence to be generated.
-            pad_token_id (`int`, *optional*):
-                The id of the *padding* token.
-            eos_token_id (`Union[int, List[int]]`, *optional*):
-                The id of the *end-of-sequence* token. Optionally, use a list to set multiple *end-of-sequence* tokens.
-            output_attentions (`bool`, *optional*, defaults to `False`):
-                Whether or not to return the attentions tensors of all attention layers. See `attentions` under
-                returned tensors for more details.
-            output_hidden_states (`bool`, *optional*, defaults to `False`):
-                Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors
-                for more details.
-            output_scores (`bool`, *optional*, defaults to `False`):
-                Whether or not to return the prediction scores. See `scores` under returned tensors for more details.
-            return_dict_in_generate (`bool`, *optional*, defaults to `False`):
-                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-            synced_gpus (`bool`, *optional*, defaults to `False`):
-                Whether to continue running the while loop until max_length (needed for ZeRO stage 3)
-            streamer (`BaseStreamer`, *optional*):
-                Streamer object that will be used to stream the generated sequences. Generated tokens are passed
-                through `streamer.put(token_ids)` and the streamer is responsible for any further processing.
-            model_kwargs:
-                Additional model specific keyword arguments will be forwarded to the `forward` function of the model.
-                If model is an encoder-decoder model the kwargs should include `encoder_outputs`.
-
-        Return:
-            [`~generation.GreedySearchDecoderOnlyOutput`], [`~generation.GreedySearchEncoderDecoderOutput`] or
-            `mindspore.Tensor`: A `mindspore.Tensor` containing the generated tokens (default behaviour) or a
-            [`~generation.GreedySearchDecoderOnlyOutput`] if `model.config.is_encoder_decoder=False` and
-            `return_dict_in_generate=True` or a [`~generation.GreedySearchEncoderDecoderOutput`] if
-            `model.config.is_encoder_decoder=True`.
-
-        Examples:
-
-        ```python
-        >>> from transformers import (
-        ...     AutoTokenizer,
-        ...     AutoModelForCausalLM,
-        ...     LogitsProcessorList,
-        ...     MinLengthLogitsProcessor,
-        ...     StoppingCriteriaList,
-        ...     MaxLengthCriteria,
-        ... )
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("gpt2")
-        >>> model = AutoModelForCausalLM.from_pretrained("gpt2")
-
-        >>> # set pad_token_id to eos_token_id because GPT2 does not have a PAD token
-        >>> model.generation_config.pad_token_id = model.generation_config.eos_token_id
-
-        >>> input_prompt = "It might be possible to"
-        >>> input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids
-
-        >>> # instantiate logits processors
-        >>> logits_processor = LogitsProcessorList(
-        ...     [
-        ...         MinLengthLogitsProcessor(10, eos_token_id=model.generation_config.eos_token_id),
-        ...     ]
-        ... )
-        >>> stopping_criteria = StoppingCriteriaList([MaxLengthCriteria(max_length=20)])
-
-        >>> outputs = model.greedy_search(
-        ...     input_ids, logits_processor=logits_processor, stopping_criteria=stopping_criteria
-        ... )
-
-        >>> tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        ["It might be possible to get a better understanding of the nature of the problem, but it's not"]
-        ```"""
-        # init values
+        """greedy search."""
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
         if max_length is not None:
-            warnings.warn(
-                "`max_length` is deprecated in this function, use"
-                " `stopping_criteria=StoppingCriteriaList([MaxLengthCriteria(max_length=max_length)])` instead.",
-                UserWarning,
-            )
             stopping_criteria = validate_stopping_criteria(stopping_criteria, max_length)
         pad_token_id = pad_token_id if pad_token_id is not None else self.generation_config.pad_token_id
         eos_token_id = eos_token_id if eos_token_id is not None else self.generation_config.eos_token_id
         if isinstance(eos_token_id, int):
             eos_token_id = [eos_token_id]
-        eos_token_id_tensor = mindspore.Tensor(eos_token_id) if eos_token_id is not None else None
+
+        eos_token_id_array = np.array(eos_token_id)
         output_scores = output_scores if output_scores is not None else self.generation_config.output_scores
         output_attentions = (
             output_attentions if output_attentions is not None else self.generation_config.output_attentions
@@ -1085,36 +977,35 @@ class GenerationMixin:
             )
 
         # keep track of which sequences are already finished
-        unfinished_sequences = ops.ones(input_ids.shape[0], dtype=mindspore.int32)
+        unfinished_sequences = np.ones(input_ids.shape[0], dtype=np.int32)
+        this_peer_finished = False
+        first_step = True
 
-        this_peer_finished = False  # used by synced_gpus only
+        if jit:
+            if use_bucket:
+                if max_length % bucket_num != 0:
+                    warnings.warn( "`max_length` not divided by `bucket_sizes", UserWarning,)
+                    bucket_num = bucket_num + 1
+                per_bucket_size = max_length // bucket_num
+                bucket_sizes = [(i + 1) * (max_length // bucket_num) for i in range(bucket_num)]
+                for i in bucket_sizes:
+                    self.compile(*self.make_compile_tensor(i))
+                model_kwargs['bucket_size'] = per_bucket_size
+            else:
+                self.compile(*self.make_compile_tensor(max_length))
+                model_kwargs['bucket_size'] = max_length
+
         while True:
-            if synced_gpus:
-                # Under synced_gpus the `forward` call must continue until all gpus complete their sequence.
-                # The following logic allows an early break if all peers finished generating their sequence
-                this_peer_finished_flag = mindspore.Tensor(0.0 if this_peer_finished else 1.0)
-                # send 0.0 if we finished, 1.0 otherwise
-                ops.AllReduce()(this_peer_finished_flag)
-                # did all peers finish? the reduced sum will be 0.0 then
-                if this_peer_finished_flag.item() == 0.0:
-                    break
-
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
-
             # forward pass to get next token
-            outputs = self(
-                **model_inputs,
-                return_dict=True,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-            )
+            if jit and not first_step:
+                outputs = self.compile_and_run(*model_inputs)
+            else:
+                outputs = self.construct(*model_inputs)
+                first_step = False
 
-            if synced_gpus and this_peer_finished:
-                continue  # don't waste resources running the code we don't need
-
-            # next_token_logits = outputs.logits[:, -1, :]
-            next_token_logits = outputs[0][:, -1, :]
+            next_token_logits = outputs[0].asnumpy()[:, -1, :]
 
             # pre-process distribution
             next_tokens_scores = logits_processor(input_ids, next_token_logits)
@@ -1138,7 +1029,7 @@ class GenerationMixin:
                     )
 
             # argmax
-            next_tokens = ops.argmax(next_tokens_scores, dim=-1)
+            next_tokens = np.argmax(next_tokens_scores, -1)
 
             # finished sentences should have their next token be a padding token
             if eos_token_id is not None:
@@ -1147,18 +1038,20 @@ class GenerationMixin:
                 next_tokens = next_tokens * unfinished_sequences + pad_token_id * (1 - unfinished_sequences)
 
             # update generated ids, model inputs, and length for next step
-            input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
+            start_pos = input_ids.shape[-1]
+            input_ids = np.concatenate([input_ids, next_tokens[:, None]], axis=-1)
             if streamer is not None:
                 streamer.put(next_tokens)
             model_kwargs = self._update_model_kwargs_for_generation(
-                outputs, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
+                outputs, start_pos, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
             )
 
             # if eos_token was found in one sentence, set sentence to finished
-            if eos_token_id_tensor is not None:
-                unfinished_sequences = unfinished_sequences.mul(
-                    next_tokens.tile((eos_token_id_tensor.shape[0], 1)).ne(eos_token_id_tensor.unsqueeze(1)).astype(mindspore.int32).prod(axis=0)
+            if eos_token_id is not None:
+                unfinished_sequences = np.multiply(unfinished_sequences,
+                    np.prod(np.not_equal(np.tile(next_tokens, (eos_token_id_array.shape[0], 1)), np.expand_dims(eos_token_id_array, 1)), axis=0)
                 )
+
                 # stop when each sentence is finished
                 if unfinished_sequences.max() == 0:
                     this_peer_finished = True
@@ -1167,7 +1060,7 @@ class GenerationMixin:
             if stopping_criteria(input_ids, scores):
                 this_peer_finished = True
 
-            if this_peer_finished and not synced_gpus:
+            if this_peer_finished:
                 break
 
         if streamer is not None:

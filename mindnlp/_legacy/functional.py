@@ -88,6 +88,12 @@ def split(x, size, axis=0):
         return ops.split(x, axis, num)
     return ops.split(x, split_size_or_sections=size, axis=axis)
 
+def chunk(input, chunks, axis=0):
+    """inner chunk"""
+    if less_min_api_compatible:
+        return ops.split(input, axis, chunks)
+    return ops.chunk(input, chunks, axis)
+
 def addmm(x, mat1, mat2, *, beta=1, alpha=1):
     """inner addmm"""
     _matmul_op = _get_cache_prim(ops.MatMul)()
@@ -141,11 +147,11 @@ def zeros_like(x, *, dtype=None):
     output = output.astype(_dtype)
     return output
 
-def linear(x, w, b):
+def linear(x, weight, bias):
     """inner linear"""
-    out = ops.matmul(x, w.swapaxes(-1, -2))
-    if b is not None:
-        out = out + b
+    out = ops.matmul(x, weight.swapaxes(-1, -2))
+    if bias is not None:
+        out = out + bias
     return out
 
 def _in_projection(

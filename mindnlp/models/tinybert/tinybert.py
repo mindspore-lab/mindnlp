@@ -23,7 +23,7 @@ import mindspore
 from mindspore import nn, ops
 from mindnlp.abc import PreTrainedModel
 from .tinybert_config import BertConfig
-from ..utils.activations import ACT2FN
+from ..activations import ACT2FN
 
 
 class TinyBertEmbeddings(nn.Cell):
