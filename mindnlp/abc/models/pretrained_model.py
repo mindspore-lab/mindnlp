@@ -35,16 +35,16 @@ from mindnlp.utils.download import cached_path, get_checkpoint_shard_files
 from mindnlp.abc.configs import PreTrainedConfig, GenerationConfig
 from mindnlp.abc.mixins import CellUtilMixin, GenerationMixin
 from mindnlp.utils import less_min_pynative_first
+
 if less_min_pynative_first:
     from mindspore import load_checkpoint
 else:
     from mindnlp._legacy.utils import load_checkpoint
 
-_init_weights = True
 WEIGHTS_NAME = "mindspore.ckpt"
 WEIGHTS_INDEX_NAME = "mindspore.ckpt.index.json"
 HF_WEIGHTS_INDEX_NAME = "pytorch_model.bin.index.json"
-
+_init_weights = True
 
 class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
     """
@@ -54,6 +54,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
     pretrained_model_archive_map = {}
     base_model_prefix = ""
     main_input_name = "input_ids"
+
 
     def __init__(self, config):
         super().__init__(config)
@@ -290,7 +291,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         # Copy word embeddings from the previous weights
         num_tokens_to_copy = min(old_num_tokens, new_num_tokens)
         new_embeddings.embedding_table.data[:num_tokens_to_copy, :] = old_embeddings.embedding_table.data[
-            :num_tokens_to_copy, :]
+                                                                      :num_tokens_to_copy, :]
 
         return new_embeddings
 
@@ -387,7 +388,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                         )
                         is_sharded = True
                     else:
-                        raise EnvironmentError(f"Couldn't reach server at '{archive_file}' to download pretrained weights.")
+                        raise EnvironmentError(
+                            f"Couldn't reach server at '{archive_file}' to download pretrained weights.")
 
             except EnvironmentError as exc:
                 raise exc
@@ -403,7 +405,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
         # Instantiate model.
         model = cls(config, *model_args, **model_kwargs)
-
 
         if from_pt:
             if is_sharded:
@@ -484,7 +485,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         save_checkpoint(model_to_save, output_model_file)
 
         logger.info(f"Model weights saved in {output_model_file}")
-
 
     def can_generate(self) -> bool:
         """
