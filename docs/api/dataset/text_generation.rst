@@ -35,7 +35,3 @@ wikitext2
    :show-inheritance:
 
 
-.. automodule:: mindnlp.dataset.text_generation
-   :members:
-   :undoc-members:
-   :show-inheritance:

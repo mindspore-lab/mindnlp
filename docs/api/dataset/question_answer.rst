@@ -19,7 +19,3 @@ squad2
    :show-inheritance:
 
 
-.. automodule:: mindnlp.dataset.question_answer
-   :members:
-   :undoc-members:
-   :show-inheritance:

@@ -17,17 +17,3 @@ rnn\_encoder
    :members:
    :undoc-members:
    :show-inheritance:
-
-transformer\_encoder
----------------------------------------------------
-
-.. automodule:: mindnlp.modules.encoder.transformer_encoder
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-.. automodule:: mindnlp.modules.encoder
-   :members:
-   :undoc-members:
-   :show-inheritance:
