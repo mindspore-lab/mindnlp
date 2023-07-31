@@ -60,6 +60,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         super().__init__(config)
         # Save config in model
         self.config = config
+        self.name_or_path = config.name_or_path
         self.generation_config = GenerationConfig.from_model_config(config) if self.can_generate() else None
 
     def post_init(self):
@@ -396,6 +397,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         else:
             raise ValueError("the argument 'pretrained_model_name_or_path' should be "
                              "a string of model name or checkpoint path, but got 'None'.")
+
+        config.name_or_path = pretrained_model_name_or_path
 
         # Instantiate model.
         model = cls(config, *model_args, **model_kwargs)

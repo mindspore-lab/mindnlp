@@ -29,6 +29,7 @@ CONFIG_ARCHIVE_MAP = {
 
 class RobertaConfig(BertConfig):
     """Roberta Config."""
+    model_type = "roberta"
     pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
 __all__ = ['RobertaConfig']

@@ -165,7 +165,6 @@ class PromptLearningConfig(PeftConfig):
     )
     num_attention_heads: Optional[int] = field(default=None, metadata={"help": "Number of attention heads"})
     num_layers: Optional[int] = field(default=None, metadata={"help": "Number of transformer layers"})
-
     @property
     def is_prompt_learning(self):
         r"""

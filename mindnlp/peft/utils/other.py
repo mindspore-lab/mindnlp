@@ -15,13 +15,29 @@
 # pylint: disable=C0103
 """other utils"""
 import copy
-from typing import List
+from typing import Optional, List
 
 import mindspore
-from mindspore import nn, ops, Parameter
+from mindspore import nn, ops, Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
-from mindnlp._legacy.nn import Matmul
 
+from mindnlp._legacy.nn import Matmul
+from mindnlp.abc import CellDict
+
+def _get_batch_size(input_ids: Optional[Tensor], inputs_embeds: Optional[Tensor]) -> int:
+    """Get the batch size based on either input_ids or input_embeds
+
+    Raises an ValueError if both are None.
+
+    """
+    if (input_ids is None) and (inputs_embeds is None):
+        raise ValueError("You have to provide either input_ids or inputs_embeds")
+
+    if input_ids is not None:
+        batch_size = input_ids.shape[0]
+    else:
+        batch_size = inputs_embeds.shape[0]
+    return batch_size
 
 class ModulesToSaveWrapper(mindspore.nn.Cell):
     """
@@ -30,7 +46,7 @@ class ModulesToSaveWrapper(mindspore.nn.Cell):
     def __init__(self, module_to_save, adapter_name):
         super().__init__()
         self.original_module = module_to_save
-        self.modules_to_save = nn.CellDict()
+        self.modules_to_save = CellDict()
         self.update(adapter_name)
         self.active_adapter = adapter_name
         self.disable_adapters = False
@@ -89,7 +105,6 @@ def custom_get_submodule(model: mindspore.nn.Cell, target: str) -> mindspore.nn.
 
     return mod
 
-
 def _get_submodules(model, key):
     """
     get submodules
@@ -118,7 +133,16 @@ def _set_trainable(model, adapter_name):
             else:
                 for _, param in target.parameters_and_names():
                     param.requires_grad = True
-                setattr(parent, target_name, ModulesToSaveWrapper(target, adapter_name))
+                warp_cell = ModulesToSaveWrapper(target, adapter_name)
+                # parent[int(target_name)] = warp_cell
+                setattr(parent, target_name, warp_cell)
+
+                # TODO:the implemtation of mindspore, __setitem__ is not consistent with __setattr__ here.
+                # self.cell_list is not set correctly if __setattr__'s value type is SequentialCell.
+                # Thus we set it apparently here. This line may be removed later.
+                if isinstance(parent, nn.SequentialCell):
+                    parent.cell_list = list(parent._cells.values())
+
 
 
 def _freeze_adapter(model, adapter_name):
@@ -266,7 +290,7 @@ COMMON_LAYERS_PATTERN = ["layers", "h", "block", "blocks", "layer"]
 TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING = {}
 
 
-WEIGHTS_NAME = "adapter_model.bin"
+WEIGHTS_NAME = "adapter_model.ckpt"
 CONFIG_NAME = "adapter_config.json"
 
 CLAMP_QUANTILE = 0.99
