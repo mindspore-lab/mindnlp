@@ -12,11 +12,16 @@ from mindnlp.engine.callbacks import CheckpointCallback, BestModelCallback
 from mindnlp.metrics import Accuracy
 
 
+from datasets import load_dataset as hf_load
+
 from mindnlp.models.llama import LlamaConfig, LlamaForCausalLM
 
 
 ## eval mmlu
-dataset_test = load_dataset('mmlu', splits='test')
+
+
+
+dataset_test = load_dataset('/home/cjl/cjldatasets/CMMLU/data', splits='test')
 metric = Accuracy()
 
 model = LlamaForCausalLM.from_pretrained('mindnlp/llama-base')
@@ -26,3 +31,5 @@ evaluator = Evaluator(
     eval_dataset=dataset_test, 
     metrics=metric
 )
+
+evaluator.run()
