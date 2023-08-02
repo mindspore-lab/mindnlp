@@ -78,7 +78,8 @@ def HF_Ptb_text_only(
         >>> train_iter = dataset_train.create_tuple_iterator()
         >>> print(next(train_iter))
     """
-    cache_dir = os.path.join(root, "datasets", "hf_datasets", "Ptb_text_only")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "hf_datasets", "Ptb_text_only")
     column_names = ['sentence']
 
     datasets_list = []

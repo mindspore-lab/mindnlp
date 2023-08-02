@@ -124,7 +124,8 @@ def SQuAD1(
         'answers_start': Tensor(shape=[1], dtype=Int32, value= [515])}
 
     """
-    cache_dir = os.path.join(root, "datasets", "SQuAD1")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "SQuAD1")
     file_list = []
     datasets_list = []
     if isinstance(split, str):

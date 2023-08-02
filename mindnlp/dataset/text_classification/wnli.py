@@ -100,7 +100,10 @@ def WNLI(
         Tensor(shape=[], dtype=String, value= 'The carrot had a hole.')]
 
     """
-    cache_dir = os.path.join(root, "datasets", "WNLI")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "WNLI")
+    else:
+        cache_dir = root
     path_dict = {
         "train": "train.tsv",
         "dev": "dev.tsv",

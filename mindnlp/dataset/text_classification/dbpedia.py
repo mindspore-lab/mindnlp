@@ -86,7 +86,8 @@ def DBpedia(
 
     """
 
-    cache_dir = os.path.join(root, "datasets", "DBpedia")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "DBpedia")
     path_dict = {
         "train": "train.csv",
         "test": "test.csv",

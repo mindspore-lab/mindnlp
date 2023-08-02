@@ -63,7 +63,8 @@ def IMDB(
 
     """
 
-    cache_dir = os.path.join(root, "datasets", "IMDB")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "IMDB")
     mode_list = []
     datasets_list = ()
     cache_file(

@@ -95,7 +95,10 @@ def LCSTS(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train', 'd
 
     """
 
-    cache_dir = os.path.join(root, "datasets", "LCSTS")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "LCSTS")
+    else:
+        cache_dir = root
     file_list = []
     datasets_list = []
     if isinstance(split, str):

@@ -89,7 +89,8 @@ def Multi30k(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train',
         "en",
     ), "language_pair must be either ('de','en') or ('en', 'de')"
 
-    cache_dir = os.path.join(root, "datasets", "Multi30k")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "Multi30k")
 
     file_list = []
 

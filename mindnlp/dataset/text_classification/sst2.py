@@ -95,7 +95,10 @@ def SST2(
         [Tensor(shape=[], dtype=String, value= '0'), Tensor(shape=[], dtype=String, \
         value= 'hide new secretions from the parental units ')]
     """
-    cache_dir = os.path.join(root, "datasets", "SST2")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "SST2")
+    else:
+        cache_dir = root
     column_names = []
     path_list = []
     datasets_list = []

@@ -91,7 +91,10 @@ def STSB(root: str = DEFAULT_ROOT,
         Tensor(shape=[], dtype=String, value= 'An air plane is taking off.')]
 
     """
-    cache_dir = os.path.join(root, "datasets", "STSB")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "STSB")
+    else:
+        cache_dir = root
     column_names = ["index", "label", "sentence1", "sentence2"]
     path_list = []
     datasets_list = []
