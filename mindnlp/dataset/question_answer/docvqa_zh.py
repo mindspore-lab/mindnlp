@@ -117,6 +117,8 @@ def docvqa_zh(
     """
     if root == DEFAULT_ROOT:
         cache_dir = os.path.join(root, "datasets", "DocVQAZh")
+    else:
+        cache_dir = root
     file_list = []
     datasets_list = []
     if isinstance(split, str):

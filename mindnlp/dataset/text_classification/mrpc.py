@@ -92,6 +92,8 @@ def MRPC(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", "te
 
     if root == DEFAULT_ROOT:
         cache_dir = os.path.join(root, "datasets", "MRPC")
+    else:
+        cache_dir = root
     column_names = ["label", "sentence1", "sentence2"]
     datasets_list = []
     path_list = []
