@@ -87,7 +87,10 @@ def YahooAnswers(
 
     """
 
-    cache_dir = os.path.join(root, "datasets", "YahooAnswers")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "YahooAnswers")
+    else:
+        cache_dir = root
     path_dict = {
         "train": "train.csv",
         "test": "test.csv",

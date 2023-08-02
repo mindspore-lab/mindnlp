@@ -115,7 +115,8 @@ def docvqa_zh(
     r"""
     Load the huggingface docvqa_zh dataset.
     """
-    cache_dir = os.path.join(root, "datasets", "DocVQAZh")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "DocVQAZh")
     file_list = []
     datasets_list = []
     if isinstance(split, str):

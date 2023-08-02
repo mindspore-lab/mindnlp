@@ -122,7 +122,8 @@ def IWSLT2017(root: str = DEFAULT_ROOT,
     if isinstance(split, str):
         split = split.split()
 
-    cache_dir = os.path.join(root, "datasets", "IWSLT2017")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "IWSLT2017")
     file_path, _ = cache_file(None, cache_dir=cache_dir, url=URL, md5sum=MD5,
                               download_file_name="2017-01-trnmted.tgz", proxies=proxies)
     dataset_dir_name = untar(file_path, os.path.dirname(file_path))[0]

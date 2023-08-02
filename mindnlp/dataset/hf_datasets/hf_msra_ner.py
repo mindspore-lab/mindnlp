@@ -82,7 +82,8 @@ def HF_Msra_ner(
         >>> print(next(train_iter))
 
     """
-    cache_dir = os.path.join(root, "datasets", "hf_datasets", "Msra_ner")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "hf_datasets", "Msra_ner")
     column_names = ['tokens', 'ner_tags']
 
     datasets_list = []

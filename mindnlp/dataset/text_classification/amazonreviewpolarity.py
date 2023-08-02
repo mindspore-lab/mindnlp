@@ -86,7 +86,8 @@ def AmazonReviewPolarity(
 
     """
 
-    cache_dir = os.path.join(root, "datasets", "AmazonReviewPolarity")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "AmazonReviewPolarity")
     path_dict = {
         "train": "train.csv",
         "test": "test.csv",

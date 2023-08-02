@@ -63,7 +63,10 @@ def WikiText103(root: str = DEFAULT_ROOT,
         [Tensor(shape=[], dtype=String, value= ' = Valkyria Chronicles III = ')]
 
     """
-    cache_dir = os.path.join(root, "datasets", "WikiText103")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "WikiText103")
+    else:
+        cache_dir = root
 
     datasets_list = []
 

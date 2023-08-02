@@ -78,7 +78,8 @@ def HF_IMDB(
 
     """
 
-    cache_dir = os.path.join(root, "datasets", "hf_datasets", "IMDB")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "hf_datasets", "IMDB")
     column_names = ["text", "label"]
     datasets_list = []
     mode_list = []

@@ -297,6 +297,12 @@ def cached_path(
 
     parsed = urlparse(filename_or_url)
 
+    if (
+        parsed.scheme == ""
+        and Path(os.path.join(dataset_cache, filename_or_url)).exists()
+    ):
+        return Path(os.path.join(dataset_cache, filename_or_url))
+
     if parsed.scheme in ("http", "https"):
         return get_from_cache(
             filename_or_url,
@@ -305,11 +311,6 @@ def cached_path(
             download_file_name=download_file_name,
             proxies=proxies,
         )
-    if (
-        parsed.scheme == ""
-        and Path(os.path.join(dataset_cache, filename_or_url)).exists()
-    ):
-        return Path(os.path.join(dataset_cache, filename_or_url))
     if parsed.scheme == "":
         raise FileNotFoundError(
             f"file {filename_or_url} not found in {dataset_cache}.")
