@@ -21,30 +21,35 @@ CMMLU is designed to evaluate the advanced knowledge and reasoning abilities of 
 import os
 from typing import Union, Tuple
 from datasets import load_dataset as hf_load
-from mindspore.dataset import GeneratorDataset
-from mindnlp.dataset.register import load_dataset
+from mindspore.dataset import GeneratorDataset, CSVDataset
+from mindnlp.dataset.register import load_dataset, process
 from mindnlp.configs import DEFAULT_ROOT
 
-CMMU_DEFAULT_SPLITS = ("test", "dev")
 
+CMMLU_DEFAULT_SPLITS = ("test", "dev")
+CMMLU_VALID_TASKS = ['agronomy', 'anatomy', 'ancient_chinese', 'arts', 'astronomy', 'business_ethics', 'chinese_civil_service_exam', 'chinese_driving_rule', 'chinese_food_culture', 'chinese_foreign_policy', 'chinese_history', 'chinese_literature', 
+'chinese_teacher_qualification', 'clinical_knowledge', 'college_actuarial_science', 'college_education', 'college_engineering_hydrology', 'college_law', 'college_mathematics', 'college_medical_statistics', 'college_medicine', 'computer_science',
+'computer_security', 'conceptual_physics', 'construction_project_management', 'economics', 'education', 'electrical_engineering', 'elementary_chinese', 'elementary_commonsense', 'elementary_information_and_technology', 'elementary_mathematics', 
+'ethnology', 'food_science', 'genetics', 'global_facts', 'high_school_biology', 'high_school_chemistry', 'high_school_geography', 'high_school_mathematics', 'high_school_physics', 'high_school_politics', 'human_sexuality',
+'international_law', 'journalism', 'jurisprudence', 'legal_and_moral_basis', 'logical', 'machine_learning', 'management', 'marketing', 'marxist_theory', 'modern_chinese', 'nutrition', 'philosophy', 'professional_accounting', 'professional_law', 
+'professional_medicine', 'professional_psychology', 'public_relations', 'security_study', 'sociology', 'sports_science', 'traditional_chinese_medicine', 'virology', 'world_history', 'world_religions']
+    
 
 @load_dataset.register
 def CMMLU(
+    name: str,
     root: str = DEFAULT_ROOT,
-    split: Union[Tuple[str], str] = CMMU_DEFAULT_SPLITS,
-    proxies=None
+    split: Union[Tuple[str], str] = CMMLU_DEFAULT_SPLITS,
+    shuffle: bool = True,
 ):
     """
     Load the CMMLU dataset from local directory. 
-    """
-    pass
-
-
-    # Args:
-    #     root (str): Directory where the datasets are saved.
-    #     split (str|Tuple[str]): Split or splits to be returned.
-    #         Default:('train','dev').
-    #     proxies (dict): a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
+    Args:
+        name (str): Subtask name of CMMLU dataset.
+        root (str): Directory where the datasets are saved.
+        split (str|Tuple[str]): Split or splits to be returned.
+            Default:('test','dev').
+        proxies (dict): a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
 
     # Returns:
     #     - **datasets_list** (list) -A list of loaded datasets.
@@ -68,28 +73,26 @@ def CMMLU(
     #     'answers': Tensor(shape=[1], dtype=String, value= ['Saint Bernadette Soubirous']),
     #     'answers_start': Tensor(shape=[1], dtype=Int32, value= [515])}
 
-    # """
-    # cache_dir = os.path.join(root, "datasets", "SQuAD1")
-    # file_list = []
-    # datasets_list = []
-    # if isinstance(split, str):
-    #     split = split.split()
-    # for s in split:
-    #     path, _ = cache_file(
-    #         None, url=URL[s], cache_dir=cache_dir, md5sum=MD5[s], proxies=proxies
-    #     )
-    #     file_list.append(path)
-
-    # for _, file in enumerate(file_list):
-    #     dataset = GeneratorDataset(source=Squad1(file),
-    #                                column_names=[
-    #                                    "id" ,"context", "question", "answers", "answer_start"],
-    #                                shuffle=False)
-    #     datasets_list.append(dataset)
-    # if len(file_list) == 1:
-    #     return datasets_list[0]
-    # return datasets_list
-
+    """
+    mode_list = []
+    if isinstance(split, str):
+        mode_list.append(split)
+    else:
+        for s in split:
+            mode_list.append(s)
+    
+    paths = []
+    for task in mode_list:
+        path = os.path.join(root, task, f"{name}.csv")
+        if not os.path.exists(path):
+            raise ValueError(f"The {name} dataset not exists.")
+        paths.append(path)
+    
+    # build CSV dataset
+    if len(paths) == 1:
+        return CSVDataset(paths[0], field_delim=',', shuffle=shuffle)
+    else:
+        return CSVDataset(paths[0], field_delim=',', shuffle=shuffle), CSVDataset(paths[1], field_delim=',', shuffle=shuffle)
 
 class HFcmmlu:
     """
@@ -117,7 +120,6 @@ class HFcmmlu:
         return self._Question[index], self._A[index], self._B[index], self._C[index], self._D[index], self._Answer[index],
 
     def __len__(self):
-        assert len(self._Question) == len(self._Answer) == len(self._A) == len(self._B) == len(self._C) == len(self._D)
         return len(self._Question)
 
 
@@ -125,7 +127,7 @@ class HFcmmlu:
 def HF_CMMLU(
         name: str,
         root: str = DEFAULT_ROOT,
-        split: Union[Tuple[str], str] = CMMU_DEFAULT_SPLITS,
+        split: Union[Tuple[str], str] = CMMLU_DEFAULT_SPLITS,
         shuffle=True,
 ):
     r"""
@@ -136,33 +138,26 @@ def HF_CMMLU(
         root (str): Directory where the datasets are saved.
             Default:~/.mindnlp
         split (str|Tuple[str]): Split or splits to be returned.
-            Default:('train', 'dev').
+            Default:('test', 'dev').
         shuffle (bool): Whether to shuffle the dataset.
             Default:True.
 
     Returns:
-        - map (keys -> GeneratorDataset)
-            keys choice from all_valid_tasks.
-
+        - **datasets_list** (list) -A list of loaded datasets.
+          If only one type of dataset is specified,such as 'trian',
+          this dataset is returned instead of a list of datasets.
 
     Examples:
         >>> root = "~/.mindnlp"
-        >>> split = ('train', 'test')
-        >>> dataset_train,dataset_test = HF_GLUE(root, split)
+        >>> split = ('test', 'dev')
+        >>> dataset_train,dataset_test = HF_CMMLU(root, split)
         >>> train_iter = dataset_train.create_tuple_iterator()
         >>> print(next(train_iter))
 
     """
     cache_dir = os.path.join(root, "datasets", "hf_datasets", "CMMLU")
-    all_valid_tasks = ['agronomy', 'anatomy', 'ancient_chinese', 'arts', 'astronomy', 'business_ethics', 'chinese_civil_service_exam', 'chinese_driving_rule', 'chinese_food_culture', 'chinese_foreign_policy', 'chinese_history', 'chinese_literature', 
-'chinese_teacher_qualification', 'clinical_knowledge', 'college_actuarial_science', 'college_education', 'college_engineering_hydrology', 'college_law', 'college_mathematics', 'college_medical_statistics', 'college_medicine', 'computer_science',
-'computer_security', 'conceptual_physics', 'construction_project_management', 'economics', 'education', 'electrical_engineering', 'elementary_chinese', 'elementary_commonsense', 'elementary_information_and_technology', 'elementary_mathematics', 
-'ethnology', 'food_science', 'genetics', 'global_facts', 'high_school_biology', 'high_school_chemistry', 'high_school_geography', 'high_school_mathematics', 'high_school_physics', 'high_school_politics', 'human_sexuality',
-'international_law', 'journalism', 'jurisprudence', 'legal_and_moral_basis', 'logical', 'machine_learning', 'management', 'marketing', 'marxist_theory', 'modern_chinese', 'nutrition', 'philosophy', 'professional_accounting', 'professional_law', 
-'professional_medicine', 'professional_psychology', 'public_relations', 'security_study', 'sociology', 'sports_science', 'traditional_chinese_medicine', 'virology', 'world_history', 'world_religions']
-    
 
-    if name not in all_valid_tasks:
+    if name not in CMMLU_VALID_TASKS:
         raise ValueError(f"subtask {name} not exists in cmmlu dataset.")
 
     column_names = ["Question", "A", "B", "C", "D", "Answer"]
@@ -185,3 +180,36 @@ def HF_CMMLU(
     if len(dataset_list) == 1:
         return dataset_list[0]
     return dataset_list
+
+
+
+@process.register
+def CMMLU_Process(dataset, tokenizer, vocab, batch_size ):
+    pass
+#     dataset: Union[CSVDataset, GeneratorDataset],
+#     tokenizer: PretrainedTokenizer,
+#     max_seq_len: int = 512,
+#     num_samples: int = None,
+#     batch_size: int = 1,
+#     shuffle: bool = False,
+#     num_workers: int = 0,
+#     task_name: str = None,
+#     return_all_fields: bool = False,
+#     proxies: dict = None,
+#     **kwargs,
+# ) -> Tuple[Dataset, dict]:
+#     r"""
+#     The process function of CMMLU dataset.
+
+#     Args:
+#         dataset (Dataset): Dataset to be processed.
+#         tokenizer (PretrainedTokenizer): Tokenizer for encoding the original text.
+#         max_seq_len (int): The maximum length of sequence. Default: 512.
+#         num_samples (int): The number of samples to be processed in the dataset. Default: None.
+#         batch_size (int): The number of samples in a batch. Default: 1.
+#         shuffle (bool): Whether to shuffle the dataset. Default: False.
+#         num_workers (int): The number of processes to load dataset. Default: 0.
+#         task_name (str): The task name of the dataset. Default: None.
+#         return_all_fields (bool): Whether to return all fields in the dataset. Default: False.
+#         proxies (dict): a dict to identify proxies,for example: {"https": "https://
+#     """

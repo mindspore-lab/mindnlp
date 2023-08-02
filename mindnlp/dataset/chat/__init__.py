@@ -1,1 +1,1 @@
-from .cmmlu import HF_CMMLU
+from .cmmlu import HF_CMMLU, CMMLU
