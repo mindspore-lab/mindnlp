@@ -104,6 +104,8 @@ def HF_GLUE(
     """
     if root == DEFAULT_ROOT:
         cache_dir = os.path.join(root, "datasets", "hf_datasets", "GLUE")
+    else:
+        cache_dir = root
     if name in ('cola', 'sst2'):
         column_names = ['sentence', 'label', 'idx']
     elif name in ('mrpc', 'stsb', 'rte', 'wnli'):

@@ -92,6 +92,8 @@ def CoLA(
     """
     if root == DEFAULT_ROOT:
         cache_dir = os.path.join(root, "datasets", "CoLA")
+    else:
+        cache_dir = root
     path_dict = {
         "train": "in_domain_train.tsv",
         "dev": "in_domain_dev.tsv",

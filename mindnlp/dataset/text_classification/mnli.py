@@ -99,6 +99,8 @@ def MNLI(
     """
     if root == DEFAULT_ROOT:
         cache_dir = os.path.join(root, "datasets", "MNLI")
+    else:
+        cache_dir = root
     path_dict = {
         "train": "multinli_1.0_train.txt",
         "dev_matched": "multinli_1.0_dev_matched.txt",

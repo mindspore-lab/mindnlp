@@ -87,6 +87,8 @@ def AmazonReviewFull(
 
     if root == DEFAULT_ROOT:
         cache_dir = os.path.join(root, "datasets", "AmazonReviewFull")
+    else:
+        cache_dir = root
     path_dict = {
         "train": "train.csv",
         "test": "test.csv",

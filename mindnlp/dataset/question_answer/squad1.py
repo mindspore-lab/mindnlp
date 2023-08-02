@@ -126,6 +126,8 @@ def SQuAD1(
     """
     if root == DEFAULT_ROOT:
         cache_dir = os.path.join(root, "datasets", "SQuAD1")
+    else:
+        cache_dir = root
     file_list = []
     datasets_list = []
     if isinstance(split, str):

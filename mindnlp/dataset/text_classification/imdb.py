@@ -65,6 +65,8 @@ def IMDB(
 
     if root == DEFAULT_ROOT:
         cache_dir = os.path.join(root, "datasets", "IMDB")
+    else:
+        cache_dir = root
     mode_list = []
     datasets_list = ()
     cache_file(
