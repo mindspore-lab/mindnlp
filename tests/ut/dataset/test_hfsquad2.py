@@ -33,8 +33,7 @@ class TestHFSQuAD2(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp_")
-        os.mkdir(cls.root)
+        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
 
     @classmethod
     def tearDownClass(cls):
