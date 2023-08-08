@@ -16,14 +16,12 @@
 TinyBert Tokenizer
 """
 import os
-from mindspore import log as logger
 from mindspore.dataset.text import Vocab as msVocab
 from mindspore.dataset.text.transforms import Implementation
 import numpy as np
 from tokenizers.implementations import BertWordPieceTokenizer
 
 from mindnlp.abc import PreTrainedTokenizer
-from mindnlp.utils.download import cached_path
 from mindnlp.vocab import Vocab
 
 PRETRAINED_VOCAB_MAP = {
@@ -106,66 +104,6 @@ class TinyBertTokenizer(PreTrainedTokenizer):
         with open(save_path, 'w', encoding='utf-8') as file:
             for token, _ in sorted_array:
                 file.write(token+"\n")
-
-    @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path, *init_inputs, **kwargs):
-        """from_pretrained"""
-        cache_dir = kwargs.pop("cache_dir", None)
-        _ = kwargs.pop("force_download", False)
-        proxies = kwargs.pop("proxies", None)
-
-        pretrained_model_name_or_path = str(pretrained_model_name_or_path)
-
-        # Get files from url, cache, or disk depending on the case
-        # Load tokenizer
-        folder_name = None
-        if pretrained_model_name_or_path is not None:
-
-            # model name
-            if pretrained_model_name_or_path in cls.pretrained_vocab_map:
-                archive_file = cls.pretrained_vocab_map[pretrained_model_name_or_path]
-                folder_name = pretrained_model_name_or_path
-            # dir
-            elif os.path.isdir(pretrained_model_name_or_path):
-                archive_file = os.path.join(pretrained_model_name_or_path, "vocab.txt")
-            # file
-            elif os.path.isfile(pretrained_model_name_or_path):
-                archive_file = pretrained_model_name_or_path
-            else:
-                raise ValueError(f'not found model of {pretrained_model_name_or_path}.')
-
-            # redirect to the cache, if necessary
-            try:
-                resolved_archive_file = str(cached_path(
-                    archive_file,
-                    cache_dir=cache_dir,
-                    proxies=proxies,
-                    folder_name=folder_name
-                )[0])
-            except EnvironmentError as exc:
-                if pretrained_model_name_or_path in cls.pretrained_vocab_map:
-                    msg = f"Couldn't reach server at '{archive_file}' to download pretrained weights."
-                else:
-                    format1 = ", ".join(cls.pretrained_vocab_map.keys())
-                    format2 = ["vocab.txt"]
-                    msg = (
-                        f"Model name '{pretrained_model_name_or_path}' "
-                        f"was not found in model name list ({format1}). "
-                        f"We assumed '{archive_file}' "
-                        f"was a path or url to model weight files named one of {format2} but "
-                        f"couldn't find any such file at this path or url."
-                    )
-                raise EnvironmentError(msg) from exc
-
-            if resolved_archive_file == archive_file:
-                logger.info("loading tokenizer file %s", archive_file)
-            else:
-                logger.info("loading tokenizer file %s from cache at %s", archive_file, resolved_archive_file)
-        else:
-            raise ValueError("the argument 'pretrained_model_name_or_path' should be "
-                             "a string of model name or checkpoint path, but got `None`.")
-
-        return cls(resolved_archive_file, *init_inputs, **kwargs)
 
     def __call__(self, text_input):
         """
