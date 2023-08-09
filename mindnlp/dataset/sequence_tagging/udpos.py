@@ -100,6 +100,8 @@ def UDPOS(
     """
     if root == DEFAULT_ROOT:
         cache_dir = os.path.join(root, "datasets", "UDPOS")
+    else:
+        cache_dir = root
     path_dict = {
         "train": "en-ud-tag.v2.train.txt",
         "dev": "en-ud-tag.v2.dev.txt",

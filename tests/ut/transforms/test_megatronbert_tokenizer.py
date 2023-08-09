@@ -1,11 +1,17 @@
+"""
+test the MegatronBertTokenizer
+"""
 import unittest
 import mindspore as ms
 from mindspore.dataset import GeneratorDataset
 from mindnlp.transforms import MegatronBertTokenizer
+
+
 class TestMegatronBertTokenizer(unittest.TestCase):
     r"""
     Test MegatronBertTokenizer
     """
+
     def test_megatronbert_tokenizer(self):
         """test BertTokenizer from pretrained."""
         texts = ['i make a small mistake when i\'m working! 床前明月光']
@@ -17,7 +23,6 @@ class TestMegatronBertTokenizer(unittest.TestCase):
 
         assert len(dataset_after) == 18
         assert dataset_after.dtype == ms.string
-
 
     def test_bert_tokenizer_add_special_tokens(self):
         """test add special tokens."""

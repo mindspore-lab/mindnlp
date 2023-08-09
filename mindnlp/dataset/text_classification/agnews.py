@@ -104,6 +104,8 @@ def AG_NEWS(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ("train", 
 
     if root == DEFAULT_ROOT:
         cache_dir = os.path.join(root, "datasets", "AG_NEWS")
+    else:
+        cache_dir = root
     column_names = ["label", "text"]
     datasets_list = []
     path_list = []

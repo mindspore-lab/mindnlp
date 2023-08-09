@@ -97,6 +97,8 @@ def QNLI(
     """
     if root == DEFAULT_ROOT:
         cache_dir = os.path.join(root, "datasets", "QNLI")
+    else:
+        cache_dir = root
     path_dict = {
         "train": "train.tsv",
         "dev": "dev.tsv",

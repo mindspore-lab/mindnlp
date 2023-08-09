@@ -338,20 +338,20 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         else:
             model_kwargs = kwargs
 
-        folder_name = None
         # Load model
         if pretrained_model_name_or_path is not None:
-            folder_name = pretrained_model_name_or_path
             if pretrained_model_name_or_path in cls.pretrained_model_archive_map and not from_pt:
                 archive_file = cls.pretrained_model_archive_map[pretrained_model_name_or_path]
+                cache_dir = os.path.join(cache_dir, pretrained_model_name_or_path)
             elif os.path.isdir(pretrained_model_name_or_path):
-                archive_file = os.path.join(
-                    pretrained_model_name_or_path, "mindspore_model.ckpt")
+                archive_file = "mindspore.ckpt"
+                cache_dir = pretrained_model_name_or_path
             elif os.path.isfile(pretrained_model_name_or_path):
                 archive_file = pretrained_model_name_or_path
+                cache_dir = None
             elif from_pt:
-                archive_file = HF_MODEL_URL_BASE.format(
-                    pretrained_model_name_or_path)
+                archive_file = HF_MODEL_URL_BASE.format(pretrained_model_name_or_path)
+                cache_dir = os.path.join(cache_dir, pretrained_model_name_or_path)
             else:
                 raise ValueError(
                     f'not found model of {pretrained_model_name_or_path}.')
@@ -361,30 +361,24 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 resolved_archive_file = cached_path(
                     archive_file,
                     cache_dir=cache_dir,
-                    proxies=proxies,
-                    folder_name=folder_name
-                )[0]
+                    proxies=proxies)
 
                 if resolved_archive_file is None:
                     base_url = '/'.join(archive_file.split('/')[:-1])
                     archive_file = base_url + '/' + HF_WEIGHTS_INDEX_NAME if from_pt else \
                         base_url + '/' + WEIGHTS_INDEX_NAME
 
-                    resolved_archive_file = str(cached_path(
+                    resolved_archive_file = cached_path(
                         archive_file,
                         cache_dir=cache_dir,
-                        proxies=proxies,
-                        folder_name=folder_name
-                    )[0])
+                        proxies=proxies)
 
                     if resolved_archive_file is not None:
                         cached_filenames, _ = get_checkpoint_shard_files(
-                            pretrained_model_name_or_path=folder_name,
                             index_filename=resolved_archive_file,
                             cache_dir=cache_dir,
                             url=base_url,
-                            proxies=proxies,
-                            subfolder=folder_name
+                            proxies=proxies
                         )
                         is_sharded = True
                     else:

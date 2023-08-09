@@ -113,6 +113,8 @@ def CoNLL2000Chunking(
 
     if root == DEFAULT_ROOT:
         cache_dir = os.path.join(root, "datasets", "CoNLL2000Chunking")
+    else:
+        cache_dir = root
     column_names = ["words", "tag", "chunk_tag"]
     datasets_list = []
     path_list = []
