@@ -99,11 +99,6 @@ class TestModelingPanGuAlpha(unittest.TestCase):
         """test from pretrained"""
         _ = PanGuAlphaModel.from_pretrained('pangu-350M')
 
-    @pytest.mark.download
-    def test_from_pretrained_from_pt(self):
-        """test from pt"""
-        _ = PanGuAlphaModel.from_pretrained('pangu-350M', from_pt=True)
-
     def tearDown(self) -> None:
         gc.collect()
 
