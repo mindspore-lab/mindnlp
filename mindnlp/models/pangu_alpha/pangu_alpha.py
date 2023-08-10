@@ -33,7 +33,7 @@ from mindspore.common.initializer import initializer, Normal
 from mindnlp._legacy.nn import Matmul
 from mindnlp.abc import PreTrainedModel
 from mindnlp.configs import MINDNLP_MODEL_URL_BASE
-from ..utils.activations import ACT2FN
+from mindnlp.models.activations import ACT2FN
 
 from .pangu_alpha_config import PANGU_ALPHA_SUPPORT_LIST, PanGuAlphaConfig
 
@@ -497,7 +497,7 @@ class PanGuAlphaModel(PanGuAlphaPreTrainedModel):
 
 class PanGuAlphaForCausalLM(PanGuAlphaPreTrainedModel):
     """PanGu-Alpha For CausalLM"""
-    def __init__(self, config, **kwargs):
+    def __init__(self, config):
         super().__init__(config)
         self.transformer = PanGuAlphaModel(config)
         self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
@@ -578,7 +578,7 @@ class PanGuAlphaForCausalLM(PanGuAlphaPreTrainedModel):
             hidden_states = transformer_outputs[0]
         else:
             hidden_states = transformer_outputs["last_hidden_state"]
-            
+
         lm_logits = self.lm_head(hidden_states)
         loss = None
         if labels is not None:
