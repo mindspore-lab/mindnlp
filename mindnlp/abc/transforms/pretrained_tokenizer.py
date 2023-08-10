@@ -63,27 +63,30 @@ class PreTrainedTokenizer(SpecialTokensMixin, PyTensorOperation):
         if pretrained_model_name_or_path is not None:
             if pretrained_model_name_or_path in cls.pretrained_vocab_map:
                 archive_file = cls.pretrained_vocab_map[pretrained_model_name_or_path]
-                folder_name = pretrained_model_name_or_path
+                cache_dir = os.path.join(cache_dir, pretrained_model_name_or_path)
             elif os.path.isdir(pretrained_model_name_or_path):
-                archive_file = os.path.join(pretrained_model_name_or_path, "tokenizer.json")
+                # from dir
+                archive_file = "tokenizer.json"
+                cache_dir = pretrained_model_name_or_path
             elif os.path.isfile(pretrained_model_name_or_path):
+                # from file
                 archive_file = pretrained_model_name_or_path
+                cache_dir = None
             else:
                 raise ValueError(f'not found model of {pretrained_model_name_or_path}.')
 
             # redirect to the cache, if necessary
             try:
-                resolved_archive_file = str(cached_path(
+                resolved_archive_file = cached_path(
                     archive_file,
                     cache_dir=cache_dir,
-                    proxies=proxies,
-                    folder_name=folder_name
-                )[0])
+                    proxies=proxies)
+
             except EnvironmentError as exc:
-                if pretrained_model_name_or_path in cls.pretrained_model_archive_map:
+                if pretrained_model_name_or_path in cls.pretrained_vocab_map:
                     msg = f"Couldn't reach server at '{archive_file}' to download pretrained weights."
                 else:
-                    format1 = ", ".join(cls.pretrained_model_archive_map.keys())
+                    format1 = ", ".join(cls.pretrained_vocab_map.keys())
                     format2 = ["tokenizer.json"]
                     msg = (
                         f"Model name '{pretrained_model_name_or_path}' "
