@@ -43,10 +43,11 @@ class HFSquad2:
         for every_dict in self.dataset_list:
             self._context.append(every_dict['context'])
             self._question.append(every_dict['question'])
-            self._anwsers.append(every_dict['answers']['text'])
             if len(every_dict['answers']['answer_start']) == 0:
+                self._anwsers.append('no answer')
                 self._answers_start.append(-1)
             else:
+                self._anwsers.append(every_dict['answers']['text'][0])
                 self._answers_start.append(every_dict['answers']['answer_start'][0])
 
     def __getitem__(self, index):
@@ -88,8 +89,8 @@ def HF_SQuAD2(
         >>> print(next(train_iter))
         [Tensor(shape=[], dtype=String, value= 'Beyoncé Giselle Knowles-Carter...),
         Tensor(shape=[], dtype=String, value= 'When did Beyonce start becoming popular?'),
-        Tensor(shape=[1], dtype=String, value= ['in the late 1990s']),
-        Tensor(shape=[1], dtype=Int32, value= [269])]
+        Tensor(shape=[], dtype=String, value= 'in the late 1990s'),
+        Tensor(shape=[], dtype=Int32, value= 269)]
 
     """
 
@@ -149,7 +150,6 @@ def HF_SQuAD2_Process(dataset, tokenizer, vocab, batch_size=64, max_context_len=
 
     pad_value = vocab.tokens_to_ids('<pad>')
     lookup_op = Lookup(vocab, unk_token='<unk>')
-
     dataset = dataset.map([tokenizer, lookup_op], 'context')
     dataset = dataset.map([tokenizer, lookup_op], 'question')
     dataset = dataset.map([tokenizer, lookup_op], 'answers')

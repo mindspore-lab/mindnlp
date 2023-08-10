@@ -57,7 +57,7 @@ class TestHFSQuAD2(unittest.TestCase):
 
     @pytest.mark.download
     def test_hf_squad2_process(self):
-        r"""
+        """
         Test hf_squad2 process
         """
 
@@ -69,12 +69,17 @@ class TestHFSQuAD2(unittest.TestCase):
         tokenizer = BasicTokenizer(True)
         train_dataset = train_dataset.map([tokenizer], 'context')
 
-        vocab = text.Vocab.from_dataset(train_dataset, 'context', special_tokens=['<pad>', '<unk>'], special_first=True)
+        vocab = text.Vocab.from_dataset(train_dataset, 'context', special_tokens=['<pad>', '<unk>'],
+                                        special_first=True)
 
         for _, value in vocab.vocab().items():
             assert isinstance(value, int)
             break
 
+        train_dataset = HF_SQuAD2(
+            root=self.root,
+            split="train"
+        )
         train_dataset = HF_SQuAD2_Process(train_dataset, tokenizer=tokenizer, vocab=vocab)
 
         for i in train_dataset.create_tuple_iterator():
@@ -86,9 +91,9 @@ class TestHFSQuAD2(unittest.TestCase):
 
     @pytest.mark.download
     def test_hf_squad2_process_bucket_boundaries(self):
-        r"""
-                Test hf_squad2 process with bucket_boundaries
-                """
+        """
+        Test hf_squad2 process with bucket_boundaries
+        """
 
         train_dataset = HF_SQuAD2(
             root=self.root,
@@ -98,10 +103,16 @@ class TestHFSQuAD2(unittest.TestCase):
         tokenizer = BasicTokenizer(True)
         train_dataset = train_dataset.map([tokenizer], 'context')
 
-        vocab = text.Vocab.from_dataset(train_dataset, 'context', special_tokens=['<pad>', '<unk>'], special_first=True)
+        vocab = text.Vocab.from_dataset(train_dataset, 'context', special_tokens=['<pad>', '<unk>'],
+                                        special_first=True)
+
+        train_dataset = HF_SQuAD2(
+            root=self.root,
+            split="train"
+        )
         dataset = HF_SQuAD2_Process(train_dataset, tokenizer=tokenizer, vocab=vocab,
                                     bucket_boundaries=[400, 500], max_context_len=800, drop_remainder=True)
 
         for i in dataset.create_tuple_iterator():
-            assert i[0].shape == (64, 400-1)
+            assert i[0].shape == (64, 400 - 1)
             break
