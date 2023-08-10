@@ -49,6 +49,7 @@ def load_tf_weights_in_megatron_bert(model, tf_checkpoint_path):
             logger.info(f"Skipping {'/'.join(name)}")
             continue
         pointer = model
+        m_name = ''
         for m_name in name:
             if re.fullmatch(r"[A-Za-z]+_\d+", m_name):
                 scope_names = re.split(r"_(\d+)", m_name)
@@ -71,10 +72,10 @@ def load_tf_weights_in_megatron_bert(model, tf_checkpoint_path):
             if len(scope_names) >= 2:
                 num = int(scope_names[1])
                 pointer = pointer[num]
-            if m_name[-11:] == "_embeddings":
-                pointer = getattr(pointer, "weight")
-            elif m_name == "kernel":
-                array = np.transpose(array)
+        if m_name[-11:] == "_embeddings":
+            pointer = getattr(pointer, "weight")
+        elif m_name == "kernel":
+            array = np.transpose(array)
         if pointer.shape != array.shape:
             raise ValueError(
                 f"Pointer shape {pointer.shape} and array shape {array.shape} mismatched")
@@ -96,11 +97,10 @@ class MegatronBertEmbeddings(nn.Cell):
         # be able to load any TensorFlow checkpoint file
 
         # In Megatron, layer-norm is applied after the 1st dropout.
-        # self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
-        self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
+        self.position_ids = mindspore.Parameter(ops.arange(config.max_position_embeddings).broadcast_to((1, -1)))
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
 
     def construct(
@@ -135,7 +135,6 @@ class MegatronBertEmbeddings(nn.Cell):
             embeddings += position_embeddings
 
         # Megatron BERT moves that layer norm after the drop-out (and to each layer).
-        # embeddings = self.LayerNorm(embeddings)
         embeddings = self.dropout(embeddings)
         return embeddings
 
@@ -252,8 +251,7 @@ class MegatronBertSelfAttention(nn.Cell):
 
         attention_scores = attention_scores / ops.sqrt(Tensor(self.attention_head_size, mindspore.float32))
         if attention_mask is not None:
-            # Apply the attention mask is (precomputed for all layers in MegatronBertModel
-            # forward() function)
+            # Apply the attention mask is (precomputed for all layers in MegatronBertModel forward() function)
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
@@ -543,25 +541,6 @@ class MegatronBertEncoder(nn.Cell):
             past_key_value = past_key_values[i] if past_key_values is not None else None
             # goto else branch
             if self.gradient_checkpointing and self.training:
-                if use_cache:
-                    logger.warning(
-                        "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`...")
-                    use_cache = False
-
-                # def create_custom_forward(module):
-                #     def custom_forward(*inputs):
-                #         return module(*inputs, past_key_value, output_attentions)
-                #
-                #     return custom_forward
-
-                # layer_outputs = torch.utils.checkpoint.checkpoint(
-                #     create_custom_forward(layer_module),
-                #     hidden_states,
-                #     attention_mask,
-                #     layer_head_mask,
-                #     encoder_hidden_states,
-                #     encoder_attention_mask,
-                # )
                 layer_outputs = ()  # this definition is for pass pylint check
             else:
                 layer_outputs = layer_module(
@@ -736,12 +715,10 @@ class MegatronBertPreTrainedModel(PreTrainedModel):
         """Initialize the embedding_tables"""
         if isinstance(module, nn.Embedding):
             # Slightly different from the TF version which uses truncated_normal
-            # for initialization https://github.com/pytorch/pytorch/pull/5617
             module.embedding_table = initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
                                                  shape=module.embedding_table.shape)
         elif isinstance(module, nn.Dense):
             # Slightly different from the TF version which uses truncated_normal
-            # for initialization https://github.com/pytorch/pytorch/pull/5617
             module.weight = initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
                                         shape=module.weight.shape)
             # module.weight.data.normal_(mean=0.0, sigma=self.config.initializer_range)
@@ -1009,10 +986,7 @@ class MegatronBertModel(MegatronBertPreTrainedModel):
         return (
             sequence_output,
             pooled_output,
-            encoder_outputs.past_key_values,
-            encoder_outputs.hidden_states,
-            encoder_outputs.attentions,
-            encoder_outputs.cross_attentions)
+            *encoder_outputs[1:])
 
 
 class MegatronBertForPreTraining(MegatronBertPreTrainedModel):
@@ -1110,8 +1084,8 @@ class MegatronBertForPreTraining(MegatronBertPreTrainedModel):
             total_loss,
             prediction_scores,
             seq_relationship_score,
-            outputs.hidden_states,
-            outputs.attentions,
+            outputs[3],
+            outputs[4],
         )
 
 
@@ -1235,74 +1209,72 @@ class MegatronBertForCausalLM(MegatronBertPreTrainedModel):
         return (
             lm_loss,
             prediction_scores,
-            outputs.past_key_values,
-            outputs.hidden_states,
-            outputs.attentions,
-            outputs.cross_attentions,
+            past_key_values,
+            outputs[3],
+            outputs[4],
+            outputs[5],
         )
 
-    # def prepare_inputs_for_generation(
-    #         self,
-    #         input_ids,
-    #         past_key_values=None,
-    #         attention_mask=None,
-    # ):
-    #     """
-    #     prepare_inputs_for_generation is used for generating sequences of text using the model.
-    #
-    #     The method creates a decoder_input_ids tensor by shifting the input_ids tensor one
-    #     position to the right.
-    #     This is done to prepare the decoder input for autoregressive generation, where the model
-    #     generates one token at a time based on the previously generated tokens.
-    #
-    #     inputs:
-    #         input_ids ('Tensor'):
-    #             A tensor of token ids representing the input sequence.
-    #         attention_mask ('Tensor'):
-    #             A tensor that indicates which tokens should be attended to and which should not.
-    #             This tensor is used to mask out padding tokens.
-    #         past_key_values ('tuple'):
-    #             A tuple of past key-value states for the Transformer blocks. The past states are
-    #             cached states from the previous forward pass that are used to speed up generation.
-    #         **model_kwargs:
-    #             Additional arguments that are passed to the MegatronBertForCausalLM model.
-    #     return:
-    #         input_ids (Tensor):
-    #             The input_ids tensor.
-    #         attention_mask (Tensor):
-    #             The attention_mask tensor.
-    #         decoder_input_ids (Tensor):
-    #             The decoder_input_ids tensor.
-    #         past_key_values ('tuple'):
-    #             The past key-value states for the Transformer blocks.
-    #     """
-    #     input_shape = input_ids.shape
-    #     # if model is used as a decoder in encoder-decoder model,
-    #     # the decoder attention mask is created on the fly
-    #     if attention_mask is None:
-    #         attention_mask = input_ids.new_ones(input_shape)
-    #
-    #     # cut decoder_input_ids if past is used
-    #     if past_key_values is not None:
-    #         input_ids = input_ids[:, -1:]
-    #
-    #     return {
-    #         "input_ids": input_ids,
-    #         "attention_mask": attention_mask,
-    #         "past_key_values": past_key_values
-    #     }
+    def prepare_inputs_for_generation(
+            self,
+            input_ids,
+            past_key_values=None,
+            attention_mask=None,
+    ):
+        """
+        prepare_inputs_for_generation is used for generating sequences of text using the model.
 
-    # def reorder_cache(self, past, beam_idx):
-    #     """
-    #     This method is specifically used in the context of causal language models, which are
-    #     language models that generate text sequentially in a left-to-right or right-to-left
-    #     manner, such as autoregressive models like GPT-2 or GPT-3.
-    #     """
-    #     reordered_past = ()
-    #     for layer_past in past:
-    #         reordered_past += (tuple(past_state.index_select(0, beam_idx) \
-    #                                  for past_state in layer_past),)
-    #     return reordered_past
+        The method creates a decoder_input_ids tensor by shifting the input_ids tensor one
+        position to the right.
+        This is done to prepare the decoder input for autoregressive generation, where the model
+        generates one token at a time based on the previously generated tokens.
+
+        inputs:
+            input_ids ('Tensor'):
+                A tensor of token ids representing the input sequence.
+            attention_mask ('Tensor'):
+                A tensor that indicates which tokens should be attended to and which should not.
+                This tensor is used to mask out padding tokens.
+            past_key_values ('tuple'):
+                A tuple of past key-value states for the Transformer blocks. The past states are
+                cached states from the previous forward pass that are used to speed up generation.
+            **model_kwargs:
+                Additional arguments that are passed to the MegatronBertForCausalLM model.
+        return:
+            input_ids (Tensor):
+                The input_ids tensor.
+            attention_mask (Tensor):
+                The attention_mask tensor.
+            decoder_input_ids (Tensor):
+                The decoder_input_ids tensor.
+            past_key_values ('tuple'):
+                The past key-value states for the Transformer blocks.
+        """
+        input_shape = input_ids.shape
+        # if model is used as a decoder in encoder-decoder model, the decoder attention mask is created on the fly
+        if attention_mask is None:
+            attention_mask = input_ids.new_ones(input_shape)
+
+        # cut decoder_input_ids if past is used
+        if past_key_values is not None:
+            input_ids = input_ids[:, -1:]
+
+        return {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "past_key_values": past_key_values
+        }
+
+    def reorder_cache(self, past, beam_idx):
+        """
+        This method is specifically used in the context of causal language models, which are
+        language models that generate text sequentially in a left-to-right or right-to-left
+        manner, such as autoregressive models like GPT-2 or GPT-3.
+        """
+        reordered_past = ()
+        for layer_past in past:
+            reordered_past += (tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),)
+        return reordered_past
 
 
 class MegatronBertForMaskedLM(MegatronBertPreTrainedModel):
@@ -1397,8 +1369,8 @@ class MegatronBertForMaskedLM(MegatronBertPreTrainedModel):
         return (
             masked_lm_loss,
             prediction_scores,
-            outputs.hidden_states,
-            outputs.attentions,
+            outputs[3],
+            outputs[4],
         )
 
     def prepare_inputs_for_generation(self, input_ids, attention_mask=None):
@@ -1545,8 +1517,8 @@ class MegatronBertForNextSentencePrediction(MegatronBertPreTrainedModel):
         return (
             next_sentence_loss,
             seq_relationship_scores,
-            outputs.hidden_states,
-            outputs.attentions,
+            outputs[3],
+            outputs[4],
         )
 
 
@@ -1637,8 +1609,8 @@ class MegatronBertForSequenceClassification(MegatronBertPreTrainedModel):
         return (
             loss,
             logits,
-            outputs.hidden_states,
-            outputs.attentions,
+            outputs[3],
+            outputs[4],
         )
 
 
@@ -1744,8 +1716,8 @@ class MegatronBertForMultipleChoice(MegatronBertPreTrainedModel):
         return (
             loss,
             reshaped_logits,
-            outputs.hidden_states,
-            outputs.attentions,
+            outputs[3],
+            outputs[4],
         )
 
 
@@ -1845,8 +1817,8 @@ class MegatronBertForTokenClassification(MegatronBertPreTrainedModel):
         return (
             loss,
             logits,
-            outputs.hidden_states,
-            outputs.attentions,
+            outputs[3],
+            outputs[4],
         )
 
 
@@ -1976,6 +1948,17 @@ class MegatronBertForQuestionAnswering(MegatronBertPreTrainedModel):
             total_loss,
             start_logits,
             end_logits,
-            outputs.hidden_states,
-            outputs.attentions,
+            outputs[3],
+            outputs[4],
         )
+
+__all__ = [
+    'MegatronBertEmbeddings', 'MegatronBertSelfAttention', 'MegatronBertSelfOutput', 'MegatronBertAttention',
+    'MegatronBertIntermediate', "MegatronBertOutput", "MegatronBertLayer", "MegatronBertEncoder",
+    'MegatronBertPooler', 'MegatronBertPredictionHeadTransform', 'MegatronBertLMPredictionHead',
+    'MegatronBertOnlyMLMHead', 'MegatronBertOnlyNSPHead', 'MegatronBertPreTrainingHeads',
+    'MegatronBertPreTrainedModel', 'MegatronBertForPreTrainingOutput', 'MegatronBertModel',
+    'MegatronBertForPreTraining', 'MegatronBertForCausalLM', 'MegatronBertForMaskedLM',
+    'MegatronBertForNextSentencePrediction', 'MegatronBertForSequenceClassification',
+    'MegatronBertForMultipleChoice', 'MegatronBertForTokenClassification', 'MegatronBertForQuestionAnswering'
+]
