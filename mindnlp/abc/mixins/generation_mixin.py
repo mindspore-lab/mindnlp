@@ -241,18 +241,19 @@ class GenerationMixin:
         )
 
     def _extract_past_from_model_output(self, outputs, standardize_cache_format: bool = False):
-        past_key_values = None
-        if "past_key_values" in outputs:
-            past_key_values = outputs.past_key_values
-        elif "mems" in outputs:
-            past_key_values = outputs.mems
-        elif "past_buckets_states" in outputs:
-            past_key_values = outputs.past_buckets_states
+        past_key_values = outputs[1]
+        # if "past_key_values" in outputs:
+        #     past_key_values = outputs.past_key_values
+        # elif "mems" in outputs:
+        #     past_key_values = outputs.mems
+        # elif "past_buckets_states" in outputs:
+        #     past_key_values = outputs.past_buckets_states
 
-        # Bloom fix: standardizes the cache format when requested
-        if standardize_cache_format and hasattr(self, "_convert_to_standard_cache"):
-            batch_size = outputs.logits.shape[0]
-            past_key_values = self._convert_to_standard_cache(past_key_values, batch_size=batch_size)
+        # # Bloom fix: standardizes the cache format when requested
+        # if standardize_cache_format and hasattr(self, "_convert_to_standard_cache"):
+        #     batch_size = outputs.logits.shape[0]
+        #     past_key_values = self._convert_to_standard_cache(past_key_values, batch_size=batch_size)
+
         return past_key_values
 
     def _update_model_kwargs_for_generation(
@@ -1101,14 +1102,8 @@ class GenerationMixin:
 
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
-
             # forward pass to get next token
-            outputs = self(
-                **model_inputs,
-                return_dict=True,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-            )
+            outputs = self(**model_inputs)
 
             if synced_gpus and this_peer_finished:
                 continue  # don't waste resources running the code we don't need

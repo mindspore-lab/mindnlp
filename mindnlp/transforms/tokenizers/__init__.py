@@ -31,8 +31,10 @@ from .chatglm_tokenizer import ChatGLMTokenizer
 from .bart_tokenizer import BartTokenizer
 from .mobilebert_tokenizer import MobileBertTokenizer
 from .uie_tokenizer import  UIETokenizer
+from .xlm_tokenizer import  XLMTokenizer
+from .megatronbert_tokenizer import MegatronBertTokenizer
 
 __all__ = ['BasicTokenizer', 'BertTokenizer', 'T5Tokenizer', 'GPTTokenizer', 'GPT2Tokenizer', 'ErnieTokenizer', 'CodeGenTokenizer',
            'RobertaTokenizer', 'LongformerTokenizer', 'NezhaTokenizer', 'TinyBertTokenizer', 'ChatGLMTokenizer', 'BartTokenizer',
-           'MobileBertTokenizer', 'UIETokenizer'
+           'MobileBertTokenizer', 'UIETokenizer', 'XLMTokenizer', 'MegatronBertTokenizer'
            ]

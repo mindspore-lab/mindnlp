@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-import copy
+# pylint: disable=C0103
+"""other utils"""
 import mindspore
 from mindspore import ops, Parameter
 from mindspore.common.initializer import initializer, Normal
-from mindnlp._legacy.nn import Dropout, Matmul
+from mindnlp._legacy.nn import Matmul
 
 class ModulesToSaveWrapper(mindspore.nn.Cell):
     """
@@ -32,7 +33,7 @@ class ModulesToSaveWrapper(mindspore.nn.Cell):
     def construct(self, *args, **kwargs):
         if self.active_adapter not in self.modules_to_save:
             return self.original_module(*args, **kwargs)
-
+        return self.modules_to_save[self.active_adapter](*args, **kwargs)
 
 def _get_submodules(model, key):
     """
@@ -85,6 +86,26 @@ def transpose(weight, fan_in_fan_out):
     return weight.T if fan_in_fan_out else weight
 
 
+def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_start_token_id: int):
+    """
+    Shift input ids one token to the right.
+
+    Args:
+        input_ids (`torch.LongTensor` of shape `(batch_size, sequence_length)`): input ids
+        pad_token_id (`int`): The id of the `padding` token.
+        decoder_start_token_id (`int`): The id of the `start` token.
+    """
+    shifted_input_ids = input_ids.new_zeros(input_ids.shape)
+    shifted_input_ids[:, 1:] = input_ids[:, :-1].clone()
+    shifted_input_ids[:, 0] = decoder_start_token_id
+
+    if pad_token_id is None:
+        raise ValueError("self.model.config.pad_token_id has to be defined.")
+    # replace possible -100 values in labels by `pad_token_id`
+    shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
+
+    return shifted_input_ids
+
 TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING = {
     "t5": ["q", "v"],
     "bart": ["q_proj", "v_proj"],
@@ -120,6 +141,6 @@ class Conv1D(mindspore.nn.Cell):
         x = self.matmul(x.view(-1, x.shape[-1]), self.weight) + self.bias
         x = x.view(size_out)
         return x
-    
+
 WEIGHTS_NAME = "adapter_model.bin"
 CONFIG_NAME = "adapter_config.json"

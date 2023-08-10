@@ -27,7 +27,3 @@ multi30k
    :show-inheritance:
 
 
-.. automodule:: mindnlp.dataset.machine_translation
-   :members:
-   :undoc-members:
-   :show-inheritance:

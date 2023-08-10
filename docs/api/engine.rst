@@ -1,5 +1,5 @@
 Engine
-======
+===========
 
 .. toctree::
    :maxdepth: 2
@@ -7,4 +7,3 @@ Engine
    engine/trainer
    engine/evaluator
    engine/callbacks
-   engine/metrics

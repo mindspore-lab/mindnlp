@@ -16,6 +16,10 @@
 """
 megatron_bert Model init
 """
-
+from . import megatron_bert, megatron_bert_config
 from .megatron_bert_config import *
 from .megatron_bert import *
+
+__all__ = []
+__all__.extend(megatron_bert.__all__)
+__all__.extend(megatron_bert_config.__all__)

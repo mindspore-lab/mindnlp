@@ -23,9 +23,9 @@ from mindspore import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import Normal, initializer
 
-from mindnlp.models.utils.activations import ACT2FN
-from mindnlp.models.codegen.codegen_config import CodeGenConfig
 from mindnlp.abc import PreTrainedModel
+from .codegen_config import CodeGenConfig
+from ..activations import ACT2FN
 
 
 _CHECKPOINT_FOR_DOC = "Salesforce/codegen-2B-mono"

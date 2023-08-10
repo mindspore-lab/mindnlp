@@ -25,8 +25,8 @@ from mindspore import nn, ops, Tensor, Parameter
 from mindspore.common.initializer import TruncatedNormal,initializer
 from mindnlp.abc import PreTrainedModel
 from mindnlp.configs import MINDNLP_MODEL_URL_BASE
-from ..utils.activations import ACT2FN
 from .ernie_config import ErnieConfig,ERNIE_SUPPORT_LIST
+from ..activations import ACT2FN
 
 PRETRAINED_MODEL_ARCHIVE_MAP = {
     model: MINDNLP_MODEL_URL_BASE.format(re.search(r"^[^-]*", model).group(), model)

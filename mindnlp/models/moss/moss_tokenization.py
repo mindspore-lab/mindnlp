@@ -1,4 +1,4 @@
-# Copyright 2021 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+""" MindSpore Moss model."""
+# from typing import Optional, Tuple, Union
+#
+# from .moss_configuration import MossConfig
 
-"""
-Common utils for models
-"""
+_CHECKPOINT_FOR_DOC = "fnlp/moss-moon-003-base"
+_CONFIG_FOR_DOC = "MossConfig"

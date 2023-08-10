@@ -86,7 +86,10 @@ def SogouNews(
         >>> print(next(train_iter))
     """
 
-    cache_dir = os.path.join(root, "datasets", "SogouNews")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "SogouNews")
+    else:
+        cache_dir = root
     path_dict = {
         "train": "train.csv",
         "test": "test.csv",

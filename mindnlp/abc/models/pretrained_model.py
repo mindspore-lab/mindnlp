@@ -30,21 +30,21 @@ from mindspore import nn, ops
 from mindspore import log as logger
 from mindspore.train.serialization import save_checkpoint
 
-from mindnlp.configs import HF_MODEL_URL_BASE
+from mindnlp.configs import HF_MODEL_URL_BASE, DEFAULT_ROOT
 from mindnlp.utils.download import cached_path, get_checkpoint_shard_files
 from mindnlp.abc.configs import PreTrainedConfig, GenerationConfig
 from mindnlp.abc.mixins import CellUtilMixin, GenerationMixin
 from mindnlp.utils import less_min_pynative_first
+
 if less_min_pynative_first:
     from mindspore import load_checkpoint
 else:
     from mindnlp._legacy.utils import load_checkpoint
 
-_init_weights = True
 WEIGHTS_NAME = "mindspore.ckpt"
 WEIGHTS_INDEX_NAME = "mindspore.ckpt.index.json"
 HF_WEIGHTS_INDEX_NAME = "pytorch_model.bin.index.json"
-
+_init_weights = True
 
 class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
     """
@@ -54,6 +54,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
     pretrained_model_archive_map = {}
     base_model_prefix = ""
     main_input_name = "input_ids"
+
 
     def __init__(self, config):
         super().__init__(config)
@@ -290,7 +291,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         # Copy word embeddings from the previous weights
         num_tokens_to_copy = min(old_num_tokens, new_num_tokens)
         new_embeddings.embedding_table.data[:num_tokens_to_copy, :] = old_embeddings.embedding_table.data[
-            :num_tokens_to_copy, :]
+                                                                      :num_tokens_to_copy, :]
 
         return new_embeddings
 
@@ -311,7 +312,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         """from_pretrained"""
         config = kwargs.pop("config", None)
         state_dict = kwargs.pop("state_dict", None)
-        cache_dir = kwargs.pop("cache_dir", None)
+        cache_dir = kwargs.pop("cache_dir", os.path.join(DEFAULT_ROOT, 'models'))
         from_pt = kwargs.pop("from_pt", False)
         force_download = kwargs.pop("force_download", False)
         resume_download = kwargs.pop("resume_download", False)
@@ -337,20 +338,20 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         else:
             model_kwargs = kwargs
 
-        folder_name = None
         # Load model
         if pretrained_model_name_or_path is not None:
-            folder_name = pretrained_model_name_or_path
             if pretrained_model_name_or_path in cls.pretrained_model_archive_map and not from_pt:
                 archive_file = cls.pretrained_model_archive_map[pretrained_model_name_or_path]
+                cache_dir = os.path.join(cache_dir, pretrained_model_name_or_path)
             elif os.path.isdir(pretrained_model_name_or_path):
-                archive_file = os.path.join(
-                    pretrained_model_name_or_path, "mindspore_model.ckpt")
+                archive_file = "mindspore.ckpt"
+                cache_dir = pretrained_model_name_or_path
             elif os.path.isfile(pretrained_model_name_or_path):
                 archive_file = pretrained_model_name_or_path
+                cache_dir = None
             elif from_pt:
-                archive_file = HF_MODEL_URL_BASE.format(
-                    pretrained_model_name_or_path)
+                archive_file = HF_MODEL_URL_BASE.format(pretrained_model_name_or_path)
+                cache_dir = os.path.join(cache_dir, pretrained_model_name_or_path)
             else:
                 raise ValueError(
                     f'not found model of {pretrained_model_name_or_path}.')
@@ -360,34 +361,29 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 resolved_archive_file = cached_path(
                     archive_file,
                     cache_dir=cache_dir,
-                    proxies=proxies,
-                    folder_name=folder_name
-                )[0]
+                    proxies=proxies)
 
                 if resolved_archive_file is None:
                     base_url = '/'.join(archive_file.split('/')[:-1])
                     archive_file = base_url + '/' + HF_WEIGHTS_INDEX_NAME if from_pt else \
                         base_url + '/' + WEIGHTS_INDEX_NAME
 
-                    resolved_archive_file = str(cached_path(
+                    resolved_archive_file = cached_path(
                         archive_file,
                         cache_dir=cache_dir,
-                        proxies=proxies,
-                        folder_name=folder_name
-                    )[0])
+                        proxies=proxies)
 
                     if resolved_archive_file is not None:
                         cached_filenames, _ = get_checkpoint_shard_files(
-                            pretrained_model_name_or_path=folder_name,
                             index_filename=resolved_archive_file,
                             cache_dir=cache_dir,
                             url=base_url,
-                            proxies=proxies,
-                            subfolder=folder_name
+                            proxies=proxies
                         )
                         is_sharded = True
                     else:
-                        raise EnvironmentError(f"Couldn't reach server at '{archive_file}' to download pretrained weights.")
+                        raise EnvironmentError(
+                            f"Couldn't reach server at '{archive_file}' to download pretrained weights.")
 
             except EnvironmentError as exc:
                 raise exc
@@ -403,7 +399,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
         # Instantiate model.
         model = cls(config, *model_args, **model_kwargs)
-
 
         if from_pt:
             if is_sharded:
@@ -484,7 +479,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         save_checkpoint(model_to_save, output_model_file)
 
         logger.info(f"Model weights saved in {output_model_file}")
-
 
     def can_generate(self) -> bool:
         """

@@ -30,7 +30,7 @@ class TestIWSLT2016(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
+        cls.root = os.path.join(os.getcwd(), ".mindnlp")
 
     @classmethod
     def tearDownClass(cls):

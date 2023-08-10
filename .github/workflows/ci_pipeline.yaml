@@ -36,6 +36,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements/requirements.txt
+        pip install triton
     - name: Install MindSpore
       shell: bash
       env:
@@ -63,6 +64,9 @@ jobs:
     - name: avoid macos error
       if: matrix.os == 'macos-latest'
       run: rm -rf $RUNNER_TOOL_CACHE/Python/3.7.17
+    - name: moss model run only on ubuntu
+      if: matrix.os == 'ubuntu-latest'
+      run: pip install triton
     - name: Set up Python
       uses: actions/setup-python@v4
       with:

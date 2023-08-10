@@ -96,7 +96,10 @@ def QQP(root: str = DEFAULT_ROOT, proxies=None):
 
     """
 
-    cache_dir = os.path.join(root, "datasets", "QQP")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "QQP")
+    else:
+        cache_dir = root
     column_names = ["label", "question1", "question2"]
     path, _ = cache_file(None, url=URL, cache_dir=cache_dir, md5sum=MD5, proxies=proxies)
     return GeneratorDataset(source=Qqp(path), column_names=column_names, shuffle=False)

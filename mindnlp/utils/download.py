@@ -27,7 +27,10 @@ from pathlib import Path
 from urllib.parse import urlparse
 import requests
 from tqdm.autonotebook import tqdm
+from requests.exceptions import ProxyError, SSLError
+
 from mindnlp.configs import DEFAULT_ROOT
+from .errors import ModelNotFoundError
 
 def get_cache_path():
     r"""
@@ -82,23 +85,20 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None)
         ('{home}\.text', '{home}\aclImdb_v1.tar.gz')
 
     """
-    if path is None:
-        path = get_cache_path()
-
     if not os.path.exists(path):
         os.makedirs(path)
 
     retry_cnt = 0
     retry_limit = 3
-    name = ""
+
     if download_file_name is None:
         name = os.path.split(url)[-1]
     else:
         name = download_file_name
 
-    filename = os.path.join(path, name)
+    file_path = os.path.join(path, name)
 
-    while not (os.path.exists(filename) and check_md5(filename, md5sum)):
+    while not (os.path.exists(file_path) and check_md5(file_path, md5sum)):
         if retry_cnt < retry_limit:
             retry_cnt += 1
         else:
@@ -106,14 +106,14 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None)
                 f"Download from {url} failed. " "Retry limit reached")
 
         req = requests.get(url, stream=True, timeout=10, proxies=proxies)
-        if req.status_code != 200:
-            raise RuntimeError(
-                f"Downloading from {url} failed with code {req.status_code}!"
-            )
 
-        tmp_filename = filename + "_tmp"
+        status = req.status_code
+        if status == 404:
+            raise ModelNotFoundError(f"Can not found url: {url}")
+
+        tmp_file_path = file_path + "_tmp"
         total_size = req.headers.get("content-length")
-        with open(tmp_filename, "wb") as file:
+        with open(tmp_file_path, "wb") as file:
             if total_size:
                 with tqdm(
                     total=int(total_size), unit="B", unit_scale=True, unit_divisor=1024
@@ -125,9 +125,9 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None)
                 for chunk in req.iter_content(chunk_size=1024):
                     if chunk:
                         file.write(chunk)
-        shutil.move(tmp_filename, filename)
+        shutil.move(tmp_file_path, file_path)
 
-    return Path(path), filename
+    return file_path
 
 
 def check_md5(filename: str, md5sum=None):
@@ -237,10 +237,9 @@ def cache_file(
     if cache_dir is None:
         cache_dir = get_cache_path()
 
-    path, filename = cached_path(
+    path = cached_path(
         filename_or_url=url,
         cache_dir=cache_dir,
-        folder_name=None,
         md5sum=md5sum,
         download_file_name=download_file_name,
         proxies=proxies,
@@ -252,7 +251,6 @@ def cache_file(
 def cached_path(
     filename_or_url: str,
     cache_dir: str = None,
-    folder_name=None,
     md5sum=None,
     download_file_name=None,
     proxies=None,
@@ -284,29 +282,31 @@ def cached_path(
         '{home}\.text\aclImdb_v1.tar.gz' 'aclImdb_v1.tar.gz'
 
     """
+    parsed = urlparse(filename_or_url)
+
+    if parsed.scheme == "":
+        if os.path.exists(filename_or_url):
+            return filename_or_url
+
     if cache_dir is None:
-        dataset_cache = Path(get_cache_path())
+        dataset_cache = get_cache_path()
     else:
         dataset_cache = cache_dir
 
-    if folder_name:
-        dataset_cache = os.path.join(dataset_cache, folder_name)
-
-    parsed = urlparse(filename_or_url)
+    if (
+        parsed.scheme == ""
+        and os.path.exists(os.path.join(dataset_cache, filename_or_url))
+    ):
+        return os.path.join(dataset_cache, filename_or_url)
 
     if parsed.scheme in ("http", "https"):
         return get_from_cache(
             filename_or_url,
-            Path(dataset_cache),
+            dataset_cache,
             md5sum=md5sum,
             download_file_name=download_file_name,
             proxies=proxies,
         )
-    if (
-        parsed.scheme == ""
-        and Path(os.path.join(dataset_cache, filename_or_url)).exists()
-    ):
-        return Path(os.path.join(dataset_cache, filename_or_url))
     if parsed.scheme == "":
         raise FileNotFoundError(
             f"file {filename_or_url} not found in {dataset_cache}.")
@@ -384,31 +384,29 @@ def get_from_cache(
 
     """
     if cache_dir is None:
-        cache_dir = Path(get_cache_path())
-    cache_dir.mkdir(parents=True, exist_ok=True)
+        raise ValueError('cache dir should not be None.')
 
-    filename = ""
+    if not os.path.exists(cache_dir):
+        os.makedirs(cache_dir)
+
     if download_file_name is None:
         filename = re.sub(r".+/", "", url)
     else:
         filename = download_file_name
 
-    match_dir_name = match_file(filename, cache_dir)
-    dir_name = filename
-    if match_dir_name:
-        dir_name = match_dir_name
-    cache_path = cache_dir / dir_name
-    if cache_path.exists() and check_md5(cache_path, md5sum):
-        return get_filepath(cache_path), filename
+    file_path = os.path.join(cache_dir, filename)
+
+    if os.path.exists(file_path) and check_md5(file_path, md5sum):
+        return file_path
     try:
-        path = http_get(url, cache_dir, md5sum,
-                        download_file_name=download_file_name, proxies=proxies)[1]
-        return Path(path), filename
-    except Exception as exc:
+        path = http_get(url, cache_dir, md5sum, download_file_name=download_file_name, proxies=proxies)
+        return path
+    except (ProxyError, SSLError) as exc:
         raise exc
+    except ModelNotFoundError:
+        return None
 
 def try_to_load_from_cache(
-    repo_id: str,
     filename: str,
     cache_dir: Union[str, Path, None] = None,
 ) -> Optional[str]:
@@ -420,8 +418,6 @@ def try_to_load_from_cache(
     Args:
         cache_dir (`str` or `os.PathLike`):
             The folder where the cached files lie.
-        repo_id (`str`):
-            The ID of the repo on huggingface.co.
         filename (`str`):
             The filename to look for inside `repo_id`.
 
@@ -432,27 +428,21 @@ def try_to_load_from_cache(
             - A special value `_CACHED_NO_EXIST` if the file does not exist at the given commit hash and this fact was
               cached.
     """
-    if cache_dir is None:
-        cache_dir = DEFAULT_ROOT
-
-    repo_cache = os.path.join(cache_dir, repo_id)
-    if not os.path.isdir(repo_cache):
+    if not os.path.isdir(cache_dir):
         # No cache for this model
         return None
 
-    cached_file = os.path.join(repo_cache, filename)
+    cached_file = os.path.join(cache_dir, filename)
 
     return cached_file if os.path.isfile(cached_file) else None
 
 
 def get_checkpoint_shard_files(
-    pretrained_model_name_or_path,
     index_filename,
     cache_dir=None,
     url=None,
     force_download=False,
     proxies=None,
-    subfolder="",
 ):
     """
     For a given model:
@@ -465,7 +455,7 @@ def get_checkpoint_shard_files(
     index (downloaded and cached if `pretrained_model_name_or_path` is a model ID on the Hub).
     """
     if not os.path.isfile(index_filename):
-        raise ValueError(f"Can't find a checkpoint index ({index_filename}) in {pretrained_model_name_or_path}.")
+        raise ValueError(f"Can't find a checkpoint index ({index_filename}) in {cache_dir}.")
 
     with open(index_filename, "r", encoding='utf-8') as f:
         index = json.loads(f.read())
@@ -476,31 +466,28 @@ def get_checkpoint_shard_files(
     sharded_metadata["weight_map"] = index["weight_map"].copy()
 
     # First, let's deal with local folder.
-    if os.path.isdir(pretrained_model_name_or_path):
-        shard_filenames = [os.path.join(pretrained_model_name_or_path, subfolder, f) for f in shard_filenames]
+    if os.path.isdir(cache_dir):
+        shard_filenames = [os.path.join(cache_dir, f) for f in shard_filenames]
         return shard_filenames, sharded_metadata
 
     # At this stage pretrained_model_name_or_path is a model identifier on the Hub
     cached_filenames = []
     # Check if the model is already cached or not. We only try the last checkpoint, this should cover most cases of
     # downloaded (if interrupted).
-    last_shard = try_to_load_from_cache(
-        pretrained_model_name_or_path, shard_filenames[-1], cache_dir=cache_dir
-    )
+    last_shard = try_to_load_from_cache(shard_filenames[-1], cache_dir=cache_dir)
     show_progress_bar = last_shard is None or force_download
     for shard_filename in tqdm(shard_filenames, desc="Downloading shards", disable=not show_progress_bar):
             # Load from URL
-        cached_filename, _ = cached_path(
+        cached_filename = cached_path(
             '/'.join([url, shard_filename]),
             cache_dir,
-            pretrained_model_name_or_path,
             proxies=proxies
         )
         # We have already dealt with RepositoryNotFoundError and RevisionNotFoundError when getting the index, so
         # we don't have to catch them here.
         if cached_filename is None:
             raise EnvironmentError(
-                f"{pretrained_model_name_or_path} does not appear to have a file named {shard_filename} which is "
+                f"{cache_dir} does not appear to have a file named {shard_filename} which is "
                 "required according to the checkpoint index."
             )
 

@@ -112,7 +112,10 @@ def SQuAD2(root: str = DEFAULT_ROOT, split: Union[Tuple[str], str] = ('train', '
         Tensor(shape=[1], dtype=Int32, value= [269])]
 
     """
-    cache_dir = os.path.join(root, "datasets", "SQuAD2")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "SQuAD2")
+    else:
+        cache_dir = root
     file_list = []
     datasets_list = []
     if isinstance(split, str):

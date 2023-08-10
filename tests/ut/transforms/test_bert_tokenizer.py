@@ -73,3 +73,11 @@ def test_bert_tokenizer_add_special_tokens():
     cls_id = bert_tokenizer.token_to_id("[CLS]")
 
     assert cls_id is not None
+
+def test_from_file():
+    """test from file"""
+    _ = BertTokenizer.from_pretrained('.mindnlp/models/bert-base-chinese/tokenizer.json')
+
+def test_from_path():
+    """test from path"""
+    _ = BertTokenizer.from_pretrained('.mindnlp/models/bert-base-chinese')
