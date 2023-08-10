@@ -29,7 +29,6 @@ import math
 import mindspore
 from mindspore import nn
 from mindspore import Parameter, Tensor, ops
-from mindspore import log as logger
 from mindspore.common.initializer import initializer, Normal
 from mindnlp._legacy.nn import Matmul
 from mindnlp.abc import PreTrainedModel
@@ -45,6 +44,7 @@ PRETRAINED_MODEL_ARCHIVE_MAP = {
 
 def torch_to_mindspore(pth_file, **kwargs):
     """torch to mindspore."""
+    prefix = kwargs.get("prefix", "")
 
     try:
         import torch
@@ -72,11 +72,13 @@ def torch_to_mindspore(pth_file, **kwargs):
     }
 
     for k, v in state_dict.items():
-        for pt_key in param_dict:
+        for pt_key, pt_val in param_dict.items():
             if pt_key in k:
-                k = k.replace(pt_key, param_dict[pt_key])
-        
+                k = k.replace(pt_key, pt_val)
+
         k = k[k.find('.') + 1:]
+        if prefix:
+            k = prefix + "." + k
         ms_ckpt.append({'name': k, 'data': Tensor(v.numpy())})
 
     ms_ckpt_path = pth_file.replace('pytorch_model.bin', 'mindspore.ckpt')
@@ -91,6 +93,7 @@ def torch_to_mindspore(pth_file, **kwargs):
 
 
 class PanGuAlphaAttention(nn.Cell):
+    """PanGu-Alpha Attention"""
     def __init__(self, config):
         super().__init__()
 
@@ -206,6 +209,7 @@ class PanGuAlphaAttention(nn.Cell):
 
 
 class PanGuAlphaMLP(nn.Cell):
+    """PanGu-Alpha MLP"""
     def __init__(self, intermediate_size, config):  # in MLP: intermediate_size= 4 * hidden_size
         super().__init__()
         embed_dim = config.hidden_size
@@ -281,6 +285,7 @@ class PanGuAlphaPreTrainedModel(PreTrainedModel):
 
 
 class PanGuAlphaBlock(nn.Cell):
+    """PanGu-Alpha Block"""
     def __init__(self, config):
         super().__init__()
         hidden_size = config.hidden_size
@@ -332,6 +337,7 @@ class PanGuAlphaBlock(nn.Cell):
 
 
 class PanGuAlphaModel(PanGuAlphaPreTrainedModel):
+    """PanGu-Alpha Model"""
     def __init__(self, config):
         super().__init__(config)
 
@@ -378,7 +384,7 @@ class PanGuAlphaModel(PanGuAlphaPreTrainedModel):
 
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
-        elif input_ids is not None:
+        if input_ids is not None:
             input_shape = input_ids.shape
             input_ids = input_ids.view(-1, input_shape[-1])
             batch_size = input_ids.shape[0]
@@ -489,11 +495,13 @@ class PanGuAlphaModel(PanGuAlphaPreTrainedModel):
         }
 
 
-class GPTPanguForCausalLM(PanGuAlphaPreTrainedModel):
-    def __init__(self, config):
+class PanGuAlphaForCausalLM(PanGuAlphaPreTrainedModel):
+    """PanGu-Alpha For CausalLM"""
+    def __init__(self, config, **kwargs):
         super().__init__(config)
         self.transformer = PanGuAlphaModel(config)
         self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -507,19 +515,19 @@ class GPTPanguForCausalLM(PanGuAlphaPreTrainedModel):
         token_type_ids = kwargs.get("token_type_ids", None)
         # only last token for inputs_ids if past is defined in kwargs
         if past:
-            input_ids = input_ids[:, -1].unsqueeze(-1)
+            input_ids = input_ids[:, -1].expand_dims(-1)
             if token_type_ids is not None:
-                token_type_ids = token_type_ids[:, -1].unsqueeze(-1)
+                token_type_ids = token_type_ids[:, -1].expand_dims(-1)
 
         attention_mask = kwargs.get("attention_mask", None)
         position_ids = kwargs.get("position_ids", None)
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.int().cumsum(-1).long() - 1
+            position_ids = attention_mask.long().cumsum(-1) - 1
             position_ids.masked_fill_(attention_mask == 0, 1)
             if past:
-                position_ids = position_ids[:, -1].unsqueeze(-1)
+                position_ids = position_ids[:, -1].expand_dims(-1)
         else:
             position_ids = None
         return {
@@ -546,13 +554,12 @@ class GPTPanguForCausalLM(PanGuAlphaPreTrainedModel):
         output_hidden_states=None,
         return_dict=None,
     ):
-        r"""
+        """
         labels (:obj:`torch.LongTensor` of shape :obj:`(batch_size, sequence_length)`, `optional`):
             Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
             ``labels = input_ids`` Indices are selected in ``[-100, 0, ..., config.vocab_size]`` All labels set to
             ``-100`` are ignored (masked), the loss is only computed for labels in ``[0, ..., config.vocab_size]``
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.transformer(
             input_ids,
@@ -567,17 +574,19 @@ class GPTPanguForCausalLM(PanGuAlphaPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-        hidden_states = transformer_outputs[0]
-
+        if not return_dict:
+            hidden_states = transformer_outputs[0]
+        else:
+            hidden_states = transformer_outputs["last_hidden_state"]
+            
         lm_logits = self.lm_head(hidden_states)
-
         loss = None
         if labels is not None:
             # Shift so that tokens < n predict n
-            shift_logits = lm_logits[..., :-1, :].contiguous()
-            shift_labels = labels[..., 1:].contiguous()
+            shift_logits = lm_logits[..., :-1, :]
+            shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss_fct = nn.SoftmaxCrossEntropyWithLogits()
+            loss_fct = nn.CrossEntropyLoss(ignore_index=self.config.pad_token_id)
             loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
 
         if not return_dict:
@@ -587,9 +596,9 @@ class GPTPanguForCausalLM(PanGuAlphaPreTrainedModel):
         return {
             "loss": loss,
             "logits": lm_logits,
-            "past_key_values": transformer_outputs.past_key_values,
-            "hidden_states": transformer_outputs.hidden_states,
-            "attentions": transformer_outputs.attentions,
+            "past_key_values": transformer_outputs["past_key_values"],
+            "hidden_states": transformer_outputs["hidden_states"],
+            "attentions": transformer_outputs["attentions"],
         }
 
     @staticmethod
@@ -600,7 +609,7 @@ class GPTPanguForCausalLM(PanGuAlphaPreTrainedModel):
         called. This is required to match :obj:`past_key_values` with the correct beam_idx at every generation step.
         """
         return tuple(
-            tuple(past_state.index_select(0, beam_idx.to(past_state.device)) for past_state in layer_past)
+            tuple(past_state.index_select(0, beam_idx.astype(past_state.device)) for past_state in layer_past)
             for layer_past in past
         )
     
