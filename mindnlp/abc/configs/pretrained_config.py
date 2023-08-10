@@ -158,31 +158,30 @@ class PreTrainedConfig:
         _ = kwargs.pop("local_files_only", False)
         from_pt = kwargs.pop("from_pt", False)
 
-        folder_name = None
         if pretrained_config_archive_map is None:
             pretrained_config_archive_map = cls.pretrained_config_archive_map
 
         if pretrained_model_name_or_path in pretrained_config_archive_map:
             config_file = pretrained_config_archive_map[pretrained_model_name_or_path]
-            folder_name = pretrained_model_name_or_path
+            cache_dir = os.path.join(cache_dir, pretrained_model_name_or_path)
         elif os.path.isdir(pretrained_model_name_or_path):
-            config_file = os.path.join(pretrained_model_name_or_path, "config.json")
+            config_file = "config.json"
+            cache_dir = pretrained_model_name_or_path
         elif os.path.isfile(pretrained_model_name_or_path):
             config_file = pretrained_model_name_or_path
+            cache_dir = None
         elif from_pt:
             config_file = HF_CONFIG_URL_BASE.format(pretrained_model_name_or_path)
-            folder_name = pretrained_model_name_or_path
+            cache_dir = os.path.join(cache_dir, pretrained_model_name_or_path)
         else:
             raise ValueError(f'not found config of {pretrained_model_name_or_path}')
 
         try:
             # Load from URL or cache if already cached
-            resolved_config_file = str(cached_path(
+            resolved_config_file = cached_path(
                 config_file,
                 cache_dir=cache_dir,
-                proxies=proxies,
-                folder_name=folder_name
-            )[0])
+                proxies=proxies)
 
             # Load config dict
             if resolved_config_file is None:

@@ -64,6 +64,11 @@ class TestModelingBert(unittest.TestCase):
         _ = BertModel.from_pretrained('bert-base-uncased')
 
     @pytest.mark.download
+    def test_from_pretrained_path(self):
+        """test from pretrained"""
+        _ = BertModel.from_pretrained('.mindnlp/models/bert-base-uncased')
+
+    @pytest.mark.download
     def test_from_pretrained_from_pt(self):
         """test from pt"""
         _ = BertModel.from_pretrained('bert-base-uncased', from_pt=True)
