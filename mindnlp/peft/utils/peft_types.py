@@ -12,31 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Parameter effcient fine tuning modules, like huggingface peft."""
-from .mapping import (
-    MODEL_TYPE_TO_PEFT_MODEL_MAPPING, 
-    PEFT_TYPE_TO_CONFIG_MAPPING, 
-    get_peft_config, 
-    get_peft_model
-)
+import enum
 
-from .peft_model import (
-    PeftModel,
-    PeftModelForCausalLM,
-    # PeftModelForFeatureExtraction,
-    # PeftModelForQuestionAnswering,
-    PeftModelForSeq2SeqLM,
-    PeftModelForSequenceClassification,
-    PeftModelForTokenClassification,
-)
-
-from .tuners import (
-    LoraConfig,
-    LoraModel,
-)
+# ok
+class PeftType(str, enum.Enum):
+    # PROMPT_TUNING = "PROMPT_TUNING"
+    # P_TUNING = "P_TUNING"
+    # PREFIX_TUNING = "PREFIX_TUNING"
+    LORA = "LORA"
+    # ADALORA = "ADALORA"
+    # ADAPTION_PROMPT = "ADAPTION_PROMPT"
+    # IA3 = "IA3"
 
 
-from .config import (
-    PeftConfig, 
-    PromptLearningConfig,
-)
+class TaskType(str, enum.Enum):
+    SEQ_CLS = "SEQ_CLS"
+    SEQ_2_SEQ_LM = "SEQ_2_SEQ_LM"
+    CAUSAL_LM = "CAUSAL_LM"
+    TOKEN_CLS = "TOKEN_CLS"
+    QUESTION_ANS = "QUESTION_ANS"
+    FEATURE_EXTRACTION = "FEATURE_EXTRACTION"

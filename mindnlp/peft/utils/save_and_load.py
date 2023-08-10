@@ -15,7 +15,7 @@
 # pylint: disable=C0103
 """save and load"""
 import mindspore
-from .config import PeftType
+from .peft_types import PeftType
 
 def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
     """

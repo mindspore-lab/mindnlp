@@ -23,22 +23,32 @@ from contextlib import contextmanager
 from copy import deepcopy
 
 import mindspore
+from mindspore import nn
 from mindspore import ops
 from mindspore.nn import CrossEntropyLoss
+
+from .config import PeftConfig
 
 from .tuners import (
     LoraModel,
     LoraConfig
 )
-
 from .utils import (
+    # SAFETENSORS_WEIGHTS_NAME,
+    # TRANSFORMERS_MODELS_TO_PREFIX_TUNING_POSTPROCESS_MAPPING,
     WEIGHTS_NAME,
-    PeftConfig,
     PeftType,
+    TaskType,
+    # _get_batch_size,
+    _prepare_prompt_learning_config,
+    _set_adapter,
     _set_trainable,
+    # add_library_to_model_card,
     get_peft_model_state_dict,
-    PromptLearningConfig,
-    shift_tokens_right
+    # infer_device,
+    # load_peft_weights,
+    set_peft_model_state_dict,
+    shift_tokens_right,
 )
 
 
@@ -58,19 +68,33 @@ class PeftModel(mindspore.nn.Cell):
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
         super().__init__()
         self.base_model = model
-        self.config = self.base_model.config
+        self.config = getattr(self.base_model, "config", {"model_type": "custom"})
         self.modules_to_save = None
-
         self.peft_config = {}
         self.active_adapter = adapter_name
         self.peft_type = peft_config.peft_type
         self.base_model_torch_dtype = getattr(model, "dtype", None)
-        if isinstance(peft_config, LoraConfig):
+        if not peft_config.is_prompt_learning:
             self.peft_config[adapter_name] = peft_config
+            print("OKKKKKKK before create and replace peft model")
+
+            # base_model -> peft model (e.g. LoraModel)
             self.base_model = PEFT_TYPE_TO_MODEL_MAPPING[peft_config.peft_type](
                 self.base_model, self.peft_config, adapter_name
             )
+            # Before Warp 
+            
+            print("OKKKKKKK before add modules to save")
             self.set_additional_trainable_modules(peft_config, adapter_name)
+        else:
+            self.add_adapter(adapter_name, peft_config)
+
+        # if getattr(model, "is_gradient_checkpointing", True):
+        #     model = self._prepare_model_for_gradient_checkpointing(model)
+        # if hasattr(self.base_model, "config") and hasattr(self.base_model.config, "pretraining_tp"):
+        #     self.base_model.config.pretraining_tp = 1
+
+
 
     def save_pretrained(self, save_directory, **kwargs):
         r"""
@@ -182,16 +206,36 @@ class PeftModel(mindspore.nn.Cell):
         """
         return self.base_model.model
 
-    def add_adapter(self, adapter_name, peft_config):
-        """add adapter."""
+    def add_adapter(self, adapter_name: str, peft_config: PeftConfig):
+
         if peft_config.peft_type != self.peft_type:
             raise ValueError(
                 f"Cannot combine adapters with different peft types. "
                 f"Found {self.peft_type} and {peft_config.peft_type}."
             )
+
         self.peft_config[adapter_name] = peft_config
-        self.base_model.add_adapter(adapter_name, peft_config)
+
+        try:
+            if peft_config.is_prompt_learning:  # add_adapter methods for prompt learning setup
+                if hasattr(self.config, "to_dict"):
+                    dict_config = self.config.to_dict()
+                else:
+                    dict_config = self.config
+
+                peft_config = _prepare_prompt_learning_config(peft_config, dict_config)
+                self._setup_prompt_encoder(adapter_name)
+            # elif peft_config.is_adaption_prompt:
+            #     self.base_model.add_adapter(adapter_name, peft_config)
+            else:
+                # inject adapter into base model (load model instead of initialize new one)
+                self.base_model.inject_adapter(self, adapter_name)  
+        except Exception:  # somthing went wrong, roll back
+            del self.peft_config[adapter_name]
+            raise
+
         self.set_additional_trainable_modules(peft_config, adapter_name)
+
 
     def set_additional_trainable_modules(self, peft_config, adapter_name):
         """set additional trainable cells"""
