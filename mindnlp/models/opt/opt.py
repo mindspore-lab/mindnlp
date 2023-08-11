@@ -12,19 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=C0103
+# pylint: disable=C0415
 """MindNLP opt model"""
 
 import os
 import logging
 import mindspore
 import numpy as np
-from typing import List, Optional, Tuple, Union, Any, Dict
+from typing import List, Optional, Tuple, Union, Any
 from mindspore import nn, ops, Tensor
 from mindspore import log as logger
 from mindspore.nn import CrossEntropyLoss, BCEWithLogitsLoss, MSELoss
 from mindnlp.abc import PreTrainedModel
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.configs import MINDNLP_MODEL_URL_BASE, HF_MODEL_URL_BASE
+from mindnlp.configs import HF_MODEL_URL_BASE
 from ..activations import ACT2FN
 from ..utils import Conv1D
 from .config_opt import OPTConfig, OPT_SUPPORT_LIST
@@ -245,7 +247,6 @@ class OPTAttention(nn.Cell):
                 )
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = ops.maximum(
-                # attn_weights # TODO:此处魔改了
                 attn_weights, np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min
             )
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
@@ -530,10 +531,10 @@ class OPTDecoder(OPTPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[Tuple, ...], BaseModelOutputWithPast]:
-        if isinstance(input_ids, list) or isinstance(input_ids, np.ndarray):
+        if isinstance(input_ids, (list, np.ndarray)):
             input_ids = Tensor(input_ids, dtype=mindspore.int64)
 
-        if isinstance(attention_mask, list) or isinstance(attention_mask, np.ndarray):
+        if isinstance(attention_mask, (list, np.ndarray)):
             attention_mask = Tensor(attention_mask, dtype=mindspore.int64)
 
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -761,6 +762,9 @@ class OPTForCausalLM(OPTPreTrainedModel):
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
+        r"""
+        Set Decoder
+        """
         self.model.decoder = decoder
 
     def get_decoder(self):
@@ -901,7 +905,7 @@ class OPTForSequenceClassification(OPTPreTrainedModel):
             sequence_lengths = -1
         else:
             if input_ids is not None:
-                sequence_lengths = (ops.ne(input_ids, self.config.pad_token_id).sum(-1) - 1)
+                sequence_lengths = ops.ne(input_ids, self.config.pad_token_id).sum(-1) - 1
             else:
                 sequence_lengths = -1
                 logger.warning(
@@ -916,7 +920,7 @@ class OPTForSequenceClassification(OPTPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in [mindspore.int64, mindspore.int32]:
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"

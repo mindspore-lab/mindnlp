@@ -22,7 +22,7 @@ __all__ = ['OPTConfig']
 
 OPT_SUPPORT_LIST = ["facebook/opt-350m"]
 
-CONFIG_ARCHIVE_MAP = { # TODO:
+CONFIG_ARCHIVE_MAP = { # TODO: 替换链接
     # model: MINDNLP_CONFIG_URL_BASE.format('facebook', model) for model in OPT_SUPPORT_LIST
     model: HF_CONFIG_URL_BASE.format(model) for model in OPT_SUPPORT_LIST
 }
