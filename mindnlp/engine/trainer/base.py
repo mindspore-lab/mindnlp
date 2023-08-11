@@ -17,13 +17,16 @@
 """
 Trainer for training.
 """
+import os
 from typing import Optional, List, Union
 from inspect import signature
 from tqdm.autonotebook import tqdm
 from mindspore import nn, Tensor
 from mindspore import log, mutable, context
+from mindspore import save_checkpoint
 from mindspore.dataset.engine import Dataset, TakeDataset
-from mindnlp.abc import Callback, Metric
+
+from mindnlp.abc import Callback, Metric, PreTrainedConfig
 from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContext
 from mindnlp.engine.callbacks.earlystop_callback import EarlyStopCallback
 from mindnlp.engine.callbacks.best_model_callback import BestModelCallback
@@ -254,10 +257,6 @@ class Trainer:
         """Load checkpoint."""
         raise NotImplementedError
 
-    def _save_checkpoint(self, path):
-        """Save checkpoint."""
-        raise NotImplementedError
-
     def _do_eval_steps(self, steps, eval_dataset):
         """Evaluate the model after n steps."""
         raise NotImplementedError
@@ -370,3 +369,14 @@ class Trainer:
 
     def predict_loop(self):
         """predict loop"""
+
+    def save_model(self, output_dir, model_name=None):
+        """save model to specify dir."""
+        assert output_dir, "`output_dir` is None, please input a real path."
+        if hasattr(self.network, 'config') and isinstance(self.network.config, PreTrainedConfig):
+            self.network.config.to_file(output_dir)
+        if model_name:
+            model_path = os.path.join(output_dir, f'{model_name}.ckpt')
+        else:
+            model_path = os.path.join(output_dir, 'model.ckpt')
+        save_checkpoint(self.network, model_path)

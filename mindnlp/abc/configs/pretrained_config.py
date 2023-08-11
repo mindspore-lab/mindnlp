@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-
+# pylint: disable=C0103
 """
 Pretrained config.
 """
@@ -231,3 +231,9 @@ class PreTrainedConfig:
     def to_json_string(self):
         """Serializes this instance to a JSON string."""
         return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
+
+    def to_file(self, save_path):
+        """Serializes this instance to a JSON file."""
+        output_dict = self.to_dict()
+        with open(os.path.join(save_path, 'config.json'), encoding='utf-8') as f:
+            json.dump(output_dict, f, sort_keys=True, indent=2)
