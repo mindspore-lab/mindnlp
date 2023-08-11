@@ -76,15 +76,11 @@ class PeftModel(mindspore.nn.Cell):
         self.base_model_torch_dtype = getattr(model, "dtype", None)
         if not peft_config.is_prompt_learning:
             self.peft_config[adapter_name] = peft_config
-            print("OKKKKKKK before create and replace peft model")
 
             # base_model -> peft model (e.g. LoraModel)
             self.base_model = PEFT_TYPE_TO_MODEL_MAPPING[peft_config.peft_type](
                 self.base_model, self.peft_config, adapter_name
             )
-            # Before Warp 
-            
-            print("OKKKKKKK before add modules to save")
             self.set_additional_trainable_modules(peft_config, adapter_name)
         else:
             self.add_adapter(adapter_name, peft_config)
@@ -157,23 +153,39 @@ class PeftModel(mindspore.nn.Cell):
         model.load_adapter(model_id, adapter_name, **kwargs)
         return model
 
-    def print_trainable_parameters(self):
-        """
-        Prints the number of trainable parameters in the model.
+    def get_nb_trainable_parameters(self):
+        r"""
+        Returns the number of trainable parameters and number of all parameters in the model.
         """
         trainable_params = 0
         all_param = 0
-        for _, param in self.named_parameters():
+        for param in self.get_parameters():
             num_params = param.numel()
             # if using DS Zero 3 and the weights are initialized empty
             if num_params == 0 and hasattr(param, "ds_numel"):
                 num_params = param.ds_numel
 
+            # Due to the design of 4bit linear layers from bitsandbytes
+            # one needs to multiply the number of parameters by 2 to get
+            # the correct number of parameters
+            if param.__class__.__name__ == "Params4bit":
+                num_params = num_params * 2
+
             all_param += num_params
             if param.requires_grad:
                 trainable_params += num_params
+
+        return trainable_params, all_param
+
+
+    def print_trainable_parameters(self):
+        """
+        Prints the number of trainable parameters in the model.
+        """
+        trainable_params, all_param = self.get_nb_trainable_parameters()
+
         print(
-            f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param}"
+            f"trainable params: {trainable_params:,d} || all params: {all_param:,d} || trainable%: {100 * trainable_params / all_param}"
         )
 
     def __getattr__(self, name: str):

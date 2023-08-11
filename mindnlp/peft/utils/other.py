@@ -14,6 +14,10 @@
 # ============================================================================
 # pylint: disable=C0103
 """other utils"""
+import copy
+from typing import List
+from collections import OrderedDict
+
 import mindspore
 from mindspore import ops, Parameter
 from mindspore.common.initializer import initializer, Normal
@@ -26,25 +30,72 @@ class ModulesToSaveWrapper(mindspore.nn.Cell):
     def __init__(self, module_to_save, adapter_name):
         super().__init__()
         self.original_module = module_to_save
-        self.modules_to_save = mindspore.nn.CellList()
+        self.modules_to_save = OrderedDict({})
         self.update(adapter_name)
         self.active_adapter = adapter_name
+        self.disable_adapters = False
+
+    def update(self, adapter_name):
+        self.modules_to_save.update(OrderedDict({adapter_name: copy.deepcopy(self.original_module)}))
+
+    #     if hasattr(self.modules_to_save[adapter_name], "_hf_hook"):
+    #         old_hook = self.modules_to_save[adapter_name]._hf_hook
+    #         new_hook = self._create_new_hook(old_hook)
+    #         remove_hook_from_module(self.modules_to_save[adapter_name])
+    #         add_hook_to_module(self.modules_to_save[adapter_name], new_hook)
+
+    # def _create_new_hook(self, old_hook):
+    #     r"""
+    #     Creates a new hook based on the old hook. Use it only if you know what you are doing !
+    #     """
+    #     old_hook_cls = getattr(accelerate.hooks, old_hook.__class__.__name__)
+    #     old_hook_attr = old_hook.__dict__
+    #     filtered_old_hook_attr = {}
+    #     old_hook_init_signature = inspect.signature(old_hook_cls.__init__)
+    #     for k in old_hook_attr.keys():
+    #         if k in old_hook_init_signature.parameters:
+    #             filtered_old_hook_attr[k] = old_hook_attr[k]
+    #     new_hook = old_hook_cls(**filtered_old_hook_attr)
+    #     return new_hook
 
     def construct(self, *args, **kwargs):
-        if self.active_adapter not in self.modules_to_save:
+        if self.disable_adapters or (self.active_adapter not in self.modules_to_save):
             return self.original_module(*args, **kwargs)
         return self.modules_to_save[self.active_adapter](*args, **kwargs)
+
+def custom_get_submodule(model: mindspore.nn.Cell, target: str) -> mindspore.nn.Cell:
+    """
+    Returns the submodule given by ``target`` if it exists, otherwise throws an error.
+    功能和 torch.nn.Module 相似
+    """
+    if target == "":
+        return model
+
+    atoms: List[str] = target.split(".")
+    mod: mindspore.nn.Cell = model
+
+    for item in atoms:
+        if not hasattr(mod, item):
+            
+            raise AttributeError(mod + " has no attribute `" + item + "`")
+
+        mod = getattr(mod, item)
+
+        if not isinstance(mod, mindspore.nn.Cell):
+            raise AttributeError("`" + item + "` is not an nn.Module")
+
+    return mod
+
 
 def _get_submodules(model, key):
     """
     get submodules
     """
-    parent = model.get_submodule(".".join(key.split(".")[:-1]))
+    parent_key = ".".join(key.split(".")[:-1])
+    parent = custom_get_submodule(model, parent_key)
     target_name = key.split(".")[-1]
-    # TODO: check get_submodule support or not in mindnlp models
-    # https://pytorch.org/docs/stable/generated/torch.nn.Module.html.
-    # we should return Mindspore.nn.Cell here
-    target = model.get_submodule(key) 
+    target = custom_get_submodule(model, key) 
+
     return parent, target, target_name
 
 
@@ -52,7 +103,7 @@ def _set_trainable(model, adapter_name):
     """
     set trainable
     """
-    key_list = [key for key, _ in model.named_parameters()]  # named_modules named_parameters
+    key_list = [key for key, _ in model.cells_and_names()]  # named_modules cells_and_names
     for key in key_list:
         target_module_found = any(key.endswith(target_key) for target_key in model.modules_to_save)
         if target_module_found:
@@ -62,7 +113,7 @@ def _set_trainable(model, adapter_name):
                 # 判断是否是此数据类型
                 target.update(adapter_name)
             else:
-                for param in target.parameters():
+                for _, param in target.parameters_and_names(): 
                     param.requires_grad = True
                 setattr(parent, target_name, ModulesToSaveWrapper(target, adapter_name))
 

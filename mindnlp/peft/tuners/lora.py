@@ -83,8 +83,8 @@ class LoraConfig(PeftConfig):
             "For example, ['q', 'v'] or '.*decoder.*(SelfAttention|EncDecAttention).*(q|v)$' "
         },
     )
-    lora_alpha: int = field(default=None, metadata={"help": "Lora alpha"})
-    lora_dropout: float = field(default=None, metadata={"help": "Lora dropout"})
+    lora_alpha: int = field(default=8, metadata={"help": "Lora alpha"})
+    lora_dropout: float = field(default=0.0, metadata={"help": "Lora dropout"})
     fan_in_fan_out: bool = field(
         default=False,
         metadata={"help": "Set this to True if the layer to replace stores weight like (fan_in, fan_out)"},
@@ -118,7 +118,13 @@ class LoraConfig(PeftConfig):
     def __post_init__(self):
         self.peft_type = PeftType.LORA
 
-
+    @property
+    def is_prompt_learning(self):
+        r"""
+        Utility method to check if the configuration is for prompt learning.
+        """
+        return False
+    
 class LoraModel(BaseTuner):
     """
     Creates Low Rank Adapter (Lora) model from a pretrained transformers model.
@@ -256,83 +262,17 @@ class LoraModel(BaseTuner):
             )
         else:
             new_module = self._create_new_module(lora_config, adapter_name, target, **kwargs)
+            print("====debug===print new module")
+
             self._replace_module(parent, target_name, new_module, target)
 
-
-    def _find_and_replace(self, adapter_name):
-        lora_config = self.peft_config[adapter_name]
-        is_target_modules_in_base_model = False
-        kwargs = {
-            "r": lora_config.r,
-            "lora_alpha": lora_config.lora_alpha,
-            "lora_dropout": lora_config.lora_dropout,
-            "fan_in_fan_out": lora_config.fan_in_fan_out,
-            "init_lora_weights": lora_config.init_lora_weights,
-        }
-        key_list = [key for key, _ in self.model.named_modules()]
-        for key in key_list:
-            if isinstance(lora_config.target_modules, str):
-                target_module_found = re.fullmatch(lora_config.target_modules, key)
-            else:
-                target_module_found = any(key.endswith(target_key) for target_key in lora_config.target_modules)
-            if target_module_found:
-                if not is_target_modules_in_base_model:
-                    is_target_modules_in_base_model = True
-
-                parent, target, target_name = _get_submodules(self.model, key)
-
-                if hasattr(target, "bias"):
-                    bias = target.bias is not None
-
-                if isinstance(target, LoraLayer):
-                    target.update_layer(
-                        adapter_name,
-                        lora_config.r,
-                        lora_config.lora_alpha,
-                        lora_config.lora_dropout,
-                        lora_config.init_lora_weights,
-                    )
-                else:
-                    if isinstance(target, mindspore.nn.Embedding):
-                        embedding_kwargs = kwargs.copy()
-                        embedding_kwargs.pop("fan_in_fan_out", None)
-                        in_features, out_features = target.num_embeddings, target.embedding_dim
-                        new_module = Embedding(adapter_name, in_features, out_features, **embedding_kwargs)
-                    else:
-                        if isinstance(target, mindspore.nn.Dense):
-                            in_features, out_features = target.in_features, target.out_features
-                            if kwargs["fan_in_fan_out"]:
-                                warnings.warn(
-                                    "fan_in_fan_out is set to True but the target module is `torch.nn.Linear`. "
-                                    "Setting fan_in_fan_out to False."
-                                )
-                                kwargs["fan_in_fan_out"] = lora_config.fan_in_fan_out = False
-                        elif isinstance(target, Conv1D):  # TODO: check if it is correct
-                            in_features, out_features = (
-                                target.weight.ds_shape if hasattr(target.weight, "ds_shape") else target.weight.shape
-                            )
-                            if not kwargs["fan_in_fan_out"]:
-                                warnings.warn(
-                                    "Setting fan_in_fan_out to True."
-                                )
-                                kwargs["fan_in_fan_out"] = lora_config.fan_in_fan_out = True
-                        else:
-                            raise ValueError(
-                                f"Target module {target} is not supported. "
-                            )
-                        new_module = Dense(adapter_name, in_features, out_features, bias=bias, **kwargs)
-
-                    self._replace_module(parent, target_name, new_module, target)
-
-
-        if not is_target_modules_in_base_model:
-            raise ValueError(
-                f"Target modules {lora_config.target_modules} not found in the base model. "
-                f"Please check the target modules and try again."
-            )
+            
+        for k, v in self.parameters_and_names():
+            print(k)
 
     @staticmethod
     def _replace_module(parent, child_name, new_module, child):
+        print("replace ", child_name, " new module ", new_module)
         setattr(parent, child_name, new_module)
         new_module.weight = child.weight
         if hasattr(child, "bias"):
@@ -433,7 +373,7 @@ class LoraModel(BaseTuner):
                 continue
             if isinstance(target, LoraLayer):
                 if isinstance(target, nn.Embedding):
-                    new_module = nn.Embedding(target.in_features, target.out_features)
+                    new_module = nn.Embedding(target.in_channels, target.out_channels)
                 elif isinstance(target, nn.Conv2d):
                     new_module = nn.Conv2d(
                         target.in_channels,
@@ -445,7 +385,7 @@ class LoraModel(BaseTuner):
                     )
                 elif isinstance(target, nn.Dense):
                     bias = target.bias is not None
-                    new_module = nn.Dense(target.in_features, target.out_features, has_bias=bias)
+                    new_module = nn.Dense(target.in_channels, target.out_channels, has_bias=bias)
                 else:
                     raise ValueError(f"Not support {type(target)}.")
                 target.merge()
@@ -457,45 +397,45 @@ class LoraModel(BaseTuner):
 
         return self.model
 
-    def add_weighted_adapter(self, adapters, weights, adapter_name):
-        """add_weighted_adapter"""
-        if len({self.peft_config[adapter].r for adapter in adapters}) != 1:
-            raise ValueError("All adapters must have the same r value")
-        self.peft_config[adapter_name] = replace(
-            self.peft_config[adapters[0]], lora_alpha=self.peft_config[adapters[0]].r
-        )
-        self._find_and_replace(adapter_name)
-        mark_only_lora_as_trainable(self.model, self.peft_config[adapter_name].bias)
-        _freeze_adapter(self.model, adapter_name)
-        key_list = [key for key, _ in self.model.named_modules() if "lora" not in key]
-        for key in key_list:
-            _, target, _ = _get_submodules(self.model, key)
-            if isinstance(target, LoraLayer):
-                if adapter_name in target.lora_A:
-                    target.lora_A[adapter_name].weight.data = target.lora_A[adapter_name].weight.data * 0.0
-                    target.lora_B[adapter_name].weight.data = target.lora_B[adapter_name].weight.data * 0.0
-                    for adapter, weight in zip(adapters, weights):
-                        if adapter not in target.lora_A:
-                            continue
-                        target.lora_A[adapter_name].weight.data += (
-                            target.lora_A[adapter].weight.data * weight * target.scaling[adapter]
-                        )
-                        target.lora_B[adapter_name].weight.data += target.lora_B[adapter].weight.data * weight
+    # def add_weighted_adapter(self, adapters, weights, adapter_name):
+    #     """add_weighted_adapter"""
+    #     if len({self.peft_config[adapter].r for adapter in adapters}) != 1:
+    #         raise ValueError("All adapters must have the same r value")
+    #     self.peft_config[adapter_name] = replace(
+    #         self.peft_config[adapters[0]], lora_alpha=self.peft_config[adapters[0]].r
+    #     )
+    #     self._find_and_replace(adapter_name)
+    #     mark_only_lora_as_trainable(self.model, self.peft_config[adapter_name].bias)
+    #     _freeze_adapter(self.model, adapter_name)
+    #     key_list = [key for key, _ in self.model.named_modules() if "lora" not in key]
+    #     for key in key_list:
+    #         _, target, _ = _get_submodules(self.model, key)
+    #         if isinstance(target, LoraLayer):
+    #             if adapter_name in target.lora_A:
+    #                 target.lora_A[adapter_name].weight.data = target.lora_A[adapter_name].weight.data * 0.0
+    #                 target.lora_B[adapter_name].weight.data = target.lora_B[adapter_name].weight.data * 0.0
+    #                 for adapter, weight in zip(adapters, weights):
+    #                     if adapter not in target.lora_A:
+    #                         continue
+    #                     target.lora_A[adapter_name].weight.data += (
+    #                         target.lora_A[adapter].weight.data * weight * target.scaling[adapter]
+    #                     )
+    #                     target.lora_B[adapter_name].weight.data += target.lora_B[adapter].weight.data * weight
 
-                elif adapter_name in target.lora_embedding_A:
-                    target.lora_embedding_A[adapter_name].data = target.lora_embedding_A[adapter_name].data * 0.0
-                    target.lora_embedding_B[adapter_name].data = target.lora_embedding_B[adapter_name].data * 0.0
-                    for adapter, weight in zip(adapters, weights):
-                        if adapter not in target.lora_embedding_A:
-                            continue
-                        target.lora_embedding_A[adapter_name].data += (
-                            target.lora_embedding_A[adapter].data * weight * target.scaling[adapter]
-                        )
-                        target.lora_embedding_B[adapter_name].data += target.lora_embedding_B[adapter].data * weight
+    #             elif adapter_name in target.lora_embedding_A:
+    #                 target.lora_embedding_A[adapter_name].data = target.lora_embedding_A[adapter_name].data * 0.0
+    #                 target.lora_embedding_B[adapter_name].data = target.lora_embedding_B[adapter_name].data * 0.0
+    #                 for adapter, weight in zip(adapters, weights):
+    #                     if adapter not in target.lora_embedding_A:
+    #                         continue
+    #                     target.lora_embedding_A[adapter_name].data += (
+    #                         target.lora_embedding_A[adapter].data * weight * target.scaling[adapter]
+    #                     )
+    #                     target.lora_embedding_B[adapter_name].data += target.lora_embedding_B[adapter].data * weight
 
     def _get_active_adapter(self) -> str:
         active_adapter = None
-        for module in self.model.cells():
+        for _, module in self.model.cells_and_names():
             if isinstance(module, LoraLayer):
                 active_adapter = module.active_adapter
 
@@ -529,10 +469,16 @@ class LoraModel(BaseTuner):
 
 
     @staticmethod
-    def _create_new_module(lora_config, adapter_name, target, **kwargs):
+    def _create_new_module(
+            lora_config: PeftConfig, 
+            adapter_name: str, 
+            target: mindspore.nn.Cell,
+            **kwargs
+        ):
         """"""
-        # loaded_in_8bit = kwargs.pop("loaded_in_8bit", False)
-        # loaded_in_4bit = kwargs.pop("loaded_in_4bit", False)
+        # TODO: support loaded_in_8bit & loaded_in_4bit later, just pop now.
+        loaded_in_8bit = kwargs.pop("loaded_in_8bit", False)  
+        loaded_in_4bit = kwargs.pop("loaded_in_4bit", False)
         bias = kwargs.pop("bias", False)
 
         # if loaded_in_8bit and isinstance(target, bnb.nn.Linear8bitLt):
@@ -546,7 +492,7 @@ class LoraModel(BaseTuner):
         #         }
         #     )
         #     new_module = Linear8bitLt(
-        #         adapter_name, target.in_features, target.out_features, bias=bias, **eightbit_kwargs
+        #         adapter_name, target.in_channels, target.out_channels, bias=bias, **eightbit_kwargs
         #     )
         # elif loaded_in_4bit and is_bnb_4bit_available() and isinstance(target, bnb.nn.Linear4bit):
         #     fourbit_kwargs = kwargs.copy()
@@ -557,7 +503,7 @@ class LoraModel(BaseTuner):
         #             "quant_type": target.weight.quant_type,
         #         }
         #     )
-        #     new_module = Linear4bit(adapter_name, target.in_features, target.out_features, bias=bias, **fourbit_kwargs)
+        #     new_module = Linear4bit(adapter_name, target.in_channels, target.out_channels, bias=bias, **fourbit_kwargs)
         if isinstance(target, nn.Embedding):
             embedding_kwargs = kwargs.copy()
             embedding_kwargs.pop("fan_in_fan_out", None)
@@ -571,7 +517,8 @@ class LoraModel(BaseTuner):
         #     new_module = Conv2d(adapter_name, in_channels, out_channels, kernel_size, stride, padding, **kwargs)
         else:
             if isinstance(target, nn.Dense): # Linear
-                in_features, out_features = target.in_features, target.out_features
+                # get
+                in_features, out_features = target.in_channels, target.out_channels
                 if kwargs["fan_in_fan_out"]:
                     warnings.warn(
                         "fan_in_fan_out is set to True but the target module is `torch.nn.Linear`. "
@@ -594,7 +541,7 @@ class LoraModel(BaseTuner):
                     f"Target module {target} is not supported. "
                     f"Currently, only `torch.nn.Linear` and `Conv1D` are supported."
                 )
-            new_module = Linear(adapter_name, in_features, out_features, bias=bias, **kwargs)
+            new_module = Linear(adapter_name, in_features, out_features, has_bias=bias, **kwargs)
 
         return new_module
 
@@ -631,8 +578,8 @@ class LoraLayer(BaseTunerLayer):
         self.lora_dropout.update(OrderedDict({adapter_name: lora_dropout_layer}))
         # Actual trainable parameters
         if r > 0:
-            self.lora_A.update(OrderedDict({adapter_name: nn.Dense(self.in_features, r, bias=False)}))
-            self.lora_B.update(OrderedDict({adapter_name: nn.Dense(r, self.out_features, bias=False)}))
+            self.lora_A.update(OrderedDict({adapter_name: nn.Dense(self.in_features, r, has_bias=False)}))
+            self.lora_B.update(OrderedDict({adapter_name: nn.Dense(r, self.out_features, has_bias=False)}))
             self.scaling[adapter_name] = lora_alpha / r
         if init_lora_weights:
             self.reset_lora_parameters(adapter_name)
@@ -688,7 +635,16 @@ class LoraLayer(BaseTunerLayer):
     def reset_lora_parameters(self, adapter_name):
         if adapter_name in self.lora_A.keys():
             # initialize A the same way as the default for nn.Dense and B to zero
-            HeUniform(negative_slope=math.sqrt(5))(self.lora_A[adapter_name].weight)
+            # TODO: bug in mindspore.common.initializer._assignment (arr: Tensor is not support now.)
+            # HeUniform(negative_slope=math.sqrt(5))(self.lora_A[adapter_name].weight)
+            # not elegant way
+            self.lora_A[adapter_name].weight.set_data(
+                initializer(HeUniform(negative_slope=math.sqrt(5)), 
+                self.lora_A[adapter_name].weight.shape, 
+                self.lora_A[adapter_name].weight.dtype)
+            )
+
+            # cell.weight.set_data(initializer(One(), cell.weight.shape, cell.weight.dtype))
             Zero()(self.lora_B[adapter_name].weight)
 
         if adapter_name in self.lora_embedding_A.keys():
@@ -723,7 +679,7 @@ class Linear(nn.Dense, LoraLayer):
             self.weight.data = self.weight.data.T
 
         # nn.Linear.reset_parameters(self)
-        self.update_layer(adapter_name, r, lora_alpha, lora_dropout, init_lora_weights)
+        self.update_layer(adapter_name, r, lora_alpha, lora_dropout, init_lora_weights)  # call # LoraLayer.update_layer
         self.active_adapter = adapter_name
         self.is_target_conv_1d_layer = is_target_conv_1d_layer
 
