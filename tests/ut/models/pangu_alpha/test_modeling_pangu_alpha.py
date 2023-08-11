@@ -36,7 +36,7 @@ class TestModelingPanGuAlpha(unittest.TestCase):
         """
         Set up.
         """
-        self.config = PanGuAlphaConfig(num_layers=2)
+        self.config = PanGuAlphaConfig(num_layers=2, vocab_size=40, hidden_size=16)
 
     def test_pangu_alpha_attention(self):
         """
