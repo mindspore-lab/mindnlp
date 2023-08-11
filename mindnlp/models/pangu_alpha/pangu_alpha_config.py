@@ -11,7 +11,7 @@ from mindnlp.configs import HF_CONFIG_URL_BASE
 from mindnlp.abc import PreTrainedConfig
 
 
-PANGU_ALPHA_SUPPORT_LIST = ['pangu-350M', 'pangu-13B', 'pangu-2_6B']
+PANGU_ALPHA_SUPPORT_LIST = ['pangu-350M', 'pangu-2_6B', 'pangu-13B']
 
 CONFIG_ARCHIVE_MAP = {
     model: HF_CONFIG_URL_BASE.format('sunzeyeah/' + model) for model in PANGU_ALPHA_SUPPORT_LIST
