@@ -24,7 +24,7 @@ import pytest
 from mindspore.dataset import text
 from mindnlp.transforms import BasicTokenizer
 from mindnlp.dataset import HF_SQuAD2, HF_SQuAD2_Process
-
+from mindnlp.configs import DEFAULT_ROOT
 
 class TestHFSQuAD2(unittest.TestCase):
     r"""
@@ -33,7 +33,7 @@ class TestHFSQuAD2(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
+        cls.root = os.path.join(DEFAULT_ROOT, 'datasets')
 
     @classmethod
     def tearDownClass(cls):

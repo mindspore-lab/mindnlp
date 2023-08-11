@@ -110,4 +110,4 @@ class TestModelingMoss(unittest.TestCase):
         model_out = model(input_ids=ms_input)
 
         assert model_out[0].shape == (2, self.config.vocab_size)
-        assert model_out[1][0][0].shape == (1, 8, 2, 512)
+        assert model_out[1][0][0].shape == (1, 8, 2, 64)
