@@ -1,4 +1,4 @@
-# %%
+
 import numpy as np
 import time
 import mindspore
@@ -14,14 +14,22 @@ from mindspore.communication import init, get_rank
 context.set_context(mode=context.GRAPH_MODE, device_target="GPU")
 # init('nccl')
 
-# %%
-# mindspore 构造一个测试数据集
+class MLP(nn.Cell):
+    def __init__(self, hidden=2000):
+        super(MLP, self).__init__()
+        self.layers = nn.SequentialCell(
+            nn.Dense(20, hidden),
+            nn.ReLU(),
+            nn.Dense(hidden, hidden),
+            nn.ReLU(),
+            nn.Dense(hidden, 2),
+            nn.LogSoftmax(axis=-1)
+        )
 
-X = mindspore.ops.rand((1000,20), seed=0)
-y = (X.sum(1) > 10).int()
+    def construct(self, X):
+        return self.layers(X)
+    
 
-n_train = 800
-batch_size = 64
 
 class MyIterable:
     def __init__(self, X: Tensor, y:Tensor):
@@ -43,7 +51,30 @@ class MyIterable:
 
     def __len__(self):
         return len(self._data)
+    
 
+def print_net_params(net: nn.Cell):
+    "print all parameters in net."
+    print("print all params")
+    all_parameter = []
+    for item in net.get_parameters():
+        all_parameter.append(item)
+        print(item.name, item.data.shape)
+    print(f"all parameter numbers: {len(all_parameter)}")
+
+    # Obtain trainable parameters.
+    trainable_params = net.trainable_params()
+    for item in trainable_params:
+        print(item.name, item.data.shape)
+    print(f"trainable parameter numbers: {len(trainable_params)}")
+
+
+# mindspore 构造一个测试数据集
+X = mindspore.ops.rand((1000,20), seed=0)
+y = (X.sum(1) > 10).int()
+
+n_train = 800
+batch_size = 64
 
 train_ds = ds.GeneratorDataset(
     source=MyIterable(X[:n_train], y[:n_train]),
@@ -58,57 +89,19 @@ eval_ds = ds.GeneratorDataset(
 train_dataloader = train_ds.batch(batch_size=batch_size, drop_remainder=True)
 eval_dataloader = eval_ds.batch(batch_size=batch_size, drop_remainder=True)
 
-train_ds, train_dataloader
-
-
-# %% [markdown]
-# ### Model
-
-# %%
-
-def print_net_params(net: nn.Cell):
-    all_parameter = []
-    for item in net.get_parameters():
-        all_parameter.append(item)
-        print(item.name, item.data.shape)
-    print(f"all parameter numbers: {len(all_parameter)}")
-
-    # Obtain trainable parameters.
-    trainable_params = net.trainable_params()
-    for item in trainable_params:
-        print(item.name, item.data.shape)
-    print(f"trainable parameter numbers: {len(trainable_params)}")
-
-
-# %%
-class MLP(nn.Cell):
-    def __init__(self, hidden=2000):
-        super(MLP, self).__init__()
-        self.layers = nn.SequentialCell(
-            nn.Dense(20, hidden),
-            nn.ReLU(),
-            nn.Dense(hidden, hidden),
-            nn.ReLU(),
-            nn.Dense(hidden, 2),
-            nn.LogSoftmax(axis=-1)
-        )
-
-    def construct(self, X):
-        return self.layers(X)
-    
-
-# %%
 lr = 0.002
 batch_size = 64
 max_epochs = 50
 
 mlp = MLP()
+
 print_net_params(mlp)
+
 optimizer = nn.Adam(mlp.trainable_params(), learning_rate=lr)
 criterion = nn.CrossEntropyLoss()
 
 
-# %%
+
 
 
 def train(model, optimizer, criterion, train_dataloader, eval_dataloader, epochs):
@@ -152,16 +145,16 @@ def train(model, optimizer, criterion, train_dataloader, eval_dataloader, epochs
     
 
 
-# %%
+
 # %time train(mlp, optimizer, criterion, train_dataloader, eval_dataloader, epochs=max_epochs)
 
-# %%
+
 # check
 trainable_params = mlp.trainable_params()
 print(mlp)
 trainable_params
 
-# %%
+
 import mindnlp.peft as peft
 
 
@@ -173,15 +166,18 @@ config = peft.LoraConfig(
     modules_to_save=["layers.4"],
 )
 
-# %%
+
 config
 
-# %%
+
 mlp = MLP()
 peft_mlp = peft.get_peft_model(mlp, peft_config=config)
 
-# %%
+print(peft_mlp)
 
 peft_mlp.print_trainable_parameters()
+# print_net_params(peft_mlp)
+
+
 
 

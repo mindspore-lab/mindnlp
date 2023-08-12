@@ -23,11 +23,11 @@ import re
 import warnings
 from dataclasses import asdict, dataclass, field, replace
 from enum import Enum
-from typing import List, Optional, Union
-from collections import OrderedDict
+from typing import List, Dict, Optional, Union
 
 import mindspore
 from mindspore import nn, ops
+from mindspore.nn.layer.container import CellList
 from mindspore.common.initializer import initializer, HeUniform, Zero, Normal
 
 import mindnlp._legacy.functional as F
@@ -50,6 +50,7 @@ from .tuners_utils import BaseTuner, BaseTunerLayer
 
 # if is_bnb_available():
 #     import bitsandbytes as bnb
+
 
 @dataclass
 class LoraConfig(PeftConfig):
@@ -262,13 +263,7 @@ class LoraModel(BaseTuner):
             )
         else:
             new_module = self._create_new_module(lora_config, adapter_name, target, **kwargs)
-            print("====debug===print new module")
-
             self._replace_module(parent, target_name, new_module, target)
-
-            
-        for k, v in self.parameters_and_names():
-            print(k)
 
     @staticmethod
     def _replace_module(parent, child_name, new_module, child):
@@ -546,6 +541,18 @@ class LoraModel(BaseTuner):
         return new_module
 
 
+class CellDict(nn.Cell):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__()
+
+    def update(self, cells: Dict[str, nn.Cell]) -> None:
+        for name, cell in cells.items():
+            self.__setattr__(name, cell)
+
+    def keys(self) -> List[str]:
+        return self.__dict__.keys()
+
+
 class LoraLayer(BaseTunerLayer):
     """Lora Layer"""
     def __init__(self, in_features: int, out_features: int, **kwargs):
@@ -553,12 +560,12 @@ class LoraLayer(BaseTunerLayer):
         self.lora_alpha = {}
         self.scaling = {}
         # TODO: there is no CellDict in mindspore
-        self.lora_dropout = OrderedDict({})  # nn.ModuleDict({}) -> OrderedDict({})  adapter_name -> nn.Cell
-        self.lora_A =  OrderedDict({})  # nn.ModuleDict({}) -> OrderedDict({})
-        self.lora_B =  OrderedDict({})  # nn.ModuleDict({}) -> OrderedDict({})
+        self.lora_dropout = CellDict()  # nn.ModuleDict({}) -> CellList({})  adapter_name -> nn.Cell
+        self.lora_A = CellDict()  # nn.ModuleDict({}) -> CellList({})
+        self.lora_B = CellDict()  # nn.ModuleDict({}) -> CellList({})
         # For Embedding layer
-        self.lora_embedding_A = OrderedDict({})  # nn.ParameterDict({}) -> OrderedDict({}) adapter_name -> mindspore.Parameter
-        self.lora_embedding_B =  OrderedDict({}) # nn.ParameterDict({}) -> OrderedDict({})
+        self.lora_embedding_A = CellDict()  # nn.ParameterDict({}) -> CellList({}) adapter_name -> mindspore.Parameter
+        self.lora_embedding_B = CellDict() # nn.ParameterDict({}) -> CellList({})
 
         # Mark the weight as unmerged
         self.merged = False
@@ -575,15 +582,15 @@ class LoraLayer(BaseTunerLayer):
         else:
             lora_dropout_layer = nn.Identity()
 
-        self.lora_dropout.update(OrderedDict({adapter_name: lora_dropout_layer}))
+        self.lora_dropout.update({adapter_name: lora_dropout_layer})
         # Actual trainable parameters
         if r > 0:
-            self.lora_A.update(OrderedDict({adapter_name: nn.Dense(self.in_features, r, has_bias=False)}))
-            self.lora_B.update(OrderedDict({adapter_name: nn.Dense(r, self.out_features, has_bias=False)}))
+            self.lora_A.update({adapter_name: nn.Dense(self.in_features, r, has_bias=False)})
+            self.lora_B.update({adapter_name: nn.Dense(r, self.out_features, has_bias=False)})
             self.scaling[adapter_name] = lora_alpha / r
         if init_lora_weights:
             self.reset_lora_parameters(adapter_name)
-        # TODO: ? device
+        # TODO: to device
         # self.to(self.weight.device)
 
     # TODO: add conv2d
@@ -595,17 +602,17 @@ class LoraLayer(BaseTunerLayer):
     #     else:
     #         lora_dropout_layer = nn.Identity()
 
-    #     self.lora_dropout.update(OrderedDict({adapter_name: lora_dropout_layer}))
+    #     self.lora_dropout.update(CellList({adapter_name: lora_dropout_layer}))
     #     # Actual trainable parameters
     #     if r > 0:
     #         kernel_size = self.kwargs["kernel_size"]
     #         stride = self.kwargs["stride"]
     #         padding = self.kwargs["padding"]
     #         self.lora_A.update(
-    #             OrderedDict({adapter_name: nn.Conv2d(self.in_features, r, kernel_size, stride, padding, bias=False)})
+    #             CellList({adapter_name: nn.Conv2d(self.in_features, r, kernel_size, stride, padding, bias=False)})
     #         )
     #         self.lora_B.update(
-    #             OrderedDict({adapter_name: nn.Conv2d(r, self.out_features, (1, 1), (1, 1), bias=False)})
+    #             CellList({adapter_name: nn.Conv2d(r, self.out_features, (1, 1), (1, 1), bias=False)})
     #         )
     #         self.scaling[adapter_name] = lora_alpha / r
     #     if init_lora_weights:
@@ -625,12 +632,12 @@ class LoraLayer(BaseTunerLayer):
         if r > 0:
             weight_A = mindspore.ops.randn((r, self.in_features))  # dtype=self.weight.dtype, device=self.weight.device
             weight_B = mindspore.ops.randn((self.out_features, r))  # dtype=self.weight.dtype, device=self.weight.device
-            self.lora_embedding_A.update(OrderedDict({adapter_name: mindspore.Parameter(weight_A)}))
-            self.lora_embedding_B.update(OrderedDict({adapter_name: mindspore.Parameter(weight_B)}))
+            self.lora_embedding_A.update({adapter_name: mindspore.Parameter(weight_A)})
+            self.lora_embedding_B.update({adapter_name: mindspore.Parameter(weight_B)})
             self.scaling[adapter_name] = lora_alpha / r
         if init_lora_weights:
             self.reset_lora_parameters(adapter_name)
-        self.to(self.weight.device)
+        # self.to(self.weight.device)
 
     def reset_lora_parameters(self, adapter_name):
         if adapter_name in self.lora_A.keys():
@@ -740,6 +747,7 @@ class Linear(nn.Dense, LoraLayer):
         result = result.to(previous_dtype)
 
         return result
+    
 
 class Embedding(nn.Embedding, LoraLayer):
     """LoRA implemented in a Embedding layer"""
