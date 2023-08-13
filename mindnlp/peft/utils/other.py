@@ -15,13 +15,13 @@
 # pylint: disable=C0103
 """other utils"""
 import copy
-from typing import List
-from collections import OrderedDict
+from typing import List, Dict, Optional, Mapping, Iterator, Tuple, Iterable
 
 import mindspore
-from mindspore import ops, Parameter
+from mindspore import nn, ops, Parameter
 from mindspore.common.initializer import initializer, Normal
 from mindnlp._legacy.nn import Matmul
+
 
 class ModulesToSaveWrapper(mindspore.nn.Cell):
     """
@@ -30,13 +30,13 @@ class ModulesToSaveWrapper(mindspore.nn.Cell):
     def __init__(self, module_to_save, adapter_name):
         super().__init__()
         self.original_module = module_to_save
-        self.modules_to_save = OrderedDict({})
+        self.modules_to_save = nn.CellDict()
         self.update(adapter_name)
         self.active_adapter = adapter_name
         self.disable_adapters = False
 
     def update(self, adapter_name):
-        self.modules_to_save.update(OrderedDict({adapter_name: copy.deepcopy(self.original_module)}))
+        self.modules_to_save.update({adapter_name: copy.deepcopy(self.original_module)})
 
     #     if hasattr(self.modules_to_save[adapter_name], "_hf_hook"):
     #         old_hook = self.modules_to_save[adapter_name]._hf_hook
@@ -58,10 +58,11 @@ class ModulesToSaveWrapper(mindspore.nn.Cell):
     #     new_hook = old_hook_cls(**filtered_old_hook_attr)
     #     return new_hook
 
-    def construct(self, *args, **kwargs):
-        if self.disable_adapters or (self.active_adapter not in self.modules_to_save):
-            return self.original_module(*args, **kwargs)
-        return self.modules_to_save[self.active_adapter](*args, **kwargs)
+    def construct(self, X):
+        # TODO:*args, **kwargs
+        if self.disable_adapters or (self.active_adapter not in self.modules_to_save.keys()):
+            return self.original_module(X)
+        return self.modules_to_save[self.active_adapter](X)
 
 def custom_get_submodule(model: mindspore.nn.Cell, target: str) -> mindspore.nn.Cell:
     """
@@ -180,7 +181,8 @@ def transpose(weight, fan_in_fan_out):
     """
     transpose weight
     """
-    return weight.T if fan_in_fan_out else weight
+    # return weight.T if fan_in_fan_out else weight
+    return ops.transpose(weight) if fan_in_fan_out else weight
 
 
 def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_start_token_id: int):

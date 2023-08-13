@@ -1,25 +1,58 @@
 
-import numpy as np
 import time
+import numpy as np
 import mindspore
 import mindspore.nn as nn
 import mindspore.ops as ops
 import mindspore.dataset as ds
+import mindnlp.peft as peft
 
 from mindspore import context, Tensor
 from mindspore.communication import init, get_rank
 
-# context.set_context(mode=context.PYNATIVE_MODE, device_target="CPU") # mode=context.PYNATIVE_MODE,
+# GRAPH_MODE have bugs
+# context.set_context(mode=context.GRAPH_MODE, device_target="GPU")
 context.set_context(mode=context.PYNATIVE_MODE, device_target="GPU") # mode=context.PYNATIVE_MODE,
-
-
 mindspore.set_seed(0)
 # init('nccl')
 
+# mindspore 构造一个测试数据集
+X = np.random.rand(1000, 20).astype(np.float32)
+y = (X.sum(1) > 10).astype(np.int32)
+
+n_train = 800
+batch_size = 64
+max_epochs = 50
+lr = 2e-4
+
+class RandomAccessDataset:
+    def __init__(self, X, y):
+        self._index = 0
+        self._data = X
+        self._label = y
+
+    def __getitem__(self, index):
+        return self._data[index], self._label[index]
+
+    def __len__(self):
+        return len(self._data)
+
+train_ds = ds.GeneratorDataset(
+    source=RandomAccessDataset(X[:n_train], y[:n_train]),
+    column_names=["data", "label"],
+    shuffle=True
+)
+eval_ds = ds.GeneratorDataset(
+    source=RandomAccessDataset(X[n_train:], y[n_train:]),
+    column_names=["data", "label"],
+)
+
+train_dataloader = train_ds.batch(batch_size=batch_size)
+eval_dataloader = eval_ds.batch(batch_size=batch_size)
+
 class MLP(nn.Cell):
-    """Tset MLP."""
-    def __init__(self, hidden=2000):
-        super(MLP, self).__init__()
+    def __init__(self, hidden: int = 2000):
+        super().__init__()
         self.layers = nn.SequentialCell(
             nn.Dense(20, hidden),
             nn.ReLU(),
@@ -30,36 +63,22 @@ class MLP(nn.Cell):
         )
 
     def construct(self, X):
-        # return self.layers.construct(X)
         # SequentialCell have bugs: construct not dynamic
-        for cell in self.layers:
-            X = cell(X)
-        # return self.layers(X)
+        # X = self.layers(X)
+
+        X = self.layers[0](X)
+
+        X = self.layers[1](X)
+
+        X = self.layers[2](X)
+
+        X = self.layers[3](X)
+
+        X = self.layers[4](X)
+
+        X = self.layers[5](X)
+
         return X
-    
-
-class MyIterable:
-    """Custom datasets."""
-    def __init__(self, X: Tensor, y:Tensor):
-        self._index = 0
-        self._data = X
-        self._label = y
-
-    def __next__(self):
-        if self._index >= len(self._data):
-            raise StopIteration
-        else:
-            item = (self._data[self._index], self._label[self._index])
-            self._index += 1
-            return item
-
-    def __iter__(self):
-        self._index = 0
-        return self
-
-    def __len__(self):
-        return len(self._data)
-    
 
 def print_net_params(net: nn.Cell):
     "print all parameters in net."
@@ -75,36 +94,6 @@ def print_net_params(net: nn.Cell):
     for item in trainable_params:
         print(item.name, item.data.shape)
     print(f"trainable parameter numbers: {len(trainable_params)}")
-
-
-# mindspore 构造一个测试数据集
-X = np.random.rand(1000, 20).astype(np.float32)
-# X = mindspore.ops.rand((1000,20))
-y = (X.sum(1) > 10).astype(np.int32)
-
-n_train = 800
-batch_size = 64
-max_epochs = 50
-lr = 2e-4
-
-train_ds = ds.GeneratorDataset(
-    source=MyIterable(X[:n_train], y[:n_train]),
-    column_names=["data", "label"],
-    shuffle=True
-)
-eval_ds = ds.GeneratorDataset(
-    source=MyIterable(X[n_train:], y[n_train:]),
-    column_names=["data", "label"],
-)
-
-train_dataloader = train_ds.batch(batch_size=batch_size)
-eval_dataloader = eval_ds.batch(batch_size=batch_size)
-
-mlp = MLP()
-optimizer = nn.Adam(mlp.trainable_params(), learning_rate=lr)
-criterion = nn.CrossEntropyLoss()
-# # print_net_params(mlp)
-
 
 def train(model, optimizer, criterion, train_dataloader, eval_dataloader, epochs):
     def forward_fn(data, label):
@@ -122,9 +111,14 @@ def train(model, optimizer, criterion, train_dataloader, eval_dataloader, epochs
             # forward + compute grad
             (loss, logits), grad = grad_fn(xb, yb)
             # update model params
+            # print(xb, yb)
+            # print("====loss")
+            # print(loss)
+            # print("=====grad")
+            # print(grad)
             optimizer(grad)
             total_loss += loss
-        print(total_loss)
+        
         return total_loss / len(train_dataloader)
     
     def eval_one_epoch():
@@ -138,40 +132,29 @@ def train(model, optimizer, criterion, train_dataloader, eval_dataloader, epochs
         return total_loss / len(eval_dataloader)
 
     # train start from here
-    for epoch in range(epochs):
+    for epoch in range(1, epochs+1):
         train_loss = train_one_epoch()
         eval_loss = eval_one_epoch()
 
         if epoch % 2 == 0:
             print(f"epoch:{epoch}  train_loss:{train_loss}  eval_loss:{eval_loss}")
     
-# train(mlp, optimizer, criterion, train_dataloader, eval_dataloader, epochs=max_epochs)
-train(mlp, optimizer, criterion, train_dataloader, eval_dataloader, epochs=max_epochs)
-# %time train(mlp, optimizer, criterion, train_dataloader, eval_dataloader, epochs=max_epochs)
 
+config = peft.LoraConfig(
+    r=8,
+    target_modules=["layers.0", "layers.2", "layers.4"],
+    modules_to_save=[],
+)
 
-# # check
-# # trainable_params = mlp.trainable_params()
+mlp = MLP(2000)
+peft_mlp = peft.get_peft_model(mlp, peft_config=config)
 
-# import mindnlp.peft as peft
+print_net_params(peft_mlp)
+print(peft_mlp)
+print(peft_mlp.trainable_params())
 
-
-# # target_modules are modules to add PEFT params
-# # modules_to_save are original modules, not freezed.
-# config = peft.LoraConfig(
-#     r=8,
-#     target_modules=["layers.0", "layers.2"],
-#     modules_to_save=["layers.4"],
-# )
-
-# mlp = MLP()
-# peft_mlp = peft.get_peft_model(mlp, peft_config=config)
-
-# # print(peft_mlp)
-
-
-# optimizer = nn.Adam(peft_mlp.trainable_params(), learning_rate=lr)
-# criterion = nn.CrossEntropyLoss()
+optimizer = nn.Adam(peft_mlp.trainable_params(), learning_rate=lr)
+criterion = nn.CrossEntropyLoss()
 # peft_mlp.print_trainable_parameters()
 
 # # print(peft_mlp.base_model.model)
@@ -181,6 +164,6 @@ train(mlp, optimizer, criterion, train_dataloader, eval_dataloader, epochs=max_e
 # # optimizer = torch.optim.Adam(peft_mlp.parameters(), lr=lr)
 
 
-# train(peft_mlp, optimizer, criterion, train_dataloader, eval_dataloader, epochs=max_epochs)
+train(peft_mlp, optimizer, criterion, train_dataloader, eval_dataloader, epochs=max_epochs)
 
 

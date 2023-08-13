@@ -55,8 +55,7 @@ from .utils import (
 PEFT_TYPE_TO_MODEL_MAPPING = {
     PeftType.LORA: LoraModel,
 }
-
-class PeftModel(mindspore.nn.Cell):
+class PeftModel(nn.Cell):
     """
     Base model encompassing various Peft methods.
 
@@ -152,66 +151,6 @@ class PeftModel(mindspore.nn.Cell):
         model.load_adapter(model_id, adapter_name, **kwargs)
         return model
 
-    def extend_repr(self):
-        return ''
-    
-    def __str__(self):
-        return self.__repr__()
-
-    @classmethod
-    def _addindent(s_, numSpaces):
-        s = s_.split('\n')
-        # don't do anything for single-line stuff
-        if len(s) == 1:
-            return s_
-        first = s.pop(0)
-        s = [(numSpaces * ' ') + line for line in s]
-        s = '\n'.join(s)
-        s = first + '\n' + s
-        return s
-
-
-    def __repr__(self):
-        # We treat the extra repr like the sub-module, one item per line
-        extra_lines = []
-        extra_repr = self.extra_repr()
-        # empty string will be split into list ['']
-        if extra_repr:
-            extra_lines = extra_repr.split('\n')
-        child_lines = []
-        for key, module in self._modules.items():
-            mod_str = repr(module)
-            mod_str = _addindent(mod_str, 2)
-            child_lines.append('(' + key + '): ' + mod_str)
-        lines = extra_lines + child_lines
-
-        main_str = self._get_name() + '('
-        if lines:
-            # simple one-liner info, which most builtin Modules will use
-            if len(extra_lines) == 1 and not child_lines:
-                main_str += extra_lines[0]
-            else:
-                main_str += '\n  ' + '\n  '.join(lines) + '\n'
-
-        main_str += ')'
-        return main_str
-
-    def __repr__(self):
-        extra_str = self.extend_repr()
-        info_str = self.__class__.__name__ + '<'
-        if self._cells:
-            sub_str = '\n'
-            if extra_str:
-                sub_str += '{}\n'.format(self.extend_repr())
-            for key, value in self._cells.items():
-                sub_str += '({}): {}\n'.format(key, repr(value))
-            sub_str = sub_str.replace('\n', '\n  ') + '>'
-            info_str += sub_str
-        else:
-            info_str += extra_str + '>'
-        return info_str
-
-
     def get_nb_trainable_parameters(self):
         r"""
         Returns the number of trainable parameters and number of all parameters in the model.
@@ -258,6 +197,7 @@ class PeftModel(mindspore.nn.Cell):
         """
         Forward pass of the model.
         """
+        # print(self.get_base_model().layers[0].__class__.construct)
         return self.get_base_model()(*args, **kwargs)
 
     @contextmanager
@@ -276,6 +216,8 @@ class PeftModel(mindspore.nn.Cell):
         Returns the base model.
         """
         return self.base_model.model
+        # return self.base_model if self.active_peft_config.is_prompt_learning else self.base_model.model
+
 
     def add_adapter(self, adapter_name: str, peft_config: PeftConfig):
 

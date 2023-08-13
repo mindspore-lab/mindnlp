@@ -94,7 +94,6 @@ class BaseTuner(nn.Cell):
     def construct(self, *args: Any, **kwargs: Any):
         return self.model.construct(*args, **kwargs)
 
-    @abstractmethod
     def _prepare_adapter_config(self, peft_config: PeftConfig, model_config: dict) -> PeftConfig:
         r"""
         A private method to eventually prepare the adapter config. For transformers based models, if
@@ -112,7 +111,6 @@ class BaseTuner(nn.Cell):
         """
         ...
 
-    @abstractmethod
     def _check_target_module_exists(peft_config: PeftConfig, key: str) -> bool:
         r"""
         A helper private method to check if the passed module's key name matches any of the target modules in the
@@ -126,7 +124,6 @@ class BaseTuner(nn.Cell):
         """
         ...
 
-    @abstractmethod
     def _create_and_replace(
         self,
         peft_config: PeftConfig,
@@ -158,7 +155,6 @@ class BaseTuner(nn.Cell):
         """
         ...
 
-    @abstractmethod
     def _mark_only_adapters_as_trainable(self):
         r"""
         A helper method to mark only the adapter layers as trainable (i.e. module.requires_grad = False) This needs to
@@ -167,6 +163,7 @@ class BaseTuner(nn.Cell):
         Check `peft.tuners.lora.LoraModel._mark_only_adapters_as_trainable` for an example.
         """
         ...
+        
 
     def _check_new_adapter_config(self, config: PeftConfig) -> None:
         """

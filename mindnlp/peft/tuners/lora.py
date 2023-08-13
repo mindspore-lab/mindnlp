@@ -27,10 +27,9 @@ from typing import List, Dict, Optional, Union
 
 import mindspore
 from mindspore import nn, ops
-from mindspore.nn.layer.container import CellList
 from mindspore.common.initializer import initializer, HeUniform, Zero, Normal
 
-import mindnlp._legacy.functional as F
+# import mindnlp._legacy.functional as F
 from mindnlp.models.utils import Conv1D
 
 from ..config import PeftConfig
@@ -267,7 +266,6 @@ class LoraModel(BaseTuner):
 
     @staticmethod
     def _replace_module(parent, child_name, new_module, child):
-        print("replace ", child_name, " new module ", new_module)
         setattr(parent, child_name, new_module)
         new_module.weight = child.weight
         if hasattr(child, "bias"):
@@ -449,6 +447,8 @@ class LoraModel(BaseTuner):
         for n, p in self.model.parameters_and_names():  # named_parameters() -> parameters_and_names()
             if "lora_" not in n:
                 p.requires_grad = False
+                print("==debug  maark_only_adapters_as_trainable==")
+            print(n, p)
         if bias == "none":
             return
         elif bias == "all":
@@ -541,31 +541,20 @@ class LoraModel(BaseTuner):
         return new_module
 
 
-class CellDict(nn.Cell):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__()
-
-    def update(self, cells: Dict[str, nn.Cell]) -> None:
-        for name, cell in cells.items():
-            self.__setattr__(name, cell)
-
-    def keys(self) -> List[str]:
-        return self.__dict__.keys()
-
-
 class LoraLayer(BaseTunerLayer):
     """Lora Layer"""
     def __init__(self, in_features: int, out_features: int, **kwargs):
         self.r = {}
         self.lora_alpha = {}
         self.scaling = {}
-        # TODO: there is no CellDict in mindspore
-        self.lora_dropout = CellDict()  # nn.ModuleDict({}) -> CellList({})  adapter_name -> nn.Cell
-        self.lora_A = CellDict()  # nn.ModuleDict({}) -> CellList({})
-        self.lora_B = CellDict()  # nn.ModuleDict({}) -> CellList({})
+        self.adpater2index = {}
+        # TODO: there is no nn.CellList in mindspore
+        self.lora_dropout = nn.CellList()  # nn.ModuleDict({}) -> CellList({})  adapter_name -> nn.Cell
+        self.lora_A = nn.CellList()  # nn.ModuleDict({}) -> CellList({})
+        self.lora_B = nn.CellList()  # nn.ModuleDict({}) -> CellList({})
         # For Embedding layer
-        self.lora_embedding_A = CellDict()  # nn.ParameterDict({}) -> CellList({}) adapter_name -> mindspore.Parameter
-        self.lora_embedding_B = CellDict() # nn.ParameterDict({}) -> CellList({})
+        self.lora_embedding_A = nn.CellList()  # nn.ParameterDict({}) -> CellList({}) adapter_name -> mindspore.Parameter
+        self.lora_embedding_B = nn.CellList() # nn.ParameterDict({}) -> CellList({})
 
         # Mark the weight as unmerged
         self.merged = False
@@ -582,11 +571,15 @@ class LoraLayer(BaseTunerLayer):
         else:
             lora_dropout_layer = nn.Identity()
 
-        self.lora_dropout.update({adapter_name: lora_dropout_layer})
+        # self.lora_dropout.append({adapter_name: lora_dropout_layer})
+        self.adpater2index[adapter_name] = len(self.lora_dropout)
+        self.lora_dropout.append(lora_dropout_layer)
         # Actual trainable parameters
         if r > 0:
-            self.lora_A.update({adapter_name: nn.Dense(self.in_features, r, has_bias=False)})
-            self.lora_B.update({adapter_name: nn.Dense(r, self.out_features, has_bias=False)})
+            # self.lora_A.update({adapter_name: nn.Dense(self.in_features, r, has_bias=False)})
+            # self.lora_B.update({adapter_name: nn.Dense(r, self.out_features, has_bias=False)})
+            self.lora_A.append(nn.Dense(self.in_features, r, has_bias=False))
+            self.lora_B.append(nn.Dense(r, self.out_features, has_bias=False))
             self.scaling[adapter_name] = lora_alpha / r
         if init_lora_weights:
             self.reset_lora_parameters(adapter_name)
@@ -640,24 +633,27 @@ class LoraLayer(BaseTunerLayer):
         # self.to(self.weight.device)
 
     def reset_lora_parameters(self, adapter_name):
-        if adapter_name in self.lora_A.keys():
+        if adapter_name in self.adpater2index.keys():
+        # if adapter_name in self.lora_A.keys():
             # initialize A the same way as the default for nn.Dense and B to zero
             # TODO: bug in mindspore.common.initializer._assignment (arr: Tensor is not support now.)
             # HeUniform(negative_slope=math.sqrt(5))(self.lora_A[adapter_name].weight)
             # not elegant way
-            self.lora_A[adapter_name].weight.set_data(
+            index = self.adpater2index[adapter_name]
+            self.lora_A[index].weight.set_data(
                 initializer(HeUniform(negative_slope=math.sqrt(5)), 
-                self.lora_A[adapter_name].weight.shape, 
-                self.lora_A[adapter_name].weight.dtype)
+                self.lora_A[index].weight.shape, 
+                self.lora_A[index].weight.dtype)
             )
 
             # cell.weight.set_data(initializer(One(), cell.weight.shape, cell.weight.dtype))
-            Zero()(self.lora_B[adapter_name].weight)
+            Zero()(self.lora_B[index].weight)
 
-        if adapter_name in self.lora_embedding_A.keys():
-            # initialize a the same way as the default for nn.Dense and b to zero
-            Zero()(self.lora_embedding_A[adapter_name])
-            Normal(mean=0, sigma=1.)(self.lora_embedding_B[adapter_name])
+        # TODO embedding not ok
+        # if adapter_name in self.lora_embedding_A.keys():
+        #     # initialize a the same way as the default for nn.Dense and b to zero
+        #     Zero()(self.lora_embedding_A[adapter_name])
+        #     Normal(mean=0, sigma=1.)(self.lora_embedding_B[adapter_name])
 
 
 class Linear(nn.Dense, LoraLayer):
@@ -678,6 +674,7 @@ class Linear(nn.Dense, LoraLayer):
 
         nn.Dense.__init__(self, in_features, out_features, **kwargs)
         LoraLayer.__init__(self, in_features=in_features, out_features=out_features)
+        
         # Freezing the pre-trained weight matrix
         self.weight.requires_grad = False
 
@@ -722,29 +719,45 @@ class Linear(nn.Dense, LoraLayer):
         )
 
     def construct(self, x: mindspore.Tensor):
-        previous_dtype = x.dtype
-        if self.active_adapter not in self.lora_A.keys():
-            return F.linear(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
+        # print(ops.is_tensor(x))
+        # previous_dtype = x.dtype
+        # if self.active_adapter not in self.lora_A.keys():
+        # print(self.active_adapter)
+        index = self.adpater2index[self.active_adapter]
+        # print("===index", index)
+        if self.adpater2index[self.active_adapter] >= len(self.lora_A):
+            return ops.dense(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
         if self.disable_adapters:
             if self.r[self.active_adapter] > 0 and self.merged:
                 self.unmerge()
-            result = F.linear(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
+            result = ops.dense(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
         elif self.r[self.active_adapter] > 0 and not self.merged:
-            result = F.linear(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
+            result = ops.dense(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
 
-            # TODO: have error
-            x = x.to(self.lora_A[self.active_adapter].weight.dtype)
+            # x = x.to(self.lora_A[self.active_adapter].weight.dtype)
 
             result += (
-                self.lora_B[self.active_adapter](
-                    self.lora_A[self.active_adapter](self.lora_dropout[self.active_adapter](x))
+                self.lora_B[index](
+                    self.lora_A[index](self.lora_dropout[index](x))
                 )
                 * self.scaling[self.active_adapter]
             )
-        else:
-            result = F.linear(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
 
-        result = result.to(previous_dtype)
+
+            # result += ( 
+            #     self.lora_B[self.active_adapter](
+            #         self.lora_A[self.active_adapter](self.lora_dropout[self.active_adapter](x))
+            #     )
+            #     * self.scaling[self.active_adapter]
+            # )
+
+        else:
+            result = ops.dense(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
+
+        # result = result.to(previous_dtype)
+        # result = ops.dense(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
+
+        # x = x.to(self.lora_A[self.active_adapter].weight.dtype)
 
         return result
     
