@@ -64,19 +64,19 @@ class MLP(nn.Cell):
 
     def construct(self, X):
         # SequentialCell have bugs: construct not dynamic
-        # X = self.layers(X)
+        X = self.layers(X)
 
-        X = self.layers[0](X)
+        # X = self.layers[0](X)
 
-        X = self.layers[1](X)
+        # X = self.layers[1](X)
 
-        X = self.layers[2](X)
+        # X = self.layers[2](X)
 
-        X = self.layers[3](X)
+        # X = self.layers[3](X)
 
-        X = self.layers[4](X)
+        # X = self.layers[4](X)
 
-        X = self.layers[5](X)
+        # X = self.layers[5](X)
 
         return X
 
@@ -111,11 +111,6 @@ def train(model, optimizer, criterion, train_dataloader, eval_dataloader, epochs
             # forward + compute grad
             (loss, logits), grad = grad_fn(xb, yb)
             # update model params
-            # print(xb, yb)
-            # print("====loss")
-            # print(loss)
-            # print("=====grad")
-            # print(grad)
             optimizer(grad)
             total_loss += loss
         
@@ -142,8 +137,8 @@ def train(model, optimizer, criterion, train_dataloader, eval_dataloader, epochs
 
 config = peft.LoraConfig(
     r=8,
-    target_modules=["layers.0", "layers.2", "layers.4"],
-    modules_to_save=[],
+    target_modules=["layers.0", "layers.2", ],
+    modules_to_save=["layers.4"],
 )
 
 mlp = MLP(2000)
@@ -151,19 +146,20 @@ peft_mlp = peft.get_peft_model(mlp, peft_config=config)
 
 print_net_params(peft_mlp)
 print(peft_mlp)
-print(peft_mlp.trainable_params())
 
 optimizer = nn.Adam(peft_mlp.trainable_params(), learning_rate=lr)
 criterion = nn.CrossEntropyLoss()
-# peft_mlp.print_trainable_parameters()
-
-# # print(peft_mlp.base_model.model)
-# # print(peft_mlp)
-# # print_net_params(peft_mlp.base_model.model)
-# # print_net_params(peft_mlp)
-# # optimizer = torch.optim.Adam(peft_mlp.parameters(), lr=lr)
-
 
 train(peft_mlp, optimizer, criterion, train_dataloader, eval_dataloader, epochs=max_epochs)
 
 
+# for name, param in peft_mlp.base_model.named_parameters():
+#     if "lora" in name:
+#         continue
+
+#     name_before = name.partition(".")[-1].replace("original_", "").replace("module.", "").replace("modules_to_save.default.", "")
+#     param_before = params_before[name_before]
+#     if torch.allclose(param, param_before):
+#         print(f"Parameter {name_before:<13} | {param.numel():>7} parameters | not updated")
+#     else:
+#         print(f"Parameter {name_before:<13} | {param.numel():>7} parameters | updated")
