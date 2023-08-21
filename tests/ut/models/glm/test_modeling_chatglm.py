@@ -112,7 +112,7 @@ class ChatGLMGenerationTest(unittest.TestCase):
         for sentence, do_sample, max_length, num_beams, use_bucket, bucket_num in parameters:
             set_random_seed(42)
             inputs = tokenizer(sentence)
-            inputs = np.array([inputs])
+            inputs = Tensor([inputs])
             outputs = model.generate(
                 inputs,
                 do_sample=do_sample,
@@ -123,7 +123,7 @@ class ChatGLMGenerationTest(unittest.TestCase):
                 bucket_num=bucket_num
             )
 
-            outputs = outputs.tolist()[0]
+            outputs = outputs.asnumpy().tolist()[0]
             out_sentence = tokenizer.decode(outputs, skip_special_tokens=True)
             print(out_sentence)
 

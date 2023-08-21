@@ -95,7 +95,10 @@ def QNLI(
         >>> train_iter = dataset_train.create_tuple_iterator()
         >>> print(next(train_iter))
     """
-    cache_dir = os.path.join(root, "datasets", "QNLI")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "QNLI")
+    else:
+        cache_dir = root
     path_dict = {
         "train": "train.tsv",
         "dev": "dev.tsv",

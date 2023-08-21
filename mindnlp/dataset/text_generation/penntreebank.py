@@ -69,7 +69,11 @@ def PennTreebank(root: str = DEFAULT_ROOT,
                 rake regatta rubens sim snack-food ssangyong swapo wachter ')]
 
     """
-    cache_dir = os.path.join(root, "datasets", "PennTreebank")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "PennTreebank")
+    else:
+        cache_dir = root
+
     datasets_list = []
 
     for key, value in URL.items():

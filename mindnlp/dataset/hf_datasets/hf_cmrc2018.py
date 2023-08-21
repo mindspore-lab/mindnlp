@@ -98,7 +98,10 @@ def HF_CMRC2018(
         'answers_start': Tensor(shape=[1], dtype=Int32, value= [515])}
 
     """
-    cache_dir = os.path.join(root, "datasets", "CMRC2018")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "CMRC2018")
+    else:
+        cache_dir = root
     datasets_list = []
     mode_list = []
     if isinstance(split, str):

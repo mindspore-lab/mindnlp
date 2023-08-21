@@ -102,7 +102,10 @@ def RTE(
         Tensor(shape=[], dtype=String, value= 'Weapons of Mass Destruction Found in Iraq.')]
 
     """
-    cache_dir = os.path.join(root, "datasets", "RTE")
+    if root == DEFAULT_ROOT:
+        cache_dir = os.path.join(root, "datasets", "RTE")
+    else:
+        cache_dir = root
     path_dict = {
         "train": "train.tsv",
         "dev": "dev.tsv",

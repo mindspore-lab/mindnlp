@@ -13,48 +13,62 @@
 # limitations under the License.
 # ============================================================================
 """
-TinyBert Tokenizer
+MegatronBertTokenizer
 """
-import os
-from mindspore.dataset.text import Vocab as msVocab
-from mindspore.dataset.text.transforms import Implementation
-import numpy as np
-from tokenizers.implementations import BertWordPieceTokenizer
 
+import os
+import numpy as np
+from mindspore.dataset.text.transforms import Implementation
+from mindspore.dataset.text import Vocab as msVocab
+from tokenizers import Tokenizer
+from tokenizers.implementations import BertWordPieceTokenizer
 from mindnlp.abc import PreTrainedTokenizer
 from mindnlp.vocab import Vocab
+from mindnlp.models.megatron_bert.megatron_bert_config import MEGATRONBERT_SUPPORT_LIST
+from mindnlp.configs import HF_TOKENIZER_CONFIG_URL_BASE
 
 PRETRAINED_VOCAB_MAP = {
-    "tinybert_4L_zh": "https://download.mindspore.cn/toolkits/mindnlp/models/tinybert/tinybert_4L_zh/vocab.txt",
-    "tinybert_6L_zh": "https://download.mindspore.cn/toolkits/mindnlp/models/tinybert/tinybert_6L_zh/vocab.txt"
+    model: HF_TOKENIZER_CONFIG_URL_BASE.format(model) for model in MEGATRONBERT_SUPPORT_LIST
 }
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
-    "tinybert_4L_zh": 312,
-    "tinybert_6L_zh": 768
+    "nvidia/Erlangshen-MegatronBert-1.3B-NLI": 512,
+    "KBLab/megatron-bert-large-swedish-cased-165-zero-shot": 512,
+    "nvidia/megatron-bert-uncased-345m": 512,
+    "nvidia/megatron-bert-cased-345m": 512,
 }
 
-class TinyBertTokenizer(PreTrainedTokenizer):
+
+class MegatronBertTokenizer(PreTrainedTokenizer):
     """
-    Tokenizer used for TinyBert text process.
+        Tokenizer used for MegatronBert text process.
+        Args:
+            vocab (Vocab): Vocabulary used to look up words.
+            return_token (bool): Whether to return token. If True: return tokens. False: return ids. Default: True.
+        Examples:
+            >>> from mindspore.dataset import text
+            >>> from mindnlp.transforms import MegatronBertTokenizer
+            >>> text = "Believing that faith can triumph over everything is in itself the greatest belief"
+            >>> tokenizer = MegatronBertTokenizer.from_pretrained('nvidia/megatron-bert-cased-345m')
+            >>> tokens = tokenizer.encode(text)
     """
 
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
     def __init__(
-        self,
-        vocab=None,
-        tokenizer_file=None,
-        do_lower_case=True,
-        unk_token="[UNK]",
-        sep_token="[SEP]",
-        pad_token="[PAD]",
-        cls_token="[CLS]",
-        mask_token="[MASK]",
-        tokenize_chinese_chars=True,
-        strip_accents=None,
-        **kwargs
+            self,
+            vocab=None,
+            tokenizer_file=None,
+            do_lower_case=True,
+            unk_token="[UNK]",
+            sep_token="[SEP]",
+            pad_token="[PAD]",
+            cls_token="[CLS]",
+            mask_token="[MASK]",
+            tokenize_chinese_chars=True,
+            strip_accents=None,
+            **kwargs
     ):
         super().__init__(
             tokenizer_file=tokenizer_file,
@@ -74,36 +88,19 @@ class TinyBertTokenizer(PreTrainedTokenizer):
         elif isinstance(vocab, str):
             if not os.path.isfile(vocab):
                 raise ValueError(f"{vocab} is not a file.")
-            if not vocab.endswith('.txt'):
-                raise ValueError(f"{vocab} is not a txt file.")
-            vocab_dict = msVocab.from_file(vocab).vocab()
+            self.tokenizer = Tokenizer.from_file(vocab)
         else:
-            raise ValueError(
-                f'only support Vocab class from mindspore or mindnlp, \
-                    and a vocab.txt, but got {vocab}'
-            )
+            raise ValueError(f'only support Vocab class from mindspore or mindnlp, but got {vocab}')
 
         return_token = kwargs.pop('return_token', False)
 
-        self._tokenizer = BertWordPieceTokenizer(vocab=vocab_dict, lowercase=do_lower_case)
+        if isinstance(vocab, str):
+            self._tokenizer = Tokenizer.from_file(vocab)
+        else:
+            self._tokenizer = BertWordPieceTokenizer(vocab=vocab_dict, lowercase=do_lower_case)
 
         self.return_token = return_token
         self.implementation = Implementation.PY
-
-    def save(self, save_path: str):
-        """
-        save tokenizer
-        """
-        # check save_path
-        if not save_path.endswith('.txt'):
-            raise ValueError(f"{save_path} is not a txt file.")
-
-        vocab_dict = self._tokenizer.get_vocab()
-        sorted_array = sorted(vocab_dict.items(), key=lambda item: item[1])
-
-        with open(save_path, 'w', encoding='utf-8') as file:
-            for token, _ in sorted_array:
-                file.write(token+"\n")
 
     def __call__(self, text_input):
         """
@@ -126,11 +123,11 @@ class TinyBertTokenizer(PreTrainedTokenizer):
         """
         Execute method.
         """
-        text = self._convert_to_unicode(text_input)
-        output = self._tokenizer.encode(text)
+        text_input = self._convert_to_unicode(text_input)
+        tokens = self.tokenizer.encode(text_input)
         if self.return_token is True:
-            return np.array(output.tokens)
-        return np.array(output.ids)
+            return np.array(tokens.tokens)
+        return np.array(tokens.ids)
 
     def _convert_to_unicode(self, text_input):
         """Converts `text` to Unicode (if it's not already), assuming utf-8 input."""
@@ -146,3 +143,6 @@ class TinyBertTokenizer(PreTrainedTokenizer):
 
     def _convert_token_to_id(self, token):
         return self._tokenizer.token_to_id(token)
+
+    def _convert_id_to_token(self, index):
+        return self._tokenizer.id_to_token(index)
