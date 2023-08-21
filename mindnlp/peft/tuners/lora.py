@@ -17,17 +17,20 @@
 # pylint: disable=R1702
 # pylint: disable=W0631
 # pylint: disable=W0613
+# pylint: disable=E1111
+# pylint: disable=W1401
+# pylint: disable=W0237
 """Lora."""
 import math
 import re
 import warnings
-from dataclasses import asdict, dataclass, field, replace
+from dataclasses import asdict, dataclass, field
 from enum import Enum
-from typing import List, Dict, Optional, Union
+from typing import List, Optional, Union
 
 import mindspore
 from mindspore import nn, ops
-from mindspore.common.initializer import initializer, HeUniform, Zero, Normal
+from mindspore.common.initializer import initializer, HeUniform, Zero
 
 # import mindnlp._legacy.functional as F
 from mindnlp.models.utils import Conv1D
@@ -35,12 +38,12 @@ from mindnlp.models.utils import Conv1D
 from ..config import PeftConfig
 # from ..import_utils import is_bnb_4bit_available, is_bnb_available
 from ..utils import (
-    CLAMP_QUANTILE,
+    # CLAMP_QUANTILE,
     COMMON_LAYERS_PATTERN,
     TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING,
     ModulesToSaveWrapper,
     PeftType,
-    _freeze_adapter,
+    # _freeze_adapter,
     _get_submodules,
     transpose,
 )
@@ -105,13 +108,16 @@ class LoraConfig(PeftConfig):
     layers_to_transform: Optional[Union[List, int]] = field(
         default=None,
         metadata={
-            "help": "The layer indexes to transform, is this argument is specified, PEFT will transform only the layers indexes that are specified inside this list. If a single integer is passed, PEFT will transform only the layer at this index."
+            "help": "The layer indexes to transform, is this argument is specified, \
+                PEFT will transform only the layers indexes that are specified inside this list. \
+                If a single integer is passed, PEFT will transform only the layer at this index."
         },
     )
     layers_pattern: Optional[str] = field(
         default=None,
         metadata={
-            "help": "The layer pattern name, used only if `layers_to_transform` is different to None and if the layer pattern is not in the common layers pattern."
+            "help": "The layer pattern name, used only if `layers_to_transform` is different to None and \
+                  if the layer pattern is not in the common layers pattern."
         },
     )
 
@@ -124,7 +130,7 @@ class LoraConfig(PeftConfig):
         Utility method to check if the configuration is for prompt learning.
         """
         return False
-    
+
 class LoraModel(BaseTuner):
     """
     Creates Low Rank Adapter (Lora) model from a pretrained transformers model.
@@ -158,9 +164,9 @@ class LoraModel(BaseTuner):
 
     def __init__(self, model: nn.Cell, config, adapter_name):
         # call BaseTuner.__init__
-        # setup config and inject lora adapter 
-        super().__init__(model, config, adapter_name)  
-    
+        # setup config and inject lora adapter
+        super().__init__(model, config, adapter_name)
+
     @staticmethod
     def _prepare_adapter_config(peft_config, model_config):
         if peft_config.target_modules is None:
@@ -169,7 +175,7 @@ class LoraModel(BaseTuner):
                 raise ValueError("Please specify `target_modules` in `peft_config`")
             peft_config.target_modules = TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING[model_config["model_type"]]
         return peft_config
-    
+
     def _check_new_adapter_config(self, config: LoraConfig):
         """
         A helper method to check the config when a new adapter is being added.
@@ -200,7 +206,7 @@ class LoraModel(BaseTuner):
 
                 for pattern in layers_pattern:
                     layer_index = re.match(f".*.{pattern}\.(\d+)\.*", key)
-                    if layer_index is not None:
+                    if layer_index is not None:  # pylint: disable=R1723
                         layer_index = int(layer_index.group(1))
                         if isinstance(lora_config.layers_to_transform, int):
                             target_module_found = layer_index == lora_config.layers_to_transform
@@ -271,7 +277,7 @@ class LoraModel(BaseTuner):
         new_module.weight = child.weight
         if hasattr(child, "bias"):
             if child.bias is not None:
-                new_module.bias = child.bias 
+                new_module.bias = child.bias
 
         if getattr(child, "state", None) is not None:
             new_module.state = child.state
@@ -279,12 +285,12 @@ class LoraModel(BaseTuner):
             # new_module.to(child.weight.device)   # error
 
         # dispatch to correct device TODO: .to(device) not support in mindspore
-        # for name, module in new_module.parameters_and_names():            
+        # for name, module in new_module.parameters_and_names():
         #     if "lora_" in name:
         #         module.to(child.weight.device)   # error
         #     if "ranknum" in name:
         #         module.to(child.weight.device)   # error
- 
+
 
     def __getattr__(self, name: str):
         """Forward missing attributes to the wrapped module."""
@@ -438,7 +444,7 @@ class LoraModel(BaseTuner):
                 "Something went wrong, no active adapter could be found, please report the issue on GitHub"
             )
         return active_adapter
-    
+
     def _mark_only_adapters_as_trainable(self) -> None:
         """mark_only_lora_as_trainable"""
         # get bias
@@ -453,7 +459,7 @@ class LoraModel(BaseTuner):
         if bias == "none":
             return
         elif bias == "all":
-            for n, p in self.model.parameters_and_names(): 
+            for n, p in self.model.parameters_and_names():
                 if "bias" in n:
                     p.requires_grad = True
         elif bias == "lora_only":
@@ -466,14 +472,15 @@ class LoraModel(BaseTuner):
 
     @staticmethod
     def _create_new_module(
-            lora_config: PeftConfig, 
-            adapter_name: str, 
+            lora_config: PeftConfig,
+            adapter_name: str,
             target: mindspore.nn.Cell,
             **kwargs
         ):
         """"""
         # TODO: support loaded_in_8bit & loaded_in_4bit later, just pop now.
-        loaded_in_8bit = kwargs.pop("loaded_in_8bit", False)  
+        # pylint: disable=W0612
+        loaded_in_8bit = kwargs.pop("loaded_in_8bit", False)
         loaded_in_4bit = kwargs.pop("loaded_in_4bit", False)
         bias = kwargs.pop("bias", False)
 
@@ -503,7 +510,7 @@ class LoraModel(BaseTuner):
         if isinstance(target, nn.Embedding):
             embedding_kwargs = kwargs.copy()
             embedding_kwargs.pop("fan_in_fan_out", None)
-            in_features, out_features = target.vocab_size, target.embedding_size  # target.num_embeddings, target.embedding_dim  
+            in_features, out_features = target.vocab_size, target.embedding_size  # target.num_embeddings, target.embedding_dim
             new_module = Embedding(adapter_name, in_features, out_features, **embedding_kwargs)
         # elif isinstance(target, torch.nn.Conv2d):
         #     out_channels, in_channels = target.weight.size()[:2]
@@ -566,6 +573,9 @@ class LoraLayer(BaseTunerLayer):
         self.kwargs = kwargs
 
     def update_layer(self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights):
+        """
+        update lora layer.
+        """
         self.r[adapter_name] = r
         self.lora_alpha[adapter_name] = lora_alpha
         if lora_dropout > 0.0:
@@ -615,6 +625,9 @@ class LoraLayer(BaseTunerLayer):
     #     self.to(self.weight.device)
 
     def update_layer_embedding(self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights):
+        """
+        update layer embedding.
+        """
         self.r[adapter_name] = r
         self.lora_alpha[adapter_name] = lora_alpha
         if lora_dropout > 0.0:
@@ -635,13 +648,17 @@ class LoraLayer(BaseTunerLayer):
         # self.to(self.weight.device)
 
     def reset_lora_parameters(self, adapter_name):
+        """
+        reset lora parameters.
+        """
+        # pylint: disable=C0201
         if adapter_name in self.adpater2index.keys():
         # if adapter_name in self.lora_A.keys():
             # initialize A the same way as the default for nn.Dense and B to zero
             index = self.adpater2index[adapter_name]
             self.lora_A[index].weight.set_data(
-                initializer(HeUniform(negative_slope=math.sqrt(5)), 
-                self.lora_A[index].weight.shape, 
+                initializer(HeUniform(negative_slope=math.sqrt(5)),
+                self.lora_A[index].weight.shape,
                 self.lora_A[index].weight.dtype)
             )
 
@@ -674,7 +691,7 @@ class Linear(nn.Dense, LoraLayer):
 
         nn.Dense.__init__(self, in_features, out_features, **kwargs)
         LoraLayer.__init__(self, in_features=in_features, out_features=out_features)
-        
+
         # Freezing the pre-trained weight matrix
         self.weight.requires_grad = False
 
@@ -710,6 +727,9 @@ class Linear(nn.Dense, LoraLayer):
             self.merged = False
 
     def get_delta_weight(self, adapter):
+        """
+        get delta weight. Add or Sub to origin.
+        """
         return (
             transpose(
                 self.lora_B[adapter].weight @ self.lora_A[adapter].weight,
@@ -742,7 +762,7 @@ class Linear(nn.Dense, LoraLayer):
                 )
                 * self.scaling[self.active_adapter]
             )
-            # result += ( 
+            # result += (
             #     self.lora_B[self.active_adapter](
             #         self.lora_A[self.active_adapter](self.lora_dropout[self.active_adapter](x))
             #     )
@@ -756,7 +776,7 @@ class Linear(nn.Dense, LoraLayer):
         # x = x.to(self.lora_A[self.active_adapter].weight.dtype)
 
         return result
-    
+
 
 class Embedding(nn.Embedding, LoraLayer):
     """LoRA implemented in a Embedding layer"""

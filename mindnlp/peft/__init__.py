@@ -14,9 +14,9 @@
 # ============================================================================
 """Parameter effcient fine tuning modules, like huggingface peft."""
 from .mapping import (
-    MODEL_TYPE_TO_PEFT_MODEL_MAPPING, 
-    PEFT_TYPE_TO_CONFIG_MAPPING, 
-    get_peft_config, 
+    MODEL_TYPE_TO_PEFT_MODEL_MAPPING,
+    PEFT_TYPE_TO_CONFIG_MAPPING,
+    get_peft_config,
     get_peft_model
 )
 
@@ -35,8 +35,7 @@ from .tuners import (
     LoraModel,
 )
 
-
 from .config import (
-    PeftConfig, 
+    PeftConfig,
     PromptLearningConfig,
 )

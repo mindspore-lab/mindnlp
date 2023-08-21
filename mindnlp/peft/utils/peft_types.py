@@ -12,10 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+"""
+Peft types and Task types.
+"""
 import enum
 
-# ok
 class PeftType(str, enum.Enum):
+    """
+    PeftType.
+    """
     # PROMPT_TUNING = "PROMPT_TUNING"
     # P_TUNING = "P_TUNING"
     # PREFIX_TUNING = "PREFIX_TUNING"
@@ -26,6 +31,9 @@ class PeftType(str, enum.Enum):
 
 
 class TaskType(str, enum.Enum):
+    """
+    TaskType
+    """
     SEQ_CLS = "SEQ_CLS"
     SEQ_2_SEQ_LM = "SEQ_2_SEQ_LM"
     CAUSAL_LM = "CAUSAL_LM"

@@ -18,6 +18,7 @@ CMMLU is designed to evaluate the advanced knowledge and reasoning abilities of 
     within the Chinese language and cultural context.
 """
 # pylint: disable=C0103
+# pylint: disable=W0613
 import os
 from typing import Union, Tuple
 from datasets import load_dataset as hf_load
@@ -27,13 +28,26 @@ from mindnlp.configs import DEFAULT_ROOT
 
 
 CMMLU_DEFAULT_SPLITS = ("test", "dev")
-CMMLU_VALID_TASKS = ['agronomy', 'anatomy', 'ancient_chinese', 'arts', 'astronomy', 'business_ethics', 'chinese_civil_service_exam', 'chinese_driving_rule', 'chinese_food_culture', 'chinese_foreign_policy', 'chinese_history', 'chinese_literature', 
-'chinese_teacher_qualification', 'clinical_knowledge', 'college_actuarial_science', 'college_education', 'college_engineering_hydrology', 'college_law', 'college_mathematics', 'college_medical_statistics', 'college_medicine', 'computer_science',
-'computer_security', 'conceptual_physics', 'construction_project_management', 'economics', 'education', 'electrical_engineering', 'elementary_chinese', 'elementary_commonsense', 'elementary_information_and_technology', 'elementary_mathematics', 
-'ethnology', 'food_science', 'genetics', 'global_facts', 'high_school_biology', 'high_school_chemistry', 'high_school_geography', 'high_school_mathematics', 'high_school_physics', 'high_school_politics', 'human_sexuality',
-'international_law', 'journalism', 'jurisprudence', 'legal_and_moral_basis', 'logical', 'machine_learning', 'management', 'marketing', 'marxist_theory', 'modern_chinese', 'nutrition', 'philosophy', 'professional_accounting', 'professional_law', 
-'professional_medicine', 'professional_psychology', 'public_relations', 'security_study', 'sociology', 'sports_science', 'traditional_chinese_medicine', 'virology', 'world_history', 'world_religions']
-    
+CMMLU_VALID_TASKS = [
+    'agronomy', 'anatomy', 'ancient_chinese', 'arts', 'astronomy', 'business_ethics', 
+    'chinese_civil_service_exam', 'chinese_driving_rule', 'chinese_food_culture', 
+    'chinese_foreign_policy', 'chinese_history', 'chinese_literature', 
+    'chinese_teacher_qualification', 'clinical_knowledge', 'college_actuarial_science', 
+    'college_education', 'college_engineering_hydrology', 'college_law', 'college_mathematics', 
+    'college_medical_statistics', 'college_medicine', 'computer_science', 
+    'computer_security', 'conceptual_physics', 'construction_project_management', 
+    'economics', 'education', 'electrical_engineering', 'elementary_chinese', 
+    'elementary_commonsense', 'elementary_information_and_technology', 'elementary_mathematics', 
+    'ethnology', 'food_science', 'genetics', 'global_facts', 'high_school_biology', 
+    'high_school_chemistry', 'high_school_geography', 'high_school_mathematics', 
+    'high_school_physics', 'high_school_politics', 'human_sexuality', 'international_law', 
+    'journalism', 'jurisprudence', 'legal_and_moral_basis', 'logical', 'machine_learning', 
+    'management', 'marketing', 'marxist_theory', 'modern_chinese', 'nutrition', 'philosophy', 
+    'professional_accounting', 'professional_law', 'professional_medicine', 'professional_psychology', 
+    'public_relations', 'security_study', 'sociology', 'sports_science', 'traditional_chinese_medicine', 
+    'virology', 'world_history', 'world_religions'
+]
+
 
 @load_dataset.register
 def CMMLU(
@@ -80,19 +94,19 @@ def CMMLU(
     else:
         for s in split:
             mode_list.append(s)
-    
+
     paths = []
     for task in mode_list:
         path = os.path.join(root, task, f"{name}.csv")
         if not os.path.exists(path):
             raise ValueError(f"The {name} dataset not exists.")
         paths.append(path)
-    
+
     # build CSV dataset
     if len(paths) == 1:
         return CSVDataset(paths[0], field_delim=',', shuffle=shuffle)
-    else:
-        return CSVDataset(paths[0], field_delim=',', shuffle=shuffle), CSVDataset(paths[1], field_delim=',', shuffle=shuffle)
+
+    return CSVDataset(paths[0], field_delim=',', shuffle=shuffle), CSVDataset(paths[1], field_delim=',', shuffle=shuffle)
 
 class HFcmmlu:
     """
@@ -117,7 +131,7 @@ class HFcmmlu:
             self._D.append(every_dict['D'])
 
     def __getitem__(self, index):
-        return self._Question[index], self._A[index], self._B[index], self._C[index], self._D[index], self._Answer[index],
+        return self._Question[index], self._A[index], self._B[index], self._C[index], self._D[index], self._Answer[index]
 
     def __len__(self):
         return len(self._Question)
@@ -163,7 +177,7 @@ def HF_CMMLU(
     column_names = ["Question", "A", "B", "C", "D", "Answer"]
 
     ds = hf_load(r"haonan-li/cmmlu", name, cache_dir=cache_dir)
-        
+
     mode_list = []
     if isinstance(split, str):
         mode_list.append(split)
@@ -173,10 +187,10 @@ def HF_CMMLU(
 
     dataset_list = []
     for m in mode_list:
-        dataset_list.append( 
+        dataset_list.append(
             GeneratorDataset(source = HFcmmlu(ds[m]), column_names = column_names, shuffle = shuffle)
         )
-    
+
     if len(dataset_list) == 1:
         return dataset_list[0]
     return dataset_list
@@ -185,7 +199,10 @@ def HF_CMMLU(
 
 @process.register
 def CMMLU_Process(dataset, tokenizer, vocab, batch_size ):
-    pass
+    """
+    TODO: finish process cmmlu.
+    """
+    pass # pylint: disable=W0107
 #     dataset: Union[CSVDataset, GeneratorDataset],
 #     tokenizer: PretrainedTokenizer,
 #     max_seq_len: int = 512,

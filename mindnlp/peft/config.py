@@ -15,7 +15,6 @@
 # pylint: disable=W0613
 """configs"""
 
-import enum
 import json
 import os
 from dataclasses import asdict, dataclass, field
@@ -123,8 +122,8 @@ class PeftConfigMixin():
         Utility method to check if the configuration is for prompt learning.
         """
         return False
-    
-# ok
+
+
 @dataclass
 class PeftConfig(PeftConfigMixin):
     """
@@ -166,7 +165,7 @@ class PromptLearningConfig(PeftConfig):
     )
     num_attention_heads: Optional[int] = field(default=None, metadata={"help": "Number of attention heads"})
     num_layers: Optional[int] = field(default=None, metadata={"help": "Number of transformer layers"})
-    
+
     @property
     def is_prompt_learning(self):
         r"""

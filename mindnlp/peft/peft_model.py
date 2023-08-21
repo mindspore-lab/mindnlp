@@ -16,6 +16,7 @@
 # pylint: disable=R1705
 # pylint: disable=R1710
 # pylint: disable=C0415
+# pylint: disable=E0602
 import os
 import warnings
 import inspect
@@ -31,23 +32,23 @@ from .config import PeftConfig
 
 from .tuners import (
     LoraModel,
-    LoraConfig
+    # LoraConfig
 )
 from .utils import (
     # SAFETENSORS_WEIGHTS_NAME,
     # TRANSFORMERS_MODELS_TO_PREFIX_TUNING_POSTPROCESS_MAPPING,
     WEIGHTS_NAME,
     PeftType,
-    TaskType,
+    # TaskType,
     # _get_batch_size,
     _prepare_prompt_learning_config,
-    _set_adapter,
+    # _set_adapter,
     _set_trainable,
     # add_library_to_model_card,
     get_peft_model_state_dict,
     # infer_device,
     # load_peft_weights,
-    set_peft_model_state_dict,
+    # set_peft_model_state_dict,
     shift_tokens_right,
 )
 
@@ -220,7 +221,7 @@ class PeftModel(nn.Cell):
 
 
     def add_adapter(self, adapter_name: str, peft_config: PeftConfig):
-
+        """add adapter."""
         if peft_config.peft_type != self.peft_type:
             raise ValueError(
                 f"Cannot combine adapters with different peft types. "
@@ -242,7 +243,7 @@ class PeftModel(nn.Cell):
             #     self.base_model.add_adapter(adapter_name, peft_config)
             else:
                 # inject adapter into base model (load model instead of initialize new one)
-                self.base_model.inject_adapter(self, adapter_name)  
+                self.base_model.inject_adapter(self, adapter_name)
         except Exception:  # somthing went wrong, roll back
             del self.peft_config[adapter_name]
             raise

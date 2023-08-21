@@ -15,7 +15,7 @@
 # pylint: disable=C0103
 """other utils"""
 import copy
-from typing import List, Dict, Optional, Mapping, Iterator, Tuple, Iterable
+from typing import List
 
 import mindspore
 from mindspore import nn, ops, Parameter
@@ -36,6 +36,9 @@ class ModulesToSaveWrapper(mindspore.nn.Cell):
         self.disable_adapters = False
 
     def update(self, adapter_name):
+        """
+        update modules_to_save.
+        """
         self.modules_to_save.update({adapter_name: copy.deepcopy(self.original_module)})
 
     #     if hasattr(self.modules_to_save[adapter_name], "_hf_hook"):
@@ -77,7 +80,6 @@ def custom_get_submodule(model: mindspore.nn.Cell, target: str) -> mindspore.nn.
 
     for item in atoms:
         if not hasattr(mod, item):
-            
             raise AttributeError(mod + " has no attribute `" + item + "`")
 
         mod = getattr(mod, item)
@@ -95,7 +97,7 @@ def _get_submodules(model, key):
     parent_key = ".".join(key.split(".")[:-1])
     parent = custom_get_submodule(model, parent_key)
     target_name = key.split(".")[-1]
-    target = custom_get_submodule(model, key) 
+    target = custom_get_submodule(model, key)
 
     return parent, target, target_name
 
@@ -114,7 +116,7 @@ def _set_trainable(model, adapter_name):
                 # 判断是否是此数据类型
                 target.update(adapter_name)
             else:
-                for _, param in target.parameters_and_names(): 
+                for _, param in target.parameters_and_names():
                     param.requires_grad = True
                 setattr(parent, target_name, ModulesToSaveWrapper(target, adapter_name))
 
@@ -176,13 +178,12 @@ def _prepare_prompt_learning_config(peft_config, model_config):
     return peft_config
 
 
-
 def transpose(weight, fan_in_fan_out):
     """
     transpose weight
     """
-    # return weight.T if fan_in_fan_out else weight
-    return ops.transpose(weight) if fan_in_fan_out else weight
+    return weight.T if fan_in_fan_out else weight
+    # return ops.transpose(weight, input_perm=?) if fan_in_fan_out else weight
 
 
 def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_start_token_id: int):

@@ -12,10 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=W0107
+"""
+BaseTuner class and BaseTunerLayer class.
+"""
 from __future__ import annotations
 
 import logging
-from abc import ABC, abstractmethod
+
 from typing import Any, Union
 
 from mindspore import nn
@@ -65,7 +69,7 @@ class BaseTuner(nn.Cell):
         # self.peft_config = config
         # self.add_adapter(adapter_name, self.peft_config[adapter_name])
 
-        self.model = model  
+        self.model = model
 
         # For advanced developers, if you want to attach multiple adapters to your
         # model, just add a `peft_config` dict attribute to your model.
@@ -109,8 +113,9 @@ class BaseTuner(nn.Cell):
             model_config (`str`):
                 The transformers model config, that config should contain the `model_type` key.
         """
-        ...
+        pass
 
+    @staticmethod
     def _check_target_module_exists(peft_config: PeftConfig, key: str) -> bool:
         r"""
         A helper private method to check if the passed module's key name matches any of the target modules in the
@@ -122,7 +127,7 @@ class BaseTuner(nn.Cell):
             key (`str`):
                 The module's key name.
         """
-        ...
+        pass
 
     def _create_and_replace(
         self,
@@ -153,7 +158,7 @@ class BaseTuner(nn.Cell):
             **optionnal_kwargs (`dict`):
                 The optional keyword arguments to pass to deal with particular cases (e.g. 8bit, 4bit quantization)
         """
-        ...
+        pass
 
     def _mark_only_adapters_as_trainable(self):
         r"""
@@ -162,8 +167,8 @@ class BaseTuner(nn.Cell):
 
         Check `peft.tuners.lora.LoraModel._mark_only_adapters_as_trainable` for an example.
         """
-        ...
-        
+        pass
+
 
     def _check_new_adapter_config(self, config: PeftConfig) -> None:
         """
@@ -192,7 +197,7 @@ class BaseTuner(nn.Cell):
     #     if self.peft_config[adapter_name].inference_mode:
     #         # freeze adapter
     #         _freeze_adapter(self.model, adapter_name)
-            
+
     def inject_adapter(self, model: nn.Cell, adapter_name: str):
         r"""
         Creates adapter layers and replaces the target modules with the adapter layers. This method is called under the
@@ -221,7 +226,7 @@ class BaseTuner(nn.Cell):
         if hasattr(model_config, "to_dict"):
             model_config = model_config.to_dict()
 
-        peft_config = self._prepare_adapter_config(peft_config, model_config)
+        peft_config = self._prepare_adapter_config(peft_config, model_config) # pylint: disable=E1111
 
         for key in key_list:
             if not self._check_target_module_exists(peft_config, key):
@@ -247,9 +252,9 @@ class BaseTuner(nn.Cell):
         self._mark_only_adapters_as_trainable()
 
         if self.peft_config[adapter_name].inference_mode:
-            for n, p in self.model.named_parameters():
-                if adapter_name in n:
-                    p.requires_grad = False
+            for name, param in self.model.named_parameters():
+                if adapter_name in name:
+                    param.requires_grad = False
 
     def merge_adapter(self):
         """
@@ -281,7 +286,9 @@ class BaseTunerLayer():
     active_adapter = None
 
     def merge(self):
+        """megre layer."""
         raise NotImplementedError
 
     def unmerge(self):
+        """unmerge layer."""
         raise NotImplementedError

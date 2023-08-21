@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=C0201
 """mappings"""
-from mindspore import nn
+from typing import Any, Dict
 
-from typing import TYPE_CHECKING, Any, Dict
+from mindspore import nn
 
 from .config import PeftConfig
 from .peft_model import (
@@ -86,10 +87,9 @@ def get_peft_model(model: nn.Cell, peft_config: PeftConfig, adapter_name: str = 
 
     # no specific task_type and is not prompt_learning
     if peft_config.task_type not in MODEL_TYPE_TO_PEFT_MODEL_MAPPING.keys() and not peft_config.is_prompt_learning:
-        return PeftModel(model, peft_config, adapter_name=adapter_name) 
+        return PeftModel(model, peft_config, adapter_name=adapter_name)
 
     # TODO: prompt learning
     # if peft_config.is_prompt_learning:
     #     # peft_config = _prepare_prompt_learning_config(peft_config, model_config)
     return MODEL_TYPE_TO_PEFT_MODEL_MAPPING[peft_config.task_type](model, peft_config, adapter_name=adapter_name)
-    
