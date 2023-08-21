@@ -16,6 +16,7 @@
 # pylint: disable=R1705
 # pylint: disable=R1710
 # pylint: disable=C0415
+# pylint: disable=E0602
 import os
 import warnings
 import inspect
@@ -23,30 +24,39 @@ from contextlib import contextmanager
 from copy import deepcopy
 
 import mindspore
+from mindspore import nn
 from mindspore import ops
 from mindspore.nn import CrossEntropyLoss
 
+from .config import PeftConfig
+
 from .tuners import (
     LoraModel,
-    LoraConfig
+    # LoraConfig
 )
-
 from .utils import (
+    # SAFETENSORS_WEIGHTS_NAME,
+    # TRANSFORMERS_MODELS_TO_PREFIX_TUNING_POSTPROCESS_MAPPING,
     WEIGHTS_NAME,
-    PeftConfig,
     PeftType,
+    # TaskType,
+    # _get_batch_size,
+    _prepare_prompt_learning_config,
+    # _set_adapter,
     _set_trainable,
+    # add_library_to_model_card,
     get_peft_model_state_dict,
-    PromptLearningConfig,
-    shift_tokens_right
+    # infer_device,
+    # load_peft_weights,
+    # set_peft_model_state_dict,
+    shift_tokens_right,
 )
 
 
 PEFT_TYPE_TO_MODEL_MAPPING = {
     PeftType.LORA: LoraModel,
 }
-
-class PeftModel(mindspore.nn.Cell):
+class PeftModel(nn.Cell):
     """
     Base model encompassing various Peft methods.
 
@@ -58,19 +68,28 @@ class PeftModel(mindspore.nn.Cell):
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
         super().__init__()
         self.base_model = model
-        self.config = self.base_model.config
+        self.config = getattr(self.base_model, "config", {"model_type": "custom"})
         self.modules_to_save = None
-
         self.peft_config = {}
         self.active_adapter = adapter_name
         self.peft_type = peft_config.peft_type
-        self.base_model_torch_dtype = getattr(model, "dtype", None)
-        if isinstance(peft_config, LoraConfig):
+        # self.base_model_torch_dtype = getattr(model, "dtype", None)
+        if not peft_config.is_prompt_learning:
             self.peft_config[adapter_name] = peft_config
+            # base_model -> peft model (e.g. LoraModel)
             self.base_model = PEFT_TYPE_TO_MODEL_MAPPING[peft_config.peft_type](
                 self.base_model, self.peft_config, adapter_name
             )
             self.set_additional_trainable_modules(peft_config, adapter_name)
+        else:
+            self.add_adapter(adapter_name, peft_config)
+
+        # if getattr(model, "is_gradient_checkpointing", True):
+        #     model = self._prepare_model_for_gradient_checkpointing(model)
+        # if hasattr(self.base_model, "config") and hasattr(self.base_model.config, "pretraining_tp"):
+        #     self.base_model.config.pretraining_tp = 1
+
+
 
     def save_pretrained(self, save_directory, **kwargs):
         r"""
@@ -133,23 +152,39 @@ class PeftModel(mindspore.nn.Cell):
         model.load_adapter(model_id, adapter_name, **kwargs)
         return model
 
-    def print_trainable_parameters(self):
-        """
-        Prints the number of trainable parameters in the model.
+    def get_nb_trainable_parameters(self):
+        r"""
+        Returns the number of trainable parameters and number of all parameters in the model.
         """
         trainable_params = 0
         all_param = 0
-        for _, param in self.named_parameters():
+        for param in self.get_parameters():
             num_params = param.numel()
             # if using DS Zero 3 and the weights are initialized empty
             if num_params == 0 and hasattr(param, "ds_numel"):
                 num_params = param.ds_numel
 
+            # Due to the design of 4bit linear layers from bitsandbytes
+            # one needs to multiply the number of parameters by 2 to get
+            # the correct number of parameters
+            if param.__class__.__name__ == "Params4bit":
+                num_params = num_params * 2
+
             all_param += num_params
             if param.requires_grad:
                 trainable_params += num_params
+
+        return trainable_params, all_param
+
+
+    def print_trainable_parameters(self):
+        """
+        Prints the number of trainable parameters in the model.
+        """
+        trainable_params, all_param = self.get_nb_trainable_parameters()
+
         print(
-            f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param}"
+            f"trainable params: {trainable_params:,d} || all params: {all_param:,d} || trainable%: {100 * trainable_params / all_param}"
         )
 
     def __getattr__(self, name: str):
@@ -163,6 +198,7 @@ class PeftModel(mindspore.nn.Cell):
         """
         Forward pass of the model.
         """
+        # print(self.get_base_model().layers[0].__class__.construct)
         return self.get_base_model()(*args, **kwargs)
 
     @contextmanager
@@ -181,17 +217,39 @@ class PeftModel(mindspore.nn.Cell):
         Returns the base model.
         """
         return self.base_model.model
+        # return self.base_model if self.active_peft_config.is_prompt_learning else self.base_model.model
 
-    def add_adapter(self, adapter_name, peft_config):
+
+    def add_adapter(self, adapter_name: str, peft_config: PeftConfig):
         """add adapter."""
         if peft_config.peft_type != self.peft_type:
             raise ValueError(
                 f"Cannot combine adapters with different peft types. "
                 f"Found {self.peft_type} and {peft_config.peft_type}."
             )
+
         self.peft_config[adapter_name] = peft_config
-        self.base_model.add_adapter(adapter_name, peft_config)
+
+        try:
+            if peft_config.is_prompt_learning:  # add_adapter methods for prompt learning setup
+                if hasattr(self.config, "to_dict"):
+                    dict_config = self.config.to_dict()
+                else:
+                    dict_config = self.config
+
+                peft_config = _prepare_prompt_learning_config(peft_config, dict_config)
+                self._setup_prompt_encoder(adapter_name)
+            # elif peft_config.is_adaption_prompt:
+            #     self.base_model.add_adapter(adapter_name, peft_config)
+            else:
+                # inject adapter into base model (load model instead of initialize new one)
+                self.base_model.inject_adapter(self, adapter_name)
+        except Exception:  # somthing went wrong, roll back
+            del self.peft_config[adapter_name]
+            raise
+
         self.set_additional_trainable_modules(peft_config, adapter_name)
+
 
     def set_additional_trainable_modules(self, peft_config, adapter_name):
         """set additional trainable cells"""
