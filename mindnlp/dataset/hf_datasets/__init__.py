@@ -23,4 +23,4 @@ from .hf_ptb_text_only import HF_Ptb_text_only, HF_Ptb_text_only_Process
 from .hf_cmrc2018 import HF_CMRC2018, HF_CMRC2018_Process
 from .hf_duconv import hf_duconv, hf_duconv_process
 from .hf_squad2 import HF_SQuAD2, HF_SQuAD2_Process
-from .hf_mt_eng_vietnamese import hf_mt_eng_vietnamese
+from .mt_eng_vietnamese import hf_mt_eng_vietnamese
