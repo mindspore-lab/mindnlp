@@ -23,7 +23,7 @@ from mindnlp.dataset import hf_mt_eng_vietnamese
 from mindnlp import load_dataset
 
 
-class Test_mt_eng_vietnamese(unittest.TestCase):
+class TestMtEngVietnamese(unittest.TestCase):
     r"""
     Test mt_eng_vietnamese
     """
@@ -66,4 +66,3 @@ class Test_mt_eng_vietnamese(unittest.TestCase):
             root=self.root,
             split=("train", "validation", "test"),
         )
-
