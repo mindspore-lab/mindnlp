@@ -641,3 +641,89 @@ class LogitNormalization(LogitsProcessor, LogitsWarper):
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         scores = ops.log_softmax(scores, axis=-1)
         return scores
+
+
+class TemperatureLogitsWarper(LogitsWarper):
+    r"""
+    [`TemperatureLogitsWarper`] for temperature (exponential scaling output probability distribution).
+    Args:
+        temperature (:obj:`float`):
+            The value used to module the logits distribution.
+    """
+
+    def __init__(self, temperature: float):
+        if not isinstance(temperature, float) or not (temperature > 0):
+            raise ValueError(f"`temperature` has to be a strictly positive float, but is {temperature}")
+
+        self.temperature = temperature
+
+    def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        scores = scores / self.temperature
+        return scores
+
+
+class TopPLogitsWarper(LogitsWarper):
+    """
+        [`LogitsWarper`] that performs top-p, i.e. restricting to top tokens summing to prob_cut_off <= prob_cut_off.
+
+        Args:
+            top_p (`float`):
+                If set to < 1, only the smallest set of most probable tokens with probabilities that add up to `top_p` or
+                higher are kept for generation.
+            filter_value (`float`, *optional*, defaults to `-float("Inf")`):
+                All filtered values will be set to this float value.
+            min_tokens_to_keep (`int`, *optional*, defaults to 1):
+                Minimum number of tokens that cannot be filtered.
+    """
+    def __init__(self, top_p: float, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
+        top_p = float(top_p)
+        if top_p < 0 or top_p > 1.0:
+            raise ValueError(f"`top_p` has to be a float > 0 and < 1, but is {top_p}")
+        if not isinstance(min_tokens_to_keep, int) or (min_tokens_to_keep < 1):
+            raise ValueError(f"`min_tokens_to_keep` has to be a positive integer, but is {min_tokens_to_keep}")
+
+        self.top_p = top_p
+        self.filter_value = filter_value
+        self.min_tokens_to_keep = min_tokens_to_keep
+
+    def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        sorted_logits, sorted_indices = ops.sort(scores, descending=False)
+        cumulative_probs = ops.softmax(sorted_logits, axis=-1).cumsum(axis=-1)
+
+        # Remove tokens with cumulative top_p above the threshold (token with 0 are kept)
+        sorted_indices_to_remove = cumulative_probs <= (1 - self.top_p)
+        # Keep at least min_tokens_to_keep
+        sorted_indices_to_remove[..., -self.min_tokens_to_keep:] = 0
+
+        # scatter sorted tensors to original indexing
+        indices_to_remove = sorted_indices_to_remove.scatter(1, sorted_indices, sorted_indices_to_remove)
+        scores = scores.masked_fill(indices_to_remove, self.filter_value)
+        return scores
+
+
+class TopKLogitsWarper(LogitsWarper):
+    r"""
+    [`LogitsWarper`] that performs top-k, i.e. restricting to the k highest probability elements.
+
+    Args:
+        top_k (`int`):
+            The number of highest probability vocabulary tokens to keep for top-k-filtering.
+        filter_value (`float`, *optional*, defaults to `-float("Inf")`):
+            All filtered values will be set to this float value.
+        min_tokens_to_keep (`int`, *optional*, defaults to 1):
+            Minimum number of tokens that cannot be filtered.
+    """
+
+    def __init__(self, top_k: int, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
+        if not isinstance(top_k, int) or top_k <= 0:
+            raise ValueError(f"`top_k` has to be a strictly positive integer, but is {top_k}")
+
+        self.top_k = max(top_k, min_tokens_to_keep)
+        self.filter_value = filter_value
+
+    def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        top_k = min(self.top_k, scores.size(-1))  # Safety check
+        # Remove all tokens with a probability less than the last token of the top-k
+        indices_to_remove = scores < Tensor.topk(scores, top_k)[0][..., -1, None]
+        scores = scores.masked_fill(indices_to_remove, self.filter_value)
+        return scores
