@@ -42,7 +42,7 @@ PRETRAINED_MODEL_ARCHIVE_MAP = {
 
 
 __all__ = ['GPT2Attention', 'GPT2DoubleHeadsModel', 'GPT2ForSequenceClassification',
-           'GPT2ForTokenClassification', 'GPT2LMHeadModel', 'GPT2Model', 'GPT2MLP']
+           'GPT2ForTokenClassification', 'GPT2LMHeadModel', 'GPT2Model', 'GPT2MLP', 'GPT2PreTrainedModel']
 
 def torch_to_mindspore(pth_file, **kwargs):
     """torch to mindspore."""
