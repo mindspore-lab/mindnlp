@@ -3,7 +3,7 @@ tqdm
 pylint
 pytest
 ddt
-datasets
+datasets==2.13.1
 tokenizers
 torch==1.13.1
 sentencepiece
