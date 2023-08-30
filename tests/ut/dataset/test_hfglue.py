@@ -75,7 +75,7 @@ class TestHFGLUE(unittest.TestCase):
             "validation": 408,
         }
         dataset_train, dataset_validation, dataset_test = HF_GLUE(
-            name="mrpc", root=self.root, split=("train", "validation", "test")
+            name="mrpc", root=self.root, split=("train", "dev", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
@@ -105,7 +105,7 @@ class TestHFGLUE(unittest.TestCase):
             "validation": 1500,
         }
         dataset_train, dataset_validation, dataset_test = HF_GLUE(
-            name="stsb", root=self.root, split=("train", "validation", "test")
+            name="stsb", root=self.root, split=("train", "dev", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
@@ -167,7 +167,7 @@ class TestHFGLUE(unittest.TestCase):
             "validation": 5463,
         }
         dataset_train, dataset_validation, dataset_test = HF_GLUE(
-            name="qnli", root=self.root, split=("train", "validation", "test")
+            name="qnli", root=self.root, split=("train", "dev", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
@@ -182,7 +182,7 @@ class TestHFGLUE(unittest.TestCase):
             "validation": 277,
         }
         dataset_train, dataset_validation, dataset_test = HF_GLUE(
-            name="rte", root=self.root, split=("train", "validation", "test")
+            name="rte", root=self.root, split=("train", "dev", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
@@ -197,7 +197,7 @@ class TestHFGLUE(unittest.TestCase):
             "validation": 71,
         }
         dataset_train, dataset_validation, dataset_test = HF_GLUE(
-            name="wnli", root=self.root, split=("train", "validation", "test")
+            name="wnli", root=self.root, split=("train", "dev", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
