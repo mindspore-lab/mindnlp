@@ -113,7 +113,7 @@ def HF_GLUE(
     elif name in ('mrpc', 'stsb', 'rte', 'wnli'):
         column_names = {
             "train": ["label", "sentence1", "sentence2"],
-            "dev": ["label", "sentence1", "sentence2"],
+            "validation": ["label", "sentence1", "sentence2"],
             "test": ["sentence1", "sentence2"],
         }
     elif name == "qqp":
@@ -123,7 +123,7 @@ def HF_GLUE(
     elif name == "qnli":
         column_names = {
             "train": ["label", "question", "sentence"],
-            "dev": ["label", "question", "sentence"],
+            "validation": ["label", "question", "sentence"],
             "test": ["question", "sentence"],
         }
 
@@ -156,7 +156,7 @@ def HF_GLUE(
     return datasets_list
 
 @process.register
-def HF_GLUE_Process(name, dataset, column=None, tokenizer=BasicTokenizer(), vocab=None):
+def HF_GLUE_Process(name, dataset, column=None, tokenizer=BasicTokenizer(True), vocab=None):
     """
     the process of the GLUE dataset
     """
