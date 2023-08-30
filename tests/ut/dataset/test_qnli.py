@@ -78,7 +78,7 @@ class TestQNLI(unittest.TestCase):
         Test QNLI_Process
         """
 
-        test_dataset = QNLI(split='test')
+        test_dataset = QNLI(split='train')
         test_dataset, vocab = QNLI_Process(test_dataset)
 
         test_dataset = test_dataset.create_tuple_iterator()
