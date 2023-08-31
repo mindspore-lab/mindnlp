@@ -33,7 +33,18 @@ PRETRAINED_MODEL_ARCHIVE_MAP = {
     for model in ERNIE_SUPPORT_LIST
 }
 
-__all__ = ['ErnieEmbeddings', 'ErnieModel', 'ErniePooler', "UIE"]
+__all__ = [
+    "ErnieModel",
+    "ErniePretrainedModel",
+    "ErnieForSequenceClassification",
+    "ErnieForTokenClassification",
+    "ErnieForQuestionAnswering",
+    "ErnieForPretraining",
+    "ErniePretrainingCriterion",
+    "ErnieForMaskedLM",
+    "ErnieForMultipleChoice",
+    "UIE"
+]
 
 class ErnieEmbeddings(nn.Cell):
     """
@@ -197,7 +208,7 @@ class ErnieModel(ErniePretrainedModel):
             batch_first=True
         )
         self.encoder = nn.TransformerEncoder(
-            encoder_layer, config.num_hidden_layers
+            encoder_layer, num_layers=config.num_hidden_layers
         )
         self.pooler = ErniePooler(config, weight_init=embedding_table)
         self.apply(self.init_weights)

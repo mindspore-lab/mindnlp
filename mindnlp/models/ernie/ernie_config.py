@@ -35,6 +35,17 @@ ERNIE_SUPPORT_LIST = [
     "uie-senta-nano",
     "uie-base-answer-extractor",
     "uie-base-qa-filter",
+    "ernie-3.0-base-zh",
+    "ernie-3.0-xbase-zh",
+    "ernie-3.0-medium-zh",
+    "ernie-3.0-mini-zh",
+    "ernie-3.0-micro-zh",
+    "ernie-3.0-nano-zh",
+    "ernie-3.0-tiny-base-v1-zh",
+    "ernie-3.0-tiny-medium-v1-zh",
+    "ernie-3.0-tiny-mini-v1-zh",
+    "ernie-3.0-tiny-micro-v1-zh",
+    "ernie-3.0-tiny-nano-v1-zh"
 ]
 
 CONFIG_ARCHIVE_MAP = {
@@ -70,8 +81,7 @@ class ErnieConfig(PreTrainedConfig):
         fuse: bool = False,
         layer_norm_eps=1e-12,
         use_cache=False,
-        use_task_id=True,
-        enable_recompute=False,
+        use_task_id=False,
         **kwargs
     ):
         super().__init__(pad_token_id=pad_token_id, **kwargs)
@@ -93,7 +103,6 @@ class ErnieConfig(PreTrainedConfig):
         self.layer_norm_eps = layer_norm_eps
         self.use_cache = use_cache
         self.use_task_id = use_task_id
-        self.enable_recompute = enable_recompute
 
 
 class UIEConfig(PreTrainedConfig):
