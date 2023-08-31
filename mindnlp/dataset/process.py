@@ -33,6 +33,7 @@ def common_process(dataset, column, tokenizer, vocab):
         - **newVocab** (Vocab) -new vocab created from dataset if 'vocab' is None
 
     '''
+    print(next(dataset.create_tuple_iterator()))
 
     if vocab is None :
         dataset = dataset.map(tokenizer, column)
