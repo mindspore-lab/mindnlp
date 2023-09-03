@@ -97,7 +97,8 @@ class ErnieEmbeddings(nn.Cell):
             if past_key_values_length > 0:
                 position_ids = position_ids + past_key_values_length
 
-            position_ids.stop_gradient = True
+            ops.stop_gradient(position_ids)
+            # position_ids.stop_gradient = True
 
         position_embeddings = self.position_embeddings(position_ids)
         embeddings = inputs_embeds + position_embeddings
@@ -228,7 +229,6 @@ class ErnieModel(ErniePretrainedModel):
         task_type_ids: Optional[Tensor] = None,
         past_key_values: Optional[Tuple[Tuple[Tensor]]] = None,
         inputs_embeds: Optional[Tensor] = None,
-        # use_cache: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         return_dict: Optional[bool] = None,
@@ -269,7 +269,8 @@ class ErnieModel(ErniePretrainedModel):
             attention_mask = ops.tile(
                 attention_mask, (1, self.nheads, seq_length, 1)).reshape(-1, seq_length, seq_length)
 
-        attention_mask.stop_gradient = True
+        ops.stop_gradient(attention_mask)
+        # attention_mask.stop_gradient = True
 
         embedding_output = self.embeddings(
             input_ids=input_ids,
