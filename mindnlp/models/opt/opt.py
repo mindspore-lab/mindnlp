@@ -28,7 +28,7 @@ from mindspore import log as logger
 from mindspore.nn import CrossEntropyLoss, BCEWithLogitsLoss, MSELoss
 from mindspore.common.initializer import initializer, Normal
 from mindnlp.abc import PreTrainedModel
-from mindnlp.configs import HF_MODEL_URL_BASE
+from mindnlp.configs import MINDNLP_MODEL_URL_BASE
 from ..activations import ACT2FN
 from ..utils import Conv1D
 from .config_opt import OPTConfig, OPT_SUPPORT_LIST
@@ -41,9 +41,7 @@ from ...modeling_outputs import (
 )
 
 PRETRAINED_MODEL_ARCHIVE_MAP = {
-    # TODO: 替换成MINDNLP
-    # model: MINDNLP_MODEL_URL_BASE.format('gpt', model) for model in OPT_SUPPORT_LIST
-    model: HF_MODEL_URL_BASE.format(model) for model in OPT_SUPPORT_LIST
+    model: MINDNLP_MODEL_URL_BASE.format('opt', model) for model in OPT_SUPPORT_LIST
 }
 
 __all__ = ['OPTAttention', 'OPTModel', 'OPTDecoder', 'OPTForCausalLM']
