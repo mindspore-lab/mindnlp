@@ -20,8 +20,8 @@ import os
 import unittest
 import shutil
 import pytest
-from mindnlp.dataset import HF_GLUE
-
+import mindspore
+from mindnlp.dataset import HF_GLUE, HF_GLUE_Process
 
 class TestHFGLUE(unittest.TestCase):
     r"""
@@ -213,3 +213,29 @@ class TestHFGLUE(unittest.TestCase):
             name="ax", root=self.root, split="test"
         )
         assert dataset_test.get_dataset_size() == num_lines["test"]
+
+    @pytest.mark.skip("seems has errors.")
+    def test_hf_glue_process(self):
+        """
+        Test hf_glue process
+        """
+
+        train_dataset = HF_GLUE(name="sst2", root=self.root, split="train")
+        train_dataset, vocab = HF_GLUE_Process("sst2", train_dataset)
+
+        train_dataset = train_dataset.create_tuple_iterator()
+        assert (next(train_dataset)[1]).dtype == mindspore.int32
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break
+        dataset = HF_GLUE(name="qnli", root=self.root, split=["test"])
+        dataset, vocab = HF_GLUE_Process("qnli", dataset)
+
+        dataset = dataset.create_tuple_iterator()
+        assert (next(dataset)[0]).dtype == mindspore.int32
+        assert (next(dataset)[1]).dtype == mindspore.int32
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break

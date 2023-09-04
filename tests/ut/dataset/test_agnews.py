@@ -15,13 +15,14 @@
 """
 Test AG_NEWS
 """
-import os
-import shutil
 import unittest
+import shutil
 import pytest
 import mindspore as ms
 from mindnlp.dataset import AG_NEWS, AG_NEWS_Process
 from mindnlp import load_dataset, process
+from mindnlp.transforms import BasicTokenizer
+from mindnlp.configs import DEFAULT_ROOT
 
 
 
@@ -32,7 +33,7 @@ class TestAGNEWS(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
+        cls.root = DEFAULT_ROOT
 
     @classmethod
     def tearDownClass(cls):
@@ -68,7 +69,7 @@ class TestAGNEWS(unittest.TestCase):
         """
 
         test_dataset = AG_NEWS(split='test')
-        agnews_dataset = AG_NEWS_Process(test_dataset)
+        agnews_dataset, _ = AG_NEWS_Process(test_dataset)
 
         agnews_dataset = agnews_dataset.create_tuple_iterator()
         assert (next(agnews_dataset)[1]).dtype == ms.int32
@@ -78,7 +79,16 @@ class TestAGNEWS(unittest.TestCase):
     def test_agnews_process_by_register(self):
         """test agnews process by register"""
         test_dataset = AG_NEWS(split='test')
-        test_dataset = process('ag_news', test_dataset)
+        test_dataset, _ = process('ag_news', test_dataset)
 
         test_dataset = test_dataset.create_tuple_iterator()
         assert (next(test_dataset)[1]).dtype == ms.int32
+
+    def test_agnews_with_tokenizer(self):
+        """test with tokenizer"""
+        train_dataset, _ = AG_NEWS()
+        column = "text"
+        tokenizer = BasicTokenizer()
+        agnews_dataset, _ = AG_NEWS_Process(dataset=train_dataset, tokenizer=tokenizer, column=column)
+        agnews_dataset = agnews_dataset.create_tuple_iterator()
+        print(next(agnews_dataset))

@@ -15,28 +15,14 @@
 # pylint: disable=W0613
 """configs"""
 
-import enum
 import json
 import os
-from dataclasses import asdict, field
+from dataclasses import asdict, dataclass, field
 from typing import Optional, Union
 
-from .other import CONFIG_NAME
+from .utils import CONFIG_NAME, PeftType, TaskType
 
-
-class PeftType(str, enum.Enum):
-    """Peft Type"""
-    LORA = "LORA"
-
-
-class TaskType(str, enum.Enum):
-    """Task type"""
-    SEQ_CLS = "SEQ_CLS"
-    SEQ_2_SEQ_LM = "SEQ_2_SEQ_LM"
-    CAUSAL_LM = "CAUSAL_LM"
-    TOKEN_CLS = "TOKEN_CLS"
-
-
+@dataclass
 class PeftConfigMixin():
     r"""
     This is the base configuration class for PEFT adapter models. 
@@ -80,6 +66,8 @@ class PeftConfigMixin():
         # save it
         with open(output_path, "w", encoding='utf-8') as writer:
             writer.write(json.dumps(output_dict, indent=2, sort_keys=True))
+
+
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, subfolder=None, **kwargs):
@@ -128,6 +116,15 @@ class PeftConfigMixin():
         return json_object
 
 
+    @property
+    def is_prompt_learning(self):
+        r"""
+        Utility method to check if the configuration is for prompt learning.
+        """
+        return False
+
+
+@dataclass
 class PeftConfig(PeftConfigMixin):
     """
     This is the base configuration class to store the configuration of a [`PeftModel`].
@@ -143,6 +140,9 @@ class PeftConfig(PeftConfigMixin):
     task_type: Union[str, TaskType] = field(default=None, metadata={"help": "Task type"})
     inference_mode: bool = field(default=False, metadata={"help": "Whether to use inference mode"})
 
+
+# ok
+@dataclass
 class PromptLearningConfig(PeftConfig):
     """
     This is the base configuration class to store the configuration of [`PrefixTuning`], [`PromptEncoder`], or
@@ -165,3 +165,10 @@ class PromptLearningConfig(PeftConfig):
     )
     num_attention_heads: Optional[int] = field(default=None, metadata={"help": "Number of attention heads"})
     num_layers: Optional[int] = field(default=None, metadata={"help": "Number of transformer layers"})
+
+    @property
+    def is_prompt_learning(self):
+        r"""
+        Utility method to check if the configuration is for prompt learning.
+        """
+        return True

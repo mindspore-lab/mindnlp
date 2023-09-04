@@ -153,7 +153,7 @@ def AG_NEWS_Process(dataset, vocab=None, tokenizer=BasicTokenizer(), bucket_boun
         >>> train_dataset, test_dataset = AG_NEWS()
         >>> column = "text"
         >>> tokenizer = BasicTokenizer()
-        >>> agnews_dataset, vocab = AG_NEWS_Process(train_dataset, column, tokenizer)
+        >>> agnews_dataset, vocab = AG_NEWS_Process(dataset=train_dataset, tokenizer=tokenizer, column=column)
         >>> agnews_dataset = agnews_dataset.create_tuple_iterator()
         >>> print(next(agnews_dataset))
         {'label': Tensor(shape=[], dtype=String, value= '3'), 'text': Tensor(shape=[35],
@@ -208,4 +208,4 @@ def AG_NEWS_Process(dataset, vocab=None, tokenizer=BasicTokenizer(), bucket_boun
         dataset = dataset.map([pad_op], 'text')
         dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)
 
-    return dataset
+    return dataset, vocab

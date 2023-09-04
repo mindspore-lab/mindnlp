@@ -29,15 +29,15 @@ from mindnlp.configs import DEFAULT_ROOT
 from mindnlp.utils import untar
 
 URL = {
-    "train": "http://www.quest.dcs.shef.ac.uk/wmt16_files_mmt/training.tar.gz",
-    "valid": "http://www.quest.dcs.shef.ac.uk/wmt16_files_mmt/validation.tar.gz",
-    "test": "http://www.quest.dcs.shef.ac.uk/wmt16_files_mmt/mmt16_task1_test.tar.gz",
+    "train": "https://openi.pcl.ac.cn/lvyufeng/multi30k/raw/branch/master/training.tar.gz",
+    "valid": "https://openi.pcl.ac.cn/lvyufeng/multi30k/raw/branch/master/validation.tar.gz",
+    "test": "https://openi.pcl.ac.cn/lvyufeng/multi30k/raw/branch/master/mmt16_task1_test.tar.gz",
 }
 
 MD5 = {
     "train": "8ebce33f4ebeb71dcb617f62cba077b7",
     "valid": "2a46f18dbae0df0becc56e33d4e28e5d",
-    "test": "f63b12fc6f95beb3bfca2c393e861063",
+    "test": "1586ce11f70cba049e9ed3d64db08843",
 }
 
 

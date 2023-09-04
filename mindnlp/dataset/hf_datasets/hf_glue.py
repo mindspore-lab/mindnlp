@@ -19,8 +19,10 @@ Hugging Face GLUE load function
 import os
 from typing import Union, Tuple
 from datasets import load_dataset as hf_load
-from mindspore.dataset import GeneratorDataset
-from mindnlp.dataset.register import load_dataset
+from mindspore.dataset import GeneratorDataset, text
+from mindnlp.transforms import BasicTokenizer
+from mindnlp.dataset.process import common_process
+from mindnlp.dataset.register import load_dataset, process
 from mindnlp.configs import DEFAULT_ROOT
 
 
@@ -107,15 +109,23 @@ def HF_GLUE(
     else:
         cache_dir = root
     if name in ('cola', 'sst2'):
-        column_names = ['sentence', 'label', 'idx']
+        column_names = ["label", "sentence"]
     elif name in ('mrpc', 'stsb', 'rte', 'wnli'):
-        column_names = ['sentence1', 'sentence2', 'label', 'idx']
+        column_names = {
+            "train": ["label", "sentence1", "sentence2"],
+            "validation": ["label", "sentence1", "sentence2"],
+            "test": ["sentence1", "sentence2"],
+        }
     elif name == "qqp":
-        column_names = ['question1', 'question2', 'label', 'idx']
+        column_names = ['question1', 'question2', 'label']
     elif (len(name) >= 4 and name[0:4] == "mnli") or name == "ax":
-        column_names = ['premise', 'hypothesis', 'label', 'idx']
+        column_names = ['premise', 'hypothesis', 'label']
     elif name == "qnli":
-        column_names = ['question', 'sentence', 'label', 'idx']
+        column_names = {
+            "train": ["label", "question", "sentence"],
+            "validation": ["label", "question", "sentence"],
+            "test": ["question", "sentence"],
+        }
 
     datasets_list = []
     mode_list = []
@@ -127,11 +137,50 @@ def HF_GLUE(
             mode_list.append(s)
 
     ds_list = hf_load('glue', name, split=mode_list, cache_dir=cache_dir)
-    for every_ds in ds_list:
-        datasets_list.append(GeneratorDataset(
-            source=HFglue(every_ds, name),
-            column_names=column_names, shuffle=shuffle)
-        )
+    if name in ('mrpc', 'stsb', 'rte', 'wnli', 'qnli'):
+        flag = 0
+        for every_ds in ds_list:
+            datasets_list.append(GeneratorDataset(
+                source=HFglue(every_ds, name),
+                column_names=column_names[split[flag]], shuffle=shuffle)
+            )
+            flag += 1
+    else:
+        for every_ds in ds_list:
+            datasets_list.append(GeneratorDataset(
+                source=HFglue(every_ds, name),
+                column_names=column_names, shuffle=shuffle)
+            )
     if len(mode_list) == 1:
         return datasets_list[0]
     return datasets_list
+
+@process.register
+def HF_GLUE_Process(name, dataset, column=None, tokenizer=BasicTokenizer(True), vocab=None):
+    """
+    the process of the GLUE dataset
+    """
+    if name in ('cola', 'sst2'):
+        return common_process(dataset, 'sentence', tokenizer, vocab)
+    if column is None:
+        if name in ('mrpc', 'stsb', 'rte', 'wnli'):
+            column = ['sentence1', 'sentence2']
+        elif name == "qqp":
+            column = ['question1', 'question2']
+        elif (len(name) >= 4 and name[0:4] == "mnli") or name == "ax":
+            column = ['premise', 'hypothesis']
+        elif name == "qnli":
+            column = ['question', 'sentence']
+    if vocab is None:
+        for col in column:
+            dataset = dataset.map(tokenizer, input_columns=col)
+        column = list(column)
+        vocab = text.Vocab.from_dataset(dataset, columns=column, special_tokens=["<pad>", "<unk>"])
+        for col in column:
+            dataset = dataset.map(text.Lookup(vocab, unknown_token='<unk>'), input_columns=col)
+        return dataset, vocab
+    for col in column:
+        dataset = dataset.map(tokenizer, input_columns=col)
+    for col in column:
+        dataset = dataset.map(text.Lookup(vocab, unknown_token='<unk>'), input_columns=col)
+    return dataset, vocab
