@@ -13,18 +13,15 @@
 # limitations under the License.
 # ============================================================================
 """Test CPM Ant"""
-import gc
-import os
-import unittest
 import numpy as np
 
 from mindspore import Tensor
-
+import mindnlp
 from mindnlp.models.cpm.cpm_ant import CpmAntModel, CpmAntForCausalLM
 from mindnlp.models.cpm.cpm_ant_config import CpmAntConfig
+from ..model_test import ModelTest
 
-
-class TestModelingCpmAnt(unittest.TestCase):
+class TestModelingCpmAnt(ModelTest):
     r"""
     Test Cpm Ant
     """
@@ -33,6 +30,7 @@ class TestModelingCpmAnt(unittest.TestCase):
         """
         Set up.
         """
+        super().setUp()
         self.config = CpmAntConfig(vocab_size=1000, hidden_size=128, num_attention_heads=8, num_hidden_layers=2)
 
     def test_cpm_ant_model(self):
@@ -40,6 +38,8 @@ class TestModelingCpmAnt(unittest.TestCase):
         Test Cpm Ant Model
         """
         model = CpmAntModel(self.config)
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
 
         input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512)))
 
@@ -53,16 +53,10 @@ class TestModelingCpmAnt(unittest.TestCase):
         Test GPT2 LMHead Model
         """
         model = CpmAntForCausalLM(self.config)
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
 
         input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512)))
 
         lm_logits, _ = model(input_ids)
         assert lm_logits.shape == (2, 512, self.config.vocab_size + self.config.prompt_types * self.config.prompt_length)
-
-    def tearDown(self) -> None:
-        gc.collect()
-
-    @classmethod
-    def tearDownClass(cls):
-        if os.path.exists("~/.mindnlp"):
-            os.removedirs("~/.mindnlp")
