@@ -69,7 +69,7 @@ class TestModelingRoberta(unittest.TestCase):
     @pytest.mark.download
     def test_from_pretrained(self):
         """test from pretrained"""
-        _ = RobertaModel.from_pretrained('bert-base-uncased')
+        _ = RobertaModel.from_pretrained('roberta-base')
 
     def tearDown(self) -> None:
         gc.collect()
