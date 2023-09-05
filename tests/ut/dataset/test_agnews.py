@@ -84,6 +84,7 @@ class TestAGNEWS(unittest.TestCase):
         test_dataset = test_dataset.create_tuple_iterator()
         assert (next(test_dataset)[1]).dtype == ms.int32
 
+    @pytest.mark.download
     def test_agnews_with_tokenizer(self):
         """test with tokenizer"""
         train_dataset, _ = AG_NEWS()

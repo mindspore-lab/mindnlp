@@ -14,18 +14,16 @@
 # ============================================================================
 """Test Bloom"""
 
-import gc
-import os
-import unittest
 import pytest
 import numpy as np
 
 from mindspore import Tensor
-
+import mindnlp
 from mindnlp.models.bloom import BloomConfig, BloomModel
+from ..model_test import ModelTest
 
 
-class TestModelingBloom(unittest.TestCase):
+class TestModelingBloom(ModelTest):
     r"""
     Test Bloom
     """
@@ -34,6 +32,7 @@ class TestModelingBloom(unittest.TestCase):
         """
         Set up.
         """
+        super().setUp()
         self.config = BloomConfig(vocab_size=1000,
                                  hidden_size=128,
                                  n_layer=2,
@@ -45,6 +44,8 @@ class TestModelingBloom(unittest.TestCase):
         Test Bloom Model
         """
         model = BloomModel(self.config)
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
 
         input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512)))
 
@@ -55,11 +56,3 @@ class TestModelingBloom(unittest.TestCase):
     def test_from_pretrained_from_pt(self):
         """test from pt"""
         _ = BloomModel.from_pretrained('bigscience/bloom-560m', from_pt=True)
-
-    def tearDown(self) -> None:
-        gc.collect()
-
-    @classmethod
-    def tearDownClass(cls):
-        if os.path.exists("~/.mindnlp"):
-            os.removedirs("~/.mindnlp")

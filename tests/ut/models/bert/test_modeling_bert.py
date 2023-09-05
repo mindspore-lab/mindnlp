@@ -13,47 +13,43 @@
 # limitations under the License.
 # ============================================================================
 """Test Bert"""
-import gc
-import os
-import unittest
 import pytest
 import numpy as np
 from ddt import ddt, data
 
 import mindspore
 from mindspore import Tensor
-from mindnlp import ms_jit
-from mindnlp.models import BertConfig, BertModel
 
+import mindnlp
+from mindnlp.models import BertConfig, BertModel
+from ..model_test import ModelTest
 
 @ddt
-class TestModelingBert(unittest.TestCase):
+class TestModelingBert(ModelTest):
     r"""
     Test model bert
     """
     def setUp(self) -> None:
+        super().setUp()
         self.config = BertConfig(vocab_size=1000,
                                  hidden_size=128,
                                  num_hidden_layers=2,
                                  num_attention_heads=8,
                                  intermediate_size=256)
+
     @data(True, False)
     def test_modeling_bert(self, jit):
         r"""
         Test model bert
         """
         model = BertModel(self.config)
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
 
         input_ids = Tensor(np.random.randn(1, 512), mindspore.int32)
 
-        def forward(input_ids):
-            outputs, pooled = model(input_ids)
-            return outputs, pooled
 
-        if jit:
-            forward = ms_jit(forward)
-
-        outputs, pooled = forward(input_ids)
+        outputs, pooled = self.modeling(model, input_ids, jit)
 
         assert outputs.shape == (1, 512, self.config.hidden_size)
         assert pooled.shape == (1, self.config.hidden_size)
@@ -72,11 +68,3 @@ class TestModelingBert(unittest.TestCase):
     def test_from_pretrained_from_pt(self):
         """test from pt"""
         _ = BertModel.from_pretrained('bert-base-uncased', from_pt=True)
-
-    def tearDown(self) -> None:
-        gc.collect()
-
-    @classmethod
-    def tearDownClass(cls):
-        if os.path.exists("~/.mindnlp"):
-            os.removedirs("~/.mindnlp")
