@@ -26,6 +26,7 @@ import mindspore
 from mindspore import ops
 import numpy as np
 
+
 class LogitsProcessor:
     """Abstract base class for all logit processors that can be applied during generation."""
 
@@ -34,6 +35,7 @@ class LogitsProcessor:
         raise NotImplementedError(
             f"{self.__class__} is an abstract class. Only classes inheriting this class can be called."
         )
+
 
 class LogitsWarper:
     """Abstract base class for all logit warpers that can be applied during generation with multinomial sampling."""
@@ -65,6 +67,7 @@ class LogitsProcessorList(list):
             else:
                 scores = processor(input_ids, scores)
         return scores
+
 
 class HammingDiversityLogitsProcessor(LogitsProcessor):
     r"""
@@ -98,11 +101,11 @@ class HammingDiversityLogitsProcessor(LogitsProcessor):
         self._num_sub_beams = num_beams // num_beam_groups
 
     def __call__(
-        self,
-        input_ids: mindspore.Tensor,
-        scores: mindspore.Tensor,
-        current_tokens: mindspore.Tensor,
-        beam_group_idx: int,
+            self,
+            input_ids: mindspore.Tensor,
+            scores: mindspore.Tensor,
+            current_tokens: mindspore.Tensor,
+            beam_group_idx: int,
     ) -> mindspore.Tensor:
         # hamming diversity: penalise using same token in current group which was used in previous groups at
         # the same time step
@@ -118,12 +121,13 @@ class HammingDiversityLogitsProcessor(LogitsProcessor):
         for batch_idx in range(batch_size):
             # predicted tokens of last time step of previous groups
             previous_group_tokens = current_tokens[
-                batch_idx * self._num_beams : batch_idx * self._num_beams + group_start_idx
-            ]
+                                    batch_idx * self._num_beams: batch_idx * self._num_beams + group_start_idx
+                                    ]
             token_frequency = ops.bincount(previous_group_tokens, minlength=vocab_size)
-            scores[batch_idx * group_size : (batch_idx + 1) * group_size] -= self._diversity_penalty * token_frequency
+            scores[batch_idx * group_size: (batch_idx + 1) * group_size] -= self._diversity_penalty * token_frequency
 
         return scores
+
 
 class EncoderRepetitionPenaltyLogitsProcessor(LogitsProcessor):
     r"""
@@ -152,6 +156,7 @@ class EncoderRepetitionPenaltyLogitsProcessor(LogitsProcessor):
         scores.scatter_(1, self.encoder_input_ids, score)
         return scores
 
+
 class RepetitionPenaltyLogitsProcessor(LogitsProcessor):
     r"""
     [`LogitsProcessor`] enforcing an exponential penalty on repeated sequences.
@@ -177,6 +182,7 @@ class RepetitionPenaltyLogitsProcessor(LogitsProcessor):
         scores.scatter_(1, input_ids, score)
         return scores
 
+
 def _get_ngrams(ngram_size: int, prev_input_ids: mindspore.Tensor, num_hypos: int):
     generated_ngrams = [{} for _ in range(num_hypos)]
     for idx in range(num_hypos):
@@ -187,14 +193,16 @@ def _get_ngrams(ngram_size: int, prev_input_ids: mindspore.Tensor, num_hypos: in
             generated_ngram[prev_ngram_tuple] = generated_ngram.get(prev_ngram_tuple, []) + [ngram[-1]]
     return generated_ngrams
 
+
 def _get_generated_ngrams(banned_ngrams, prev_input_ids, ngram_size, cur_len):
     # Before decoding the next token, prevent decoding of ngrams that have already appeared
     start_idx = cur_len + 1 - ngram_size
     ngram_idx = tuple(prev_input_ids[start_idx:cur_len].tolist())
     return banned_ngrams.get(ngram_idx, [])
 
+
 def _calc_banned_ngram_tokens(
-    ngram_size: int, prev_input_ids: mindspore.Tensor, num_hypos: int, cur_len: int
+        ngram_size: int, prev_input_ids: mindspore.Tensor, num_hypos: int, cur_len: int
 ) -> List[Iterable[int]]:
     """Copied from fairseq for no_repeat_ngram in beam_search"""
     if cur_len + 1 < ngram_size:
@@ -208,6 +216,7 @@ def _calc_banned_ngram_tokens(
         for hypo_idx in range(num_hypos)
     ]
     return banned_tokens
+
 
 class NoRepeatNGramLogitsProcessor(LogitsProcessor):
     r"""
@@ -233,6 +242,7 @@ class NoRepeatNGramLogitsProcessor(LogitsProcessor):
             scores[i, banned_tokens] = -float("inf")
 
         return scores
+
 
 class EncoderNoRepeatNGramLogitsProcessor(LogitsProcessor):
     r"""
@@ -274,6 +284,7 @@ class EncoderNoRepeatNGramLogitsProcessor(LogitsProcessor):
 
         return scores
 
+
 class NoBadWordsLogitsProcessor(LogitsProcessor):
     """
     [`LogitsProcessor`] that enforces that specified sequences will never be sampled.
@@ -293,8 +304,8 @@ class NoBadWordsLogitsProcessor(LogitsProcessor):
         if any(not isinstance(bad_word_ids, list) for bad_word_ids in bad_words_ids):
             raise ValueError(f"`bad_words_ids` has to be a list of lists, but is {bad_words_ids}.")
         if any(
-            any((not isinstance(token_id, (int, np.integer)) or token_id < 0) for token_id in bad_word_ids)
-            for bad_word_ids in bad_words_ids
+                any((not isinstance(token_id, (int, np.integer)) or token_id < 0) for token_id in bad_word_ids)
+                for bad_word_ids in bad_words_ids
         ):
             raise ValueError(
                 f"Each list in `bad_words_ids` has to be a list of positive integers, but is {bad_words_ids}."
@@ -343,7 +354,7 @@ class NoBadWordsLogitsProcessor(LogitsProcessor):
         if len(tokens) > len(prev_tokens):
             # if bad word tokens are longer then prev input_ids they can't be equal
             return False
-        return prev_tokens[-len(tokens) :] == tokens
+        return prev_tokens[-len(tokens):] == tokens
 
     def _calc_banned_bad_words_ids(self, prev_input_ids: List[List[int]]) -> Iterable[int]:
         banned_tokens = []
@@ -358,7 +369,7 @@ class NoBadWordsLogitsProcessor(LogitsProcessor):
         return banned_tokens
 
     def _set_scores_to_inf_for_banned_tokens(
-        self, scores: mindspore.Tensor, banned_tokens: List[List[int]]
+            self, scores: mindspore.Tensor, banned_tokens: List[List[int]]
     ) -> mindspore.Tensor:
         """
         Modifies the scores in place by setting the banned token positions to `-inf`. Banned token is expected to be a
@@ -392,7 +403,7 @@ class NoBadWordsLogitsProcessor(LogitsProcessor):
 
             banned_mask = (
                 mindspore.COOTensor(banned_mask,
-                indices, scores.shape)
+                                    indices, scores.shape)
                 .to_dense()
                 .bool()
             )
@@ -404,6 +415,7 @@ class NoBadWordsLogitsProcessor(LogitsProcessor):
 
         scores = scores.masked_fill(banned_mask, -float("inf"))
         return scores
+
 
 class MinLengthLogitsProcessor(LogitsProcessor):
     r"""
@@ -434,6 +446,7 @@ class MinLengthLogitsProcessor(LogitsProcessor):
             for i in self.eos_token_id:
                 scores[:, i] = -float("inf")
         return scores
+
 
 class MinNewTokensLengthLogitsProcessor(LogitsProcessor):
     r"""
@@ -468,6 +481,7 @@ class MinNewTokensLengthLogitsProcessor(LogitsProcessor):
 
         return scores
 
+
 class PrefixConstrainedLogitsProcessor(LogitsProcessor):
     r"""
     [`LogitsProcessor`] that enforces constrained generation and is useful for prefix-conditioned constrained
@@ -493,6 +507,7 @@ class PrefixConstrainedLogitsProcessor(LogitsProcessor):
 
         return scores + mask
 
+
 class ForcedBOSTokenLogitsProcessor(LogitsProcessor):
     r"""
     [`LogitsProcessor`] that enforces the specified token as the first generated token.
@@ -512,6 +527,7 @@ class ForcedBOSTokenLogitsProcessor(LogitsProcessor):
             scores[:, [i for i in range(num_tokens) if i != self.bos_token_id]] = -float("inf")
             scores[:, self.bos_token_id] = 0
         return scores
+
 
 class ForcedEOSTokenLogitsProcessor(LogitsProcessor):
     r"""
@@ -540,6 +556,7 @@ class ForcedEOSTokenLogitsProcessor(LogitsProcessor):
                 scores[:, i] = 0
         return scores
 
+
 class InfNanRemoveLogitsProcessor(LogitsProcessor):
     r"""
     [`LogitsProcessor`] that removes all `nan` and `inf` values to avoid the generation method to fail. Note that using
@@ -554,6 +571,7 @@ class InfNanRemoveLogitsProcessor(LogitsProcessor):
         # set all inf values to max possible value
         scores[scores == float("inf")] = float(np.finfo(mindspore.dtype_to_nptype(scores.dtype)).max)
         return scores
+
 
 class ExponentialDecayLengthPenalty(LogitsProcessor):
     r"""
@@ -571,7 +589,8 @@ class ExponentialDecayLengthPenalty(LogitsProcessor):
     """
 
     def __init__(
-        self, exponential_decay_length_penalty: Tuple, eos_token_id: Union[int, List[int]], input_ids_seq_length: int
+            self, exponential_decay_length_penalty: Tuple, eos_token_id: Union[int, List[int]],
+            input_ids_seq_length: int
     ):
         self.regulation_start = exponential_decay_length_penalty[0] + input_ids_seq_length
         self.regulation_factor = exponential_decay_length_penalty[1]
@@ -586,6 +605,7 @@ class ExponentialDecayLengthPenalty(LogitsProcessor):
                 scores[:, i] = scores[:, i] * pow(self.regulation_factor, cur_len - self.regulation_start)
         return scores
 
+
 class SuppressTokensLogitsProcessor(LogitsProcessor):
     r"""This processor can be used to suppress a list of tokens. The processor will set their log probs to `-inf` so that they
     are not sampled."""
@@ -596,6 +616,7 @@ class SuppressTokensLogitsProcessor(LogitsProcessor):
     def __call__(self, input_ids, scores):
         scores[:, self.suppress_tokens] = -float("inf")
         return scores
+
 
 class SuppressTokensAtBeginLogitsProcessor(LogitsProcessor):
     r"""
@@ -614,6 +635,7 @@ class SuppressTokensAtBeginLogitsProcessor(LogitsProcessor):
 
         return scores
 
+
 class ForceTokensLogitsProcessor(LogitsProcessor):
     r"""This processor takes a list of pairs of integers which indicates a mapping from generation indices to token
     indices that will be forced before sampling. The processor will set their log probs to `inf` so that they are
@@ -630,6 +652,7 @@ class ForceTokensLogitsProcessor(LogitsProcessor):
             scores[:, current_token] = 0
         return scores
 
+
 class LogitNormalization(LogitsProcessor, LogitsWarper):
     r"""
     [`LogitsWarper`] and [`LogitsProcessor`] for normalizing the scores using log-softmax. It's important to normalize
@@ -640,4 +663,91 @@ class LogitNormalization(LogitsProcessor, LogitsWarper):
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         scores = ops.log_softmax(scores, axis=-1)
+        return scores
+
+
+class TemperatureLogitsWarper(LogitsWarper):
+    r"""
+    [`TemperatureLogitsWarper`] for temperature (exponential scaling output probability distribution).
+    Args:
+        temperature (:obj:`float`):
+            The value used to module the logits distribution.
+    """
+
+    def __init__(self, temperature: float):
+        if not isinstance(temperature, float) or not temperature > 0:
+            raise ValueError(f"`temperature` has to be a strictly positive float, but is {temperature}")
+
+        self.temperature = temperature
+
+    def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        scores = scores / self.temperature
+        return scores
+
+
+class TopPLogitsWarper(LogitsWarper):
+    """
+        [`LogitsWarper`] that performs top-p, i.e. restricting to top tokens summing to prob_cut_off <= prob_cut_off.
+
+        Args:
+            top_p (`float`):
+                If set to < 1, only the smallest set of most probable tokens with probabilities that add up to `top_p` or
+                higher are kept for generation.
+            filter_value (`float`, *optional*, defaults to `-float("Inf")`):
+                All filtered values will be set to this float value.
+            min_tokens_to_keep (`int`, *optional*, defaults to 1):
+                Minimum number of tokens that cannot be filtered.
+    """
+
+    def __init__(self, top_p: float, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
+        top_p = float(top_p)
+        if top_p < 0 or top_p > 1.0:
+            raise ValueError(f"`top_p` has to be a float > 0 and < 1, but is {top_p}")
+        if not isinstance(min_tokens_to_keep, int) or min_tokens_to_keep < 1:
+            raise ValueError(f"`min_tokens_to_keep` has to be a positive integer, but is {min_tokens_to_keep}")
+
+        self.top_p = top_p
+        self.filter_value = filter_value
+        self.min_tokens_to_keep = min_tokens_to_keep
+
+    def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        sorted_logits, sorted_indices = ops.sort(scores, descending=False)
+        cumulative_probs = ops.softmax(sorted_logits, axis=-1).cumsum(axis=-1)
+
+        # Remove tokens with cumulative top_p above the threshold (token with 0 are kept)
+        sorted_indices_to_remove = cumulative_probs <= (1 - self.top_p)
+        # Keep at least min_tokens_to_keep
+        sorted_indices_to_remove[..., -self.min_tokens_to_keep:] = 0
+
+        # scatter sorted tensors to original indexing
+        indices_to_remove = sorted_indices_to_remove.scatter(1, sorted_indices, sorted_indices_to_remove)
+        scores = scores.masked_fill(indices_to_remove, self.filter_value)
+        return scores
+
+
+class TopKLogitsWarper(LogitsWarper):
+    r"""
+    [`LogitsWarper`] that performs top-k, i.e. restricting to the k highest probability elements.
+
+    Args:
+        top_k (`int`):
+            The number of highest probability vocabulary tokens to keep for top-k-filtering.
+        filter_value (`float`, *optional*, defaults to `-float("Inf")`):
+            All filtered values will be set to this float value.
+        min_tokens_to_keep (`int`, *optional*, defaults to 1):
+            Minimum number of tokens that cannot be filtered.
+    """
+
+    def __init__(self, top_k: int, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
+        if not isinstance(top_k, int) or top_k <= 0:
+            raise ValueError(f"`top_k` has to be a strictly positive integer, but is {top_k}")
+
+        self.top_k = max(top_k, min_tokens_to_keep)
+        self.filter_value = filter_value
+
+    def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        top_k = min(self.top_k, scores.size(-1))  # Safety check
+        # Remove all tokens with a probability less than the last token of the top-k
+        indices_to_remove = scores < mindspore.Tensor.topk(scores, top_k)[0][..., -1, None]
+        scores = scores.masked_fill(indices_to_remove, self.filter_value)
         return scores

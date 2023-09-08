@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,15 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""
-Directly load huggingface datasets
-"""
+"""Test Bert functions"""
+import pytest
 
-from .hf_imdb import HF_IMDB, HF_IMDB_Process
-from .hf_glue import HF_GLUE, HF_GLUE_Process
-from .hf_msra_ner import HF_Msra_ner, HF_Msra_ner_Process
-from .hf_ptb_text_only import HF_Ptb_text_only, HF_Ptb_text_only_Process
-from .hf_cmrc2018 import HF_CMRC2018, HF_CMRC2018_Process
-from .hf_duconv import hf_duconv, hf_duconv_process
-from .hf_squad2 import HF_SQuAD2, HF_SQuAD2_Process
-from .mt_eng_vietnamese import hf_mt_eng_vietnamese
+from mindnlp.models import RobertaForMaskedLM
+
+@pytest.mark.download
+def test_resize_embed():
+    """test from pretrained"""
+    model = RobertaForMaskedLM.from_pretrained('roberta-base')
+    assert model.roberta.embeddings.word_embeddings.vocab_size == model.config.vocab_size
+    num_tokens = model.config.vocab_size
+    model.resize_token_embeddings(num_tokens + 1)
+    assert model.roberta.embeddings.word_embeddings.vocab_size == num_tokens + 1

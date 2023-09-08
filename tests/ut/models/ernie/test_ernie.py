@@ -13,9 +13,6 @@
 # limitations under the License.
 # ============================================================================
 """Test Ernie"""
-import gc
-import os
-import unittest
 import pytest
 import numpy as np
 import mindspore
@@ -35,9 +32,11 @@ from mindnlp.models.ernie.ernie import (
     ErnieForPretraining,
     ErniePretrainingHeads
 )
+import mindnlp
 
+from ..model_test import ModelTest
 
-class TestModelingErnie(unittest.TestCase):
+class TestModelingErnie(ModelTest):
     r"""
     Test Ernie
     """
@@ -46,6 +45,7 @@ class TestModelingErnie(unittest.TestCase):
         """
         Set up.
         """
+        super().setUp()
         self.config = UIEConfig(
             vocab_size=1000,
             num_hidden_layers=2,
@@ -66,6 +66,9 @@ class TestModelingErnie(unittest.TestCase):
         """
 
         model = UIE(self.config)
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
         input_ids = Tensor(np.random.randint(0, 100, (1, 20)), dtype=mindspore.int32)
         outputs = model(input_ids=input_ids)
         assert outputs[0].shape == (1, 20)
@@ -76,6 +79,10 @@ class TestModelingErnie(unittest.TestCase):
         Test ErnieForSequenceClassification
         """
         model = ErnieForSequenceClassification(self.config)
+
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
         input_ids = Tensor(np.random.randint(
             0, 100, (1, 20)), dtype=mindspore.int32)
         outputs = model(input_ids=input_ids)
@@ -86,6 +93,10 @@ class TestModelingErnie(unittest.TestCase):
         Test ErnieForSequenceClassification
         """
         model = ErnieForQuestionAnswering(self.config)
+
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
         input_ids = Tensor(np.random.randint(
             0, 100, (1, 20)), dtype=mindspore.int32)
         outputs = model(input_ids=input_ids)
@@ -97,6 +108,10 @@ class TestModelingErnie(unittest.TestCase):
         Test ErnieForSequenceClassification
         """
         model = ErnieForTokenClassification(self.config)
+
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
         input_ids = Tensor(np.random.randint(
             0, 100, (1, 20)), dtype=mindspore.int32)
         outputs = model(input_ids=input_ids)
@@ -107,6 +122,10 @@ class TestModelingErnie(unittest.TestCase):
         Test LMPredictionHead
         """
         model = ErnieLMPredictionHead(self.config)
+
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
         input_ids = Tensor(np.random.randint(
             0, 100, (128, 128)), dtype=mindspore.float32)
         outputs = model(input_ids)
@@ -118,6 +137,10 @@ class TestModelingErnie(unittest.TestCase):
         """
 
         model = ErniePretrainingHeads(self.config)
+
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
         input_ids = Tensor(np.random.randint(
             0, 100, (128, 128)), dtype=mindspore.float32)
         outputs = model(input_ids,input_ids)
@@ -130,6 +153,10 @@ class TestModelingErnie(unittest.TestCase):
         """
 
         model = ErnieOnlyMLMHead(self.config)
+
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
         input_ids = Tensor(np.random.randint(
             0, 100, (128,128)), dtype=mindspore.float32)
         outputs = model(input_ids)
@@ -140,6 +167,10 @@ class TestModelingErnie(unittest.TestCase):
         Test ErnieForMaskedLM
         """
         model = ErnieForMaskedLM(self.config)
+
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
         input_np = Tensor(np.random.randint(0,100, (1,200)),dtype=mindspore.int32)
         outputs = model(input_np)
         assert outputs.shape == (1,200,1000)
@@ -149,6 +180,10 @@ class TestModelingErnie(unittest.TestCase):
         Test ErnieForMultipleChoice
         """
         model = ErnieForMultipleChoice(self.config)
+
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
         input_np = Tensor(np.random.randint(0,100, (10,10,20)),dtype=mindspore.int32)
         outputs = model(input_np)
         assert outputs.shape == (50,2)
@@ -158,6 +193,10 @@ class TestModelingErnie(unittest.TestCase):
         Test ErnieForPretraining
         """
         model = ErnieForPretraining(self.config)
+
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
         input_ids = Tensor(np.random.randint(
             0, 100, (1,128)), dtype=mindspore.int32)
         outputs = model(input_ids,input_ids)
@@ -168,11 +207,3 @@ class TestModelingErnie(unittest.TestCase):
     def test_from_pretrained(self):
         """test from pretrained"""
         _ = UIE.from_pretrained("uie-base")
-
-    def tearDown(self) -> None:
-        gc.collect()
-
-    @classmethod
-    def tearDownClass(cls):
-        if os.path.exists("~/.mindnlp"):
-            os.removedirs("~/.mindnlp")

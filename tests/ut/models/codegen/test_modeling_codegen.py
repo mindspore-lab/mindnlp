@@ -13,18 +13,15 @@
 # limitations under the License.
 # ============================================================================
 """Test CodeGen"""
-import gc
-import os
-import unittest
-
 import mindspore
 import numpy as np
 from mindspore import Tensor
 
+import mindnlp
 from mindnlp.models.codegen import codegen_config, codegen
+from ..model_test import ModelTest
 
-
-class TestModelingCodeGen(unittest.TestCase):
+class TestModelingCodeGen(ModelTest):
     r"""
     Test CodeGen
     """
@@ -33,6 +30,7 @@ class TestModelingCodeGen(unittest.TestCase):
         """
         Set up.
         """
+        super().setUp()
         self.config = codegen_config.CodeGenConfig(vocab_size=1000,
                                                    hidden_size=128,
                                                    n_layer=2,
@@ -44,6 +42,8 @@ class TestModelingCodeGen(unittest.TestCase):
         Test CodeGen Attention
         """
         model = codegen.CodeGenAttention(self.config)
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
 
         hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.float32)
 
@@ -56,6 +56,8 @@ class TestModelingCodeGen(unittest.TestCase):
         """
         intermediate_size = 100
         model = codegen.CodeGenMLP(intermediate_size, self.config)
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
 
         hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.float32)
 
@@ -67,6 +69,8 @@ class TestModelingCodeGen(unittest.TestCase):
             Test CodeGen BLOCK
         """
         model = codegen.CodeGenBlock(self.config)
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
 
         hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.float32)
 
@@ -78,6 +82,8 @@ class TestModelingCodeGen(unittest.TestCase):
             Test CodeGen MODEL
         """
         model = codegen.CodeGenModel(self.config)
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
 
         input_ids = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.int32)
 
@@ -89,17 +95,10 @@ class TestModelingCodeGen(unittest.TestCase):
             Test CodeGen FORCAUSALLM
         """
         model = codegen.CodeGenForCausalLM(self.config)
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
 
         input_ids = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.int32)
 
         input_ids = model(input_ids)
         assert input_ids[0].shape == (2, 2, 512, 1000)
-
-
-    def tearDown(self) -> None:
-        gc.collect()
-
-    @classmethod
-    def tearDownClass(cls):
-        if os.path.exists("~/.mindnlp"):
-            os.removedirs("~/.mindnlp")
