@@ -50,6 +50,7 @@ from .utils import (
     # load_peft_weights,
     # set_peft_model_state_dict,
     shift_tokens_right,
+    _get_batch_size,
 )
 
 
@@ -76,7 +77,6 @@ class PeftModel(nn.Cell):
         # self.base_model_torch_dtype = getattr(model, "dtype", None)
         if not peft_config.is_prompt_learning:
             self.peft_config[adapter_name] = peft_config
-            # base_model -> peft model (e.g. LoraModel)
             self.base_model = PEFT_TYPE_TO_MODEL_MAPPING[peft_config.peft_type](
                 self.base_model, self.peft_config, adapter_name
             )
@@ -283,7 +283,7 @@ class PeftModelForSequenceClassification(PeftModel):
         else:
             self.modules_to_save.update({"classifier", "score"})
 
-        for name, _ in self.base_model.named_children():
+        for name, _ in self.base_model.cells_and_names():
             if any(module_name in name for module_name in self.modules_to_save):
                 self.cls_layer_name = name
                 break
@@ -316,7 +316,7 @@ class PeftModelForSequenceClassification(PeftModel):
                 **kwargs,
             )
 
-        batch_size = input_ids.shape[0]
+        batch_size = _get_batch_size(input_ids, inputs_embeds)
         if attention_mask is not None:
             # concat prompt attention mask
             prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens)
@@ -708,7 +708,7 @@ class PeftModelForTokenClassification(PeftModel):
         else:
             self.modules_to_save.update({"classifier", "score"})
 
-        for name, _ in self.base_model.named_children():
+        for name, _ in self.base_model.cells_and_names():
             if any(module_name in name for module_name in self.modules_to_save):
                 self.cls_layer_name = name
                 break
@@ -812,7 +812,7 @@ class PeftModelForTokenClassification(PeftModel):
                 raise ValueError("Model does not support past key values which are required for prefix tuning.")
             outputs = transformer_backbone_name(**kwargs)
             sequence_output = outputs[0]
-            if "dropout" in [name for name, _ in list(self.base_model.named_children())]:
+            if "dropout" in [name for name, _ in list(self.base_model.cells_and_names())]:
                 sequence_output = self.base_model.dropout(sequence_output)
             logits = self.base_model.get_submodule(self.cls_layer_name)(sequence_output)
 

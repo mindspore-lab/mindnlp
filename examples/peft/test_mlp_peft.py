@@ -23,7 +23,7 @@ y = (X.sum(1) > 10).astype(np.int32)
 n_train = 800
 batch_size = 64
 max_epochs = 50
-lr = 2e-4
+lr = 0.002
 
 class RandomAccessDataset:
     def __init__(self, X, y):
@@ -65,18 +65,6 @@ class MLP(nn.Cell):
     def construct(self, X):
         # SequentialCell have bugs: construct not dynamic
         X = self.layers(X)
-
-        # X = self.layers[0](X)
-
-        # X = self.layers[1](X)
-
-        # X = self.layers[2](X)
-
-        # X = self.layers[3](X)
-
-        # X = self.layers[4](X)
-
-        # X = self.layers[5](X)
 
         return X
 
@@ -137,29 +125,31 @@ def train(model, optimizer, criterion, train_dataloader, eval_dataloader, epochs
 
 config = peft.LoraConfig(
     r=8,
-    target_modules=["layers.0", "layers.2", ],
+    target_modules=["layers.0", "layers.2"],
     modules_to_save=["layers.4"],
 )
+import copy
+model = MLP(2000)
+module_copy = copy.deepcopy(model) 
+peft_model = peft.get_peft_model(model, peft_config=config)
 
-mlp = MLP(2000)
-peft_mlp = peft.get_peft_model(mlp, peft_config=config)
+print_net_params(peft_model)
+print(peft_model)
 
-print_net_params(peft_mlp)
-print(peft_mlp)
-
-optimizer = nn.Adam(peft_mlp.trainable_params(), learning_rate=lr)
+optimizer = nn.Adam(peft_model.trainable_params(), learning_rate=lr)
 criterion = nn.CrossEntropyLoss()
 
-train(peft_mlp, optimizer, criterion, train_dataloader, eval_dataloader, epochs=max_epochs)
+train(peft_model, optimizer, criterion, train_dataloader, eval_dataloader, epochs=max_epochs)
 
-
-# for name, param in peft_mlp.base_model.named_parameters():
-#     if "lora" in name:
-#         continue
-
-#     name_before = name.partition(".")[-1].replace("original_", "").replace("module.", "").replace("modules_to_save.default.", "")
-#     param_before = params_before[name_before]
-#     if torch.allclose(param, param_before):
-#         print(f"Parameter {name_before:<13} | {param.numel():>7} parameters | not updated")
-#     else:
-#         print(f"Parameter {name_before:<13} | {param.numel():>7} parameters | updated")
+params_before = dict(module_copy.parameters_and_names())
+print(params_before.keys())
+for name, param in peft_model.base_model.parameters_and_names():
+    if "lora" in name:
+        continue
+    name_before = name.partition(".")[-1].replace("original_", "").replace("module.", "").replace("modules_to_save.default.", "")
+    param_before = params_before[name_before]
+    
+    if np.allclose(param.asnumpy(), param_before.asnumpy()):
+        print(f"Parameter {name_before:<13} | {param.numel():>7} parameters | not updated")
+    else:
+        print(f"Parameter {name_before:<13} | {param.numel():>7} parameters | updated")

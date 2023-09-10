@@ -221,7 +221,6 @@ class BaseTuner(nn.Cell):
         is_target_modules_in_base_model = False
         key_list = [key for key, _ in model.cells_and_names()]  # named_modules
 
-        # TODO: check .config existed or not in mindnlp models (may diff from transformers)
         model_config = getattr(model, "config", {"model_type": "custom"})
         if hasattr(model_config, "to_dict"):
             model_config = model_config.to_dict()

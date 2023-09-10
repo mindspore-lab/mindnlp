@@ -85,7 +85,7 @@ y = (X.sum(1) > 10).astype(np.int32)
 n_train = 800
 batch_size = 64
 max_epochs = 50
-lr = 2e-4
+lr = 2e-3
 
 train_ds = ds.GeneratorDataset(
     source=MyIterable(X[:n_train], y[:n_train]),
@@ -124,7 +124,6 @@ def train(model, optimizer, criterion, train_dataloader, eval_dataloader, epochs
             # update model params
             optimizer(grad)
             total_loss += loss
-        print(total_loss)
         return total_loss / len(train_dataloader)
     
     def eval_one_epoch():
@@ -147,40 +146,3 @@ def train(model, optimizer, criterion, train_dataloader, eval_dataloader, epochs
     
 # train(mlp, optimizer, criterion, train_dataloader, eval_dataloader, epochs=max_epochs)
 train(mlp, optimizer, criterion, train_dataloader, eval_dataloader, epochs=max_epochs)
-# %time train(mlp, optimizer, criterion, train_dataloader, eval_dataloader, epochs=max_epochs)
-
-
-# # check
-# # trainable_params = mlp.trainable_params()
-
-# import mindnlp.peft as peft
-
-
-# # target_modules are modules to add PEFT params
-# # modules_to_save are original modules, not freezed.
-# config = peft.LoraConfig(
-#     r=8,
-#     target_modules=["layers.0", "layers.2"],
-#     modules_to_save=["layers.4"],
-# )
-
-# mlp = MLP()
-# peft_mlp = peft.get_peft_model(mlp, peft_config=config)
-
-# # print(peft_mlp)
-
-
-# optimizer = nn.Adam(peft_mlp.trainable_params(), learning_rate=lr)
-# criterion = nn.CrossEntropyLoss()
-# peft_mlp.print_trainable_parameters()
-
-# # print(peft_mlp.base_model.model)
-# # print(peft_mlp)
-# # print_net_params(peft_mlp.base_model.model)
-# # print_net_params(peft_mlp)
-# # optimizer = torch.optim.Adam(peft_mlp.parameters(), lr=lr)
-
-
-# train(peft_mlp, optimizer, criterion, train_dataloader, eval_dataloader, epochs=max_epochs)
-
-
