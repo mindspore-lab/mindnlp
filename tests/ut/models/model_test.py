@@ -12,30 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Parameter effcient fine tuning modules, like huggingface peft."""
-from .mapping import (
-    MODEL_TYPE_TO_PEFT_MODEL_MAPPING,
-    PEFT_TYPE_TO_CONFIG_MAPPING,
-    get_peft_config,
-    get_peft_model
-)
+"""ModelTest test case"""
+import gc
+import unittest
 
-from .peft_model import (
-    PeftModel,
-    PeftModelForCausalLM,
-    # PeftModelForFeatureExtraction,
-    # PeftModelForQuestionAnswering,
-    PeftModelForSeq2SeqLM,
-    PeftModelForSequenceClassification,
-    PeftModelForTokenClassification,
-)
+import mindspore
+from mindnlp import ms_jit
 
-from .tuners import (
-    LoraConfig,
-    LoraModel,
-)
+class ModelTest(unittest.TestCase):
+    r"""
+    Test model bert
+    """
+    def setUp(self):
+        """setup"""
+        self.use_amp = mindspore.get_context('device_target') == 'Ascend'
 
-from .config import (
-    PeftConfig,
-    PromptLearningConfig,
-)
+    def tearDown(self) -> None:
+        """tear down"""
+        gc.collect()
+
+    def modeling(self, model, inputs, jit):
+        """modeling"""
+        def forward(input_ids):
+            outputs, pooled = model(input_ids)
+            return outputs, pooled
+
+        if jit:
+            forward = ms_jit(forward)
+        outputs = forward(inputs)
+
+        return outputs

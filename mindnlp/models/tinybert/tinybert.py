@@ -13,18 +13,65 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=C0103
+# pylint: disable=C0415
+
 """
 TinyBert Models
 """
 import math
 import os
+import logging
 from typing import Union
 import mindspore
-from mindspore import nn, ops
+from mindspore import nn, ops, Tensor
 from mindnlp.abc import PreTrainedModel
-from .tinybert_config import BertConfig
+from mindnlp.configs import MINDNLP_MODEL_URL_BASE
+from .tinybert_config import TinyBertConfig, TINYBERT_SUPPORT_LIST
 from ..activations import ACT2FN
 
+PRETRAINED_MODEL_ARCHIVE_MAP = {
+    model: MINDNLP_MODEL_URL_BASE.format('tinybert', model) for model in TINYBERT_SUPPORT_LIST
+}
+
+
+def torch_to_mindspore(pth_file, **kwargs):
+    """convert torch checkpoint to mindspore"""
+    _ = kwargs.get('prefix', '')
+
+    try:
+        import torch
+    except Exception as exc:
+        raise ImportError("'import torch' failed, please install torch by "
+                          "`pip install torch` or instructions from 'https://pytorch.org'") \
+                          from exc
+
+    from mindspore.train.serialization import save_checkpoint
+
+    logging.info('Starting checkpoint conversion.')
+    ms_ckpt = []
+    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
+
+    for key, value in state_dict.items():
+        if 'LayerNorm' in key:
+            if '.weight' in key:
+                key = key.replace('.weight', '.gamma')
+            if '.bias' in key:
+                key = key.replace('.bias', '.beta')
+        if 'embeddings' in key:
+            key = key.replace('weight', 'embedding_table')
+        if 'self' in key:
+            key = key.replace('self', 'self_')
+        ms_ckpt.append({'name': key, 'data': Tensor(value.numpy())})
+
+    ms_ckpt_path = pth_file.replace('pytorch_model.bin', 'mindspore.ckpt')
+    if not os.path.exists(ms_ckpt_path):
+        try:
+            save_checkpoint(ms_ckpt, ms_ckpt_path)
+        except Exception as exc:
+            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, '
+                               f'please checkout the path.') from exc
+
+    return ms_ckpt_path
 
 class TinyBertEmbeddings(nn.Cell):
     """
@@ -200,7 +247,7 @@ class TinyBertOutput(nn.Cell):
         else:
             self.dense = nn.Dense(intermediate_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=1e-12)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
@@ -370,10 +417,14 @@ class TinyBertPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization.
     """
+    config_class = TinyBertConfig
+    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+    base_model_prefix = 'bert'
+    convert_torch_to_mindspore = torch_to_mindspore
 
     def __init__(self, config):
         super().__init__(config)
-        if not isinstance(config, BertConfig):
+        if not isinstance(config, TinyBertConfig):
             raise ValueError(
                 f"Parameter config in `{self.__class__.__name__}(config)` should be an instance of " +
                 "class `BertConfig`. To create a model from a Google pretrained model use " +
@@ -681,7 +732,3 @@ class TinyBertForSequenceClassification(TinyBertPreTrainedModel):
                 tmp.append(self.fit_dense(sequence_layer))
             sequence_output = tmp
         return logits, att_output, sequence_output
-
-
-if __name__ == "__main__":
-    pass

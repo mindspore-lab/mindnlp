@@ -87,11 +87,12 @@ class TestHFCMMLU(unittest.TestCase):
         assert dev.get_dataset_size() == num_lines['dev']
     
     @pytest.mark.local
+    @pytest.mark.download
     def test_cmmlu_agronomy(self):
         """Test load cmmlu:agronomy"""
         test, dev = CMMLU(
             name = "agronomy",
-            root = "/home/cjl/code/chat/collections/datasets/CMMLU/data",
+            root = self.root,
             split = ("test", "dev"),
         )
 

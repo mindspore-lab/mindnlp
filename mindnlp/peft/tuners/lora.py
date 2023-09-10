@@ -787,6 +787,7 @@ class Linear(nn.Dense, LoraLayer):
         return result
     
 
+
 class Embedding(nn.Embedding, LoraLayer):
     """LoRA implemented in a Embedding layer"""
     def __init__(

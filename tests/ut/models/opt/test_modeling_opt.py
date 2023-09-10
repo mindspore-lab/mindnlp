@@ -82,7 +82,7 @@ class OPTModelIntegrationTests(unittest.TestCase):
         Test inference
         """
         model = OPTModel.from_pretrained(
-            "facebook/opt-350m", from_pt=True, return_dict=True
+            "opt-350m", from_pt=False, return_dict=True
         )
         input_ids = Tensor(
             [[0, 31414, 232, 328, 740, 1140, 12695, 69, 46078, 1588, 2]],
@@ -116,21 +116,21 @@ class OPTEmbeddingsTest(unittest.TestCase):
         Set up.
         """
         super().setUp()
-        self.path_model = "facebook/opt-350m"
+        self.path_model = "opt-350m"
 
     @pytest.mark.download
     def test_load_model(self):
         r"""
         Test load model
         """
-        _ = OPTForCausalLM.from_pretrained(self.path_model, from_pt=True)
+        _ = OPTForCausalLM.from_pretrained(self.path_model, from_pt=False)
 
     @pytest.mark.download
     def test_logits(self):
         r"""
         Test logits
         """
-        model = OPTForCausalLM.from_pretrained(self.path_model, from_pt=True)
+        model = OPTForCausalLM.from_pretrained(self.path_model, from_pt=False)
         model = model.set_train(False)
         tokenizer = OPTTokenizer.from_pretrained(self.path_model)
 
@@ -221,7 +221,7 @@ class OPTGenerationTest(unittest.TestCase):
         r"""
         Test Generation
         """
-        model_id = "facebook/opt-350m"
+        model_id = "opt-350m"
 
         EXPECTED_OUTPUTS = [
             "Today is a beautiful day and I want to",
@@ -251,7 +251,7 @@ class OPTGenerationTest(unittest.TestCase):
         r"""
         Test batch generation
         """
-        model_id = "facebook/opt-350m"
+        model_id = "opt-350m"
 
         tokenizer = OPTTokenizer.from_pretrained(model_id)
         model = OPTForCausalLM.from_pretrained(model_id)
@@ -301,7 +301,7 @@ class OPTGenerationTest(unittest.TestCase):
         r"""
         Test generation
         """
-        model_id = "facebook/opt-350m"
+        model_id = "opt-350m"
 
         EXPECTED_OUTPUTS = [
             "Today is a beautiful day and I want to",

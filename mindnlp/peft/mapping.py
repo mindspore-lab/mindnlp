@@ -82,6 +82,7 @@ def get_peft_model(model: nn.Cell, peft_config: PeftConfig, adapter_name: str = 
     model_config = getattr(model, "config", {"model_type": "custom"})
     if hasattr(model_config, "to_dict"):
         model_config = model_config.to_dict()
+
     peft_config.base_model_name_or_path = model.__dict__.get("name_or_path", None)
 
     # no specific task_type and is not prompt_learning

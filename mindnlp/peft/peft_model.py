@@ -77,6 +77,7 @@ class PeftModel(nn.Cell):
         # self.base_model_torch_dtype = getattr(model, "dtype", None)
         if not peft_config.is_prompt_learning:
             self.peft_config[adapter_name] = peft_config
+            # base_model -> peft model (e.g. LoraModel)
             self.base_model = PEFT_TYPE_TO_MODEL_MAPPING[peft_config.peft_type](
                 self.base_model, self.peft_config, adapter_name
             )

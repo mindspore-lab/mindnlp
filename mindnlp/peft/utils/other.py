@@ -24,6 +24,7 @@ from mindspore.common.initializer import initializer, Normal
 from mindnlp.abc import PreTrainedModel
 from mindnlp._legacy.nn import Matmul
 
+
 from .CellDict import CellDict
 
 def _get_batch_size(input_ids: Optional[Tensor], inputs_embeds: Optional[Tensor]) -> int:

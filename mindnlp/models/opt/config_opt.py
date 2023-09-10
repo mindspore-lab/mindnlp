@@ -15,16 +15,15 @@
 """ OPT model configuration"""
 
 from mindnlp.abc import PreTrainedConfig
-from mindnlp.configs import HF_CONFIG_URL_BASE
+from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
 
 
 __all__ = ['OPTConfig']
 
-OPT_SUPPORT_LIST = ["facebook/opt-350m"]
+OPT_SUPPORT_LIST = ["opt-350m"]
 
-CONFIG_ARCHIVE_MAP = { # TODO: 替换链接
-    # model: MINDNLP_CONFIG_URL_BASE.format('facebook', model) for model in OPT_SUPPORT_LIST
-    model: HF_CONFIG_URL_BASE.format(model) for model in OPT_SUPPORT_LIST
+CONFIG_ARCHIVE_MAP = {
+    model: MINDNLP_CONFIG_URL_BASE.format('opt', model) for model in OPT_SUPPORT_LIST
 }
 
 

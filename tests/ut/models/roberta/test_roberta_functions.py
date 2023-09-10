@@ -12,30 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Parameter effcient fine tuning modules, like huggingface peft."""
-from .mapping import (
-    MODEL_TYPE_TO_PEFT_MODEL_MAPPING,
-    PEFT_TYPE_TO_CONFIG_MAPPING,
-    get_peft_config,
-    get_peft_model
-)
+"""Test Bert functions"""
+import pytest
 
-from .peft_model import (
-    PeftModel,
-    PeftModelForCausalLM,
-    # PeftModelForFeatureExtraction,
-    # PeftModelForQuestionAnswering,
-    PeftModelForSeq2SeqLM,
-    PeftModelForSequenceClassification,
-    PeftModelForTokenClassification,
-)
+from mindnlp.models import RobertaForMaskedLM
 
-from .tuners import (
-    LoraConfig,
-    LoraModel,
-)
-
-from .config import (
-    PeftConfig,
-    PromptLearningConfig,
-)
+@pytest.mark.download
+def test_resize_embed():
+    """test from pretrained"""
+    model = RobertaForMaskedLM.from_pretrained('roberta-base')
+    assert model.roberta.embeddings.word_embeddings.vocab_size == model.config.vocab_size
+    num_tokens = model.config.vocab_size
+    model.resize_token_embeddings(num_tokens + 1)
+    assert model.roberta.embeddings.word_embeddings.vocab_size == num_tokens + 1

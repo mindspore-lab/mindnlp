@@ -13,12 +13,11 @@
 # limitations under the License.
 # ============================================================================
 """Test CLIP"""
-import gc
-import os
-import unittest
 import numpy as np
 import mindspore
 from mindspore import Tensor
+
+import mindnlp
 from mindnlp.models.clip import CLIPTextConfig, CLIPVisionConfig, CLIPConfig
 from mindnlp.models.clip import (CLIPVisionEmbeddings,
                            CLIPTextEmbeddings,
@@ -34,9 +33,9 @@ from mindnlp.models.clip import (CLIPVisionEmbeddings,
                            CLIPTextModelWithProjection,
                            CLIPVisionModelWithProjection,
                            )
+from ..model_test import ModelTest
 
-
-class TestModelingCLIP(unittest.TestCase):
+class TestModelingCLIP(ModelTest):
     """
     Test for clip model
     """
@@ -44,6 +43,7 @@ class TestModelingCLIP(unittest.TestCase):
         """
         Set up.
         """
+        super().setUp()
         self.text_config = CLIPTextConfig(vocab_size=1000,
                                           hidden_size=128,
                                           intermediate_size=256,
@@ -120,6 +120,10 @@ class TestModelingCLIP(unittest.TestCase):
         attention_mask = Tensor(np.random.randint(0, 2, (2, 3)), mindspore.int32)
 
         model = CLIPTextTransformer(self.text_config)
+
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
         outputs = model(
             input_ids=input_ids,
             position_ids=position_ids,
@@ -147,6 +151,10 @@ class TestModelingCLIP(unittest.TestCase):
         Test CLIP Text Model
         """
         model = CLIPTextModel(self.text_config)
+
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
         input_ids = Tensor(np.random.randint(low=0, high=10000, size=(1, 77)), mindspore.int32)
         outputs = model(input_ids=input_ids)
 
@@ -163,6 +171,10 @@ class TestModelingCLIP(unittest.TestCase):
         num_channels = 3
         pixel_values = Tensor(np.random.randn(batch_size, num_channels, image_height, image_width), mindspore.float32)
         model = CLIPVisionTransformer(self.vision_config)
+
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
         outputs = model(pixel_values)
 
         assert outputs[0].shape == (2, 50, self.vision_config.hidden_size)
@@ -173,6 +185,10 @@ class TestModelingCLIP(unittest.TestCase):
         Test CLIP Vision Model
         """
         model = CLIPVisionModel(self.vision_config)
+
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
         pixel_values = Tensor(np.random.randn(1, 3, 224, 224), mindspore.float32)
         outputs = model(pixel_values=pixel_values)
 
@@ -186,6 +202,9 @@ class TestModelingCLIP(unittest.TestCase):
         config = CLIPConfig(self.text_config, self.vision_config)
 
         model = CLIPModel(config=config)
+
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
 
         input_ids = Tensor(np.random.randint(0, 10, (2, 3)), mindspore.int32)
         pixel_values = Tensor(np.random.randn(self.vision_config.hidden_size, 3, 224, 224), mindspore.float32)
@@ -217,6 +236,10 @@ class TestModelingCLIP(unittest.TestCase):
         Test CLIP Text Model with projection
         """
         model = CLIPTextModelWithProjection(self.text_config)
+
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
         input_ids = Tensor(np.random.randint(0, 10, (1, 16)), mindspore.int32)
         attention_mask = Tensor(np.random.randint(0, 2, (1, 16)), mindspore.int32)
         position_ids = Tensor(np.random.randint(0, 10, (1, 16)), mindspore.int32)
@@ -231,16 +254,12 @@ class TestModelingCLIP(unittest.TestCase):
         Test CLIP Vision Model with projection
         """
         model = CLIPVisionModelWithProjection(self.vision_config)
+
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
         pixel_values = Tensor(np.random.randn(1, 3, 224, 224), mindspore.float32)
         outputs = model(pixel_values=pixel_values)
 
         assert outputs[0].shape == (1, self.text_config.hidden_size)
         assert outputs[1].shape == (1, 50, self.vision_config.hidden_size)
-
-    def tearDown(self) -> None:
-        gc.collect()
-
-    @classmethod
-    def tearDownClass(cls):
-        if os.path.exists("~/.mindnlp"):
-            os.removedirs("~/.mindnlp")
