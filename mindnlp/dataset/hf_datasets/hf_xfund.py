@@ -29,6 +29,7 @@ class HFxfund:
     """
     Hugging Face Xfund dataset source
     """
+
     def __init__(self, dataset_list) -> None:
         self.dataset_list = dataset_list
         self._id = []
@@ -51,7 +52,6 @@ class HFxfund:
 
     def __len__(self):
         return len(self._id)
-
 
 
 @load_dataset.register

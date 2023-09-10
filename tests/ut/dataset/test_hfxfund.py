@@ -37,6 +37,7 @@ class TestXFUND(unittest.TestCase):
         shutil.rmtree(cls.root)
 
     @pytest.mark.download
+    @pytest.mark.local
     def test_xfund(self):
         """Test xfund"""
         num_lines = {
@@ -55,8 +56,9 @@ class TestXFUND(unittest.TestCase):
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
     @pytest.mark.download
+    @pytest.mark.local
     def test_xfund_by_register(self):
-        """test mt_eng_vietnamese by register"""
+        """test xfund by register"""
         _ = load_dataset(
             "HF_XFUND",
             root=self.root,
