@@ -29,7 +29,6 @@ class HFxfund:
     """
     Hugging Face Xfund dataset source
     """
-
     def __init__(self, dataset_list) -> None:
         self.dataset_list = dataset_list
         self._id = []
