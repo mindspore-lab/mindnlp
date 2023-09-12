@@ -2,6 +2,7 @@ import os
 import json
 import copy
 import logging
+import numpy as np
 from tqdm import tqdm 
 
 import mindspore
@@ -30,7 +31,7 @@ task = "mrpc"
 peft_type = PeftType.LORA
 device = "GPU" # "cuda"
 num_epochs = 20
-lr = 3e-4
+lr = 1e-3
 warmup_ratio = 0.06
 max_seq_length = 128
 
@@ -175,10 +176,11 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length=512):
     return features
 
 
-def load_examples(tokenizer):
+def load_examples(tokenizer, data_type="train"):
     """load_examples using load_dataset"""
     mrpc_train, mrpc_test = MRPC()
-    train_examples = convert_dataset_to_examples(mrpc_train)
+    mrpc = mrpc_train if data_type == "train" else mrpc_test
+    train_examples = convert_dataset_to_examples(mrpc)
     # test_examples = convert_dataset_to_examples(mrpc_test)
 
     features = convert_examples_to_features(train_examples, tokenizer, max_seq_length=max_seq_length)
@@ -207,7 +209,7 @@ def train(model, optimizer, criterion, train_dataloader, eval_dataloader, epochs
         # loss = criterion(logits, label)
         return loss, logits
 
-    grad_fn = mindspore.value_and_grad(forward_fn, None, optimizer.parameters) # has_aux=True
+    grad_fn = mindspore.value_and_grad(forward_fn, None, optimizer.parameters, has_aux=True) # 
 
     def train_one_epoch():
         model.set_train(True)
@@ -226,15 +228,15 @@ def train(model, optimizer, criterion, train_dataloader, eval_dataloader, epochs
                 curr_loss = total_loss / total_step  # 当前的平均loss
                 t.set_postfix({'train-loss': f'{curr_loss:.2f}'})
                 t.update(1)
-                
+
         return total_loss / total_step
     
     def eval_one_epoch():
-        num_batches = len(eval_dataloader)
-        if num_batches == 0:
-            return 0
         model.set_train(False)
         total_loss, total_step = 0, 0
+        preds, label_ids = None, None
+        num_batches = len(eval_dataloader)
+
         with tqdm(total=num_batches) as t:
             for batch in eval_dataloader:
                 input_ids, attention_mask, token_type_ids, lens, labels = batch
@@ -242,40 +244,54 @@ def train(model, optimizer, criterion, train_dataloader, eval_dataloader, epochs
                 total_loss += loss.asnumpy()
                 total_step += 1
                 curr_loss = total_loss / total_step  # 当前的平均loss
+                if preds is None:
+                    preds = np.argmax(logits.asnumpy(), axis=1)
+                    label_ids = labels.asnumpy()
+                else:
+                    preds = np.append(preds, np.argmax(logits.asnumpy(), axis=1), axis=0)
+                    label_ids = np.append(label_ids, labels.asnumpy(), axis=0)
                 t.set_postfix({'eval-loss': f'{curr_loss:.2f}'})
                 t.update(1)
 
-        return total_loss / total_step
+        # compute metrics
+        acc = (preds == label_ids).mean()
+
+        return total_loss / total_step, acc
 
     # train start from here
     for epoch in range(1, epochs+1):
         train_loss = train_one_epoch()
-        eval_loss = eval_one_epoch()
-        # logging
-        print(f"epoch:{epoch} train_loss:{train_loss} eval_loss:{eval_loss}")
-        
+        eval_loss, eval_acc = eval_one_epoch()
+
+        print(f"epoch:{epoch} train_loss:{train_loss} eval_loss:{eval_loss} eval_acc:{eval_acc}")
+        # print(f"epoch:{epoch} train_loss:{train_loss} eval_loss:{eval_loss}")
 
 if __name__ == "__main__":
     # dataset
     tokenizer = RobertaTokenizer.from_pretrained('roberta-base', lower_case=True)
-    train_ds = load_examples(tokenizer)
+    train_ds = load_examples(tokenizer, 'train')
     train_sampler = SequentialSampler()
     train_dataloader = NumpySlicesDataset(train_ds, sampler=train_sampler)
     train_dataloader = train_dataloader.batch(batch_size)
-    print(len(train_dataloader))
+    
+    eval_ds = load_examples(tokenizer, 'test')
+    eval_sampler = SequentialSampler()
+    eval_dataloader = NumpySlicesDataset(eval_ds, sampler=eval_sampler)
+    eval_dataloader = eval_dataloader.batch(batch_size)
 
     # model
     model_config = RobertaConfig(num_labels=2)
     model = RobertaForSequenceClassification.from_pretrained('roberta-base', config=model_config )
-    peft_config = LoraConfig(task_type="SEQ_CLS", inference_mode=False, r=8, lora_alpha=16, lora_dropout=0.1)
-    peft_model = get_peft_model(model, peft_config)
-    print(peft_model)
-    peft_model.print_trainable_parameters()
+    # peft_config = LoraConfig(task_type="SEQ_CLS", inference_mode=False, r=8, lora_alpha=16, lora_dropout=0.1)
+    # peft_model = get_peft_model(model, peft_config)
+    # print(peft_model)
+    # peft_model.print_trainable_parameters()
 
     # optimzer & loss_fn
-    optimizer = AdamWeightDecay(params=peft_model.trainable_params(), learning_rate=lr)
+    print(model.trainable_params())
+    optimizer = AdamWeightDecay(params=model.trainable_params(), learning_rate=lr)
     loss_fn = nn.CrossEntropyLoss()  
 
-    train(peft_model, optimizer, loss_fn, train_dataloader, eval_dataloader=[], epochs=10)
+    train(model, optimizer, loss_fn, train_dataloader, eval_dataloader=eval_dataloader, epochs=10)
 
         
