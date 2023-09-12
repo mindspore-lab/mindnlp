@@ -15,6 +15,7 @@
 # ============================================================================
 
 # This software may be used and distributed according to the terms of the GNU General Public License version 3.
+# pylint: disable=C0103
 """ MindNLP llama model."""
 
 import math
@@ -87,6 +88,16 @@ def apply_rotary_emb(
     xk_out = (x_k * cos) + (rotate_half(x_k) * sin)
     return xq_out.astype(x_q.dtype), xk_out.astype(x_k.dtype)
 
+def repeat_kv(x: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
+    """repeat kv"""
+    bs, slen, n_kv_heads, head_dim = x.shape
+    if n_rep == 1:
+        return x
+    return (
+        x[:, :, :, None, :]
+        .expand(bs, slen, n_kv_heads, n_rep, head_dim)
+        .reshape(bs, slen, n_kv_heads * n_rep, head_dim)
+    )
 
 class Attention(nn.Cell):
     '''
