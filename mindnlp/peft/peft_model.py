@@ -305,18 +305,20 @@ class PeftModelForSequenceClassification(PeftModel):
     ):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         peft_config = self.active_peft_config
-        if not isinstance(peft_config):
+        if not peft_config.is_prompt_learning:
+            # NOTE:some args not exists in base model
+            # inputs_embeds=inputs_embeds,
+            # output_attentions=output_attentions,
+            # output_hidden_states=output_hidden_states,
+            # return_dict=return_dict,
             return self.base_model(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
-                inputs_embeds=inputs_embeds,
                 labels=labels,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
                 **kwargs,
             )
-
+        
+        raise NotImplementedError
         batch_size = _get_batch_size(input_ids, inputs_embeds)
         if attention_mask is not None:
             # concat prompt attention mask

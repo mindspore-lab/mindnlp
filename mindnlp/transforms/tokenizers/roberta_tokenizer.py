@@ -100,3 +100,25 @@ class RobertaTokenizer(PreTrainedTokenizer):
 
     def _convert_token_to_id(self, token):
         return self._tokenizer.token_to_id(token)
+
+    def convert_tokens_to_ids(self, tokens):
+        """
+        Converts a token string (or a sequence of tokens) in a single integer id (or a sequence of ids), using the
+        vocabulary.
+
+        Args:
+            tokens (`str` or `List[str]`): One or several token(s) to convert to token id(s).
+
+        Returns:
+            `int` or `List[int]`: The token id or list of token ids.
+        """
+        if tokens is None:
+            return None
+
+        if isinstance(tokens, str):
+            return self._convert_token_to_id(tokens)
+
+        ids = []
+        for token in tokens:
+            ids.append(self._convert_token_to_id(token))
+        return ids
