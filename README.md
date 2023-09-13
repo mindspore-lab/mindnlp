@@ -70,6 +70,15 @@ To install MindNLP from source, please run:
 pip install git+https://github.com/mindspore-lab/mindnlp.git
 ```
 
+or
+
+```bash
+git clone https://github.com/mindspore-lab/mindnlp.git
+cd mindnlp
+bash scripts/build_and_reinstall.sh
+```
+
+
 ## Get Started
 
 We will next quickly implement a sentiment classification task by using mindnlp.

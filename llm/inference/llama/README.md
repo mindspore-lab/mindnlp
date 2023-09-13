@@ -2,7 +2,7 @@
 
 ## Setup
 
-In a conda env with pytorch / cuda available, run:
+In a conda env with mindspore available, run:
 ```
 pip install -r requirements.txt
 ```
