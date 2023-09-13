@@ -50,5 +50,5 @@ from .utils import (
     # prepare_model_for_kbit_training,
     set_peft_model_state_dict,
     shift_tokens_right,
-    # load_peft_weights,
+    load_peft_weights,
 )

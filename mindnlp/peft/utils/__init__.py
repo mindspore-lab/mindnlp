@@ -42,5 +42,5 @@ from .other import (
     # infer_device,
 )
 # from .hub_utils import hub_file_exists
-from .save_and_load import get_peft_model_state_dict, set_peft_model_state_dict # , load_peft_weights
+from .save_and_load import get_peft_model_state_dict, set_peft_model_state_dict, load_peft_weights
 from .CellDict import CellDict

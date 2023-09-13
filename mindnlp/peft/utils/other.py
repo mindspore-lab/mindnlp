@@ -295,7 +295,7 @@ COMMON_LAYERS_PATTERN = ["layers", "h", "block", "blocks", "layer"]
 TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING = {}
 
 
-WEIGHTS_NAME = "adapter_model.bin"
+WEIGHTS_NAME = "adapter_model.ckpt"
 CONFIG_NAME = "adapter_config.json"
 
 CLAMP_QUANTILE = 0.99

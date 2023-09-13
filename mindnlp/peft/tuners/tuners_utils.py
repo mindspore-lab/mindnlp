@@ -251,7 +251,7 @@ class BaseTuner(nn.Cell):
         self._mark_only_adapters_as_trainable()
 
         if self.peft_config[adapter_name].inference_mode:
-            for name, param in self.model.named_parameters():
+            for name, param in self.model.parameters_and_names():
                 if adapter_name in name:
                     param.requires_grad = False
 

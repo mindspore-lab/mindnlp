@@ -49,8 +49,8 @@ from .utils import (
     # add_library_to_model_card,
     get_peft_model_state_dict,
     # infer_device,
-    # load_peft_weights,
-    # set_peft_model_state_dict,
+    load_peft_weights,
+    set_peft_model_state_dict,
     shift_tokens_right,
     _get_batch_size,
 )
@@ -159,6 +159,27 @@ class PeftModel(nn.Cell):
             model = MODEL_TYPE_TO_PEFT_MODEL_MAPPING[config.task_type](model, config, adapter_name)
         model.load_adapter(model_id, adapter_name, **kwargs)
         return model
+
+
+    def load_adapter(self, model_id: str, adapter_name: str, is_trainable: bool = False, **kwargs):
+        from .mapping import PEFT_TYPE_TO_CONFIG_MAPPING
+
+        # NOTE: remove download logic.
+        if adapter_name not in self.peft_config:
+            raise ValueError("{} is not a valid adapter name. Valid names: {}".format(adapter_name, self.peft_config.keys()))
+
+        adapters_weights = load_peft_weights(model_id)
+
+        # load the weights into the model
+        load_result = set_peft_model_state_dict(self, adapters_weights, adapter_name=adapter_name)
+        # TODO: add parallel logic & offload logic & device map logic(dispatch_model)
+
+        # Set model in evaluation mode to deactivate Dropout modules by default
+        if not is_trainable:
+            self.set_train(False)
+
+        return load_result
+
 
     def get_nb_trainable_parameters(self):
         r"""
