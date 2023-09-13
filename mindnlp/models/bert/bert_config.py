@@ -46,6 +46,7 @@ class BertConfig(PreTrainedConfig):
     """
     Configuration for BERT-base
     """
+    model_type = "bert"
     pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     def __init__(self,

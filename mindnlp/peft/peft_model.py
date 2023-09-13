@@ -22,10 +22,12 @@ import warnings
 import inspect
 from contextlib import contextmanager
 from copy import deepcopy
+from collections import Mapping
 
 import mindspore
 from mindspore import nn
 from mindspore import ops
+from mindspore.train.serialization import load_checkpoint, load_param_into_net, _exec_save
 from mindspore.nn import CrossEntropyLoss
 
 from .config import PeftConfig
@@ -71,7 +73,7 @@ class PeftModel(nn.Cell):
         self.base_model = model
         self.config = getattr(self.base_model, "config", {"model_type": "custom"})
         self.modules_to_save = None
-        self.peft_config = {}
+        self.peft_config: Mapping[str, PeftConfig] = {}
         self.active_adapter = adapter_name
         self.peft_type = peft_config.peft_type
         # self.base_model_torch_dtype = getattr(model, "dtype", None)
@@ -105,12 +107,17 @@ class PeftModel(nn.Cell):
         for adapter_name, peft_config in self.peft_config.items():
             # save only the trainable weights
             output_state_dict = get_peft_model_state_dict(
-                self, state_dict=kwargs.get("state_dict", None), adapter_name=adapter_name
+                self, 
+                state_dict=kwargs.get("state_dict", None),
+                adapter_name=adapter_name
             )
             output_dir = os.path.join(save_directory, adapter_name) if adapter_name != "default" else save_directory
             os.makedirs(output_dir, exist_ok=True)
 
-            mindspore.save_checkpoint(output_state_dict, os.path.join(output_dir, WEIGHTS_NAME))
+            _exec_save(
+                ckpt_file_name=os.path.join(output_dir, WEIGHTS_NAME),
+                data_list=output_state_dict,
+            )
 
             # save the config and change the inference mode to `True`
             if peft_config.base_model_name_or_path is None:
@@ -139,7 +146,7 @@ class PeftModel(nn.Cell):
         """
         from .mapping import MODEL_TYPE_TO_PEFT_MODEL_MAPPING, PEFT_TYPE_TO_CONFIG_MAPPING # pylint: disable=R0401
 
-        # load the config
+        # load peft config
         config = PEFT_TYPE_TO_CONFIG_MAPPING[
             PeftConfig.from_pretrained(model_id, subfolder=kwargs.get("subfolder", None)).peft_type
         ].from_pretrained(model_id, subfolder=kwargs.get("subfolder", None))

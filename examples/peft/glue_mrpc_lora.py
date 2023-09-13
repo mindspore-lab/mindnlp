@@ -10,6 +10,11 @@ from mindspore import nn
 from mindspore.nn import AdamWeightDecay
 from mindspore.dataset import RandomSampler, DistributedSampler, NumpySlicesDataset, SequentialSampler
 
+from mindnlp.models.mobilebert.mobilebert import MobileBertForSequenceClassification
+from mindnlp.models.mobilebert.mobilebert_config import MobileBertConfig
+from mindnlp.transforms.tokenizers.bert_tokenizer import BertTokenizer
+from mindnlp.models import BertModel, BertConfig, BertForSequenceClassification
+
 from mindnlp.transforms import RobertaTokenizer
 from mindnlp.models import RobertaConfig, RobertaForSequenceClassification
 from mindnlp import load_dataset, process
@@ -24,16 +29,16 @@ from mindnlp.peft import (
 logger = logging.getLogger()
 
 # hypers
-batch_size = 32
+batch_size = 16
 model_type = "roberta"
 model_name_or_path = "roberta-base"
 task = "mrpc"
 peft_type = PeftType.LORA
 device = "GPU" # "cuda"
-num_epochs = 20
-lr = 1e-3
+num_epochs = 8
+lr = 1e-4 # 2e-5
 warmup_ratio = 0.06
-max_seq_length = 128
+max_seq_length = 256
 
 
 class InputExample(object):
@@ -127,7 +132,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length=512):
             token_type_ids.append(0)
 
         if tokens_b is not None:
-            for token in tokens_b:
+            for token in tokens_b[1:]:
                 tokens.append(token)
                 token_type_ids.append(1)
             # tokens.append("[SEP]")
@@ -155,16 +160,15 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length=512):
         
         label_id = example.label
 
-        # debug info
-        # if ex_index < 5:
-        #     print("*** Example ***")
-        #     print("guid: %s" % (example.guid))
-        #     print("tokens: %s"%" ".join([str(x) for x in tokens]))
-        #     print("input_ids: %s" % " ".join([str(x) for x in input_ids]))
-        #     print("attention_mask: %s" % " ".join([str(x) for x in attention_mask]))
-        #     print("token_type_ids: %s" % " ".join([str(x) for x in token_type_ids]))
-        #     print("label: %s (id = %d)" % (example.label, label_id))
-        #     print("input length: %d" % (input_len))
+        if ex_index < 5:
+            print("*** Example ***")
+            print("guid: %s" % (example.guid))
+            print("tokens: %s"%" ".join([str(x) for x in tokens]))
+            print("input_ids: %s" % " ".join([str(x) for x in input_ids]))
+            print("attention_mask: %s" % " ".join([str(x) for x in attention_mask]))
+            print("token_type_ids: %s" % " ".join([str(x) for x in token_type_ids]))
+            print("label: %s (id = %d)" % (example.label, label_id))
+            print("input length: %d" % (input_len))
 
         features.append(
             InputFeatures(input_ids=input_ids,
@@ -197,28 +201,28 @@ def load_examples(tokenizer, data_type="train"):
 
 
 def train(model, optimizer, criterion, train_dataloader, eval_dataloader, epochs):
-    def forward_fn(input_ids, attention_mask, token_type_ids, lens, label):
+    def forward_fn(input_ids, attention_mask, token_type_ids, lens, labels):
         # _, _ = hidden_states, attentions
         loss, logits = model(
             input_ids=input_ids,
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
-            labels=label
+            labels=mindspore.Tensor(labels.asnumpy(), mindspore.int32)
         )
         # RobertaForSequenceClassification Model has loss_fn (mse or cross_entropy)
         # loss = criterion(logits, label)
         return loss, logits
 
-    grad_fn = mindspore.value_and_grad(forward_fn, None, optimizer.parameters, has_aux=True) # 
+    grad_fn = mindspore.value_and_grad(forward_fn, None, optimizer.parameters, has_aux=True)
 
     def train_one_epoch():
         model.set_train(True)
         total_loss, total_step = 0, 0
         num_batches = len(train_dataloader)
+        preds, label_ids = None, None
 
         with tqdm(total=num_batches) as t:
-            for batch in train_dataloader:
-                input_ids, attention_mask, token_type_ids, lens, labels = batch
+            for i, (input_ids, attention_mask, token_type_ids, lens, labels) in enumerate(train_dataloader):
                 # forward + grad
                 (loss, logits), grad = grad_fn(input_ids, attention_mask, token_type_ids, lens, labels)
                 # update model params
@@ -226,10 +230,19 @@ def train(model, optimizer, criterion, train_dataloader, eval_dataloader, epochs
                 total_loss += loss.asnumpy()
                 total_step += 1
                 curr_loss = total_loss / total_step  # 当前的平均loss
+
+                if preds is None:
+                    preds = np.argmax(logits.asnumpy(), axis=1)
+                    label_ids = labels.asnumpy()
+                else:
+                    preds = np.append(preds, np.argmax(logits.asnumpy(), axis=1), axis=0)
+                    label_ids = np.append(label_ids, labels.asnumpy(), axis=0)
+
                 t.set_postfix({'train-loss': f'{curr_loss:.2f}'})
                 t.update(1)
+        acc = (preds == label_ids).mean()
 
-        return total_loss / total_step
+        return total_loss / total_step, acc
     
     def eval_one_epoch():
         model.set_train(False)
@@ -238,9 +251,14 @@ def train(model, optimizer, criterion, train_dataloader, eval_dataloader, epochs
         num_batches = len(eval_dataloader)
 
         with tqdm(total=num_batches) as t:
-            for batch in eval_dataloader:
-                input_ids, attention_mask, token_type_ids, lens, labels = batch
-                (loss, logits), grad = grad_fn(input_ids, attention_mask, token_type_ids, lens, labels)
+            for i, (input_ids, attention_mask, token_type_ids, lens, labels) in enumerate(eval_dataloader):
+                loss, logits = model(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    token_type_ids=token_type_ids,
+                    labels=mindspore.Tensor(labels.asnumpy(), mindspore.int32)
+                )
+                # (loss, logits), grad = grad_fn(input_ids, attention_mask, token_type_ids, lens, labels)
                 total_loss += loss.asnumpy()
                 total_step += 1
                 curr_loss = total_loss / total_step  # 当前的平均loss
@@ -260,15 +278,23 @@ def train(model, optimizer, criterion, train_dataloader, eval_dataloader, epochs
 
     # train start from here
     for epoch in range(1, epochs+1):
-        train_loss = train_one_epoch()
+        train_loss, train_acc = train_one_epoch()
         eval_loss, eval_acc = eval_one_epoch()
 
-        print(f"epoch:{epoch} train_loss:{train_loss} eval_loss:{eval_loss} eval_acc:{eval_acc}")
+        print(f"epoch:{epoch} train_loss:{train_loss} eval_acc:{train_acc} \
+              eval_loss:{eval_loss} eval_acc:{eval_acc}")
         # print(f"epoch:{epoch} train_loss:{train_loss} eval_loss:{eval_loss}")
 
 if __name__ == "__main__":
-    # dataset
-    tokenizer = RobertaTokenizer.from_pretrained('roberta-base', lower_case=True)
+    # from pretrained
+    tokenizer = BertTokenizer.from_pretrained("bert-base-cased", lower_case=True)
+    model_config = BertConfig(num_labels=2, problem_type="single_label_classification")
+    model = BertForSequenceClassification.from_pretrained('bert-base-cased', config=model_config)
+
+    # tokenizer = RobertaTokenizer.from_pretrained('roberta-base', lower_case=True)
+    # model_config = RobertaConfig(num_labels=2)
+    # model = RobertaForSequenceClassification.from_pretrained('roberta-base', config=model_config )
+
     train_ds = load_examples(tokenizer, 'train')
     train_sampler = SequentialSampler()
     train_dataloader = NumpySlicesDataset(train_ds, sampler=train_sampler)
@@ -279,19 +305,21 @@ if __name__ == "__main__":
     eval_dataloader = NumpySlicesDataset(eval_ds, sampler=eval_sampler)
     eval_dataloader = eval_dataloader.batch(batch_size)
 
-    # model
-    model_config = RobertaConfig(num_labels=2)
-    model = RobertaForSequenceClassification.from_pretrained('roberta-base', config=model_config )
-    # peft_config = LoraConfig(task_type="SEQ_CLS", inference_mode=False, r=8, lora_alpha=16, lora_dropout=0.1)
-    # peft_model = get_peft_model(model, peft_config)
-    # print(peft_model)
-    # peft_model.print_trainable_parameters()
+    # build peft model
+    peft_config = LoraConfig(task_type="SEQ_CLS", inference_mode=False, r=8, lora_alpha=16, lora_dropout=0.1)
+    model = get_peft_model(model, peft_config)
+    print(model)
+    model.print_trainable_parameters()
 
     # optimzer & loss_fn
     print(model.trainable_params())
     optimizer = AdamWeightDecay(params=model.trainable_params(), learning_rate=lr)
     loss_fn = nn.CrossEntropyLoss()  
 
-    train(model, optimizer, loss_fn, train_dataloader, eval_dataloader=eval_dataloader, epochs=10)
+    # train(model, optimizer, loss_fn, train_dataloader, eval_dataloader, epochs=num_epochs)
 
-        
+    # save peft model
+    model.save_pretrained(save_directory="./peft_model")
+
+    # load peft model
+    # model = RobertaForSequenceClassification.from_pretrained('./peft_model')

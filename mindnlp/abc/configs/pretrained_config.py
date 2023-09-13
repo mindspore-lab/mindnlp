@@ -55,9 +55,19 @@ class PreTrainedConfig:
                 f"The config parameter `problem_type` was not understood: received {self.problem_type} "
                 "but only 'regression', 'single_label_classification' and 'multi_label_classification' are valid."
             )
+        
+        self._name_or_path = str(kwargs.pop("name_or_path", ""))
 
     pretrained_config_archive_map: Dict[str, str] = {}
 
+    @property
+    def name_or_path(self) -> str:
+        return getattr(self, "_name_or_path", None)
+
+    @name_or_path.setter
+    def name_or_path(self, value):
+        self._name_or_path = str(value)  # Make sure that name_or_path is a string (for JSON encoding)
+    
     @classmethod
     def from_json(cls, file_path):
         """load config from json."""
