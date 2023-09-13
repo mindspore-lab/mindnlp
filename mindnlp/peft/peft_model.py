@@ -13,21 +13,19 @@
 # limitations under the License.
 # ============================================================================
 """PEFT model."""
-# pylint: disable=R1705
-# pylint: disable=R1710
-# pylint: disable=C0415
-# pylint: disable=E0602
+# pylint: disable=E0602  # Import outside toplevel
+# pylint: disable=R1705  # Unnecessary "else" after "return"
+# pylint: disable=W0613  # unused kwargs
+# pylint: disable=C0415  # Undefined variable
 import os
 import warnings
 import inspect
 from contextlib import contextmanager
 from copy import deepcopy
-from collections import Mapping
+from typing import Dict
 
-import mindspore
-from mindspore import nn
-from mindspore import ops
-from mindspore.train.serialization import load_checkpoint, load_param_into_net, _exec_save
+from mindspore import nn, ops
+from mindspore.train.serialization import  _exec_save
 from mindspore.nn import CrossEntropyLoss
 
 from .config import PeftConfig
@@ -52,7 +50,7 @@ from .utils import (
     load_peft_weights,
     set_peft_model_state_dict,
     shift_tokens_right,
-    _get_batch_size,
+    # _get_batch_size, # will be used for prompt learning methods
 )
 
 
@@ -73,7 +71,7 @@ class PeftModel(nn.Cell):
         self.base_model = model
         self.config = getattr(self.base_model, "config", {"model_type": "custom"})
         self.modules_to_save = None
-        self.peft_config: Mapping[str, PeftConfig] = {}
+        self.peft_config: Dict[str, PeftConfig] = {}
         self.active_adapter = adapter_name
         self.peft_type = peft_config.peft_type
         # self.base_model_torch_dtype = getattr(model, "dtype", None)
@@ -107,7 +105,7 @@ class PeftModel(nn.Cell):
         for adapter_name, peft_config in self.peft_config.items():
             # save only the trainable weights
             output_state_dict = get_peft_model_state_dict(
-                self, 
+                self,
                 state_dict=kwargs.get("state_dict", None),
                 adapter_name=adapter_name
             )
@@ -144,7 +142,7 @@ class PeftModel(nn.Cell):
                     - A path to a directory containing a Lora configuration file saved using the `save_pretrained`
                       method (`./my_lora_config_directory/`).
         """
-        from .mapping import MODEL_TYPE_TO_PEFT_MODEL_MAPPING, PEFT_TYPE_TO_CONFIG_MAPPING # pylint: disable=R0401
+        from .mapping import MODEL_TYPE_TO_PEFT_MODEL_MAPPING, PEFT_TYPE_TO_CONFIG_MAPPING  # pylint: disable=R0401
 
         # load peft config
         config = PEFT_TYPE_TO_CONFIG_MAPPING[
@@ -162,11 +160,10 @@ class PeftModel(nn.Cell):
 
 
     def load_adapter(self, model_id: str, adapter_name: str, is_trainable: bool = False, **kwargs):
-        from .mapping import PEFT_TYPE_TO_CONFIG_MAPPING
-
+        """load adapter to peft model, called by `model.from_pretrained`."""
         # NOTE: remove download logic.
         if adapter_name not in self.peft_config:
-            raise ValueError("{} is not a valid adapter name. Valid names: {}".format(adapter_name, self.peft_config.keys()))
+            raise ValueError(f"{adapter_name} is not a valid adapter name. Valid names: {self.peft_config.keys()}")
 
         adapters_weights = load_peft_weights(model_id)
 
@@ -345,42 +342,42 @@ class PeftModelForSequenceClassification(PeftModel):
                 labels=labels,
                 **kwargs,
             )
-        
-        raise NotImplementedError
-        batch_size = _get_batch_size(input_ids, inputs_embeds)
-        if attention_mask is not None:
-            # concat prompt attention mask
-            prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens)
-            attention_mask = ops.cat((prefix_attention_mask, attention_mask), axis=1)
-        if kwargs.get("position_ids", None) is not None:
-            warnings.warn("Position ids are not supported for parameter efficient tuning. Ignoring position ids.")
-            kwargs["position_ids"] = None
-        kwargs.update(
-            {
-                "attention_mask": attention_mask,
-                "labels": labels,
-                "output_attentions": output_attentions,
-                "output_hidden_states": output_hidden_states,
-                "return_dict": return_dict,
-            }
-        )
 
-        if peft_config.peft_type == PeftType.PREFIX_TUNING:
-            return self._prefix_tuning_forward(input_ids=input_ids, **kwargs)
-        if kwargs.get("token_type_ids", None) is not None:
-            kwargs["token_type_ids"] = ops.cat(
-                (
-                    ops.zeros(batch_size, peft_config.num_virtual_tokens),
-                    kwargs["token_type_ids"],
-                ),
-                axis=1,
-            ).long()
-        if inputs_embeds is None:
-            inputs_embeds = self.word_embeddings(input_ids)
-        prompts = self.get_prompt(batch_size=batch_size)
-        prompts = prompts.to(inputs_embeds.dtype)
-        inputs_embeds = ops.cat((prompts, inputs_embeds), axis=1)
-        return self.base_model(inputs_embeds=inputs_embeds, **kwargs)
+        raise NotImplementedError
+        # batch_size = _get_batch_size(input_ids, inputs_embeds)
+        # if attention_mask is not None:
+        #     # concat prompt attention mask
+        #     prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens)
+        #     attention_mask = ops.cat((prefix_attention_mask, attention_mask), axis=1)
+        # if kwargs.get("position_ids", None) is not None:
+        #     warnings.warn("Position ids are not supported for parameter efficient tuning. Ignoring position ids.")
+        #     kwargs["position_ids"] = None
+        # kwargs.update(
+        #     {
+        #         "attention_mask": attention_mask,
+        #         "labels": labels,
+        #         "output_attentions": output_attentions,
+        #         "output_hidden_states": output_hidden_states,
+        #         "return_dict": return_dict,
+        #     }
+        # )
+
+        # if peft_config.peft_type == PeftType.PREFIX_TUNING:
+        #     return self._prefix_tuning_forward(input_ids=input_ids, **kwargs)
+        # if kwargs.get("token_type_ids", None) is not None:
+        #     kwargs["token_type_ids"] = ops.cat(
+        #         (
+        #             ops.zeros(batch_size, peft_config.num_virtual_tokens),
+        #             kwargs["token_type_ids"],
+        #         ),
+        #         axis=1,
+        #     ).long()
+        # if inputs_embeds is None:
+        #     inputs_embeds = self.word_embeddings(input_ids)
+        # prompts = self.get_prompt(batch_size=batch_size)
+        # prompts = prompts.to(inputs_embeds.dtype)
+        # inputs_embeds = ops.cat((prompts, inputs_embeds), axis=1)
+        # return self.base_model(inputs_embeds=inputs_embeds, **kwargs)
 
 class PeftModelForCausalLM(PeftModel):
     """
@@ -646,6 +643,7 @@ class PeftModelForSeq2SeqLM(PeftModel):
                 return self.base_model(
                     inputs_embeds=inputs_embeds, decoder_inputs_embeds=decoder_inputs_embeds, **kwargs
                 )
+            return None # never go here
 
     def generate(self, **kwargs):
         """generate."""

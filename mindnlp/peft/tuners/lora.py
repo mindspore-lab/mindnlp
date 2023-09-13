@@ -749,22 +749,21 @@ class Linear(nn.Dense, LoraLayer):
         )
 
     def extend_repr(self):
-        s = 'input_channels={}, output_channels={}'.format(
-            self.in_channels, self.out_channels)
+        s = f'input_channels={self.in_channels}, output_channels={self.out_channels}'
         if self.has_bias:
-            s += ', has_bias={}'.format(self.has_bias)
+            s += f', has_bias={self.has_bias}'
         if self.activation_flag:
-            s += ', activation={}'.format(self.activation)
-        s += ', requires_grad={}'.format(self.weight.requires_grad)
+            s += f', activation={self.activation}'
+        s += f', requires_grad={self.weight.requires_grad}'
         return s
 
-    def _linear(self, input: mindspore.Tensor) -> mindspore.Tensor:
-        return ops.dense(input, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
+    def _linear(self, x: mindspore.Tensor) -> mindspore.Tensor:
+        return ops.dense(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
 
     def construct(self, x: mindspore.Tensor):
         if self.active_adapter not in self.lora_A.keys():
             return self._linear(x)
-        
+
         previous_dtype = x.dtype
 
         if self.disable_adapters:
@@ -785,7 +784,6 @@ class Linear(nn.Dense, LoraLayer):
 
         result = result.to(previous_dtype)
         return result
-    
 
 
 class Embedding(nn.Embedding, LoraLayer):

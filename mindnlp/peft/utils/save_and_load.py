@@ -15,9 +15,9 @@
 # pylint: disable=C0103
 """save and load"""
 import os
-import mindspore
-from typing import Optional
 from collections import OrderedDict
+
+import mindspore
 
 from .peft_types import PeftType
 from .other import WEIGHTS_NAME
@@ -78,7 +78,7 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
         to_return = {k: v for k, v in to_return.items() if (("lora_" in k and adapter_name in k) or ("bias" in k))}
     else:
         raise NotImplementedError
-    
+
     if model.modules_to_save is not None:
         for key, value in state_dict.items():
             if any(f"{module_name}.modules_to_save.{adapter_name}" in key for module_name in model.modules_to_save):
@@ -144,9 +144,8 @@ def load_peft_weights(model_id: str,) -> dict:
         filename = os.path.join(path, WEIGHTS_NAME)
     else:
         # TODO: add download logic later
-        raise ValueError("load peft model failed, peft model file: {} not exists.".format(filename))
-   
+        raise ValueError(f"load peft model failed, peft model file: {filename} not exists.")
+
     adapters_weights = mindspore.load_checkpoint(filename)
 
     return adapters_weights
-

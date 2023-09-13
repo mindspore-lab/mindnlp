@@ -1,8 +1,24 @@
+# Copyright 2023 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+"""Customized mindspore.nn.Cell Dict."""
+# pylint: disable=C0116
+# pylint: disable=C0103
+# pylint: disable=W0237
+
 from __future__ import absolute_import
-
 from collections import OrderedDict, abc as container_abcs
-from abc import abstractmethod
-
 from mindspore.nn.cell import Cell
 
 __all__ = ['CellDict']
@@ -64,6 +80,7 @@ def _get_prefix_and_index(cells):
 
 
 class CellDict(Cell):
+    """nn.Cell Dict"""
     _cells: OrderedDict[str, Cell]
 
     def __init__(self, cells: OrderedDict[str, Cell] = None):
@@ -71,7 +88,7 @@ class CellDict(Cell):
         super().__init__()
         if cells is not None:
             self.update(cells)
-    
+
     def __getitem__(self, key: str) -> Cell:
         return self._cells[key]
 
@@ -102,16 +119,16 @@ class CellDict(Cell):
 
     def contains(self, key: str) -> bool:
         return key in self._cells
-    
+
     def keys(self):
         return self._cells.keys()
-    
+
     def values(self):
         return self._cells.values()
 
     def items(self):
         return self._cells.items()
-    
+
     def update(self, cells) -> None:
         """Update the `nn.CellDict`"""
         if not isinstance(cells, container_abcs.Iterable):

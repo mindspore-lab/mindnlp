@@ -399,7 +399,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                              "a string of model name or checkpoint path, but got 'None'.")
 
         config.name_or_path = pretrained_model_name_or_path
-        
+
         # Instantiate model.
         model = cls(config, *model_args, **model_kwargs)
 

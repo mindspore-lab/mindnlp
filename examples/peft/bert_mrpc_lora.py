@@ -31,17 +31,6 @@ from mindnlp.peft import (
 
 logger = logging.getLogger()
 
-# hypers
-batch_size = 16
-model_type = "roberta"
-model_name_or_path = "roberta-base"
-task = "mrpc"
-peft_type = PeftType.LORA
-device = "GPU" # "cuda"
-num_epochs = 8
-lr = 1e-4 # 2e-5
-warmup_ratio = 0.06
-max_seq_length = 256
 
 
 class InputExample(object):
@@ -163,15 +152,15 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length=512):
         
         label_id = example.label
 
-        if ex_index < 5:
-            print("*** Example ***")
-            print("guid: %s" % (example.guid))
-            print("tokens: %s"%" ".join([str(x) for x in tokens]))
-            print("input_ids: %s" % " ".join([str(x) for x in input_ids]))
-            print("attention_mask: %s" % " ".join([str(x) for x in attention_mask]))
-            print("token_type_ids: %s" % " ".join([str(x) for x in token_type_ids]))
-            print("label: %s (id = %d)" % (example.label, label_id))
-            print("input length: %d" % (input_len))
+        # if ex_index < 5:
+        #     print("*** Example ***")
+        #     print("guid: %s" % (example.guid))
+        #     print("tokens: %s"%" ".join([str(x) for x in tokens]))
+        #     print("input_ids: %s" % " ".join([str(x) for x in input_ids]))
+        #     print("attention_mask: %s" % " ".join([str(x) for x in attention_mask]))
+        #     print("token_type_ids: %s" % " ".join([str(x) for x in token_type_ids]))
+        #     print("label: %s (id = %d)" % (example.label, label_id))
+        #     print("input length: %d" % (input_len))
 
         features.append(
             InputFeatures(input_ids=input_ids,
@@ -183,7 +172,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length=512):
     return features
 
 
-def load_examples(tokenizer, data_type="train"):
+def load_examples(tokenizer, max_seq_length, data_type="train"):
     """load_examples using load_dataset"""
     mrpc_train, mrpc_test = MRPC()
     mrpc = mrpc_train if data_type == "train" else mrpc_test
@@ -295,60 +284,77 @@ def eval_model(model, optimizer, criterion, eval_dataloader):
     print(f"eval_loss:{eval_loss} eval_acc:{eval_acc}")
 
 if __name__ == "__main__":
+    # `python examples/peft/bert_mrpc_lora.py --do_train --do_eval --model_name_or_path bert-base-cased`
     # from pretrained
     parser = argparse.ArgumentParser()
     parser.add_argument("--do_train", action='store_true', help="Whether to run training.")
     parser.add_argument("--do_eval", action='store_true', help="Whether to run eval on the dev set.")
+    parser.add_argument("--save_dir", default=".mindnlp/peft_model/mrpc_lora", type=str, help="The output directory where the model checkpoints will be written.")
+    parser.add_argument("--batch_size", default=16, type=int, help="Batch size per GPU/CPU for training.")
+    parser.add_argument("--model_name_or_path", default="roberta-base", type=str, help="bert-base-cased")
+    parser.add_argument("--num_epochs", default=5, type=int)
+    parser.add_argument("--lr", default=1e-4, type=float, help="Set 2e-5 for full-finetuning.")
+    parser.add_argument("--max_seq_len", default=256, type=int)
+
     args = parser.parse_args()
-    
+
+    task = "mrpc"
+    peft_type = PeftType.LORA
+
+    MODEL_CLASSES = {
+        "roberta-base": (RobertaConfig, RobertaForSequenceClassification, RobertaTokenizer),
+        "bert-base-cased": (BertConfig, BertForSequenceClassification, BertTokenizer),
+    }
+
+    config_class, model_class, token_class = MODEL_CLASSES[args.model_name_or_path]
+
     if args.do_train:
-        tokenizer = BertTokenizer.from_pretrained("bert-base-cased", lower_case=True)
-        model_config = BertConfig(num_labels=2, problem_type="single_label_classification")
-        model = BertForSequenceClassification.from_pretrained('bert-base-cased', config=model_config)
+        # tokenizer = token_class.from_pretrained("bert-base-cased", lower_case=True)
+        # model_config = config_class(num_labels=2, problem_type="single_label_classification")
+        # model = model_class.from_pretrained('bert-base-cased', config=model_config)
+        tokenizer = token_class.from_pretrained(args.model_name_or_path, lower_case=True)
+        model_config = config_class(num_labels=2, problem_type="single_label_classification")
+        model = model_class.from_pretrained(args.model_name_or_path, config=model_config )
 
-        # tokenizer = RobertaTokenizer.from_pretrained('roberta-base', lower_case=True)
-        # model_config = RobertaConfig(num_labels=2)
-        # model = RobertaForSequenceClassification.from_pretrained('roberta-base', config=model_config )
-
-        train_ds = load_examples(tokenizer, 'train')
+        train_ds = load_examples(tokenizer, args.max_seq_len, 'train')
         train_sampler = SequentialSampler()
         train_dataloader = NumpySlicesDataset(train_ds, sampler=train_sampler)
-        train_dataloader = train_dataloader.batch(batch_size)
+        train_dataloader = train_dataloader.batch(args.batch_size)
         
-        eval_ds = load_examples(tokenizer, 'test')
+        eval_ds = load_examples(tokenizer, args.max_seq_len, 'test')
         eval_sampler = SequentialSampler()
         eval_dataloader = NumpySlicesDataset(eval_ds, sampler=eval_sampler)
-        eval_dataloader = eval_dataloader.batch(batch_size)
+        eval_dataloader = eval_dataloader.batch(args.batch_size)
 
         # build peft model
         peft_config = LoraConfig(task_type="SEQ_CLS", inference_mode=False, r=8, lora_alpha=16, lora_dropout=0.1)
         model = get_peft_model(model, peft_config)
-        print(model)
+        # print(model)
         model.print_trainable_parameters()
 
         # optimzer & loss_fn
-        print(model.trainable_params())
-        optimizer = AdamWeightDecay(params=model.trainable_params(), learning_rate=lr)
+        # print(model.trainable_params())
+        optimizer = AdamWeightDecay(params=model.trainable_params(), learning_rate=args.lr)
         loss_fn = nn.CrossEntropyLoss()  
 
-        train(model, optimizer, loss_fn, train_dataloader, eval_dataloader, epochs=num_epochs)
+        train(model, optimizer, loss_fn, train_dataloader, eval_dataloader, epochs=args.num_epochs)
 
         # save peft model
-        model.save_pretrained(save_directory=".mindnlp/peft_model")
+        model.save_pretrained(save_directory=args.save_dir)
     
     if args.do_eval:
         # load tokenizer & eval_dataset
-        tokenizer = BertTokenizer.from_pretrained("bert-base-cased", lower_case=True)
-        eval_ds = load_examples(tokenizer, 'test')
+        tokenizer = token_class.from_pretrained(args.model_name_or_path, lower_case=True)
+        eval_ds = load_examples(tokenizer, args.max_seq_len, 'test')
         eval_sampler = SequentialSampler()
         eval_dataloader = NumpySlicesDataset(eval_ds, sampler=eval_sampler)
-        eval_dataloader = eval_dataloader.batch(batch_size)
+        eval_dataloader = eval_dataloader.batch(args.batch_size)
     
         # load peft model from pretrained
-        peft_model_id = ".mindnlp/peft_model"
+        peft_model_id = args.save_dir
         config = PeftConfig.from_pretrained(peft_model_id)
         print(config.base_model_name_or_path)
-        model = BertForSequenceClassification.from_pretrained(config.base_model_name_or_path, problem_type="single_label_classification")
+        model = model_class.from_pretrained(config.base_model_name_or_path, problem_type="single_label_classification")
         model = PeftModel.from_pretrained(model, peft_model_id)
 
         # eval

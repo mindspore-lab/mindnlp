@@ -21,7 +21,6 @@ import mindspore
 from mindspore import nn, ops, Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.abc import PreTrainedModel
 from mindnlp._legacy.nn import Matmul
 
 
