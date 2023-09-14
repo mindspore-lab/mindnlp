@@ -46,7 +46,7 @@ class TestModelingBart(ModelTest):
         Test BartLearnedPositionalEmbedding
         """
         model = bart.BartLearnedPositionalEmbedding(self.config.max_position_embeddings,self.config.d_model)
-        input_ids = Tensor(np.random.randn(1, 10), mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (1, 10)), mindspore.int32)
         outputs = model(input_ids)
         assert outputs.shape == (1, 10, self.config.max_position_embeddings)
 
@@ -122,7 +122,7 @@ class TestModelingBart(ModelTest):
         if self.use_amp:
             model = mindnlp._legacy.amp.auto_mixed_precision(model)
 
-        input_ids = Tensor(np.random.randn(1, 2), mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (1, 2)), mindspore.int32)
         outputs = model(input_ids)
         assert outputs[0].shape == (1, 2, self.config.d_model)
 

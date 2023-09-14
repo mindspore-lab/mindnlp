@@ -155,7 +155,7 @@ class TestModelingCLIP(ModelTest):
         if self.use_amp:
             model = mindnlp._legacy.amp.auto_mixed_precision(model)
 
-        input_ids = Tensor(np.random.randint(low=0, high=10000, size=(1, 77)), mindspore.int32)
+        input_ids = Tensor(np.random.randint(low=0, high=self.text_config.vocab_size, size=(1, 77)), mindspore.int32)
         outputs = model(input_ids=input_ids)
 
         assert outputs[0].shape == (1, 77, self.text_config.hidden_size)

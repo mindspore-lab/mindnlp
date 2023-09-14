@@ -53,6 +53,10 @@ class RobertaPreTrainedModel(BertPreTrainedModel):
 
 class RobertaModel(BertModel):
     """Roberta Model"""
+    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+    config_class = RobertaConfig
+    base_model_prefix = "roberta"
+
     def __init__(self, config, add_pooling_layer=True):
         super().__init__(config, add_pooling_layer=add_pooling_layer)
         self.embeddings = RobertaEmbeddings(config)

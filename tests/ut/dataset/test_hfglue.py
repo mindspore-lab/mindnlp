@@ -215,6 +215,7 @@ class TestHFGLUE(unittest.TestCase):
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
     @pytest.mark.skip("seems has errors.")
+    @pytest.mark.download
     def test_hf_glue_process(self):
         """
         Test hf_glue process

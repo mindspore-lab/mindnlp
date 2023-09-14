@@ -13,53 +13,47 @@
 # limitations under the License.
 # ============================================================================
 """Test Roberta"""
-import gc
-import os
-import unittest
 import pytest
 import numpy as np
+from ddt import ddt, data
 
 import mindspore
 
 from mindspore import Tensor
-from mindspore import context
 
+import mindnlp
 from mindnlp.models import RobertaConfig, RobertaModel
+from ..model_test import ModelTest
 
-
-class TestModelingRoberta(unittest.TestCase):
+@ddt
+class TestModelingRoberta(ModelTest):
     r"""
     Test model bert
     """
-    def test_modeling_roberta_pynative(self):
+    def setUp(self) -> None:
+        super().setUp()
+        self.config = RobertaConfig(vocab_size=1000,
+                                 hidden_size=128,
+                                 num_hidden_layers=2,
+                                 num_attention_heads=8,
+                                 intermediate_size=256)
+
+    @data(True, False)
+    def test_modeling_roberta(self, jit):
         r"""
-        Test model bert with pynative mode
+        Test model bert
         """
+        model = RobertaModel(self.config)
+        if self.use_amp:
+            model = mindnlp._legacy.amp.auto_mixed_precision(model)
 
-        context.set_context(mode=context.PYNATIVE_MODE)
-        config = RobertaConfig(num_hidden_layers=2)
-        model = RobertaModel(config)
+        input_ids = Tensor(np.random.randint(1, self.config.vocab_size, (1, 256)), mindspore.int64)
 
-        input_ids = Tensor(np.random.randn(1, 512), mindspore.int32)
+        outputs, pooled = self.modeling(model, input_ids, jit)
 
-        outputs, pooled = model(input_ids)
-        assert outputs.shape == (1, 512, 768)
-        assert pooled.shape == (1, 768)
+        assert outputs.shape == (1, 256, self.config.hidden_size)
+        assert pooled.shape == (1, self.config.hidden_size)
 
-    def test_modeling_roberta_graph(self):
-        r"""
-        Test model bert with graph mode
-        """
-
-        context.set_context(mode=context.GRAPH_MODE)
-        config = RobertaConfig(num_hidden_layers=2)
-        model = RobertaModel(config)
-
-        input_ids = Tensor(np.random.randn(1, 512), mindspore.int32)
-
-        outputs, pooled = model(input_ids)
-        assert outputs.shape == (1, 512, 768)
-        assert pooled.shape == (1, 768)
 
     @pytest.mark.download
     def test_from_pretrained_from_pt(self):
@@ -70,11 +64,3 @@ class TestModelingRoberta(unittest.TestCase):
     def test_from_pretrained(self):
         """test from pretrained"""
         _ = RobertaModel.from_pretrained('roberta-base')
-
-    def tearDown(self) -> None:
-        gc.collect()
-
-    @classmethod
-    def tearDownClass(cls):
-        if os.path.exists("~/.mindnlp"):
-            os.removedirs("~/.mindnlp")

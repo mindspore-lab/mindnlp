@@ -48,6 +48,8 @@ from mindnlp.models.nezha import (NezhaConfig,
                                   NezhaForMultipleChoice,
                                   NezhaForTokenClassification,
                                   NezhaForQuestionAnswering)
+
+
 class TestNezhaBasicModule(unittest.TestCase):
     r"""
     Test Nezha Basic Module
@@ -71,7 +73,7 @@ class TestNezhaBasicModule(unittest.TestCase):
         Test NezhaEmbeddings
         """
         model = NezhaEmbeddings(self.config)
-        inputs = Tensor(np.random.randn(4, 16), mindspore.int64)
+        inputs = Tensor(np.random.randint(0, self.config.vocab_size, (4, 16)), mindspore.int64)
         outputs = model(inputs)
         assert outputs.shape == (4, 16, 48)
 
@@ -207,7 +209,7 @@ class TestModelingNezha(unittest.TestCase):
         Test NezhaModel
         """
         model = NezhaModel(self.config)
-        inputs = Tensor(np.random.randn(4, 16), mindspore.int64)
+        inputs = Tensor(np.random.randint(0, self.config.vocab_size, (4, 16)), mindspore.int64)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 16, 48)
         assert outputs[1].shape == (4, 48)
@@ -217,7 +219,7 @@ class TestModelingNezha(unittest.TestCase):
         Test NezhaForPreTraining
         """
         model = NezhaForPreTraining(self.config)
-        inputs= Tensor(np.random.randn(4, 16), mindspore.int64)
+        inputs = Tensor(np.random.randint(0, self.config.vocab_size, (4, 16)), mindspore.int64)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 16, 64)
         assert outputs[1].shape == (4, 2)
@@ -227,7 +229,7 @@ class TestModelingNezha(unittest.TestCase):
         Test NezhaForMaskedLM
         """
         model = NezhaForMaskedLM(self.config)
-        inputs= Tensor(np.random.randn(4, 16), mindspore.int64)
+        inputs = Tensor(np.random.randint(0, self.config.vocab_size, (4, 16)), mindspore.int64)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 16, 64)
 
@@ -236,7 +238,7 @@ class TestModelingNezha(unittest.TestCase):
         Test NezhaForNextSentencePrediction
         """
         model = NezhaForNextSentencePrediction(self.config)
-        inputs= Tensor(np.random.randn(4, 16), mindspore.int64)
+        inputs = Tensor(np.random.randint(0, self.config.vocab_size, (4, 16)), mindspore.int64)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 2)
 
@@ -245,7 +247,7 @@ class TestModelingNezha(unittest.TestCase):
         Test NezhaForSequenceClassification
         """
         model = NezhaForSequenceClassification(self.config)
-        inputs= Tensor(np.random.randn(4, 16), mindspore.int64)
+        inputs = Tensor(np.random.randint(0, self.config.vocab_size, (4, 16)), mindspore.int64)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 2)
 
@@ -254,7 +256,7 @@ class TestModelingNezha(unittest.TestCase):
         Test NezhaForMultipleChoice
         """
         model = NezhaForMultipleChoice(self.config)
-        inputs= Tensor(np.random.randn(4, 4, 16), mindspore.int64)
+        inputs = Tensor(np.random.randint(0, self.config.vocab_size, (4, 4, 16)), mindspore.int64)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 4)
 
@@ -263,7 +265,7 @@ class TestModelingNezha(unittest.TestCase):
         Test NezhaforTokenClassification
         """
         model = NezhaForTokenClassification(self.config)
-        inputs= Tensor(np.random.randn(4, 16), mindspore.int64)
+        inputs = Tensor(np.random.randint(0, self.config.vocab_size, (4, 16)), mindspore.int64)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 16, 2)
 
@@ -272,7 +274,7 @@ class TestModelingNezha(unittest.TestCase):
         Test NezhaForQuestionAnswering
         """
         model = NezhaForQuestionAnswering(self.config)
-        inputs = Tensor(np.random.randn(4, 16), mindspore.int64)
+        inputs = Tensor(np.random.randint(0, self.config.vocab_size, (4, 16)), mindspore.int64)
         outputs = model(inputs)
         assert outputs[0].shape == (4, 16)
         assert outputs[1].shape == (4, 16)
