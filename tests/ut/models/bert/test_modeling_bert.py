@@ -24,6 +24,7 @@ import mindnlp
 from mindnlp.models import BertConfig, BertModel
 from ..model_test import ModelTest
 
+
 @ddt
 class TestModelingBert(ModelTest):
     r"""
@@ -46,8 +47,7 @@ class TestModelingBert(ModelTest):
         if self.use_amp:
             model = mindnlp._legacy.amp.auto_mixed_precision(model)
 
-        input_ids = Tensor(np.random.randn(1, 512), mindspore.int32)
-
+        input_ids = Tensor(np.random.randint(1, self.config.vocab_size, (1, 512)), mindspore.int32)
 
         outputs, pooled = self.modeling(model, input_ids, jit)
 

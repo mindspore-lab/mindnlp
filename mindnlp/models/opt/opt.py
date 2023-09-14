@@ -33,7 +33,7 @@ from ..activations import ACT2FN
 from ..utils import Conv1D
 from .config_opt import OPTConfig, OPT_SUPPORT_LIST
 
-from ...modeling_outputs import (
+from ...utils.modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
     QuestionAnsweringModelOutput,

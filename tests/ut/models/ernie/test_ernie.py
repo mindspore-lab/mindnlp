@@ -188,7 +188,7 @@ class TestModelingErnie(ModelTest):
         outputs = model(input_np)
         assert outputs.shape == (50,2)
 
-    def test_erniegorpretraining_model(self):
+    def test_ernie_for_pretraining_model(self):
         """
         Test ErnieForPretraining
         """
@@ -199,7 +199,7 @@ class TestModelingErnie(ModelTest):
 
         input_ids = Tensor(np.random.randint(
             0, 100, (1,128)), dtype=mindspore.int32)
-        outputs = model(input_ids,input_ids)
+        outputs = model(input_ids)
         assert outputs[0].shape == (1,128,1000)
         assert outputs[1].shape == (1,2)
 

@@ -55,17 +55,18 @@ class NezhaRelativePositionsEncoding(nn.Cell):
                                         max_relative_position)
         final_mat = distance_mat_clipped + max_relative_position
 
+        # TODO: use numpy to avoid setitem(mindspore not support complete `view`.)
         embeddings_table = ops.zeros((vocab_size, depth))
-        position = ops.arange(0, vocab_size, dtype=mindspore.float32).expand_dims(1)
-        div_term = ops.exp(ops.arange(0, depth, 2).float() * (-math.log(10000.0)) / depth)
-        embeddings_table[:, 0::2] = ops.sin(position * div_term)
-        embeddings_table[:, 1::2] = ops.cos(position * div_term)
+        # position = ops.arange(0, vocab_size, dtype=mindspore.float32).expand_dims(1)
+        # div_term = ops.exp(ops.arange(0, depth, 2).astype(mindspore.float32) * (-math.log(10000.0)) / depth)
+        # embeddings_table[:, 0::2] = ops.sin(position * div_term)
+        # embeddings_table[:, 1::2] = ops.cos(position * div_term)
 
         flat_relative_positions_matrix = final_mat.view(-1)
         on_value, off_value = Tensor(1.0, mindspore.float32), Tensor(0.0, mindspore.float32)
         one_hot_relative_positions_matrix = ops.one_hot(
             flat_relative_positions_matrix, vocab_size, on_value, off_value, axis=-1
-        ).float()
+        ).astype(mindspore.float32)
         positions_encoding = ops.matmul(one_hot_relative_positions_matrix, embeddings_table)
         my_shape = list(final_mat.shape)
         my_shape.append(depth)
@@ -1014,11 +1015,8 @@ class NezhaForMultipleChoice(NezhaPreTrainedModel):
         )
 
         pooled_output = outputs[1]
-        print(pooled_output.shape)
         pooled_output = self.dropout(pooled_output)
         logits = self.classifier(pooled_output)
-        print(logits.shape)
-        print(num_choices)
         reshaped_logits = logits.view(-1, num_choices)
 
         loss = None

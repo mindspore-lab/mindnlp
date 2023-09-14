@@ -51,7 +51,7 @@ class TestTinyBert(ModelTest):
         """
 
         bert_embeddings = TinyBertEmbeddings(self.bert_config)
-        input_ids = mindspore.Tensor(np.random.randint(0, 1000, (2, 128)))
+        input_ids = mindspore.Tensor(np.random.randint(0, self.bert_config.vocab_size, (2, 128)))
         output = bert_embeddings(input_ids)
         assert output.shape == (2, 128, self.bert_config.hidden_size)
 

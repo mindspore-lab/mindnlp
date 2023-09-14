@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 import mindspore
-from .utils import ModelOutput
+from .generic import ModelOutput
 
 @dataclass
 class BaseModelOutputWithPast(ModelOutput):
