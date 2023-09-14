@@ -14,8 +14,35 @@
 # ============================================================================
 # pylint: disable=C0103
 """save and load"""
+import os
+from collections import OrderedDict
+
 import mindspore
+
 from .peft_types import PeftType
+from .other import WEIGHTS_NAME
+
+def get_data_list(model: mindspore.nn.Cell):
+    """Get state dict of the Peft model for saving."""
+    param_dict: OrderedDict = model.parameters_dict()
+    data_list = OrderedDict()  # {key: [dims, tensor_type, data]}
+
+    for key, value in param_dict.items():
+        data_list[key] = []
+        dims = []
+        if value.shape == ():
+            dims.append(0)
+        else:
+            for dim in value.shape:
+                dims.append(dim)
+        data_list[key].append(dims)
+        tensor_type = str(value.dtype)
+        data_list[key].append(tensor_type)
+        data = value.asnumpy().reshape(-1)
+        data_list[key].append(data)
+
+    return data_list
+
 
 def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
     """
@@ -27,7 +54,8 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
 
     config = model.peft_config[adapter_name]
     if state_dict is None:
-        state_dict = model.state_dict()
+        # NOTE: state_dict = model.state_dict()
+        state_dict = get_data_list(model)
     if config.peft_type == PeftType.LORA:
         # to_return = lora_state_dict(model, bias=model.peft_config.bias)
         # adapted from `https://github.com/microsoft/LoRA/blob/main/loralib/utils.py`
@@ -50,6 +78,7 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
         to_return = {k: v for k, v in to_return.items() if (("lora_" in k and adapter_name in k) or ("bias" in k))}
     else:
         raise NotImplementedError
+
     if model.modules_to_save is not None:
         for key, value in state_dict.items():
             if any(f"{module_name}.modules_to_save.{adapter_name}" in key for module_name in model.modules_to_save):
@@ -96,4 +125,27 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
     else:
         raise NotImplementedError
 
-    _ = mindspore.load_param_into_net(model, peft_model_state_dict)
+    param_not_load, ckpt_not_load = mindspore.load_param_into_net(model, peft_model_state_dict)
+
+    return (param_not_load, ckpt_not_load)
+
+
+def load_peft_weights(model_id: str,) -> dict:
+    r"""
+    A helper method to load the PEFT weights from local storage. Add download logic later.
+
+    Args:
+        model_id (`str`):
+            The local path to the adapter weights or the name of the adapter to load from the HuggingFace Hub.
+    """
+    path = model_id
+
+    if os.path.exists(os.path.join(path, WEIGHTS_NAME)):
+        filename = os.path.join(path, WEIGHTS_NAME)
+    else:
+        # TODO: add download logic later
+        raise ValueError(f"load peft model failed, peft model file: {filename} not exists.")
+
+    adapters_weights = mindspore.load_checkpoint(filename)
+
+    return adapters_weights

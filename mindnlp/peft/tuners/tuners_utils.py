@@ -197,7 +197,6 @@ class BaseTuner(nn.Cell):
     #     if self.peft_config[adapter_name].inference_mode:
     #         # freeze adapter
     #         _freeze_adapter(self.model, adapter_name)
-
     def inject_adapter(self, model: nn.Cell, adapter_name: str):
         r"""
         Creates adapter layers and replaces the target modules with the adapter layers. This method is called under the
@@ -221,7 +220,6 @@ class BaseTuner(nn.Cell):
         is_target_modules_in_base_model = False
         key_list = [key for key, _ in model.cells_and_names()]  # named_modules
 
-        # TODO: check .config existed or not in mindnlp models (may diff from transformers)
         model_config = getattr(model, "config", {"model_type": "custom"})
         if hasattr(model_config, "to_dict"):
             model_config = model_config.to_dict()
@@ -252,7 +250,7 @@ class BaseTuner(nn.Cell):
         self._mark_only_adapters_as_trainable()
 
         if self.peft_config[adapter_name].inference_mode:
-            for name, param in self.model.named_parameters():
+            for name, param in self.model.parameters_and_names():
                 if adapter_name in name:
                     param.requires_grad = False
 

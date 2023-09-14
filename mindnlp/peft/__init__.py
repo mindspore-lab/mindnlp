@@ -35,6 +35,19 @@ from .tuners import (
     LoraModel,
 )
 
+from .utils import (
+    # TRANSFORMERS_MODELS_TO_PREFIX_TUNING_POSTPROCESS_MAPPING,
+    PeftType,
+    TaskType,
+    # bloom_model_postprocess_past_key_value,
+    get_peft_model_state_dict,
+    # prepare_model_for_int8_training,
+    # prepare_model_for_kbit_training,
+    set_peft_model_state_dict,
+    shift_tokens_right,
+    # load_peft_weights,
+)
+
 from .config import (
     PeftConfig,
     PromptLearningConfig,
