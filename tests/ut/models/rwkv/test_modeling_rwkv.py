@@ -42,7 +42,7 @@ class TestModelingRWKV(unittest.TestCase):
         """
         model = RwkvModel(self.config)
 
-        input_ids = Tensor(np.random.randn(1, self.config.context_length), mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (1, self.config.context_length)), mindspore.int32)
 
         def forward(input_ids):
             outputs = model(input_ids)
