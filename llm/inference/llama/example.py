@@ -14,7 +14,7 @@ from mindspore.communication import init, get_rank, get_group_size
 mindspore.set_context(mode=mindspore.PYNATIVE_MODE, device_target="GPU")
 init(backend_name="nccl")
 
-from llama.modeling import LlamaConfig, Transformer
+from llama.model import LlamaConfig, Transformer
 from llama.tokenizer import Tokenizer
 from llama.generation import LLaMA
 

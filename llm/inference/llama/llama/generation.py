@@ -9,7 +9,7 @@ from mindspore import ops
 from mindspore import numpy as mnp
 
 from .tokenizer import Tokenizer
-from .modeling import Transformer
+from .model import Transformer
 
 
 class LLaMA:
