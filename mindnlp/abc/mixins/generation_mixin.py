@@ -20,6 +20,7 @@
 # pylint: disable=E1123
 # pylint: disable=E1121
 # pylint: disable=R1710
+# pylint: disable=R1705
 # pylint: disable=E1102
 """
 Generation mixin.
@@ -263,9 +264,33 @@ class GenerationMixin:
         is_encoder_decoder: bool = False,
         standardize_cache_format: bool = False,
     ) -> Dict[str, Any]:
-        raise NotImplementedError(
-            "TODO: You need to implement this function."
+        # update past_key_values
+        model_kwargs["past_key_values"] = self._extract_past_from_model_output(
+            outputs, standardize_cache_format=standardize_cache_format
         )
+
+        # update token_type_ids with last value
+        if "token_type_ids" in model_kwargs:
+            token_type_ids = model_kwargs["token_type_ids"]
+            model_kwargs["token_type_ids"] = ops.cat([token_type_ids, token_type_ids[:, -1].unsqueeze(-1)], dim=-1)
+
+        if not is_encoder_decoder:
+            # update attention mask
+            if "attention_mask" in model_kwargs:
+                attention_mask = model_kwargs["attention_mask"]
+                model_kwargs["attention_mask"] = ops.cat(
+                    [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1))], dim=-1
+                )
+        else:
+            # update decoder attention mask
+            if "decoder_attention_mask" in model_kwargs:
+                decoder_attention_mask = model_kwargs["decoder_attention_mask"]
+                model_kwargs["decoder_attention_mask"] = ops.cat(
+                    [decoder_attention_mask, decoder_attention_mask.new_ones((decoder_attention_mask.shape[0], 1))],
+                    dim=-1,
+                )
+
+        return model_kwargs
 
     def _reorder_cache(self, past, beam_idx):
         raise NotImplementedError(
@@ -685,7 +710,7 @@ class GenerationMixin:
                 **model_kwargs,
             )
 
-        if is_contrastive_search_gen_mode:
+        elif is_contrastive_search_gen_mode:
             if generation_config.num_return_sequences > 1:
                 raise ValueError(
                     f"num_return_sequences has to be 1, but is {generation_config.num_return_sequences} when doing"
@@ -706,7 +731,7 @@ class GenerationMixin:
                 **model_kwargs,
             )
 
-        if is_sample_gen_mode:
+        elif is_sample_gen_mode:
             # 11. prepare logits warper
             logits_warper = self._get_logits_warper(generation_config)
 
@@ -732,7 +757,7 @@ class GenerationMixin:
                 **model_kwargs,
             )
 
-        if is_beam_gen_mode:
+        elif is_beam_gen_mode:
             if generation_config.num_return_sequences > generation_config.num_beams:
                 raise ValueError("`num_return_sequences` has to be smaller or equal to `num_beams`.")
 
@@ -768,7 +793,7 @@ class GenerationMixin:
                 **model_kwargs,
             )
 
-        if is_beam_sample_gen_mode:
+        elif is_beam_sample_gen_mode:
             # 11. prepare logits warper
             logits_warper = self._get_logits_warper(generation_config)
 
@@ -805,7 +830,7 @@ class GenerationMixin:
                 **model_kwargs,
             )
 
-        if is_group_beam_gen_mode:
+        elif is_group_beam_gen_mode:
             if generation_config.num_return_sequences > generation_config.num_beams:
                 raise ValueError("`num_return_sequences` has to be smaller or equal to `num_beams`.")
 
@@ -850,7 +875,7 @@ class GenerationMixin:
                 **model_kwargs,
             )
 
-        if is_constraint_gen_mode:
+        elif is_constraint_gen_mode:
             if generation_config.num_return_sequences > generation_config.num_beams:
                 raise ValueError("`num_return_sequences` has to be smaller or equal to `num_beams`.")
 
@@ -1142,7 +1167,7 @@ class GenerationMixin:
                 next_tokens = next_tokens * unfinished_sequences + pad_token_id * (1 - unfinished_sequences)
 
             # update generated ids, model inputs, and length for next step
-            input_ids = ops.cat([input_ids, next_tokens[:, None]], axis=-1)
+            input_ids = ops.cat([input_ids.astype(next_tokens[:, None].dtype), next_tokens[:, None]], axis=-1)
             if streamer is not None:
                 streamer.put(next_tokens)
             model_kwargs = self._update_model_kwargs_for_generation(
