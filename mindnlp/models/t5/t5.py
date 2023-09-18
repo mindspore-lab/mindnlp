@@ -94,7 +94,6 @@ class T5LayerNorm(nn.Cell):
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
-
         variance = hidden_states.astype(mindspore.float32).pow(2).mean(-1, keep_dims=True)
         hidden_states = hidden_states / ops.sqrt(variance + self.variance_epsilon)
         # convert into half-precision if necessary
@@ -328,7 +327,7 @@ class T5Attention(nn.Cell):
             # if key and values are already calculated
             # we want only the last query position bias
             if past_key_value is not None:
-                position_bias = position_bias[:, :, -hidden_states.size(1) :, :]
+                position_bias = position_bias[:, :, -hidden_states.shape[1] :, :]
 
             if mask is not None:
                 position_bias = position_bias + mask  # (batch_size, n_heads, seq_length, key_length)
@@ -660,7 +659,7 @@ class T5Stack(T5PreTrainedModel):
 
         if inputs_embeds is None:
             assert self.embed_tokens is not None, "You have to initialize the model with valid token embeddings"
-            inputs_embeds = self.embed_tokens(input_ids)
+            inputs_embeds = self.embed_tokens(input_ids.astype(mindspore.int64))
 
         batch_size, seq_length = input_shape
 

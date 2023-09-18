@@ -42,12 +42,11 @@ class CellUtilMixin:
         """create_extended_attention_mask_for_decoder"""
         batch_size, seq_length = input_shape
         seq_ids = arange(seq_length)
-        # causal_mask = ops.tile((seq_ids[None, None, :]).astype(mindspore.int32),\
-        #  (batch_size, seq_length, 1)) <= seq_ids[None, :, None] # mindspore 2.0
-        causal_mask = Tensor(np.tile(seq_ids[None, None, :].asnumpy(), (batch_size, seq_length, 1))) \
-            <= seq_ids[None, :, None]
+        causal_mask = ops.tile((seq_ids[None, None, :]).astype(mindspore.int32),\
+         (batch_size, seq_length, 1)) <= seq_ids[None, :, None] # mindspore 2.0
+        # causal_mask = Tensor(np.tile(seq_ids[None, None, :].asnumpy(), (batch_size, seq_length, 1))) \
+        #     <= seq_ids[None, :, None]
         # in case past_key_values are used we need to add a prefix ones mask to the causal mask
-        # causal and attention masks must have same type with pytorch version < 1.3
         causal_mask = causal_mask.astype(attention_mask.dtype)
 
         if causal_mask.shape[1] < attention_mask.shape[1]:
