@@ -11,8 +11,6 @@ from pathlib import Path
 
 import mindspore
 from mindspore.communication import init, get_rank, get_group_size
-mindspore.set_context(mode=mindspore.PYNATIVE_MODE, device_target="GPU")
-init(backend_name="nccl")
 
 from llama.model import LlamaConfig, Transformer
 from llama.tokenizer import Tokenizer
@@ -42,7 +40,6 @@ def load(
         checkpoints
     ), f"Loading a checkpoint for MP={len(checkpoints)} but world size is {rank_size}"
     ckpt_path = str(checkpoints[rank_id])
-    print("Loading")
     with open(Path(ckpt_dir) / "params.json", "r") as f:
         params = json.loads(f.read())
 
@@ -52,7 +49,9 @@ def load(
     tokenizer = Tokenizer(model_path=tokenizer_path)
     model_args.vocab_size = tokenizer.n_words
 
+    print("Instanctial model")
     model = Transformer(model_args)
+    print("Loading checkpoint")
     mindspore.load_checkpoint(ckpt_path, net=model)
 
     generator = LLaMA(model, tokenizer)
@@ -113,4 +112,5 @@ cheese =>""",
 
 
 if __name__ == "__main__":
+    init(backend_name="nccl")
     fire.Fire(main)

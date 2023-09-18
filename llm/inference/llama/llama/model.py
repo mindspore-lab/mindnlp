@@ -16,14 +16,15 @@
 
 # This software may be used and distributed according to the terms of the GNU General Public License version 3.
 """ MindNLP llama model."""
-
 import math
 from typing import Tuple, Optional
 
 import mindspore
-from mindspore import nn, ops, Parameter
-from mindspore.communication import get_group_size
+from mindspore import nn, ops, Parameter, Tensor
+from mindspore.common.initializer import One, Zero
+from mindspore.ops._tracefunc import trace
 from mindspore.ops._primitive_cache import _get_cache_prim
+from mindnlp.parallel.utils import get_group_size
 
 from mindnlp.parallel.layers import (
     ParallelEmbedding,
@@ -65,11 +66,12 @@ class RMSNorm(nn.Cell):
     def __init__(self, dim: int, eps: float = 1e-6):
         super().__init__()
         self.eps = eps
-        self.weight = Parameter(ops.ones(dim, dtype=mindspore.float16))
+        self.weight = Parameter(Tensor(shape=(dim,), dtype=mindspore.float16, init=One()), 'weight')
 
     def _norm(self, norm_x):
         return norm_x * ops.rsqrt(ops.mean(ops.pow(norm_x, 2), -1, keep_dims=True) + self.eps)
 
+    @trace
     def construct(self, construct_x):
         '''RMSNorm construct'''
         output = self._norm(construct_x.float()).astype(construct_x.dtype)
@@ -106,6 +108,7 @@ def view_as_complex(_x: mindspore.Tensor):
     return _complex(_x[:,:,:,:,0], _x[:,:,:,:,1])
 
 
+@trace
 def apply_rotary_emb(
     x_q: mindspore.Tensor,
     x_k: mindspore.Tensor,
@@ -161,12 +164,11 @@ class Attention(nn.Cell):
             dtype=mindspore.float16,
         )
 
-        self.cache_k = ops.zeros(
-            (config.max_batch_size, config.max_seq_len, self.n_local_heads, self.head_dim)
-        )
-        self.cache_v = ops.zeros(
-            (config.max_batch_size, config.max_seq_len, self.n_local_heads, self.head_dim)
-        )
+        self.cache_k = Tensor(shape=(config.max_batch_size, config.max_seq_len, self.n_local_heads, self.head_dim),
+                              dtype=mindspore.float16, init=Zero())
+
+        self.cache_v = Tensor(shape=(config.max_batch_size, config.max_seq_len, self.n_local_heads, self.head_dim),
+                              dtype=mindspore.float16, init=Zero())
 
     def construct(self, _x: mindspore.Tensor, start_pos: int,
                 freqs_cis: mindspore.Tensor, mask: Optional[mindspore.Tensor]):
@@ -275,10 +277,9 @@ class Transformer(nn.Cell):
             config.vocab_size, config.dim, dtype=mindspore.float16
         )
 
-        self.layers = nn.SequentialCell()
+        self.layers = nn.CellList()
         for layer_id in range(config.n_layers):
             self.layers.append(TransformerBlock(layer_id, config))
-
         self.norm = RMSNorm(config.dim, eps=config.norm_eps)
         self.output = ColumnParallelLinear(
             config.dim, config.vocab_size, bias=False, dtype=mindspore.float16
@@ -300,6 +301,7 @@ class Transformer(nn.Cell):
 
         for layer in self.layers:
             _h = layer(_h, start_pos, freqs_cis, mask)
+
         _h = self.norm(_h) # h = [bsz * seqlen * emb_dim]
         output = self.output(_h[:, -1, :])  # only compute last logits  output = [bsz * vocab_size]
         return output.astype(mindspore.float32)

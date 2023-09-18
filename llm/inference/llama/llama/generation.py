@@ -4,13 +4,13 @@
 from typing import List
 
 import mindspore
-from mindspore import nn
-from mindspore import ops
-from mindspore import numpy as mnp
+from mindspore import ops, Tensor, mutable
+from mindspore.ops._tracefunc import trace
 
 from .tokenizer import Tokenizer
 from .model import Transformer
 
+import time
 
 class LLaMA:
     def __init__(self, model: Transformer, tokenizer: Tokenizer):
@@ -42,7 +42,11 @@ class LLaMA:
         start_pos = min_prompt_size
         prev_pos = 0
         for cur_pos in range(start_pos, total_len):
+            s = time.time()
             logits = self.model(tokens[:, prev_pos:cur_pos], prev_pos)
+            t = time.time()
+            print(t - s)
+
             if temperature > 0:
                 probs = ops.softmax(logits / temperature, axis=-1)
                 next_token = sample_top_p(probs, top_p)
@@ -69,11 +73,13 @@ class LLaMA:
         return decoded
 
 
+@trace
 def sample_top_p(probs, p):
     probs_sort, probs_idx = ops.sort(probs, axis=-1, descending=True)
     probs_sum = ops.cumsum(probs_sort, axis=-1)
     mask = probs_sum - probs_sort > p
-    probs_sort[mask] = 0.0
+    # probs_sort[mask] = 0.0
+    probs_sort = probs_sort * (1 - mask)
     probs_sort = ops.div(probs_sort, probs_sort.sum(axis=-1, keepdims=True))
     next_token = ops.multinomial(probs_sort, num_samples=1, replacement=False)
     next_token = ops.gather_elements(probs_idx, -1, next_token)
