@@ -17,5 +17,5 @@
 """
 LLAMA Model init
 """
-from .llama import LlamaModel, LlamaForCausalLM
+from .llama import LlamaPreTrainedModel, LlamaModel, LlamaForCausalLM, LlamaForSequenceClassification
 from .llama_config import LlamaConfig
