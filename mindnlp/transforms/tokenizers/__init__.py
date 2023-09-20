@@ -35,8 +35,9 @@ from .xlm_tokenizer import  XLMTokenizer
 from .megatronbert_tokenizer import MegatronBertTokenizer
 from .opt_tokenizer import OPTTokenizer
 from .luke_tokenizer import LukeTokenizer
+from .llama_tokenizer import LlamaTokenizer
 
 __all__ = ['BasicTokenizer', 'BertTokenizer', 'T5Tokenizer', 'GPTTokenizer', 'GPT2Tokenizer', 'ErnieTokenizer', 'CodeGenTokenizer',
            'RobertaTokenizer', 'LongformerTokenizer', 'NezhaTokenizer', 'TinyBertTokenizer', 'ChatGLMTokenizer', 'BartTokenizer',
-           'MobileBertTokenizer', 'UIETokenizer', 'XLMTokenizer', 'MegatronBertTokenizer', 'OPTTokenizer','LukeTokenizer'
+           'MobileBertTokenizer', 'UIETokenizer', 'XLMTokenizer', 'MegatronBertTokenizer', 'OPTTokenizer','LukeTokenizer', 'LlamaTokenizer'
            ]
