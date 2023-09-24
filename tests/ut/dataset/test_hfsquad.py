@@ -105,7 +105,6 @@ class TestHFSQuAD(unittest.TestCase):
 
         vocab = text.Vocab.from_dataset(train_dataset, 'context', special_tokens=['<pad>', '<unk>'],
                                         special_first=True)
-
         train_dataset = HF_SQuAD(
             root=self.root,
             split="train"
