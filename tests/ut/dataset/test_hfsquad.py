@@ -17,7 +17,6 @@ Test SQuAD
 """
 
 import os
-import shutil
 import unittest
 import pytest
 
