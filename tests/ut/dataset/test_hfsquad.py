@@ -35,10 +35,6 @@ class TestHFSQuAD(unittest.TestCase):
     def setUpClass(cls):
         cls.root = os.path.join(DEFAULT_ROOT, 'datasets')
 
-    @classmethod
-    def tearDownClass(cls):
-        shutil.rmtree(cls.root)
-
     @pytest.mark.download
     def test_hf_squad(self):
         """Test HF_SQuAD"""
