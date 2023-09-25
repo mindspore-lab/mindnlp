@@ -25,7 +25,7 @@ from mindnlp.transforms import BasicTokenizer
 from mindnlp.dataset import HF_dureader_robust, HF_dureader_robust_Process
 from mindnlp.configs import DEFAULT_ROOT
 
-class TestHFdureader_robust(unittest.TestCase):
+class Test_hf_dureader_robust(unittest.TestCase):
     r"""
     Test HF_dureader_robust
     """
@@ -40,7 +40,7 @@ class TestHFdureader_robust(unittest.TestCase):
         num_lines = {
             "train": 14520,
             "validation": 1417,
-            "validation": 50000,
+            "test": 50000,
         }
         dataset_train, dataset_validation, dataset_test = HF_dureader_robust(root=self.root, split=('train', 'validation', 'test'))
         assert dataset_train.get_dataset_size() == num_lines["train"]
@@ -55,7 +55,7 @@ class TestHFdureader_robust(unittest.TestCase):
         assert dataset_validation.get_dataset_size() == num_lines["test"]
 
     @pytest.mark.download
-    def test_hf_dureader_robust(self):
+    def test_hf_dureader_robust_process(self):
         """
         Test hf_dureader_robust process
         """
