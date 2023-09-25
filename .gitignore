@@ -148,3 +148,6 @@ cmp/
 # txt files
 *.txt
 !requirements.txt
+
+# mindspore profiler
+RuntimeProfiler*
