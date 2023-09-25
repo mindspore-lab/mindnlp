@@ -24,6 +24,7 @@ from .hf_cmrc2018 import HF_CMRC2018, HF_CMRC2018_Process
 from .hf_duconv import hf_duconv, hf_duconv_process
 from .hf_squad2 import HF_SQuAD2, HF_SQuAD2_Process
 from .hf_squad import HF_SQuAD, HF_SQuAD_Process
+from .hf_dureader_robust import HF_dureader_robust, HF_dureader_robust_Process
 from .mt_eng_vietnamese import hf_mt_eng_vietnamese
 from .hf_xfund import HF_XFUND
 from .hf_funsd import HF_FUNSD
