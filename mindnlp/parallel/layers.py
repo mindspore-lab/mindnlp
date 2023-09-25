@@ -21,7 +21,7 @@ import mindspore
 from mindspore import nn, ops
 from mindspore import Parameter, Tensor
 from mindspore.common.initializer import Initializer, Zero
-
+from mindspore.ops._tracefunc import trace
 from .mappings import _get_rank, _get_group_size
 
 
@@ -72,6 +72,7 @@ class VocabParallelEmbedding(nn.Cell):
                                        dtype=dtype, init=init_method),
                                 "weight")
 
+    @trace
     def construct(self, input_: Tensor) -> Tensor:  # type: ignore
         # Build the mask.
         input_mask = (input_ < self.vocab_start_index) | (
@@ -129,6 +130,7 @@ class ParallelEmbedding(nn.Cell):
                                        dtype=dtype, init=init_method),
                                 "weight")
 
+    @trace
     def construct(self, input_: Tensor) -> Tensor:  # type: ignore
         input_parallel = copy_to_model_parallel_region(input_)
         ori_shape = input_parallel.shape
@@ -199,6 +201,7 @@ class ColumnParallelLinear(nn.Cell):
         """get master weight of ColumnParallelLinear"""
         return gather_from_model_parallel_region(self.weight).swapaxes(0, 1)
 
+    @trace
     def construct(self, input_: Tensor) -> Tensor:  # type: ignore
         # Set up backprop all-reduce.
         input_parallel = copy_to_model_parallel_region(input_)
@@ -279,6 +282,7 @@ class RowParallelLinear(nn.Cell):
         """get master weight of RowParallelLinear"""
         return gather_from_model_parallel_region(self.weight).swapaxes(0, 1)
 
+    @trace
     def construct(self, input_: Tensor) -> Tensor:  # type:ignore
         # Set up backprop all-reduce.
         if self.input_is_parallel:

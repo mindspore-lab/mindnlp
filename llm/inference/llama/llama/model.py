@@ -170,11 +170,8 @@ class Attention(nn.Cell):
         self.cache_v = Tensor(shape=(config.max_batch_size, config.max_seq_len, self.n_local_heads, self.head_dim),
                               dtype=mindspore.float16, init=Zero())
 
-    def construct(self, _x: mindspore.Tensor, start_pos: int,
-                freqs_cis: mindspore.Tensor, mask: Optional[mindspore.Tensor]):
-        '''
-        construct
-        '''
+    @trace
+    def get_qkv(self, _x):
         bsz, seqlen, _ = _x.shape
         # x = h = [bsz * seqlen * emb_dim]
         x_q, x_k, x_v = self.w_q(_x), self.w_k(_x), self.w_v(_x)
@@ -182,6 +179,15 @@ class Attention(nn.Cell):
         x_q = x_q.view(bsz, seqlen, self.n_local_heads, self.head_dim)
         x_k = x_k.view(bsz, seqlen, self.n_local_heads, self.head_dim)
         x_v = x_v.view(bsz, seqlen, self.n_local_heads, self.head_dim)
+        return x_q, x_k, x_v        
+
+    def construct(self, _x: mindspore.Tensor, start_pos: int,
+                freqs_cis: mindspore.Tensor, mask: Optional[mindspore.Tensor]):
+        '''
+        construct
+        '''
+        bsz, seqlen, _ = _x.shape
+        x_q, x_k, x_v = self.get_qkv(_x)
 
         # xq = xk = xv = [bsz, seqlen, self.n_local_heads, self.head_dim]
 
@@ -235,6 +241,7 @@ class FeedForward(nn.Cell):
             dim, hidden_dim, bias=False, gather_output=False, dtype=mindspore.float16
         )
 
+    @trace
     def construct(self, _x):
         return self.w_2(ops.silu(self.w_1(_x)) * self.w_3(_x))
 
