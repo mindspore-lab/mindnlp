@@ -52,7 +52,7 @@ class TestHFdureaderrobust(unittest.TestCase):
         dataset_test = HF_dureader_robust(root=self.root, split='test')
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_validation.get_dataset_size() == num_lines["validation"]
-        assert dataset_validation.get_dataset_size() == num_lines["test"]
+        assert dataset_test.get_dataset_size() == num_lines["test"]
 
     @pytest.mark.download
     def test_hf_dureader_robust_process(self):
