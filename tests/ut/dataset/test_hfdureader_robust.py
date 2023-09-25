@@ -25,7 +25,7 @@ from mindnlp.transforms import BasicTokenizer
 from mindnlp.dataset import HF_dureader_robust, HF_dureader_robust_Process
 from mindnlp.configs import DEFAULT_ROOT
 
-class Test_hf_dureader_robust(unittest.TestCase):
+class TestHFdureaderrobust(unittest.TestCase):
     r"""
     Test HF_dureader_robust
     """
