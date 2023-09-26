@@ -24,10 +24,8 @@ from mindspore.dataset import GeneratorDataset
 from mindnlp.dataset.register import load_dataset, process
 from mindnlp.transforms import BasicTokenizer
 from mindnlp.dataset.process import common_process
-from mindnlp.transforms import Truncate, Lookup, PadTransform
 from mindnlp.configs import DEFAULT_ROOT
-from datasets import Dataset
-import pandas as pd
+
 
 class HFmt_eng_vietnamese:
     """
@@ -98,7 +96,7 @@ def Hf_mt_eng_vietnamese(
             mode_list.append(s)
 
     ds_list = hf_load('mt_eng_vietnamese', 'iwslt2015-en-vi',split=mode_list, data_dir=cache_dir)
-    
+
     for every_ds in ds_list:
         datasets_list.append(GeneratorDataset(
             source=HFmt_eng_vietnamese(every_ds),
@@ -112,8 +110,7 @@ def Hf_mt_eng_vietnamese(
 
 
 @process.register
-def Hf_mt_eng_vietnamese_Process(dataset, column="en", tokenizer=BasicTokenizer(),vocab=None, batch_size=64, max_len=500, \
-                 bucket_boundaries=None, drop_remainder=False):
+def Hf_mt_eng_vietnamese_Process(dataset, column="en", tokenizer=BasicTokenizer(),vocab=None):
     """
     the process of the mt_eng_vietnamese dataset
 
