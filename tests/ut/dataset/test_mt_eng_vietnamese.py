@@ -13,13 +13,11 @@
 # limitations under the License.
 # ============================================================================
 """
-Test Ptb_text_only
+Test MtEngVietnamese
 """
 import os
 import unittest
 import pytest
-import mindspore as ms
-from mindspore.dataset import text
 from mindnlp.transforms import BasicTokenizer
 from mindnlp.dataset import Hf_mt_eng_vietnamese,Hf_mt_eng_vietnamese_Process
 from mindnlp import load_dataset, process
@@ -65,8 +63,7 @@ class TestMtEngVietnamese(unittest.TestCase):
             root=self.root,
             split=("train", "validation", "test"),
         )
-    
-    
+
     @pytest.mark.download
     def test_mt_eng_vietnamese_process(self):
         r"""
@@ -82,8 +79,8 @@ class TestMtEngVietnamese(unittest.TestCase):
             break
 
     @pytest.mark.download
-    def test_ptb_text_only_process_by_register(self):
-        """test ptb_text_only process by register"""
+    def test_hf_mt_eng_vietnamese_process_by_register(self):
+        """test MtEngVietnamese process by register"""
         train_dataset, _, _ = Hf_mt_eng_vietnamese()
         train_dataset, vocab = process('Hf_mt_eng_vietnamese',
                                        dataset=train_dataset,
