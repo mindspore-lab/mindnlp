@@ -13,14 +13,14 @@
 # limitations under the License.
 # ============================================================================
 """
-Test Ptb_text_only
+Test MtEngVietnamese
 """
 import os
-# import shutil
 import unittest
 import pytest
-from mindnlp.dataset import hf_mt_eng_vietnamese
-from mindnlp import load_dataset
+from mindnlp.transforms import BasicTokenizer
+from mindnlp.dataset import Hf_mt_eng_vietnamese,Hf_mt_eng_vietnamese_Process
+from mindnlp import load_dataset, process
 
 
 class TestMtEngVietnamese(unittest.TestCase):
@@ -32,9 +32,6 @@ class TestMtEngVietnamese(unittest.TestCase):
     def setUpClass(cls):
         cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
 
-    # @classmethod
-    # def tearDownClass(cls):
-    #     shutil.rmtree(cls.root)
 
     @pytest.mark.download
     def test_mt_eng_vietnamese(self):
@@ -44,16 +41,16 @@ class TestMtEngVietnamese(unittest.TestCase):
             "validation": 1269,
             "test": 1269,
         }
-        dataset_train, dataset_dev, dataset_test = hf_mt_eng_vietnamese(
+        dataset_train, dataset_dev, dataset_test = Hf_mt_eng_vietnamese(
             root=self.root, split=("train", "validation", "test")
         )
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["validation"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
 
-        dataset_train = hf_mt_eng_vietnamese(root=self.root, split="train")
-        dataset_dev = hf_mt_eng_vietnamese(root=self.root, split="validation")
-        dataset_test = hf_mt_eng_vietnamese(root=self.root, split="test")
+        dataset_train = Hf_mt_eng_vietnamese(root=self.root, split="train")
+        dataset_dev = Hf_mt_eng_vietnamese(root=self.root, split="validation")
+        dataset_test = Hf_mt_eng_vietnamese(root=self.root, split="test")
         assert dataset_train.get_dataset_size() == num_lines["train"]
         assert dataset_dev.get_dataset_size() == num_lines["validation"]
         assert dataset_test.get_dataset_size() == num_lines["test"]
@@ -62,7 +59,37 @@ class TestMtEngVietnamese(unittest.TestCase):
     def test_mt_eng_vietnamese_by_register(self):
         """test mt_eng_vietnamese by register"""
         _ = load_dataset(
-            "hf_mt_eng_vietnamese",
+            "Hf_mt_eng_vietnamese",
             root=self.root,
             split=("train", "validation", "test"),
         )
+
+    @pytest.mark.download
+    def test_mt_eng_vietnamese_process(self):
+        r"""
+        Test HF_mt_eng_vietnamese_Process
+        """
+
+        train_dataset, _, _ = Hf_mt_eng_vietnamese()
+        train_dataset, vocab = Hf_mt_eng_vietnamese_Process(train_dataset)
+        train_dataset = train_dataset.create_tuple_iterator()
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break
+
+    @pytest.mark.download
+    def test_hf_mt_eng_vietnamese_process_by_register(self):
+        """test MtEngVietnamese process by register"""
+        train_dataset, _, _ = Hf_mt_eng_vietnamese()
+        train_dataset, vocab = process('Hf_mt_eng_vietnamese',
+                                       dataset=train_dataset,
+                                       column="en",
+                                       tokenizer=BasicTokenizer(),
+                                       vocab=None
+                                       )
+        train_dataset = train_dataset.create_tuple_iterator()
+
+        for _, value in vocab.vocab().items():
+            assert isinstance(value, int)
+            break
