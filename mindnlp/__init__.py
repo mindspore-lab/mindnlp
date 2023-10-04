@@ -16,7 +16,7 @@
 MindNLP library.
 """
 
-from mindnlp.dataset import load_dataset, process
+from mindnlp.dataset import load_dataset
 from mindnlp.utils import less_min_pynative_first
 from mindnlp.workflow.workflow import Workflow
 from mindnlp.vocab import Vocab
@@ -29,4 +29,4 @@ else:
     from mindspore import jit as ms_jit
 
 
-__all__ = ['ms_jit', 'load_dataset', 'process', 'Workflow', 'Vocab']
+__all__ = ['ms_jit', 'load_dataset', 'Workflow', 'Vocab']

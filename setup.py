@@ -120,7 +120,8 @@ setup(
         'requests',
         'datasets',
         'tokenizers',
-        'sentencepiece'
+        'sentencepiece',
+        'regex'
     ],
     classifiers=[
         'License :: OSI Approved :: Apache Software License'
