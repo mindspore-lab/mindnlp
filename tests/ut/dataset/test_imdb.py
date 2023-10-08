@@ -66,3 +66,11 @@ class TestIMDB(unittest.TestCase):
         dataset = load_dataset('imdb', split=None, streaming=True)
         print(dataset.keys())
         print(next(dataset['train'].create_tuple_iterator()))
+
+    @pytest.mark.download
+    @pytest.mark.local
+    def test_split(self):
+        """Test HF_Docvqa_zh"""
+        dataset = load_dataset('imdb', split='train')
+        train, _ = dataset.split([0.7, 0.3])
+        print(next(train.create_tuple_iterator()))

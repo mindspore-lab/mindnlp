@@ -21,7 +21,7 @@ import os
 from typing import Union, Optional, Dict, Sequence, Mapping
 from mindspore.dataset import GeneratorDataset
 from datasets import load_dataset as hf_load
-from datasets import Dataset, Split, Features, \
+from datasets import Dataset, IterableDataset, Split, Features, \
     DownloadConfig, DownloadMode, VerificationMode, Version
 from mindnlp.configs import DEFAULT_ROOT
 
@@ -45,7 +45,7 @@ class TransferDataset():
         return tuple(self.ds[int(index)][name] for name in self.column_names)
 
     def __len__(self):
-        return self.ds.dataset_size
+        return self.ds.num_rows
 
 
 def load_dataset(
@@ -230,8 +230,7 @@ def load_dataset(
     shuffle = config_kwargs.get('shuffle', False)
     if cache_dir is None:
         cache_dir = os.path.join(DEFAULT_ROOT, "datasets", path)
-    if isinstance(split, str):
-        split = (split,)
+
     ds_ret = hf_load(path,
                      name=name,
                      data_dir=data_dir,
@@ -251,6 +250,9 @@ def load_dataset(
                      )
     if isinstance(ds_ret, (list, tuple)):
         ds_dict = dict(zip(split, ds_ret))
+    elif isinstance(ds_ret, (Dataset, IterableDataset)):
+        assert isinstance(split, str)
+        ds_dict = {split: ds_ret}
     else:
         ds_dict = ds_ret
 
