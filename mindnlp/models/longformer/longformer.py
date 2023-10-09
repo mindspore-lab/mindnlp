@@ -13,14 +13,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""MindSpore Longformer model."""
-# pylint: disable=relative-beyond-top-level
-# pylint: disable=too-many-instance-attributes
-# pylint: disable=too-many-locals
-# pylint: disable=too-few-public-methods
-# pylint: disable=too-many-arguments
-# pylint: disable=invalid-name
+# ============================================================================
+# pylint: disable=C0103
 # pylint: disable=C0302
+"""MindSpore Longformer model."""
 import inspect
 import math
 from typing import List, Set, Tuple, Callable, Optional, Union
@@ -2107,3 +2103,12 @@ class LongformerForMultipleChoice(LongformerPreTrainedModel):
             output = (reshaped_logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
         return None
+
+__all__ = ['LongformerForMaskedLM',
+            'LongformerForMultipleChoice',
+            'LongformerForQuestionAnswering',
+            'LongformerForSequenceClassification',
+            'LongformerForTokenClassification',
+            'LongformerModel',
+            'LongformerPreTrainedModel',
+            'LongformerSelfAttention']

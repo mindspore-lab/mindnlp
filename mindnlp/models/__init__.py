@@ -22,6 +22,7 @@ from .gpt2 import *
 from .t5 import *
 from .ernie import *
 from .roberta import *
+from .longformer import *
 
 __all__ = []
 __all__.extend(bert.__all__)
@@ -30,3 +31,4 @@ __all__.extend(gpt2.__all__)
 __all__.extend(t5.__all__)
 __all__.extend(ernie.__all__)
 __all__.extend(roberta.__all__)
+__all__.extend(longformer.__all__)
