@@ -13,11 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=relative-beyond-top-level
-# pylint: disable=too-many-instance-attributes
-# pylint: disable=too-many-locals
-# pylint: disable=too-few-public-methods
-# pylint: disable=too-many-arguments
+# ============================================================================
 """ Longformer configuration"""
 from typing import List, Union
 from mindnlp.abc import PreTrainedConfig
@@ -88,3 +84,5 @@ class LongformerConfig(PreTrainedConfig):
         self.position_embedding_type = position_embedding_type
         self.classifier_dropout = classifier_dropout
         self.onnx_export = onnx_export
+
+__all__ = ['LongformerConfig']
