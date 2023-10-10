@@ -23,7 +23,7 @@ python convert.py --ckpt_path $TARGET_FOLDER/model_size
 
 The provided `example.py` can be run on a single or multi-card node with `mpirun` and will output completions for two pre-defined prompts. Using `TARGET_FOLDER` as defined in `download.sh`:
 ```
-mpirun MP example.py --ckpt_dir $TARGET_FOLDER/model_size --tokenizer_path $TARGET_FOLDER/tokenizer.model
+mpirun -n MP python example.py --ckpt_dir $TARGET_FOLDER/model_size --tokenizer_path $TARGET_FOLDER/tokenizer.model
 ```
 
 Different models require different MP values (at least 24GB per card):

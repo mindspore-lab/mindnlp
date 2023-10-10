@@ -20,7 +20,6 @@
 '''RNN operators module, include RNN, GRU, LSTM'''
 import math
 import numpy as np
-import mindspore as ms
 from mindspore import nn, ops, context
 from mindspore import Tensor, Parameter, ParameterTuple
 from mindspore import log as logger
@@ -194,66 +193,6 @@ class SingleLSTMLayer_GPU(SingleLSTMLayerBase):
 
         weights = ops.concat(weights)
         return weights
-
-class SingleGRULayer_Ascend(nn.Cell):
-    """Single GRU on Ascend."""
-    def __init__(self, input_size, hidden_size, has_bias, bidirectional):
-        super().__init__(False)
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.gate_size = 3 * hidden_size
-        self.has_bias = has_bias
-        self.bidirectional = bidirectional
-        self.rnn = ops.DynamicGRUV2(gate_order='rzh')
-
-    def construct(self, inputs, h, weights):
-        if self.bidirectional:
-            return self.bidirection(inputs, h, weights)
-        return self.forward(inputs, h, weights)
-
-    def forward(self, inputs, h, weights):
-        """forward direction."""
-        if not self.has_bias:
-            w_ih, w_hh = weights
-            b_ih = ops.zeros(self.gate_size, inputs.dtype)
-            b_hh = ops.zeros(self.gate_size, inputs.dtype)
-        else:
-            w_ih, w_hh, b_ih, b_hh = weights
-        outputs, hn, _, _, _, _ = self.rnn(inputs.astype(ms.float16), \
-                                           w_ih.transpose((1, 0)).astype(ms.float16), \
-                                           w_hh.transpose((1, 0)).astype(ms.float16), \
-                                           b_ih, b_hh, \
-                                           None, h.astype(ms.float16))
-
-        return outputs, hn
-
-    def bidirection(self, inputs, h, weights):
-        """bidirectional."""
-        rev_inputs = reverse(inputs, 0)
-        if not self.has_bias:
-            w_ih_f, w_hh_f, w_ih_b, w_hh_b = weights
-            b_ih_f = ops.zeros(self.gate_size, inputs.dtype)
-            b_hh_f = ops.zeros(self.gate_size, inputs.dtype)
-            b_ih_b = ops.zeros(self.gate_size, inputs.dtype)
-            b_hh_b = ops.zeros(self.gate_size, inputs.dtype)
-        else:
-            w_ih_f, w_hh_f, w_ih_b, w_hh_b, b_ih_f, b_hh_f, b_ih_b, b_hh_b = weights
-
-        outputs_f, hn_f, _, _, _, _ = self.rnn(inputs.astype(ms.float16), \
-                                               w_ih_f.transpose((1, 0)).astype(ms.float16), \
-                                               w_hh_f.transpose((1, 0)).astype(ms.float16), \
-                                               b_ih_f, b_hh_f, \
-                                               None, h[0].astype(ms.float16))
-        outputs_b, hn_b, _, _, _, _ = self.rnn(rev_inputs.astype(ms.float16), \
-                                               w_ih_b.transpose((1, 0)).astype(ms.float16), \
-                                               w_hh_b.transpose((1, 0)).astype(ms.float16), \
-                                               b_ih_b, b_hh_b, \
-                                               None, h[1].astype(ms.float16))
-        outputs_b = reverse(outputs_b, 0)
-        outputs = ops.concat([outputs_f, outputs_b], 2)
-        hn = ops.concat([hn_f, hn_b], 0)
-
-        return outputs, hn.view(h.shape)
 
 
 class MultiLayerRNN(nn.Cell):
@@ -493,7 +432,7 @@ class StaticGRU(_RNNBase):
         ValueError: If `dropout` is not in range [0.0, 1.0).
 
     Supported Platforms:
-        ``Ascend`` ``GPU`` ``CPU``
+        ``GPU`` ``CPU``
 
     Examples:
         >>> net = StaticGRU(10, 16, 2, has_bias=True, batch_first=True, bidirectional=False)
@@ -576,7 +515,7 @@ class StaticLSTM(_RNNBase):
         ValueError: If `dropout` is not in range [0.0, 1.0).
 
     Supported Platforms:
-        ``Ascend`` ``GPU`` ``CPU``
+        ``GPU`` ``CPU``
 
     Examples:
         >>> net = StaticLSTM(10, 16, 2, has_bias=True, batch_first=True, bidirectional=False)
