@@ -33,6 +33,17 @@ PRETRAINED_VOCAB_MAP = {
 
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
+    "ernie-3.0-base-zh": 2048,
+    "ernie-3.0-xbase-zh": 2048,
+    "ernie-3.0-medium-zh": 2048,
+    "ernie-3.0-mini-zh": 2048,
+    "ernie-3.0-micro-zh": 2048,
+    "ernie-3.0-nano-zh": 2048,
+    "ernie-3.0-tiny-base-v1-zh": 2048,
+    "ernie-3.0-tiny-medium-v1-zh": 2048,
+    "ernie-3.0-tiny-mini-v1-zh": 2048,
+    "ernie-3.0-tiny-micro-v1-zh": 2048,
+    "ernie-3.0-tiny-nano-v1-zh": 2048,
     "uie-base": 2048,
     "uie-medium": 2048,
     "uie-mini": 2048,
