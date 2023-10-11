@@ -83,7 +83,9 @@ class ErnieEmbeddings(nn.Cell):
         inputs_embeds: Optional[Tensor] = None,
         past_key_values_length: int = 0,
     ):
-
+        r"""
+            ErnieEmbedding Construct
+        """
         if input_ids is not None:
             inputs_embeds = self.word_embeddings(input_ids)
 
@@ -179,8 +181,10 @@ class ErniePooler(nn.Cell):
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states):
+        r"""
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
+        """
         first_token_tensor = hidden_states[:, 0]
         pooled_output = self.dense(first_token_tensor)
         pooled_output = self.activation(pooled_output)
@@ -233,6 +237,9 @@ class ErnieModel(ErniePretrainedModel):
         output_attentions: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ):
+        r"""
+        Ernir Model
+        """
         batch_size, seq_length = input_ids.shape
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -601,6 +608,9 @@ class ErnieLMPredictionHead(nn.Cell):
                         dtype=mindspore.float32))
 
     def construct(self, hidden_states = None, masked_positions = None):
+        r"""
+        ErniePredictionHead
+        """
         if masked_positions is not None:
             hidden_states = ops.reshape(
                 hidden_states, [-1, hidden_states.shape[-1]])
@@ -632,6 +642,9 @@ class ErniePretrainingHeads(nn.Cell):
             config.hidden_size, 2, weight_init=weight_attr)
 
     def construct(self, sequence_output, pooled_output, masked_positions=None):
+        r"""
+        ErniePretrainingHeads
+        """
         prediction_scores = self.predictions(sequence_output, masked_positions)
         seq_relationship_score = self.seq_relationship(pooled_output)
         return prediction_scores, seq_relationship_score
@@ -793,6 +806,9 @@ class ErnieOnlyMLMHead(nn.Cell):
         self.predictions = ErnieLMPredictionHead(config=config)
 
     def construct(self, sequence_output, masked_positions=None):
+        r"""
+        ErnieOnlyMLMHead
+        """
         prediction_scores = self.predictions(sequence_output, masked_positions)
         return prediction_scores
 
@@ -1024,6 +1040,9 @@ class UIE(ErniePretrainedModel):
         inputs_embeds: Optional[Tensor] = None,
         return_dict: Optional[Tensor] = None,
     ):
+        r"""
+        UIE
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         sequence_output, _ = self.ernie(
             input_ids=input_ids,
