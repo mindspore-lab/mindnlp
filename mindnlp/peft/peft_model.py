@@ -13,19 +13,19 @@
 # limitations under the License.
 # ============================================================================
 """PEFT model."""
-# pylint: disable=R1705
-# pylint: disable=R1710
-# pylint: disable=C0415
-# pylint: disable=E0602
+# pylint: disable=E0602  # Import outside toplevel
+# pylint: disable=R1705  # Unnecessary "else" after "return"
+# pylint: disable=W0613  # unused kwargs
+# pylint: disable=C0415  # Undefined variable
 import os
 import warnings
 import inspect
 from contextlib import contextmanager
 from copy import deepcopy
+from typing import Dict
 
-import mindspore
-from mindspore import nn
-from mindspore import ops
+from mindspore import nn, ops
+from mindspore.train.serialization import  _exec_save
 from mindspore.nn import CrossEntropyLoss
 
 from .config import PeftConfig
@@ -47,9 +47,10 @@ from .utils import (
     # add_library_to_model_card,
     get_peft_model_state_dict,
     # infer_device,
-    # load_peft_weights,
-    # set_peft_model_state_dict,
+    load_peft_weights,
+    set_peft_model_state_dict,
     shift_tokens_right,
+    # _get_batch_size, # will be used for prompt learning methods
 )
 
 
@@ -70,13 +71,12 @@ class PeftModel(nn.Cell):
         self.base_model = model
         self.config = getattr(self.base_model, "config", {"model_type": "custom"})
         self.modules_to_save = None
-        self.peft_config = {}
+        self.peft_config: Dict[str, PeftConfig] = {}
         self.active_adapter = adapter_name
         self.peft_type = peft_config.peft_type
         # self.base_model_torch_dtype = getattr(model, "dtype", None)
         if not peft_config.is_prompt_learning:
             self.peft_config[adapter_name] = peft_config
-            # base_model -> peft model (e.g. LoraModel)
             self.base_model = PEFT_TYPE_TO_MODEL_MAPPING[peft_config.peft_type](
                 self.base_model, self.peft_config, adapter_name
             )
@@ -104,12 +104,17 @@ class PeftModel(nn.Cell):
         for adapter_name, peft_config in self.peft_config.items():
             # save only the trainable weights
             output_state_dict = get_peft_model_state_dict(
-                self, state_dict=kwargs.get("state_dict", None), adapter_name=adapter_name
+                self,
+                state_dict=kwargs.get("state_dict", None),
+                adapter_name=adapter_name
             )
             output_dir = os.path.join(save_directory, adapter_name) if adapter_name != "default" else save_directory
             os.makedirs(output_dir, exist_ok=True)
 
-            mindspore.save_checkpoint(output_state_dict, os.path.join(output_dir, WEIGHTS_NAME))
+            _exec_save(
+                ckpt_file_name=os.path.join(output_dir, WEIGHTS_NAME),
+                data_list=output_state_dict,
+            )
 
             # save the config and change the inference mode to `True`
             if peft_config.base_model_name_or_path is None:
@@ -136,9 +141,9 @@ class PeftModel(nn.Cell):
                     - A path to a directory containing a Lora configuration file saved using the `save_pretrained`
                       method (`./my_lora_config_directory/`).
         """
-        from .mapping import MODEL_TYPE_TO_PEFT_MODEL_MAPPING, PEFT_TYPE_TO_CONFIG_MAPPING # pylint: disable=R0401
+        from .mapping import MODEL_TYPE_TO_PEFT_MODEL_MAPPING, PEFT_TYPE_TO_CONFIG_MAPPING  # pylint: disable=R0401
 
-        # load the config
+        # load peft config
         config = PEFT_TYPE_TO_CONFIG_MAPPING[
             PeftConfig.from_pretrained(model_id, subfolder=kwargs.get("subfolder", None)).peft_type
         ].from_pretrained(model_id, subfolder=kwargs.get("subfolder", None))
@@ -151,6 +156,26 @@ class PeftModel(nn.Cell):
             model = MODEL_TYPE_TO_PEFT_MODEL_MAPPING[config.task_type](model, config, adapter_name)
         model.load_adapter(model_id, adapter_name, **kwargs)
         return model
+
+
+    def load_adapter(self, model_id: str, adapter_name: str, is_trainable: bool = False, **kwargs):
+        """load adapter to peft model, called by `model.from_pretrained`."""
+        # NOTE: remove download logic.
+        if adapter_name not in self.peft_config:
+            raise ValueError(f"{adapter_name} is not a valid adapter name. Valid names: {self.peft_config.keys()}")
+
+        adapters_weights = load_peft_weights(model_id)
+
+        # load the weights into the model
+        load_result = set_peft_model_state_dict(self, adapters_weights, adapter_name=adapter_name)
+        # TODO: add parallel logic & offload logic & device map logic(dispatch_model)
+
+        # Set model in evaluation mode to deactivate Dropout modules by default
+        if not is_trainable:
+            self.set_train(False)
+
+        return load_result
+
 
     def get_nb_trainable_parameters(self):
         r"""
@@ -283,7 +308,7 @@ class PeftModelForSequenceClassification(PeftModel):
         else:
             self.modules_to_save.update({"classifier", "score"})
 
-        for name, _ in self.base_model.named_children():
+        for name, _ in self.base_model.cells_and_names():
             if any(module_name in name for module_name in self.modules_to_save):
                 self.cls_layer_name = name
                 break
@@ -304,52 +329,54 @@ class PeftModelForSequenceClassification(PeftModel):
     ):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         peft_config = self.active_peft_config
-        if not isinstance(peft_config):
+        if not peft_config.is_prompt_learning:
+            # NOTE:some args not exists in base model
+            # inputs_embeds=inputs_embeds,
+            # output_attentions=output_attentions,
+            # output_hidden_states=output_hidden_states,
+            # return_dict=return_dict,
             return self.base_model(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
-                inputs_embeds=inputs_embeds,
                 labels=labels,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
                 **kwargs,
             )
 
-        batch_size = input_ids.shape[0]
-        if attention_mask is not None:
-            # concat prompt attention mask
-            prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens)
-            attention_mask = ops.cat((prefix_attention_mask, attention_mask), axis=1)
-        if kwargs.get("position_ids", None) is not None:
-            warnings.warn("Position ids are not supported for parameter efficient tuning. Ignoring position ids.")
-            kwargs["position_ids"] = None
-        kwargs.update(
-            {
-                "attention_mask": attention_mask,
-                "labels": labels,
-                "output_attentions": output_attentions,
-                "output_hidden_states": output_hidden_states,
-                "return_dict": return_dict,
-            }
-        )
+        raise NotImplementedError
+        # batch_size = _get_batch_size(input_ids, inputs_embeds)
+        # if attention_mask is not None:
+        #     # concat prompt attention mask
+        #     prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens)
+        #     attention_mask = ops.cat((prefix_attention_mask, attention_mask), axis=1)
+        # if kwargs.get("position_ids", None) is not None:
+        #     warnings.warn("Position ids are not supported for parameter efficient tuning. Ignoring position ids.")
+        #     kwargs["position_ids"] = None
+        # kwargs.update(
+        #     {
+        #         "attention_mask": attention_mask,
+        #         "labels": labels,
+        #         "output_attentions": output_attentions,
+        #         "output_hidden_states": output_hidden_states,
+        #         "return_dict": return_dict,
+        #     }
+        # )
 
-        if peft_config.peft_type == PeftType.PREFIX_TUNING:
-            return self._prefix_tuning_forward(input_ids=input_ids, **kwargs)
-        if kwargs.get("token_type_ids", None) is not None:
-            kwargs["token_type_ids"] = ops.cat(
-                (
-                    ops.zeros(batch_size, peft_config.num_virtual_tokens),
-                    kwargs["token_type_ids"],
-                ),
-                axis=1,
-            ).long()
-        if inputs_embeds is None:
-            inputs_embeds = self.word_embeddings(input_ids)
-        prompts = self.get_prompt(batch_size=batch_size)
-        prompts = prompts.to(inputs_embeds.dtype)
-        inputs_embeds = ops.cat((prompts, inputs_embeds), axis=1)
-        return self.base_model(inputs_embeds=inputs_embeds, **kwargs)
+        # if peft_config.peft_type == PeftType.PREFIX_TUNING:
+        #     return self._prefix_tuning_forward(input_ids=input_ids, **kwargs)
+        # if kwargs.get("token_type_ids", None) is not None:
+        #     kwargs["token_type_ids"] = ops.cat(
+        #         (
+        #             ops.zeros(batch_size, peft_config.num_virtual_tokens),
+        #             kwargs["token_type_ids"],
+        #         ),
+        #         axis=1,
+        #     ).long()
+        # if inputs_embeds is None:
+        #     inputs_embeds = self.word_embeddings(input_ids)
+        # prompts = self.get_prompt(batch_size=batch_size)
+        # prompts = prompts.to(inputs_embeds.dtype)
+        # inputs_embeds = ops.cat((prompts, inputs_embeds), axis=1)
+        # return self.base_model(inputs_embeds=inputs_embeds, **kwargs)
 
 class PeftModelForCausalLM(PeftModel):
     """
@@ -615,6 +642,7 @@ class PeftModelForSeq2SeqLM(PeftModel):
                 return self.base_model(
                     inputs_embeds=inputs_embeds, decoder_inputs_embeds=decoder_inputs_embeds, **kwargs
                 )
+            return None # never go here
 
     def generate(self, **kwargs):
         """generate."""
@@ -708,7 +736,7 @@ class PeftModelForTokenClassification(PeftModel):
         else:
             self.modules_to_save.update({"classifier", "score"})
 
-        for name, _ in self.base_model.named_children():
+        for name, _ in self.base_model.cells_and_names():
             if any(module_name in name for module_name in self.modules_to_save):
                 self.cls_layer_name = name
                 break
@@ -812,7 +840,7 @@ class PeftModelForTokenClassification(PeftModel):
                 raise ValueError("Model does not support past key values which are required for prefix tuning.")
             outputs = transformer_backbone_name(**kwargs)
             sequence_output = outputs[0]
-            if "dropout" in [name for name, _ in list(self.base_model.named_children())]:
+            if "dropout" in [name for name, _ in list(self.base_model.cells_and_names())]:
                 sequence_output = self.base_model.dropout(sequence_output)
             logits = self.base_model.get_submodule(self.cls_layer_name)(sequence_output)
 

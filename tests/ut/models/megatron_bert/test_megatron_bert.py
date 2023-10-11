@@ -17,16 +17,15 @@ class TestModelingMegatronBert(unittest.TestCase):
         Set up
         """
         self.input = None
-        # self.config = MegatronBertConfig()
+        self.config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
 
     def test_megatron_bert_embeddings(self):
         """
         test megatron_bert embedding layer
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
 
-        model = mindnlp.models.megatron_bert.MegatronBertEmbeddings(config)
-        embedding_input = Tensor(np.random.randint(0, 1000, (2, 128)), mindspore.int32)
+        model = mindnlp.models.megatron_bert.MegatronBertEmbeddings(self.config)
+        embedding_input = Tensor(np.random.randint(0, self.config.vocab_size, (2, 128)), mindspore.int32)
         attn_output, _ = model(embedding_input)
         assert attn_output.shape == (128, 128)
 
@@ -34,8 +33,7 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test megatron_bert self-attention layer
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-        model = mindnlp.models.megatron_bert.MegatronBertSelfAttention(config)
+        model = mindnlp.models.megatron_bert.MegatronBertSelfAttention(self.config)
 
         hidden_states = Tensor(np.random.randn(4, 32, 128), mindspore.float32)
 
@@ -46,8 +44,7 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test megatron_bert self-output layer
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-        model = mindnlp.models.megatron_bert.MegatronBertSelfOutput(config)
+        model = mindnlp.models.megatron_bert.MegatronBertSelfOutput(self.config)
 
         hidden_states = Tensor(np.random.randn(4, 32, 128), mindspore.float32)
         residual = Tensor(np.random.randn(4, 32, 128), mindspore.float32)
@@ -59,9 +56,7 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test megatron_bert attention layer
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-        model = mindnlp.models.megatron_bert.MegatronBertAttention(config)
-
+        model = mindnlp.models.megatron_bert.MegatronBertAttention(self.config)
         hidden_states = Tensor(np.random.randn(4, 32, 128), mindspore.float32)
         output = model(hidden_states)
         assert output[0].shape == (4, 32, 128)
@@ -70,8 +65,7 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test megatron_bert intermediate layer
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-        model = mindnlp.models.megatron_bert.MegatronBertIntermediate(config)
+        model = mindnlp.models.megatron_bert.MegatronBertIntermediate(self.config)
 
         hidden_states = Tensor(np.random.randn(4, 32, 128), mindspore.float32)
         output = model(hidden_states)
@@ -81,8 +75,7 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test megatron_bert output
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-        model = mindnlp.models.megatron_bert.MegatronBertOutput(config)
+        model = mindnlp.models.megatron_bert.MegatronBertOutput(self.config)
 
         hidden_states = Tensor(np.random.randn(2, 8, 128), mindspore.float32)
         input_tensor = Tensor(np.random.randn(2, 8, 128), mindspore.float32)
@@ -93,9 +86,7 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test megatron_bert layer
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-
-        model = mindnlp.models.megatron_bert.MegatronBertLayer(config)
+        model = mindnlp.models.megatron_bert.MegatronBertLayer(self.config)
 
         hidden_states = Tensor(np.random.randn(2, 32, 128), mindspore.float32)
         output = model(hidden_states)
@@ -105,9 +96,7 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test megatron_bert encoding
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-
-        model = mindnlp.models.megatron_bert.MegatronBertEncoder(config)
+        model = mindnlp.models.megatron_bert.MegatronBertEncoder(self.config)
 
         hidden_states = Tensor(np.random.randn(2, 32, 128), mindspore.float32)
         output = model(hidden_states)
@@ -117,9 +106,7 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test megatron_bert encoding
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-
-        model = mindnlp.models.megatron_bert.MegatronBertPooler(config)
+        model = mindnlp.models.megatron_bert.MegatronBertPooler(self.config)
 
         hidden_states = Tensor(np.random.randn(2, 32, 128), mindspore.float32)
         output = model(hidden_states)
@@ -129,9 +116,7 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test MegatronBertPredictionHeadTransform
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-
-        model = mindnlp.models.megatron_bert.MegatronBertPredictionHeadTransform(config)
+        model = mindnlp.models.megatron_bert.MegatronBertPredictionHeadTransform(self.config)
 
         hidden_states = Tensor(np.random.randn(2, 32, 128), mindspore.float32)
         output = model(hidden_states)
@@ -141,9 +126,7 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test MegatronBertLMPredictionHead
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-
-        model = mindnlp.models.megatron_bert.MegatronBertLMPredictionHead(config)
+        model = mindnlp.models.megatron_bert.MegatronBertLMPredictionHead(self.config)
 
         hidden_states = Tensor(np.random.randn(2, 32, 128), mindspore.float32)
         output = model(hidden_states)
@@ -153,9 +136,7 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test MegatronBertOnlyMLMHead
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-
-        model = mindnlp.models.megatron_bert.MegatronBertOnlyMLMHead(config)
+        model = mindnlp.models.megatron_bert.MegatronBertOnlyMLMHead(self.config)
 
         sequence_output = Tensor(np.random.randn(2, 32, 128), mindspore.float32)
         output = model(sequence_output)
@@ -165,9 +146,7 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test MegatronBertOnlyNSPHead
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-
-        model = mindnlp.models.megatron_bert.MegatronBertOnlyNSPHead(config)
+        model = mindnlp.models.megatron_bert.MegatronBertOnlyNSPHead(self.config)
 
         pooled_output = Tensor(np.random.randn(2, 32, 128), mindspore.float32)
         output = model(pooled_output)
@@ -177,9 +156,7 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test MegatronBertPreTrainingHeads
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-
-        model = mindnlp.models.megatron_bert.MegatronBertPreTrainingHeads(config)
+        model = mindnlp.models.megatron_bert.MegatronBertPreTrainingHeads(self.config)
 
         sequence_output = Tensor(np.random.randn(2, 32, 128), mindspore.float32)
         pooled_output = Tensor(np.random.randn(2, 32, 128), mindspore.float32)
@@ -191,11 +168,9 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test MegatronBertModel
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
+        model = mindnlp.models.megatron_bert.MegatronBertModel(self.config)
 
-        model = mindnlp.models.megatron_bert.MegatronBertModel(config)
-
-        input_ids = Tensor(np.random.randint(0, 4, [4, 32]), mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, [4, 32]), mindspore.int32)
         output = model(input_ids)
         assert output[0].shape == (4, 32, 128)
         assert output[1].shape == (4, 128)
@@ -204,11 +179,9 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test MegatronBertPreTraining
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
+        model = mindnlp.models.megatron_bert.MegatronBertForPreTraining(self.config)
 
-        model = mindnlp.models.megatron_bert.MegatronBertForPreTraining(config)
-
-        input_ids = Tensor(np.random.randint(0, 4, [4, 16]), mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, [4, 16]), mindspore.int32)
         output = model(input_ids)
         assert output[0].shape == (4, 16, 100)
         assert output[1].shape == (4, 2)
@@ -217,12 +190,12 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test MegatronBertForCausalLM
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-        config.is_decoder = True
-        model = mindnlp.models.megatron_bert.MegatronBertForCausalLM(config)
+        self.config.is_decoder = True
+        model = mindnlp.models.megatron_bert.MegatronBertForCausalLM(self.config)
 
-        input_ids = Tensor(np.random.randint(0, 4, [4, 16]), mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, [4, 16]), mindspore.int32)
         output = model(input_ids)
+
         assert output[0].shape == (4, 16, 100)
         assert len(output[1]) == 24
         assert output[1][0][0].shape == (4, 16, 16, 8)
@@ -231,10 +204,9 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test MegatronBertForMaskedLM
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-        model = mindnlp.models.megatron_bert.MegatronBertForMaskedLM(config)
+        model = mindnlp.models.megatron_bert.MegatronBertForMaskedLM(self.config)
 
-        input_ids = Tensor(np.random.randint(0, 4, [4, 16]), mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, [4, 16]), mindspore.int32)
         output = model(input_ids)
         assert output[0].shape == (4, 16, 100)
 
@@ -242,11 +214,10 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test MegatronBertForNextSentencePrediction
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-        config.is_decoder = True
-        model = mindnlp.models.megatron_bert.MegatronBertForNextSentencePrediction(config)
+        self.config.is_decoder = True
+        model = mindnlp.models.megatron_bert.MegatronBertForNextSentencePrediction(self.config)
 
-        input_ids = Tensor(np.random.randint(0, 4, [2, 32]), mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, [2, 32]), mindspore.int32)
         output = model(input_ids)
         assert output[0].shape == (2, 2)
 
@@ -254,11 +225,10 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test MegatronBertForSequenceClassification
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-        config.is_decoder = True
-        model = mindnlp.models.megatron_bert.MegatronBertForSequenceClassification(config)
+        self.config.is_decoder = True
+        model = mindnlp.models.megatron_bert.MegatronBertForSequenceClassification(self.config)
 
-        input_ids = Tensor(np.random.randint(0, 4, [4, 32]), mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, [4, 32]), mindspore.int32)
         output = model(input_ids)
         assert output[0].shape == (4, 2)
 
@@ -266,10 +236,9 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test MegatronBertForMultipleChoice
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-        model = mindnlp.models.megatron_bert.MegatronBertForMultipleChoice(config)
+        model = mindnlp.models.megatron_bert.MegatronBertForMultipleChoice(self.config)
 
-        input_ids = Tensor(np.random.randint(0, 4, [1, 2, 4, 8]), mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, [1, 2, 4, 8]), mindspore.int32)
         output = model(input_ids)
         assert output[0].shape == (4, 2)
 
@@ -277,10 +246,9 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test MegatronBertForTokenClassification
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-        model = mindnlp.models.megatron_bert.MegatronBertForTokenClassification(config)
+        model = mindnlp.models.megatron_bert.MegatronBertForTokenClassification(self.config)
 
-        input_ids = Tensor(np.random.randint(0, 4, [4, 16]), mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, [4, 16]), mindspore.int32)
         output = model(input_ids)
         assert output[0].shape == (4, 16, 2)
 
@@ -288,10 +256,9 @@ class TestModelingMegatronBert(unittest.TestCase):
         """
         test MegatronBertForQuestionAnswering
         """
-        config = mindnlp.models.megatron_bert.MegatronBertConfig(hidden_size=128, intermediate_size=128, vocab_size=100)
-        model = mindnlp.models.megatron_bert.MegatronBertForQuestionAnswering(config)
+        model = mindnlp.models.megatron_bert.MegatronBertForQuestionAnswering(self.config)
 
-        input_ids = Tensor(np.random.randint(0, 4, [4, 32]), mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, [4, 32]), mindspore.int32)
         output = model(input_ids)
         assert output[0].shape == (4, 32)
         assert output[1].shape == (4, 32)

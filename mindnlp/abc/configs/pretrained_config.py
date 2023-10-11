@@ -56,7 +56,19 @@ class PreTrainedConfig:
                 "but only 'regression', 'single_label_classification' and 'multi_label_classification' are valid."
             )
 
+        self._name_or_path = str(kwargs.pop("name_or_path", ""))
+
     pretrained_config_archive_map: Dict[str, str] = {}
+
+    @property
+    def name_or_path(self) -> str:
+        """get name_or_path"""
+        return getattr(self, "_name_or_path", None)
+
+    @name_or_path.setter
+    def name_or_path(self, value):
+        """set name_or_path"""
+        self._name_or_path = str(value)  # Make sure that name_or_path is a string (for JSON encoding)
 
     @classmethod
     def from_json(cls, file_path):
@@ -226,6 +238,8 @@ class PreTrainedConfig:
     def to_dict(self):
         """Serializes this instance to a Python dictionary."""
         output = copy.deepcopy(self.__dict__)
+        if hasattr(self.__class__, "model_type"):
+            output["model_type"] = self.__class__.model_type
         return output
 
     def to_json_string(self):

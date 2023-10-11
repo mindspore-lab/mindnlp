@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,52 +13,64 @@
 # limitations under the License.
 # ============================================================================
 """
-Test IMDB
+Test imdb
 """
-import os
-import shutil
+
 import unittest
 import pytest
-from mindnlp import load_dataset
-from mindnlp.dataset import IMDB
+from mindnlp.dataset import load_dataset
 
 
 class TestIMDB(unittest.TestCase):
     r"""
-    Test IMDB
+    Test imdb with huggingface datasets
     """
 
-    @classmethod
-    def setUpClass(cls):
-        cls.root = os.path.join(os.path.expanduser("~"), ".mindnlp")
+    @pytest.mark.download
+    @pytest.mark.local
+    def test_load_single(self):
+        """Test HF_Docvqa_zh"""
+        dataset = load_dataset('imdb', split='train')
+        print(dataset)
+        print(next(dataset.create_tuple_iterator()))
 
-    @classmethod
-    def tearDownClass(cls):
-        shutil.rmtree(cls.root)
 
     @pytest.mark.download
-    def test_imdb(self):
-        """Test imdb"""
-        num_lines = {
-            "train": 25000,
-            "test": 25000,
-        }
-        dataset_train, dataset_test = IMDB(
-            root=self.root, split=("train", "test")
-        )
-        assert dataset_train.get_dataset_size() == num_lines["train"]
-        assert dataset_test.get_dataset_size() == num_lines["test"]
-
-        dataset_train = IMDB(root=self.root, split="train")
-        dataset_test = IMDB(root=self.root, split="test")
-        assert dataset_train.get_dataset_size() == num_lines["train"]
-        assert dataset_test.get_dataset_size() == num_lines["test"]
+    @pytest.mark.local
+    def test_load_single_with_tuple(self):
+        """Test HF_Docvqa_zh"""
+        dataset = load_dataset('imdb', split=('train',))
+        print(dataset)
+        print(next(dataset.create_tuple_iterator()))
 
     @pytest.mark.download
-    def test_imdb_by_register(self):
-        """test imdb by register"""
-        _ = load_dataset(
-            "IMDB",
-            root=self.root,
-            split=("train", "test"),
-        )
+    @pytest.mark.local
+    def test_load_single_with_list(self):
+        """Test HF_Docvqa_zh"""
+        dataset = load_dataset('imdb', split=['train'])
+        print(dataset)
+        print(next(dataset.create_tuple_iterator()))
+
+    @pytest.mark.download
+    @pytest.mark.local
+    def test_load_single_with_dict(self):
+        """Test HF_Docvqa_zh"""
+        dataset = load_dataset('imdb', split=None)
+        print(dataset.keys())
+        print(next(dataset['train'].create_tuple_iterator()))
+
+    @pytest.mark.download
+    @pytest.mark.local
+    def test_load_single_with_streaming(self):
+        """Test HF_Docvqa_zh"""
+        dataset = load_dataset('imdb', split=None, streaming=True)
+        print(dataset.keys())
+        print(next(dataset['train'].create_tuple_iterator()))
+
+    @pytest.mark.download
+    @pytest.mark.local
+    def test_split(self):
+        """Test HF_Docvqa_zh"""
+        dataset = load_dataset('imdb', split='train')
+        train, _ = dataset.split([0.7, 0.3])
+        print(next(train.create_tuple_iterator()))

@@ -20,9 +20,9 @@ from typing import Optional, Union
 import mindspore
 from mindspore import nn, ops
 from mindspore import Parameter, Tensor
-from mindspore.common.initializer import Initializer, initializer
-
-from mindspore.communication import get_rank, get_group_size
+from mindspore.common.initializer import Initializer, Zero
+from mindspore.ops._tracefunc import trace
+from .mappings import _get_rank, _get_group_size
 
 
 from .mappings import (
@@ -50,7 +50,7 @@ class VocabParallelEmbedding(nn.Cell):
         vocab_size: int,
         embedding_size: int,
         padding_idx: Optional[int] = None,
-        init_method: Union[str, Initializer] = "normal",
+        init_method: Union[str, Initializer] = Zero(),
         dtype: mindspore.dtype = mindspore.float32,
     ) -> None:
         super().__init__()
@@ -63,18 +63,16 @@ class VocabParallelEmbedding(nn.Cell):
             self.vocab_start_index,
             self.vocab_end_index,
         ) = VocabUtility.vocab_range_from_global_vocab_size(
-            self.vocab_size, get_rank(), get_group_size()
+            self.vocab_size, _get_rank(), _get_group_size()
         )
         self.vocab_size_per_partition = self.vocab_end_index - self.vocab_start_index
 
         # Allocate weights.
-        self.weight = Parameter(
-            initializer(
-                init_method, (self.vocab_size_per_partition, self.embedding_size), dtype
-            ),
-            "weight",
-        )
+        self.weight = Parameter(Tensor(shape=(self.vocab_size_per_partition, self.embedding_size),
+                                       dtype=dtype, init=init_method),
+                                "weight")
 
+    @trace
     def construct(self, input_: Tensor) -> Tensor:  # type: ignore
         # Build the mask.
         input_mask = (input_ < self.vocab_start_index) | (
@@ -113,7 +111,7 @@ class ParallelEmbedding(nn.Cell):
         vocab_size: int,
         embedding_size: int,
         padding_idx: Optional[int] = None,
-        init_method: Union[str, Initializer] = "normal",
+        init_method: Union[str, Initializer] = Zero(),
         dtype: mindspore.dtype = mindspore.float32,
     ) -> None:
         super().__init__()
@@ -122,19 +120,17 @@ class ParallelEmbedding(nn.Cell):
         self.embedding_size = embedding_size
         self.padding_idx = padding_idx
         # Divide the weight matrix along the embedding dimension.
-        rank_size = get_group_size()
+        rank_size = _get_group_size()
         self.embedding_size_per_partition = divide_and_check_no_remainder(
             self.embedding_size, rank_size
         )
 
         # Allocate weights.
-        self.weight = Parameter(
-            initializer(
-                init_method, (self.vocab_size, self.embedding_size_per_partition), dtype
-            ),
-            "weight",
-        )
+        self.weight = Parameter(Tensor(shape=(self.vocab_size, self.embedding_size_per_partition),
+                                       dtype=dtype, init=init_method),
+                                "weight")
 
+    @trace
     def construct(self, input_: Tensor) -> Tensor:  # type: ignore
         input_parallel = copy_to_model_parallel_region(input_)
         ori_shape = input_parallel.shape
@@ -172,7 +168,7 @@ class ColumnParallelLinear(nn.Cell):
         out_features: int,
         bias: bool = True,
         gather_output: bool = True,
-        init_method: Union[str, Initializer] = "normal",
+        init_method: Union[str, Initializer] = Zero(),
         dtype: mindspore.dtype = mindspore.float32,
         stride: int = 1,
         keep_master_weight_for_test: bool = False,
@@ -184,23 +180,20 @@ class ColumnParallelLinear(nn.Cell):
         self.out_features = out_features
         self.gather_output = gather_output
         # Divide the weight matrix along the last dimension.
-        rank_size = get_group_size()
+        rank_size = _get_group_size()
         self.output_size_per_partition = divide_and_check_no_remainder(
             out_features, rank_size
         )
 
         # Parameters.
-        self.weight = Parameter(
-            initializer(
-                init_method, (self.in_features, self.output_size_per_partition), dtype
-            ),
-            "weight",
-        )
+        self.weight = Parameter(Tensor(shape=(self.in_features, self.output_size_per_partition),
+                                       dtype=dtype, init=init_method),
+                                "weight")
         if bias:
             # Always initialize bias to zero.
-            self.bias = Parameter(
-                initializer("zeros", (self.output_size_per_partition,), dtype), "bias"
-            )
+            self.bias = Parameter(Tensor(shape=(self.output_size_per_partition,),
+                                         dtype=dtype, init=init_method),
+                                  "bias")
         else:
             self.bias = None
 
@@ -208,6 +201,7 @@ class ColumnParallelLinear(nn.Cell):
         """get master weight of ColumnParallelLinear"""
         return gather_from_model_parallel_region(self.weight).swapaxes(0, 1)
 
+    @trace
     def construct(self, input_: Tensor) -> Tensor:  # type: ignore
         # Set up backprop all-reduce.
         input_parallel = copy_to_model_parallel_region(input_)
@@ -256,7 +250,7 @@ class RowParallelLinear(nn.Cell):
         out_features: int,
         bias: bool = True,
         input_is_parallel: bool = False,
-        init_method: Union[str, Initializer] = "normal",
+        init_method: Union[str, Initializer] = Zero(),
         dtype: mindspore.dtype = mindspore.float32,
         stride: int = 1,
         keep_master_weight_for_test: bool = False,
@@ -268,22 +262,19 @@ class RowParallelLinear(nn.Cell):
         self.out_features = out_features
         self.input_is_parallel = input_is_parallel
         # Divide the weight matrix along the last dimension.
-        rank_size = get_group_size()
+        rank_size = _get_group_size()
         self.input_size_per_partition = divide_and_check_no_remainder(
             in_features, rank_size
         )
 
         # Parameters.
         # we allocate the transpose.
-        self.weight = Parameter(
-            initializer(
-                init_method, (self.input_size_per_partition, self.out_features), dtype
-            ),
-            "weight",
-        )
+        self.weight = Parameter(Tensor(shape=(self.input_size_per_partition, self.out_features),
+                                       dtype=dtype, init=init_method),
+                                "weight")
         if bias:
             # Always initialize bias to zero.
-            self.bias = Parameter(initializer("zeros", (self.out_features,), dtype), "bias")
+            self.bias = Parameter(Tensor(shape=(self.out_features,), dtype=dtype, init=init_method), "bias")
         else:
             self.bias = None
 
@@ -291,6 +282,7 @@ class RowParallelLinear(nn.Cell):
         """get master weight of RowParallelLinear"""
         return gather_from_model_parallel_region(self.weight).swapaxes(0, 1)
 
+    @trace
     def construct(self, input_: Tensor) -> Tensor:  # type:ignore
         # Set up backprop all-reduce.
         if self.input_is_parallel:

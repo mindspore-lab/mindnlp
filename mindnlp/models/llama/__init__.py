@@ -17,7 +17,5 @@
 """
 LLAMA Model init
 """
-from .llama_hf_config import LlamaConfig as HF_LlamaConfig
-from .llama_hf import LlamaForCausalLM as HF_LlamaForCausalLM
-from .llama import Transformer as LlamaModel
+from .llama import LlamaPreTrainedModel, LlamaModel, LlamaForCausalLM, LlamaForSequenceClassification
 from .llama_config import LlamaConfig

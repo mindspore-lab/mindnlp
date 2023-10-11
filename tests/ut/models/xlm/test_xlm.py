@@ -92,7 +92,7 @@ class TestXlm(unittest.TestCase):
         """
         xlm_xlmmodel = xlm.XLMModel(self.config)
         input_ids1 = mindspore.Tensor(
-            np.random.randint(0, 1000, (1, 1)), mindspore.int32)
+            np.random.randint(0, self.config.vocab_size, (1, 1)), mindspore.int32)
         output = xlm_xlmmodel(input_ids=input_ids1)
         assert output[0].shape == (1, 1, 24)
 

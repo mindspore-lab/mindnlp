@@ -49,9 +49,14 @@ class RobertaPreTrainedModel(BertPreTrainedModel):
     """Roberta Pretrained Model."""
     pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
     config_class = RobertaConfig
+    base_model_prefix = "roberta"
 
 class RobertaModel(BertModel):
     """Roberta Model"""
+    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+    config_class = RobertaConfig
+    base_model_prefix = "roberta"
+
     def __init__(self, config, add_pooling_layer=True):
         super().__init__(config, add_pooling_layer=add_pooling_layer)
         self.embeddings = RobertaEmbeddings(config)
@@ -99,6 +104,12 @@ class RobertaForMaskedLM(RobertaPreTrainedModel):
         self.lm_head = RobertaLMHead(config)
         self.lm_head.decoder.weight = self.roberta.embeddings.word_embeddings.embedding_table
         self.vocab_size = self.config.vocab_size
+
+    def get_output_embeddings(self):
+        return self.lm_head.decoder
+
+    def set_output_embeddings(self, new_embeddings):
+        self.lm_head.decoder = new_embeddings
 
     def construct(self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None,
                   masked_lm_labels=None):

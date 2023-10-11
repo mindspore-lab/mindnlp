@@ -16,14 +16,22 @@
 import gc
 import os
 import unittest
-import pytest
 import numpy as np
 import mindspore
 
 from mindspore import Tensor
-from mindnlp.models.llama import llama, llama_config
+from mindnlp.models.llama.llama import (
+    LlamaRMSNorm,
+    LlamaMLP,
+    LlamaAttention,
+    LlamaDecoderLayer,
+    LlamaModel,
+    LlamaForCausalLM,
+    LlamaForSequenceClassification,
+)
+from mindnlp.models.llama.llama_config import LlamaConfig
 
-@pytest.mark.skip
+
 class TestModelingLlama(unittest.TestCase):
     """
     Test Llama
@@ -32,79 +40,106 @@ class TestModelingLlama(unittest.TestCase):
         """
         Set up.
         """
-        self.config = llama_config.LlamaConfig(n_layers=2)
-        self.config.max_batch_size = 2
-        self.config.dim = 128
-        self.config.max_seq_len = 256
-        self.config.vocab_size = 256 # define by tokenizer
-        self.input = None
+        self.config = LlamaConfig(num_hidden_layers=2, num_attention_heads=8, hidden_size=128,
+                                  vocab_size=1000, intermediate_size=256)
 
-    def test_llama_rmsnorm(self):
+
+    def test_llama_rms_norm(self):
+        r"""
+        test_llama_rms_norm
         """
-        test llama rmsnorm
+        hidden_size = 512
+        model = LlamaRMSNorm((hidden_size,), eps = 1e-6)
+
+        input_ids = Tensor(np.random.randn(hidden_size), mindspore.float32)
+
+        outputs = model(input_ids)
+        assert outputs.shape == (hidden_size, )
+
+    def test_llama_mlp_norm(self):
+        r"""
+        test_llama_mlp_norm
         """
-        config = self.config
-        model = llama.RMSNorm(config.dim)
+        batch_size = 2
+        seq_len = 128
+        hidden_size = 128
+        model = LlamaMLP(hidden_size, hidden_size * 4, "silu")
 
-        rmsnorm_input = Tensor(np.random.randint(0, 10,
-                                                 (config.max_batch_size, config.max_seq_len, config.dim)
-                                                 ), mindspore.float32)
-
-        output = model(rmsnorm_input)
-
-        assert output.shape == (config.max_batch_size, config.max_seq_len, config.dim)
+        input_ids = Tensor(np.random.randint(0, 10, (batch_size, seq_len, hidden_size)), mindspore.float32)
+        outputs = model(input_ids)
+        assert outputs.shape == (batch_size, seq_len, hidden_size)
 
     def test_llama_attention(self):
-        '''
-        test llama attention
-        '''
-        config = self.config
-        model = llama.Attention(config)
-        attention_input = Tensor(np.random.randint(0, 10,
-                                (config.max_batch_size, config.max_seq_len, config.dim))
-                                , mindspore.float32)
-        output = model(attention_input, start_pos=0, mask=None)
+        r"""
+        Test Llama attention
+        """
+        model = LlamaAttention(self.config)
 
-        assert output.shape == (config.max_batch_size, config.max_seq_len, config.dim)
+        input_ids = Tensor(np.random.randn(2, self.config.max_position_embeddings, 128), mindspore.float32)
+        position_ids = Tensor([np.arange(0, self.config.max_position_embeddings)
+                               , np.arange(0, self.config.max_position_embeddings)], mindspore.int64)
+        outputs = model(input_ids, position_ids=position_ids)
+        assert outputs[0].shape == (2, self.config.max_position_embeddings, 128)
 
-    def test_llama_feedforward(self):
-        '''
-        test llama test_llama_feedforward
-        '''
-        config = self.config
-        model = llama.FeedForward(config.dim, config.dim * 4, config.multiple_of)
-        feedforward_input = Tensor(np.random.randint(0, 10,
-                                (config.max_batch_size, config.max_seq_len, config.dim))
-                                , mindspore.float32)
-        output = model(feedforward_input)
+    def test_llama_decoderlayer(self):
+        r"""
+        test_llama_decoderlayer
+        """
+        model = LlamaDecoderLayer(self.config)
 
-        assert output.shape == (config.max_batch_size, config.max_seq_len, config.dim)
+        input_ids = Tensor(np.random.randn(2, self.config.max_position_embeddings, 128), mindspore.float32)
+        position_ids = Tensor([np.arange(0, self.config.max_position_embeddings)
+                               , np.arange(0, self.config.max_position_embeddings)], mindspore.int64)
+        outputs = model(input_ids, position_ids=position_ids)
+        assert outputs[0].shape == (2, self.config.max_position_embeddings, 128)
 
-    def test_llama_transformerblock(self):
-        '''
-        test_llama_transformerblock
-        '''
-        config = self.config
-        model = llama.TransformerBlock(0, config)
-        transformerblock_input = Tensor(np.random.randint(0, 10,
-                                (config.max_batch_size, config.max_seq_len, config.dim))
-                                , mindspore.float32)
-        output = model(_x=transformerblock_input, start_pos=0, mask=None)
+    def test_llama_model(self):
+        """
+        Test Llama Model.
+        """
+        model = LlamaModel(self.config)
 
-        assert output.shape == (config.max_batch_size, config.max_seq_len, config.dim)
+        input_ids = Tensor(np.random.randint(
+            0, 100, (2, 128)))
 
-    def test_llama_transformer(self):
-        '''
-        test_llama_transformer
-        '''
-        config = self.config
-        model = llama.Transformer(config)
-        tokens = Tensor(np.random.randint(0, config.vocab_size,
-                                (config.max_batch_size, config.max_seq_len))
-                                , mindspore.int32)
-        output = model(tokens, 0)
+        outputs = model(input_ids)
 
-        assert output.shape == (config.max_batch_size, config.max_seq_len)
+        assert outputs[0].shape == (2, 128, 128)
+        for i in range(len(outputs[1])):
+            for j in range(len(outputs[1][i])):
+                assert outputs[1][i][j].shape == (2, 8, 128, 16)
+
+    def test_llama_for_causal_lm(self):
+        """
+        test_llama_for_causal_lm
+        """
+        model = LlamaForCausalLM(self.config)
+
+        input_ids = Tensor(np.random.randint(
+            0, 100, (2, 128)))
+
+        outputs = model(input_ids)
+
+        assert outputs[0].shape == (2, 128, self.config.vocab_size)
+        for i in range(len(outputs[1])):
+            for j in range(len(outputs[1][i])):
+                assert outputs[1][i][j].shape == (2, 8, 128, 16)
+
+    def test_llama_for_sequence_classification(self):
+        """
+        test_llama_for_sequence_classification
+        """
+        model = LlamaForSequenceClassification(self.config)
+
+        input_ids = Tensor(np.random.randint(
+            0, 10, (2, 128)))
+
+        outputs = model(input_ids)
+
+        assert outputs[0].shape == (2, 2)
+        for i in range(len(outputs[1])):
+            for j in range(len(outputs[1][i])):
+                assert outputs[1][i][j].shape == (2, 8, 128, 16)
 
     def tearDown(self) -> None:
         gc.collect()

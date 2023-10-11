@@ -13,11 +13,11 @@
 # limitations under the License.
 # ============================================================================
 """Tensor Parallel Utils"""
-
 from typing import Tuple
 
 import mindspore
 from mindspore import ops
+from mindspore.communication import GlobalComm
 
 
 def ensure_divisibility(numerator: int, denominator: int) -> None:
@@ -48,6 +48,13 @@ def split_tensor_along_last_dim(
 
     return tensor_list
 
+def concat_tensor_along_last_dim(tensor, num_partitions):
+    """Concat a tensor along its last dimension."""
+    last_dim = tensor.ndim - 1
+    tensor_list = ops.split(tensor, divide_and_check_no_remainder(tensor.shape[0], num_partitions), axis=0)
+    output = ops.concat(tensor_list, axis=last_dim)
+    return output
+
 
 class VocabUtility:
     """Split the vocabulary into `rank_size` chunks amd return the
@@ -68,3 +75,11 @@ class VocabUtility:
         """get vocab range from global vocab size"""
         per_partition_vocab_size = divide_and_check_no_remainder(global_vocab_size, rank_size)
         return VocabUtility.vocab_range_from_per_partition_vocab_size(per_partition_vocab_size, rank_id)
+
+def get_rank(group=GlobalComm.WORLD_COMM_GROUP):
+    """get rank"""
+    return mindspore.communication.get_rank(group)
+
+def get_group_size(group=GlobalComm.WORLD_COMM_GROUP):
+    """get group size"""
+    return mindspore.communication.get_group_size(group)

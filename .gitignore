@@ -139,9 +139,15 @@ download.txt
 *.tar.gz
 *hf*.py
 *torch*.py
-*.txt
 cmp/
 *.zip
 
 # mindnlp cache
 .mindnlp/
+
+# txt files
+*.txt
+!requirements.txt
+
+# mindspore profiler
+RuntimeProfiler*

@@ -25,150 +25,68 @@
 [Tutorials](#tutorials) |
 [Notes](#notes)
 
-## News 📢
+### News 📢
 
 * 🔥 **Latest Features**
-  * 📃 Support PreTrained Models, including **[BERT](./mindnlp/models/bert)**, **[Roberta](./mindnlp/models/roberta)**, **[GPT2](./mindnlp/models/gpt2)** and **[T5](./mindnlp/models/t5)**.
-    You can use them by following code snippet:
+
+  * 🤗 Hugging *huggingface* ecosystem, we use **datasets** lib as default dataset loader to support
+  mounts of useful datasets.
+  * 📝 MindNLP supports NLP tasks such as *language model*, *machine translation*, *question answering*, *sentiment analysis*, *sequence labeling*, *summarization*, etc. You can access them through [examples](./examples/).
+  * 🚀 MindNLP currently supports industry-leading Large Language Models (LLMs), including **Llama**, **GLM**, **RWKV**, etc. For support related to large language models, including ***pre-training***, ***fine-tuning***, and **inference** demo examples, you can find them in the ["llm" directory](./llm/).
+  * 🤗 Pretrained models support ***huggingface transformers-like apis***, including **28+** models like **[BERT](./mindnlp/models/bert)**, **[Roberta](./mindnlp/models/roberta)**, **[GPT2](./mindnlp/models/gpt2)**, **[T5](./mindnlp/models/t5)**, etc.
+    You can use them easily by following code snippet:
     ```python
     from mindnlp.models import BertModel
 
     model = BertModel.from_pretrained('bert-base-cased')
     ```
+### Installation
 
+Version Compatibility:
 
+| MindNLP version | MindSpore version | Supported Python version |
+|-----------------|-------------------|--------------------------|
+| master          | daily build       | >=3.7.5, <=3.9           |
+| 0.1.1           | >=1.8.1, <=2.0.0  | >=3.7.5, <=3.9           |
+| 0.2.0           | >=2.1.0           | >=3.7.5, <=3.9           |
 
-## Introduction
+#### Daily build
 
-MindNLP is an open source NLP library based on MindSpore. It supports a platform for solving natural language processing tasks, containing many common approaches in NLP. It can help researchers and developers to construct and train models more conveniently and rapidly.
+You can download MindNLP daily wheel from [here](https://repo.mindspore.cn/mindspore-lab/mindnlp/newest/any/).
 
-The master branch works with **MindSpore master**.
-
-### Major Features
-
-- **Comprehensive data processing**: Several classical NLP datasets are packaged into friendly module for easy use, such as Multi30k, SQuAD, CoNLL, etc.
-- **Friendly NLP model toolset**: MindNLP provides various configurable components. It is friendly to customize models using MindNLP.
-- **Easy-to-use engine**: MindNLP simplified complicated training process in MindSpore. It supports Trainer and Evaluator interfaces to train and evaluate models easily.
-
-## Quick Links
-
-- [Documentation](https://mindnlp.cqu.ai/en/latest/)
-- [Examples](https://github.com/mindspore-lab/mindnlp/tree/master/examples)
-- ...
-
-## Installation
-
-### Dependency
-
-- mindspore >= 1.8.1
-
-### Install from source
+#### Install from source
 
 To install MindNLP from source, please run:
 
 ```bash
 pip install git+https://github.com/mindspore-lab/mindnlp.git
+# or
+git clone https://github.com/mindspore-lab/mindnlp.git
+cd mindnlp
+bash scripts/build_and_reinstall.sh
 ```
 
-## Get Started
 
-We will next quickly implement a sentiment classification task by using mindnlp.
+### Introduction
 
-### Define Model
+MindNLP is an open source NLP library based on MindSpore. It supports a platform for solving natural language processing tasks, containing many common approaches in NLP. It can help researchers and developers to construct and train models more conveniently and rapidly.
 
-```python
-from mindspore import ops
-from mindnlp.abc import Seq2vecModel
+The master branch works with **MindSpore master**.
 
-class SentimentClassification(Seq2vecModel):
-    def construct(self, text):
-        _, (hidden, _), _ = self.encoder(text)
-        context = ops.concat((hidden[-2, :, :], hidden[-1, :, :]), axis=1)
-        output = self.head(context)
-        return output
-```
-    
-### Define Hyperparameters
-The following are some of the required hyperparameters in the model training process.
-```python
-# define Models & Loss & Optimizer
-hidden_size = 256
-output_size = 1
-num_layers = 2
-bidirectional = True
-drop = 0.5
-lr = 0.001
-```
+#### Major Features
 
-### Data Preprocessing
-The dataset was downloaded and preprocessed by calling the interface of dataset in mindnlp.
+- **Comprehensive data processing**: Several classical NLP datasets are packaged into friendly module for easy use, such as Multi30k, SQuAD, CoNLL, etc.
+- **Friendly NLP model toolset**: MindNLP provides various configurable components. It is friendly to customize models using MindNLP.
+- **Easy-to-use engine**: MindNLP simplified complicated training process in MindSpore. It supports Trainer and Evaluator interfaces to train and evaluate models easily.
 
-Load dataset:
-```python
-from mindnlp import load_dataset
+### Quick Links
 
-imdb_train, imdb_test = load_dataset('imdb', shuffle=True)
-```
+- [Documentation](https://mindnlp.cqu.ai/en/latest/)
+- [Tutorials](./tutorials/)
+- [Examples](./examples)
+- [LLMs](./llm)
+- ...
 
-Initializes the vocab and tokenizer for preprocessing:
-```python
-from mindnlp import Vocab
-from mindnlp.transforms import BasicTokenizer
-
-tokenizer = BasicTokenizer(True)
-vocab = Vocab.from_pretrained(name="glove.6B.100d")
-```
-
-The loaded dataset is preprocessed and divided into training and validation:
-```python
-from mindnlp.dataset import process
-
-imdb_train = process('imdb', imdb_train, tokenizer=tokenizer, vocab=vocab, \
-                     bucket_boundaries=[400, 500], max_len=600, drop_remainder=True)
-imdb_test = process('imdb', imdb_test, tokenizer=tokenizer, vocab=vocab, \
-                     bucket_boundaries=[400, 500], max_len=600, drop_remainder=False)
-```
-
-### Instantiate Model
-```python
-from mindnlp.modules import RNNEncoder, Glove
-
-embedding = Glove.from_pretrained('6B', 100, special_tokens=["<unk>", "<pad>"])
-# build encoder
-lstm_layer = nn.LSTM(100, hidden_size, num_layers=num_layers, batch_first=True,
-                     dropout=dropout, bidirectional=bidirectional)
-encoder = RNNEncoder(embedding, lstm_layer)
-
-# build head
-head = nn.SequentialCell([
-    nn.Dropout(p=dropout),
-    nn.Sigmoid(),
-    nn.Dense(hidden_size * 2, output_size,
-             weight_init=HeUniform(math.sqrt(5)),
-             bias_init=Uniform(1 / math.sqrt(hidden_size * 2)))
-
-])
-
-# build network
-network = SentimentClassification(encoder, head)
-loss = nn.BCELoss(reduction='mean')
-optimizer = nn.Adam(network.trainable_params(), learning_rate=lr)
-```
-
-### Training Process
-Now that we have completed all the preparations, we can begin to train the model.
-```python
-from mindnlp.engine.metrics import Accuracy
-from mindnlp.engine.trainer import Trainer
-
-# define metrics
-metric = Accuracy()
-
-# define trainer
-trainer = Trainer(network=network, train_dataset=imdb_train, eval_dataset=imdb_test, metrics=metric,
-                  epochs=5, loss_fn=loss, optimizer=optimizer)
-trainer.run(tgt_columns="label")
-```
 
 <!-- ## Tutorials
 

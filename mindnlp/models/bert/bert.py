@@ -19,7 +19,6 @@
 """MindNLP bert model"""
 import os
 import logging
-import mindspore.numpy as mnp
 import mindspore.common.dtype as mstype
 from mindspore import nn, ops
 from mindspore import Parameter, Tensor
@@ -95,7 +94,7 @@ class BertEmbeddings(nn.Cell):
     def construct(self, input_ids, token_type_ids=None, position_ids=None):
         seq_len = input_ids.shape[1]
         if position_ids is None:
-            position_ids = mnp.arange(seq_len)
+            position_ids = ops.arange(seq_len)
             position_ids = position_ids.expand_dims(0).expand_as(input_ids)
         if token_type_ids is None:
             token_type_ids = ops.zeros_like(input_ids)
@@ -348,7 +347,7 @@ class BertLMPredictionHead(nn.Cell):
     def construct(self, hidden_states, masked_lm_positions):
         batch_size, seq_len, hidden_size = hidden_states.shape
         if masked_lm_positions is not None:
-            flat_offsets = mnp.arange(batch_size) * seq_len
+            flat_offsets = ops.arange(batch_size) * seq_len
             flat_position = (masked_lm_positions + flat_offsets.reshape(-1, 1)).reshape(-1)
             flat_sequence_tensor = hidden_states.reshape(-1, hidden_size)
             hidden_states = ops.gather(flat_sequence_tensor, flat_position, 0)
@@ -431,7 +430,7 @@ class BertModel(BertPreTrainedModel):
         if head_mask is not None:
             if head_mask.ndim == 1:
                 head_mask = head_mask.expand_dims(0).expand_dims(0).expand_dims(-1).expand_dims(-1)
-                head_mask = mnp.broadcast_to(head_mask, (self.num_hidden_layers, -1, -1, -1, -1))
+                head_mask = ops.broadcast_to(head_mask, (self.num_hidden_layers, -1, -1, -1, -1))
             elif head_mask.ndim == 2:
                 head_mask = head_mask.expand_dims(1).expand_dims(-1).expand_dims(-1)
         else:

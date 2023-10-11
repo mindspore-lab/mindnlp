@@ -36,23 +36,23 @@ class TestModelingLUKE(unittest.TestCase):
         """
         Set up.
         """
-        self.config = luke_config.LukeConfig(num_hidden_layers=2)
+        self.config = luke_config.LukeConfig(vocab_size=1000, num_hidden_layers=2)
 
     def test_luke_embeddings(self):
         r"""
         Test LukeEmbeddings
         """
         model = luke.LukeEmbeddings(self.config)
-        input_ids = Tensor(np.random.randn(1, 2), mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (1, 128)), mindspore.int32)
         outputs = model(input_ids)
-        assert outputs.shape == (1, 2, 128)
+        assert outputs.shape == (1, 128, 128)
 
     def test_luke_entity_embeddings(self):
         r"""
         Test LukeEntityEmbeddings
         """
         model = luke.LukeEmbeddings(self.config)
-        entity_ids = Tensor(np.random.randn(1, ), mindspore.int32)
+        entity_ids = Tensor(np.random.randint(0, self.config.entity_vocab_size, (1,)), mindspore.int32)
         position_ids = Tensor(np.random.randn(1, 2), mindspore.int32)
         outputs = model(entity_ids, position_ids)
         assert outputs.shape == (1, 2, 128)
@@ -173,7 +173,7 @@ class TestModelingLUKE(unittest.TestCase):
         model = luke.LukeLMHead(self.config)
         features = Tensor(np.random.randn(2, 128), mindspore.float32)
         output = model(features)
-        assert output.shape == (2, 100)
+        assert output.shape == (2, self.config.vocab_size)
 
     def test_luke_for_masked_lm(self):
         r"""
@@ -182,7 +182,7 @@ class TestModelingLUKE(unittest.TestCase):
         model = luke.LukeForMaskedLM(self.config)
         input_ids = Tensor(np.random.randint(0, 10, (2, 4)), mindspore.int32)
         outputs = model(input_ids)
-        assert outputs[0].shape == (2, 4, 100)
+        assert outputs[0].shape == (2, 4, self.config.vocab_size)
 
     def test_luke_for_entity_classification(self):
         r"""

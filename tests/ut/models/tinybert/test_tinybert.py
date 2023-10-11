@@ -16,18 +16,20 @@
 """
 Test TinyBert
 """
-import gc
-import os
-import unittest
-
+import pytest
 import numpy as np
 import mindspore
 from mindspore import ops
 
-from mindnlp.models import tinybert
+from mindnlp.models.tinybert import TinyBertConfig, TinyBertEmbeddings, TinyBertSelfAttention, \
+    TinyBertAttention, TinyBertSelfOutput, TinyBertIntermediate, TinyBertOutput, \
+    TinyBertLayer, TinyBertEncoder, TinyBertPooler, TinyBertPredictionHeadTransform, \
+    TinyBertLMPredictionHead, TinyBertOnlyMLMHead, TinyBertOnlyNSPHead, TinyBertPreTrainingHeads, \
+    TinyBertModel, TinyBertForPreTraining, TinyBertFitForPreTraining, TinyBertForNextSentencePrediction, \
+    TinyBertForMaskedLM, TinyBertForSentencePairClassification, TinyBertForSequenceClassification
+from ..model_test import ModelTest
 
-
-class TestTinyBert(unittest.TestCase):
+class TestTinyBert(ModelTest):
     """
     Test TinyBert Models
     """
@@ -38,8 +40,8 @@ class TestTinyBert(unittest.TestCase):
         Set up config
         """
 
-        cls.bert_config = tinybert.BertConfig(
-            vocab_size_or_config_json_file=200,
+        cls.bert_config = TinyBertConfig(
+            vocab_size=200,
             num_attention_heads=12,
             num_hidden_layers=2)
 
@@ -48,8 +50,8 @@ class TestTinyBert(unittest.TestCase):
         Test BertEmbeddings
         """
 
-        bert_embeddings = tinybert.TinyBertEmbeddings(self.bert_config)
-        input_ids = mindspore.Tensor(np.random.randint(0, 1000, (2, 128)))
+        bert_embeddings = TinyBertEmbeddings(self.bert_config)
+        input_ids = mindspore.Tensor(np.random.randint(0, self.bert_config.vocab_size, (2, 128)))
         output = bert_embeddings(input_ids)
         assert output.shape == (2, 128, self.bert_config.hidden_size)
 
@@ -58,7 +60,7 @@ class TestTinyBert(unittest.TestCase):
         Test TinyBertSelfAttention
         """
 
-        bert_self_attention = tinybert.TinyBertSelfAttention(self.bert_config)
+        bert_self_attention = TinyBertSelfAttention(self.bert_config)
         input_tensor = mindspore.Tensor(
             np.random.rand(2, 3, 768), dtype=mindspore.float32)
         input_mask = ops.ones((2, 1, 1, 3), dtype=mindspore.float32)
@@ -71,7 +73,7 @@ class TestTinyBert(unittest.TestCase):
         Test TinyBertAttention
         """
 
-        bert_attention = tinybert.TinyBertAttention(self.bert_config)
+        bert_attention = TinyBertAttention(self.bert_config)
         input_tensor = mindspore.Tensor(
             np.random.rand(2, 3, 768), dtype=mindspore.float32)
         input_mask = ops.ones((2, 1, 1, 3), dtype=mindspore.float32)
@@ -84,7 +86,7 @@ class TestTinyBert(unittest.TestCase):
         Test TinyBertSelfOutput
         """
 
-        bert_self_output = tinybert.TinyBertSelfOutput(self.bert_config)
+        bert_self_output = TinyBertSelfOutput(self.bert_config)
         input_tensor = mindspore.Tensor(
             np.random.rand(2, 3, 768), dtype=mindspore.float32)
         attention_output = bert_self_output(input_tensor, input_tensor)
@@ -95,7 +97,7 @@ class TestTinyBert(unittest.TestCase):
         Test TinyBertIntermediate
         """
 
-        bert_intermediate = tinybert.TinyBertIntermediate(self.bert_config)
+        bert_intermediate = TinyBertIntermediate(self.bert_config)
         input_tensor = mindspore.Tensor(
             np.random.rand(2, 3, 768), dtype=mindspore.float32)
         intermediate_output = bert_intermediate(input_tensor)
@@ -106,7 +108,7 @@ class TestTinyBert(unittest.TestCase):
         Test TinyBertOutput
         """
 
-        bert_output = tinybert.TinyBertOutput(self.bert_config)
+        bert_output = TinyBertOutput(self.bert_config)
         input_tensor = mindspore.Tensor(
             np.random.rand(2, 3, 768), dtype=mindspore.float32)
         intermediate_output = mindspore.Tensor(
@@ -119,7 +121,7 @@ class TestTinyBert(unittest.TestCase):
         Test TinyBertLayer
         """
 
-        bert_layer = tinybert.TinyBertLayer(self.bert_config)
+        bert_layer = TinyBertLayer(self.bert_config)
         input_tensor = mindspore.Tensor(
             np.random.rand(2, 3, 768), dtype=mindspore.float32)
         input_mask = ops.ones((2, 1, 1, 3), dtype=mindspore.float32)
@@ -132,7 +134,7 @@ class TestTinyBert(unittest.TestCase):
         Test TinyBertEncoder
         """
 
-        bert_encoder = tinybert.TinyBertEncoder(self.bert_config)
+        bert_encoder = TinyBertEncoder(self.bert_config)
         input_tensor = mindspore.Tensor(
             np.random.rand(2, 3, 768), dtype=mindspore.float32)
         input_mask = ops.ones((2, 1, 1, 3), dtype=mindspore.float32)
@@ -145,7 +147,7 @@ class TestTinyBert(unittest.TestCase):
         Test TinyBertPooler
         """
 
-        bert_pooler = tinybert.TinyBertPooler(self.bert_config)
+        bert_pooler = TinyBertPooler(self.bert_config)
         input_encoded_layers = []
         for _ in range(13):
             input_encoded_layers.append(mindspore.Tensor(
@@ -159,7 +161,7 @@ class TestTinyBert(unittest.TestCase):
         Test TinyBertPredictionHeadTransform
         """
 
-        bert_prediction_head_transform = tinybert.TinyBertPredictionHeadTransform(
+        bert_prediction_head_transform = TinyBertPredictionHeadTransform(
             self.bert_config)
         input_tensor = mindspore.Tensor(
             np.random.rand(2, 3, 768), dtype=mindspore.float32)
@@ -171,8 +173,8 @@ class TestTinyBert(unittest.TestCase):
         Test TinyBertLMPredictionHead
         """
 
-        bert_embeddings = tinybert.TinyBertEmbeddings(self.bert_config)
-        bert_lm_prediction_head = tinybert.TinyBertLMPredictionHead(
+        bert_embeddings = TinyBertEmbeddings(self.bert_config)
+        bert_lm_prediction_head = TinyBertLMPredictionHead(
             self.bert_config, bert_embeddings.word_embeddings.embedding_table)
         input_tensor = mindspore.Tensor(
             np.random.rand(2, 3, 768), dtype=mindspore.float32)
@@ -184,8 +186,8 @@ class TestTinyBert(unittest.TestCase):
         Test TinyBertOnlyMLMHead
         """
 
-        bert_embeddings = tinybert.TinyBertEmbeddings(self.bert_config)
-        bert_only_mlm_head = tinybert.TinyBertOnlyMLMHead(
+        bert_embeddings = TinyBertEmbeddings(self.bert_config)
+        bert_only_mlm_head = TinyBertOnlyMLMHead(
             self.bert_config, bert_embeddings.word_embeddings.embedding_table)
         input_tensor = mindspore.Tensor(
             np.random.rand(2, 3, 768), dtype=mindspore.float32)
@@ -197,7 +199,7 @@ class TestTinyBert(unittest.TestCase):
         Test TinyBertOnlyNSPHead
         """
 
-        bert_only_nsp_head = tinybert.TinyBertOnlyNSPHead(self.bert_config)
+        bert_only_nsp_head = TinyBertOnlyNSPHead(self.bert_config)
         input_tensor = mindspore.Tensor(
             np.random.rand(2, 768), dtype=mindspore.float32)
         seq_relationship_score = bert_only_nsp_head(input_tensor)
@@ -208,8 +210,8 @@ class TestTinyBert(unittest.TestCase):
         Test TinyBertPreTrainingHeads
         """
 
-        bert_embeddings = tinybert.TinyBertEmbeddings(self.bert_config)
-        bert_pretraining_heads = tinybert.TinyBertPreTrainingHeads(
+        bert_embeddings = TinyBertEmbeddings(self.bert_config)
+        bert_pretraining_heads = TinyBertPreTrainingHeads(
             self.bert_config, bert_embeddings.word_embeddings.embedding_table)
         input_tensor = mindspore.Tensor(
             np.random.rand(2, 3, 768), dtype=mindspore.float32)
@@ -225,7 +227,7 @@ class TestTinyBert(unittest.TestCase):
         Test TinyBertModel
         """
 
-        bert_model = tinybert.TinyBertModel(self.bert_config)
+        bert_model = TinyBertModel(self.bert_config)
         input_ids = np.array([[31, 51, 99], [15, 5, 0]], dtype=np.int64)
         input_mask = np.array([[1, 1, 1], [1, 1, 0]], dtype=np.int64)
         token_type_ids = np.array([[0, 0, 1], [0, 1, 0]], dtype=np.int64)
@@ -245,7 +247,7 @@ class TestTinyBert(unittest.TestCase):
         TinyBertForPreTraining
         """
 
-        bert_for_pretraining = tinybert.TinyBertForPreTraining(
+        bert_for_pretraining = TinyBertForPreTraining(
             self.bert_config)
         input_ids = np.array([[31, 51, 99], [15, 5, 0]], dtype=np.int64)
         input_mask = np.array([[1, 1, 1], [1, 1, 0]], dtype=np.int64)
@@ -266,7 +268,7 @@ class TestTinyBert(unittest.TestCase):
         Test TinyBertFitForPreTraining
         """
 
-        bert_fit_for_pretraining = tinybert.TinyBertFitForPreTraining(
+        bert_fit_for_pretraining = TinyBertFitForPreTraining(
             self.bert_config)
         # original
         input_ids = np.array([[31, 51, 99], [15, 5, 0]], dtype=np.int64)
@@ -288,7 +290,7 @@ class TestTinyBert(unittest.TestCase):
         Test TinyBertForMaskedLM
         """
 
-        bert_for_masked_lm = tinybert.TinyBertForMaskedLM(self.bert_config)
+        bert_for_masked_lm = TinyBertForMaskedLM(self.bert_config)
         # original
         input_ids = np.array([[31, 51, 99], [15, 5, 0]], dtype=np.int64)
         input_mask = np.array([[1, 1, 1], [1, 1, 0]], dtype=np.int64)
@@ -307,7 +309,7 @@ class TestTinyBert(unittest.TestCase):
         Test TinyBertForNextSentencePrediction
         """
 
-        bert_for_next_sentence_prediction = tinybert.TinyBertForNextSentencePrediction(
+        bert_for_next_sentence_prediction = TinyBertForNextSentencePrediction(
             self.bert_config)
         # original
         input_ids = np.array([[31, 51, 99], [15, 5, 0]], dtype=np.int64)
@@ -327,7 +329,7 @@ class TestTinyBert(unittest.TestCase):
         TinyBertForSentencePairClassification
         """
 
-        bert_for_sentence_pair_classification = tinybert.TinyBertForSentencePairClassification(
+        bert_for_sentence_pair_classification = TinyBertForSentencePairClassification(
             self.bert_config, 2)
         # original
         input_ids = np.array([[31, 51, 99], [15, 5, 0]], dtype=np.int64)
@@ -347,7 +349,7 @@ class TestTinyBert(unittest.TestCase):
         Test TinyBertForSequenceClassification
         """
 
-        bert_for_sequence_classification = tinybert.TinyBertForSequenceClassification(
+        bert_for_sequence_classification = TinyBertForSequenceClassification(
             self.bert_config, 2)
         # original
         input_ids = np.array([[31, 51, 99], [15, 5, 0]], dtype=np.int64)
@@ -364,10 +366,17 @@ class TestTinyBert(unittest.TestCase):
         assert att_output[0].shape == (2, 12, 3, 3)
         assert sequence_output[0].shape == (2, 3, 768)
 
-    def tearDown(self) -> None:
-        gc.collect()
+    @pytest.mark.download
+    def test_from_pretrained(self):
+        """test from pretrained"""
+        _ = TinyBertModel.from_pretrained('tinybert_6L_zh')
 
-    @classmethod
-    def tearDownClass(cls):
-        if os.path.exists("~/.mindnlp"):
-            os.removedirs("~/.mindnlp")
+    @pytest.mark.download
+    def test_from_pretrained_path(self):
+        """test from pretrained"""
+        _ = TinyBertModel.from_pretrained('.mindnlp/models/tinybert_6L_zh')
+
+    @pytest.mark.download
+    def test_from_pretrained_from_pt(self):
+        """test from pt"""
+        _ = TinyBertModel.from_pretrained('huawei-noah/tinybert_6L_zh', from_pt=True)

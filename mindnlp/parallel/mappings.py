@@ -12,28 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Tensor Parallel mappings"""
 # pylint: disable=unused-argument
-
+"""Tensor Parallel mappings"""
 import mindspore
 from mindspore import nn
 from mindspore import ops
 
-from mindspore.communication import get_rank, get_group_size
 from mindspore.ops import constexpr
+from mindspore.communication import GlobalComm
+from mindspore.ops._primitive_cache import _get_cache_prim
 
 from mindnlp._legacy.ops import AllGather
-from .utils import divide_and_check_no_remainder, split_tensor_along_last_dim
+from .utils import concat_tensor_along_last_dim, split_tensor_along_last_dim, get_rank, get_group_size
 
 
 @constexpr
-def _get_rank():
-    return get_rank()
+def _get_rank(group=GlobalComm.WORLD_COMM_GROUP):
+    return get_rank(group)
 
 
 @constexpr
-def _get_group_size():
-    return get_group_size()
+def _get_group_size(group=GlobalComm.WORLD_COMM_GROUP):
+    return get_group_size(group)
 
 
 def _reduce(input_: mindspore.Tensor) -> mindspore.Tensor:
@@ -43,7 +43,7 @@ def _reduce(input_: mindspore.Tensor) -> mindspore.Tensor:
         return input_
 
     # All-reduce.
-    _all_reduce = ops.AllReduce()
+    _all_reduce = _get_cache_prim(ops.AllReduce)()
     output = _all_reduce(input_)
 
     return output
@@ -52,11 +52,11 @@ def _split(input_: mindspore.Tensor) -> mindspore.Tensor:
     """Split the tensor along its last dimension and keep the
     corresponding slice."""
     # Bypass the function if we are using only 1 GPU.
-    if _get_group_size() == 1:
+    rank_size = _get_group_size()
+    if rank_size == 1:
         return input_
 
     # Split along last dimension.
-    rank_size = _get_group_size()
     input_list = split_tensor_along_last_dim(input_, rank_size)
 
     rank = _get_rank()
@@ -71,13 +71,10 @@ def _gather(input_: mindspore.Tensor) -> mindspore.Tensor:
     if rank_size == 1:
         return input_
 
-    # # Size and dimension.
-    last_dim = input_.ndim - 1
-
-    _all_gather = AllGather()
+    _all_gather = _get_cache_prim(AllGather)()
     tensor = _all_gather(input_)
-    tensor_list = ops.split(tensor, divide_and_check_no_remainder(tensor.shape[0], rank_size), axis=0)
-    output = ops.concat(tensor_list, axis=last_dim)
+    # # Size and dimension.
+    output = concat_tensor_along_last_dim(tensor, rank_size)
 
     return output
 

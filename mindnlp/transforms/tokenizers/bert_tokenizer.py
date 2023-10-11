@@ -175,3 +175,6 @@ class BertTokenizer(PreTrainedTokenizer):
 
     def _convert_token_to_id(self, token):
         return self._tokenizer.token_to_id(token)
+
+    def _convert_id_to_token(self, index):
+        return self._tokenizer.id_to_token(index)
