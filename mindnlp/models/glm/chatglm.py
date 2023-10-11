@@ -558,6 +558,7 @@ class ChatGLMPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["GLMBlock"]
     pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
     convert_torch_to_mindspore = torch_to_mindspore
+    _keys_to_ignore_on_load_unexpected = [r'inv_freq']
 
     def _init_weights(self, cell: nn.Cell):
         """Initialize the weights."""
