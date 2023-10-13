@@ -83,14 +83,17 @@ jobs:
       run: |
         python .github/install_mindspore.py
         pip install -r download.txt
-    - name: Test with pytest on linux and macos
-      if: matrix.os != 'windows-latest'
+    - name: Test with pytest
       run: |
         pytest -m 'not download and not gpu_only' tests/ut
-    - name: Test with pytest on windows
-      if: matrix.os == 'windows-latest'
-      run: |
-        pytest -m 'not download and not gpu_only' tests/ut --ignore=tests/ut/models
+    # - name: Test with pytest on linux and macos
+    #   if: matrix.os != 'windows-latest'
+    #   run: |
+    #     pytest -m 'not download and not gpu_only' tests/ut
+    # - name: Test with pytest on windows
+    #   if: matrix.os == 'windows-latest'
+    #   run: |
+    #     pytest -m 'not download and not gpu_only' tests/ut --ignore=tests/ut/models
 
   release-test:
     needs: pylint-check
