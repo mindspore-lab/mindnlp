@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=C0412
 """modules init"""
-
+import mindspore
 from mindnlp.utils import less_min_pynative_first
 from mindnlp._legacy.nn import transformer
 from mindnlp.modules import encoder, decoder, embeddings, loss, attentions, crf, rnns, \
@@ -26,8 +27,13 @@ from mindnlp.modules.decoder import RNNDecoder
 from mindnlp.modules.embeddings import Fasttext, Glove
 from mindnlp.modules.crf import CRF
 from mindnlp.modules.loss import RDropLoss, CMRC2018Loss
-from mindnlp.modules.rnns import *
 from mindnlp.modules.accumulator import *
+
+if mindspore.get_context('device_target') == 'Ascend':
+    from mindspore.nn import GRU as StaticGRU
+    from mindspore.nn import LSTM as StaticLSTM
+else:
+    from mindnlp.modules.rnns import *
 
 if less_min_pynative_first:
     from mindnlp._legacy.nn.transformer import Transformer, TransformerDecoder, TransformerEncoder, \

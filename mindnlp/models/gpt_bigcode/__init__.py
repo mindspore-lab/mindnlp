@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""MindNLP Parallel modules, which is ported from Megatron."""
-
-from . import tensor_parallel
-from .tensor_parallel import *
-
-__all__ = []
-__all__.extend(tensor_parallel.__all__)
+"""
+Big Code GPT Model.
+"""

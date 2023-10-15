@@ -23,6 +23,7 @@ Abstract class for Pretrained models.
 """
 import os
 import gc
+import re
 from typing import Union, Optional
 from tqdm.autonotebook import tqdm
 
@@ -55,6 +56,13 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
     base_model_prefix = ""
     main_input_name = "input_ids"
 
+    # a list of `re` patterns of `state_dict` keys that should be removed from the list of missing
+    # keys we find (keys inside the model but not in the checkpoint) and avoid unnecessary warnings.
+    _keys_to_ignore_on_load_missing = None
+    # a list of `re` patterns of `state_dict` keys that should be removed from the list of
+    # unexpected keys we find (keys inside the checkpoint but not the model) and avoid unnecessary
+    # warnings.
+    _keys_to_ignore_on_load_unexpected = None
 
     def __init__(self, config):
         super().__init__(config)
@@ -375,6 +383,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                         proxies=proxies)
 
                     if resolved_archive_file is not None:
+                        cache_dir = os.path.join(cache_dir, 'shard_ckpt')
                         cached_filenames, _ = get_checkpoint_shard_files(
                             index_filename=resolved_archive_file,
                             cache_dir=cache_dir,
@@ -426,8 +435,10 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 ) from exc
             return state_dict
 
+        keys_missing = list(model.parameters_dict().keys())
+
         def load_param_into_net(model: nn.Cell, param_dict: dict, prefix: str):
-            not_loaded = list(param_dict.keys())
+            keys_unexpected = list(param_dict.keys())
             for _, param in model.parameters_and_names():
                 if param.name in param_dict:
                     param_name = param.name
@@ -437,25 +448,38 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 if new_param is not None:
                     param.set_dtype(new_param.dtype)
                     param.assign_value(new_param)
-                    not_loaded.remove(param_name)
+                    keys_unexpected.remove(param_name)
+                    keys_missing.remove(param_name)
 
-            return not_loaded
+            return keys_unexpected, keys_missing
 
         if state_dict is None:
             if is_sharded:
-                not_loaded = []
+                all_keys_unexpected = []
                 for name in tqdm(converted_filenames, desc="Loading checkpoint shards"):
                     state_dict = load_ckpt(name)
-                    not_loaded.extend(load_param_into_net(model, state_dict, cls.base_model_prefix))
+                    keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
+                    all_keys_unexpected.extend(keys_unexpected)
                     del state_dict
                     gc.collect()
             else:
                 state_dict = load_ckpt(resolved_archive_file)
-                not_loaded = load_param_into_net(model, state_dict, cls.base_model_prefix)
+                all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
 
-        if not_loaded:
+        if cls._keys_to_ignore_on_load_missing is not None:
+            for pat in cls._keys_to_ignore_on_load_missing:
+                keys_missing = [k for k in keys_missing if re.search(pat, k) is None]
+
+        if cls._keys_to_ignore_on_load_unexpected is not None:
+            for pat in cls._keys_to_ignore_on_load_unexpected:
+                all_keys_unexpected = [k for k in all_keys_unexpected if re.search(pat, k) is None]
+
+        if all_keys_unexpected:
             logger.warning(f'The following parameters in checkpoint files are not loaded:\n'
-                           f'{not_loaded}')
+                           f'{all_keys_unexpected}')
+        if keys_missing:
+            logger.warning(f'The following parameters in models are missing parameter:\n'
+                           f'{keys_missing}')
 
         return model
 
