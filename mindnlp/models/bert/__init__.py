@@ -15,10 +15,12 @@
 """
 Bert Model.
 """
-from . import bert, bert_config
+from . import bert, bert_config, bert_graph
 from .bert import *
 from .bert_config import *
+from .bert_graph import *
 
 __all__ = []
 __all__.extend(bert.__all__)
+__all__.extend(bert_graph.__all__)
 __all__.extend(bert_config.__all__)
