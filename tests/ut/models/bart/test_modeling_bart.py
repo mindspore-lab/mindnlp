@@ -20,8 +20,8 @@ import numpy as np
 from mindspore import Tensor
 
 import mindnlp
-from mindnlp.models.bart import BartConfig
-from mindnlp.models.bart import bart
+from mindnlp.transformers import BartConfig
+from mindnlp.transformers.models.bart import bart
 from ..model_test import ModelTest
 
 

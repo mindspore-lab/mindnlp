@@ -15,7 +15,7 @@
 """Test the AddToken"""
 
 from mindspore.dataset import NumpySlicesDataset
-from mindnlp.transforms import PadTransform, Truncate
+from mindnlp.dataset.transforms import PadTransform, Truncate
 from mindnlp.utils import less_min_pynative_first
 
 def test_pad_transform():

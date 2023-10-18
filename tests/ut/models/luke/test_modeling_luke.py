@@ -24,7 +24,9 @@ import mindspore
 import numpy as np
 from mindspore import Tensor
 
-from mindnlp.models.luke import luke_config, luke
+from mindnlp.transformers.models.luke import luke_config, luke
+
+mindspore.set_context(pynative_synchronize=True)
 
 
 class TestModelingLUKE(unittest.TestCase):
@@ -51,11 +53,11 @@ class TestModelingLUKE(unittest.TestCase):
         r"""
         Test LukeEntityEmbeddings
         """
-        model = luke.LukeEmbeddings(self.config)
+        model = luke.LukeEntityEmbeddings(self.config)
         entity_ids = Tensor(np.random.randint(0, self.config.entity_vocab_size, (1,)), mindspore.int32)
         position_ids = Tensor(np.random.randn(1, 2), mindspore.int32)
         outputs = model(entity_ids, position_ids)
-        assert outputs.shape == (1, 2, 128)
+        assert outputs.shape == (1, 128)
 
     def test_luke_self_attention(self):
         r"""

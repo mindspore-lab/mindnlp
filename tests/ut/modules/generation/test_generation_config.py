@@ -17,8 +17,8 @@ Test GenerationConfig
 """
 
 import unittest
-from mindnlp.abc import GenerationConfig
-from mindnlp.models.t5 import T5Config
+from mindnlp.transformers.generation import GenerationConfig
+from mindnlp.transformers import T5Config
 
 class TestGenerationConfig(unittest.TestCase):
     r"""

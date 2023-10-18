@@ -15,7 +15,7 @@
 """Test Bert functions"""
 import pytest
 
-from mindnlp.models import BertModel
+from mindnlp.transformers import BertModel
 
 @pytest.mark.download
 def test_resize_embed():

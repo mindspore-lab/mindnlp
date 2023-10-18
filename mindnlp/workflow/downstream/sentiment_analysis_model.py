@@ -18,7 +18,7 @@
 # pylint: disable=arguments-differ
 
 from mindspore import nn
-from mindnlp.models import BertModel
+from mindnlp.transformers import BertModel
 
 class BertForSentimentAnalysis(nn.Cell):
     """Bert Model for classification tasks"""

@@ -33,7 +33,7 @@ from mindspore import nn, ops
 from mindspore.common.initializer import initializer, HeUniform, Zero, Normal
 
 # import mindnlp._legacy.functional as F
-from mindnlp.models.utils import Conv1D
+from mindnlp.transformers.ms_utils import Conv1D
 from mindnlp.abc import CellDict
 
 from ..config import PeftConfig
@@ -146,7 +146,7 @@ class LoraModel(BaseTuner):
     Example:
 
         ```py
-        >>> from mindnlp.models import GPTForSequenceClassification
+        >>> from mindnlp.transformers import GPTForSequenceClassification
         >>> from mindnlp.modules import LoraModel, LoraConfig
 
         >>> config = LoraConfig(

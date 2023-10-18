@@ -16,7 +16,7 @@
 
 import pytest
 
-from mindnlp.models import GPTDoubleHeadsModel
+from mindnlp.transformers import GPTDoubleHeadsModel
 
 @pytest.mark.download
 def test_resize_embed():

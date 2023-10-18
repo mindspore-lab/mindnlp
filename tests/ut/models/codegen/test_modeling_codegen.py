@@ -18,7 +18,7 @@ import numpy as np
 from mindspore import Tensor
 
 import mindnlp
-from mindnlp.models.codegen import codegen_config, codegen
+from mindnlp.transformers.models.codegen import codegen_config, codegen
 from ..model_test import ModelTest
 
 class TestModelingCodeGen(ModelTest):

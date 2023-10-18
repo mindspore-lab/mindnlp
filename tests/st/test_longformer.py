@@ -19,7 +19,7 @@
 import numpy as np
 import mindspore
 from mindspore import nn, Tensor
-from mindnlp.models import LongformerConfig, LongformerForSequenceClassification
+from mindnlp.transformers import LongformerConfig, LongformerForSequenceClassification
 
 
 def test_train_longformer():

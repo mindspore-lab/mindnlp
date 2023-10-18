@@ -25,8 +25,7 @@ from typing import List
 
 import mindspore.dataset as ds
 from mindnlp.workflow.work import Work
-from mindnlp.transforms.tokenizers import UIETokenizer
-from mindnlp.models import UIE
+from mindnlp.transformers import UIE, UIETokenizer
 from mindnlp.workflow.utils import (
     SchemaTree,
     dbc2sbc,

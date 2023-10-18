@@ -15,7 +15,7 @@
 """Test Bert functions"""
 import pytest
 
-from mindnlp.models import RobertaForMaskedLM
+from mindnlp.transformers import RobertaForMaskedLM
 
 @pytest.mark.download
 def test_resize_embed():

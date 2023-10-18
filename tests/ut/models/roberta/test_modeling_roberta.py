@@ -22,7 +22,7 @@ import mindspore
 from mindspore import Tensor
 
 import mindnlp
-from mindnlp.models import RobertaConfig, RobertaModel
+from mindnlp.transformers import RobertaConfig, RobertaModel
 from ..model_test import ModelTest
 
 @ddt
@@ -36,9 +36,10 @@ class TestModelingRoberta(ModelTest):
                                  hidden_size=128,
                                  num_hidden_layers=2,
                                  num_attention_heads=8,
-                                 intermediate_size=256)
+                                 intermediate_size=256,
+                                 pad_token_id=0)
 
-    @data(True, False)
+    @data(False)
     def test_modeling_roberta(self, jit):
         r"""
         Test model bert

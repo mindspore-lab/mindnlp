@@ -21,7 +21,7 @@ import numpy as np
 import mindspore
 from mindspore import ops
 
-from mindnlp.models.tinybert import TinyBertConfig, TinyBertEmbeddings, TinyBertSelfAttention, \
+from mindnlp.transformers.models.tinybert.tinybert import TinyBertConfig, TinyBertEmbeddings, TinyBertSelfAttention, \
     TinyBertAttention, TinyBertSelfOutput, TinyBertIntermediate, TinyBertOutput, \
     TinyBertLayer, TinyBertEncoder, TinyBertPooler, TinyBertPredictionHeadTransform, \
     TinyBertLMPredictionHead, TinyBertOnlyMLMHead, TinyBertOnlyNSPHead, TinyBertPreTrainingHeads, \
