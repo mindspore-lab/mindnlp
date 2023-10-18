@@ -20,8 +20,8 @@ import unittest
 import numpy as np
 import mindspore
 from mindspore import Tensor
-from mindnlp.models.longformer.longformer_config import LongformerConfig
-from mindnlp.models.longformer.longformer import LongformerEmbeddings, LongformerSelfAttention, \
+from mindnlp.transformers import LongformerConfig
+from mindnlp.transformers.models.longformer.longformer import LongformerEmbeddings, LongformerSelfAttention, \
     LongformerSelfOutput, LongformerAttention, LongformerIntermediate, LongformerOutput, \
     LongformerEncoder, LongformerPooler, LongformerLMHead, LongformerModel, \
     LongformerForMaskedLM, LongformerForSequenceClassification, LongformerClassificationHead, \

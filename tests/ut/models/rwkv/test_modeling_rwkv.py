@@ -21,8 +21,8 @@ import numpy as np
 
 import mindspore
 from mindspore import Tensor
-from mindnlp.models.rwkv.rwkv_config import RwkvConfig
-from mindnlp.models.rwkv.rwkv import RwkvModel
+from mindnlp.transformers.models.rwkv.rwkv_config import RwkvConfig
+from mindnlp.transformers.models.rwkv.rwkv import RwkvModel
 
 
 class TestModelingRWKV(unittest.TestCase):

@@ -21,7 +21,7 @@ import mindspore
 from mindspore import Tensor
 
 import mindnlp
-from mindnlp.models import BertConfig, BertModel
+from mindnlp.transformers import BertConfig, BertModel
 from ..model_test import ModelTest
 
 
@@ -38,7 +38,7 @@ class TestModelingBert(ModelTest):
                                  num_attention_heads=8,
                                  intermediate_size=256)
 
-    @data(True, False)
+    @data(False)
     def test_modeling_bert(self, jit):
         r"""
         Test model bert

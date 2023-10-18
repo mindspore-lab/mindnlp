@@ -23,8 +23,7 @@ import numpy as np
 import mindspore
 from mindspore import Tensor
 
-from mindnlp.models.glm.chatglm import ChatGLMForConditionalGeneration
-from mindnlp.transforms.tokenizers import ChatGLMTokenizer
+from mindnlp.transformers import ChatGLMForConditionalGeneration, ChatGLMTokenizer
 
 def set_random_seed(seed):
     """set random seed"""

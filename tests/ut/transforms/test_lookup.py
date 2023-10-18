@@ -16,7 +16,7 @@
 
 from mindspore.dataset.text import Vocab as msVocab
 from mindnlp import Vocab
-from mindnlp.transforms import Lookup
+from mindnlp.dataset.transforms import Lookup
 
 def test_lookup():
     """look up."""

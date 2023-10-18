@@ -19,7 +19,7 @@ import numpy as np
 
 from mindspore import Tensor
 import mindnlp
-from mindnlp.models.bloom import BloomConfig, BloomModel
+from mindnlp.transformers import BloomConfig, BloomModel
 from ..model_test import ModelTest
 
 

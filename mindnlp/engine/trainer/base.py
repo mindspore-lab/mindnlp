@@ -26,7 +26,8 @@ from mindspore import log, mutable, context
 from mindspore import save_checkpoint
 from mindspore.dataset.engine import Dataset, TakeDataset
 
-from mindnlp.abc import Callback, Metric, PreTrainedConfig
+from mindnlp.abc import Callback, Metric
+from mindnlp.transformers.configuration_utils import PreTrainedConfig
 from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContext
 from mindnlp.engine.callbacks.earlystop_callback import EarlyStopCallback
 from mindnlp.engine.callbacks.best_model_callback import BestModelCallback

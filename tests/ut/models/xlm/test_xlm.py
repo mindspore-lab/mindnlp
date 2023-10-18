@@ -21,8 +21,10 @@ import unittest
 import pytest
 import numpy as np
 import mindspore
-from mindnlp.models.xlm import xlm_config
-from mindnlp.models import xlm
+from mindnlp.transformers import XLMConfig, XLMModel, XLMForSequenceClassification, XLMForQuestionAnsweringSimple, \
+    XLMForTokenClassification, XLMForQuestionAnswering, XLMForMultipleChoice
+from mindnlp.transformers.models.xlm.xlm import XLMPredLayer, MultiHeadAttention, \
+    TransformerFFN, XLMWithLMHeadModel
 
 
 class TestXlm(unittest.TestCase):
@@ -34,18 +36,18 @@ class TestXlm(unittest.TestCase):
         """
         Set up.
         """
-        self.config = xlm_config.XLMConfig(vocab_size=22,
-                                           emb_dim=24,
-                                           n_layers=2,
-                                           n_heads=8,
-                                           max_position_embeddings=128,
-                                           batch_size=1)
+        self.config = XLMConfig(vocab_size=22,
+                                emb_dim=24,
+                                n_layers=2,
+                                n_heads=8,
+                                max_position_embeddings=128,
+                                batch_size=1)
 
     def test_xlm_predlayer(self):
         """
         Test xlm_XLMPredLayer
         """
-        xlm_predlayer = xlm.XLMPredLayer(self.config)
+        xlm_predlayer = XLMPredLayer(self.config)
         input_ids = mindspore.Tensor(np.random.randint(
             0, 1000, (2, 24)), mindspore.float32)
         output = xlm_predlayer(input_ids)
@@ -55,7 +57,7 @@ class TestXlm(unittest.TestCase):
         """
         test xlm_multiheadattention
         """
-        xlm_multiheadattention = xlm.MultiHeadAttention(n_heads=self.config.n_heads,
+        xlm_multiheadattention = MultiHeadAttention(n_heads=self.config.n_heads,
                                                         dim=self.config.emb_dim,
                                                         config=self.config)
         input_ids = mindspore.Tensor(np.random.randint(
@@ -69,7 +71,7 @@ class TestXlm(unittest.TestCase):
         """
         test xlm_TransformerFFN
         """
-        xlm_transformerffn = xlm.TransformerFFN(
+        xlm_transformerffn = TransformerFFN(
             self.config.emb_dim//8, self.config.emb_dim//2, self.config.emb_dim, self.config)
         input_ids = mindspore.Tensor(np.random.randint(
             0, 1000, (12, 3)), mindspore.float32)
@@ -80,7 +82,7 @@ class TestXlm(unittest.TestCase):
         """
         test xlm_xlmwithLmheadmodel
         """
-        xlm_xlmwithlmheadmodel = xlm.XLMWithLMHeadModel(self.config)
+        xlm_xlmwithlmheadmodel = XLMWithLMHeadModel(self.config)
         input_ids1 = mindspore.Tensor(
             np.random.randint(0, 22, (4, 8)), mindspore.int32)
         output = xlm_xlmwithlmheadmodel(input_ids=input_ids1)
@@ -90,7 +92,7 @@ class TestXlm(unittest.TestCase):
         """
         test xlm_TransformerFFN
         """
-        xlm_xlmmodel = xlm.XLMModel(self.config)
+        xlm_xlmmodel = XLMModel(self.config)
         input_ids1 = mindspore.Tensor(
             np.random.randint(0, self.config.vocab_size, (1, 1)), mindspore.int32)
         output = xlm_xlmmodel(input_ids=input_ids1)
@@ -100,7 +102,7 @@ class TestXlm(unittest.TestCase):
         """
         test xlm_XLMForSequenceClassification
         """
-        xlm_xlmforsequenceclassification = xlm.XLMForSequenceClassification(
+        xlm_xlmforsequenceclassification = XLMForSequenceClassification(
             self.config)
         input_ids1 = mindspore.Tensor(
             np.random.randint(0, 22, (1, 24)), mindspore.int32)
@@ -112,7 +114,7 @@ class TestXlm(unittest.TestCase):
         test xlm_XLMForQuestionAnsweringSimple
         """
 
-        xlm_xlmforquestionansweringsimple = xlm.XLMForQuestionAnsweringSimple(
+        xlm_xlmforquestionansweringsimple = XLMForQuestionAnsweringSimple(
             self.config)
         input_ids1 = mindspore.Tensor(
             np.random.randint(0, 22, (1, 24)), mindspore.int32)
@@ -123,7 +125,7 @@ class TestXlm(unittest.TestCase):
         """
         test xlm_xlmfortokenclassification
         """
-        xlm_xlmfortokenclassification = xlm.XLMForTokenClassification(
+        xlm_xlmfortokenclassification = XLMForTokenClassification(
             self.config)
         input_ids1 = mindspore.Tensor(
             np.random.randint(0, 22, (1, 24)), mindspore.int32)
@@ -134,7 +136,7 @@ class TestXlm(unittest.TestCase):
         """
         test xlm_xlmformultiplechoice
         """
-        xlm_xlmformultiplechoice = xlm.XLMForMultipleChoice(self.config)
+        xlm_xlmformultiplechoice = XLMForMultipleChoice(self.config)
         input_ids1 = mindspore.Tensor(
             np.random.randint(0, 22, (22, 22)), mindspore.int32)
         output = xlm_xlmformultiplechoice(input_ids=input_ids1)
@@ -144,7 +146,7 @@ class TestXlm(unittest.TestCase):
         """
         test xlm_xlmforquestionanswering
         """
-        xlm_xlmforquestionanswering = xlm.XLMForQuestionAnswering(self.config)
+        xlm_xlmforquestionanswering = XLMForQuestionAnswering(self.config)
         input_ids1 = mindspore.Tensor(
             np.random.randint(0, 1, (13, 7)), mindspore.int32)
         # token_type_ids =  mindspore.Tensor(np.random.randint(0, 1, (13,7)),mindspore.int32)
@@ -173,12 +175,12 @@ class TestXlm(unittest.TestCase):
     @pytest.mark.download
     def test_from_pretrained(self):
         """test from pretrained"""
-        _ = xlm.XLMModel.from_pretrained('xlm-clm-enfr-1024')
+        _ = XLMModel.from_pretrained('xlm-clm-enfr-1024')
 
     @pytest.mark.download
     def test_from_pretrained_from_pt(self):
         """test from pt"""
-        _ = xlm.XLMModel.from_pretrained('xlm-mlm-en-2048', from_pt=True)
+        _ = XLMModel.from_pretrained('xlm-mlm-en-2048', from_pt=True)
 
     def tearDown(self) -> None:
         gc.collect()

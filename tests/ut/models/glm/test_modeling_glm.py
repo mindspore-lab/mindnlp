@@ -21,7 +21,7 @@ import numpy as np
 import mindspore
 from mindspore import Tensor
 
-from mindnlp.models.glm import glm,glm_config
+from mindnlp.transformers.models.glm import glm, glm_config
 
 class TestModelingGlm(unittest.TestCase):
     """

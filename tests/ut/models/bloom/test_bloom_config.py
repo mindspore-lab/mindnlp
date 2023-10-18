@@ -19,7 +19,7 @@ import os
 import unittest
 import pytest
 
-from mindnlp.models.bloom import BloomConfig
+from mindnlp.transformers import BloomConfig
 
 
 class TestBloomConfig(unittest.TestCase):

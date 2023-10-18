@@ -28,9 +28,9 @@ from mindspore.ops import functional as F
 from mindnlp._legacy.functional import argmax
 from mindnlp.workflow.work import Work
 from mindnlp.workflow.downstream import BertForSentimentAnalysis
-from mindnlp.models import BertConfig
-from mindnlp.transforms import PadTransform
-from mindnlp.transforms.tokenizers import BertTokenizer
+from mindnlp.transformers import BertConfig
+from mindnlp.dataset.transforms import PadTransform
+from mindnlp.transformers import BertTokenizer
 
 usage = r"""
     from mindnlp import Workflow

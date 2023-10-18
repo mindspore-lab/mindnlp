@@ -24,7 +24,7 @@ import numpy as np
 import mindspore
 from mindspore import Tensor
 
-from mindnlp.models.nezha import (NezhaConfig,
+from mindnlp.transformers.models.nezha.nezha import (NezhaConfig,
                                   NezhaRelativePositionsEncoding,
                                   NezhaEmbeddings,
                                   NezhaSelfAttention,

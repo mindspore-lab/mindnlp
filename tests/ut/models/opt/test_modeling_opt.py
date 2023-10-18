@@ -20,9 +20,8 @@ import mindspore
 import pytest
 from mindspore.ops import functional
 from mindspore import Tensor
-from mindnlp.models.opt import OPTModel, OPTForCausalLM
-from mindnlp.transforms.tokenizers import OPTTokenizer
-from mindnlp.models.opt import config_opt, opt
+from mindnlp.transformers.models.opt import opt, opt_config
+from mindnlp.transformers import OPTModel, OPTForCausalLM, OPTTokenizer
 
 
 class OPTModelTest(unittest.TestCase):
@@ -34,7 +33,7 @@ class OPTModelTest(unittest.TestCase):
         r"""
         Set up.
         """
-        self.config = config_opt.OPTConfig(vocab_size=10, hidden_size=10, num_attention_heads=1, num_hidden_layers=1, ffn_dim=10)
+        self.config = opt_config.OPTConfig(vocab_size=10, hidden_size=10, num_attention_heads=1, num_hidden_layers=1, ffn_dim=10)
 
     def test_opt_attention(self):
         r"""

@@ -24,6 +24,7 @@ import mindspore
 
 from mindspore import Tensor
 
+from mindnlp.transformers.models.moss import MossConfig, MossAttention, MossMLP, MossBlock, MossModel, MossForCausalLM
 
 @pytest.mark.gpu_only
 class TestModelingMoss(unittest.TestCase):
@@ -35,7 +36,6 @@ class TestModelingMoss(unittest.TestCase):
         """
         Set up.
         """
-        from mindnlp.models.moss import MossConfig, MossAttention, MossMLP, MossBlock, MossModel, MossForCausalLM
         self.MossAttention = MossAttention
         self.MossMLP = MossMLP
         self.MossBlock = MossBlock

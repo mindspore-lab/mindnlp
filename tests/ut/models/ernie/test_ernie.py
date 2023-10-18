@@ -17,11 +17,11 @@ import pytest
 import numpy as np
 import mindspore
 from mindspore import Tensor
-from mindnlp.models import (
+from mindnlp.transformers import (
     UIEConfig,
     UIE
 )
-from mindnlp.models.ernie.ernie import (
+from mindnlp.transformers.models.ernie.ernie import (
     ErnieForSequenceClassification,
     ErnieForQuestionAnswering,
     ErnieForTokenClassification,
@@ -32,6 +32,7 @@ from mindnlp.models.ernie.ernie import (
     ErnieForPretraining,
     ErniePretrainingHeads
 )
+
 import mindnlp
 
 from ..model_test import ModelTest

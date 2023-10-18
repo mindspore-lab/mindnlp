@@ -18,8 +18,8 @@ import mindspore
 from mindspore import Tensor
 
 import mindnlp
-from mindnlp.models.clip import CLIPTextConfig, CLIPVisionConfig, CLIPConfig
-from mindnlp.models.clip import (CLIPVisionEmbeddings,
+from mindnlp.transformers import CLIPTextConfig, CLIPVisionConfig, CLIPConfig
+from mindnlp.transformers.models.clip.clip import (CLIPVisionEmbeddings,
                            CLIPTextEmbeddings,
                            CLIPAttention,
                            CLIPMLP,
@@ -33,6 +33,7 @@ from mindnlp.models.clip import (CLIPVisionEmbeddings,
                            CLIPTextModelWithProjection,
                            CLIPVisionModelWithProjection,
                            )
+
 from ..model_test import ModelTest
 
 class TestModelingCLIP(ModelTest):

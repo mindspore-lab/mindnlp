@@ -20,7 +20,7 @@ import numpy as np
 import mindspore
 
 from mindspore import Tensor
-from mindnlp.models.llama.llama import (
+from mindnlp.transformers.models.llama.llama import (
     LlamaRMSNorm,
     LlamaMLP,
     LlamaAttention,
@@ -29,7 +29,7 @@ from mindnlp.models.llama.llama import (
     LlamaForCausalLM,
     LlamaForSequenceClassification,
 )
-from mindnlp.models.llama.llama_config import LlamaConfig
+from mindnlp.transformers import LlamaConfig
 
 
 class TestModelingLlama(unittest.TestCase):

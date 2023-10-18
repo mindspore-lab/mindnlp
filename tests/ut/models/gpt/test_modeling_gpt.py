@@ -27,7 +27,7 @@ import mindspore
 from mindspore import Tensor
 
 from mindnlp import ms_jit
-from mindnlp.models.gpt import GPTConfig, GPTModel, MLP, Attention, Block, \
+from mindnlp.transformers.models.gpt.gpt import GPTConfig, GPTModel, MLP, Attention, Block, \
     GPTLMHeadModel, GPTDoubleHeadsModel, GPTForSequenceClassification
 
 @ddt

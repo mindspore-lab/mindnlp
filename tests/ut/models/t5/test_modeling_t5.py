@@ -25,7 +25,7 @@ from mindspore import nn
 from mindspore import ops
 from mindspore import Tensor
 
-from mindnlp.models.t5 import (T5Config,
+from mindnlp.transformers import (T5Config,
                                T5LayerNorm,
                                T5DenseActDense,
                                T5DenseGatedActDense,
@@ -39,6 +39,7 @@ from mindnlp.models.t5 import (T5Config,
                                T5Model,
                                T5ForConditionalGeneration,
                                T5EncoderModel)
+
 class TestModelingT5(unittest.TestCase):
     r"""
     Test T5

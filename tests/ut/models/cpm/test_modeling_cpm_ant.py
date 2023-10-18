@@ -17,8 +17,7 @@ import numpy as np
 
 from mindspore import Tensor
 import mindnlp
-from mindnlp.models.cpm.cpm_ant import CpmAntModel, CpmAntForCausalLM
-from mindnlp.models.cpm.cpm_ant_config import CpmAntConfig
+from mindnlp.transformers import CpmAntModel, CpmAntForCausalLM, CpmAntConfig
 from ..model_test import ModelTest
 
 class TestModelingCpmAnt(ModelTest):

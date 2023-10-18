@@ -21,8 +21,7 @@ import numpy as np
 import mindspore
 
 from mindspore import Tensor
-from mindnlp.models.gpt_neo import gpt_neo
-from mindnlp.models.gpt_neo import gpt_neo_config
+from mindnlp.transformers.models.gpt_neo import gpt_neo, gpt_neo_config
 
 
 class TestModelingGPTNeo(unittest.TestCase):
