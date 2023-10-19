@@ -131,7 +131,7 @@ class LukeEntityEmbeddings(nn.Cell):
 
         position_embeddings = self.position_embeddings(ops.clamp(position_ids, min=0))
         position_embedding_mask = ops.cast(position_ids != -1, position_embeddings.dtype).unsqueeze(-1)
-        position_embeddings = position_embeddings * position_embedding_mask.contiguous()
+        position_embeddings = position_embeddings * position_embedding_mask
         position_embeddings = position_embeddings.sum(axis=-2)
         position_embeddings = position_embeddings / position_embedding_mask.sum(axis=-2).clamp(min=1e-7)
 
