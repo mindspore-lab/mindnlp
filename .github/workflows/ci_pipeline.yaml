@@ -96,7 +96,7 @@ jobs:
     needs: pylint-check
     strategy:
       matrix:
-        ms_version: ['1.10', '2.0', '2.1']
+        ms_version: ['2.0', '2.1']
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3

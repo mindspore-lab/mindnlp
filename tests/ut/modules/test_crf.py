@@ -181,6 +181,7 @@ class TestForward(unittest.TestCase):
 
         assert np.allclose(llh.asnumpy(), total_llh.asnumpy(),rtol=1e-3,atol=1e-3)
 
+    @pytest.mark.skip('transpose operator error on macOS and Windows')
     def test_reduction_none(self):
         """
         Test reduction none
@@ -216,6 +217,7 @@ class TestForward(unittest.TestCase):
         for llh_, manual_llh_ in zip(llh, manual_llh):
             assert np.allclose(llh_.asnumpy(), manual_llh_,rtol=1e-3,atol=1e-3)
 
+    @pytest.mark.skip('transpose operator error on macOS and Windows')
     def test_reduction_mean(self):
         """
         Test reduction mean

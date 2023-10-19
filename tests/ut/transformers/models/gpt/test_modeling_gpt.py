@@ -39,7 +39,7 @@ class TestModelingGPT(unittest.TestCase):
         """
         Set up.
         """
-        self.config = GPTConfig(n_layer=2)
+        self.config = GPTConfig(n_layer=2, vocab_size=1000, n_embd=128, hidden_size=128, n_head=8)
 
     def test_gpt_mlp(self):
         r"""
@@ -47,27 +47,27 @@ class TestModelingGPT(unittest.TestCase):
         """
         intermediate_size = 3072
         model = MLP(intermediate_size, self.config)
-        hidden_states = Tensor(np.random.randn(2, 512, 768), mindspore.float32)
+        hidden_states = Tensor(np.random.randn(2, 512, self.config.hidden_size), mindspore.float32)
         mlp_output = model(hidden_states)
-        assert mlp_output.shape == (2, 512, 768)
+        assert mlp_output.shape == (2, 512, self.config.hidden_size)
 
     def test_gpt_attention(self):
         r"""
         Test GPT Attention
         """
         model = Attention(self.config.n_embd, self.config.n_positions, self.config)
-        hidden_states = Tensor(np.random.randn(2, 512, 768), mindspore.float32)
+        hidden_states = Tensor(np.random.randn(2, 512, self.config.hidden_size), mindspore.float32)
         attn_output = model(hidden_states)
-        assert attn_output[0].shape == (2, 512, 768)
+        assert attn_output[0].shape == (2, 512, self.config.hidden_size)
 
     def test_gpt_block(self):
         r"""
         Test GPT Block
         """
         model = Block(self.config.n_positions, self.config)
-        hidden_states = Tensor(np.random.randn(2, 512, 768), mindspore.float32)
+        hidden_states = Tensor(np.random.randn(2, 512, self.config.hidden_size), mindspore.float32)
         block_outputs = model(hidden_states)
-        assert block_outputs[0].shape == (2, 512, 768)
+        assert block_outputs[0].shape == (2, 512, self.config.hidden_size)
 
     @data(True, False)
     def test_gpt_model(self, jit):
@@ -86,7 +86,7 @@ class TestModelingGPT(unittest.TestCase):
 
         model_outputs = forward(input_ids)
 
-        assert model_outputs[0].shape == (2, 512, 768)
+        assert model_outputs[0].shape == (2, 512, self.config.hidden_size)
 
     @data(True, False)
     def test_gpt_lmhead_model(self, jit):
@@ -104,7 +104,7 @@ class TestModelingGPT(unittest.TestCase):
             forward = ms_jit(forward)
         model_outputs = forward(input_ids)
 
-        assert model_outputs[0].shape == (2, 512, 40478)
+        assert model_outputs[0].shape == (2, 512, self.config.vocab_size)
 
     @data(True, False)
     def test_gpt_double_heads_model(self, jit):
@@ -122,7 +122,7 @@ class TestModelingGPT(unittest.TestCase):
             forward = ms_jit(forward)
         model_outputs = forward(input_ids)
 
-        assert model_outputs[0].shape == (2, 512, 40478)
+        assert model_outputs[0].shape == (2, 512, self.config.vocab_size)
 
     @data(True, False)
     def test_gpt_for_sequence_classification(self, jit):
