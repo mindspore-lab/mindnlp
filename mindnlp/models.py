@@ -12,9 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""MindNLP Transformers"""
-from . import models
-from .models import *
+# pylint: disable=W0614
+# pylint: disable=W0401
+"""
+Models folder compatible
+"""
+from mindspore import log as logger
+from . import transformers
+from .transformers import *
 
-__all__ = []
-__all__.extend(models.__all__)
+logger.warning('`mindnlp.models` will be deprecated, please use `mindspore.transformers` instead.')
+
+__all__ = transformers.__all__
