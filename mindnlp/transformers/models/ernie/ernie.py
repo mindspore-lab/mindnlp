@@ -360,7 +360,7 @@ class ErnieForSequenceClassification(ErniePretrainedModel):
 
         Returns:
             it returns a tuple of tensors corresponding to ordered and
-            not None (depending on the input arguments) 
+            not None (depending on the input arguments)
         """
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -437,15 +437,15 @@ class ErnieForQuestionAnswering(ErniePretrainedModel):
             inputs_embeds(Tensor, optional):
                 See :class:`ErnieModel`.
             start_positions (Tensor of shape `(batch_size,)`, optional):
-                Labels for position (index) of the start of the labelled span 
+                Labels for position (index) of the start of the labelled span
                 for computing the token classification loss.
-                Positions are clamped to the length of the sequence (`sequence_length`). 
+                Positions are clamped to the length of the sequence (`sequence_length`).
                 Position outside of the sequence
                 are not taken into account for computing the loss.
             end_positions (Tensor of shape `(batch_size,)`, optional):
-                Labels for position (index) of the end of the labelled span 
+                Labels for position (index) of the end of the labelled span
                 for computing the token classification loss.
-                Positions are clamped to the length of the sequence (`sequence_length`). 
+                Positions are clamped to the length of the sequence (`sequence_length`).
                 Position outside of the sequence are not taken into account for computing the loss.
             output_hidden_states (bool, optional):
                 Whether to return the hidden states of all layers.
@@ -717,8 +717,8 @@ class ErnieForPretraining(ErniePretrainedModel):
                 `False`, the output will be a tuple of tensors. Defaults to `False`.
 
         Returns:
-            it returns a tuple of tensors corresponding to ordered 
-            
+            it returns a tuple of tensors corresponding to ordered
+
 
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict

@@ -27,7 +27,7 @@ CONFIG_ARCHIVE_MAP = {
 class TinyBertConfig(PreTrainedConfig):
     """
     Configuration class to store the configuration of a `BertModel`.
-    
+
     Args:
         vocab_size_or_config_json_file: Vocabulary size of `inputs_ids` in `BertModel`.
         hidden_size: Size of the encoder layers and the pooler layer.

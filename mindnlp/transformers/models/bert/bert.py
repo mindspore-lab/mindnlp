@@ -33,8 +33,7 @@ from mindspore import nn, ops
 from mindspore import Parameter, Tensor
 from mindspore import log as logger
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.configs import MINDNLP_MODEL_URL_BASE
-from .bert_config import BertConfig, BERT_SUPPORT_LIST
+from .bert_config import BertConfig
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
 from ...utils import ModelOutput
@@ -53,14 +52,21 @@ from ...modeling_outputs import (
 from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
 
 PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MINDNLP_MODEL_URL_BASE.format('bert', model) for model in BERT_SUPPORT_LIST
+    "bert-base-uncased": "https://openi.pcl.ac.cn/mindnlp/bert-base-uncased.git/info/lfs/objects/9a64c5b300e5dc46c626d059ca8ad2797d18b38bed07fda358394b397f2e25fb",
+    "bert-large-uncased": "https://openi.pcl.ac.cn/mindnlp/bert-large-uncased.git/info/lfs/objects/148c9ed203c9a9e9d2c482a0cc0c3e3b34533a8f8c01110403c107d0ace75e29",
+    "bert-base-cased": "https://openi.pcl.ac.cn/mindnlp/bert-base-cased.git/info/lfs/objects/9787bdcade3ccc005e21fa668405c8beed9190e749beff464e9589b4b0e3fd9d",
+    "bert-large-cased": "https://openi.pcl.ac.cn/mindnlp/bert-large-cased.git/info/lfs/objects/160b1f67624574945cb130e596c5a38b9a290366af25e2eb629b371c33fa3c68",
+    "bert-base-multilingual-uncased": "https://openi.pcl.ac.cn/mindnlp/bert-base-multilingual-uncased.git/info/lfs/objects/05c557d749648c8bfe7cfc9af5f2027862735962bab63c038c6a7700e9a4d405",
+    "bert-base-multilingual-cased": "https://openi.pcl.ac.cn/mindnlp/bert-base-multilingual-cased.git/info/lfs/objects/abbd6cf83dc5f76b68b2a0342108b6023fab1924be5f89d2f0e10ea91eb5e5a8",
+    "bert-base-chinese": "https://openi.pcl.ac.cn/mindnlp/bert-base-chinese.git/info/lfs/objects/b9eea6814577bebc3ad78a9f0135c9956efec7e41b35875f1c6841962255903e",
+    "bert-base-german-cased": "https://openi.pcl.ac.cn/mindnlp/bert-base-german-cased.git/info/lfs/objects/0ce123642c12311296b30525fd5ed8812550d4b4fa8f59c984fdf360fcd424c5",
+    "bert-large-uncased-whole-word-masking": "https://openi.pcl.ac.cn/mindnlp/bert-large-uncased-whole-word-masking.git/info/lfs/objects/7c58098e2e8d9776019e1dbe8dfae72c53e8ac60fd9a132b8cd13e59417bd5d6",
+    "bert-large-cased-whole-word-masking": "https://openi.pcl.ac.cn/mindnlp/bert-large-cased-whole-word-masking.git/info/lfs/objects/dbe01a52842164abebf65561f9fa6a6d51675db3f352c6b8f1333704270176f7",
 }
 
 
-def torch_to_mindspore(pth_file, **kwargs):
+def torch_to_mindspore(pth_file):
     """convert torch checkpoint to mindspore"""
-    _ = kwargs.get('prefix', '')
-
     try:
         import torch
     except Exception as exc:
@@ -173,7 +179,6 @@ class BertEmbeddings(nn.Cell):
                 token_type_ids = buffered_token_type_ids_expanded
             else:
                 token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
-
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
         token_type_embeddings = self.token_type_embeddings(token_type_ids)
@@ -418,13 +423,13 @@ class BertOutput(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.layer_norm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
-        hidden_states = self. layer_norm(hidden_states + input_tensor)
+        hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
@@ -705,7 +710,7 @@ class BertPreTrainedModel(PreTrainedModel):
             embedding_table = initializer(Normal(self.config.initializer_range),
                                                  cell.embedding_table.shape,
                                                  cell.embedding_table.dtype)
-            if cell.padding_idx is not None:
+            if cell.padding_idx:
                 embedding_table[cell.padding_idx] = 0
             cell.embedding_table.set_data(embedding_table)
         elif isinstance(cell, nn.LayerNorm):
@@ -793,7 +798,6 @@ class BertModel(BertPreTrainedModel):
                 token_type_ids = buffered_token_type_ids_expanded
             else:
                 token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
-
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
         extended_attention_mask = self.get_extended_attention_mask(attention_mask, input_shape)
@@ -1210,7 +1214,7 @@ class BertForSequenceClassification(BertPreTrainedModel):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
+        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()

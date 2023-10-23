@@ -1,10 +1,12 @@
 """Test the BartTokenizer"""
 
+import pytest
 import mindspore as ms
 from mindspore.dataset import GeneratorDataset
 from mindnlp.transformers import BartTokenizer
 
 
+@pytest.mark.download
 def test_bart_tokenizer_from_pretrained():
     """test BartTokenizer from pretrained."""
     texts = ['i make a small mistake when i\'m working! 床前明月光']
