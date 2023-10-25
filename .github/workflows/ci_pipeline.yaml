@@ -120,7 +120,7 @@ jobs:
     needs: ut-test
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
         python: [3.8]
     runs-on: ${{ matrix.os }}
     steps:

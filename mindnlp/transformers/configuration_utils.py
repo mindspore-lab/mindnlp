@@ -38,6 +38,8 @@ class PreTrainedConfig:
         self.is_decoder = kwargs.pop("is_decoder", False)
         self.pad_token_id = kwargs.pop("pad_token_id", None)
         self.eos_token_id = kwargs.pop("eos_token_id", None)
+        self.bos_token_id = kwargs.pop("bos_token_id", None)
+        self.sep_token_id = kwargs.pop("sep_token_id", None)
         self.is_encoder_decoder = kwargs.pop("is_encoder_decoder", False)
         self.add_cross_attention = kwargs.pop("add_cross_attention", False)
         self.tie_word_embeddings = kwargs.pop(

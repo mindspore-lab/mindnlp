@@ -22,7 +22,7 @@ from typing import Optional, List, Union
 from inspect import signature
 from tqdm.autonotebook import tqdm
 from mindspore import nn, Tensor
-from mindspore import log, mutable, context
+from mindspore import log, context
 from mindspore import save_checkpoint
 from mindspore.dataset.engine import Dataset, TakeDataset
 
@@ -225,14 +225,14 @@ class Trainer:
                 loss_total = 0
                 # step begin
                 for data in self.train_dataset.create_dict_iterator():
-                    inputs, tgts = self._data_process(data, tgt_columns)
+                    data = self._data_process(data, tgt_columns)
                     run_context.cur_step_nums += 1
                     self.cur_step_nums += 1
                     self.callback_manager.train_step_begin(run_context)
                     if self.obj_network:
-                        loss = self.train_fn(inputs)
+                        loss = self.train_fn(**data)
                     else:
-                        loss = self.train_fn(inputs, tgts)
+                        loss = self.train_fn(**data)
                     loss_total += loss
                     run_context.loss = loss_total/self.cur_step_nums
                     progress.set_postfix(loss=loss_total/self.cur_step_nums)
@@ -278,25 +278,39 @@ class Trainer:
         # prepare input dataset.
         sig = signature(self.network.construct)
         net_args = sig.parameters
-        inputs = ()
-        tgts = ()
 
+        inputs = {}
+        used_col = set()
         for arg in net_args:
             if arg == 'self':
                 continue
             if arg not in data.keys():
-                if str(net_args[arg])[-4:] == 'None':
-                    continue
+                if str(net_args[arg])[-4:] != 'None':
+                    raise ValueError(f'network inputs need `{arg}`, but not found in dataset columns.')
             else:
-                inputs = inputs + (data[arg],)
+                inputs[arg] = data.get(arg)
+                used_col.add(arg)
 
         if self.obj_network:
-            return mutable(inputs), mutable(tgts)
+            return inputs
+
         # process target dataset.
+        tgts = ()
         tgt_columns = self._prepare_tgt_columns(tgt_columns)
         for tgt_column in tgt_columns:
-            tgts = tgts + (data[tgt_column],)
-        return mutable(inputs), mutable(tgts)
+            if tgt_column in data:
+                tgts += (data.get(tgt_column),)
+                used_col.add(tgt_column)
+            else:
+                raise ValueError(f'Not found `{tgt_column}` in dataset, please check dataset column names.')
+        inputs['processed_labels'] = tgts
+
+        remain_data_keys = set(data.keys()) - used_col
+
+        if remain_data_keys:
+            log.warning(f'{remain_data_keys} is not match inputs arguments of network or function.')
+
+        return inputs
 
     def _prepare_tgt_columns(self, tgt_columns):
         """Check and prepare target columns for training."""
@@ -304,16 +318,18 @@ class Trainer:
         if tgt_columns is None:
             log.warning("In the process of training model, tgt_column can not be None.")
             return []
-        if isinstance(tgt_columns, str):
-            out_columns.append(tgt_columns)
-        elif isinstance(tgt_columns, list):
-            if all(isinstance(tgt_column, str) for tgt_column in tgt_columns) is True:
-                out_columns = tgt_columns
-            else:
-                obj = [not isinstance(tgt_column, str) for tgt_column in tgt_columns][0]
-                raise TypeError(f"Expect str of tgt_column. Got {type(obj)}")
-        else:
+        if not isinstance(tgt_columns, (str, list)):
             raise TypeError(f"Expect tgt_columns to be list or str. Got {type(tgt_columns)}.")
+
+        if isinstance(tgt_columns, str):
+            tgt_columns = [tgt_columns]
+
+        for col in tgt_columns:
+            if isinstance(col, str):
+                out_columns.append(col)
+            else:
+                raise TypeError(f"Expect str of tgt_column. Got {type(col)}")
+
         return out_columns
 
     def add_callback(self):
