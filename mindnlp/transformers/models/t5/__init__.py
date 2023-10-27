@@ -15,7 +15,7 @@
 """
 T5 Model init
 """
-from . import t5, t5_config, t5_tokenizer
+from . import t5, t5_config, t5_tokenizer, chatyuan_tokenizer
 from .t5_config import *
 from .t5 import *
 from .t5_tokenizer import *
