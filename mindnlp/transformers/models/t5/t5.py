@@ -43,7 +43,12 @@ __all__ = ['T5Attention', 'T5DenseActDense', 'T5DenseGatedActDense', 'T5EncoderM
            'T5LayerNorm', 'T5Model', 'T5LayerFF', 'T5Block', 'T5PreTrainedModel']
 
 PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MINDNLP_MODEL_URL_BASE.format('t5', model) for model in T5_SUPPORT_LIST
+    "t5-small":"",
+    "t5-base":"",
+    "t5-large":"",
+    "t5-3b":"",
+    "t5-11b":"",
+    "ChatYuan-large-v2":"https://openi.pcl.ac.cn/mindnlp/ChatYuan-large-v2.git/info/lfs/objects/e563221cfc5ed1e1896f7f86b2cd56d704ff6ce538fc098639aee5e34b21e4d5/bWluZHNwb3JlLmNrcHQ"
 }
 
 def torch_to_mindspore(pth_file, **kwargs):
