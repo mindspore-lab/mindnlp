@@ -45,29 +45,34 @@ PRETRAINED_MODEL_ARCHIVE_MAP = {
 
 
 def upcast_masked_softmax(
-    x: mindspore.Tensor, mask: mindspore.Tensor, mask_value: mindspore.Tensor, scale: float, softmax_dtype: mindspore.dtype
+    input_x: mindspore.Tensor, mask: mindspore.Tensor, mask_value: mindspore.Tensor, scale: float, softmax_dtype: mindspore.dtype
 ):
-    input_dtype = x.dtype
-    x = x.to(softmax_dtype) * scale
-    x = ops.where(mask, x, mask_value)
-    x = ops.softmax(x, axis=-1).to(input_dtype)
-    return x
+    """Fuse kernel for upcast masked softmax."""
+    input_dtype = input_x.dtype
+    input_x = input_x.to(softmax_dtype) * scale
+    input_x = ops.where(mask, input_x, mask_value)
+    input_x = ops.softmax(input_x, axis=-1).to(input_dtype)
+    return input_x
 
 
-def upcast_softmax(x: mindspore.Tensor, scale: float, softmax_dtype: mindspore.dtype):
-    input_dtype = x.dtype
-    x = x.to(softmax_dtype) * scale
-    x = ops.softmax(x, axis=-1).to(input_dtype)
-    return x
+def upcast_softmax(input_x: mindspore.Tensor, scale: float, softmax_dtype: mindspore.dtype):
+    """Fuse kernel for upcast softmax."""
+    input_dtype = input_x.dtype
+    input_x = input_x.to(softmax_dtype) * scale
+    input_x = ops.softmax(input_x, axis=-1).to(input_dtype)
+    return input_x
 
 
-def masked_softmax(x: mindspore.Tensor, mask: mindspore.Tensor, mask_value: mindspore.Tensor):
-    x = ops.where(mask, x, mask_value)
-    x = ops.softmax(x, axis=-1)
-    return x
+def masked_softmax(input_x: mindspore.Tensor, mask: mindspore.Tensor, mask_value: mindspore.Tensor):
+    """Fuse kernel for masked softmax."""
+    input_x = ops.where(mask, input_x, mask_value)
+    input_x = ops.softmax(input_x, axis=-1)
+    return input_x
 
 
 class GPTBigCodeAttention(nn.Cell):
+    """GPT BigCode Attention"""
+
     def __init__(self, config, is_cross_attention=False, layer_idx=None):
         super().__init__()
         self.mask_value = None
@@ -246,7 +251,7 @@ class GPTBigCodeAttention(nn.Cell):
             )
 
         if layer_past is not None:
-            key_value = ops.cat((layer_past, key_value), dim=-2)
+            key_value = ops.cat((layer_past, key_value), axis=-2)
         present = key_value if use_cache else None
 
         key, value = key_value.split((self.head_dim, self.head_dim), axis=-1)
@@ -272,6 +277,8 @@ class GPTBigCodeAttention(nn.Cell):
 
 
 class GPTBigCodeMLP(nn.Cell):
+    """GPT BigCode MLP"""
+
     def __init__(self, intermediate_size, config):
         super().__init__()
         embed_dim = config.hidden_size
@@ -280,7 +287,6 @@ class GPTBigCodeMLP(nn.Cell):
         self.act = ACT2FN[config.activation_function]
         self.dropout = nn.Dropout(p=config.resid_pdrop)
 
-    # Copied from transformers.models.gpt2.modeling_gpt2.GPT2MLP.forward
     def construct(self, hidden_states: Optional[Tuple[mindspore.Tensor]]) -> mindspore.Tensor:
         hidden_states = self.c_fc(hidden_states)
         hidden_states = self.act(hidden_states)
@@ -290,6 +296,8 @@ class GPTBigCodeMLP(nn.Cell):
 
 
 class GPTBigCodeBlock(nn.Cell):
+    """GPT BigCode Block"""
+
     def __init__(self, config, layer_idx=None):
         super().__init__()
         hidden_size = config.hidden_size
@@ -391,9 +399,6 @@ class GPTBigCodePreTrainedModel(PreTrainedModel):
     _no_split_modules = ["GPTBigCodeBlock"]
     _skip_keys_device_placement = "past_key_values"
 
-    def __init__(self, *inputs, **kwargs):
-        super().__init__(*inputs, **kwargs)
-
     def _init_weights(self, cell):
         """Initialize the weights."""
         if isinstance(cell, nn.Dense):
@@ -417,14 +422,14 @@ class GPTBigCodePreTrainedModel(PreTrainedModel):
             cell.beta.set_data(initializer(
                 'zeros', cell.beta.shape, cell.beta.dtype))
 
-    # Copied from transformers.models.gpt2.modeling_gpt2.GPT2PreTrainedModel._set_gradient_checkpointing with GPT2->GPTBigCode
-
     def _set_gradient_checkpointing(self, module, value=False):
         if isinstance(module, GPTBigCodeModel):
             module.gradient_checkpointing = value
 
 
 class GPTBigCodeModel(GPTBigCodePreTrainedModel):
+    """GPT BigCode Model"""
+
     def __init__(self, config):
         super().__init__(config)
         self.multi_query = config.multi_query
@@ -434,8 +439,8 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         self.wpe = nn.Embedding(config.max_position_embeddings, self.embed_dim)
 
         self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.h = nn.CellList([GPTBigCodeBlock(config, layer_idx=i)
-                              for i in range(config.num_hidden_layers)])
+        self.blocks = nn.CellList([GPTBigCodeBlock(config, layer_idx=i)
+                                   for i in range(config.num_hidden_layers)])
         self.ln_f = nn.LayerNorm(
             [self.embed_dim], epsilon=config.layer_norm_epsilon)
 
@@ -480,7 +485,8 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError(
                 "You cannot specify both input_ids and inputs_embeds at the same time")
-        elif input_ids is not None:
+
+        if input_ids is not None:
             self.warn_if_padding_and_no_attention_mask(
                 input_ids, attention_mask)
             input_shape = input_ids.shape
@@ -501,7 +507,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
 
         if past_key_values is None:
             past_length = 0
-            past_key_values = tuple([None] * len(self.h))
+            past_key_values = tuple([None] * len(self.blocks))
         else:
             past_length = past_key_values[0].size(-2)
 
@@ -570,7 +576,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         all_self_attentions = () if output_attentions else None
         all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
         all_hidden_states = () if output_hidden_states else None
-        for i, (block, layer_past) in enumerate(zip(self.h, past_key_values)):
+        for i, (block, layer_past) in enumerate(zip(self.blocks, past_key_values)):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
@@ -620,6 +626,8 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
 
 
 class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
+    """GPT BigCode for CausalLM"""
+
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
@@ -766,6 +774,8 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
 
 
 class GPTBigCodeForSequenceClassification(GPTBigCodePreTrainedModel):
+    """GPT BigCode for Sequence Classification"""
+
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -815,9 +825,9 @@ class GPTBigCodeForSequenceClassification(GPTBigCodePreTrainedModel):
         logits = self.score(hidden_states)
 
         if input_ids is not None:
-            batch_size, sequence_length = input_ids.shape[:2]
+            batch_size, _ = input_ids.shape[:2]
         else:
-            batch_size, sequence_length = inputs_embeds.shape[:2]
+            batch_size, _ = inputs_embeds.shape[:2]
 
         assert (
             self.config.pad_token_id is not None or batch_size == 1
@@ -832,17 +842,15 @@ class GPTBigCodeForSequenceClassification(GPTBigCodePreTrainedModel):
             else:
                 sequence_lengths = -1
 
-        pooled_logits = logits[ops.arange(
-            batch_size, device=logits.device), sequence_lengths]
+        pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
 
         loss = None
         if labels is not None:
-            labels = labels.to(logits.device)
 
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -874,6 +882,8 @@ class GPTBigCodeForSequenceClassification(GPTBigCodePreTrainedModel):
 
 
 class GPTBigCodeForTokenClassification(GPTBigCodePreTrainedModel):
+    """GPT BigCode for Token Classification"""
+
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
