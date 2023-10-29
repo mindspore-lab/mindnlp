@@ -18,23 +18,20 @@
 load dataset from modelscope
 """
 import os
-from typing import Union, Optional, Dict, Sequence, Mapping
+from typing import Union, Optional, Sequence, Mapping
 from mindspore.dataset import GeneratorDataset
 
 from modelscope.msdatasets import MsDataset
 from modelscope.msdatasets.ms_dataset import DatasetContextConfig as ms_load
-
-from datasets import Dataset, DownloadMode
-from datasets.utils.file_utils import is_relative_path
-
 from modelscope.utils.config_ds import MS_DATASETS_CACHE
 from modelscope.utils.constant import (DEFAULT_DATASET_NAMESPACE,
-                                       DEFAULT_DATASET_REVISION, 
-                                       DownloadMode, Hubs)
+                                       DEFAULT_DATASET_REVISION, DownloadMode, Hubs)
 from modelscope.msdatasets.dataset_cls import (NativeIterableDataset)
 from modelscope.msdatasets.data_loader.data_loader_manager import (
                         RemoteDataLoaderManager,RemoteDataLoaderType)
-from mindnlp.configs import DEFAULT_ROOT
+
+from datasets import Dataset
+from datasets.utils.file_utils import is_relative_path
 
 
 class TransferIterableDataset():
@@ -145,15 +142,14 @@ def load_dataset_ms(
         ```
 
         """
-    if token:
-        from modelscope.hub.api import HubApi
-        api = HubApi()
-        api.login(token)
+    # if token:
+    #     from modelscope.hub.api import HubApi
+    #     api = HubApi()
+    #     api.login(token)
 
     download_mode = DownloadMode(download_mode
                                     or DownloadMode.REUSE_DATASET_IF_EXISTS)
     hub = Hubs(hub or Hubs.modelscope)
-    
     shuffle = config_kwargs.get('shuffle', False)
 
     if not isinstance(dataset_name, str) and not isinstance(
@@ -178,7 +174,7 @@ def load_dataset_ms(
         if not namespace or not dataset_name:
             raise 'The dataset_name should be in the form of `namespace/dataset_name` or `dataset_name`.'
 
-    ds_ret = ms_load(dataset_name=dataset_name,
+    ds_ret = ms_load(dataset_name,
                      namespace=namespace,
                      target=target,
                      version=version,
@@ -192,7 +188,6 @@ def load_dataset_ms(
                      use_streaming=use_streaming,
                      stream_batch_size=stream_batch_size,
                      **config_kwargs)
-    
     remote_dataloader_manager = RemoteDataLoaderManager(ds_ret)
     dataset_inst = remote_dataloader_manager.load_dataset(
                         RemoteDataLoaderType.MS_DATA_LOADER)
@@ -212,5 +207,4 @@ def load_dataset_ms(
 
     if len(datasets_dict) == 1:
         return datasets_dict.popitem()[1]
-    
     return datasets_dict
