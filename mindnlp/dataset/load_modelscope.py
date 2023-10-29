@@ -74,7 +74,6 @@ def load_dataset_ms(
     cache_dir: Optional[str] = MS_DATASETS_CACHE,
     use_streaming: Optional[bool] = False,
     stream_batch_size: Optional[int] = 1,
-    token: Optional[str] = None,
     **config_kwargs,
 ) -> Union[dict, 'MsDataset', NativeIterableDataset]:
     """Load a MsDataset from the ModelScope Hub, Hugging Face Hub, urls, or a local dataset.
@@ -103,7 +102,6 @@ def load_dataset_ms(
             stream_batch_size (int, Optional): The batch size of the streaming data.
             custom_cfg (str, Optional): Model configuration, this can be used for custom datasets.
                                         see https://modelscope.cn/docs/Configuration%E8%AF%A6%E8%A7%A3
-            token (str, Optional): SDK token of ModelScope.
             **config_kwargs (additional keyword arguments): Keyword arguments to be passed
 
         Returns:
@@ -142,11 +140,6 @@ def load_dataset_ms(
         ```
 
         """
-    # if token:
-    #     from modelscope.hub.api import HubApi
-    #     api = HubApi()
-    #     api.login(token)
-
     download_mode = DownloadMode(download_mode
                                     or DownloadMode.REUSE_DATASET_IF_EXISTS)
     hub = Hubs(hub or Hubs.modelscope)
@@ -174,7 +167,7 @@ def load_dataset_ms(
         if not namespace or not dataset_name:
             raise 'The dataset_name should be in the form of `namespace/dataset_name` or `dataset_name`.'
 
-    ds_ret = ms_load(dataset_name,
+    ds_ret = ms_load(dataset_name=dataset_name,
                      namespace=namespace,
                      target=target,
                      version=version,
