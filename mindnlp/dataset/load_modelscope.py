@@ -14,6 +14,8 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=C0103
+# pylint: disable=E0702
+
 """
 load dataset from modelscope
 """
@@ -57,7 +59,7 @@ class TransferDataset():
         return self.ds.num_rows
 
 
-def load_dataset_ms(
+def load_dataset_from_ms(
     dataset_name: Union[str, list],
     namespace: Optional[str] = DEFAULT_DATASET_NAMESPACE,
     target: Optional[str] = None,
@@ -114,19 +116,19 @@ def load_dataset_ms(
         ```py
         >>> !pip install modelscope
         >>> from modelscope.msdatasets import MsDataset
-        >>> ds =  load_dataset_ms('damo/MSAgent-Bench', subset_name='default', namespace='test01', split='train')
+        >>> ds =  load_dataset_from_ms('damo/MSAgent-Bench', subset_name='default', namespace='test01', split='train')
 
         # Map data files to splits
         >>> data_files = {'train': 'train.csv', 'test': 'test.csv'}
-        >>> ds = load_dataset_ms('namespace/your_dataset_name', data_files=data_files)
+        >>> ds = load_dataset_from_ms('namespace/your_dataset_name', data_files=data_files)
         ```
 
         Load an image dataset with the `ImageFolder` dataset builder:
 
         ```py
         >>> from modelscope.msdatasets import MsDataset
-        >>> ds = load_dataset_ms('imagefolder', data_dir='/path/to/imgs/')
-        >>> ds = load_dataset_ms('imagefolder', data_files='/path/to/imgs.zip', split='train') 
+        >>> ds = load_dataset_from_ms('imagefolder', data_dir='/path/to/imgs/')
+        >>> ds = load_dataset_from_ms('imagefolder', data_files='/path/to/imgs.zip', split='train') 
         >>> print(next(iter(ds)))
         ```
 
@@ -135,7 +137,7 @@ def load_dataset_ms(
         ```py
         >>> from modelscope.msdatasets import MsDataset
         >>> # Take uni-fold datasets as an example, URL: https://modelscope.cn/datasets/DPTech/Uni-Fold-Data/summary
-        >>> ds = load_dataset_ms(dataset_name='Uni-Fold-Data', namespace='DPTech', split='train', use_streaming=True)
+        >>> ds = load_dataset_from_ms(dataset_name='Uni-Fold-Data', namespace='DPTech', split='train', use_streaming=True)
         >>> print(next(iter(ds)))
         ```
 
