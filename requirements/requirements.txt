@@ -8,3 +8,4 @@ tokenizers
 torch==1.13.1
 sentencepiece
 regex
+modelscope
