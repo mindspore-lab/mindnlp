@@ -23,7 +23,7 @@ from mindspore.common.initializer import initializer
 
 from mindnlp.configs import MINDNLP_MODEL_URL_BASE
 from mindnlp._legacy.nn import Dropout
-from ..bert.bert import BertModel, BertPreTrainedModel
+from ..bert.modeling_bert import BertModel, BertPreTrainedModel
 from .roberta_config import RobertaConfig, ROBERTA_SUPPORT_LIST
 
 

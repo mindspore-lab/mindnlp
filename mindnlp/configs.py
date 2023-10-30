@@ -18,9 +18,10 @@ Global configs
 import os
 
 DEFAULT_ROOT = os.path.join(os.getcwd(), ".mindnlp")
-# for openi url
-OPENI_CONFIG_URL_BASE = 'https://openi.pcl.ac.cn/mindnlp/{}/raw/branch/master/config.json'
-OPENI_TOKENIZER_CONFIG_URL_BASE = 'https://openi.pcl.ac.cn/mindnlp/{}/raw/branch/master/tokenizer.json'
+# for modelscope models
+MS_CONFIG_URL_BASE = "https://modelscope.cn/api/v1/models/mindnlp/{}/repo?Revision=master&FilePath=config.json"
+MS_TOKENIZER_CONFIG_URL_BASE = "https://modelscope.cn/api/v1/models/mindnlp/{}/repo?Revision=master&FilePath=tokenizer.json"
+MS_MODEL_URL_BASE = "https://modelscope.cn/api/v1/models/mindnlp/{}/repo?Revision=master&FilePath=mindspore.ckpt"
 # for huggingface url
 HF_CONFIG_URL_BASE = 'https://huggingface.co/{}/resolve/main/config.json'
 HF_TOKENIZER_CONFIG_URL_BASE = 'https://huggingface.co/{}/resolve/main/tokenizer.json'

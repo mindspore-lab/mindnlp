@@ -22,12 +22,12 @@ from mindspore.dataset.text import Vocab as msVocab
 from tokenizers import Tokenizer
 from tokenizers.implementations import BertWordPieceTokenizer
 from mindnlp.vocab import Vocab
-from mindnlp.configs import OPENI_TOKENIZER_CONFIG_URL_BASE
-from .bert_config import BERT_SUPPORT_LIST
+from mindnlp.configs import MS_TOKENIZER_CONFIG_URL_BASE
+from .configuration_bert import BERT_SUPPORT_LIST
 from ...tokenization_utils import PreTrainedTokenizer
 
 PRETRAINED_VOCAB_MAP = {
-    model: OPENI_TOKENIZER_CONFIG_URL_BASE.format(model) for model in BERT_SUPPORT_LIST
+    model: MS_TOKENIZER_CONFIG_URL_BASE.format(model) for model in BERT_SUPPORT_LIST
 }
 
 
