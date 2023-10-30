@@ -25,15 +25,17 @@ from mindnlp._legacy.amp import all_finite, init_status
 def get_default_forward_fn_with_loss_fn(network, loss_fn, loss_scaler):
     """get default forward function with loss function"""
     # forward function
-    def forward_fn(inputs, labels):
+    def forward_fn(*args, **kwargs):
         logits_list = ()
-        logits = network(*inputs)
+        labels = kwargs.pop('processed_labels')
+        logits = network(*args, **kwargs)
         if isinstance(logits, tuple):
             logits_list += logits
         else:
             logits_list += (logits,)
 
-        loss = loss_fn(logits_list[0], *labels)
+        logits_list += labels
+        loss = loss_fn(*logits_list)
         loss = loss_scaler.scale(loss)
         return loss
 
@@ -41,9 +43,9 @@ def get_default_forward_fn_with_loss_fn(network, loss_fn, loss_scaler):
 
 def get_default_forward_fn_without_loss_fn(network, loss_scaler):
     """get default forward function without loss function"""
-    def forward_fn(inputs):
+    def forward_fn(*args, **kwargs):
         outputs_list = ()
-        outputs = network(*inputs)
+        outputs = network(*args, **kwargs)
         if isinstance(outputs, tuple):
             outputs_list += outputs
         else:
@@ -58,11 +60,11 @@ def get_default_train_step_fn(forward_fn, optimizer, loss_scaler, check_gradient
     """get default train function"""
     grad_fn = value_and_grad(forward_fn, None, optimizer.parameters, has_aux=False)
 
-    def default_run_step(inputs, labels):
+    def default_run_step(*args, **kwargs):
         """Core process of each step, including the forward propagation process and back propagation of data."""
         status = init_status()
-        inputs = ops.depend(inputs, status)
-        loss, grads = grad_fn(inputs, labels)
+        args = ops.depend(args, status)
+        loss, grads = grad_fn(*args, **kwargs)
         loss = loss_scaler.unscale(loss)
         if check_gradients:
             is_finite = all_finite(grads, status)
@@ -74,11 +76,11 @@ def get_default_train_step_fn(forward_fn, optimizer, loss_scaler, check_gradient
             loss = ops.depend(loss, optimizer(grads))
         return loss
 
-    def default_run_step_for_obj_net(inputs):
+    def default_run_step_for_obj_net(*args, **kwargs):
         """Core process of each step, including the forward propagation process and back propagation of data."""
         status = init_status()
-        inputs = ops.depend(inputs, status)
-        loss, grads = grad_fn(inputs)
+        args = ops.depend(args, status)
+        loss, grads = grad_fn(*args, **kwargs)
         loss = loss_scaler.unscale(loss)
         if check_gradients:
             is_finite = all_finite(grads, status)

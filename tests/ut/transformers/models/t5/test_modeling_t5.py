@@ -48,7 +48,7 @@ class TestModelingT5(unittest.TestCase):
         """
         Set up.
         """
-        self.config = T5Config(num_layers=2)
+        self.config = T5Config(vocab_size=2000, num_layers=2)
 
     def test_t5_layer_norm(self):
         r"""

@@ -15,3 +15,4 @@
 """functional modules init"""
 
 from .neural_network import embedding
+from .graph_func import *

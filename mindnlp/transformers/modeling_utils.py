@@ -581,11 +581,11 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 converted_filenames = []
                 for name in cached_filenames:
                     converted = cls.convert_torch_to_mindspore(
-                        str(name), prefix=cls.base_model_prefix)
+                        str(name))
                     converted_filenames.append(converted)
             else:
                 resolved_archive_file = cls.convert_torch_to_mindspore(
-                    str(resolved_archive_file), prefix=cls.base_model_prefix)
+                    str(resolved_archive_file))
         else:
             if is_sharded:
                 converted_filenames = cached_filenames
@@ -613,7 +613,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     param.set_dtype(new_param.dtype)
                     param.assign_value(new_param)
                     keys_unexpected.remove(param_name)
-                    keys_missing.remove(param_name)
+                    keys_missing.remove(param.name)
 
             return keys_unexpected, keys_missing
 

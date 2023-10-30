@@ -15,3 +15,13 @@
 """
 Big Code GPT Model.
 """
+
+from . import gpt_bigcode, gpt_bigcode_config, gpt_bigcode_tokenizer
+from .gpt_bigcode import *
+from .gpt_bigcode_config import *
+from .gpt_bigcode_tokenizer import *
+
+__all__ = []
+__all__.extend(gpt_bigcode.__all__)
+__all__.extend(gpt_bigcode_config.__all__)
+__all__.extend(gpt_bigcode_tokenizer.__all__)

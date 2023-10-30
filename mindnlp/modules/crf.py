@@ -157,30 +157,23 @@ class CRF(nn.Cell):
         # Start transition score and first emission
         # shape: (batch_size,)
         score = self.start_transitions[tags[0]]
-        indices = ops.stack([ops.zeros((batch_size,), mindspore.int64), arange(batch_size), tags[0]])
-        # score += emissions[0, arange(batch_size), tags[0]]
-        score += ops.gather_nd(emissions, indices.T)
+        score += emissions[0, arange(batch_size), tags[0]]
 
         i = Tensor(1, mindspore.int64)
         while i < seq_length:
         # for i in range(1, seq_length):
             # Transition score to next tag, only added if next timestep is valid (mask == 1)
             # shape: (batch_size,)
-            t_indices = ops.stack([tags[i - 1], tags[i]])
-            # score += self.transitions[tags[i - 1], tags[i]] * mask[i]
-            score += ops.gather_nd(self.transitions, t_indices.T) * mask[i]
+            score += self.transitions[tags[i - 1], tags[i]] * mask[i]
 
             # Emission score for next tag, only added if next timestep is valid (mask == 1)
             # shape: (batch_size,)
-            e_indices = ops.stack([ops.tile(i, (batch_size,)), arange(batch_size), tags[i]])
-            score += ops.gather_nd(emissions, e_indices.T) * mask[i]
+            score += emissions[i, ops.arange(batch_size), tags[i]] * mask[i]
             i += 1
 
         # End transition score
         # shape: (batch_size,)
-        tag_indices = ops.stack([seq_ends, arange(batch_size)])
-        # last_tags = tags[seq_ends, arange(batch_size)]
-        last_tags = ops.gather_nd(tags, tag_indices.T)
+        last_tags = tags[seq_ends, arange(batch_size)]
         # shape: (batch_size,)
         score += self.end_transitions[last_tags]
 

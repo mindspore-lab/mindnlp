@@ -23,7 +23,7 @@ def embedding(inputs, weight):
     args:
         input: (batch_size, seq_length)
         weight: (vocab_size, hidden_size)
-    
+
     output:
         output: (batch_size, seq_length, hidden_size)
     """

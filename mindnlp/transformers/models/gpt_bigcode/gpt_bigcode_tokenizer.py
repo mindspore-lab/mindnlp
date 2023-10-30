@@ -13,53 +13,60 @@
 # limitations under the License.
 # ============================================================================
 """
-T5Tokenizer
+GPT2Tokenizer
 """
-
 import numpy as np
 from mindspore.dataset.text.transforms import Implementation
+from mindspore import Tensor
 from tokenizers import Tokenizer
-from mindnlp.configs import MS_TOKENIZER_CONFIG_URL_BASE
-from .t5_config import T5_SUPPORT_LIST
+from mindnlp.configs import MINDNLP_TOKENIZER_CONFIG_URL_BASE
+from .gpt_bigcode_config import GPT_BIGCODE_SUPPORT_LIST
 from ...tokenization_utils import PreTrainedTokenizer
 
 PRETRAINED_VOCAB_MAP = {
-    model: MS_TOKENIZER_CONFIG_URL_BASE.format(model) for model in T5_SUPPORT_LIST
+    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format('gpt_bigcode', model) for model in GPT_BIGCODE_SUPPORT_LIST
 }
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
-    "t5-small": 512,
-    "t5-base": 512,
-    "t5-large": 512,
-    "t5-3b": 512,
-    "t5-11b": 512,
+    "gpt_bigcode": 2048,
 }
 
-class T5Tokenizer(PreTrainedTokenizer):
+
+class GPTBigCodeTokenizer(PreTrainedTokenizer):
     """
-        Tokenizer used for T5 text process.
+        Tokenizer used for GPT2 text process.
         Args:
             vocab (Vocab): Vocabulary used to look up words.
             return_token (bool): Whether to return token. If True: return tokens. False: return ids. Default: True.
-        Examples:
-            >>> from mindspore.dataset import text
-            >>> from mindnlp.transforms import T5Tokenizer
-            >>> text = "Believing that faith can triumph over everything is in itself the greatest belief"
-            >>> tokenizer = T5Tokenizer.from_pretrained('t5-base')
-            >>> tokens = tokenizer.encode(text)
-    """
+
+        """
 
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
-    def __init__(self, vocab: str, **kwargs):
-        super().__init__()
+    def __init__(
+        self,
+        tokenizer_file=None,
+        unk_token="<|endoftext|>",
+        bos_token="<|endoftext|>",
+        eos_token="<|endoftext|>",
+        add_prefix_space=False,
+        **kwargs
+    ):
+        super().__init__(
+            unk_token=unk_token,
+            bos_token=bos_token,
+            eos_token=eos_token,
+            add_prefix_space=add_prefix_space,
+            **kwargs)
+
         return_token = kwargs.pop('return_token', False)
 
-        if isinstance(vocab, str):
-            self.tokenizer = Tokenizer.from_file(vocab)
+        if isinstance(tokenizer_file, str):
+            self._tokenizer = Tokenizer.from_file(tokenizer_file)
         else:
-            raise ValueError(f'only support string, but got {vocab}')
+            raise ValueError(f'only support string, but got {tokenizer_file}')
+
         self.return_token = return_token
         self.implementation = Implementation.PY
 
@@ -85,10 +92,10 @@ class T5Tokenizer(PreTrainedTokenizer):
         Execute method.
         """
         text_input = self._convert_to_unicode(text_input)
-        tokens = self.tokenizer.encode(text_input)
+        tokens = self._tokenizer.encode(text_input)
         if self.return_token is True:
             return np.array(tokens.tokens)
-        return np.array(tokens.ids)
+        return {"input_ids": Tensor(np.array(tokens.ids)), "attention_mask": Tensor(np.array(tokens.attention_mask))}
 
     def _convert_to_unicode(self, text_input):
         """Converts `text` to Unicode (if it's not already), assuming utf-8 input."""
@@ -100,6 +107,14 @@ class T5Tokenizer(PreTrainedTokenizer):
             if text_input.dtype.type is np.bytes_:
                 text_input = np.char.decode(text_input, "utf-8")
             return str(text_input)
-        raise ValueError(f"Unsupported string type: {type(text_input)}, {text_input.dtype}")
+        raise ValueError(
+            f"Unsupported string type: {type(text_input)}, {text_input.dtype}")
 
-__all__ = ['T5Tokenizer']
+    def _convert_token_to_id(self, token):
+        index = self._tokenizer.token_to_id(token)
+        if index is None:
+            return self.unk_token_id
+        return index
+
+
+__all__ = ['GPTBigCodeTokenizer']

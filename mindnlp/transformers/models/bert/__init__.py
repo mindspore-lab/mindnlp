@@ -15,14 +15,14 @@
 """
 Bert Model.
 """
-from . import bert, bert_config, bert_graph, bert_tokenizer
-from .bert import *
-from .bert_config import *
-from .bert_tokenizer import *
-from .bert_graph import *
+from . import configuration_bert, modeling_bert, modeling_graph_bert, tokenization_bert
+from .modeling_bert import *
+from .configuration_bert import *
+from .tokenization_bert import *
+from .modeling_graph_bert import *
 
 __all__ = []
-__all__.extend(bert.__all__)
-__all__.extend(bert_graph.__all__)
-__all__.extend(bert_config.__all__)
-__all__.extend(bert_tokenizer.__all__)
+__all__.extend(modeling_bert.__all__)
+__all__.extend(modeling_graph_bert.__all__)
+__all__.extend(configuration_bert.__all__)
+__all__.extend(tokenization_bert.__all__)
