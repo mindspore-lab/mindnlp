@@ -15,7 +15,7 @@
 """
 Bert Model config
 """
-from mindnlp.configs import HF_CONFIG_URL_BASE
+from mindnlp.configs import MS_CONFIG_URL_BASE
 from ...configuration_utils import PreTrainedConfig
 
 
@@ -33,7 +33,7 @@ BERT_SUPPORT_LIST = [
 ]
 
 CONFIG_ARCHIVE_MAP = {
-    model: HF_CONFIG_URL_BASE.format(model) for model in BERT_SUPPORT_LIST
+    model: MS_CONFIG_URL_BASE.format(model) for model in BERT_SUPPORT_LIST
 }
 
 

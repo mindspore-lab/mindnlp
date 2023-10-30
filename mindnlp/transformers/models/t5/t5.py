@@ -32,7 +32,8 @@ from mindspore import Parameter, Tensor
 
 from mindnlp._legacy.nn import Dropout
 from mindnlp._legacy.functional import arange
-from .t5_config import T5Config
+from mindnlp.configs import MS_MODEL_URL_BASE
+from .t5_config import T5Config, T5_SUPPORT_LIST
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
 
@@ -42,12 +43,7 @@ __all__ = ['T5Attention', 'T5DenseActDense', 'T5DenseGatedActDense', 'T5EncoderM
            'T5LayerNorm', 'T5Model', 'T5LayerFF', 'T5Block', 'T5PreTrainedModel']
 
 PRETRAINED_MODEL_ARCHIVE_MAP = {
-    "t5-small":"https://openi.pcl.ac.cn/mindnlp/t5-small.git/info/lfs/objects/285eaa65ff47df10869a39f2a1ef022a283b7d2115e9b84523e5b3eecd4ba7bf",
-    "t5-base":"https://openi.pcl.ac.cn/mindnlp/t5-base.git/info/lfs/objects/aacf7204cd3b5a7d3ea6a916850d1ae4150dac47c8a4fa4023ac569803e6b027",
-    "t5-large":"https://openi.pcl.ac.cn/mindnlp/t5-large.git/info/lfs/objects/b90d19ff2d7dbbe78846d91b6ad4d120c3d3744fb1433a09f04df99e0692f000",
-    "t5-3b":"",     # TODO: upload ckpt to openi
-    "t5-11b":"",    # TODO: upload ckpt to openi
-    "ChatYuan-large-v2":"https://openi.pcl.ac.cn/mindnlp/ChatYuan-large-v2.git/info/lfs/objects/e563221cfc5ed1e1896f7f86b2cd56d704ff6ce538fc098639aee5e34b21e4d5/bWluZHNwb3JlLmNrcHQ"
+    model: MS_MODEL_URL_BASE.format(model) for model in T5_SUPPORT_LIST
 }
 
 def torch_to_mindspore(pth_file, **kwargs):
