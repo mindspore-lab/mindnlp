@@ -13,6 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """Test Bert"""
+from packaging import version
 import pytest
 import numpy as np
 from ddt import ddt, data
@@ -21,6 +22,7 @@ import mindspore
 from mindspore import Tensor
 
 import mindnlp
+from mindnlp.utils.compatibility import MS_VERSION
 from mindnlp.transformers import BertConfig, MSBertModel
 from ..model_test import ModelTest
 
@@ -38,6 +40,7 @@ class TestModelingBert(ModelTest):
                                  num_attention_heads=8,
                                  intermediate_size=256)
 
+    @pytest.mark.skipif(version.parse(MS_VERSION) < version.parse("2.2.0"), reason='older version skip')
     @data(True, False)
     def test_modeling_bert(self, jit):
         r"""
