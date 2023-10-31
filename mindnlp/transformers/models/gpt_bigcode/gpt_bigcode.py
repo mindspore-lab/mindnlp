@@ -16,6 +16,7 @@
 # limitations under the License.
 # ============================================================================
 """MindNLP gpt_bigcode model"""
+# pylint: disable=C0415
 
 from typing import List, Optional, Tuple, Union
 
