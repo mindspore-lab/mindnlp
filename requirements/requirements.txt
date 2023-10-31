@@ -3,9 +3,9 @@ tqdm
 pylint
 pytest
 ddt
-datasets==2.13.1
+datasets
 tokenizers
-torch==1.13.1
+torch
 sentencepiece
 regex
 modelscope
