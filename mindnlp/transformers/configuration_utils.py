@@ -31,6 +31,7 @@ class PreTrainedConfig:
     Abstract class for Pretrained models config.
     """
     def __init__(self, **kwargs):
+        self.return_dict = kwargs.pop("return_dict", True)
         self.finetuning_task = kwargs.pop('finetuning_task', None)
         self.num_labels = kwargs.pop('num_labels', 2)
         self.output_attentions = kwargs.pop('output_attentions', False)
@@ -46,7 +47,6 @@ class PreTrainedConfig:
             "tie_word_embeddings", True
         )  # Whether input and output word embeddings should be tied for all MLM, LM and Seq2Seq models.
         self.decoder_start_token_id = kwargs.pop("decoder_start_token_id", None)
-        self.return_dict = kwargs.pop("return_dict", False)
         self.chunk_size_feed_forward = kwargs.pop("chunk_size_feed_forward", 0)
         self.pruned_heads = kwargs.pop("pruned_heads", {})
 

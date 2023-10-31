@@ -410,7 +410,7 @@ def get_from_cache(
         filename = download_file_name
 
     file_path = os.path.join(cache_dir, filename)
-    print(file_path)
+
     if os.path.exists(file_path) and check_md5(file_path, md5sum):
         return file_path
     try:
