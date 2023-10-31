@@ -42,7 +42,9 @@ class TestTinyBert(ModelTest):
 
         cls.bert_config = TinyBertConfig(
             vocab_size=200,
-            num_attention_heads=12,
+            hidden_size=128,
+            intermediate_size=256,
+            num_attention_heads=8,
             num_hidden_layers=2)
 
     def test_tiny_bert_embedding(self):
@@ -62,11 +64,11 @@ class TestTinyBert(ModelTest):
 
         bert_self_attention = TinyBertSelfAttention(self.bert_config)
         input_tensor = mindspore.Tensor(
-            np.random.rand(2, 3, 768), dtype=mindspore.float32)
+            np.random.rand(2, 3, 128), dtype=mindspore.float32)
         input_mask = ops.ones((2, 1, 1, 3), dtype=mindspore.float32)
         self_output, layer_att = bert_self_attention(input_tensor, input_mask)
-        assert self_output.shape == (2, 3, 768)
-        assert layer_att.shape == (2, 12, 3, 3)
+        assert self_output.shape == (2, 3, 128)
+        assert layer_att.shape == (2, 8, 3, 3)
 
     def test_tiny_bert_attention(self):
         """
@@ -75,11 +77,11 @@ class TestTinyBert(ModelTest):
 
         bert_attention = TinyBertAttention(self.bert_config)
         input_tensor = mindspore.Tensor(
-            np.random.rand(2, 3, 768), dtype=mindspore.float32)
+            np.random.rand(2, 3, 128), dtype=mindspore.float32)
         input_mask = ops.ones((2, 1, 1, 3), dtype=mindspore.float32)
         attention_output, layer_att = bert_attention(input_tensor, input_mask)
-        assert attention_output.shape == (2, 3, 768)
-        assert layer_att.shape == (2, 12, 3, 3)
+        assert attention_output.shape == (2, 3, 128)
+        assert layer_att.shape == (2, 8, 3, 3)
 
     def test_tiny_bert_self_output(self):
         """
@@ -88,9 +90,9 @@ class TestTinyBert(ModelTest):
 
         bert_self_output = TinyBertSelfOutput(self.bert_config)
         input_tensor = mindspore.Tensor(
-            np.random.rand(2, 3, 768), dtype=mindspore.float32)
+            np.random.rand(2, 3, 128), dtype=mindspore.float32)
         attention_output = bert_self_output(input_tensor, input_tensor)
-        assert attention_output.shape == (2, 3, 768)
+        assert attention_output.shape == (2, 3, 128)
 
     def test_tiny_bert_intermediate(self):
         """
@@ -99,9 +101,9 @@ class TestTinyBert(ModelTest):
 
         bert_intermediate = TinyBertIntermediate(self.bert_config)
         input_tensor = mindspore.Tensor(
-            np.random.rand(2, 3, 768), dtype=mindspore.float32)
+            np.random.rand(2, 3, 128), dtype=mindspore.float32)
         intermediate_output = bert_intermediate(input_tensor)
-        assert intermediate_output.shape == (2, 3, 3072)
+        assert intermediate_output.shape == (2, 3, 256)
 
     def test_tiny_bert_output(self):
         """
@@ -110,11 +112,11 @@ class TestTinyBert(ModelTest):
 
         bert_output = TinyBertOutput(self.bert_config)
         input_tensor = mindspore.Tensor(
-            np.random.rand(2, 3, 768), dtype=mindspore.float32)
+            np.random.rand(2, 3, 128), dtype=mindspore.float32)
         intermediate_output = mindspore.Tensor(
-            np.random.rand(2, 3, 3072), dtype=mindspore.float32)
+            np.random.rand(2, 3, 256), dtype=mindspore.float32)
         layer_output = bert_output(intermediate_output, input_tensor)
-        assert layer_output.shape == (2, 3, 768)
+        assert layer_output.shape == (2, 3, 128)
 
     def test_tiny_bert_layer(self):
         """
@@ -123,11 +125,11 @@ class TestTinyBert(ModelTest):
 
         bert_layer = TinyBertLayer(self.bert_config)
         input_tensor = mindspore.Tensor(
-            np.random.rand(2, 3, 768), dtype=mindspore.float32)
+            np.random.rand(2, 3, 128), dtype=mindspore.float32)
         input_mask = ops.ones((2, 1, 1, 3), dtype=mindspore.float32)
         hidden_states, layer_att = bert_layer(input_tensor, input_mask)
-        assert hidden_states.shape == (2, 3, 768)
-        assert layer_att.shape == (2, 12, 3, 3)
+        assert hidden_states.shape == (2, 3, 128)
+        assert layer_att.shape == (2, 8, 3, 3)
 
     def test_tiny_bert_encoder(self):
         """
@@ -136,11 +138,11 @@ class TestTinyBert(ModelTest):
 
         bert_encoder = TinyBertEncoder(self.bert_config)
         input_tensor = mindspore.Tensor(
-            np.random.rand(2, 3, 768), dtype=mindspore.float32)
+            np.random.rand(2, 3, 128), dtype=mindspore.float32)
         input_mask = ops.ones((2, 1, 1, 3), dtype=mindspore.float32)
         encoded_layers, layer_atts = bert_encoder(input_tensor, input_mask)
-        assert encoded_layers[0].shape == (2, 3, 768)
-        assert layer_atts[0].shape == (2, 12, 3, 3)
+        assert encoded_layers[0].shape == (2, 3, 128)
+        assert layer_atts[0].shape == (2, 8, 3, 3)
 
     def test_tiny_bert_pooler(self):
         """
@@ -151,10 +153,10 @@ class TestTinyBert(ModelTest):
         input_encoded_layers = []
         for _ in range(13):
             input_encoded_layers.append(mindspore.Tensor(
-                np.random.rand(2, 3, 768), dtype=mindspore.float32))
+                np.random.rand(2, 3, 128), dtype=mindspore.float32))
 
         pooled_output = bert_pooler(input_encoded_layers)
-        assert pooled_output.shape == (2, 768)
+        assert pooled_output.shape == (2, 128)
 
     def test_tiny_bert_prediction_head_transform(self):
         """
@@ -164,9 +166,9 @@ class TestTinyBert(ModelTest):
         bert_prediction_head_transform = TinyBertPredictionHeadTransform(
             self.bert_config)
         input_tensor = mindspore.Tensor(
-            np.random.rand(2, 3, 768), dtype=mindspore.float32)
+            np.random.rand(2, 3, 128), dtype=mindspore.float32)
         hidden_states = bert_prediction_head_transform(input_tensor)
-        assert hidden_states.shape == (2, 3, 768)
+        assert hidden_states.shape == (2, 3, 128)
 
     def test_tiny_bert_lm_prediction_head(self):
         """
@@ -177,7 +179,7 @@ class TestTinyBert(ModelTest):
         bert_lm_prediction_head = TinyBertLMPredictionHead(
             self.bert_config, bert_embeddings.word_embeddings.embedding_table)
         input_tensor = mindspore.Tensor(
-            np.random.rand(2, 3, 768), dtype=mindspore.float32)
+            np.random.rand(2, 3, 128), dtype=mindspore.float32)
         prediction_scores = bert_lm_prediction_head(input_tensor)
         assert prediction_scores.shape == (2, 3, 200)
 
@@ -190,7 +192,7 @@ class TestTinyBert(ModelTest):
         bert_only_mlm_head = TinyBertOnlyMLMHead(
             self.bert_config, bert_embeddings.word_embeddings.embedding_table)
         input_tensor = mindspore.Tensor(
-            np.random.rand(2, 3, 768), dtype=mindspore.float32)
+            np.random.rand(2, 3, 128), dtype=mindspore.float32)
         prediction_scores = bert_only_mlm_head(input_tensor)
         assert prediction_scores.shape == (2, 3, 200)
 
@@ -201,7 +203,7 @@ class TestTinyBert(ModelTest):
 
         bert_only_nsp_head = TinyBertOnlyNSPHead(self.bert_config)
         input_tensor = mindspore.Tensor(
-            np.random.rand(2, 768), dtype=mindspore.float32)
+            np.random.rand(2, 128), dtype=mindspore.float32)
         seq_relationship_score = bert_only_nsp_head(input_tensor)
         assert seq_relationship_score.shape == (2, 2)
 
@@ -214,9 +216,9 @@ class TestTinyBert(ModelTest):
         bert_pretraining_heads = TinyBertPreTrainingHeads(
             self.bert_config, bert_embeddings.word_embeddings.embedding_table)
         input_tensor = mindspore.Tensor(
-            np.random.rand(2, 3, 768), dtype=mindspore.float32)
+            np.random.rand(2, 3, 128), dtype=mindspore.float32)
         pooled_output = mindspore.Tensor(
-            np.random.rand(2, 768), dtype=mindspore.float32)
+            np.random.rand(2, 128), dtype=mindspore.float32)
         prediction_scores, seq_relationship_score = bert_pretraining_heads(
             input_tensor, pooled_output)
         assert prediction_scores.shape == (2, 3, 200)
@@ -239,8 +241,8 @@ class TestTinyBert(ModelTest):
 
         sequence_output, pooled_output = bert_model(
             ms_input_ids, ms_token_type_ids, ms_input_mask, output_all_encoded_layers=False, output_att=False)
-        assert sequence_output.shape == (2, 3, 768)
-        assert pooled_output.shape == (2, 768)
+        assert sequence_output.shape == (2, 3, 128)
+        assert pooled_output.shape == (2, 128)
 
     def test_tiny_bert_for_pretraining(self):
         """
@@ -282,7 +284,7 @@ class TestTinyBert(ModelTest):
         # forward
         masked_lm_logits_scores, seq_relationship_score = bert_fit_for_pretraining(
             ms_input_ids, ms_token_type_ids, ms_input_mask)
-        assert masked_lm_logits_scores[0].shape == (2, 12, 3, 3)
+        assert masked_lm_logits_scores[0].shape == (2, 8, 3, 3)
         assert seq_relationship_score[0].shape == (2, 3, 768)
 
     def test_tiny_bert_for_masked_lm(self):
@@ -363,8 +365,8 @@ class TestTinyBert(ModelTest):
         logits, att_output, sequence_output = bert_for_sequence_classification(
             ms_input_ids, ms_token_type_ids, ms_input_mask)
         assert logits.shape == (2, 2)
-        assert att_output[0].shape == (2, 12, 3, 3)
-        assert sequence_output[0].shape == (2, 3, 768)
+        assert att_output[0].shape == (2, 8, 3, 3)
+        assert sequence_output[0].shape == (2, 3, 128)
 
     @pytest.mark.download
     def test_from_pretrained(self):

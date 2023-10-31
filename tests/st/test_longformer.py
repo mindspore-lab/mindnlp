@@ -16,13 +16,13 @@
 # ============================================================================
 # pylint: disable=C0103
 """test longformer for sequence classification."""
+import time
 import numpy as np
 import mindspore
 from mindspore import nn, Tensor
 from mindnlp.transformers import LongformerConfig, LongformerForSequenceClassification
 
-
-def test_train_longformer():
+def test_train_longformer_pynative():
     """test train longformer."""
     epochs = 1
     batch_size = 2
@@ -42,9 +42,11 @@ def test_train_longformer():
     grad_fn = mindspore.value_and_grad(forward_fn, None, optimizer.parameters)
 
     for _ in range(epochs):
-        for _ in range(steps):
+        s = time.time()
+        for i in range(steps):
             input_ids = Tensor(np.random.randint(1, config.vocab_size, (batch_size, seq_len)), dtype=mindspore.int32)
             labels = Tensor(np.random.randint(0, config.num_labels, (batch_size,)), mindspore.int32)
             loss, grads = grad_fn(input_ids, labels)
-            print(loss)
+            t = time.time()
+            print(f"loss: {loss}, cost time: {(t - s) / (i + 1):.3f} s/step")
             optimizer(grads)
