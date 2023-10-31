@@ -535,7 +535,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     archive_file,
                     cache_dir=cache_dir,
                     proxies=proxies)
-
+                print(resolved_archive_file)
                 if resolved_archive_file is None:
                     base_url = '/'.join(archive_file.split('/')[:-1])
                     archive_file = base_url + '/' + HF_WEIGHTS_INDEX_NAME if from_pt else \
