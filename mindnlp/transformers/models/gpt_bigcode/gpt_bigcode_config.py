@@ -17,13 +17,13 @@
 # ============================================================================
 """MindNLP gpt_bigcode config"""
 
-from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
+from mindnlp.configs import MS_CONFIG_URL_BASE
 from ...configuration_utils import PreTrainedConfig
 
-GPT_BIGCODE_SUPPORT_LIST = ["openai-gpt-bigcode"]
+GPT_BIGCODE_SUPPORT_LIST = ["gpt_bigcode-santacoder"]
 
 CONFIG_ARCHIVE_MAP = {
-    model: MINDNLP_CONFIG_URL_BASE.format('gpt_bigcode', model) for model in GPT_BIGCODE_SUPPORT_LIST
+    model: MS_CONFIG_URL_BASE.format(model) for model in GPT_BIGCODE_SUPPORT_LIST
 }
 
 __all__ = ['GPTBigCodeConfig']

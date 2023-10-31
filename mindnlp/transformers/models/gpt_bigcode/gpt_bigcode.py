@@ -16,6 +16,8 @@
 # limitations under the License.
 # ============================================================================
 """MindNLP gpt_bigcode model"""
+# pylint: disable=C0415
+# pylint: disable=C0103
 
 from typing import List, Optional, Tuple, Union
 
@@ -25,7 +27,7 @@ from mindspore import nn
 from mindspore import ops
 from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.configs import MINDNLP_MODEL_URL_BASE
+from mindnlp.configs import MS_MODEL_URL_BASE
 from .gpt_bigcode_config import GPTBigCodeConfig, GPT_BIGCODE_SUPPORT_LIST
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
@@ -40,7 +42,7 @@ __all__ = ['GPTBigCodeAttention', 'GPTBigCodeMLP', 'GPTBigCodeBlock', 'GPTBigCod
            'GPTBigCodeForTokenClassification', 'GPTBigCodeForSequenceClassification', 'GPTBigCodeForCausalLM']
 
 PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MINDNLP_MODEL_URL_BASE.format('gpt_bigcode', model) for model in GPT_BIGCODE_SUPPORT_LIST
+    model: MS_MODEL_URL_BASE.format(model) for model in GPT_BIGCODE_SUPPORT_LIST
 }
 
 
@@ -398,6 +400,7 @@ class GPTBigCodePreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["GPTBigCodeBlock"]
     _skip_keys_device_placement = "past_key_values"
+    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
 
     def _init_weights(self, cell):
         """Initialize the weights."""
@@ -439,7 +442,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         self.wpe = nn.Embedding(config.max_position_embeddings, self.embed_dim)
 
         self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.blocks = nn.CellList([GPTBigCodeBlock(config, layer_idx=i)
+        self.h = nn.CellList([GPTBigCodeBlock(config, layer_idx=i)
                                    for i in range(config.num_hidden_layers)])
         self.ln_f = nn.LayerNorm(
             [self.embed_dim], epsilon=config.layer_norm_epsilon)
@@ -507,7 +510,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
 
         if past_key_values is None:
             past_length = 0
-            past_key_values = tuple([None] * len(self.blocks))
+            past_key_values = tuple([None] * len(self.h))
         else:
             past_length = past_key_values[0].size(-2)
 
@@ -576,7 +579,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         all_self_attentions = () if output_attentions else None
         all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
         all_hidden_states = () if output_hidden_states else None
-        for i, (block, layer_past) in enumerate(zip(self.blocks, past_key_values)):
+        for i, (block, layer_past) in enumerate(zip(self.h, past_key_values)):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
