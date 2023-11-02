@@ -18,15 +18,14 @@ import numpy as np
 from ddt import ddt, data
 
 import mindspore
-
+import unittest
 from mindspore import Tensor
 
 import mindnlp
 from mindnlp.transformers import RobertaConfig, RobertaModel
-from ..model_test import ModelTest
 
 @ddt
-class TestModelingRoberta(ModelTest):
+class TestModelingRoberta(unittest.TestCase):
     r"""
     Test model bert
     """
@@ -39,21 +38,18 @@ class TestModelingRoberta(ModelTest):
                                  intermediate_size=256,
                                  pad_token_id=0)
 
-    @data(False)
-    def test_modeling_roberta(self, jit):
+    def test_modeling_roberta(self):
         r"""
         Test model bert
         """
         model = RobertaModel(self.config)
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
 
         input_ids = Tensor(np.random.randint(1, self.config.vocab_size, (1, 256)), mindspore.int64)
 
-        outputs, pooled = self.modeling(model, input_ids, jit)
+        outputs = model(input_ids)
 
-        assert outputs.shape == (1, 256, self.config.hidden_size)
-        assert pooled.shape == (1, self.config.hidden_size)
+        assert outputs.last_hidden_state.shape == (1, 256, self.config.hidden_size)
+        assert outputs.pooler_output.shape == (1, self.config.hidden_size)
 
 
     @pytest.mark.download

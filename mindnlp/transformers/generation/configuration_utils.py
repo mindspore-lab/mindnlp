@@ -13,11 +13,24 @@
 # limitations under the License.
 # ============================================================================
 # pylint:disable=R0902
+# pylint:disable=invalid-name
+# pylint:disable=logging-fstring-interpolation
+# pylint:disable=unused-argument
 """
 GenerationConfig
 """
+import os
+import copy
+import warnings
+import json
+from typing import Dict, Any, Union, Optional
 
-from typing import Dict, Any
+from mindnlp.configs import GENERATION_CONFIG_NAME
+from mindnlp.utils import logging
+
+logger = logging.get_logger(__name__)
+
+METADATA_FIELDS = ("_from_model_config", "_commit_hash", "_original_object_hash")
 
 class GenerationConfig:
     """
@@ -79,11 +92,21 @@ class GenerationConfig:
         self.encoder_no_repeat_ngram_size = kwargs.pop("encoder_no_repeat_ngram_size", 0)
         self.decoder_start_token_id = kwargs.pop("decoder_start_token_id", None)
 
+        # Assistant generation
+        self.num_assistant_tokens = kwargs.pop("num_assistant_tokens", 5)
+        self.num_assistant_tokens_schedule = kwargs.pop("num_assistant_tokens_schedule", "heuristic")
+
         # Wild card
         self.generation_kwargs = kwargs.pop("generation_kwargs", {})
 
         # From model config
         self._from_model_config = kwargs.pop("from_model_config", False)
+
+        self.sequence_bias = kwargs.pop("sequence_bias", None)
+        self.guidance_scale = kwargs.pop("guidance_scale", None)
+
+        self.low_memory = kwargs.pop("low_memory", None)
+
 
     def set_from_model_config(self, value:bool):
         """set _from_model_config"""
@@ -171,5 +194,292 @@ class GenerationConfig:
 
         config.set_from_model_config(True)
         return config
+
+    def validate(self, is_init=False):
+        """
+        Validates the values of the attributes of the [`GenerationConfig`] instance. Raises exceptions in the presence
+        of parameterization that can be detected as incorrect from the configuration instance alone.
+
+        Note that some parameters are best validated at generate runtime, as they may depend on other inputs and/or the
+        model, such as parameters related to the generation length.
+        """
+
+        # Validation of individual attributes
+        if self.early_stopping not in {True, False, "never"}:
+            raise ValueError(f"`early_stopping` must be a boolean or 'never', but is {self.early_stopping}.")
+
+        # Validation of attribute relations:
+        fix_location = ""
+        if is_init:
+            fix_location = (
+                " This was detected when initializing the generation config instance, which means the corresponding "
+                "file may hold incorrect parameterization and should be fixed."
+            )
+
+        # 1. detect sampling-only parameterization when not in sampling mode
+        if self.do_sample is False:
+            greedy_wrong_parameter_msg = (
+                "`do_sample` is set to `False`. However, `{flag_name}` is set to `{flag_value}` -- this flag is only "
+                "used in sample-based generation modes. You should set `do_sample=True` or unset `{flag_name}`."
+                + fix_location
+            )
+            if self.temperature != 1.0:
+                warnings.warn(
+                    greedy_wrong_parameter_msg.format(flag_name="temperature", flag_value=self.temperature),
+                    UserWarning,
+                )
+            if self.top_p != 1.0:
+                warnings.warn(
+                    greedy_wrong_parameter_msg.format(flag_name="top_p", flag_value=self.top_p),
+                    UserWarning,
+                )
+            if self.typical_p != 1.0:
+                warnings.warn(
+                    greedy_wrong_parameter_msg.format(flag_name="typical_p", flag_value=self.typical_p),
+                    UserWarning,
+                )
+            if self.top_k != 50 and self.penalty_alpha is None:  # contrastive search uses top_k
+                warnings.warn(
+                    greedy_wrong_parameter_msg.format(flag_name="top_k", flag_value=self.top_k),
+                    UserWarning,
+                )
+            if self.epsilon_cutoff != 0.0:
+                warnings.warn(
+                    greedy_wrong_parameter_msg.format(flag_name="epsilon_cutoff", flag_value=self.epsilon_cutoff),
+                    UserWarning,
+                )
+            if self.eta_cutoff != 0.0:
+                warnings.warn(
+                    greedy_wrong_parameter_msg.format(flag_name="eta_cutoff", flag_value=self.eta_cutoff),
+                    UserWarning,
+                )
+
+        # 2. detect beam-only parameterization when not in beam mode
+        if self.num_beams == 1:
+            single_beam_wrong_parameter_msg = (
+                "`num_beams` is set to 1. However, `{flag_name}` is set to `{flag_value}` -- this flag is only used "
+                "in beam-based generation modes. You should set `num_beams>1` or unset `{flag_name}`." + fix_location
+            )
+            if self.early_stopping is not False:
+                warnings.warn(
+                    single_beam_wrong_parameter_msg.format(flag_name="early_stopping", flag_value=self.early_stopping),
+                    UserWarning,
+                )
+            if self.num_beam_groups != 1:
+                warnings.warn(
+                    single_beam_wrong_parameter_msg.format(
+                        flag_name="num_beam_groups", flag_value=self.num_beam_groups
+                    ),
+                    UserWarning,
+                )
+            if self.diversity_penalty != 0.0:
+                warnings.warn(
+                    single_beam_wrong_parameter_msg.format(
+                        flag_name="diversity_penalty", flag_value=self.diversity_penalty
+                    ),
+                    UserWarning,
+                )
+            if self.length_penalty != 1.0:
+                warnings.warn(
+                    single_beam_wrong_parameter_msg.format(flag_name="length_penalty", flag_value=self.length_penalty),
+                    UserWarning,
+                )
+            if self.constraints is not None:
+                warnings.warn(
+                    single_beam_wrong_parameter_msg.format(flag_name="constraints", flag_value=self.constraints),
+                    UserWarning,
+                )
+
+        # 3. detect incorrect paramaterization specific to advanced beam modes
+        else:
+            # constrained beam search
+            if self.constraints is not None:
+                constrained_wrong_parameter_msg = (
+                    "`constraints` is not `None`, triggering constrained beam search. However, `{flag_name}` is set "
+                    "to `{flag_value}`, which is incompatible with this generation mode. Set `constraints=None` or "
+                    "unset `{flag_name}` to continue." + fix_location
+                )
+                if self.do_sample is True:
+                    raise ValueError(
+                        constrained_wrong_parameter_msg.format(flag_name="do_sample", flag_value=self.do_sample)
+                    )
+                if self.num_beam_groups != 1:
+                    raise ValueError(
+                        constrained_wrong_parameter_msg.format(
+                            flag_name="num_beam_groups", flag_value=self.num_beam_groups
+                        )
+                    )
+            # group beam search
+            if self.diversity_penalty != 0.0 or self.num_beam_groups != 1:
+                group_error_prefix = (
+                    "`diversity_penalty` is not 0.0 or `num_beam_groups` is not 1, triggering group beam search. In "
+                    "this generation mode, "
+                )
+                if self.do_sample is True:
+                    raise ValueError(group_error_prefix + "`do_sample` must be set to `False`")
+                if self.num_beams % self.num_beam_groups != 0:
+                    raise ValueError(group_error_prefix + "`num_beams` should be divisible by `num_beam_groups`")
+                if self.diversity_penalty == 0.0:
+                    raise ValueError(
+                        group_error_prefix
+                        + "`diversity_penalty` should be greater than `0.0`, otherwise your groups will be identical."
+                    )
+
+        # 4. check `num_return_sequences`
+        if self.num_return_sequences != 1:
+            if self.num_beams == 1:
+                if self.do_sample is False:
+                    raise ValueError(
+                        "Greedy methods without beam search do not support `num_return_sequences` different than 1 "
+                        f"(got {self.num_return_sequences})."
+                    )
+            elif self.num_return_sequences > self.num_beams:
+                raise ValueError(
+                    f"`num_return_sequences` ({self.num_return_sequences}) has to be smaller or equal to `num_beams` "
+                    f"({self.num_beams})."
+                )
+
+    def save_pretrained(
+        self,
+        save_directory: Union[str, os.PathLike],
+        config_file_name: Optional[Union[str, os.PathLike]] = None,
+        **kwargs,
+    ):
+        r"""
+        Save a generation configuration object to the directory `save_directory`, so that it can be re-loaded using the
+        [`~GenerationConfig.from_pretrained`] class method.
+
+        Args:
+            save_directory (`str` or `os.PathLike`):
+                Directory where the configuration JSON file will be saved (will be created if it does not exist).
+            config_file_name (`str` or `os.PathLike`, *optional*, defaults to `"generation_config.json"`):
+                Name of the generation configuration JSON file to be saved in `save_directory`.
+            push_to_hub (`bool`, *optional*, defaults to `False`):
+                Whether or not to push your model to the Hugging Face model hub after saving it. You can specify the
+                repository you want to push to with `repo_id` (will default to the name of `save_directory` in your
+                namespace).
+            kwargs (`Dict[str, Any]`, *optional*):
+                Additional key word arguments passed along to the [`~utils.PushToHubMixin.push_to_hub`] method.
+        """
+
+        # At save time, validate the instance -- if any warning/exception is thrown, we refuse to save the instance
+        try:
+            with warnings.catch_warnings(record=True) as caught_warnings:
+                self.validate()
+            for w in caught_warnings:
+                raise ValueError(w.message)
+        except ValueError as exc:
+            warnings.warn(
+                "The generation config instance is invalid -- `.validate()` throws warnings and/or exceptions. "
+                "Fix these issues to save the configuration. This warning will be raised to an exception in v4.34."
+                "\n\nThrown during validation:\n" + str(exc),
+                UserWarning,
+            )
+            return
+
+        config_file_name = config_file_name if config_file_name is not None else GENERATION_CONFIG_NAME
+
+        if os.path.isfile(save_directory):
+            raise AssertionError(f"Provided path ({save_directory}) should be a directory, not a file")
+
+        os.makedirs(save_directory, exist_ok=True)
+
+        output_config_file = os.path.join(save_directory, config_file_name)
+
+        self.to_json_file(output_config_file, use_diff=True)
+        logger.info(f"Configuration saved in {output_config_file}")
+
+    def to_json_file(self, json_file_path: Union[str, os.PathLike], use_diff: bool = True):
+        """
+        Save this instance to a JSON file.
+
+        Args:
+            json_file_path (`str` or `os.PathLike`):
+                Path to the JSON file in which this configuration instance's parameters will be saved.
+            use_diff (`bool`, *optional*, defaults to `True`):
+                If set to `True`, only the difference between the config instance and the default `GenerationConfig()`
+                is serialized to JSON file.
+        """
+        with open(json_file_path, "w", encoding="utf-8") as writer:
+            writer.write(self.to_json_string(use_diff=use_diff))
+
+    def to_json_string(self, use_diff: bool = True, ignore_metadata: bool = False) -> str:
+        """
+        Serializes this instance to a JSON string.
+
+        Args:
+            use_diff (`bool`, *optional*, defaults to `True`):
+                If set to `True`, only the difference between the config instance and the default `GenerationConfig()`
+                is serialized to JSON string.
+            ignore_metadata (`bool`, *optional*, defaults to `False`):
+                Whether to ignore the metadata fields present in the instance
+
+        Returns:
+            `str`: String containing all the attributes that make up this configuration instance in JSON format.
+        """
+        if use_diff is True:
+            config_dict = self.to_diff_dict()
+        else:
+            config_dict = self.to_dict()
+
+        if ignore_metadata:
+            for metadata_field in METADATA_FIELDS:
+                config_dict.pop(metadata_field, None)
+
+        return json.dumps(config_dict, indent=2, sort_keys=True) + "\n"
+
+
+    def to_diff_dict(self) -> Dict[str, Any]:
+        """
+        Removes all attributes from config which correspond to the default config attributes for better readability and
+        serializes to a Python dictionary.
+
+        Returns:
+            `Dict[str, Any]`: Dictionary of all the attributes that make up this configuration instance,
+        """
+        config_dict = self.to_dict()
+
+        # get the default config dict
+        default_config_dict = GenerationConfig().to_dict()
+
+        serializable_config_dict = {}
+
+        # only serialize values that differ from the default config
+        for key, value in config_dict.items():
+            if key not in default_config_dict or key == "transformers_version" or value != default_config_dict[key]:
+                serializable_config_dict[key] = value
+
+        self.dict_ms_dtype_to_str(serializable_config_dict)
+        return serializable_config_dict
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Serializes this instance to a Python dictionary.
+
+        Returns:
+            `Dict[str, Any]`: Dictionary of all the attributes that make up this configuration instance.
+        """
+        output = copy.deepcopy(self.__dict__)
+
+        # Fields to ignore at serialization time
+        if "_commit_hash" in output:
+            del output["_commit_hash"]
+        if "_original_object_hash" in output:
+            del output["_original_object_hash"]
+
+        self.dict_ms_dtype_to_str(output)
+        return output
+
+    def dict_ms_dtype_to_str(self, d: Dict[str, Any]) -> None:
+        """
+        Checks whether the passed dictionary and its nested dicts have a *ms_dtype* key and if it's not None,
+        converts torch.dtype to a string of just the type. For example, `torch.float32` get converted into *"float32"*
+        string, which can then be stored in the json format.
+        """
+        if d.get("ms_dtype", None) is not None and not isinstance(d["ms_dtype"], str):
+            d["ms_dtype"] = str(d["ms_dtype"])
+        for value in d.values():
+            if isinstance(value, dict):
+                self.dict_ms_dtype_to_str(value)
 
 __all__ = ['GenerationConfig']

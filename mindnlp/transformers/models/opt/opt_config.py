@@ -14,7 +14,7 @@
 # ============================================================================
 """ OPT model configuration"""
 from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 
 __all__ = ['OPTConfig']
@@ -36,7 +36,7 @@ OPT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
 }
 
 
-class OPTConfig(PreTrainedConfig):
+class OPTConfig(PretrainedConfig):
     """
     Configuration for opt
     """

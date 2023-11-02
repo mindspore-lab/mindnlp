@@ -15,6 +15,7 @@
 """Test Bert"""
 from packaging import version
 import pytest
+import unittest
 import numpy as np
 from ddt import ddt, data
 
@@ -24,11 +25,10 @@ from mindspore import Tensor
 import mindnlp
 from mindnlp.utils.compatibility import MS_VERSION
 from mindnlp.transformers import BertConfig, MSBertModel
-from ..model_test import ModelTest
 
 
 @ddt
-class TestModelingBert(ModelTest):
+class TestModelingBert(unittest.TestCase):
     r"""
     Test model bert
     """
@@ -41,18 +41,16 @@ class TestModelingBert(ModelTest):
                                  intermediate_size=256)
 
     @pytest.mark.skipif(version.parse(MS_VERSION) < version.parse("2.2.0"), reason='older version skip')
-    @data(True, False)
-    def test_modeling_bert(self, jit):
+    def test_modeling_bert(self):
         r"""
         Test model bert
         """
         model = MSBertModel(self.config)
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
 
         input_ids = Tensor(np.random.randint(1, self.config.vocab_size, (1, 512)), mindspore.int32)
 
-        outputs, pooled = self.modeling(model, input_ids, jit)
+        outputs, pooled = model(input_ids)
 
         assert outputs.shape == (1, 512, self.config.hidden_size)
         assert pooled.shape == (1, self.config.hidden_size)

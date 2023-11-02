@@ -27,7 +27,7 @@ from mindspore import save_checkpoint
 from mindspore.dataset.engine import Dataset, TakeDataset
 
 from mindnlp.abc import Callback, Metric
-from mindnlp.transformers.configuration_utils import PreTrainedConfig
+from mindnlp.transformers.configuration_utils import PretrainedConfig
 from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContext
 from mindnlp.engine.callbacks.earlystop_callback import EarlyStopCallback
 from mindnlp.engine.callbacks.best_model_callback import BestModelCallback
@@ -390,7 +390,7 @@ class Trainer:
     def save_model(self, output_dir, model_name=None):
         """save model to specify dir."""
         assert output_dir, "`output_dir` is None, please input a real path."
-        if hasattr(self.network, 'config') and isinstance(self.network.config, PreTrainedConfig):
+        if hasattr(self.network, 'config') and isinstance(self.network.config, PretrainedConfig):
             self.network.config.to_file(output_dir)
         if model_name:
             model_path = os.path.join(output_dir, f'{model_name}.ckpt')

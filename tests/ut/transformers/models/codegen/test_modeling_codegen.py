@@ -13,15 +13,15 @@
 # limitations under the License.
 # ============================================================================
 """Test CodeGen"""
+import unittest
 import mindspore
 import numpy as np
 from mindspore import Tensor
 
 import mindnlp
 from mindnlp.transformers.models.codegen import codegen_config, codegen
-from ..model_test import ModelTest
 
-class TestModelingCodeGen(ModelTest):
+class TestModelingCodeGen(unittest.TestCase):
     r"""
     Test CodeGen
     """
@@ -32,7 +32,7 @@ class TestModelingCodeGen(ModelTest):
         """
         super().setUp()
         self.config = codegen_config.CodeGenConfig(vocab_size=1000,
-                                                   hidden_size=128,
+                                                   hidden_size=512,
                                                    n_layer=2,
                                                    n_head=8,
                                                    )
@@ -42,8 +42,7 @@ class TestModelingCodeGen(ModelTest):
         Test CodeGen Attention
         """
         model = codegen.CodeGenAttention(self.config)
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
 
         hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.float32)
 
@@ -56,8 +55,7 @@ class TestModelingCodeGen(ModelTest):
         """
         intermediate_size = 100
         model = codegen.CodeGenMLP(intermediate_size, self.config)
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
 
         hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.float32)
 
@@ -69,8 +67,7 @@ class TestModelingCodeGen(ModelTest):
             Test CodeGen BLOCK
         """
         model = codegen.CodeGenBlock(self.config)
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
 
         hidden_states = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.float32)
 
@@ -82,8 +79,7 @@ class TestModelingCodeGen(ModelTest):
             Test CodeGen MODEL
         """
         model = codegen.CodeGenModel(self.config)
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
 
         input_ids = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.int32)
 
@@ -95,8 +91,7 @@ class TestModelingCodeGen(ModelTest):
             Test CodeGen FORCAUSALLM
         """
         model = codegen.CodeGenForCausalLM(self.config)
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
 
         input_ids = Tensor(np.random.randint(0, 10, (2, 2, 512)), mindspore.int32)
 

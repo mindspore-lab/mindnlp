@@ -27,8 +27,9 @@ from mindspore import Tensor, Parameter
 from mindspore.nn import CrossEntropyLoss
 from mindspore.common.initializer import initializer, Normal
 
-from ...modeling_utils import PreTrainedModel
 from .cpm_ant_config import CpmAntConfig
+from ...modeling_utils import PreTrainedModel
+from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
 from ...activations import ACT2FN
 
 CPMANT_PRETRAINED_MODEL_ARCHIVE_LIST = [
@@ -773,15 +774,16 @@ class CpmAntModel(CpmAntPreTrainedModel):
                     new_hidden_states += (hidden_state[:, self.prompt_length :, :],)
                 all_hidden_states = new_hidden_states
 
-        return tuple(
-            v
-            for v in [
-                hidden_states,
-                present_key_values,
-                all_hidden_states,
-                all_attentions,
-            ]
-            if v is not None
+        if not return_dict:
+            return tuple(
+                v for v in [hidden_states, present_key_values, all_hidden_states, all_attentions] if v is not None
+            )
+
+        return BaseModelOutputWithPast(
+            last_hidden_state=hidden_states,
+            past_key_values=present_key_values,
+            hidden_states=all_hidden_states,
+            attentions=all_attentions,
         )
 
 
@@ -835,8 +837,17 @@ class CpmAntForCausalLM(CpmAntPreTrainedModel):
             loss_func = CrossEntropyLoss()
             loss = loss_func(logits.view(-1, logits.shape[-1]), labels.view(-1))
 
-        output = (logits,) + model_output[1:]
-        return ((loss,) + output) if loss is not None else output
+        if not return_dict:
+            output = (logits,) + model_output[1:]
+            return ((loss,) + output) if loss is not None else output
+
+        return CausalLMOutputWithPast(
+            loss=loss,
+            logits=logits,
+            past_key_values=model_output.past_key_values,
+            hidden_states=model_output.hidden_states,
+            attentions=model_output.attentions,
+        )
 
     def get_input_embeddings(self):
         return self.cpmant.input_embedding

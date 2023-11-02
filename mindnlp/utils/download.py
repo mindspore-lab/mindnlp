@@ -22,6 +22,8 @@ import shutil
 import hashlib
 import re
 import json
+import types
+import functools
 from typing import Union, Optional
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -32,6 +34,14 @@ from requests.exceptions import ProxyError, SSLError
 from mindnlp.configs import DEFAULT_ROOT
 from .errors import ModelNotFoundError
 
+
+def copy_func(f):
+    """Returns a copy of a function f."""
+    # Based on http://stackoverflow.com/a/6528148/190597 (Glenn Maynard)
+    g = types.FunctionType(f.__code__, f.__globals__, name=f.__name__, argdefs=f.__defaults__, closure=f.__closure__)
+    g = functools.update_wrapper(g, f)
+    g.__kwdefaults__ = f.__kwdefaults__
+    return g
 
 def extract_filename_from_url(url):
     """extract filename from url"""
@@ -212,7 +222,7 @@ def get_filepath(path: str):
     raise FileNotFoundError(f"{path} is not a valid file or directory.")
 
 
-def cache_file(
+def cached_file(
     filename: str,
     cache_dir: str = None,
     url: str = None,
@@ -244,7 +254,7 @@ def cache_file(
 
     Examples:
         >>> filename = 'aclImdb_v1'
-        >>> path, filename = cache_file(filename)
+        >>> path, filename = cached_file(filename)
         >>> print(path, filename)
         '{home}\.text' 'aclImdb_v1.tar.gz'
 
@@ -447,9 +457,9 @@ def try_to_load_from_cache(
         # No cache for this model
         return None
 
-    cached_file = os.path.join(cache_dir, filename)
+    cached_file_ = os.path.join(cache_dir, filename)
 
-    return cached_file if os.path.isfile(cached_file) else None
+    return cached_file_ if os.path.isfile(cached_file_) else None
 
 
 def get_checkpoint_shard_files(

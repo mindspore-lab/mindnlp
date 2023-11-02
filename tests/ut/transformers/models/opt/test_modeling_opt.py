@@ -54,8 +54,8 @@ class OPTModelTest(unittest.TestCase):
 
         hidden_states = Tensor(np.random.randint(0, self.config.vocab_size, (1, 10)), dtype=mindspore.int64)
 
-        output, _ = model(hidden_states)
-        assert output.shape == (1, 10, 10)
+        outputs = model(hidden_states)
+        assert outputs.last_hidden_state.shape == (1, 10, 10)
 
     def test_opt_model(self):
         r"""
@@ -65,8 +65,8 @@ class OPTModelTest(unittest.TestCase):
 
         hidden_states = Tensor(np.random.randint(0, self.config.vocab_size, (1, 10)), dtype=mindspore.int64)
 
-        output, _ = model(hidden_states)
-        assert output.shape == (1, 10, 10)
+        outputs = model(hidden_states)
+        assert outputs.last_hidden_state.shape == (1, 10, 10)
 
 
 

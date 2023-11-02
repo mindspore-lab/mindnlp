@@ -241,7 +241,7 @@ class TestMobileBert(unittest.TestCase):
         assert outputs[0].shape == (2, 8, 512)
         assert outputs[1].shape == (2, 512)
 
-    def test_mobilebert_forpretraining(self):
+    def test_mobilebert_for_pretraining(self):
         """
         Test MobileBertForPreTraining
         """
@@ -249,13 +249,10 @@ class TestMobileBert(unittest.TestCase):
         input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
-        assert outputs[0].shape == (2, 8, 30522)
-        assert outputs[1].shape == (2, 2)
-        outputs = model(input_ids, return_dict=True)
-        assert outputs[1].shape == (2, 8, 30522)
-        assert outputs[2].shape == (2, 2)
+        assert outputs.prediction_logits.shape == (2, 8, 30522)
+        assert outputs.seq_relationship_logits.shape == (2, 2)
 
-    def test_mobilebert_formaskedlm(self):
+    def test_mobilebert_for_maskedlm(self):
         """
         Test MobileBertForMaskedLM
         """
@@ -263,9 +260,7 @@ class TestMobileBert(unittest.TestCase):
         input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
-        assert outputs[0].shape == (2, 8, 30522)
-        outputs = model(input_ids, return_dict=True)
-        assert outputs[1].shape == (2, 8, 30522)
+        assert outputs.logits.shape == (2, 8, 30522)
 
     def test_mobilebert_onlynsphead(self):
         """
@@ -277,7 +272,7 @@ class TestMobileBert(unittest.TestCase):
         outputs = model(pooled_output)
         assert outputs.shape == (2, 2)
 
-    def test_mobilebert_fornextsentenceprediction(self):
+    def test_mobilebert_for_nextsentenceprediction(self):
         """
         Test MobileBertForNextSentencePrediction
         """
@@ -285,11 +280,9 @@ class TestMobileBert(unittest.TestCase):
         input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
-        assert outputs[0].shape == (2, 2)
-        outputs = model(input_ids, return_dict=True)
-        assert outputs[1].shape == (2, 2)
+        assert outputs.logits.shape == (2, 2)
 
-    def test_mobilebert_forsequenceclassification(self):
+    def test_mobilebert_for_sequenceclassification(self):
         """
         Test MobileBertForSequenceClassification
         """
@@ -297,11 +290,9 @@ class TestMobileBert(unittest.TestCase):
         input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
-        assert outputs[0].shape == (2, 2)
-        outputs = model(input_ids, return_dict=True)
-        assert outputs[1].shape == (2, 2)
+        assert outputs.logits.shape == (2, 2)
 
-    def test_mobilebert_forquestionanswering(self):
+    def test_mobilebert_for_questionanswering(self):
         """
         Test MobileBertForQuestionAnswering
         """
@@ -309,13 +300,10 @@ class TestMobileBert(unittest.TestCase):
         input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
-        assert outputs[0].shape == (2, 8)
-        assert outputs[1].shape == (2, 8)
-        outputs = model(input_ids, return_dict=True)
-        assert outputs[1].shape == (2, 8)
-        assert outputs[2].shape == (2, 8)
+        assert outputs.start_logits.shape == (2, 8)
+        assert outputs.end_logits.shape == (2, 8)
 
-    def test_mobilebert_formultiplechoice(self):
+    def test_mobilebert_for_multiplechoice(self):
         """
         Test MobileBertForMultipleChoice
         """
@@ -323,11 +311,9 @@ class TestMobileBert(unittest.TestCase):
         input_ids = Tensor(np.random.randint(0, 1000, (2, 8, 256)), mindspore.int32)
 
         outputs = model(input_ids)
-        assert outputs[0].shape == (2, 8)
-        outputs = model(input_ids, return_dict=True)
-        assert outputs[1].shape == (2, 8)
+        assert outputs.logits.shape == (2, 8)
 
-    def test_mobilebert_fortokenclassification(self):
+    def test_mobilebert_for_tokenclassification(self):
         """
         Test MobileBertForTokenClassification
         """
@@ -335,9 +321,8 @@ class TestMobileBert(unittest.TestCase):
         input_ids = Tensor(np.random.randint(0, 1000, (2, 8)), mindspore.int32)
 
         outputs = model(input_ids)
-        assert outputs[0].shape == (2, 8, 2)
-        outputs = model(input_ids, return_dict=True)
-        assert outputs[1].shape == (2, 8, 2)
+
+        assert outputs.logits.shape == (2, 8, 2)
 
     def tearDown(self) -> None:
         gc.collect()
