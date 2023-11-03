@@ -15,3 +15,13 @@
 """
 mbart Model.
 """
+
+from .mbart import *
+from .mbart_config import *
+# from .mbart_tokenizer import *
+
+__all__ = []
+__all__.extend(mbart.__all__)
+__all__.extend(mbart_config.__all__)
+# __all__.extend(mbart_tokenizer.__all__)
+
