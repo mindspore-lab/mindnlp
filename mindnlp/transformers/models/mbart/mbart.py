@@ -54,7 +54,7 @@ def shift_tokens_right(input_ids: Tensor, pad_token_id: int):
         raise ValueError("self.model.config.pad_token_id has to be defined.")
     # replace possible -100 values in labels by `pad_token_id`
     prev_output_tokens = ops.masked_fill(prev_output_tokens, prev_output_tokens == -100, pad_token_id)
-    index_of_eos = (ops.ne(prev_output_tokens, pad_token_id).sum(axis=1) - 1)
+    index_of_eos = ops.ne(prev_output_tokens, pad_token_id).sum(axis=1) - 1
     index_of_eos = ops.unsqueeze(index_of_eos, -1)
     decoder_start_tokens = ops.gather_elements(prev_output_tokens, 1, index_of_eos)
     decoder_start_tokens = ops.squeeze(decoder_start_tokens)
@@ -459,6 +459,7 @@ class MBartClassificationHead(nn.Cell):
 
 
 class MBartPreTrainedModel(PreTrainedModel):
+    """MBartPreTrainedModel"""
     config_class = MBartConfig
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
@@ -484,6 +485,7 @@ class MBartPreTrainedModel(PreTrainedModel):
 
     @property
     def dummy_inputs(self):
+        """dummy_inputs"""
         pad_token = self.config.pad_token_id
         input_ids = Tensor([[0, 6, 10, 4, 2], [0, 8, 12, 2, pad_token]])
         dummy_inputs = {
@@ -556,7 +558,7 @@ class MBartEncoder(MBartPreTrainedModel):
         # retrieve input_ids and inputs_embeds
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
-        elif input_ids is not None:
+        if input_ids is not None:
             _input = input_ids
             input_ids = input_ids.view(-1, input_ids.shape[-1])
         elif inputs_embeds is not None:
@@ -592,7 +594,6 @@ class MBartEncoder(MBartPreTrainedModel):
             if output_hidden_states:
                 encoder_states = encoder_states + (hidden_states,)
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
-            to_drop = False
             dropout_probability = random.uniform(0, 1)
             if self.training and dropout_probability < self.layerdrop:  # skip the layer
                 layer_outputs = (None, None)
@@ -674,8 +675,8 @@ class MBartDecoder(MBartPreTrainedModel):
     def get_input_embeddings(self):
         return self.embed_tokens
 
-    def set_input_embeddings(self, value):
-        self.embed_tokens = value
+    def set_input_embeddings(self, new_embeddings):
+        self.embed_tokens = new_embeddings
 
     def _prepare_decoder_attention_mask(self, attention_mask, input_shape, inputs_embeds, past_key_values_length):
         # create causal mask
@@ -723,7 +724,7 @@ class MBartDecoder(MBartPreTrainedModel):
         # retrieve input_ids and inputs_embeds
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both decoder_input_ids and decoder_inputs_embeds at the same time")
-        elif input_ids is not None:
+        if input_ids is not None:
             _input = input_ids
             input_shape = _input.shape
             input_ids = input_ids.view(-1, input_shape[-1])
@@ -875,15 +876,17 @@ class MBartModel(MBartPreTrainedModel):
     def get_input_embeddings(self):
         return self.shared
 
-    def set_input_embeddings(self, value):
-        self.shared = value
+    def set_input_embeddings(self, new_embeddings):
+        self.shared = new_embeddings
         self.encoder.embed_tokens = self.shared
         self.decoder.embed_tokens = self.shared
 
     def get_encoder(self):
+        """get_encoder"""
         return self.encoder
 
     def get_decoder(self):
+        """get_decoder"""
         return self.decoder
 
     def construct(
@@ -989,7 +992,6 @@ class MBartForConditionalGeneration(MBartPreTrainedModel):
         """get_decoder"""
         return self.model.get_decoder()
 
-    # 如果需要调用此方法, 需要在PretrainedModel上继承实现了该函数的Mixin类
     def resize_token_embeddings(self, new_num_tokens: Optional[int] = None) -> nn.Embedding:
         """resize_token_embeddings"""
         new_embeddings = super().resize_token_embeddings(new_num_tokens)
@@ -1122,10 +1124,12 @@ class MBartForConditionalGeneration(MBartPreTrainedModel):
         }
 
     def prepare_decoder_input_ids_from_labels(self, labels: Tensor):
+        """prepare_decoder_input_ids_from_labels"""
         return shift_tokens_right(labels, self.config.pad_token_id)
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
+        """reorder_cache"""
         reordered_past = ()
         for layer_past in past_key_values:
             # cached cross_attention states don't have to be reordered -> they are always the same
@@ -1214,8 +1218,7 @@ class MBartForSequenceClassification(MBartPreTrainedModel):
             if self.config.problem_type is None:
                 if self.config.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.config.num_labels > 1 and (
-                        labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.config.num_labels > 1 and (labels.dtype in (mindspore.int64, mindspore.int32)):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1384,21 +1387,27 @@ class MBartForCausalLM(MBartPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
+        """get_input_embeddings"""
         return self.model.decoder.embed_tokens
 
-    def set_input_embeddings(self, value):
-        self.model.decoder.embed_tokens = value
+    def set_input_embeddings(self, new_embeddings):
+        """set_input_embeddings"""
+        self.model.decoder.embed_tokens = new_embeddings
 
     def get_output_embeddings(self):
+        """get_output_embeddings"""
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
+        """set_output_embeddings"""
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
+        """set_decoder"""
         self.model.decoder = decoder
 
     def get_decoder(self):
+        """get_decoder"""
         return self.model.decoder
 
     def construct(
@@ -1417,7 +1426,6 @@ class MBartForCausalLM(MBartPreTrainedModel):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithCrossAttentions]:
-
 
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
