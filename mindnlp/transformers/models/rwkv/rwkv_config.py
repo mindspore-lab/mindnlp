@@ -17,7 +17,7 @@
 
 """ RWKV configuration"""
 
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 
 
@@ -35,7 +35,7 @@ RWKV_PRETRAINED_CONFIG_ARCHIVE_MAP = {
 }
 
 
-class RwkvConfig(PreTrainedConfig):
+class RwkvConfig(PretrainedConfig):
     """
     This is the configuration class to store the configuration of a [`RwkvModel`]. It is used to instantiate a RWKV
     model according to the specified arguments, defining the model architecture. Instantiating a configuration with the

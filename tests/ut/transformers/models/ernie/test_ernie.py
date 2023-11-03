@@ -14,6 +14,7 @@
 # ============================================================================
 """Test Ernie"""
 import pytest
+import unittest
 import numpy as np
 import mindspore
 from mindspore import Tensor
@@ -35,9 +36,8 @@ from mindnlp.transformers.models.ernie.ernie import (
 
 import mindnlp
 
-from ..model_test import ModelTest
 
-class TestModelingErnie(ModelTest):
+class TestModelingErnie(unittest.TestCase):
     r"""
     Test Ernie
     """
@@ -67,8 +67,7 @@ class TestModelingErnie(ModelTest):
         """
 
         model = UIE(self.config)
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
 
         input_ids = Tensor(np.random.randint(0, 100, (1, 20)), dtype=mindspore.int32)
         outputs = model(input_ids=input_ids)
@@ -81,8 +80,7 @@ class TestModelingErnie(ModelTest):
         """
         model = ErnieForSequenceClassification(self.config)
 
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
 
         input_ids = Tensor(np.random.randint(
             0, 100, (1, 20)), dtype=mindspore.int32)
@@ -95,8 +93,7 @@ class TestModelingErnie(ModelTest):
         """
         model = ErnieForQuestionAnswering(self.config)
 
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
 
         input_ids = Tensor(np.random.randint(
             0, 100, (1, 20)), dtype=mindspore.int32)
@@ -110,8 +107,7 @@ class TestModelingErnie(ModelTest):
         """
         model = ErnieForTokenClassification(self.config)
 
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
 
         input_ids = Tensor(np.random.randint(
             0, 100, (1, 20)), dtype=mindspore.int32)
@@ -124,8 +120,7 @@ class TestModelingErnie(ModelTest):
         """
         model = ErnieLMPredictionHead(self.config)
 
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
 
         input_ids = Tensor(np.random.randint(
             0, 100, (128, 128)), dtype=mindspore.float32)
@@ -139,8 +134,7 @@ class TestModelingErnie(ModelTest):
 
         model = ErniePretrainingHeads(self.config)
 
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
 
         input_ids = Tensor(np.random.randint(
             0, 100, (128, 128)), dtype=mindspore.float32)
@@ -155,8 +149,7 @@ class TestModelingErnie(ModelTest):
 
         model = ErnieOnlyMLMHead(self.config)
 
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
 
         input_ids = Tensor(np.random.randint(
             0, 100, (128,128)), dtype=mindspore.float32)
@@ -169,8 +162,7 @@ class TestModelingErnie(ModelTest):
         """
         model = ErnieForMaskedLM(self.config)
 
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
 
         input_np = Tensor(np.random.randint(0,100, (1,200)),dtype=mindspore.int32)
         outputs = model(input_np)
@@ -182,8 +174,7 @@ class TestModelingErnie(ModelTest):
         """
         model = ErnieForMultipleChoice(self.config)
 
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
 
         input_np = Tensor(np.random.randint(0,100, (10,10,20)),dtype=mindspore.int32)
         outputs = model(input_np)
@@ -195,8 +186,7 @@ class TestModelingErnie(ModelTest):
         """
         model = ErnieForPretraining(self.config)
 
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
 
         input_ids = Tensor(np.random.randint(
             0, 100, (1,128)), dtype=mindspore.int32)

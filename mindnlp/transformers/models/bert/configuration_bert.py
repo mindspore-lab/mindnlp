@@ -16,7 +16,7 @@
 Bert Model config
 """
 from mindnlp.configs import MS_CONFIG_URL_BASE
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 
 BERT_SUPPORT_LIST = [
@@ -37,7 +37,7 @@ CONFIG_ARCHIVE_MAP = {
 }
 
 
-class BertConfig(PreTrainedConfig):
+class BertConfig(PretrainedConfig):
     """
     Configuration for BERT-base
     """

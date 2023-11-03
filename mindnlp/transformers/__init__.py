@@ -15,6 +15,7 @@
 """MindNLP Transformers"""
 from . import models
 from .models import *
+from .configuration_utils import PretrainedConfig
 
-__all__ = []
+__all__ = ['PretrainedConfig']
 __all__.extend(models.__all__)

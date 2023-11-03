@@ -18,7 +18,7 @@ from typing import Optional, Tuple
 
 import mindspore
 
-from .utils import ModelOutput
+from mindnlp.utils import ModelOutput
 
 
 @dataclass

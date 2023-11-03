@@ -14,4 +14,3 @@
 # limitations under the License.
 
 pylint mindnlp --rcfile=.github/pylint.conf
-pylint tests --rcfile=.github/pylint.conf

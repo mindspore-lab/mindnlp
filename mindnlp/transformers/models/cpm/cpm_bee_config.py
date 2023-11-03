@@ -16,7 +16,7 @@
 # ============================================================================
 """ CPM Bee model configuration"""
 
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 
 CONFIG_ARCHIVE_MAP = {
@@ -27,7 +27,7 @@ CONFIG_ARCHIVE_MAP = {
 }
 
 
-class CpmBeeConfig(PreTrainedConfig):
+class CpmBeeConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`CpmAntModel`]. It is used to instantiate an
     CPMAnt model according to the specified arguments, defining the model architecture. Instantiating a configuration

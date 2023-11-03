@@ -16,11 +16,11 @@
 # ============================================================================
 """ LUKE configuration"""
 
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 
 
-class LukeConfig(PreTrainedConfig):
+class LukeConfig(PretrainedConfig):
     """
     Configurations for Luke
     """

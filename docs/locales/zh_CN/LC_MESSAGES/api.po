@@ -267,7 +267,7 @@ msgstr "seq2seq模型的基类"
 #: mindnlp.utils.decompress.ungz:0 mindnlp.utils.decompress.untar:0
 #: mindnlp.utils.decompress.unzip:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
-#: mindnlp.utils.download.cache_file:0 mindnlp.utils.download.cached_path:0
+#: mindnlp.utils.download.cached_file:0 mindnlp.utils.download.cached_path:0
 #: mindnlp.utils.download.check_md5:0 mindnlp.utils.download.get_cache_path:0
 #: mindnlp.utils.download.get_dataset_url:0 mindnlp.utils.download.get_filepath:0
 #: mindnlp.utils.download.get_from_cache:0 mindnlp.utils.download.http_get:0
@@ -794,7 +794,7 @@ msgstr ""
 #: mindnlp.utils.decompress.ungz:0 mindnlp.utils.decompress.untar:0
 #: mindnlp.utils.decompress.unzip:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
-#: mindnlp.utils.download.cache_file:0 mindnlp.utils.download.cached_path:0
+#: mindnlp.utils.download.cached_file:0 mindnlp.utils.download.cached_path:0
 #: mindnlp.utils.download.check_md5:0 mindnlp.utils.download.get_cache_path:0
 #: mindnlp.utils.download.get_dataset_url:0 mindnlp.utils.download.get_filepath:0
 #: mindnlp.utils.download.get_from_cache:0 mindnlp.utils.download.http_get:0
@@ -910,7 +910,7 @@ msgstr "Tensor, 计算后的 CMRC2018Loss"
 #: mindnlp.utils.decompress.ungz:0 mindnlp.utils.decompress.untar:0
 #: mindnlp.utils.decompress.unzip:0
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
-#: mindnlp.utils.download.cache_file:0 mindnlp.utils.download.cached_path:0
+#: mindnlp.utils.download.cached_file:0 mindnlp.utils.download.cached_path:0
 #: mindnlp.utils.download.check_md5:0 mindnlp.utils.download.get_dataset_url:0
 #: mindnlp.utils.download.get_filepath:0 mindnlp.utils.download.get_from_cache:0
 #: mindnlp.utils.download.http_get:0 mindnlp.utils.download.match_file:0
@@ -1151,7 +1151,7 @@ msgstr "计算方式 `reduction` 不是 `sum` , `mean` , `batchmean` 或 `none` 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/decompress.py:docstring
 #: mindnlp.utils.decompress.untar:16
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
-#: mindnlp.utils.download.cache_file:28 mindnlp.utils.download.cached_path:26
+#: mindnlp.utils.download.cached_file:28 mindnlp.utils.download.cached_path:26
 #: mindnlp.utils.download.check_md5:14 mindnlp.utils.download.get_cache_path:8
 #: mindnlp.utils.download.get_dataset_url:12 mindnlp.utils.download.get_filepath:15
 #: mindnlp.utils.download.get_from_cache:25 mindnlp.utils.download.http_get:21
@@ -2083,7 +2083,7 @@ msgstr "定义测试集的字符串。默认：\"tst2014\""
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/dataset/text_generation/wikitext2.py:docstring
 #: mindnlp.dataset.text_generation.wikitext2.WikiText2:8
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
-#: mindnlp.utils.download.cache_file:14 mindnlp.utils.download.cached_path:14
+#: mindnlp.utils.download.cached_file:14 mindnlp.utils.download.cached_path:14
 #: mindnlp.utils.download.get_from_cache:12 mindnlp.utils.download.http_get:12
 msgid "a dict to identify proxies,for example: {\"https\": \"https://127.0.0.1:7890\"}."
 msgstr "定义代理的字典，例如：{\"https\": \"https://127.0.0.1:7890\"}"
@@ -6543,7 +6543,7 @@ msgid "Download functions"
 msgstr "下载函数"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
-#: of mindnlp.utils.download.cache_file:1 mindnlp.utils.download.cached_path:1
+#: of mindnlp.utils.download.cached_file:1 mindnlp.utils.download.cached_path:1
 #: mindnlp.utils.download.get_from_cache:1
 msgid ""
 "If there is the file in cache_dir, return the path; if there is no such file, use the "
@@ -6553,30 +6553,30 @@ msgstr ""
 "url地址进行下载。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
-#: of mindnlp.utils.download.cache_file:3
+#: of mindnlp.utils.download.cached_file:3
 msgid "The name of the required dataset file."
 msgstr "所需数据集文件的名称。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
-#: of mindnlp.utils.download.cache_file:5 mindnlp.utils.download.cached_path:5
+#: of mindnlp.utils.download.cached_file:5 mindnlp.utils.download.cached_path:5
 #: mindnlp.utils.download.get_from_cache:5 mindnlp.utils.download.match_file:5
 msgid "The path of save the file."
 msgstr "储存文件的路径。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
-#: of mindnlp.utils.download.cache_file:7
+#: of mindnlp.utils.download.cached_file:7
 msgid "The url of the required dataset file."
 msgstr "所需数据集文件的url地址。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
-#: of mindnlp.utils.download.cache_file:9 mindnlp.utils.download.cached_path:9
+#: of mindnlp.utils.download.cached_file:9 mindnlp.utils.download.cached_path:9
 #: mindnlp.utils.download.check_md5:5 mindnlp.utils.download.get_from_cache:7
 #: mindnlp.utils.download.http_get:7
 msgid "The true md5sum of download file."
 msgstr "下载文件的真实MD5值。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
-#: of mindnlp.utils.download.cache_file:11 mindnlp.utils.download.cached_path:11
+#: of mindnlp.utils.download.cached_file:11 mindnlp.utils.download.cached_path:11
 #: mindnlp.utils.download.get_from_cache:9
 msgid ""
 "The name of the downloaded file.\\ (This parameter is required if the end of the link "
@@ -6585,7 +6585,7 @@ msgstr ""
 "所需下载文件的名称（如果链接的末尾部分不是所需下载文件的名称，则需要输入该参数）。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
-#: of mindnlp.utils.download.cache_file:17 mindnlp.utils.download.cached_path:17
+#: of mindnlp.utils.download.cached_file:17 mindnlp.utils.download.cached_path:17
 #: mindnlp.utils.download.get_filepath:6
 msgid ""
 "- str, If `path` is a folder containing a file, return `{path}\\{filename}`;   if "
@@ -6595,7 +6595,7 @@ msgstr ""
 "回；如果 `path` 是一个包含有多个文件的文件夹或单个文件，则返回 `path` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
-#: of mindnlp.utils.download.cache_file:19 mindnlp.utils.download.cached_path:19
+#: of mindnlp.utils.download.cached_file:19 mindnlp.utils.download.cached_path:19
 #: mindnlp.utils.download.get_filepath:8
 msgid ""
 "str, If `path` is a folder containing a file, return `{path}\\{filename}`; if `path` "
@@ -6605,23 +6605,23 @@ msgstr ""
 "如果 `path` 是一个包含有多个文件的文件夹或单个文件，则返回 `path` 。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
-#: of mindnlp.utils.download.cache_file:22 mindnlp.utils.download.check_md5:10
+#: of mindnlp.utils.download.cached_file:22 mindnlp.utils.download.check_md5:10
 #: mindnlp.utils.download.match_file:14
 msgid "If `filename` is not a string."
 msgstr "如果 `filename` 不是一个字符串。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
-#: of mindnlp.utils.download.cache_file:23 mindnlp.utils.download.match_file:15
+#: of mindnlp.utils.download.cached_file:23 mindnlp.utils.download.match_file:15
 msgid "If `cache_dir` is not a string."
 msgstr "如果 `cache_dir` 不是一个字符串。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
-#: of mindnlp.utils.download.cache_file:24 mindnlp.utils.download.get_from_cache:20
+#: of mindnlp.utils.download.cached_file:24 mindnlp.utils.download.get_from_cache:20
 msgid "If `url` is not a string."
 msgstr "如果 `url` 不是一个字符串。"
 
 #: ../../../../../../../Install/Miniconda3/lib/site-packages/mindnlp/utils/download.py:docstring
-#: of mindnlp.utils.download.cache_file:25 mindnlp.utils.download.check_md5:11
+#: of mindnlp.utils.download.cached_file:25 mindnlp.utils.download.check_md5:11
 #: mindnlp.utils.download.match_file:16
 msgid "If `filename` is None."
 msgstr "如果 `filename` 为空值。"

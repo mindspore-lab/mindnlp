@@ -46,8 +46,8 @@ def load_from_cache(name, url, cache_dir:str=None, force_download=False):
             temp_file.seek(0)
 
             logging.info(f"copying {temp_file.name} to cache at {cache_path}")
-            with open(cache_path, 'wb') as cache_file:
-                shutil.copyfileobj(temp_file, cache_file)
+            with open(cache_path, 'wb') as cached_file:
+                shutil.copyfileobj(temp_file, cached_file)
     
     return cache_path
 
