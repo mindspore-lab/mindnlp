@@ -17,3 +17,4 @@ Dataset init
 """
 
 from .load import load_dataset
+from .load_modelscope import load_dataset_from_ms

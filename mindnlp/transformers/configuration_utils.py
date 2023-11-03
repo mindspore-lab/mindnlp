@@ -31,6 +31,7 @@ class PreTrainedConfig:
     Abstract class for Pretrained models config.
     """
     def __init__(self, **kwargs):
+        self.return_dict = kwargs.pop("return_dict", True)
         self.finetuning_task = kwargs.pop('finetuning_task', None)
         self.num_labels = kwargs.pop('num_labels', 2)
         self.output_attentions = kwargs.pop('output_attentions', False)
@@ -38,13 +39,14 @@ class PreTrainedConfig:
         self.is_decoder = kwargs.pop("is_decoder", False)
         self.pad_token_id = kwargs.pop("pad_token_id", None)
         self.eos_token_id = kwargs.pop("eos_token_id", None)
+        self.bos_token_id = kwargs.pop("bos_token_id", None)
+        self.sep_token_id = kwargs.pop("sep_token_id", None)
         self.is_encoder_decoder = kwargs.pop("is_encoder_decoder", False)
         self.add_cross_attention = kwargs.pop("add_cross_attention", False)
         self.tie_word_embeddings = kwargs.pop(
             "tie_word_embeddings", True
         )  # Whether input and output word embeddings should be tied for all MLM, LM and Seq2Seq models.
         self.decoder_start_token_id = kwargs.pop("decoder_start_token_id", None)
-        self.return_dict = kwargs.pop("return_dict", False)
         self.chunk_size_feed_forward = kwargs.pop("chunk_size_feed_forward", 0)
         self.pruned_heads = kwargs.pop("pruned_heads", {})
 
@@ -59,6 +61,21 @@ class PreTrainedConfig:
         self._name_or_path = str(kwargs.pop("name_or_path", ""))
 
     pretrained_config_archive_map: Dict[str, str] = {}
+
+    """
+    Add for handle attribute_map
+    """
+    attribute_map: Dict[str, str] = {}
+
+    def __setattr__(self, key, value):
+        if key in super().__getattribute__("attribute_map"):
+            key = super().__getattribute__("attribute_map")[key]
+        super().__setattr__(key, value)
+
+    def __getattribute__(self, key):
+        if key != "attribute_map" and key in super().__getattribute__("attribute_map"):
+            key = super().__getattribute__("attribute_map")[key]
+        return super().__getattribute__(key)
 
     @property
     def name_or_path(self) -> str:

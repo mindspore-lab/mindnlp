@@ -176,7 +176,7 @@ class LlamaTokenizer(PreTrainedTokenizer):
             return np.array(all_inputs_ids), np.array(all_attention_mask)
 
         return {
-            'input_ids':mindspore.Tensor(np.array(all_inputs_ids), dtype=mindspore.int64), 
+            'input_ids':mindspore.Tensor(np.array(all_inputs_ids), dtype=mindspore.int64),
             'attention_mask':mindspore.Tensor(np.array(all_attention_mask), dtype=mindspore.int32)
         }
 

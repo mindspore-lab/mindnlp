@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,16 +13,5 @@
 # limitations under the License.
 # ============================================================================
 """
-T5 Model init
+Falcon Model.
 """
-from . import t5, t5_config, t5_tokenizer, chatyuan_tokenizer
-from .t5_config import *
-from .t5 import *
-from .t5_tokenizer import *
-from .chatyuan_tokenizer import *
-
-__all__ = []
-__all__.extend(t5.__all__)
-__all__.extend(t5_config.__all__)
-__all__.extend(t5_tokenizer.__all__)
-__all__.extend(chatyuan_tokenizer.__all__)

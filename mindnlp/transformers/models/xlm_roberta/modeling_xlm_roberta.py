@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2018 The Google AI Language Team Authors and The HuggingFace Inc. team.
+# Copyright 2019 Facebook AI Research and the HuggingFace Inc. team.
 # Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
 # Copyright 2023 Huawei Technologies Co., Ltd
 #
@@ -16,51 +16,47 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=C0415
-# pylint: disable=W0223
-# pylint: disable=E0401
 # pylint: disable=C0103
-# pylint: disable=R1714
 # pylint: disable=W0237
+# pylint: disable=W0613
 
-"""MindNLP bert model"""
+"""PyTorch XLM-RoBERTa model."""
 import os
 import math
 import logging
-from dataclasses import dataclass
-from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple, Union
+
+import numpy as np
 import mindspore
-from mindspore import nn, ops
-from mindspore import Parameter, Tensor
-from mindspore import log as logger
+from mindspore import nn, ops, Parameter, Tensor
+from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.configs import MINDNLP_MODEL_URL_BASE
-from .bert_config import BertConfig, BERT_SUPPORT_LIST
-from ...modeling_utils import PreTrainedModel
+from mindspore import log as logger
+
+from mindnlp.configs import MS_MODEL_URL_BASE
+from .configuration_xlm_roberta import XLMRobertaConfig, XLM_ROBERTA_SUPPORT_LIST
 from ...activations import ACT2FN
-from ...utils import ModelOutput
+from ...modeling_utils import PreTrainedModel
+from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
     BaseModelOutputWithPoolingAndCrossAttentions,
     CausalLMOutputWithCrossAttentions,
     MaskedLMOutput,
     MultipleChoiceModelOutput,
-    NextSentencePredictorOutput,
     QuestionAnsweringModelOutput,
     SequenceClassifierOutput,
     TokenClassifierOutput,
 )
 
-from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
-
 PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MINDNLP_MODEL_URL_BASE.format('bert', model) for model in BERT_SUPPORT_LIST
+    model: MS_MODEL_URL_BASE.format(model) for model in XLM_ROBERTA_SUPPORT_LIST
 }
 
 
-def torch_to_mindspore(pth_file, **kwargs):
-    """convert torch checkpoint to mindspore"""
-    _ = kwargs.get('prefix', '')
 
+def torch_to_mindspore(pth_file):
+    """convert torch checkpoint to mindspore"""
     try:
         import torch
     except Exception as exc:
@@ -95,73 +91,50 @@ def torch_to_mindspore(pth_file, **kwargs):
     return ms_ckpt_path
 
 
-@dataclass
-class BertForPreTrainingOutput(ModelOutput):
+# Copied from transformers.models.roberta.modeling_roberta.RobertaEmbeddings with Roberta->XLMRoberta
+class XLMRobertaEmbeddings(nn.Cell):
     """
-    Output type of [`BertForPreTraining`].
-
-    Args:
-        loss (*optional*, returned when `labels` is provided, `mindspore.Tensor` of shape `(1,)`):
-            Total loss as the sum of the masked language modeling loss and the next sequence prediction
-            (classification) loss.
-        prediction_logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, config.vocab_size)`):
-            Prediction scores of the language modeling head (scores for each vocabulary token before SoftMax).
-        seq_relationship_logits (`mindspore.Tensor` of shape `(batch_size, 2)`):
-            Prediction scores of the next sequence prediction (classification) head (scores of True/False continuation
-            before SoftMax).
-        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
-            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
-            shape `(batch_size, sequence_length, hidden_size)`.
-
-            Hidden-states of the model at the output of each layer plus the initial embedding outputs.
-        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
-            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
-            sequence_length)`.
-
-            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
-            heads.
+    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
     """
 
-    loss: Optional[mindspore.Tensor] = None
-    prediction_logits: mindspore.Tensor = None
-    seq_relationship_logits: mindspore.Tensor = None
-    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
-    attentions: Optional[Tuple[mindspore.Tensor]] = None
-
-class BertEmbeddings(nn.Cell):
-    """
-    Embeddings for BERT, include word, position and token_type
-    """
+    # Copied from transformers.models.bert.modeling_bert.BertEmbeddings.__init__
     def __init__(self, config):
         super().__init__()
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
         self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
 
-        self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
+        # any TensorFlow checkpoint file
+        self.LayerNorm = nn.LayerNorm([config.hidden_size,], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
-        self.position_ids = ops.arange(config.max_position_embeddings).reshape((1, -1))
+        self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
         self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
 
+        # End copy
+        self.padding_idx = config.pad_token_id
+        self.position_embeddings = nn.Embedding(
+            config.max_position_embeddings, config.hidden_size, padding_idx=self.padding_idx
+        )
+
     def construct(
-        self,
-        input_ids: Optional[mindspore.Tensor] = None,
-        token_type_ids: Optional[mindspore.Tensor] = None,
-        position_ids: Optional[mindspore.Tensor] = None,
-        inputs_embeds: Optional[mindspore.Tensor] = None,
-        past_key_values_length: int = 0,
+        self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None, past_key_values_length=0
     ):
+        if position_ids is None:
+            if input_ids is not None:
+                # Create the position ids from the input token ids. Any padded tokens remain padded.
+                position_ids = create_position_ids_from_input_ids(input_ids, self.padding_idx, past_key_values_length)
+            else:
+                position_ids = self.create_position_ids_from_inputs_embeds(inputs_embeds)
+
         if input_ids is not None:
             input_shape = input_ids.shape
         else:
             input_shape = inputs_embeds.shape[:-1]
 
         seq_length = input_shape[1]
-
-        if position_ids is None:
-            position_ids = self.position_ids[:, past_key_values_length : seq_length + past_key_values_length]
 
         # Setting the token_type_ids to the registered buffer in constructor where it is all zeros, which usually occurs
         # when its auto-generated, registered buffer helps users when tracing the model without passing token_type_ids, solves
@@ -186,19 +159,32 @@ class BertEmbeddings(nn.Cell):
         embeddings = self.dropout(embeddings)
         return embeddings
 
+    def create_position_ids_from_inputs_embeds(self, inputs_embeds):
+        """
+        We are provided embeddings directly. We cannot infer which are padded so just generate sequential position ids.
 
-class BertSelfAttention(nn.Cell):
-    """
-    Self attention layer for BERT.
-    """
+        Args:
+            inputs_embeds: mindspore.Tensor
+
+        Returns: mindspore.Tensor
+        """
+        input_shape = inputs_embeds.shape[:-1]
+        sequence_length = input_shape[1]
+
+        position_ids = ops.arange(
+            self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=mindspore.int64)
+        return position_ids.unsqueeze(0).expand(input_shape)
+
+
+class XLMRobertaSelfAttention(nn.Cell):
+    """XLMRobertaSelfAttention"""
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
-        if config.hidden_size % config.num_attention_heads != 0:
+        if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
             raise ValueError(
-                f"The hidden size {config.hidden_size} is not a multiple of the number of attention "
-                f"heads {config.num_attention_heads}"
+                f"The hidden size ({config.hidden_size}) is not a multiple of the number of attention "
+                f"heads ({config.num_attention_heads})"
             )
-        self.output_attentions = config.output_attentions
 
         self.num_attention_heads = config.num_attention_heads
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
@@ -212,19 +198,17 @@ class BertSelfAttention(nn.Cell):
         self.position_embedding_type = position_embedding_type or getattr(
             config, "position_embedding_type", "absolute"
         )
-        if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
+        if self.position_embedding_type in ('relative_key', 'relative_key_query'):
             self.max_position_embeddings = config.max_position_embeddings
             self.distance_embedding = nn.Embedding(2 * config.max_position_embeddings - 1, self.attention_head_size)
 
         self.is_decoder = config.is_decoder
 
-    def transpose_for_scores(self, input_x):
-        r"""
-        transpose for scores
-        """
-        new_x_shape = input_x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
-        input_x = input_x.view(*new_x_shape)
-        return input_x.transpose(0, 2, 1, 3)
+    def transpose_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
+        """transpose_for_scores"""
+        new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
+        x = x.view(new_x_shape)
+        return x.permute(0, 2, 1, 3)
 
     def construct(
         self,
@@ -235,13 +219,14 @@ class BertSelfAttention(nn.Cell):
         encoder_attention_mask: Optional[mindspore.Tensor] = None,
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
-    ):
+    ) -> Tuple[mindspore.Tensor]:
         mixed_query_layer = self.query(hidden_states)
 
         # If this is instantiated as a cross-attention module, the keys
         # and values come from an encoder; the attention mask needs to be
         # such that the encoder's padding tokens are not attended to.
         is_cross_attention = encoder_hidden_states is not None
+
         if is_cross_attention and past_key_value is not None:
             # reuse k,v, cross_attentions
             key_layer = past_key_value[0]
@@ -261,6 +246,7 @@ class BertSelfAttention(nn.Cell):
             value_layer = self.transpose_for_scores(self.value(hidden_states))
 
         query_layer = self.transpose_for_scores(mixed_query_layer)
+
         use_cache = past_key_value is not None
         if self.is_decoder:
             # if cross_attention save Tuple(mindspore.Tensor, mindspore.Tensor) of all cross attention key/value_states.
@@ -275,10 +261,10 @@ class BertSelfAttention(nn.Cell):
         # Take the dot product between "query" and "key" to get the raw attention scores.
         attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
 
-        if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
+        if self.position_embedding_type in ('relative_key', 'relative_key_query'):
             query_length, key_length = query_layer.shape[2], key_layer.shape[2]
             if use_cache:
-                position_ids_l = Tensor(key_length - 1, dtype=mindspore.int64).view(-1, 1)
+                position_ids_l = mindspore.Tensor(key_length - 1, dtype=mindspore.int64).view(-1, 1)
             else:
                 position_ids_l = ops.arange(query_length, dtype=mindspore.int64).view(-1, 1)
             position_ids_r = ops.arange(key_length, dtype=mindspore.int64).view(1, -1)
@@ -297,7 +283,7 @@ class BertSelfAttention(nn.Cell):
 
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
         if attention_mask is not None:
-            # Apply the attention mask is (precomputed for all layers in BertModel forward() function)
+            # Apply the attention mask is (precomputed for all layers in XLMRobertaModel forward() function)
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
@@ -316,6 +302,7 @@ class BertSelfAttention(nn.Cell):
         context_layer = context_layer.transpose(0, 2, 1, 3)
         new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(new_context_layer_shape)
+
         outputs = (context_layer, attention_probs) if output_attentions else (context_layer,)
 
         if self.is_decoder:
@@ -323,31 +310,27 @@ class BertSelfAttention(nn.Cell):
         return outputs
 
 
-class BertSelfOutput(nn.Cell):
-    r"""
-    Bert Self Output
-    """
+class XLMRobertaSelfOutput(nn.Cell):
+    """XLMRobertaSelfOutput"""
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm  = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
-class BertAttention(nn.Cell):
-    r"""
-    Bert Attention
-    """
+class XLMRobertaAttention(nn.Cell):
+    """XLMRobertaAttention"""
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
-        self.self = BertSelfAttention(config, position_embedding_type=position_embedding_type)
-        self.output = BertSelfOutput(config)
+        self.self = XLMRobertaSelfAttention(config, position_embedding_type=position_embedding_type)
+        self.output = XLMRobertaSelfOutput(config)
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
@@ -378,7 +361,7 @@ class BertAttention(nn.Cell):
         encoder_attention_mask: Optional[mindspore.Tensor] = None,
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
-    ):
+    ) -> Tuple[mindspore.Tensor]:
         self_outputs = self.self(
             hidden_states,
             attention_mask,
@@ -393,10 +376,8 @@ class BertAttention(nn.Cell):
         return outputs
 
 
-class BertIntermediate(nn.Cell):
-    r"""
-    Bert Intermediate
-    """
+class XLMRobertaIntermediate(nn.Cell):
+    """XLMRobertaIntermediate"""
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
@@ -405,47 +386,42 @@ class BertIntermediate(nn.Cell):
         else:
             self.intermediate_act_fn = config.hidden_act
 
-    def construct(self, hidden_states):
+    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
 
-class BertOutput(nn.Cell):
-    r"""
-    Bert Output
-    """
+class XLMRobertaOutput(nn.Cell):
+    """XLMRobertaOutput"""
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.layer_norm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-    def construct(self, hidden_states, input_tensor):
+    def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
-        hidden_states = self. layer_norm(hidden_states + input_tensor)
+        hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
 
-class BertLayer(nn.Cell):
-    r"""
-    Bert Layer
-    """
+class XLMRobertaLayer(nn.Cell):
+    """XLMRobertaLayer"""
     def __init__(self, config):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
-        self.attention = BertAttention(config)
+        self.attention = XLMRobertaAttention(config)
         self.is_decoder = config.is_decoder
         self.add_cross_attention = config.add_cross_attention
         if self.add_cross_attention:
             if not self.is_decoder:
                 raise ValueError(f"{self} should be used as a decoder model if cross attention is added")
-            self.crossattention = BertAttention(config, position_embedding_type="absolute")
-        self.intermediate = BertIntermediate(config)
-        self.output = BertOutput(config)
-
+            self.crossattention = XLMRobertaAttention(config, position_embedding_type="absolute")
+        self.intermediate = XLMRobertaIntermediate(config)
+        self.output = XLMRobertaOutput(config)
 
     def construct(
         self,
@@ -456,7 +432,7 @@ class BertLayer(nn.Cell):
         encoder_attention_mask: Optional[mindspore.Tensor] = None,
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
-    ):
+    ) -> Tuple[mindspore.Tensor]:
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
         self_attention_outputs = self.attention(
@@ -513,20 +489,19 @@ class BertLayer(nn.Cell):
         return outputs
 
     def feed_forward_chunk(self, attention_output):
-        """feed forward chunk"""
+        """feed_forward_chunk"""
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
         return layer_output
 
 
-class BertEncoder(nn.Cell):
-    r"""
-    Bert Encoder
-    """
+class XLMRobertaEncoder(nn.Cell):
+    """XLMRobertaEncoder"""
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([BertLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.CellList([XLMRobertaLayer(config) for _ in range(config.num_hidden_layers)])
+        self.gradient_checkpointing = False
 
     def construct(
         self,
@@ -540,10 +515,17 @@ class BertEncoder(nn.Cell):
         output_attentions: Optional[bool] = False,
         output_hidden_states: Optional[bool] = False,
         return_dict: Optional[bool] = True,
-    ):
+    ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
         all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
+
+        if self.gradient_checkpointing and self.training:
+            if use_cache:
+                logger.warning_once(
+                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
+                )
+                use_cache = False
 
         next_decoder_cache = () if use_cache else None
         for i, layer_module in enumerate(self.layer):
@@ -552,6 +534,7 @@ class BertEncoder(nn.Cell):
 
             layer_head_mask = head_mask[i] if head_mask is not None else None
             past_key_value = past_key_values[i] if past_key_values is not None else None
+
             layer_outputs = layer_module(
                 hidden_states,
                 attention_mask,
@@ -561,6 +544,7 @@ class BertEncoder(nn.Cell):
                 past_key_value,
                 output_attentions,
             )
+
             hidden_states = layer_outputs[0]
             if use_cache:
                 next_decoder_cache += (layer_outputs[-1],)
@@ -593,105 +577,36 @@ class BertEncoder(nn.Cell):
         )
 
 
-class BertPooler(nn.Cell):
-    r"""
-    Bert Pooler
-    """
-    def __init__(self, config):
-        super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size, activation='tanh')
-
-    def construct(self, hidden_states):
-        # We "pool" the model by simply taking the hidden state corresponding.
-        # to the first token
-        first_token_tensor = hidden_states[:, 0]
-        pooled_output = self.dense(first_token_tensor)
-        return pooled_output
-
-
-class BertPredictionHeadTransform(nn.Cell):
-    r"""
-    Bert Prediction Head Transform
-    """
+class XLMRobertaPooler(nn.Cell):
+    """XLMRobertaPooler"""
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.transform_act_fn = ACT2FN[config.hidden_act]
-        self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.activation = nn.Tanh()
 
-    def construct(self, hidden_states):
-        hidden_states = self.dense(hidden_states)
-        hidden_states = self.transform_act_fn(hidden_states)
-        hidden_states = self.LayerNorm(hidden_states)
-        return hidden_states
+    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        # We "pool" the model by simply taking the hidden state corresponding
+        # to the first token.
+        first_token_tensor = hidden_states[:, 0]
+        pooled_output = self.dense(first_token_tensor)
+        pooled_output = self.activation(pooled_output)
+        return pooled_output
 
 
-class BertLMPredictionHead(nn.Cell):
-    r"""
-    Bert LM Prediction Head
+class XLMRobertaPreTrainedModel(PreTrainedModel):
     """
-    def __init__(self, config):
-        super().__init__()
-        self.transform = BertPredictionHeadTransform(config)
-
-        # The output weights are the same as the input embeddings, but there is
-        # an output-only bias for each token.
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
-
-        self.bias = Parameter(initializer('zeros', config.vocab_size), 'bias')
-
-        self.decoder.bias = self.bias
-
-    def construct(self, hidden_states):
-        hidden_states = self.transform(hidden_states)
-        hidden_states = self.decoder(hidden_states)
-        return hidden_states
-
-
-class BertOnlyMLMHead(nn.Cell):
-    """BertOnlyMLMHead"""
-    def __init__(self, config):
-        super().__init__()
-        self.predictions = BertLMPredictionHead(config)
-
-    def construct(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
-        prediction_scores = self.predictions(sequence_output)
-        return prediction_scores
-
-
-class BertOnlyNSPHead(nn.Cell):
-    """BertOnlyNSPHead"""
-    def __init__(self, config):
-        super().__init__()
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
-
-    def construct(self, pooled_output):
-        seq_relationship_score = self.seq_relationship(pooled_output)
-        return seq_relationship_score
-
-
-class BertPreTrainingHeads(nn.Cell):
-    r"""
-    Bert PreTraining Heads
+    An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
+    models.
     """
-    def __init__(self, config):
-        super().__init__()
-        self.predictions = BertLMPredictionHead(config)
-        self.seq_relationship = nn.Dense(config.hidden_size, 2)
 
-    def construct(self, sequence_output, pooled_output, masked_lm_positions):
-        prediction_scores = self.predictions(sequence_output, masked_lm_positions)
-        seq_relationship_score = self.seq_relationship(pooled_output)
-        return prediction_scores, seq_relationship_score
-
-
-class BertPreTrainedModel(PreTrainedModel):
-    """BertPretrainedModel"""
     convert_torch_to_mindspore = torch_to_mindspore
     pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
-    config_class = BertConfig
-    base_model_prefix = 'bert'
+    config_class = XLMRobertaConfig
+    base_model_prefix = "roberta"
+    supports_gradient_checkpointing = False
+    _no_split_modules = ["XLMRobertaEmbeddings", "XLMRobertaSelfAttention"]
 
+    # Copied from transformers.models.bert.modeling_bert.BertPreTrainedModel._init_weights
     def _init_weights(self, cell):
         """Initialize the weights"""
         if isinstance(cell, nn.Dense):
@@ -699,39 +614,55 @@ class BertPreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            embedding_table = initializer(Normal(self.config.initializer_range),
-                                                 cell.embedding_table.shape,
-                                                 cell.embedding_table.dtype)
-            if cell.padding_idx is not None:
+            embedding_table = np.random.normal(0.0, self.config.initializer_range, cell.embedding_table.shape)
+            if cell.padding_idx:
                 embedding_table[cell.padding_idx] = 0
-            cell.embedding_table.set_data(embedding_table)
+
+            cell.embedding_table.set_data(Tensor(embedding_table, cell.embedding_table.dtype))
         elif isinstance(cell, nn.LayerNorm):
             cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
             cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
 
+    def _set_gradient_checkpointing(self, module, value=False):
+        if isinstance(module, XLMRobertaEncoder):
+            module.gradient_checkpointing = value
 
-class BertModel(BertPreTrainedModel):
-    r"""
-    Bert Model
+
+class XLMRobertaModel(XLMRobertaPreTrainedModel):
     """
+
+    The model can behave as an encoder (with only self-attention) as well as a decoder, in which case a layer of
+    cross-attention is added between the self-attention layers, following the architecture described in *Attention is
+    all you need*_ by Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz
+    Kaiser and Illia Polosukhin.
+
+    To behave as an decoder the model needs to be initialized with the `is_decoder` argument of the configuration set
+    to `True`. To be used in a Seq2Seq model, the model needs to initialized with both `is_decoder` argument and
+    `add_cross_attention` set to `True`; an `encoder_hidden_states` is then expected as an input to the forward pass.
+
+    .. _*Attention is all you need*: https://arxiv.org/abs/1706.03762
+
+    """
+
+    # Copied from transformers.models.bert.modeling_bert.BertModel.__init__ with Bert->XLMRoberta
     def __init__(self, config, add_pooling_layer=True):
         super().__init__(config)
         self.config = config
-        self.embeddings = BertEmbeddings(config)
-        self.encoder = BertEncoder(config)
+        self.embeddings = XLMRobertaEmbeddings(config)
+        self.encoder = XLMRobertaEncoder(config)
+        self.pooler = XLMRobertaPooler(config) if add_pooling_layer else None
 
-        self.pooler = BertPooler(config) if add_pooling_layer else None
-
+        # Initialize weights and apply final processing
         self.post_init()
 
     def get_input_embeddings(self):
         return self.embeddings.word_embeddings
 
-    def set_input_embeddings(self, new_embeddings):
-        self.embeddings.word_embeddings = new_embeddings
+    def set_input_embeddings(self, value):
+        self.embeddings.word_embeddings = value
 
     def _prune_heads(self, heads_to_prune):
         """
@@ -756,7 +687,27 @@ class BertModel(BertPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ):
+    ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPoolingAndCrossAttentions]:
+        r"""
+        encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+            Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
+            the model is configured as a decoder.
+        encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
+            the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
+
+            - 1 for tokens that are **not masked**,
+            - 0 for tokens that are **masked**.
+        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
+
+            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+        use_cache (`bool`, *optional*):
+            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+            `past_key_values`).
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -796,7 +747,7 @@ class BertModel(BertPreTrainedModel):
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
-        extended_attention_mask = self.get_extended_attention_mask(attention_mask, input_shape)
+        extended_attention_mask: mindspore.Tensor = self.get_extended_attention_mask(attention_mask, input_shape)
 
         # If a 2D or 3D attention mask is provided for the cross-attention
         # we need to make broadcastable to [batch_size, num_heads, seq_length, seq_length]
@@ -823,7 +774,6 @@ class BertModel(BertPreTrainedModel):
             inputs_embeds=inputs_embeds,
             past_key_values_length=past_key_values_length,
         )
-
         encoder_outputs = self.encoder(
             embedding_output,
             attention_mask=extended_attention_mask,
@@ -836,7 +786,6 @@ class BertModel(BertPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-
         sequence_output = encoder_outputs[0]
         pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
 
@@ -853,97 +802,27 @@ class BertModel(BertPreTrainedModel):
         )
 
 
-class BertForPretraining(BertPreTrainedModel):
-    r"""
-    Bert For Pretraining
-    """
-    _tied_weights_keys = ["predictions.decoder.bias", "cls.predictions.decoder.weight"]
-
-    def __init__(self, config):
-        super().__init__(config)
-
-        self.bert = BertModel(config)
-        self.cls = BertPreTrainingHeads(config)
-
-        # Initialize weights and apply final processing
-        self.post_init()
-
-    def get_output_embeddings(self):
-        return self.cls.predictions.decoder
-
-    def set_output_embeddings(self, new_embeddings):
-        self.cls.predictions.decoder = new_embeddings
-
-    def construct(
-        self,
-        input_ids: Optional[mindspore.Tensor] = None,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        token_type_ids: Optional[mindspore.Tensor] = None,
-        position_ids: Optional[mindspore.Tensor] = None,
-        head_mask: Optional[mindspore.Tensor] = None,
-        inputs_embeds: Optional[mindspore.Tensor] = None,
-        labels: Optional[mindspore.Tensor] = None,
-        next_sentence_label: Optional[mindspore.Tensor] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ):
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
-        outputs = self.bert(
-            input_ids,
-            attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
-            position_ids=position_ids,
-            head_mask=head_mask,
-            inputs_embeds=inputs_embeds,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-        )
-
-        sequence_output, pooled_output = outputs[:2]
-        prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
-
-        total_loss = None
-        if labels is not None and next_sentence_label is not None:
-            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
-            next_sentence_loss = ops.cross_entropy(seq_relationship_score.view(-1, 2), next_sentence_label.view(-1))
-            total_loss = masked_lm_loss + next_sentence_loss
-
-        if not return_dict:
-            output = (prediction_scores, seq_relationship_score) + outputs[2:]
-            return ((total_loss,) + output) if total_loss is not None else output
-
-        return BertForPreTrainingOutput(
-            loss=total_loss,
-            prediction_logits=prediction_scores,
-            seq_relationship_logits=seq_relationship_score,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
-        )
-
-class BertLMHeadModel(BertPreTrainedModel):
-    """BertLMHeadModel"""
-    _tied_weights_keys = ["predictions.decoder.bias", "cls.predictions.decoder.weight"]
+class XLMRobertaForCausalLM(XLMRobertaPreTrainedModel):
+    """XLMRobertaForCausalLM"""
+    _tied_weights_keys = ["lm_head.decoder.weight", "lm_head.decoder.bias"]
 
     def __init__(self, config):
         super().__init__(config)
 
         if not config.is_decoder:
-            logger.warning("If you want to use `BertLMHeadModel` as a standalone, add `is_decoder=True.`")
+            logger.warning("If you want to use `XLMRobertaLMHeadModel` as a standalone, add `is_decoder=True.`")
 
-        self.bert = BertModel(config, add_pooling_layer=False)
-        self.cls = BertOnlyMLMHead(config)
+        self.roberta = XLMRobertaModel(config, add_pooling_layer=False)
+        self.lm_head = XLMRobertaLMHead(config)
 
         # Initialize weights and apply final processing
         self.post_init()
 
     def get_output_embeddings(self):
-        return self.cls.predictions.decoder
+        return self.lm_head.decoder
 
     def set_output_embeddings(self, new_embeddings):
-        self.cls.predictions.decoder = new_embeddings
+        self.lm_head.decoder = new_embeddings
 
     def construct(
         self,
@@ -956,17 +835,60 @@ class BertLMHeadModel(BertPreTrainedModel):
         encoder_hidden_states: Optional[mindspore.Tensor] = None,
         encoder_attention_mask: Optional[mindspore.Tensor] = None,
         labels: Optional[mindspore.Tensor] = None,
-        past_key_values: Optional[List[mindspore.Tensor]] = None,
+        past_key_values: Tuple[Tuple[mindspore.Tensor]] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ):
+    ) -> Union[Tuple[mindspore.Tensor], CausalLMOutputWithCrossAttentions]:
+        r"""
+        encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+            Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
+            the model is configured as a decoder.
+        encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used in
+            the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
+
+            - 1 for tokens that are **not masked**,
+            - 0 for tokens that are **masked**.
+
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
+            `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
+            ignored (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
+            Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
+
+            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
+            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
+            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+        use_cache (`bool`, *optional*):
+            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
+            `past_key_values`).
+
+        Returns:
+
+        Example:
+
+        ```python
+        >>> from transformers import AutoTokenizer, XLMRobertaForCausalLM, AutoConfig
+        >>> import torch
+
+        >>> tokenizer = AutoTokenizer.from_pretrained("roberta-base")
+        >>> config = AutoConfig.from_pretrained("roberta-base")
+        >>> config.is_decoder = True
+        >>> model = XLMRobertaForCausalLM.from_pretrained("roberta-base", config=config)
+
+        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+        >>> outputs = model(**inputs)
+
+        >>> prediction_logits = outputs.logits
+        ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None:
             use_cache = False
 
-        outputs = self.bert(
+        outputs = self.roberta(
             input_ids,
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
@@ -983,14 +905,15 @@ class BertLMHeadModel(BertPreTrainedModel):
         )
 
         sequence_output = outputs[0]
-        prediction_scores = self.cls(sequence_output)
+        prediction_scores = self.lm_head(sequence_output)
 
         lm_loss = None
         if labels is not None:
             # we are doing next-token prediction; shift prediction scores and input ids by one
             shifted_prediction_scores = prediction_scores[:, :-1, :]
             labels = labels[:, 1:]
-            lm_loss = ops.cross_entropy(shifted_prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            loss_fct = CrossEntropyLoss()
+            lm_loss = loss_fct(shifted_prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (prediction_scores,) + outputs[2:]
@@ -1005,33 +928,17 @@ class BertLMHeadModel(BertPreTrainedModel):
             cross_attentions=outputs.cross_attentions,
         )
 
-    def prepare_inputs_for_generation(
-        self, input_ids, past_key_values=None, attention_mask=None, use_cache=True
-    ):
+    def prepare_inputs_for_generation(self, input_ids, past_key_values=None, attention_mask=None, **model_kwargs):
         input_shape = input_ids.shape
         # if model is used as a decoder in encoder-decoder model, the decoder attention mask is created on the fly
         if attention_mask is None:
             attention_mask = input_ids.new_ones(input_shape)
 
-        # cut decoder_input_ids if past_key_values is used
+        # cut decoder_input_ids if past is used
         if past_key_values is not None:
-            past_length = past_key_values[0][0].shape[2]
+            input_ids = input_ids[:, -1:]
 
-            # Some generation methods already pass only the last input ID
-            if input_ids.shape[1] > past_length:
-                remove_prefix_length = past_length
-            else:
-                # Default to old behavior: keep only final ID
-                remove_prefix_length = input_ids.shape[1] - 1
-
-            input_ids = input_ids[:, remove_prefix_length:]
-
-        return {
-            "input_ids": input_ids,
-            "attention_mask": attention_mask,
-            "past_key_values": past_key_values,
-            "use_cache": use_cache,
-        }
+        return {"input_ids": input_ids, "attention_mask": attention_mask, "past_key_values": past_key_values}
 
     def _reorder_cache(self, past_key_values, beam_idx):
         reordered_past = ()
@@ -1042,30 +949,30 @@ class BertLMHeadModel(BertPreTrainedModel):
         return reordered_past
 
 
-class BertForMaskedLM(BertPreTrainedModel):
-    """BertForMaskedLM"""
-    _tied_weights_keys = ["predictions.decoder.bias", "cls.predictions.decoder.weight"]
+class XLMRobertaForMaskedLM(XLMRobertaPreTrainedModel):
+    """XLMRobertaForMaskedLM"""
+    _tied_weights_keys = ["lm_head.decoder.weight", "lm_head.decoder.bias"]
 
     def __init__(self, config):
         super().__init__(config)
 
         if config.is_decoder:
             logger.warning(
-                "If you want to use `BertForMaskedLM` make sure `config.is_decoder=False` for "
+                "If you want to use `XLMRobertaForMaskedLM` make sure `config.is_decoder=False` for "
                 "bi-directional self-attention."
             )
 
-        self.bert = BertModel(config, add_pooling_layer=False)
-        self.cls = BertOnlyMLMHead(config)
+        self.roberta = XLMRobertaModel(config, add_pooling_layer=False)
+        self.lm_head = XLMRobertaLMHead(config)
 
         # Initialize weights and apply final processing
         self.post_init()
 
     def get_output_embeddings(self):
-        return self.cls.predictions.decoder
+        return self.lm_head.decoder
 
     def set_output_embeddings(self, new_embeddings):
-        self.cls.predictions.decoder = new_embeddings
+        self.lm_head.decoder = new_embeddings
 
     def construct(
         self,
@@ -1081,17 +988,18 @@ class BertForMaskedLM(BertPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ):
+    ) -> Union[Tuple[mindspore.Tensor], MaskedLMOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
             config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
             loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+        kwargs (`Dict[str, any]`, optional, defaults to *{}*):
+            Used to hide legacy arguments that have been deprecated.
         """
-
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        outputs = self.bert(
+        outputs = self.roberta(
             input_ids,
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
@@ -1104,13 +1012,15 @@ class BertForMaskedLM(BertPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-
         sequence_output = outputs[0]
-        prediction_scores = self.cls(sequence_output)
+        prediction_scores = self.lm_head(sequence_output)
 
         masked_lm_loss = None
         if labels is not None:
-            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            # move labels to correct device to enable model parallelism
+            labels = labels.to(prediction_scores.device)
+            loss_fct = CrossEntropyLoss()
+            masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (prediction_scores,) + outputs[2:]
@@ -1123,94 +1033,48 @@ class BertForMaskedLM(BertPreTrainedModel):
             attentions=outputs.attentions,
         )
 
-    def prepare_inputs_for_generation(self, input_ids, attention_mask=None):
-        input_shape = input_ids.shape
-        effective_batch_size = input_shape[0]
 
-        #  add a dummy token
-        if self.config.pad_token_id is None:
-            raise ValueError("The PAD token should be defined for generation")
+# Copied from transformers.models.roberta.modeling_roberta.RobertaLMHead
+class XLMRobertaLMHead(nn.Cell):
+    """Roberta Head for masked language modeling."""
 
-        attention_mask = ops.cat([attention_mask, attention_mask.new_zeros((attention_mask.shape[0], 1))], axis=-1)
-        dummy_token = ops.full(
-            (effective_batch_size, 1), self.config.pad_token_id, dtype=mindspore.int64)
-        input_ids = ops.cat([input_ids, dummy_token], axis=1)
-
-        return {"input_ids": input_ids, "attention_mask": attention_mask}
-
-
-class BertForNextSentencePrediction(BertPreTrainedModel):
-    """BertForNextSentencePrediction"""
     def __init__(self, config):
-        super().__init__(config)
+        super().__init__()
+        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
 
-        self.bert = BertModel(config)
-        self.cls = BertOnlyNSPHead(config)
+        self.decoder = nn.Dense(config.hidden_size, config.vocab_size)
+        self.bias = Parameter(ops.zeros(config.vocab_size), 'bias')
+        self.decoder.bias = self.bias
 
-        # Initialize weights and apply final processing
-        self.post_init()
+    def construct(self, features, **kwargs):
+        x = self.dense(features)
+        x = ops.gelu(x)
+        x = self.layer_norm(x)
 
-    def construct(
-        self,
-        input_ids: Optional[mindspore.Tensor] = None,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        token_type_ids: Optional[mindspore.Tensor] = None,
-        position_ids: Optional[mindspore.Tensor] = None,
-        head_mask: Optional[mindspore.Tensor] = None,
-        inputs_embeds: Optional[mindspore.Tensor] = None,
-        labels: Optional[mindspore.Tensor] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ):
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        # project back to size of vocabulary with bias
+        x = self.decoder(x)
 
-        outputs = self.bert(
-            input_ids,
-            attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
-            position_ids=position_ids,
-            head_mask=head_mask,
-            inputs_embeds=inputs_embeds,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-        )
+        return x
 
-        pooled_output = outputs[1]
-
-        seq_relationship_scores = self.cls(pooled_output)
-
-        next_sentence_loss = None
-        if labels is not None:
-            next_sentence_loss = ops.cross_entropy(seq_relationship_scores.view(-1, 2), labels.view(-1))
-
-        if not return_dict:
-            output = (seq_relationship_scores,) + outputs[2:]
-            return ((next_sentence_loss,) + output) if next_sentence_loss is not None else output
-
-        return NextSentencePredictorOutput(
-            loss=next_sentence_loss,
-            logits=seq_relationship_scores,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
-        )
+    def _tie_weights(self):
+        # To tie those two weights if they get disconnected (on TPU or when the bias is resized)
+        # For accelerate compatibility and to not break backward compatibility
+        if self.decoder.bias.device.type == "meta":
+            self.decoder.bias = self.bias
+        else:
+            self.bias = self.decoder.bias
 
 
-class BertForSequenceClassification(BertPreTrainedModel):
-    """Bert Model for classification tasks"""
-
+class XLMRobertaForSequenceClassification(XLMRobertaPreTrainedModel):
+    """XLMRobertaForSequenceClassification"""
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.config = config
 
-        self.bert = BertModel(config)
-        classifier_dropout = (
-            config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
-        )
-        self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
+        self.roberta = XLMRobertaModel(config, add_pooling_layer=False)
+        self.classifier = XLMRobertaClassificationHead(config)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1227,10 +1091,16 @@ class BertForSequenceClassification(BertPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ):
+    ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
+        r"""
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        outputs = self.bert(
+        outputs = self.roberta(
             input_ids,
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
@@ -1241,31 +1111,34 @@ class BertForSequenceClassification(BertPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-
-        pooled_output = outputs[1]
-
-        pooled_output = self.dropout(pooled_output)
-        logits = self.classifier(pooled_output)
+        sequence_output = outputs[0]
+        logits = self.classifier(sequence_output)
 
         loss = None
         if labels is not None:
+            # move labels to correct device to enable model parallelism
+            labels = labels.to(logits.device)
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int32 or labels.dtype == mindspore.int64):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
+                loss_fct = MSELoss()
                 if self.num_labels == 1:
-                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                    loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = ops.mse_loss(logits, labels)
+                    loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+                loss_fct = BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels)
+
         if not return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
@@ -1278,17 +1151,14 @@ class BertForSequenceClassification(BertPreTrainedModel):
         )
 
 
-class BertForMultipleChoice(BertPreTrainedModel):
-    """BertForMultipleChoice"""
+class XLMRobertaForMultipleChoice(XLMRobertaPreTrainedModel):
+    """XLMRobertaForMultipleChoice"""
     def __init__(self, config):
         super().__init__(config)
 
-        self.bert = BertModel(config)
-        classifier_dropout = (
-            config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
-        )
-        self.dropout = nn.Dropout(p=classifier_dropout)
-        self.classifier = nn.Dense(config.hidden_size, 1)
+        self.roberta = XLMRobertaModel(config)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.classifier = nn.Linear(config.hidden_size, 1)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1296,18 +1166,18 @@ class BertForMultipleChoice(BertPreTrainedModel):
     def construct(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
-        attention_mask: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
         inputs_embeds: Optional[mindspore.Tensor] = None,
-        labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ):
+    ) -> Union[Tuple[mindspore.Tensor], MultipleChoiceModelOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
             num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
             `input_ids` above)
@@ -1315,28 +1185,27 @@ class BertForMultipleChoice(BertPreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
 
-        input_ids = input_ids.view(-1, input_ids.size(-1)) if input_ids is not None else None
-        attention_mask = attention_mask.view(-1, attention_mask.size(-1)) if attention_mask is not None else None
-        token_type_ids = token_type_ids.view(-1, token_type_ids.size(-1)) if token_type_ids is not None else None
-        position_ids = position_ids.view(-1, position_ids.size(-1)) if position_ids is not None else None
-        inputs_embeds = (
+        flat_input_ids = input_ids.view(-1, input_ids.size(-1)) if input_ids is not None else None
+        flat_position_ids = position_ids.view(-1, position_ids.size(-1)) if position_ids is not None else None
+        flat_token_type_ids = token_type_ids.view(-1, token_type_ids.size(-1)) if token_type_ids is not None else None
+        flat_attention_mask = attention_mask.view(-1, attention_mask.size(-1)) if attention_mask is not None else None
+        flat_inputs_embeds = (
             inputs_embeds.view(-1, inputs_embeds.size(-2), inputs_embeds.size(-1))
             if inputs_embeds is not None
             else None
         )
 
-        outputs = self.bert(
-            input_ids,
-            attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
-            position_ids=position_ids,
+        outputs = self.roberta(
+            flat_input_ids,
+            position_ids=flat_position_ids,
+            token_type_ids=flat_token_type_ids,
+            attention_mask=flat_attention_mask,
             head_mask=head_mask,
-            inputs_embeds=inputs_embeds,
+            inputs_embeds=flat_inputs_embeds,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-
         pooled_output = outputs[1]
 
         pooled_output = self.dropout(pooled_output)
@@ -1345,7 +1214,10 @@ class BertForMultipleChoice(BertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(reshaped_logits, labels)
+            # move labels to correct device to enable model parallelism
+            labels = labels.to(reshaped_logits.device)
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
@@ -1359,13 +1231,13 @@ class BertForMultipleChoice(BertPreTrainedModel):
         )
 
 
-class BertForTokenClassification(BertPreTrainedModel):
-    """BertForTokenClassification"""
+class XLMRobertaForTokenClassification(XLMRobertaPreTrainedModel):
+    """XLMRobertaForTokenClassification"""
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
 
-        self.bert = BertModel(config, add_pooling_layer=False)
+        self.roberta = XLMRobertaModel(config, add_pooling_layer=False)
         classifier_dropout = (
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
@@ -1387,14 +1259,14 @@ class BertForTokenClassification(BertPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ):
+    ) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        outputs = self.bert(
+        outputs = self.roberta(
             input_ids,
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
@@ -1413,7 +1285,10 @@ class BertForTokenClassification(BertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            # move labels to correct device to enable model parallelism
+            labels = labels.to(logits.device)
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1427,13 +1302,36 @@ class BertForTokenClassification(BertPreTrainedModel):
         )
 
 
-class BertForQuestionAnswering(BertPreTrainedModel):
-    """BertForQuestionAnswering"""
+# Copied from transformers.models.roberta.modeling_roberta.RobertaClassificationHead with Roberta->XLMRoberta
+class XLMRobertaClassificationHead(nn.Cell):
+    """Head for sentence-level classification tasks."""
+
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        classifier_dropout = (
+            config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
+        )
+        self.dropout = nn.Dropout(p=classifier_dropout)
+        self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
+
+    def construct(self, features, **kwargs):
+        x = features[:, 0, :]  # take <s> token (equiv. to [CLS])
+        x = self.dropout(x)
+        x = self.dense(x)
+        x = ops.tanh(x)
+        x = self.dropout(x)
+        x = self.out_proj(x)
+        return x
+
+
+class XLMRobertaForQuestionAnswering(XLMRobertaPreTrainedModel):
+    """XLMRobertaForQuestionAnswering"""
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
 
-        self.bert = BertModel(config, add_pooling_layer=False)
+        self.roberta = XLMRobertaModel(config, add_pooling_layer=False)
         self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
@@ -1452,10 +1350,20 @@ class BertForQuestionAnswering(BertPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ):
+    ) -> Union[Tuple[mindspore.Tensor], QuestionAnsweringModelOutput]:
+        r"""
+        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the start of the labelled span for computing the token classification loss.
+            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+            are not taken into account for computing the loss.
+        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the end of the labelled span for computing the token classification loss.
+            Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
+            are not taken into account for computing the loss.
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        outputs = self.bert(
+        outputs = self.roberta(
             input_ids,
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
@@ -1477,17 +1385,18 @@ class BertForQuestionAnswering(BertPreTrainedModel):
         total_loss = None
         if start_positions is not None and end_positions is not None:
             # If we are on multi-GPU, split add a dimension
-            if len(start_positions.size()) > 1:
+            if len(start_positions.shape) > 1:
                 start_positions = start_positions.squeeze(-1)
-            if len(end_positions.size()) > 1:
+            if len(end_positions.shape) > 1:
                 end_positions = end_positions.squeeze(-1)
             # sometimes the start/end positions are outside our model inputs, we ignore these terms
             ignored_index = start_logits.size(1)
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
-            end_loss = ops.cross_entropy(end_logits, end_positions)
+            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:
@@ -1503,7 +1412,28 @@ class BertForQuestionAnswering(BertPreTrainedModel):
         )
 
 
+def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_length=0):
+    """
+    Replace non-padding symbols with their position numbers. Position numbers begin at padding_idx+1. Padding symbols
+    are ignored. This is modified from fairseq's `utils.make_positions`.
+
+    Args:
+        x: mindspore.Tensor x:
+
+    Returns: mindspore.Tensor
+    """
+    # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
+    mask = input_ids.ne(padding_idx).int()
+    incremental_indices = (ops.cumsum(mask, axis=1).astype(mask.dtype) + past_key_values_length) * mask
+    return incremental_indices.long() + padding_idx
+
 __all__ = [
-    'BertEmbeddings', 'BertAttention', 'BertEncoder', 'BertIntermediate', 'BertLayer',
-    'BertModel', 'BertForPretraining', 'BertLMPredictionHead', 'BertForSequenceClassification'
-]
+        "XLMRobertaForCausalLM",
+        "XLMRobertaForMaskedLM",
+        "XLMRobertaForMultipleChoice",
+        "XLMRobertaForQuestionAnswering",
+        "XLMRobertaForSequenceClassification",
+        "XLMRobertaForTokenClassification",
+        "XLMRobertaModel",
+        "XLMRobertaPreTrainedModel",
+    ]

@@ -22,12 +22,12 @@ from mindspore.dataset.text import Vocab as msVocab
 from tokenizers import Tokenizer
 from tokenizers.implementations import BertWordPieceTokenizer
 from mindnlp.vocab import Vocab
-from mindnlp.configs import MINDNLP_TOKENIZER_CONFIG_URL_BASE
-from .bert_config import BERT_SUPPORT_LIST
+from mindnlp.configs import MS_TOKENIZER_CONFIG_URL_BASE
+from .configuration_bert import BERT_SUPPORT_LIST
 from ...tokenization_utils import PreTrainedTokenizer
 
 PRETRAINED_VOCAB_MAP = {
-    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format('bert', model) for model in BERT_SUPPORT_LIST
+    model: MS_TOKENIZER_CONFIG_URL_BASE.format(model) for model in BERT_SUPPORT_LIST
 }
 
 
@@ -42,11 +42,6 @@ PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
     "bert-base-german-cased": 512,
     "bert-large-uncased-whole-word-masking": 512,
     "bert-large-cased-whole-word-masking": 512,
-    "bert-large-uncased-whole-word-masking-finetuned-squad": 512,
-    "bert-large-cased-whole-word-masking-finetuned-squad": 512,
-    "bert-base-cased-finetuned-mrpc": 512,
-    "bert-base-german-dbmdz-cased": 512,
-    "bert-base-german-dbmdz-uncased": 512,
 }
 
 

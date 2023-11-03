@@ -615,7 +615,7 @@ class GenerationMixin:
             input_ids_string = "decoder_input_ids" if self.config.is_encoder_decoder else "input_ids"
             logging.warning(
                 "Input length of %s is %d, but `max_length` is set to %d. This can lead to unexpected behavior. "
-                "You should consider increasing `max_new_tokens`.", 
+                "You should consider increasing `max_new_tokens`.",
                 input_ids_string,
                 input_ids_seq_length,
                 generation_config.max_length
