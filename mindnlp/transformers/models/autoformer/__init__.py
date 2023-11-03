@@ -15,3 +15,10 @@
 """
 autoformer Model.
 """
+from . import configuration_autoformer, modeling_autoformer
+from .modeling_autoformer import *
+from .configuration_autoformer import *
+
+__all__ = []
+__all__.extend(modeling_autoformer.__all__)
+__all__.extend(configuration_autoformer.__all__)
