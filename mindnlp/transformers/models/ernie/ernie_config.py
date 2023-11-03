@@ -17,7 +17,7 @@ Ernie config
 """
 import re
 from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 ERNIE_SUPPORT_LIST = [
     "uie-base",
@@ -52,7 +52,7 @@ CONFIG_ARCHIVE_MAP = {
 }
 
 
-class ErnieConfig(PreTrainedConfig):
+class ErnieConfig(PretrainedConfig):
     """
     Configuration for Ernie.
     """
@@ -103,7 +103,7 @@ class ErnieConfig(PreTrainedConfig):
         self.use_task_id = use_task_id
 
 
-class UIEConfig(PreTrainedConfig):
+class UIEConfig(PretrainedConfig):
     """
     Configuration for UIE.
     """

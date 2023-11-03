@@ -20,6 +20,7 @@ from mindnlp.dataset import load_dataset
 from mindnlp.utils import less_min_pynative_first
 from mindnlp.workflow.workflow import Workflow
 from mindnlp.vocab import Vocab
+from mindnlp import injection
 
 if less_min_pynative_first:
     from mindspore import context

@@ -17,7 +17,7 @@
 
 """ Bloom configuration"""
 from mindnlp.configs import HF_CONFIG_URL_BASE
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 
 BLOOM_SUPPORT_LIST = [
@@ -32,7 +32,7 @@ CONFIG_ARCHIVE_MAP = {
     model: HF_CONFIG_URL_BASE.format(model) for model in BLOOM_SUPPORT_LIST
 }
 
-class BloomConfig(PreTrainedConfig):
+class BloomConfig(PretrainedConfig):
     """Bloom Config"""
     model_type = "bloom"
     keys_to_ignore_at_inference = ["past_key_values"]

@@ -20,10 +20,10 @@
 # limitations under the License.
 """ Codellama model configuration"""
 
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 
-class CodellamaConfig(PreTrainedConfig):
+class CodellamaConfig(PretrainedConfig):
     r"""
     ```python
     >>> from transformers import CodellamaModel, CodellamaConfig

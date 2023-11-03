@@ -16,12 +16,12 @@
 # ============================================================================
 """ Longformer configuration"""
 from typing import List, Union
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 
 LONGFORMER_SUPPORT_LIST = ["allenai/longformer-base-4096"]
 
-class LongformerConfig(PreTrainedConfig):
+class LongformerConfig(PretrainedConfig):
     r"""
     Example:
 

@@ -17,7 +17,7 @@
 # ============================================================================
 """ XLM-RoBERTa configuration"""
 from mindnlp.configs import MS_CONFIG_URL_BASE
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 XLM_ROBERTA_SUPPORT_LIST = [
     "xlm-roberta-base",
@@ -28,7 +28,7 @@ CONFIG_ARCHIVE_MAP = {
     model: MS_CONFIG_URL_BASE.format(model) for model in XLM_ROBERTA_SUPPORT_LIST
 }
 
-class XLMRobertaConfig(PreTrainedConfig):
+class XLMRobertaConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`XLMRobertaModel`] or a [`TFXLMRobertaModel`]. It
     is used to instantiate a XLM-RoBERTa model according to the specified arguments, defining the model architecture.

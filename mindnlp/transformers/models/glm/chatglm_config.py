@@ -14,13 +14,13 @@
 # ============================================================================
 """ ChatGLM model configuration """
 from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 CONFIG_ARCHIVE_MAP = {
     'chatglm-6b': MINDNLP_CONFIG_URL_BASE.format('glm', 'chatglm-6b')
 }
 
-class ChatGLMConfig(PreTrainedConfig):
+class ChatGLMConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`~ChatGLMModel`].
     It is used to instantiate an ChatGLM model according to the specified arguments, defining the model

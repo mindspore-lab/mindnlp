@@ -8,7 +8,7 @@
 PanGu_Alpha Models config
 """
 from mindnlp.configs import HF_CONFIG_URL_BASE
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 
 
@@ -19,7 +19,7 @@ CONFIG_ARCHIVE_MAP = {
 }
 
 
-class PanGuAlphaConfig(PreTrainedConfig):
+class PanGuAlphaConfig(PretrainedConfig):
     """
     Configuration for PanGu_Alpha
     """

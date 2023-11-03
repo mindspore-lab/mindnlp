@@ -16,7 +16,7 @@
 T5 Model config
 """
 from mindnlp.configs import MS_CONFIG_URL_BASE
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 __all__ = ['T5Config']
 
@@ -26,7 +26,7 @@ CONFIG_ARCHIVE_MAP = {
     model: MS_CONFIG_URL_BASE.format(model) for model in T5_SUPPORT_LIST
 }
 
-class T5Config(PreTrainedConfig):
+class T5Config(PretrainedConfig):
     """
     Configuration for T5
     """

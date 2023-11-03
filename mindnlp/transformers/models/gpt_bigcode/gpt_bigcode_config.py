@@ -18,7 +18,7 @@
 """MindNLP gpt_bigcode config"""
 
 from mindnlp.configs import MS_CONFIG_URL_BASE
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 GPT_BIGCODE_SUPPORT_LIST = ["gpt_bigcode-santacoder"]
 
@@ -29,7 +29,7 @@ CONFIG_ARCHIVE_MAP = {
 __all__ = ['GPTBigCodeConfig']
 
 
-class GPTBigCodeConfig(PreTrainedConfig):
+class GPTBigCodeConfig(PretrainedConfig):
     r"""
     GPT BigCode config
     """
