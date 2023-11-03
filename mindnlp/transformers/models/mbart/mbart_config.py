@@ -15,7 +15,7 @@
 # limitations under the License.
 """ MBART model configuration"""
 
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 
 MBART_PRETRAINED_CONFIG_ARCHIVE_MAP = {
@@ -24,7 +24,7 @@ MBART_PRETRAINED_CONFIG_ARCHIVE_MAP = {
 }
 
 
-class MBartConfig(PreTrainedConfig):
+class MBartConfig(PretrainedConfig):
     """
     Configuration for MBart
     """
