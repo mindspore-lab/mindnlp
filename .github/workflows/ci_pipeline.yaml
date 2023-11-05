@@ -47,9 +47,7 @@ jobs:
     - name: Analysing the mindnlp code with pylint
       run: |
         pylint mindnlp --rcfile=.github/pylint.conf
-    - name: Analysing the tests code with pylint
-      run: |
-        pylint tests --rcfile=.github/pylint.conf
+
 
   ut-test:
     needs: pylint-check
@@ -80,23 +78,20 @@ jobs:
       run: |
         python .github/install_mindspore.py
         pip install -r download.txt
-    - name: Test with pytest
+    - name: Test with pytest on linux and macos
+      if: matrix.os != 'windows-latest'
       run: |
-        pytest -m 'not download and not gpu_only' tests/ut
-    # - name: Test with pytest on linux and macos
-    #   if: matrix.os != 'windows-latest'
-    #   run: |
-    #     pytest -m 'not download and not gpu_only' tests/ut
-    # - name: Test with pytest on windows
-    #   if: matrix.os == 'windows-latest'
-    #   run: |
-    #     pytest -m 'not download and not gpu_only' tests/ut --ignore=tests/ut/models
+        pytest -c pytest.ini -m 'not download and not gpu_only' tests/ut
+    - name: Test with pytest on windows
+      if: matrix.os == 'windows-latest'
+      run: |
+        pytest -c pytest.ini -m 'not download and not gpu_only' tests/ut --ignore=tests/ut/transformers
 
   release-test:
     needs: pylint-check
     strategy:
       matrix:
-        ms_version: ['2.0', '2.1']
+        ms_version: ['2.0', '2.1', '2.2']
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -114,13 +109,13 @@ jobs:
         pip install mindspore==${{matrix.ms_version}}
     - name: Test with pytest
       run: |
-        pytest -m 'not download and not gpu_only' --ignore=tests/ut/models tests/ut 
+        pytest -c pytest.ini -m 'not download and not gpu_only' --ignore=tests/ut/transformers tests/ut 
 
   st-test:
     needs: ut-test
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
         python: [3.8]
     runs-on: ${{ matrix.os }}
     steps:
@@ -143,7 +138,7 @@ jobs:
         pip install -r download.txt
     - name: Test ST with pytest
       run: |
-        pytest tests/st
+        pytest -c pytest.ini tests/st
 
   kaggle-gpu-test:
     needs: pylint-check

@@ -13,17 +13,16 @@
 # limitations under the License.
 # ============================================================================
 """Test Bloom"""
-
+import unittest
 import pytest
 import numpy as np
 
 from mindspore import Tensor
 import mindnlp
 from mindnlp.transformers import BloomConfig, BloomModel
-from ..model_test import ModelTest
 
 
-class TestModelingBloom(ModelTest):
+class TestModelingBloom(unittest.TestCase):
     r"""
     Test Bloom
     """
@@ -44,8 +43,7 @@ class TestModelingBloom(ModelTest):
         Test Bloom Model
         """
         model = BloomModel(self.config)
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
+
 
         input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512)))
 

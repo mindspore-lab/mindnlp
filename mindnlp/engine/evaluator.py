@@ -17,7 +17,7 @@ Evaluator for testing.
 """
 from inspect import signature
 from tqdm.autonotebook import tqdm
-from mindspore import log, mutable
+from mindspore import log
 from mindnlp import ms_jit
 from mindnlp.abc import Metric
 from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContext
@@ -52,9 +52,9 @@ class Evaluator:
         self.eval_func = self._prepare_eval_func(network, jit)
 
     def _prepare_eval_func(self, network, jit):
-        def _run_step(inputs):
+        def _run_step(*args, **kwargs):
             """Core process of each step."""
-            outputs = network(*inputs)
+            outputs = network(*args, **kwargs)
             return outputs
         if jit:
             return ms_jit(_run_step)
@@ -120,7 +120,7 @@ class Evaluator:
             progress.set_description('Evaluate')
             for data in self.eval_dataset.create_dict_iterator():
                 inputs, tgts = self._data_process(data, tgt_columns)
-                outputs = self.eval_func(inputs)
+                outputs = self.eval_func(**inputs)
                 self._update_metrics(outputs, *tgts)
                 progress.update(1)
 
@@ -160,23 +160,30 @@ class Evaluator:
 
     def _data_process(self, data, tgt_columns):
         """Process data match the network construct"""
-        # prepare input dataset.
         sig = signature(self.network.construct)
         net_args = sig.parameters
-        inputs = ()
+
+        inputs = {}
+        used_col = set()
         for arg in net_args:
             if arg == 'self':
                 continue
             if arg not in data.keys():
-                if str(net_args[arg])[-4:] == 'None':
-                    continue
-            inputs = inputs + (data[arg],)
+                if str(net_args[arg])[-4:] != 'None':
+                    raise ValueError(f'network inputs need `{arg}`, but not found in dataset columns.')
+            else:
+                inputs[arg] = data.get(arg)
+                used_col.add(arg)
+
         # process target dataset.
-        tgt_columns = self._prepare_tgt_columns(tgt_columns)
         tgts = ()
+        tgt_columns = self._prepare_tgt_columns(tgt_columns)
         for tgt_column in tgt_columns:
-            tgts = tgts + (data[tgt_column],)
-        return mutable(inputs), mutable(tgts)
+            if tgt_column in data:
+                tgts = tgts + (data.pop(tgt_column),)
+            else:
+                raise ValueError(f'Not found `{tgt_column}` in dataset, please check dataset column names.')
+        return inputs, tgts
 
     def _prepare_tgt_columns(self, tgt_columns):
         """Check and prepare target columns for training."""
@@ -187,11 +194,11 @@ class Evaluator:
         if isinstance(tgt_columns, str):
             out_columns.append(tgt_columns)
         elif isinstance(tgt_columns, list):
-            if all(isinstance(tgt_column, str) for tgt_column in tgt_columns) is True:
-                out_columns = tgt_columns
-            else:
-                obj = [not isinstance(tgt_column, str) for tgt_column in tgt_columns][0]
-                raise TypeError(f"Expect str of tgt_column. Got {type(obj)}")
+            for col in tgt_columns:
+                if isinstance(col, str):
+                    out_columns.append(col)
+                else:
+                    raise TypeError(f"Expect str of tgt_column. Got {type(col)}")
         else:
             raise TypeError(f"Expect tgt_columns to be list or str. Got {type(tgt_columns)}.")
         return out_columns

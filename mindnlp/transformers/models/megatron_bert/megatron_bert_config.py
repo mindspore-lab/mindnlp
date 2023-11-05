@@ -1,6 +1,6 @@
 """ MEGATRON_BERT model configuration"""
 from mindnlp.configs import HF_CONFIG_URL_BASE
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 __all__ = ['MegatronBertConfig']
 
@@ -14,7 +14,7 @@ CONFIG_ARCHIVE_MAP = {
     model: HF_CONFIG_URL_BASE.format(model) for model in MEGATRONBERT_SUPPORT_LIST
 }
 
-class MegatronBertConfig(PreTrainedConfig):
+class MegatronBertConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`MegatronBertModel`]. It is used to instantiate a
     MEGATRON_BERT model according to the specified arguments, defining the model architecture. Instantiating a

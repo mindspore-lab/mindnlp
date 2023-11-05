@@ -16,7 +16,7 @@
 TinyBert Models config
 """
 from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 TINYBERT_SUPPORT_LIST = ['tinybert_4L_zh', 'tinybert_6L_zh']
 
@@ -24,10 +24,10 @@ CONFIG_ARCHIVE_MAP = {
     model: MINDNLP_CONFIG_URL_BASE.format('tinybert', model) for model in TINYBERT_SUPPORT_LIST
 }
 
-class TinyBertConfig(PreTrainedConfig):
+class TinyBertConfig(PretrainedConfig):
     """
     Configuration class to store the configuration of a `BertModel`.
-    
+
     Args:
         vocab_size_or_config_json_file: Vocabulary size of `inputs_ids` in `BertModel`.
         hidden_size: Size of the encoder layers and the pooler layer.

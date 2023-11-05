@@ -15,6 +15,7 @@
 # limitations under the License.
 # ============================================================================
 """Test Bart"""
+import unittest
 import mindspore
 import numpy as np
 from mindspore import Tensor
@@ -22,10 +23,9 @@ from mindspore import Tensor
 import mindnlp
 from mindnlp.transformers import BartConfig
 from mindnlp.transformers.models.bart import bart
-from ..model_test import ModelTest
 
 
-class TestModelingBart(ModelTest):
+class TestModelingBart(unittest.TestCase):
     """
     Test Bart
     """
@@ -35,18 +35,26 @@ class TestModelingBart(ModelTest):
         Set up.
         """
         super().setUp()
-        self.input_ids = np.array([
+        self.input_ids = np.array(
+            [
                 [71, 82, 18, 33, 46, 91, 2],
                 [68, 34, 26, 58, 30, 82, 2],
-            ])
-        self.config = BartConfig(vocab_size=1024,max_position_embeddings=128,d_model=128)
+            ]
+        )
+        self.config = BartConfig(
+            vocab_size=1024, max_position_embeddings=128, d_model=128
+        )
 
     def test_bart_learned_positional_embedding(self):
         """
         Test BartLearnedPositionalEmbedding
         """
-        model = bart.BartLearnedPositionalEmbedding(self.config.max_position_embeddings,self.config.d_model)
-        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (1, 10)), mindspore.int32)
+        model = bart.BartLearnedPositionalEmbedding(
+            self.config.max_position_embeddings, self.config.d_model
+        )
+        input_ids = Tensor(
+            np.random.randint(0, self.config.vocab_size, (1, 10)), mindspore.int32
+        )
         outputs = model(input_ids)
         assert outputs.shape == (1, 10, self.config.max_position_embeddings)
 
@@ -60,10 +68,9 @@ class TestModelingBart(ModelTest):
             dropout=self.config.attention_dropout,
         )
 
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
-
-        hidden_states = Tensor(np.random.randn(1, 2, self.config.d_model), mindspore.float32)
+        hidden_states = Tensor(
+            np.random.randn(1, 2, self.config.d_model), mindspore.float32
+        )
         outputs = model(hidden_states)
         assert outputs[0].shape == (1, 2, self.config.d_model)
 
@@ -73,13 +80,12 @@ class TestModelingBart(ModelTest):
         """
         model = bart.BartEncoderLayer(self.config)
 
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
-
-        hidden_states = Tensor(np.random.randn(1, 2, self.config.d_model), mindspore.float32)
+        hidden_states = Tensor(
+            np.random.randn(1, 2, self.config.d_model), mindspore.float32
+        )
         attention_mask = Tensor(np.random.randn(1, 1, 2, 2) > 0, mindspore.bool_)
         layer_head_mask = Tensor(np.random.randn(16) > 0, mindspore.bool_)
-        outputs = model(hidden_states,attention_mask,layer_head_mask)
+        outputs = model(hidden_states, attention_mask, layer_head_mask)
         assert outputs[0].shape == (1, 2, self.config.d_model)
 
     def test_bart_decoder_layer(self):
@@ -88,10 +94,9 @@ class TestModelingBart(ModelTest):
         """
         model = bart.BartDecoderLayer(self.config)
 
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
-
-        hidden_states = Tensor(np.random.randn(1, 2, self.config.d_model), mindspore.float32)
+        hidden_states = Tensor(
+            np.random.randn(1, 2, self.config.d_model), mindspore.float32
+        )
         outputs = model(hidden_states)
         assert outputs[0].shape == (1, 2, self.config.d_model)
 
@@ -106,10 +111,9 @@ class TestModelingBart(ModelTest):
             self.config.classifier_dropout,
         )
 
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
-
-        hidden_states = Tensor(np.random.randn(1, 2, self.config.d_model), mindspore.float32)
+        hidden_states = Tensor(
+            np.random.randn(1, 2, self.config.d_model), mindspore.float32
+        )
         outputs = model(hidden_states)
         assert outputs.shape == (1, 2, 3)
 
@@ -119,10 +123,9 @@ class TestModelingBart(ModelTest):
         """
         model = bart.BartEncoder(self.config)
 
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
-
-        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (1, 2)), mindspore.int32)
+        input_ids = Tensor(
+            np.random.randint(0, self.config.vocab_size, (1, 2)), mindspore.int32
+        )
         outputs = model(input_ids)
         assert outputs[0].shape == (1, 2, self.config.d_model)
 
@@ -132,10 +135,9 @@ class TestModelingBart(ModelTest):
         """
         model = bart.BartDecoder(self.config)
 
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
-
-        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (1, 2)), mindspore.int32)
+        input_ids = Tensor(
+            np.random.randint(0, self.config.vocab_size, (1, 2)), mindspore.int32
+        )
         outputs = model(input_ids)
         assert outputs[0].shape == (1, 2, self.config.d_model)
 
@@ -145,10 +147,9 @@ class TestModelingBart(ModelTest):
         """
         model = bart.BartModel(self.config)
 
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
-
-        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (1, 2)), mindspore.int32)
+        input_ids = Tensor(
+            np.random.randint(0, self.config.vocab_size, (1, 2)), mindspore.int32
+        )
         outputs = model(input_ids)
         assert outputs[0].shape == (1, 2, self.config.d_model)
 
@@ -158,10 +159,9 @@ class TestModelingBart(ModelTest):
         """
         model = bart.BartForConditionalGeneration(self.config)
 
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
-
-        input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (1, 2)), mindspore.int32)
+        input_ids = Tensor(
+            np.random.randint(0, self.config.vocab_size, (1, 2)), mindspore.int32
+        )
         outputs = model(input_ids)
         assert outputs[0].shape == (1, 2, self.config.vocab_size)
 
@@ -170,9 +170,6 @@ class TestModelingBart(ModelTest):
         Test BartForSequenceClassification
         """
         model = bart.BartForSequenceClassification(self.config)
-
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
 
         input_ids = Tensor(self.input_ids, mindspore.int32)
         outputs = model(input_ids)
@@ -184,9 +181,6 @@ class TestModelingBart(ModelTest):
         """
         model = bart.BartForQuestionAnswering(self.config)
 
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
-
         input_ids = Tensor(self.input_ids, mindspore.int32)
         outputs = model(input_ids)
         assert outputs[0].shape == (2, 7)
@@ -196,9 +190,6 @@ class TestModelingBart(ModelTest):
         Test BartForCausalLM
         """
         model = bart.BartForCausalLM(self.config)
-
-        if self.use_amp:
-            model = mindnlp._legacy.amp.auto_mixed_precision(model)
 
         input_ids = Tensor(self.input_ids, mindspore.int32)
         outputs = model(input_ids)

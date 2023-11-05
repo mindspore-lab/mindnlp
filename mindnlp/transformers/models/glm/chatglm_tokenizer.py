@@ -22,7 +22,7 @@ import sentencepiece as spm
 import numpy as np
 
 from ...tokenization_utils import PreTrainedTokenizer
-from ...utils.generic import PaddingStrategy
+from ....utils.generic import PaddingStrategy
 
 PRETRAINED_VOCAB_MAP = {
     'chatglm-6b': 'https://download.mindspore.cn/toolkits/mindnlp/models/glm/chatglm-6b/ice_text.model'

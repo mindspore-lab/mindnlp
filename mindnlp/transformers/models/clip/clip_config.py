@@ -16,11 +16,11 @@
 
 import copy
 import logging
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 
 
-class CLIPVisionConfig(PreTrainedConfig):
+class CLIPVisionConfig(PretrainedConfig):
     """
     Vision configuration for clip
     """
@@ -57,7 +57,7 @@ class CLIPVisionConfig(PreTrainedConfig):
         super().__init__(**kwargs)
 
 
-class CLIPTextConfig(PreTrainedConfig):
+class CLIPTextConfig(PretrainedConfig):
     """
     Text configuration for clip
     """
@@ -95,7 +95,7 @@ class CLIPTextConfig(PreTrainedConfig):
         super().__init__(pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
 
 
-class CLIPConfig(PreTrainedConfig):
+class CLIPConfig(PretrainedConfig):
     """
     Total configuration for clip
     """

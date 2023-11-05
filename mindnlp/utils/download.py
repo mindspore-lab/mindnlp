@@ -22,15 +22,40 @@ import shutil
 import hashlib
 import re
 import json
+import types
+import functools
 from typing import Union, Optional
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 import requests
 from tqdm.autonotebook import tqdm
 from requests.exceptions import ProxyError, SSLError
 
 from mindnlp.configs import DEFAULT_ROOT
 from .errors import ModelNotFoundError
+
+
+def copy_func(f):
+    """Returns a copy of a function f."""
+    # Based on http://stackoverflow.com/a/6528148/190597 (Glenn Maynard)
+    g = types.FunctionType(f.__code__, f.__globals__, name=f.__name__, argdefs=f.__defaults__, closure=f.__closure__)
+    g = functools.update_wrapper(g, f)
+    g.__kwdefaults__ = f.__kwdefaults__
+    return g
+
+def extract_filename_from_url(url):
+    """extract filename from url"""
+    parsed_url = urlparse(url)
+
+    path_segments = parsed_url.path.split('/')
+    file_from_path = path_segments[-1]
+
+    # for modelscope
+    query_params = parse_qs(parsed_url.query)
+    file_from_query = query_params.get('FilePath', [''])[0]
+
+    return file_from_query if file_from_query else file_from_path
+
 
 def get_cache_path():
     r"""
@@ -92,7 +117,7 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None)
     retry_limit = 3
 
     if download_file_name is None:
-        name = os.path.split(url)[-1]
+        name = extract_filename_from_url(url)
     else:
         name = download_file_name
 
@@ -197,7 +222,7 @@ def get_filepath(path: str):
     raise FileNotFoundError(f"{path} is not a valid file or directory.")
 
 
-def cache_file(
+def cached_file(
     filename: str,
     cache_dir: str = None,
     url: str = None,
@@ -229,7 +254,7 @@ def cache_file(
 
     Examples:
         >>> filename = 'aclImdb_v1'
-        >>> path, filename = cache_file(filename)
+        >>> path, filename = cached_file(filename)
         >>> print(path, filename)
         '{home}\.text' 'aclImdb_v1.tar.gz'
 
@@ -390,7 +415,7 @@ def get_from_cache(
         os.makedirs(cache_dir)
 
     if download_file_name is None:
-        filename = re.sub(r".+/", "", url)
+        filename = extract_filename_from_url(url)
     else:
         filename = download_file_name
 
@@ -399,7 +424,7 @@ def get_from_cache(
     if os.path.exists(file_path) and check_md5(file_path, md5sum):
         return file_path
     try:
-        path = http_get(url, cache_dir, md5sum, download_file_name=download_file_name, proxies=proxies)
+        path = http_get(url, cache_dir, md5sum, download_file_name=filename, proxies=proxies)
         return path
     except (ProxyError, SSLError) as exc:
         raise exc
@@ -432,9 +457,9 @@ def try_to_load_from_cache(
         # No cache for this model
         return None
 
-    cached_file = os.path.join(cache_dir, filename)
+    cached_file_ = os.path.join(cache_dir, filename)
 
-    return cached_file if os.path.isfile(cached_file) else None
+    return cached_file_ if os.path.isfile(cached_file_) else None
 
 
 def get_checkpoint_shard_files(

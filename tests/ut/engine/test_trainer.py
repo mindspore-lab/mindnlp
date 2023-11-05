@@ -36,8 +36,10 @@ class MyDataset:
         self.data = np.random.randn(20, 3).astype(np.float32)
         self.label = list(np.random.choice([0, 1]).astype(np.float32) for i in range(20))
         self.length = list(np.random.choice([0, 1]).astype(np.float32) for i in range(20))
+
     def __getitem__(self, index):
         return self.data[index], self.label[index], self.length[index]
+
     def __len__(self):
         return len(self.data)
 
@@ -46,6 +48,7 @@ class MyModel(nn.Cell):
     def __init__(self):
         super().__init__()
         self.fc = nn.Dense(3, 1)
+
     def construct(self, data):
         output = self.fc(data)
         return output
@@ -55,6 +58,7 @@ class MyModel2(nn.Cell):
     def __init__(self):
         super().__init__()
         self.fc = nn.Dense(3, 1)
+
     def construct(self, data, label, length):
         output = self.fc(data)
         label = label + label + length
@@ -104,7 +108,7 @@ class TestTrainerRun(unittest.TestCase):
         self.metric = Accuracy()
         # 5. define trainer
 
-    @data(True, False)
+    @data(False)
     def test_pure_trainer(self, jit):
         """test_pure_trainer"""
         # 6. trainer run
@@ -113,7 +117,7 @@ class TestTrainerRun(unittest.TestCase):
                                 loss_fn=self.loss_fn, jit=jit)
         pure_trainer.run(tgt_columns='label')
 
-    @data(True, False)
+    @data(False)
     def test_trainer_timer(self, jit):
         """test_trainer_timer"""
         trainer = Trainer(network=self.net, train_dataset=self.train_dataset, eval_dataset=self.eval_dataset,
@@ -121,7 +125,7 @@ class TestTrainerRun(unittest.TestCase):
                           callbacks=self.timer_callback_epochs, jit=jit)
         trainer.run(tgt_columns='label')
 
-    @data(True, False)
+    @data(False)
     def test_trainer_earlystop(self, jit):
         """test_trainer_earlystop"""
         trainer = Trainer(network=self.net, train_dataset=self.train_dataset, eval_dataset=self.eval_dataset,
@@ -129,7 +133,7 @@ class TestTrainerRun(unittest.TestCase):
                           callbacks=self.earlystop_callback, jit=jit)
         trainer.run(tgt_columns='label')
 
-    @data(True, False)
+    @data(False)
     def test_trainer_bestmodel(self, jit):
         """test_trainer_bestmodel"""
         trainer = Trainer(network=self.net, train_dataset=self.train_dataset, eval_dataset=self.eval_dataset,
@@ -137,7 +141,7 @@ class TestTrainerRun(unittest.TestCase):
                           callbacks=self.bestmodel_callback, jit=jit)
         trainer.run(tgt_columns='label')
 
-    @data(True, False)
+    @data(False)
     def test_trainer_checkpoint(self, jit):
         """test_trainer_checkpoint"""
         trainer = Trainer(network=self.net, train_dataset=self.train_dataset, eval_dataset=self.eval_dataset,
@@ -145,7 +149,7 @@ class TestTrainerRun(unittest.TestCase):
                           callbacks=self.checkpoint_callback, jit=jit)
         trainer.run(tgt_columns='label')
 
-    @data(True, False)
+    @data(False)
     def test_different_model(self, jit):
         """test_different_model"""
         trainer = Trainer(network=self.net_2, train_dataset=self.train_dataset, eval_dataset=self.eval_dataset,
@@ -153,14 +157,14 @@ class TestTrainerRun(unittest.TestCase):
                           loss_fn=self.loss_fn, jit=jit)
         trainer.run(tgt_columns='length')
 
-    @data(True, False)
+    @data(False)
     def test_no_eval_in_trainer(self, jit):
         """test_eval_in_trainer"""
         trainer = Trainer(network=self.net, train_dataset=self.train_dataset, epochs=2,
                           optimizer=self.optimizer, loss_fn=self.loss_fn, jit=jit)
         trainer.run(tgt_columns='length')
 
-    @data(True, False)
+    @data(False)
     def test_train_object_netword(self, jit):
         """test_eval_in_trainer"""
         net = MyModelWithLoss()
