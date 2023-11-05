@@ -105,7 +105,7 @@ class TestModelingMoss(unittest.TestCase):
         """
         model = self.MossForCausalLM(self.config)
 
-        ms_input = Tensor(np.random.randn(2), dtype=mindspore.int64)
+        ms_input = Tensor(np.random.randint(0, 100, 2), dtype=mindspore.int64)
 
         model_out = model(input_ids=ms_input)
 

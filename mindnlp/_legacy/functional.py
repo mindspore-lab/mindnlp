@@ -1460,49 +1460,78 @@ def sumproduct_pair(left_, right_, sum_dims_, keep_dim_):
 
     return result
 
+ELLIPSIS = 52
 
 def einsum(equation, *operands):
-    operands = list(op for op in operands)
-    op_labels = [[]]
-    lhs = equation.split('->')[0]
+    assert operands, "einsum(): must provide at least one operand"
+
+    arrow_pos = equation.find("->")
+    num_ops = len(operands)
+    op_labels = [[] for _ in range(num_ops)]
+    lhs = equation[0: arrow_pos]
+
     curr_op = 0
-    ELLIPSIS = 52
     found_ell = False
     for i, label in enumerate(lhs):
         if label == ' ':
             continue
         if label == '.':
+            assert not found_ell, f"einsum(): found {curr_op} for operand for which an ellipsis was already found"
+            assert i + 2 < len(lhs) and lhs[i + 1] == '.', f"einsum(): found {curr_op} for operand that is not part of any ellipsis"
             op_labels[curr_op].append(ELLIPSIS)
             found_ell = True
         elif label == ',':
             curr_op += 1
+            assert curr_op < num_ops, "einsum(): fewer operands were provided than specified in the equation"
             found_ell = False
-            op_labels.append([])
         else:
+            assert str.isalpha(label), f"einsum(): invalid subscript given at index {i} in the equation string, subscripts must be in [a-zA-Z]"
             op_labels[curr_op].append(einsum_label_to_index(label))
 
+    assert curr_op == num_ops - 1, "einsum(): more operands were provided than specified in the equation"
+    # Labels must be within [a-zA-Z].
     TOTAL_LABELS = 52
-    label_count = [0]*TOTAL_LABELS
+    label_count = [0] * TOTAL_LABELS
+    # The maximum number of dimensions covered by any ellipsis, needed when
+    # unsqueezing missing dimensions from operands to permute and broadcast
     ell_num_dim = 0
+
+    # Compute label frequency and number of dimensions covered by ellipsis
+    # We do this after parsing labels to make it more readable and simpler
+    # to compute the number of dimensions covered by ellipsis.
     for i, operand in enumerate(operands):
         labels = op_labels[i]
-        shape = ops.shape(operand)
-        ndims = len(shape)
+        ndims = operand.ndim
         nlabels = len(labels)
+        has_ellipsis = False
 
         for label in labels:
             if label == ELLIPSIS:
                 nlabels -= 1
+                has_ellipsis = True
                 ell_num_dim = max(ell_num_dim, ndims - nlabels)
             else:
                 label_count[label] += 1
+        if has_ellipsis:
+            assert nlabels <= ndims, f"einsum(): the number of subscripts in the equation ({nlabels}" \
+                                     f") is more than the number of dimensions ({ndims}) for operand {i}"
+        else:
+            assert nlabels == ndims, f"einsum(): the number of subscripts in the equation ({nlabels}" \
+                                     f") does not match the number of dimensions (" \
+                                     f"{ndims}) for operand {i} and no ellipsis was given"
 
-    label_perm_index = [-1]*TOTAL_LABELS
+    # We want to align the dimensions of every input tensor to have
+    # shape out_dims + sum_dims. For this, we create a mapping of label
+    # to index into the permuted shape.
+    label_perm_index = [-1] * TOTAL_LABELS
+    # Current index in the permuted shape
     perm_index = 0
+    # Start index of ellipsis dimensions in the permuted shape
     ell_index = 0
     found_ell = False
 
-    if len(equation.split('->')) == 1:
+    if arrow_pos == -1:
+    # Implicit output is ellipsis (...) + labels seen only once
         perm_index = ell_num_dim
         found_ell = True
         for label, _label_count in enumerate(label_count):
@@ -1510,89 +1539,100 @@ def einsum(equation, *operands):
                 label_perm_index[label] = perm_index
                 perm_index += 1
     else:
-        rhs = equation.split('->')[1]
+        rhs = equation[arrow_pos + 2:]
         for i, label in enumerate(rhs):
             if label == ' ':
                 continue
             if label == '.':
+                assert not found_ell, "einsum(): found \'.\' for output but an ellipsis (...) was already found"
+                assert i + 2 < len(rhs) and rhs[i + 1] == '.', "einsum(): found \'.\' for output that is not part of any ellipsis (...)"
                 ell_index = perm_index
                 perm_index += ell_num_dim
                 found_ell = True
             else:
+                assert str.isalpha(label), f"einsum(): invalid subscript given at index {len(lhs) + 2 + i} " \
+                                           f"in the equation string, subscripts must be in [a-zA-Z]"
+
                 index = einsum_label_to_index(label)
                 label_perm_index[index] = perm_index
                 perm_index += 1
 
     out_size = perm_index
-    if found_ell is False:
+    if not found_ell:
         ell_index = perm_index
         perm_index += ell_num_dim
 
     for label in range(TOTAL_LABELS):
         if label_count[label] > 0 and label_perm_index[label] == -1:
-
             label_perm_index[label] = perm_index
             perm_index += 1
 
+    # Here we unsqueeze missing dimensions to make all operands have the same
+    # number of dimensions. We take diagonals for repeated labels within the
+    # same operand. Finally we permute the operands to align dimensions as
+    # per the perm_out_index we computed above.
     permuted_operands = []
     for i, operand in enumerate(operands):
-        perm_shape = [-1]*perm_index
-        label_dim = [-1]*TOTAL_LABELS
+        perm_shape = [-1] * perm_index
+        label_dim = [-1] * TOTAL_LABELS
+        operand = operands[i]
         labels = op_labels[i]
-        original_sizes = ops.shape(operand)
+        original_sizes = operand.shape
 
         j = 0
         for label in labels:
-            operand = operands[i]
             if label == ELLIPSIS:
+                # Add missing dimensions covered by the ellipsis
                 num_missing_dim = ell_num_dim - \
                     (len(original_sizes) - len(labels) + 1)
                 for k in range(num_missing_dim):
-                    operands[i] = ops.unsqueeze(operand, j)
+                    operand = ops.unsqueeze(operand, j)
                 for k in range(ell_num_dim):
                     perm_shape[ell_index + k] = j
                     j += 1
             elif label_dim[label] != -1:
                 dim = label_dim[label]
                 operand = ops.diagonal(operand, offset=0, dim1=dim, dim2=j)
-                operands[i] = ops.moveaxis(operand, -1, dim)
+                operand = ops.moveaxis(operand, -1, dim)
             else:
                 label_dim[label] = j
                 perm_shape[label_perm_index[label]] = j
                 j += 1
 
-        for perm_shape_i, index in enumerate(perm_shape):
-            operand = operands[i]
+        # Add dimensions for missing labels
+        for idx, index in enumerate(perm_shape):
             if index == -1:
-                operands[i] = ops.unsqueeze(operand, len(ops.shape(operand)))
-                perm_shape[perm_shape_i] = j
+                operand = ops.unsqueeze(operand, -1)
+                perm_shape[idx] = j
                 j += 1
 
-        operand = operands[i]
         operand = ops.transpose(operand, tuple(perm_shape))
         permuted_operands.append(operand)
 
-    dim_last_op = [0]*perm_index
+    # Check if operands broadcast and keep track of last operand with
+    # dimension size != 1 for optimizing reductions
+    dim_last_op = [0] * perm_index
     has_zero_size_dim = False
     for dim in range(perm_index):
         broadcast_size = permuted_operands[0].shape[dim]
         for i in range(1, len(operands)):
             dim_size = permuted_operands[i].shape[dim]
             if broadcast_size != dim_size and broadcast_size != 1 and dim_size != 1:
-                raise RuntimeError("near dim_last_op")
+                raise RuntimeError("einsum(): operands do not broadcast with remapped shapes [original->remapped]")
             if dim_size != 1:
                 broadcast_size = dim_size
                 dim_last_op[dim] = i
         has_zero_size_dim = has_zero_size_dim or (broadcast_size == 0)
 
+    # Compute result
     result = permuted_operands[0]
-    # has_zero_size_dim = True
     if has_zero_size_dim:
-        out_shape = [-1]*out_size
+        out_shape = [-1] * out_size
         for i in range(out_size):
             out_shape[i] = permuted_operands[dim_last_op[i]].shape[i]
         return ops.zeros(out_shape)
 
+    # Sum out or squeeze dimensions that are size 1 for all later operands
     dim = out_size
     for i in range(dim, perm_index):
         if dim_last_op[i] == 0:
@@ -1604,27 +1644,29 @@ def einsum(equation, *operands):
                 dim -= 1
         dim += 1
 
-    for i in range(1, len(permuted_operands)):
+    for i in range(1, num_ops):
+        operand = permuted_operands[i]
         sum_dims = []
+
+        # Sum out or squeeze dimensions that are size 1 for all later operands
         dim = out_size
         for j in range(dim, perm_index):
             if dim_last_op[j] < i:
-                permuted_operands[i] = ops.squeeze(permuted_operands[i], dim)
+                operand = ops.squeeze(operand, dim)
                 dim -= 1
             elif dim_last_op[j] == i:
                 if result.shape[dim] == 1:
-                    permuted_operands[i] = ops.sum(permuted_operands[i], dim)
+                    operand = ops.sum(operand, dim)
                     result = ops.squeeze(result, dim)
                     dim -= 1
                 else:
                     sum_dims.append(dim)
             dim += 1
-
         if len(sum_dims) == 0:
-            result = ops.multiply(result, permuted_operands[i])
+            result = result.mul(operand)
         elif len(sum_dims) == len(result.shape):
-            result = result.flatten().dot(permuted_operands[i].flatten())
+            result = result.flatten().dot(operand.flatten())
         else:
             result = sumproduct_pair(
-                result, permuted_operands[i], sum_dims, False)
+                result, operand, sum_dims, False)
     return result
