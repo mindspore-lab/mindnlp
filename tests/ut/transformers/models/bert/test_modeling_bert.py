@@ -15,7 +15,7 @@
 import os
 import tempfile
 import unittest
-
+import pytest
 import numpy as np
 
 from mindnlp.transformers import BertConfig
@@ -599,6 +599,7 @@ class BertModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             model(input_ids, attention_mask=None, token_type_ids=token_type_ids)
         self.assertIn("We strongly recommend passing in an `attention_mask`", cl.out)
 
+    @pytest.mark.download
     def test_model_from_pretrained(self):
         for model_name in BERT_SUPPORT_LIST[:1]:
             model = BertModel.from_pretrained(model_name)
@@ -629,7 +630,6 @@ class BertModelIntegrationTest(unittest.TestCase):
         expected_slice = mindspore.tensor(
             [[[0.0756, 0.3142, -0.5128], [0.3761, 0.3462, -0.5477], [0.2052, 0.3760, -0.1240]]]
         )
-
         self.assertTrue(np.allclose(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
 
     def test_inference_no_head_relative_embedding_key_query(self):
