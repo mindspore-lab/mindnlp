@@ -164,22 +164,13 @@ class GPTBigCodeAttention(nn.Cell):
 
         attn_weights = mindspore.numpy.empty(
             attn_view, dtype=query.dtype)
-        # if query.device.type == "cpu":
-        # This is needed because of a bug in pytorch https://github.com/pytorch/pytorch/issues/80588.
-        # The bug was fixed in https://github.com/pytorch/pytorch/pull/96086,
-        # but the fix has not been released as of pytorch version 2.0.0.
-        # attn_weights = ops.zeros_like(attn_weights)
-        # beta = 1
-        # else:
-        # beta = 0
+
         attn_weights = ops.zeros_like(attn_weights)
         beta = 1
         attn_weights = Tensor.baddbmm(
             attn_weights, query, key, beta=beta, alpha=scale_factor).view(attn_shape)
 
         if upcast:
-            # Use a fused kernel to prevent a large overhead from casting and scaling.
-            # Sub-optimal when the key length is not a multiple of 8.
             if attention_mask is None:
                 attn_weights = upcast_softmax(
                     attn_weights, unscale, softmax_dtype)
@@ -443,7 +434,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
 
         self.drop = nn.Dropout(p=config.embd_pdrop)
         self.h = nn.CellList([GPTBigCodeBlock(config, layer_idx=i)
-                                   for i in range(config.num_hidden_layers)])
+                              for i in range(config.num_hidden_layers)])
         self.ln_f = nn.LayerNorm(
             [self.embed_dim], epsilon=config.layer_norm_epsilon)
 
@@ -496,7 +487,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
             input_ids = input_ids.view(-1, input_shape[-1])
             batch_size = input_ids.shape[0]
         elif inputs_embeds is not None:
-            input_shape = inputs_embeds.size()[:-1]
+            input_shape = inputs_embeds.shape[:-1]
             batch_size = inputs_embeds.shape[0]
         else:
             raise ValueError(
@@ -636,7 +627,7 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.transformer = GPTBigCodeModel(config)
-        self.lm_head = nn.Linear(
+        self.lm_head = nn.Dense(
             config.n_embd, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
@@ -674,7 +665,7 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
             position_ids = attention_mask.long().cumsum(-1) - 1
-            position_ids.masked_fill_(attention_mask == 0, 1)
+            position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1]:]
         else:
@@ -744,8 +735,8 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
         loss = None
         if labels is not None:
             # Shift so that tokens < n predict n
-            shift_logits = lm_logits[..., :-1, :].contiguous()
-            shift_labels = labels[..., 1:].contiguous().to(shift_logits.device)
+            shift_logits = lm_logits[..., :-1, :]
+            shift_labels = labels[..., 1:]
             # Flatten the tokens
             loss_fct = nn.CrossEntropyLoss()
             loss = loss_fct(
@@ -764,17 +755,6 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
             cross_attentions=transformer_outputs.cross_attentions,
         )
 
-    @staticmethod
-    def _reorder_cache(
-        past_key_values: Tuple[Tuple[mindspore.Tensor]], beam_idx: mindspore.Tensor
-    ) -> Tuple[Tuple[mindspore.Tensor]]:
-        """
-        This function is used to re-order the `past_key_values` cache if [`~PreTrainedModel.beam_search`] or
-        [`~PreTrainedModel.beam_sample`] is called. This is required to match `past_key_values` with the correct
-        beam_idx at every generation step.
-        """
-        return tuple(layer_past.index_select(0, beam_idx.to(layer_past.device)) for layer_past in past_key_values)
-
 
 class GPTBigCodeForSequenceClassification(GPTBigCodePreTrainedModel):
     """GPT BigCode for Sequence Classification"""
@@ -783,7 +763,7 @@ class GPTBigCodeForSequenceClassification(GPTBigCodePreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = GPTBigCodeModel(config)
-        self.score = nn.Linear(config.n_embd, self.num_labels, bias=False)
+        self.score = nn.Dense(config.n_embd, self.num_labels, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -839,13 +819,12 @@ class GPTBigCodeForSequenceClassification(GPTBigCodePreTrainedModel):
             sequence_lengths = -1
         else:
             if input_ids is not None:
-                sequence_lengths = (ops.equal(input_ids, self.config.pad_token_id).long().argmax(-1) - 1).to(
-                    logits.device
-                )
+                sequence_lengths = ops.ne(
+                    input_ids, self.config.pad_token_id).sum(-1) - 1
             else:
                 sequence_lengths = -1
 
-        pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
+        pooled_logits = logits[:, sequence_lengths]
 
         loss = None
         if labels is not None:
@@ -853,7 +832,7 @@ class GPTBigCodeForSequenceClassification(GPTBigCodePreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -898,8 +877,8 @@ class GPTBigCodeForTokenClassification(GPTBigCodePreTrainedModel):
             classifier_dropout = config.hidden_dropout
         else:
             classifier_dropout = 0.1
-        self.dropout = nn.Dropout(classifier_dropout)
-        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
+        self.dropout = nn.Dropout(p=classifier_dropout)
+        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -948,8 +927,7 @@ class GPTBigCodeForTokenClassification(GPTBigCodePreTrainedModel):
         loss = None
         if labels is not None:
             loss_fct = nn.CrossEntropyLoss()
-            loss = loss_fct(logits.view(-1, self.num_labels),
-                            labels.view(-1).to(logits.device))
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + transformer_outputs[2:]
