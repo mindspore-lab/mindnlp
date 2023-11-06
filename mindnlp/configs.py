@@ -17,6 +17,11 @@ Global configs
 """
 import os
 
+CONFIG_NAME = "config.json"
+WEIGHTS_NAME = "mindspore.ckpt"
+GENERATION_CONFIG_NAME = "generation_config.json"
+TOKENIZER_CONFIG_FILE = "tokenizer_config.json"
+
 DEFAULT_ROOT = os.path.join(os.getcwd(), ".mindnlp")
 # for modelscope models
 MS_CONFIG_URL_BASE = "https://modelscope.cn/api/v1/models/mindnlp/{}/repo?Revision=master&FilePath=config.json"

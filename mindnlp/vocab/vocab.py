@@ -13,7 +13,6 @@
 # limitations under the License.
 # ============================================================================
 # pylint:disable=I1101
-# pylint:disable=I1101
 
 """Vocab Class"""
 
@@ -23,7 +22,7 @@ import warnings
 from typing import Union
 from mindspore.dataset import TextBaseDataset
 from mindnlp.configs import DEFAULT_ROOT
-from mindnlp.utils import cache_file
+from mindnlp.utils import cached_file
 
 class Vocab:
     r"""
@@ -249,7 +248,7 @@ class Vocab:
 
         cache_dir = os.path.join(root, "vocabs")
         download_file_name = re.sub(r".+/", "", url)
-        path, _ = cache_file(filename=download_file_name, cache_dir=cache_dir, url=url)
+        path, _ = cached_file(filename=download_file_name, cache_dir=cache_dir, url=url)
 
         with open(path, 'r', encoding='utf-8') as file:
             file.readline()

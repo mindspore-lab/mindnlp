@@ -15,12 +15,12 @@
 """
 ALBERT model config
 """
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 __all__ = ['AlbertConfig']
 
 
-class AlbertConfig(PreTrainedConfig):
+class AlbertConfig(PretrainedConfig):
     """
     Configuration for Albert.
     """

@@ -22,6 +22,7 @@ MobileBert model
 import math
 import warnings
 from typing import Optional, Tuple
+from dataclasses import dataclass
 
 import mindspore
 from mindspore import Parameter, Tensor
@@ -30,8 +31,19 @@ from mindspore import nn
 from mindspore import ops
 from mindspore.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
 
-from ...modeling_utils import PreTrainedModel
+from mindnlp.utils import ModelOutput
 from .mobilebert_config import MobileBertConfig
+from ...modeling_outputs import (
+    BaseModelOutput,
+    BaseModelOutputWithPooling,
+    MaskedLMOutput,
+    MultipleChoiceModelOutput,
+    NextSentencePredictorOutput,
+    QuestionAnsweringModelOutput,
+    SequenceClassifierOutput,
+    TokenClassifierOutput,
+)
+from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_conv1d_layer
 from ...activations import ACT2FN
 
@@ -501,8 +513,9 @@ class MobileBertEncoder(nn.Cell):
 
         if not return_dict:
             return tuple(v for v in [hidden_states, all_hidden_states, all_attentions] if v is not None)
-        return hidden_states, all_hidden_states, all_attentions
-
+        return BaseModelOutput(
+            last_hidden_state=hidden_states, hidden_states=all_hidden_states, attentions=all_attentions
+        )
 
 class MobileBertPooler(nn.Cell):
     """MobileBertPooler"""
@@ -727,7 +740,45 @@ class MobileBertModel(MobileBertPreTrainedModel):
         if not return_dict:
             return (sequence_output, pooled_output) + encoder_outputs[1:]
 
-        return sequence_output, pooled_output, encoder_outputs[1], encoder_outputs[2]
+        return BaseModelOutputWithPooling(
+            last_hidden_state=sequence_output,
+            pooler_output=pooled_output,
+            hidden_states=encoder_outputs.hidden_states,
+            attentions=encoder_outputs.attentions,
+        )
+
+@dataclass
+class MobileBertForPreTrainingOutput(ModelOutput):
+    """
+    Output type of [`MobileBertForPreTraining`].
+
+    Args:
+        loss (*optional*, returned when `labels` is provided, `mindspore.Tensor` of shape `(1,)`):
+            Total loss as the sum of the masked language modeling loss and the next sequence prediction
+            (classification) loss.
+        prediction_logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, config.vocab_size)`):
+            Prediction scores of the language modeling head (scores for each vocabulary token before SoftMax).
+        seq_relationship_logits (`mindspore.Tensor` of shape `(batch_size, 2)`):
+            Prediction scores of the next sequence prediction (classification) head (scores of True/False continuation
+            before SoftMax).
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
+            shape `(batch_size, sequence_length, hidden_size)`.
+
+            Hidden-states of the model at the output of each layer plus the initial embedding outputs.
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+            sequence_length)`.
+
+            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
+            heads.
+    """
+
+    loss: Optional[mindspore.Tensor] = None
+    prediction_logits: mindspore.Tensor = None
+    seq_relationship_logits: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
 class MobileBertForPreTraining(MobileBertPreTrainedModel):
@@ -831,8 +882,13 @@ class MobileBertForPreTraining(MobileBertPreTrainedModel):
             output = (prediction_scores, seq_relationship_score) + outputs[2:]
             return ((total_loss,) + output) if total_loss is not None else output
 
-        return total_loss, prediction_scores, seq_relationship_score, outputs[2], outputs[3]
-
+        return MobileBertForPreTrainingOutput(
+            loss=total_loss,
+            prediction_logits=prediction_scores,
+            seq_relationship_logits=seq_relationship_score,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
 
 class MobileBertForMaskedLM(MobileBertPreTrainedModel):
     """MobileBertForMaskedLM"""
@@ -909,8 +965,12 @@ class MobileBertForMaskedLM(MobileBertPreTrainedModel):
             output = (prediction_scores,) + outputs[2:]
             return ((masked_lm_loss,) + output) if masked_lm_loss is not None else output
 
-        return masked_lm_loss, prediction_scores, outputs[2], outputs[3]
-
+        return MaskedLMOutput(
+            loss=masked_lm_loss,
+            logits=prediction_scores,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
 
 class MobileBertOnlyNSPHead(nn.Cell):
     """MobileBertOnlyNSPHead"""
@@ -1008,7 +1068,12 @@ class MobileBertForNextSentencePrediction(MobileBertPreTrainedModel):
             output = (seq_relationship_score,) + outputs[2:]
             return ((next_sentence_loss,) + output) if next_sentence_loss is not None else output
 
-        return next_sentence_loss, seq_relationship_score, outputs[2], outputs[3]
+        return NextSentencePredictorOutput(
+            loss=next_sentence_loss,
+            logits=seq_relationship_score,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
 
 
 class MobileBertForSequenceClassification(MobileBertPreTrainedModel):
@@ -1089,7 +1154,12 @@ class MobileBertForSequenceClassification(MobileBertPreTrainedModel):
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
 
-        return loss, logits, outputs[2], outputs[3]
+        return SequenceClassifierOutput(
+            loss=loss,
+            logits=logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
 
 
 class MobileBertForQuestionAnswering(MobileBertPreTrainedModel):
@@ -1168,8 +1238,13 @@ class MobileBertForQuestionAnswering(MobileBertPreTrainedModel):
             output = (start_logits, end_logits) + outputs[2:]
             return ((total_loss,) + output) if total_loss is not None else output
 
-        return total_loss, start_logits, end_logits, outputs[2], outputs[3]
-
+        return QuestionAnsweringModelOutput(
+            loss=total_loss,
+            start_logits=start_logits,
+            end_logits=end_logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
 
 class MobileBertForMultipleChoice(MobileBertPreTrainedModel):
     """MobileBertForMultipleChoice"""
@@ -1242,7 +1317,12 @@ class MobileBertForMultipleChoice(MobileBertPreTrainedModel):
             output = (reshaped_logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
 
-        return loss, reshaped_logits, outputs[2], outputs[3]
+        return MultipleChoiceModelOutput(
+            loss=loss,
+            logits=reshaped_logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
 
 
 class MobileBertForTokenClassification(MobileBertPreTrainedModel):
@@ -1305,7 +1385,12 @@ class MobileBertForTokenClassification(MobileBertPreTrainedModel):
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
 
-        return loss, logits, outputs[2], outputs[3]
+        return TokenClassifierOutput(
+            loss=loss,
+            logits=logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
 
 __all__ = [
         "MobileBertForMaskedLM",

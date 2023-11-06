@@ -21,23 +21,25 @@
 # pylint: disable=C0103
 # pylint: disable=R1714
 # pylint: disable=W0237
+# pylint: disable=W0613
 
 """MindNLP bert model"""
 import os
 import math
 import logging
 from dataclasses import dataclass
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Union
 import mindspore
 from mindspore import nn, ops
 from mindspore import Parameter, Tensor
 from mindspore import log as logger
 from mindspore.common.initializer import initializer, Normal
+from mindnlp._legacy.functional import einsum
 from mindnlp.configs import MS_MODEL_URL_BASE
+from mindnlp.utils import ModelOutput
 from .configuration_bert import BertConfig, BERT_SUPPORT_LIST
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
-from ...utils import ModelOutput
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
     BaseModelOutputWithPoolingAndCrossAttentions,
@@ -78,7 +80,7 @@ def torch_to_mindspore(pth_file):
                 key = key.replace('.weight', '.gamma')
             if '.bias' in key:
                 key = key.replace('.bias', '.beta')
-        if 'embeddings' in key:
+        if 'embeddings' in key or 'embedding' in key:
             key = key.replace('weight', 'embedding_table')
         ms_ckpt.append({'name': key, 'data': Tensor(value.numpy())})
 
@@ -280,16 +282,15 @@ class BertSelfAttention(nn.Cell):
                 position_ids_l = ops.arange(query_length, dtype=mindspore.int64).view(-1, 1)
             position_ids_r = ops.arange(key_length, dtype=mindspore.int64).view(1, -1)
             distance = position_ids_l - position_ids_r
-
             positional_embedding = self.distance_embedding(distance + self.max_position_embeddings - 1)
             positional_embedding = positional_embedding.to(dtype=query_layer.dtype)  # fp16 compatibility
 
             if self.position_embedding_type == "relative_key":
-                relative_position_scores = ops.einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
+                relative_position_scores = einsum("bhld,lrd->bhlr", query_layer, positional_embedding.broadcast_to((query_length, -1, -1)))
                 attention_scores = attention_scores + relative_position_scores
             elif self.position_embedding_type == "relative_key_query":
-                relative_position_scores_query = ops.einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
-                relative_position_scores_key = ops.einsum("bhrd,lrd->bhlr", key_layer, positional_embedding)
+                relative_position_scores_query = einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
+                relative_position_scores_key = einsum("bhrd,lrd->bhlr", key_layer, positional_embedding)
                 attention_scores = attention_scores + relative_position_scores_query + relative_position_scores_key
 
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
@@ -635,7 +636,7 @@ class BertLMPredictionHead(nn.Cell):
         # an output-only bias for each token.
         self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
 
-        self.bias = Parameter(initializer('zeros', config.vocab_size), 'bias')
+        self.bias = Parameter(initializer('zeros', config.vocab_size), 'decoder.bias')
 
         self.decoder.bias = self.bias
 
@@ -676,11 +677,10 @@ class BertPreTrainingHeads(nn.Cell):
         self.predictions = BertLMPredictionHead(config)
         self.seq_relationship = nn.Dense(config.hidden_size, 2)
 
-    def construct(self, sequence_output, pooled_output, masked_lm_positions):
-        prediction_scores = self.predictions(sequence_output, masked_lm_positions)
+    def construct(self, sequence_output, pooled_output):
+        prediction_scores = self.predictions(sequence_output)
         seq_relationship_score = self.seq_relationship(pooled_output)
         return prediction_scores, seq_relationship_score
-
 
 class BertPreTrainedModel(PreTrainedModel):
     """BertPretrainedModel"""
@@ -1002,7 +1002,7 @@ class BertLMHeadModel(BertPreTrainedModel):
         )
 
     def prepare_inputs_for_generation(
-        self, input_ids, past_key_values=None, attention_mask=None, use_cache=True
+        self, input_ids, past_key_values=None, attention_mask=None, use_cache=True, **model_kwargs
     ):
         input_shape = input_ids.shape
         # if model is used as a decoder in encoder-decoder model, the decoder attention mask is created on the fly
@@ -1033,7 +1033,7 @@ class BertLMHeadModel(BertPreTrainedModel):
         reordered_past = ()
         for layer_past in past_key_values:
             reordered_past += (
-                tuple(past_state.index_select(0, beam_idx.to(past_state.device)) for past_state in layer_past),
+                tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),
             )
         return reordered_past
 
@@ -1311,12 +1311,12 @@ class BertForMultipleChoice(BertPreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
 
-        input_ids = input_ids.view(-1, input_ids.size(-1)) if input_ids is not None else None
-        attention_mask = attention_mask.view(-1, attention_mask.size(-1)) if attention_mask is not None else None
-        token_type_ids = token_type_ids.view(-1, token_type_ids.size(-1)) if token_type_ids is not None else None
-        position_ids = position_ids.view(-1, position_ids.size(-1)) if position_ids is not None else None
+        input_ids = input_ids.view(-1, input_ids.shape[-1]) if input_ids is not None else None
+        attention_mask = attention_mask.view(-1, attention_mask.shape[-1]) if attention_mask is not None else None
+        token_type_ids = token_type_ids.view(-1, token_type_ids.shape[-1]) if token_type_ids is not None else None
+        position_ids = position_ids.view(-1, position_ids.shape[-1]) if position_ids is not None else None
         inputs_embeds = (
-            inputs_embeds.view(-1, inputs_embeds.size(-2), inputs_embeds.size(-1))
+            inputs_embeds.view(-1, inputs_embeds.shape[-2], inputs_embeds.shape[-1])
             if inputs_embeds is not None
             else None
         )
@@ -1466,19 +1466,19 @@ class BertForQuestionAnswering(BertPreTrainedModel):
         sequence_output = outputs[0]
 
         logits = self.qa_outputs(sequence_output)
-        start_logits, end_logits = logits.split(1, dim=-1)
+        start_logits, end_logits = logits.split(1, axis=-1)
         start_logits = start_logits.squeeze(-1)
         end_logits = end_logits.squeeze(-1)
 
         total_loss = None
         if start_positions is not None and end_positions is not None:
             # If we are on multi-GPU, split add a dimension
-            if len(start_positions.size()) > 1:
+            if len(start_positions.shape) > 1:
                 start_positions = start_positions.squeeze(-1)
-            if len(end_positions.size()) > 1:
+            if len(end_positions.shape) > 1:
                 end_positions = end_positions.squeeze(-1)
             # sometimes the start/end positions are outside our model inputs, we ignore these terms
-            ignored_index = start_logits.size(1)
+            ignored_index = start_logits.shape[1]
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
@@ -1499,7 +1499,77 @@ class BertForQuestionAnswering(BertPreTrainedModel):
         )
 
 
+class BertForPreTraining(BertPreTrainedModel):
+    """BertForPreTraining"""
+    _tied_weights_keys = ["predictions.decoder.bias", "cls.predictions.decoder.weight"]
+
+    def __init__(self, config):
+        super().__init__(config)
+
+        self.bert = BertModel(config)
+        self.cls = BertPreTrainingHeads(config)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def get_output_embeddings(self):
+        return self.cls.predictions.decoder
+
+    def set_output_embeddings(self, new_embeddings):
+        self.cls.predictions.decoder = new_embeddings
+
+    def construct(
+        self,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        next_sentence_label: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple[mindspore.Tensor], BertForPreTrainingOutput]:
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.bert(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        sequence_output, pooled_output = outputs[:2]
+        prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
+
+        total_loss = None
+        if labels is not None and next_sentence_label is not None:
+            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            next_sentence_loss = ops.cross_entropy(seq_relationship_score.view(-1, 2), next_sentence_label.view(-1))
+            total_loss = masked_lm_loss + next_sentence_loss
+
+        if not return_dict:
+            output = (prediction_scores, seq_relationship_score) + outputs[2:]
+            return ((total_loss,) + output) if total_loss is not None else output
+
+        return BertForPreTrainingOutput(
+            loss=total_loss,
+            prediction_logits=prediction_scores,
+            seq_relationship_logits=seq_relationship_score,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
+
 __all__ = [
     'BertEmbeddings', 'BertAttention', 'BertEncoder', 'BertIntermediate', 'BertLayer',
-    'BertModel', 'BertForPretraining', 'BertLMPredictionHead', 'BertForSequenceClassification'
+    'BertModel', 'BertForPretraining', 'BertLMPredictionHead', 'BertForSequenceClassification',
+    'BertForMaskedLM', 'BertForMultipleChoice', 'BertForNextSentencePrediction', 'BertForPreTraining',
+    'BertForQuestionAnswering', 'BertForTokenClassification', 'BertLMHeadModel'
 ]

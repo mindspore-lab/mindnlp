@@ -16,7 +16,7 @@
 Bart Model config
 """
 from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 __all__ = ['BartConfig']
 
@@ -27,7 +27,7 @@ CONFIG_ARCHIVE_MAP = {
     model: MINDNLP_CONFIG_URL_BASE.format('bart', model) for model in BART_SUPPORT_LIST
 }
 
-class BartConfig(PreTrainedConfig):
+class BartConfig(PretrainedConfig):
     """
     Configuration for Bart
     """

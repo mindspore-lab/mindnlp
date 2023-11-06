@@ -13,6 +13,9 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=W0613
+# pylint: disable=invalid-name
+# pylint: disable=invalid-sequence-index
+# pylint: disable=invalid-unary-operand-type
 
 """
 Logits process
@@ -21,7 +24,7 @@ Logits process
 import math
 import inspect
 import logging
-from typing import List, Iterable, Union, Optional, Callable, Tuple
+from typing import List, Iterable, Union, Optional, Callable, Tuple, Dict
 import mindspore
 from mindspore import ops
 import numpy as np
@@ -136,7 +139,7 @@ class EncoderRepetitionPenaltyLogitsProcessor(LogitsProcessor):
     Args:
         hallucination_penalty (`float`):
             The parameter for hallucination penalty. 1.0 means no penalty.
-        encoder_input_ids (`torch.LongTensor`):
+        encoder_input_ids (`mindspore.Tensor`):
             The encoder_input_ids that should not be repeated within the decoder ids.
     """
 
@@ -179,7 +182,7 @@ class RepetitionPenaltyLogitsProcessor(LogitsProcessor):
         # if score < 0 then repetition penalty has to be multiplied to reduce the previous token probability
         score = ops.where(score < 0, score * self.penalty, score / self.penalty)
 
-        scores.scatter_(1, input_ids, score)
+        scores = ops.tensor_scatter_elements(scores, input_ids, score, axis=1)
         return scores
 
 
@@ -566,7 +569,7 @@ class InfNanRemoveLogitsProcessor(LogitsProcessor):
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
         # set all nan values to 0.0
-        scores[np.isnan(scores)] = 0.0
+        scores[ops.isnan(scores)] = 0.0
 
         # set all inf values to max possible value
         scores[scores == float("inf")] = float(np.finfo(mindspore.dtype_to_nptype(scores.dtype)).max)
@@ -746,8 +749,421 @@ class TopKLogitsWarper(LogitsWarper):
         self.filter_value = filter_value
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-        top_k = min(self.top_k, scores.size(-1))  # Safety check
+        top_k = min(self.top_k, scores.shape[-1])  # Safety check
         # Remove all tokens with a probability less than the last token of the top-k
         indices_to_remove = scores < mindspore.Tensor.topk(scores, top_k)[0][..., -1, None]
         scores = scores.masked_fill(indices_to_remove, self.filter_value)
         return scores
+
+class TypicalLogitsWarper(LogitsWarper):
+    r"""
+    [`LogitsWarper`] that performs typical decoding. See [Typical Decoding for Natural Language
+    Generation](https://arxiv.org/abs/2202.00666) for more information.
+
+    Args:
+        mass (`float`, *optional*, defaults to 0.9):
+            Value of typical_p between 0 and 1 inclusive, defaults to 0.9.
+        filter_value (`float`, *optional*, defaults to -inf):
+            All filtered values will be set to this float value.
+        min_tokens_to_keep (`int`, *optional*, defaults to 1):
+            Minimum number of tokens that cannot be filtered.
+    """
+
+    def __init__(self, mass: float = 0.9, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
+        mass = float(mass)
+        if mass <= 0 or mass >= 1:
+            raise ValueError(f"`typical_p` has to be a float > 0 and < 1, but is {mass}")
+        if not isinstance(min_tokens_to_keep, int) or (min_tokens_to_keep < 1):
+            raise ValueError(f"`min_tokens_to_keep` has to be a positive integer, but is {min_tokens_to_keep}")
+
+        self.filter_value = filter_value
+        self.mass = mass
+        self.min_tokens_to_keep = min_tokens_to_keep
+
+    def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        # calculate entropy
+        normalized = ops.log_softmax(scores, axis=-1)
+        p = ops.exp(normalized)
+        ent = -(normalized * p).nansum(-1, keepdim=True)
+
+        # shift and sort
+        shifted_scores = ops.abs((-normalized) - ent)
+        sorted_scores, sorted_indices = ops.sort(shifted_scores, descending=False)
+        sorted_logits = scores.gather(-1, sorted_indices)
+        cumulative_probs = sorted_logits.softmax(axis=-1).cumsum(axis=-1)
+
+        # Remove tokens with cumulative mass above the threshold
+        last_ind = (cumulative_probs < self.mass).axis(dim=1)
+        last_ind.clamp_(max=sorted_scores.shape[-1] - 1)
+        sorted_indices_to_remove = sorted_scores > sorted_scores.gather(1, last_ind.view(-1, 1))
+        sorted_indices_to_remove[..., : self.min_tokens_to_keep] = 0
+        indices_to_remove = ops.tensor_scatter_elements(sorted_indices_to_remove, sorted_indices, sorted_indices_to_remove, axis=1)
+
+        scores = scores.masked_fill(indices_to_remove, self.filter_value)
+        return scores
+
+
+class EpsilonLogitsWarper(LogitsWarper):
+    r"""
+    [`LogitsWarper`] that performs epsilon-sampling, i.e. restricting to tokens with `prob >= epsilon`. Takes the
+    largest min_tokens_to_keep tokens if no tokens satisfy this constraint. See [Truncation Sampling as Language Model
+    Desmoothing](https://arxiv.org/abs/2210.15191) for more information.
+
+    Args:
+        epsilon (`float`):
+            If set to > 0, only the most tokens with probabilities `epsilon` or higher are kept for generation.
+        filter_value (`float`, *optional*, defaults to -inf):
+            All filtered values will be set to this float value.
+        min_tokens_to_keep (`int`, *optional*, defaults to 1):
+            Minimum number of tokens that cannot be filtered.
+
+    Examples:
+    ```python
+    >>> from transformers import AutoTokenizer, AutoModelForCausalLM, set_seed
+
+    >>> set_seed(0)
+    >>> model = AutoModelForCausalLM.from_pretrained("distilgpt2")
+    >>> tokenizer = AutoTokenizer.from_pretrained("distilgpt2")
+
+    >>> inputs = tokenizer("A sequence: 1, 2", return_tensors="pt")
+
+    >>> # With sampling, the output is unexpected -- sometimes too unexpected.
+    >>> outputs = model.generate(**inputs, do_sample=True)
+    >>> print(tokenizer.batch_decode(outputs, skip_special_tokens=True)[0])
+    A sequence: 1, 2, 0, 2, 2. 2, 2, 2, 2
+
+    >>> # With epsilon sampling, the output gets restricted to high-probability tokens. Note that this is similar to
+    >>> # Top P sampling, which restricts tokens based on their cumulative probability.
+    >>> # Pro tip: The paper recomends using `epsilon_cutoff` values between 3e-4 and 9e-4
+    >>> outputs = model.generate(**inputs, do_sample=True, epsilon_cutoff=0.1)
+    >>> print(tokenizer.batch_decode(outputs, skip_special_tokens=True)[0])
+    A sequence: 1, 2, 3, 4, 5, 6, 7, 8, 9
+    ```
+    """
+
+    def __init__(self, epsilon: float, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
+        epsilon = float(epsilon)
+        if epsilon <= 0 or epsilon >= 1:
+            raise ValueError(f"`epsilon_cutoff` has to be a float > 0 and < 1, but is {epsilon}")
+
+        min_tokens_to_keep = int(min_tokens_to_keep)
+        if min_tokens_to_keep < 1:
+            raise ValueError(
+                f"`min_tokens_to_keep` has to be a strictly positive integer, but is {min_tokens_to_keep}"
+            )
+
+        self.epsilon = epsilon
+        self.filter_value = filter_value
+        self.min_tokens_to_keep = min_tokens_to_keep
+
+    def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        # Determine which indices to remove
+        probabilities = ops.softmax(scores, axis=-1)
+        indices_to_remove = probabilities < self.epsilon
+
+        # Keep the words with the 'min_tokens_to_keep'-highest probabilities
+        top_k = min(self.min_tokens_to_keep, scores.size(-1))  # Safety check
+        indices_to_remove = indices_to_remove & (scores < ops.topk(scores, top_k)[0][..., -1, None])
+
+        scores = scores.masked_fill(indices_to_remove, self.filter_value)
+        return scores
+
+
+class EtaLogitsWarper(LogitsWarper):
+    r"""
+    [`LogitsWarper`] that performs eta-sampling, a technique to filter out tokens with probabilities below a dynamic
+    cutoff value, `eta`, which is calculated based on a combination of the hyperparameter `epsilon` and the entropy of
+    the token probabilities, i.e. `eta := min(epsilon, sqrt(epsilon * e^-entropy(probabilities)))`. Takes the largest
+    min_tokens_to_keep tokens if no tokens satisfy this constraint. It addresses the issue of poor quality in long
+    samples of text generated by neural language models leading to more coherent and fluent text. See [Truncation
+    Sampling as Language Model Desmoothing](https://arxiv.org/abs/2210.15191) for more information. Note: `do_sample`
+    must be set to `True` for this `LogitsWarper` to work.
+
+
+    Args:
+        epsilon (`float`):
+            A float value in the range (0, 1). Hyperparameter used to calculate the dynamic cutoff value, `eta`. The
+            suggested values from the paper ranges from 3e-4 to 4e-3 depending on the size of the model.
+        filter_value (`float`, *optional*, defaults to -inf):
+            All values that are found to be below the dynamic cutoff value, `eta`, are set to this float value. This
+            parameter is useful when logits need to be modified for very low probability tokens that should be excluded
+            from generation entirely.
+        min_tokens_to_keep (`int`, *optional*, defaults to 1):
+            Specifies the minimum number of tokens that must be kept for generation, regardless of their probabilities.
+            For example, if `min_tokens_to_keep` is set to 1, at least one token will always be kept for generation,
+            even if all tokens have probabilities below the cutoff `eta`.
+
+    Examples:
+    ```python
+    >>> from transformers import AutoTokenizer, AutoModelForCausalLM, set_seed
+
+    >>> set_seed(0)
+    >>> model = AutoModelForCausalLM.from_pretrained("distilgpt2")
+    >>> tokenizer = AutoTokenizer.from_pretrained("distilgpt2")
+
+    >>> inputs = tokenizer("A sequence: 1, 2", return_tensors="pt")
+
+    >>> # With sampling, the output is unexpected -- sometimes too unexpected.
+    >>> outputs = model.generate(**inputs, do_sample=True)
+    >>> print(tokenizer.batch_decode(outputs, skip_special_tokens=True)[0])
+    A sequence: 1, 2, 0, 2, 2. 2, 2, 2, 2
+
+    >>> # With eta sampling, the output gets restricted to high-probability tokens. You can see it as a dynamic form of
+    >>> # epsilon sampling that adapts its cutoff probability based on the entropy (high entropy = lower cutoff).
+    >>> # Pro tip: The paper recomends using `eta_cutoff` values between 3e-4 to 4e-3
+    >>> outputs = model.generate(**inputs, do_sample=True, eta_cutoff=0.1)
+    >>> print(tokenizer.batch_decode(outputs, skip_special_tokens=True)[0])
+    A sequence: 1, 2, 3, 4, 5, 6, 7, 8, 9
+    ```
+    """
+
+    def __init__(self, epsilon: float, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
+        epsilon = float(epsilon)
+        if epsilon <= 0 or epsilon >= 1:
+            raise ValueError(f"`eta_cutoff` has to be a float > 0 and < 1, but is {epsilon}")
+
+        min_tokens_to_keep = int(min_tokens_to_keep)
+        if min_tokens_to_keep < 1:
+            raise ValueError(
+                f"`min_tokens_to_keep` has to be a strictly positive integer, but is {min_tokens_to_keep}"
+            )
+
+        self.epsilon = mindspore.tensor(epsilon, mindspore.float32)
+        self.filter_value = filter_value
+        self.min_tokens_to_keep = min_tokens_to_keep
+
+    def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        # Calculate the adaptive cutoff
+        probabilities = scores.softmax(dim=-1)
+        entropy = mindspore.nn.probability.distribution.Categorical().entropy(scores)
+        eta = ops.min(self.epsilon, ops.sqrt(self.epsilon) * ops.exp(-entropy))[..., None]
+        indices_to_remove = probabilities < eta
+
+        # Keep the words with the 'min_tokens_to_keep'-highest probabilities
+        top_k = min(self.min_tokens_to_keep, scores.size(-1))  # Safety check
+        indices_to_remove = indices_to_remove & (scores < ops.topk(scores, top_k)[0][..., -1, None])
+
+        scores = scores.masked_fill(indices_to_remove, self.filter_value)
+        return scores
+
+class SequenceBiasLogitsProcessor(LogitsProcessor):
+    """
+    [`LogitsProcessor`] that applies an additive bias on sequences. The bias is applied to the last token of a sequence
+    when the next generated token can complete it. Consequently, to take the most of biasing sequences with more than
+    one token, consider using beam methods (to gracefully work around partially completed sequences that have a
+    negative bias) and applying the bias to their prefixes (to ensure the bias is applied earlier).
+
+    <Tip>
+
+    In order to get the token ids of the sequences that you want to bias, make sure to set `add_prefix_space=True` when
+    initializing the tokenizer, and use `tokenizer(bad_words, add_special_tokens=False).input_ids`. The
+    `add_prefix_space` argument is only supported for some slow tokenizers, as fast tokenizers' prefixing behaviours
+    come from `pre tokenizers`. Read more [here](https://huggingface.co/docs/tokenizers/api/pre-tokenizers).
+
+    </Tip>
+
+    Args:
+        sequence_bias (`Dict[Tuple[int], float]`):
+            Dictionary that maps a sequence of tokens to its bias term. Positive biases increase the odds of the
+            sequence being selected, while negative biases do the opposite. If a sequence has a length of 1, its bias
+            will always be applied. Otherwise, the bias will only be applied if the sequence in question is about to be
+            completed (in the token selection step after this processor is applied).
+
+    Examples:
+
+    ```python
+    >>> from transformers import AutoTokenizer, AutoModelForCausalLM
+
+    >>> model = AutoModelForCausalLM.from_pretrained("gpt2")
+    >>> tokenizer = AutoTokenizer.from_pretrained("gpt2")
+    >>> inputs = tokenizer(["The full name of Donald is Donald"], return_tensors="pt")
+
+    >>> summary_ids = model.generate(inputs["input_ids"], max_new_tokens=4)
+    >>> print(tokenizer.batch_decode(summary_ids, skip_special_tokens=True)[0])
+    The full name of Donald is Donald J. Trump Jr
+
+    >>> # Now let's control generation through a bias. Please note that the tokenizer is initialized differently!
+    >>> tokenizer_with_prefix_space = AutoTokenizer.from_pretrained("gpt2", add_prefix_space=True)
+
+
+    >>> def get_tokens_as_tuple(word):
+    ...     return tuple(tokenizer_with_prefix_space([word], add_special_tokens=False).input_ids[0])
+
+
+    >>> # If we add a negative bias without beam search, it may become "stuck" in a prefix without good continuations
+    >>> sequence_bias = {get_tokens_as_tuple("Trump"): -10.0}
+    >>> biased_ids = model.generate(inputs["input_ids"], max_new_tokens=4, sequence_bias=sequence_bias)
+    >>> print(tokenizer.batch_decode(biased_ids, skip_special_tokens=True)[0])
+    The full name of Donald is Donald J. Donald,
+
+    >>> biased_ids = model.generate(inputs["input_ids"], max_new_tokens=4, num_beams=4, sequence_bias=sequence_bias)
+    >>> print(tokenizer.batch_decode(biased_ids, skip_special_tokens=True)[0])
+    The full name of Donald is Donald Rumsfeld,
+
+    >>> # We can also add a positive bias to nudge the model towards specific tokens or continuations
+    >>> sequence_bias = {get_tokens_as_tuple("Donald Duck"): 10.0}
+    >>> biased_ids = model.generate(inputs["input_ids"], max_new_tokens=4, num_beams=4, sequence_bias=sequence_bias)
+    >>> print(tokenizer.batch_decode(biased_ids, skip_special_tokens=True)[0])
+    The full name of Donald is Donald Duck.
+    ```
+    """
+
+    def __init__(self, sequence_bias: Dict[Tuple[int], float]):
+        self.sequence_bias = sequence_bias
+        self._validate_arguments()
+
+        # Bias variables that will be populated on the first call (for retrocompatibility purposes, the vocabulary size
+        # is infered in the first usage, which inhibits initializing here)
+        self.length_1_bias = None
+        self.prepared_bias_variables = False
+
+    def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        # 1 - Prepares the bias tensors. This is only needed the first time the logit processor is called.
+        if not self.prepared_bias_variables:
+            self._prepare_bias_variables(scores)
+
+        # 2 - prepares an empty bias to add
+        bias = ops.zeros_like(scores)
+
+        # 3 - include the bias from length = 1
+        bias += self.length_1_bias
+
+        # 4 - include the bias from length > 1, after determining which biased sequences may be completed.
+        for sequence_ids, sequence_bias in self.sequence_bias.items():
+            if len(sequence_ids) == 1:  # the sequence is of length 1, already applied
+                continue
+            if len(sequence_ids) > input_ids.shape[1]:  # the sequence is longer than the context, ignore
+                continue
+            prefix_length = len(sequence_ids) - 1
+            last_token = sequence_ids[-1]
+            matching_rows = ops.eq(
+                input_ids[:, -prefix_length:],
+                mindspore.tensor(sequence_ids[:-1], dtype=input_ids.dtype),
+            ).prod(dim=1)
+            bias[:, last_token] += ops.where(
+                matching_rows.bool(),
+                mindspore.tensor(sequence_bias),
+                mindspore.tensor(0.0),
+            )
+
+        # 5 - apply the bias to the scores
+        scores = scores + bias
+        return scores
+
+class UnbatchedClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
+    r"""Logits processor for Classifier-Free Guidance (CFG). The processors
+    computes a weighted average across scores from prompt conditional and prompt unconditional (or negative) logits,
+    parameterized by the `guidance_scale`. The unconditional scores are computed internally by prompting `model` with
+    the `unconditional_ids` branch.
+
+    See [the paper](https://arxiv.org/abs/2306.17806) for more information.
+
+    Args:
+        guidance_scale (`float`):
+            The guidance scale for classifier free guidance (CFG). CFG is enabled by setting `guidance_scale != 1`.
+            Higher guidance scale encourages the model to generate samples that are more closely linked to the input
+            prompt, usually at the expense of poorer quality. A value smaller than 1 has the opposite effect, while
+            making the negative prompt provided with negative_prompt_ids (if any) act as a positive prompt.
+        model (`PreTrainedModel`):
+            The model computing the unconditional scores. Supposedly the same as the one computing the conditional
+            scores. Both models must use the same tokenizer.
+        unconditional_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Indices of input sequence tokens in the vocabulary for the unconditional branch. If unset, will default to
+            the last token of the prompt.
+        unconditional_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Attention mask for unconditional_ids.
+        use_cache (`bool`, *optional*, defaults to `True`):
+            Whether to cache key/values during the negative prompt forward pass.
+
+
+    Examples:
+
+    ```python
+    >>> from transformers import AutoTokenizer, AutoModelForCausalLM
+
+    >>> model = AutoModelForCausalLM.from_pretrained("gpt2")
+    >>> tokenizer = AutoTokenizer.from_pretrained("gpt2")
+    >>> inputs = tokenizer(["Today, a dragon flew over Paris, France,"], return_tensors="pt")
+    >>> out = model.generate(inputs["input_ids"], guidance_scale=1.5)
+    >>> tokenizer.batch_decode(out, skip_special_tokens=True)[0]
+    'Today, a dragon flew over Paris, France, killing at least 50 people and injuring more than 100'
+
+    >>> # with a negative prompt
+    >>> neg_inputs = tokenizer(["A very happy event happened,"], return_tensors="pt")
+    >>> out = model.generate(inputs["input_ids"], guidance_scale=2, negative_prompt_ids=neg_inputs["input_ids"])
+    >>> tokenizer.batch_decode(out, skip_special_tokens=True)[0]
+    'Today, a dragon flew over Paris, France, killing at least 130 people. French media reported that'
+
+    >>> # with a positive prompt
+    >>> neg_inputs = tokenizer(["A very happy event happened,"], return_tensors="pt")
+    >>> out = model.generate(inputs["input_ids"], guidance_scale=0, negative_prompt_ids=neg_inputs["input_ids"])
+    >>> tokenizer.batch_decode(out, skip_special_tokens=True)[0]
+    "Today, a dragon flew over Paris, France, and I'm very happy to be here. I"
+    ```
+    """
+
+    def __init__(
+        self,
+        guidance_scale: float,
+        model,
+        unconditional_ids: Optional[mindspore.Tensor] = None,
+        unconditional_attention_mask: Optional[mindspore.Tensor] = None,
+        use_cache: Optional[bool] = True,
+    ):
+        self.guidance_scale = guidance_scale
+        self.model = model
+        self.unconditional_context = {
+            "input_ids": unconditional_ids,
+            "attention_mask": unconditional_attention_mask,
+            "use_cache": use_cache,
+            "past_key_values": None,
+            "first_pass": True,
+        }
+
+    def get_unconditional_logits(self, input_ids):
+        """get_unconditional_logits"""
+        if self.unconditional_context["first_pass"]:
+            if self.unconditional_context["input_ids"] is None:
+                self.unconditional_context["input_ids"] = input_ids[:, -1:]
+            if self.unconditional_context["attention_mask"] is None:
+                self.unconditional_context["attention_mask"] = ops.ones_like(
+                    self.unconditional_context["input_ids"], dtype=mindspore.int64
+                )
+            input_ids = self.unconditional_context["input_ids"]
+            attention_mask = self.unconditional_context["attention_mask"]
+            self.unconditional_context["first_pass"] = False
+        else:
+            attention_mask = ops.cat(
+                [
+                    self.unconditional_context["attention_mask"],
+                    ops.ones_like(input_ids[:, -1:], dtype=mindspore.int64),
+                ],
+                axis=1,
+            )
+            if not self.unconditional_context["use_cache"]:
+                input_ids = ops.cat([self.unconditional_context["input_ids"], input_ids[:, -1:]], axis=1)
+            else:
+                input_ids = input_ids[:, -1:]
+            self.unconditional_context["input_ids"] = input_ids
+            self.unconditional_context["attention_mask"] = attention_mask
+
+        out = self.model(
+            input_ids,
+            attention_mask=attention_mask,
+            use_cache=self.unconditional_context["use_cache"],
+            past_key_values=self.unconditional_context["past_key_values"],
+        )
+        self.unconditional_context["past_key_values"] = out.get("past_key_values", None)
+
+        return out.logits
+
+    def __call__(self, input_ids, scores):
+        scores = ops.log_softmax(scores, axis=-1)
+        if self.guidance_scale == 1:
+            return scores
+
+        logits = self.get_unconditional_logits(input_ids)
+
+        unconditional_logits = ops.log_softmax(logits[:, -1], axis=-1)
+        out = self.guidance_scale * (scores - unconditional_logits) + unconditional_logits
+        return out

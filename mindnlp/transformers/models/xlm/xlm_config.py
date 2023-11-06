@@ -16,7 +16,7 @@
 # pylint: disable=too-many-instance-attributes
 """ XLM configuration"""
 from mindnlp.configs import HF_CONFIG_URL_BASE
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 XLM_SUPPORT_LIST = [
     "xlm-clm-ende-1024",
@@ -34,7 +34,7 @@ CONFIG_ARCHIVE_MAP = {
     model: HF_CONFIG_URL_BASE.format(model) for model in XLM_SUPPORT_LIST
 }
 
-class XLMConfig(PreTrainedConfig):
+class XLMConfig(PretrainedConfig):
     """
     This is the configuration class to store the configuration of a [`XLMModel`] or a [`TFXLMModel`]. It is used to
     instantiate a XLM model according to the specified arguments, defining the model architecture. Instantiating a

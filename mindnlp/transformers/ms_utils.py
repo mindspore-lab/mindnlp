@@ -27,7 +27,7 @@ from mindspore.common.initializer import initializer, Normal
 
 from mindnlp._legacy.nn import Dropout, Matmul
 from .activations import get_activation
-from .configuration_utils import PreTrainedConfig
+from .configuration_utils import PretrainedConfig
 
 try:
     from mindspore.nn import Identity
@@ -186,11 +186,11 @@ class PoolerStartLogits(nn.Cell):
     Compute SQuAD start logits from sequence hidden states.
 
     Args:
-        config ([`PreTrainedConfig`]):
+        config ([`PretrainedConfig`]):
             The config used by the model, will be used to grab the `hidden_size` of the model.
     """
 
-    def __init__(self, config: PreTrainedConfig):
+    def __init__(self, config: PretrainedConfig):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, 1)
 
@@ -226,7 +226,7 @@ class SQuADHead(nn.Cell):
     A SQuAD head inspired by XLNet.
 
     Args:
-        config ([`PreTrainedConfig`]):
+        config ([`PretrainedConfig`]):
             The config used by the model, will be used to grab the `hidden_size` of the model and the `layer_norm_eps`
             to use.
     """
@@ -325,12 +325,12 @@ class PoolerEndLogits(nn.Cell):
     Compute SQuAD end logits from sequence hidden states.
 
     Args:
-        config ([`PreTrainedConfig`]):
+        config ([`PretrainedConfig`]):
             The config used by the model, will be used to grab the `hidden_size` of the model and the `layer_norm_eps`
             to use.
     """
 
-    def __init__(self, config: PreTrainedConfig):
+    def __init__(self, config: PretrainedConfig):
         super().__init__()
         self.dense_0 = nn.Dense(config.hidden_size * 2, config.hidden_size)
         self.activation = nn.Tanh()
@@ -374,7 +374,7 @@ class PoolerAnswerClass(nn.Cell):
     Compute SQuAD 2.0 answer class from classification and start tokens hidden states.
 
     Args:
-        config ([`PreTrainedConfig`]):
+        config ([`PretrainedConfig`]):
             The config used by the model, will be used to grab the `hidden_size` of the model.
     """
 
@@ -425,22 +425,22 @@ def prune_linear_layer(layer, index, axis=0):
     Returns:
         `mindspore.nn.Dense`: The pruned layer as a new layer with `requires_grad=True`.
     """
-    gamma_l = layer.gamma.index_select(axis, index)
-    if layer.beta is not None:
+    W = layer.weight.index_select(axis, index).copy()
+    if layer.bias is not None:
         if axis == 1:
-            beta_l = layer.beta
+            b = layer.bias.copy()
         else:
-            beta_l = layer.beta[index]
-    new_size = list(layer.gamma.shape())
+            b = layer.bias[index].copy()
+    new_size = list(layer.weight.shape)
     new_size[axis] = len(index)
-    new_layer = nn.Dense(new_size[1], new_size[0], has_bias=layer.beta is not None)
-    new_layer.gamma.requires_grad = False
-    new_layer.gamma = gamma_l.copy()
-    new_layer.gamma.requires_grad = True
-    if layer.beta is not None:
-        new_layer.beta.requires_grad = False
-        new_layer.beta = beta_l.copy()
-        new_layer.beta.requires_grad = True
+    new_layer = nn.Dense(new_size[1], new_size[0], has_bias=layer.bias is not None)
+    new_layer.weight.requires_grad = False
+    new_layer.weight.set_data(W)
+    new_layer.weight.requires_grad = True
+    if layer.bias is not None:
+        new_layer.bias.requires_grad = False
+        new_layer.bias.set_data(b)
+        new_layer.bias.requires_grad = True
     return new_layer
 
 
