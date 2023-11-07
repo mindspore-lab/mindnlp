@@ -184,7 +184,7 @@ class GPTBigCodeAttention(nn.Cell):
 
                 # The fused kernel is very slow when the key length is not a multiple of 8, so we skip fusion.
                 attn_weights = ops.where(
-                    attention_mask, attn_weights, mask_value)
+                    Tensor(attention_mask, dtype=mindspore.bool_), attn_weights, mask_value)
 
             attn_weights = ops.softmax(attn_weights, axis=-1)
 
@@ -442,7 +442,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
 
         max_positions = config.max_position_embeddings
         self.bias = Tensor(
-            ops.tril(ops.ones((max_positions, max_positions))), mindspore.bool_)
+            np.tril(np.ones((max_positions, max_positions))), mindspore.bool_)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -520,8 +520,8 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         # Self-attention mask.
         query_length = input_shape[-1]
         key_length = past_length + query_length
-        self_attention_mask = self.bias[None, key_length -
-                                        query_length: key_length, :key_length]
+        self_attention_mask = Tensor(self.bias[None, key_length -
+                                               query_length: key_length, :key_length], dtype=mindspore.int64)
 
         if attention_mask is not None:
             self_attention_mask = self_attention_mask * \
@@ -531,8 +531,8 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         # MQA models: (batch_size, query_length, n_heads, key_length)
         # MHA models: (batch_size, n_heads, query_length, key_length)
         attention_mask = ops.unsqueeze(
-            self_attention_mask, 2 if self.multi_query else 1).bool()
-        print(type(attention_mask))
+            self_attention_mask, 2 if self.multi_query else 1)
+
         # If a 2D or 3D attention mask is provided for the cross-attention
         # we need to make broadcastable to [batch_size, num_heads, seq_length, seq_length]
         if (
