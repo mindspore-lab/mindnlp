@@ -19,7 +19,7 @@ import numpy as np
 from mindspore.dataset.text.transforms import Implementation
 from tokenizers import Tokenizer
 from mindnlp.configs import MINDNLP_TOKENIZER_CONFIG_URL_BASE
-from .roberta_config import ROBERTA_SUPPORT_LIST
+from .configuration_roberta import ROBERTA_SUPPORT_LIST
 from ...tokenization_utils import PreTrainedTokenizer
 
 PRETRAINED_VOCAB_MAP = {

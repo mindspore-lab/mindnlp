@@ -451,12 +451,13 @@ class ModelTesterMixin:
                 *get_values(MODEL_FOR_BACKBONE_MAPPING_NAMES),
             ]:
                 continue
-
+            
             model = model_class(config)
             model.set_train()
             inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
             def forward(**inputs):
-                loss = model(**inputs).loss
+                outputs = model(**inputs)
+                loss = outputs.loss
                 return loss
 
             grad_fn = mindspore.value_and_grad(forward, None, model.trainable_params())
@@ -959,7 +960,6 @@ class ModelTesterMixin:
         for model_class in self.all_model_classes:
             config = copy.deepcopy(original_config)
             model = model_class(config)
-            model
 
             if self.model_tester.is_training is False:
                 model.set_train(False)
@@ -974,7 +974,7 @@ class ModelTesterMixin:
             self.assertEqual(model.config.vocab_size, model_vocab_size + 10)
             # Check that it actually resizes the embeddings matrix
             self.assertEqual(model_embed.embedding_table.shape[0], cloned_embeddings.shape[0] + 10)
-            # Check that the model can still do a forward pass successfully (every parameter should be resized)
+             # Check that the model can still do a forward pass successfully (every parameter should be resized)
             model(**self._prepare_for_class(inputs_dict, model_class))
 
             # Check that resizing the token embeddings with a smaller vocab size decreases the model's vocab size

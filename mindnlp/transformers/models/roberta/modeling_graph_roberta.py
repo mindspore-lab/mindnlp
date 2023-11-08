@@ -24,14 +24,14 @@ from mindspore.common.initializer import initializer
 from mindnlp.configs import MINDNLP_MODEL_URL_BASE
 from mindnlp._legacy.nn import Dropout
 from ..bert.modeling_bert import BertModel, BertPreTrainedModel
-from .roberta_config import RobertaConfig, ROBERTA_SUPPORT_LIST
+from .configuration_roberta import RobertaConfig, ROBERTA_SUPPORT_LIST
 
 
 PRETRAINED_MODEL_ARCHIVE_MAP = {
     model: MINDNLP_MODEL_URL_BASE.format('roberta', model) for model in ROBERTA_SUPPORT_LIST
 }
 
-class RobertaEmbeddings(nn.Cell):
+class MSRobertaEmbeddings(nn.Cell):
     """
     Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
     """
@@ -117,13 +117,13 @@ class RobertaEmbeddings(nn.Cell):
 
 
 
-class RobertaPreTrainedModel(BertPreTrainedModel):
+class MSRobertaPreTrainedModel(BertPreTrainedModel):
     """Roberta Pretrained Model."""
     pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
     config_class = RobertaConfig
     base_model_prefix = "roberta"
 
-class RobertaModel(BertModel):
+class MSRobertaModel(BertModel):
     """Roberta Model"""
     pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
     config_class = RobertaConfig
@@ -131,9 +131,9 @@ class RobertaModel(BertModel):
 
     def __init__(self, config, add_pooling_layer=True):
         super().__init__(config, add_pooling_layer=add_pooling_layer)
-        self.embeddings = RobertaEmbeddings(config)
+        self.embeddings = MSRobertaEmbeddings(config)
 
-class RobertaLMHead(nn.Cell):
+class MSRobertaLMHead(nn.Cell):
     """RobertaLMHead"""
     def __init__(self, config):
         super().__init__()
@@ -152,7 +152,7 @@ class RobertaLMHead(nn.Cell):
         x = self.decoder(x) + self.bias
         return x
 
-class RobertaClassificationHead(nn.Cell):
+class MSRobertaClassificationHead(nn.Cell):
     """RobertaClassificationHead"""
     def __init__(self, config):
         super().__init__()
@@ -168,12 +168,12 @@ class RobertaClassificationHead(nn.Cell):
         x = self.out_proj(x)
         return x
 
-class RobertaForMaskedLM(RobertaPreTrainedModel):
+class MSRobertaForMaskedLM(MSRobertaPreTrainedModel):
     """RobertaForMaskedLM"""
     def __init__(self, config, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
-        self.roberta = RobertaModel(config)
-        self.lm_head = RobertaLMHead(config)
+        self.roberta = MSRobertaModel(config)
+        self.lm_head = MSRobertaLMHead(config)
         self.lm_head.decoder.weight = self.roberta.embeddings.word_embeddings.embedding_table
         self.vocab_size = self.config.vocab_size
 
@@ -202,13 +202,13 @@ class RobertaForMaskedLM(RobertaPreTrainedModel):
 
         return outputs
 
-class RobertaForSequenceClassification(RobertaPreTrainedModel):
-    """RobertaForSequenceClassification"""
+class MSRobertaForSequenceClassification(MSRobertaPreTrainedModel):
+    """MSRobertaForSequenceClassification"""
     def __init__(self, config, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
         self.num_labels = config.num_labels
-        self.roberta = RobertaModel(config, add_pooling_layer=False)
-        self.classifier = RobertaClassificationHead(config)
+        self.roberta = MSRobertaModel(config, add_pooling_layer=False)
+        self.classifier = MSRobertaClassificationHead(config)
 
     def construct(self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None,
                   labels=None):
@@ -231,11 +231,11 @@ class RobertaForSequenceClassification(RobertaPreTrainedModel):
 
         return outputs  # (loss), logits, (hidden_states), (attentions)
 
-class RobertaForMultipleChoice(RobertaPreTrainedModel):
+class MSRobertaForMultipleChoice(MSRobertaPreTrainedModel):
     """RobertaForMultipleChoice"""
     def __init__(self, config, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
-        self.roberta = RobertaModel(config)
+        self.roberta = MSRobertaModel(config)
         self.dropout = Dropout(p=config.hidden_dropout_prob)
         self.classifier = nn.Dense(config.hidden_size, 1)
 
@@ -280,6 +280,6 @@ def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_l
     return incremental_indices.long() + padding_idx
 
 
-__all__ = ['RobertaModel', 'RobertaPreTrainedModel',
-           'RobertaForMaskedLM', 'RobertaForMultipleChoice',
-           'RobertaForSequenceClassification']
+__all__ = ['MSRobertaModel', 'MSRobertaPreTrainedModel',
+           'MSRobertaForMaskedLM', 'MSRobertaForMultipleChoice',
+           'MSRobertaForSequenceClassification']

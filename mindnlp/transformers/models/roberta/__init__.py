@@ -13,12 +13,12 @@
 # limitations under the License.
 # ============================================================================
 """Roberta model."""
-from . import roberta, roberta_config, roberta_tokenizer
-from .roberta_config import *
-from .roberta import *
-from .roberta_tokenizer import *
+from . import configuration_roberta, modeling_roberta, tokenization_roberta
+from .configuration_roberta import *
+from .modeling_roberta import *
+from .tokenization_roberta import *
 
 __all__ = []
-__all__.extend(roberta.__all__)
-__all__.extend(roberta_config.__all__)
-__all__.extend(roberta_tokenizer.__all__)
+__all__.extend(modeling_roberta.__all__)
+__all__.extend(configuration_roberta.__all__)
+__all__.extend(tokenization_roberta.__all__)
