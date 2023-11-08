@@ -211,7 +211,7 @@ class GraphormerGraphNodeFeature(nn.Cell):
 
         graph_token_feature = self.graph_token.weight.unsqueeze(0).repeat(n_graph, 1, 1)
 
-        graph_node_feature = torch.cat([graph_token_feature, node_feature], dim=1)
+        graph_node_feature = ops.cat([graph_token_feature, node_feature], dim=1)
 
         return graph_node_feature
 
