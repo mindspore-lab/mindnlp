@@ -17,10 +17,11 @@
 import math
 from typing import Iterable, Iterator, List, Optional, Tuple, Union
 
-import mindspore
+import mindspore as ms
 from mindspore import nn, ops
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindspore import Parameter, Tensor
+from mindspore.common.initializer import initializer, Normal, Uniform
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -30,6 +31,7 @@ from ...modeling_outputs import (
 from ...modeling_utils import PreTrainedModel
 import logging
 from .configuration_graphormer import GraphormerConfig
+from .utils import init_zero, init_normal, init_constant, init_xavier_uniform
 
 
 logger = logging.getLogger(__name__)
@@ -80,7 +82,7 @@ def quant_noise(module: nn.Cell, p: float, block_size: int):
 
     # 2D matrix
     if not is_conv:
-        if module.weight.size(1) % block_size != 0:
+        if module.weight.shape[1] % block_size != 0:
             raise AssertionError("Input features must be a multiple of block sizes")
 
     # 4D matrix
@@ -101,11 +103,11 @@ def quant_noise(module: nn.Cell, p: float, block_size: int):
             if not is_conv:
                 # gather weight and sizes
                 weight = mod.weight
-                in_features = weight.size(1)
-                out_features = weight.size(0)
+                in_features = weight.shape[1]
+                out_features = weight.shape[0]
 
                 # split weight matrix into blocks and randomly drop selected blocks
-                mask = torch.zeros(in_features // block_size * out_features, device=weight.device)
+                mask = ops.zeros(in_features // block_size * out_features, device=weight.device)
                 mask.bernoulli_(p)
                 mask = mask.repeat_interleave(block_size, -1).view(-1, in_features)
 
@@ -117,19 +119,19 @@ def quant_noise(module: nn.Cell, p: float, block_size: int):
 
                 # split weight matrix into blocks and randomly drop selected blocks
                 if mod.kernel_size == (1, 1):
-                    mask = torch.zeros(
+                    mask = ops.zeros(
                         int(in_channels // block_size * out_channels),
                         device=weight.device,
                     )
                     mask.bernoulli_(p)
                     mask = mask.repeat_interleave(block_size, -1).view(-1, in_channels)
                 else:
-                    mask = torch.zeros(weight.size(0), weight.size(1), device=weight.device)
+                    mask = ops.zeros(weight.shape[0], weight.shape[1], device=weight.device)
                     mask.bernoulli_(p)
                     mask = mask.unsqueeze(2).unsqueeze(3).repeat(1, 1, mod.kernel_size[0], mod.kernel_size[1])
 
             # scale weights and apply mask
-            mask = mask.to(torch.bool)  # x.bool() is not currently supported in TorchScript
+            mask = mask.bool()
             s = 1 / (1 - p)
             mod.weight.data = s * weight.masked_fill(mask, 0)
 
@@ -144,8 +146,7 @@ class LayerDropModuleList(nn.CellList):
     A LayerDrop implementation based on [`mindspore.nn.CellList`]. LayerDrop as described in
     https://arxiv.org/abs/1909.11556.
 
-    We refresh the choice of which layers to drop every time we iterate over the LayerDropModuleList instance. During
-    evaluation we always iterate over all layers.
+    We refresh the choice of which layers to drop every time we iterate over the LayerDropModuleList instance. During evaluation we always iterate over all layers.
 
     Usage:
 
@@ -169,7 +170,7 @@ class LayerDropModuleList(nn.CellList):
         self.p = p
 
     def __iter__(self) -> Iterator[nn.Cell]:
-        dropout_probs = torch.empty(len(self)).uniform_()
+        dropout_probs = Tensor(shape=(len(self)), dtype=ms.float32, init=Uniform())
         for i, m in enumerate(super().__iter__()):
             if not self.training or (dropout_probs[i] > self.p):
                 yield m
@@ -201,17 +202,17 @@ class GraphormerGraphNodeFeature(nn.Cell):
         in_degree: Tensor,
         out_degree: Tensor,
     ) -> Tensor:
-        n_graph, n_node = input_nodes.size()[:2]
+        n_graph, n_node = input_nodes.shape[:2]
 
         node_feature = (  # node feature + graph token
-            self.atom_encoder(input_nodes).sum(dim=-2)  # [n_graph, n_node, n_hidden]
+            self.atom_encoder(input_nodes).sum(axis=-2)  # [n_graph, n_node, n_hidden]
             + self.in_degree_encoder(in_degree)
             + self.out_degree_encoder(out_degree)
         )
 
-        graph_token_feature = self.graph_token.weight.unsqueeze(0).repeat(n_graph, 1, 1)
+        graph_token_feature = self.graph_token.embedding_table.unsqueeze(0).tile((n_graph, 1, 1))
 
-        graph_node_feature = ops.cat([graph_token_feature, node_feature], dim=1)
+        graph_node_feature = ops.cat([graph_token_feature, node_feature], axis=1)
 
         return graph_node_feature
 
@@ -249,10 +250,10 @@ class GraphormerGraphAttnBias(nn.Cell):
         input_edges: Tensor,
         attn_edge_type: Tensor,
     ) -> Tensor:
-        n_graph, n_node = input_nodes.size()[:2]
-        graph_attn_bias = attn_bias.clone()
-        graph_attn_bias = graph_attn_bias.unsqueeze(1).repeat(
-            1, self.num_heads, 1, 1
+        n_graph, n_node = input_nodes.shape[:2]
+        graph_attn_bias = attn_bias.copy()
+        graph_attn_bias = graph_attn_bias.unsqueeze(1).tile(
+            (1, self.num_heads, 1, 1)
         )  # [n_graph, n_head, n_node+1, n_node+1]
 
         # spatial pos
@@ -261,28 +262,28 @@ class GraphormerGraphAttnBias(nn.Cell):
         graph_attn_bias[:, :, 1:, 1:] = graph_attn_bias[:, :, 1:, 1:] + spatial_pos_bias
 
         # reset spatial pos here
-        t = self.graph_token_virtual_distance.weight.view(1, self.num_heads, 1)
+        t = self.graph_token_virtual_distance.embedding_table.view(1, self.num_heads, 1)
         graph_attn_bias[:, :, 1:, 0] = graph_attn_bias[:, :, 1:, 0] + t
         graph_attn_bias[:, :, 0, :] = graph_attn_bias[:, :, 0, :] + t
 
         # edge feature
         if self.edge_type == "multi_hop":
-            spatial_pos_ = spatial_pos.clone()
+            spatial_pos_ = spatial_pos.copy()
 
             spatial_pos_[spatial_pos_ == 0] = 1  # set pad to 1
             # set 1 to 1, input_nodes > 1 to input_nodes - 1
-            spatial_pos_ = torch.where(spatial_pos_ > 1, spatial_pos_ - 1, spatial_pos_)
+            spatial_pos_ = ops.where(spatial_pos_ > 1, spatial_pos_ - 1, spatial_pos_)
             if self.multi_hop_max_dist > 0:
                 spatial_pos_ = spatial_pos_.clamp(0, self.multi_hop_max_dist)
                 input_edges = input_edges[:, :, :, : self.multi_hop_max_dist, :]
             # [n_graph, n_node, n_node, max_dist, n_head]
 
             input_edges = self.edge_encoder(input_edges).mean(-2)
-            max_dist = input_edges.size(-2)
+            max_dist = input_edges.shape[-2]
             edge_input_flat = input_edges.permute(3, 0, 1, 2, 4).reshape(max_dist, -1, self.num_heads)
-            edge_input_flat = torch.bmm(
+            edge_input_flat = ops.bmm(
                 edge_input_flat,
-                self.edge_dis_encoder.weight.reshape(-1, self.num_heads, self.num_heads)[:max_dist, :, :],
+                self.edge_dis_encoder.embedding_table.reshape(-1, self.num_heads, self.num_heads)[:max_dist, :, :],
             )
             input_edges = edge_input_flat.reshape(max_dist, n_graph, n_node, n_node, self.num_heads).permute(
                 1, 2, 3, 0, 4
@@ -353,17 +354,17 @@ class GraphormerMultiheadAttention(nn.Cell):
         if self.qkv_same_dim:
             # Empirically observed the convergence to be much better with
             # the scaled initialization
-            nn.init.xavier_uniform_(self.k_proj.weight, gain=1 / math.sqrt(2))
-            nn.init.xavier_uniform_(self.v_proj.weight, gain=1 / math.sqrt(2))
-            nn.init.xavier_uniform_(self.q_proj.weight, gain=1 / math.sqrt(2))
+            gain = 1 / math.sqrt(2)
         else:
-            nn.init.xavier_uniform_(self.k_proj.weight)
-            nn.init.xavier_uniform_(self.v_proj.weight)
-            nn.init.xavier_uniform_(self.q_proj.weight)
+            gain = 1
 
-        nn.init.xavier_uniform_(self.out_proj.weight)
+        self.k_proj.weight.set_data(init_xavier_uniform(self.k_proj.weight, gain))
+        self.v_proj.weight.set_data(init_xavier_uniform(self.v_proj.weight, gain))
+        self.q_proj.weight.set_data(init_xavier_uniform(self.q_proj.weight, gain))
+
+        self.out_proj.weight.set_data(init_xavier_uniform(self.out_proj.weight, gain))
         if self.out_proj.bias is not None:
-            nn.init.constant_(self.out_proj.bias, 0.0)
+            self.out_proj.bias.set_data(init_zero(self.out_proj.bias))
 
     def construct(
         self,
@@ -395,23 +396,23 @@ class GraphormerMultiheadAttention(nn.Cell):
         if need_head_weights:
             need_weights = True
 
-        tgt_len, bsz, embedding_dim = query.size()
+        tgt_len, bsz, embedding_dim = query.shape
         src_len = tgt_len
         if not (embedding_dim == self.embedding_dim):
             raise AssertionError(
                 f"The query embedding dimension {embedding_dim} is not equal to the expected embedding_dim"
                 f" {self.embedding_dim}."
             )
-        if not (list(query.size()) == [tgt_len, bsz, embedding_dim]):
+        if not (list(query.shape) == [tgt_len, bsz, embedding_dim]):
             raise AssertionError("Query size incorrect in Graphormer, compared to model dimensions.")
 
         if key is not None:
-            src_len, key_bsz, _ = key.size()
-            if not torch.jit.is_scripting():
-                if (key_bsz != bsz) or (value is None) or not (src_len, bsz == value.shape[:2]):
-                    raise AssertionError(
-                        "The batch shape does not match the key or value shapes provided to the attention."
-                    )
+            src_len, key_bsz, _ = key.shape
+            # Only do this assertion outside jit
+            if (key_bsz != bsz) or (value is None) or not (src_len, bsz == value.shape[:2]):
+                raise AssertionError(
+                    "The batch shape does not match the key or value shapes provided to the attention."
+                )
 
         q = self.q_proj(query)
         k = self.k_proj(query)
@@ -419,13 +420,13 @@ class GraphormerMultiheadAttention(nn.Cell):
 
         q *= self.scaling
 
-        q = q.contiguous().view(tgt_len, bsz * self.num_heads, self.head_dim).transpose(0, 1)
+        q = q.contiguous().view(tgt_len, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
         if k is not None:
-            k = k.contiguous().view(-1, bsz * self.num_heads, self.head_dim).transpose(0, 1)
+            k = k.contiguous().view(-1, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
         if v is not None:
-            v = v.contiguous().view(-1, bsz * self.num_heads, self.head_dim).transpose(0, 1)
+            v = v.contiguous().view(-1, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
 
-        if (k is None) or not (k.size(1) == src_len):
+        if (k is None) or not (k.shape[1] == src_len):
             raise AssertionError("The shape of the key generated in the attention is incorrect")
 
         # This is part of a workaround to get around fork/join parallelism
@@ -434,14 +435,14 @@ class GraphormerMultiheadAttention(nn.Cell):
             key_padding_mask = None
 
         if key_padding_mask is not None:
-            if key_padding_mask.size(0) != bsz or key_padding_mask.size(1) != src_len:
+            if key_padding_mask.shape[0] != bsz or key_padding_mask.shape[1] != src_len:
                 raise AssertionError(
                     "The shape of the generated padding mask for the key does not match expected dimensions."
                 )
-        attn_weights = torch.bmm(q, k.transpose(1, 2))
+        attn_weights = ops.bmm(q, k.swapaxes(1, 2))
         attn_weights = self.apply_sparse_mask(attn_weights, tgt_len, src_len, bsz)
 
-        if list(attn_weights.size()) != [bsz * self.num_heads, tgt_len, src_len]:
+        if list(attn_weights.shape) != [bsz * self.num_heads, tgt_len, src_len]:
             raise AssertionError("The attention weights generated do not match the expected dimensions.")
 
         if attn_bias is not None:
@@ -455,29 +456,29 @@ class GraphormerMultiheadAttention(nn.Cell):
             # don't attend to padding symbols
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
             attn_weights = attn_weights.masked_fill(
-                key_padding_mask.unsqueeze(1).unsqueeze(2).to(torch.bool), float("-inf")
+                key_padding_mask.unsqueeze(1).unsqueeze(2).bool(), float("-inf")
             )
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         if before_softmax:
             return attn_weights, v
 
-        attn_weights_float = torch.nn.functional.softmax(attn_weights, dim=-1)
+        attn_weights_float = ops.softmax(attn_weights, axis=-1)
         attn_weights = attn_weights_float.type_as(attn_weights)
         attn_probs = self.attention_dropout_module(attn_weights)
 
         if v is None:
             raise AssertionError("No value generated")
-        attn = torch.bmm(attn_probs, v)
-        if list(attn.size()) != [bsz * self.num_heads, tgt_len, self.head_dim]:
+        attn = ops.bmm(attn_probs, v)
+        if list(attn.shape) != [bsz * self.num_heads, tgt_len, self.head_dim]:
             raise AssertionError("The attention generated do not match the expected dimensions.")
 
-        attn = attn.transpose(0, 1).contiguous().view(tgt_len, bsz, embedding_dim)
-        attn: torch.Tensor = self.out_proj(attn)
+        attn = attn.swapaxes(0, 1).contiguous().view(tgt_len, bsz, embedding_dim)
+        attn: Tensor = self.out_proj(attn)
 
         attn_weights = None
         if need_weights:
-            attn_weights = attn_weights_float.contiguous().view(bsz, self.num_heads, tgt_len, src_len).transpose(1, 0)
+            attn_weights = attn_weights_float.contiguous().view(bsz, self.num_heads, tgt_len, src_len).swapaxes(1, 0)
             if not need_head_weights:
                 # average attention weights over heads
                 attn_weights = attn_weights.mean(dim=0)
@@ -638,10 +639,10 @@ class GraphormerGraphEncoder(nn.Cell):
     ) -> Tuple[Union[Tensor, List[Tensor]], Tensor]:
         # compute padding mask. This is needed for multi-head attention
         data_x = input_nodes
-        n_graph, n_node = data_x.size()[:2]
+        n_graph, n_node = data_x.shape[:2]
         padding_mask = (data_x[:, :, 0]).eq(0)
-        padding_mask_cls = torch.zeros(n_graph, 1, device=padding_mask.device, dtype=padding_mask.dtype)
-        padding_mask = torch.cat((padding_mask_cls, padding_mask), dim=1)
+        padding_mask_cls = ops.zeros((n_graph, 1), dtype=padding_mask.dtype)
+        padding_mask = ops.cat((padding_mask_cls, padding_mask), axis=1)
 
         attn_bias = self.graph_attn_bias(input_nodes, attn_bias, spatial_pos, input_edges, attn_edge_type)
 
@@ -664,7 +665,7 @@ class GraphormerGraphEncoder(nn.Cell):
 
         input_nodes = self.dropout_module(input_nodes)
 
-        input_nodes = input_nodes.transpose(0, 1)
+        input_nodes = input_nodes.swapaxes(0, 1)
 
         inner_states = []
         if not last_state_only:
@@ -686,7 +687,7 @@ class GraphormerGraphEncoder(nn.Cell):
             inner_states = [input_nodes]
 
         if self.traceable:
-            return torch.stack(inner_states), graph_rep
+            return ops.stack(inner_states), graph_rep
         else:
             return inner_states, graph_rep
 
@@ -695,7 +696,7 @@ class GraphormerDecoderHead(nn.Cell):
     def __init__(self, embedding_dim: int, num_classes: int):
         super().__init__()
         """num_classes should be 1 for regression, or the number of classes for classification"""
-        self.lm_output_learned_bias = nn.Parameter(torch.zeros(1))
+        self.lm_output_learned_bias = Parameter(ops.zeros(1))
         self.classifier = nn.Dense(embedding_dim, num_classes, has_bias=False)
         self.num_classes = num_classes
 
@@ -750,28 +751,26 @@ class GraphormerPreTrainedModel(PreTrainedModel):
         """
         if isinstance(module, (nn.Dense, nn.Conv2d)):
             # We might be missing part of the Linear init, dependant on the layer num
-            module.weight.data.normal_(mean=0.0, std=0.02)
-            if module.bias is not None:
-                module.bias.data.zero_()
+            module.weight.set_data(init_normal(module.weight, sigma=0.02, mean=0.0))
+            if module.has_bias:
+                module.bias.set_data(init_zero(module.bias))
         elif isinstance(module, nn.Embedding):
-            module.embedding_table.data.normal_(mean=0.0, std=0.02)
-            if module.padding_idx is not None:
-                module.embedding_table.data[module.padding_idx].zero_()
+            embedding_table = init_normal(module.embedding_table, sigma=0.02, mean=0.0)
+            if module.padding_idx:
+                embedding_table[module.padding_idx] = 0
+
+            module.embedding_table.set_data(embedding_table)
         elif isinstance(module, GraphormerMultiheadAttention):
-            module.q_proj.weight.data.normal_(mean=0.0, std=0.02)
-            module.k_proj.weight.data.normal_(mean=0.0, std=0.02)
-            module.v_proj.weight.data.normal_(mean=0.0, std=0.02)
+            module.q_proj.weight.set_data(init_normal(module.q_proj.weight,
+                                                      sigma=0.02, mean=0.0))
+            module.k_proj.weight.set_data(init_normal(module.k_proj.weight,
+                                                      sigma=0.02, mean=0.0))
+            module.v_proj.weight.set_data(init_normal(module.v_proj.weight,
+                                                      sigma=0.02, mean=0.0))
             module.reset_parameters()
-        elif isinstance(module, nn.LayerNorm):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
         elif isinstance(module, GraphormerGraphEncoder):
             if module.apply_graphormer_init:
                 module.apply(self.init_graphormer_params)
-
-        elif isinstance(module, nn.LayerNorm):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
 
     def _set_gradient_checkpointing(self, module, value=False):
         if isinstance(module, GraphormerModel):
@@ -807,7 +806,7 @@ class GraphormerModel(GraphormerPreTrainedModel):
     def reset_output_layer_parameters(self):
         self.lm_output_learned_bias = Parameter(ops.zeros(1))
 
-    def forward(
+    def construct(
         self,
         input_nodes: Tensor,
         input_edges: Tensor,
@@ -828,7 +827,7 @@ class GraphormerModel(GraphormerPreTrainedModel):
         )
 
         # last inner state, then revert Batch and Graph len
-        input_nodes = inner_states[-1].transpose(0, 1)
+        input_nodes = inner_states[-1].swapaxes(0, 1)
 
         # project masked tokens only
         if masked_tokens is not None:
@@ -838,7 +837,7 @@ class GraphormerModel(GraphormerPreTrainedModel):
 
         # project back to size of vocabulary
         if self.share_input_output_embed and hasattr(self.graph_encoder.embed_tokens, "weight"):
-            input_nodes = torch.nn.functional.linear(input_nodes, self.graph_encoder.embed_tokens.weight)
+            input_nodes = ops.dense(input_nodes, self.graph_encoder.embed_tokens.weight)
 
         if not return_dict:
             return tuple(x for x in [input_nodes, inner_states] if x is not None)
@@ -904,7 +903,7 @@ class GraphormerForGraphClassification(GraphormerPreTrainedModel):
 
         loss = None
         if labels is not None:
-            mask = ~torch.isnan(labels)
+            mask = ~ops.isnan(labels)
 
             if self.num_classes == 1:  # regression
                 loss_fct = MSELoss()

@@ -176,8 +176,7 @@ class GraphormerModelTester:
         self, config, attn_bias, attn_edge_type, spatial_pos, in_degree, out_degree, input_nodes, input_edges, labels
     ):
         model = GraphormerModel(config=config)
-        model.to(torch_device)
-        model.eval()
+        model.set_train(False)
         result = model(
             input_nodes=input_nodes,
             attn_bias=attn_bias,
@@ -196,8 +195,7 @@ class GraphormerModelTester:
         self, config, attn_bias, attn_edge_type, spatial_pos, in_degree, out_degree, input_nodes, input_edges, labels
     ):
         model = GraphormerForGraphClassification(config)
-        model.to(torch_device)
-        model.eval()
+        model.set_train(False)
         result = model(
             input_nodes=input_nodes,
             attn_bias=attn_bias,
