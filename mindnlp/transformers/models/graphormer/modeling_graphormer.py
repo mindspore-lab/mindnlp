@@ -896,6 +896,7 @@ class GraphormerForGraphClassification(GraphormerPreTrainedModel):
             attn_edge_type,
             return_dict=True,
         )
+
         outputs, hidden_states = encoder_outputs["last_hidden_state"], encoder_outputs["hidden_states"]
 
         head_outputs = self.classifier(outputs)
