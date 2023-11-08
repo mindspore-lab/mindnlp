@@ -212,7 +212,7 @@ class BeamSearchScorer(BeamScorer):
                         beam_index = None
 
                     self._beam_hyps[batch_group_idx].add(
-                        input_ids[batch_beam_idx].clone(),
+                        input_ids[batch_beam_idx].copy(),
                         next_score.asnumpy().item(),
                         beam_indices=beam_index,
                     )

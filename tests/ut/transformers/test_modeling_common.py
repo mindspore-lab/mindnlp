@@ -183,6 +183,32 @@ class ModelTesterMixin:
 
         return inputs_dict
 
+    def test_forward_signature(self):
+        config, _ = self.model_tester.prepare_config_and_inputs_for_common()
+
+        for model_class in self.all_model_classes:
+            model = model_class(config)
+            signature = inspect.signature(model.construct)
+            # signature.parameters is an OrderedDict => so arg_names order is deterministic
+            arg_names = [*signature.parameters.keys()]
+
+            if model.config.is_encoder_decoder:
+                expected_arg_names = [
+                    "input_ids",
+                    "attention_mask",
+                    "decoder_input_ids",
+                    "decoder_attention_mask",
+                ]
+                expected_arg_names.extend(
+                    ["head_mask", "decoder_head_mask", "cross_attn_head_mask", "encoder_outputs"]
+                    if "head_mask" and "decoder_head_mask" and "cross_attn_head_mask" in arg_names
+                    else ["encoder_outputs"]
+                )
+                self.assertListEqual(arg_names[: len(expected_arg_names)], expected_arg_names)
+            else:
+                expected_arg_names = ["input_ids"]
+                self.assertListEqual(arg_names[:1], expected_arg_names)
+
     def test_save_load(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
@@ -412,32 +438,6 @@ class ModelTesterMixin:
             else:
                 check_determinism(first, second)
 
-    def test_construct_signature(self):
-        config, _ = self.model_tester.prepare_config_and_inputs_for_common()
-
-        for model_class in self.all_model_classes:
-            model = model_class(config)
-            signature = inspect.signature(model.construct)
-            # signature.parameters is an OrderedDict => so arg_names order is deterministic
-            arg_names = [*signature.parameters.keys()]
-
-            if model.config.is_encoder_decoder:
-                expected_arg_names = [
-                    "input_ids",
-                    "attention_mask",
-                    "decoder_input_ids",
-                    "decoder_attention_mask",
-                ]
-                expected_arg_names.extend(
-                    ["head_mask", "decoder_head_mask", "cross_attn_head_mask", "encoder_outputs"]
-                    if "head_mask" and "decoder_head_mask" and "cross_attn_head_mask" in arg_names
-                    else ["encoder_outputs"]
-                )
-                self.assertListEqual(arg_names[: len(expected_arg_names)], expected_arg_names)
-            else:
-                expected_arg_names = ["input_ids"]
-                self.assertListEqual(arg_names[:1], expected_arg_names)
-
     def test_training(self):
         if not self.model_tester.is_training:
             return
@@ -609,7 +609,7 @@ class ModelTesterMixin:
             inputs = self._prepare_for_class(inputs_dict, model_class).copy()
             inputs["head_mask"] = head_mask
             if model.config.is_encoder_decoder:
-                signature = inspect.signature(model.forward)
+                signature = inspect.signature(model.construct)
                 arg_names = [*signature.parameters.keys()]
                 if "decoder_head_mask" in arg_names:  # necessary diferentiation because of T5 model
                     inputs["decoder_head_mask"] = head_mask
@@ -855,14 +855,14 @@ class ModelTesterMixin:
             inputs_dict,
         ) = self.model_tester.prepare_config_and_inputs_for_common()
         for model_class in self.all_model_classes:
-            mindspore.set_seed(0)
+            mindspore.set_seed(1234)
             config = copy.deepcopy(original_config)
             model = model_class(config)
             model.set_train(False)
 
             hidden_states_no_chunk = model(**self._prepare_for_class(inputs_dict, model_class))[0]
 
-            mindspore.set_seed(0)
+            mindspore.set_seed(1234)
             config.chunk_size_feed_forward = 1
             model = model_class(config)
             model.set_train(False)

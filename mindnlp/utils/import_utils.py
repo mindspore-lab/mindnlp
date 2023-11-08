@@ -23,6 +23,7 @@ Import utilities: Utilities related to imports and our lazy inits.
 import os
 import sys
 import warnings
+from types import ModuleType
 from collections import OrderedDict
 from functools import wraps
 from typing import Tuple, Union
@@ -206,3 +207,21 @@ def mindspore_required(func):
 
 class OptionalDependencyNotAvailable(BaseException):
     """Internally used error class for signalling an optional dependency was not found."""
+
+def direct_transformers_import(path: str, file="__init__.py") -> ModuleType:
+    """Imports transformers directly
+
+    Args:
+        path (`str`): The path to the source file
+        file (`str`, optional): The file to join with the path. Defaults to "__init__.py".
+
+    Returns:
+        `ModuleType`: The resulting imported module
+    """
+    name = "transformers"
+    location = os.path.join(path, file)
+    spec = importlib.util.spec_from_file_location(name, location, submodule_search_locations=[path])
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    module = sys.modules[name]
+    return module
