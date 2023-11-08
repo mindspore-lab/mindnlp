@@ -2,86 +2,35 @@
 # pylint: disable=C0302
 # pylint: disable=C0415
 # pylint: disable=R1720
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 import os
+from dataclasses import dataclass
+
 import mindspore
 from mindspore import nn, ops, Tensor, numpy, log as logger
 from mindspore.common.initializer import Normal, initializer
 from mindspore.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
 
-from ...modeling_utils import PreTrainedModel
+from mindnlp.utils import ModelOutput
 from .megatron_bert_config import MegatronBertConfig
-from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer, \
-    apply_chunking_to_forward
+from ...modeling_outputs import (
+    BaseModelOutputWithPastAndCrossAttentions,
+    BaseModelOutputWithPoolingAndCrossAttentions,
+    CausalLMOutputWithCrossAttentions,
+    MaskedLMOutput,
+    MultipleChoiceModelOutput,
+    NextSentencePredictorOutput,
+    QuestionAnsweringModelOutput,
+    SequenceClassifierOutput,
+    TokenClassifierOutput,
+)
+from ...modeling_utils import PreTrainedModel
+from ...ms_utils import (
+    find_pruneable_heads_and_indices,
+    prune_linear_layer,
+    apply_chunking_to_forward,
+)
 from ...activations import ACT2FN
-
-
-def load_tf_weights_in_megatron_bert(model, tf_checkpoint_path):
-    """Load tf checkpoints in a mindspore model."""
-    try:
-        import re
-        import numpy as np
-        import tensorflow as tf
-    except ImportError:
-        logger.error(
-            "Loading a TensorFlow model in MindSpore, requires TensorFlow to be installed. "
-            "Please see https://www.tensorflow.org/install/ for installation instructions."
-        )
-        raise
-    tf_path = os.path.abspath(tf_checkpoint_path)
-    logger.info(f"Converting TensorFlow checkpoint from {tf_path}")
-    # Load weights from TF model
-    init_vars = tf.train.list_variables(tf_path)
-    names = []
-    arrays = []
-    for name, shape in init_vars:
-        logger.info(f"Loading TF weight {name} with shape {shape}")
-        array = tf.train.load_variable(tf_path, name)
-        names.append(name)
-        arrays.append(array)
-
-    for name, array in zip(names, arrays):
-        name = name.split("/")
-        # adam_v and adam_m are variables used in AdamWeightDecayOptimizer to calculated m and v
-        # which are not required for using pretrained model
-        if any(n in ["adam_v", "adam_m", "AdamWeightDecayOptimizer", "AdamWeightDecayOptimizer_1",
-                     "global_step"] for n in name):
-            logger.info(f"Skipping {'/'.join(name)}")
-            continue
-        pointer = model
-        m_name = ''
-        for m_name in name:
-            if re.fullmatch(r"[A-Za-z]+_\d+", m_name):
-                scope_names = re.split(r"_(\d+)", m_name)
-            else:
-                scope_names = [m_name]
-            if scope_names[0] == "kernel" or scope_names[0] == "gamma":
-                pointer = getattr(pointer, "weight")
-            elif scope_names[0] == "output_bias" or scope_names[0] == "beta":
-                pointer = getattr(pointer, "bias")
-            elif scope_names[0] == "output_weights":
-                pointer = getattr(pointer, "weight")
-            elif scope_names[0] == "squad":
-                pointer = getattr(pointer, "classifier")
-            else:
-                try:
-                    pointer = getattr(pointer, scope_names[0])
-                except AttributeError:
-                    logger.info(f"Skipping {'/'.join(name)}")
-                    continue
-            if len(scope_names) >= 2:
-                num = int(scope_names[1])
-                pointer = pointer[num]
-        if m_name[-11:] == "_embeddings":
-            pointer = getattr(pointer, "weight")
-        elif m_name == "kernel":
-            array = np.transpose(array)
-        if pointer.shape != array.shape:
-            raise ValueError(
-                f"Pointer shape {pointer.shape} and array shape {array.shape} mismatched")
-        logger.info(f"Initialize MindSpore weight {name}")
-        pointer.data = Tensor.from_numpy(array)
-    return model
 
 
 class MegatronBertEmbeddings(nn.Cell):
@@ -89,9 +38,15 @@ class MegatronBertEmbeddings(nn.Cell):
 
     def __init__(self, config):
         super().__init__()
-        self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
-        self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
-        self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
+        self.word_embeddings = nn.Embedding(
+            config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id
+        )
+        self.position_embeddings = nn.Embedding(
+            config.max_position_embeddings, config.hidden_size
+        )
+        self.token_type_embeddings = nn.Embedding(
+            config.type_vocab_size, config.hidden_size
+        )
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and
         # be able to load any TensorFlow checkpoint file
@@ -100,18 +55,22 @@ class MegatronBertEmbeddings(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
-        self.position_ids = mindspore.Parameter(ops.arange(config.max_position_embeddings).broadcast_to((1, -1)))
-        self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
+        self.position_ids = mindspore.Parameter(
+            ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
+        )
+        self.position_embedding_type = getattr(
+            config, "position_embedding_type", "absolute"
+        )
 
     def construct(
-            self,
-            input_ids=None,
-            token_type_ids=None,
-            position_ids=None,
-            inputs_embeds=None,
-            past_key_values_length=0
+        self,
+        input_ids=None,
+        token_type_ids=None,
+        position_ids=None,
+        inputs_embeds=None,
+        past_key_values_length=0,
     ) -> Tensor:
-        """ The forward algorithm for the embedding layer. """
+        """The forward algorithm for the embedding layer."""
         if input_ids is not None:
             input_shape = input_ids.shape
         else:
@@ -120,7 +79,9 @@ class MegatronBertEmbeddings(nn.Cell):
         seq_length = input_shape[1]
 
         if position_ids is None:
-            position_ids = self.position_ids[:, past_key_values_length: seq_length + past_key_values_length]
+            position_ids = self.position_ids[
+                :, past_key_values_length : seq_length + past_key_values_length
+            ]
 
         if token_type_ids is None:
             token_type_ids = ops.zeros(input_shape, mindspore.int32)
@@ -140,11 +101,13 @@ class MegatronBertEmbeddings(nn.Cell):
 
 
 class MegatronBertSelfAttention(nn.Cell):
-    """ MegatronBert SelfAttention layer """
+    """MegatronBert SelfAttention layer"""
 
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
-        if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
+        if config.hidden_size % config.num_attention_heads != 0 and not hasattr(
+            config, "embedding_size"
+        ):
             raise ValueError(
                 f"The hidden size ({config.hidden_size}) is not a multiple of "
                 f"the number of attention heads ({config.num_attention_heads})"
@@ -164,24 +127,29 @@ class MegatronBertSelfAttention(nn.Cell):
         )
         if self.position_embedding_type in ("relative_key", "relative_key_query"):
             self.max_position_embeddings = config.max_position_embeddings
-            self.distance_embedding = nn.Embedding(2 * config.max_position_embeddings - 1, self.attention_head_size)
+            self.distance_embedding = nn.Embedding(
+                2 * config.max_position_embeddings - 1, self.attention_head_size
+            )
         self.is_decoder = config.is_decoder
 
     def transpose_for_scores(self, matrix_x: Tensor) -> Tensor:
         """Transpose the score Tensor"""
-        new_x_shape = matrix_x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
+        new_x_shape = matrix_x.shape[:-1] + (
+            self.num_attention_heads,
+            self.attention_head_size,
+        )
         matrix_x = matrix_x.view(new_x_shape)
         return matrix_x.permute(0, 2, 1, 3)
 
     def construct(
-            self,
-            hidden_states,
-            attention_mask=None,
-            head_mask=None,
-            encoder_hidden_states=None,
-            encoder_attention_mask=None,
-            past_key_value=None,
-            output_attentions=False
+        self,
+        hidden_states,
+        attention_mask=None,
+        head_mask=None,
+        encoder_hidden_states=None,
+        encoder_attention_mask=None,
+        past_key_value=None,
+        output_attentions=False,
     ) -> Tuple[Tensor]:
         """Forward algorithms for the self-attention layer"""
         mixed_query_layer = self.query(hidden_states)
@@ -231,25 +199,45 @@ class MegatronBertSelfAttention(nn.Cell):
         if self.position_embedding_type == ("relative_key", "relative_key_query"):
             query_length, key_length = query_layer.shape[2], key_layer.shape[2]
             if use_cache:
-                position_ids_l = Tensor(key_length - 1, dtype=mindspore.int64).view(-1, 1)
+                position_ids_l = Tensor(key_length - 1, dtype=mindspore.int64).view(
+                    -1, 1
+                )
             else:
-                position_ids_l = mindspore.numpy.arange(query_length, dtype=Tensor.long).view(-1, 1)
-            position_ids_r = mindspore.numpy.arange(key_length, dtype=Tensor.long).view(1, -1)
+                position_ids_l = mindspore.numpy.arange(
+                    query_length, dtype=Tensor.long
+                ).view(-1, 1)
+            position_ids_r = mindspore.numpy.arange(key_length, dtype=Tensor.long).view(
+                1, -1
+            )
             distance = position_ids_l - position_ids_r
 
-            positional_embedding = self.distance_embedding(distance + self.max_position_embeddings - 1)
+            positional_embedding = self.distance_embedding(
+                distance + self.max_position_embeddings - 1
+            )
             # fp16 compatibility
             positional_embedding = positional_embedding.to(dtype=query_layer.dtype)
 
             if self.position_embedding_type == "relative_key":
-                relative_position_scores = ops.einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
+                relative_position_scores = ops.einsum(
+                    "bhld,lrd->bhlr", query_layer, positional_embedding
+                )
                 attention_scores = attention_scores + relative_position_scores
             elif self.position_embedding_type == "relative_key_query":
-                relative_position_scores_query = ops.einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
-                relative_position_scores_key = ops.einsum("bhrd,lrd->bhlr", key_layer, positional_embedding)
-                attention_scores = attention_scores + relative_position_scores_query + relative_position_scores_key
+                relative_position_scores_query = ops.einsum(
+                    "bhld,lrd->bhlr", query_layer, positional_embedding
+                )
+                relative_position_scores_key = ops.einsum(
+                    "bhrd,lrd->bhlr", key_layer, positional_embedding
+                )
+                attention_scores = (
+                    attention_scores
+                    + relative_position_scores_query
+                    + relative_position_scores_key
+                )
 
-        attention_scores = attention_scores / ops.sqrt(Tensor(self.attention_head_size, mindspore.float32))
+        attention_scores = attention_scores / ops.sqrt(
+            Tensor(self.attention_head_size, mindspore.float32)
+        )
         if attention_mask is not None:
             # Apply the attention mask is (precomputed for all layers in MegatronBertModel forward() function)
             attention_scores = attention_scores + attention_mask
@@ -271,7 +259,9 @@ class MegatronBertSelfAttention(nn.Cell):
         new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(new_context_layer_shape)
 
-        outputs = (context_layer, attention_probs) if output_attentions else (context_layer,)
+        outputs = (
+            (context_layer, attention_probs) if output_attentions else (context_layer,)
+        )
 
         if self.is_decoder:
             outputs = outputs + (past_key_value,)
@@ -297,11 +287,13 @@ class MegatronBertSelfOutput(nn.Cell):
 
 
 class MegatronBertAttention(nn.Cell):
-    """ MegatronBert Attention layer """
+    """MegatronBert Attention layer"""
 
     def __init__(self, config):
         super().__init__()
-        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(
+            [config.hidden_size], epsilon=config.layer_norm_eps
+        )
         self.self = MegatronBertSelfAttention(config)
         self.output = MegatronBertSelfOutput(config)
         self.pruned_heads = set()
@@ -316,7 +308,7 @@ class MegatronBertAttention(nn.Cell):
             heads,
             self.self.num_attention_heads,
             self.self.attention_head_size,
-            self.pruned_heads
+            self.pruned_heads,
         )
         # Prune linear layers
         self.self.query = prune_linear_layer(self.self.query, index)
@@ -326,18 +318,20 @@ class MegatronBertAttention(nn.Cell):
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
-        self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
+        self.self.all_head_size = (
+            self.self.attention_head_size * self.self.num_attention_heads
+        )
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def construct(
-            self,
-            hidden_states,
-            attention_mask=None,
-            head_mask=None,
-            encoder_hidden_states=None,
-            encoder_attention_mask=None,
-            past_key_value=None,
-            output_attentions=False,
+        self,
+        hidden_states,
+        attention_mask=None,
+        head_mask=None,
+        encoder_hidden_states=None,
+        encoder_attention_mask=None,
+        past_key_value=None,
+        output_attentions=False,
     ) -> Tuple[Tensor]:
         ln_outputs = Tensor(self.layer_norm(hidden_states))
         self_outputs = self.self(
@@ -350,13 +344,15 @@ class MegatronBertAttention(nn.Cell):
             output_attentions,
         )
         attention_output = self.output(self_outputs[0], hidden_states)
-        outputs = (attention_output,) + self_outputs[1:]  # add attentions if we output them
+        outputs = (attention_output,) + self_outputs[
+            1:
+        ]  # add attentions if we output them
         return outputs
 
 
 # Copied from transformers.models.bert.modeling_bert.BertIntermediate with Bert->MegatronBert
 class MegatronBertIntermediate(nn.Cell):
-    """ MegatronBert Intermediate layer """
+    """MegatronBert Intermediate layer"""
 
     def __init__(self, config):
         super().__init__()
@@ -403,25 +399,31 @@ class MegatronBertLayer(nn.Cell):
         self.add_cross_attention = config.add_cross_attention
         if self.add_cross_attention:
             if not self.is_decoder:
-                raise TypeError(f"{self} should be used as a decoder model "
-                                f"if cross attention is added")
+                raise TypeError(
+                    f"{self} should be used as a decoder model "
+                    f"if cross attention is added"
+                )
             self.crossattention = MegatronBertAttention(config)
-        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(
+            [config.hidden_size], epsilon=config.layer_norm_eps
+        )
         self.intermediate = MegatronBertIntermediate(config)
         self.output = MegatronBertOutput(config)
 
     def construct(
-            self,
-            hidden_states,
-            attention_mask=None,
-            head_mask=None,
-            encoder_hidden_states=None,
-            encoder_attention_mask=None,
-            past_key_value=None,
-            output_attentions=False,
+        self,
+        hidden_states,
+        attention_mask=None,
+        head_mask=None,
+        encoder_hidden_states=None,
+        encoder_attention_mask=None,
+        past_key_value=None,
+        output_attentions=False,
     ) -> Tuple[Tensor]:
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
-        self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
+        self_attn_past_key_value = (
+            past_key_value[:2] if past_key_value is not None else None
+        )
         self_attention_outputs = self.attention(
             hidden_states,
             attention_mask,
@@ -449,7 +451,9 @@ class MegatronBertLayer(nn.Cell):
                 )
 
             # cross_attn cached key/values tuple is at positions 3,4 of past_key_value tuple
-            cross_attn_past_key_value = past_key_value[-2:] if past_key_value is not None else None
+            cross_attn_past_key_value = (
+                past_key_value[-2:] if past_key_value is not None else None
+            )
             cross_attention_outputs = self.crossattention(
                 attention_output,
                 attention_mask,
@@ -471,7 +475,7 @@ class MegatronBertLayer(nn.Cell):
             self.feed_forward_chunk,
             self.chunk_size_feed_forward,
             self.seq_len_dim,
-            attention_output
+            attention_output,
         )
         outputs = (layer_output,) + outputs
 
@@ -508,29 +512,35 @@ class MegatronBertEncoder(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([MegatronBertLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.CellList(
+            [MegatronBertLayer(config) for _ in range(config.num_hidden_layers)]
+        )
 
         # The final layer norm. We removed the 1st LN, moved LN to each hidden layer and this one
         # is simply the final LN (Transformer's BERT has it attached to each hidden layer).
-        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(
+            [config.hidden_size], epsilon=config.layer_norm_eps
+        )
         self.gradient_checkpointing = False
 
     def construct(
-            self,
-            hidden_states,
-            attention_mask=None,
-            head_mask=None,
-            encoder_hidden_states=None,
-            encoder_attention_mask=None,
-            past_key_values=None,
-            use_cache=None,
-            output_attentions=False,
-            output_hidden_states=False,
-            return_dict=True,
+        self,
+        hidden_states,
+        attention_mask=None,
+        head_mask=None,
+        encoder_hidden_states=None,
+        encoder_attention_mask=None,
+        past_key_values=None,
+        use_cache=None,
+        output_attentions=False,
+        output_hidden_states=False,
+        return_dict=True,
     ) -> Union[Tuple, Tuple]:
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
-        all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
+        all_cross_attentions = (
+            () if output_attentions and self.config.add_cross_attention else None
+        )
 
         next_decoder_cache = () if use_cache else None
         for i, layer_module in enumerate(self.layer):
@@ -573,25 +583,29 @@ class MegatronBertEncoder(nn.Cell):
 
         if not return_dict:
             return tuple(
-                v for v in [
+                v
+                for v in [
                     hidden_states,
                     next_decoder_cache,
                     all_hidden_states,
                     all_self_attentions,
                     all_cross_attentions,
-                ] if v is not None
+                ]
+                if v is not None
             )
 
-        return (hidden_states,
-                next_decoder_cache,
-                all_hidden_states,
-                all_self_attentions,
-                all_cross_attentions)
+        return BaseModelOutputWithPastAndCrossAttentions(
+            last_hidden_state=hidden_states,
+            past_key_values=next_decoder_cache,
+            hidden_states=all_hidden_states,
+            attentions=all_self_attentions,
+            cross_attentions=all_cross_attentions,
+        )
 
 
 class MegatronBertPooler(nn.Cell):
     """
-        Copied from transformers.models.bert.modeling_bert.BertPooler with Bert->MegatronBert
+    Copied from transformers.models.bert.modeling_bert.BertPooler with Bert->MegatronBert
     """
 
     def __init__(self, config):
@@ -706,7 +720,6 @@ class MegatronBertPreTrainedModel(PreTrainedModel):
     """
 
     config_class = MegatronBertConfig
-    load_tf_weights = load_tf_weights_in_megatron_bert
     base_model_prefix = "bert"
     supports_gradient_checkpointing = True
     _keys_to_ignore_on_load_missing = [r"position_ids"]
@@ -715,12 +728,16 @@ class MegatronBertPreTrainedModel(PreTrainedModel):
         """Initialize the embedding_tables"""
         if isinstance(module, nn.Embedding):
             # Slightly different from the TF version which uses truncated_normal
-            module.embedding_table = initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
-                                                 shape=module.embedding_table.shape)
+            module.embedding_table = initializer(
+                Normal(mean=0.0, sigma=self.config.initializer_range),
+                shape=module.embedding_table.shape,
+            )
         elif isinstance(module, nn.Dense):
             # Slightly different from the TF version which uses truncated_normal
-            module.weight = initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
-                                        shape=module.weight.shape)
+            module.weight = initializer(
+                Normal(mean=0.0, sigma=self.config.initializer_range),
+                shape=module.weight.shape,
+            )
             # module.weight.data.normal_(mean=0.0, sigma=self.config.initializer_range)
         elif isinstance(module, nn.LayerNorm):
             zeroslike = ops.ZerosLike()
@@ -775,7 +792,8 @@ class MegatronBertPreTrainedModel(PreTrainedModel):
         """
 
 
-class MegatronBertForPreTrainingOutput(nn.Cell):
+@dataclass
+class MegatronBertForPreTrainingOutput(ModelOutput):
     """
     Output type of [`MegatronBertForPreTraining`].
 
@@ -804,15 +822,11 @@ class MegatronBertForPreTrainingOutput(nn.Cell):
             in the self-attention heads.
     """
 
-    loss = None
-    prediction_logits = None
-    seq_relationship_logits = None
-    hidden_states = None
-    attentions = None
-
-    def __init__(self, *inputs, **kwargs):
-        super().__init__(*inputs, **kwargs)
-
+    loss: Optional[mindspore.Tensor] = None
+    prediction_logits: mindspore.Tensor = None
+    seq_relationship_logits: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 class MegatronBertModel(MegatronBertPreTrainedModel):
     """
@@ -863,20 +877,20 @@ class MegatronBertModel(MegatronBertPreTrainedModel):
             self.encoder.layer[layer].attention.prune_heads(heads)
 
     def construct(
-            self,
-            input_ids=None,
-            attention_mask=None,
-            token_type_ids=None,
-            position_ids=None,
-            head_mask=None,
-            inputs_embeds=None,
-            encoder_hidden_states=None,
-            encoder_attention_mask=None,
-            past_key_values=None,
-            use_cache=None,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
+        self,
+        input_ids=None,
+        attention_mask=None,
+        token_type_ids=None,
+        position_ids=None,
+        head_mask=None,
+        inputs_embeds=None,
+        encoder_hidden_states=None,
+        encoder_attention_mask=None,
+        past_key_values=None,
+        use_cache=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
     ) -> Union[Tuple, Tuple]:
         r"""
         encoder_hidden_states  (`mindspore.float32` of shape `(batch_size, sequence_length,
@@ -905,10 +919,19 @@ class MegatronBertModel(MegatronBertPreTrainedModel):
             If set to `True`, `past_key_values` key value states are returned and can be
             used to speed up decoding (see `past_key_values`).
         """
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
+        )
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states)
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         if self.config.is_decoder:
             use_cache = use_cache if use_cache is not None else self.config.use_cache
@@ -916,7 +939,9 @@ class MegatronBertModel(MegatronBertPreTrainedModel):
             use_cache = False
 
         if (input_ids is not None) and (inputs_embeds is not None):
-            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
+            raise ValueError(
+                "You cannot specify both input_ids and inputs_embeds at the same time"
+            )
         elif input_ids is not None:
             input_shape = input_ids.shape
         elif inputs_embeds is not None:
@@ -927,7 +952,9 @@ class MegatronBertModel(MegatronBertPreTrainedModel):
         batch_size, seq_length = input_shape
 
         # past_key_values_length
-        past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
+        past_key_values_length = (
+            past_key_values[0][0].shape[2] if past_key_values is not None else 0
+        )
 
         if attention_mask is None:
             attention_mask = ops.ones((batch_size, seq_length + past_key_values_length))
@@ -937,16 +964,24 @@ class MegatronBertModel(MegatronBertPreTrainedModel):
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length,
         # to_seq_length], ourselves in which case we just need to make it broadcastable
         # to all heads.
-        extended_attention_mask: Tensor = self.get_extended_attention_mask(attention_mask, input_shape)
+        extended_attention_mask: Tensor = self.get_extended_attention_mask(
+            attention_mask, input_shape
+        )
 
         # If a 2D or 3D attention mask is provided for the cross-attention
         # we need to make broadcastable to [batch_size, num_heads, seq_length, seq_length]
         if self.config.is_decoder and encoder_hidden_states is not None:
-            encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.size()
+            (
+                encoder_batch_size,
+                encoder_sequence_length,
+                _,
+            ) = encoder_hidden_states.size()
             encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
             if encoder_attention_mask is None:
                 encoder_attention_mask = ops.ones(encoder_hidden_shape)
-            encoder_extended_attention_mask = self.invert_attention_mask(encoder_attention_mask)
+            encoder_extended_attention_mask = self.invert_attention_mask(
+                encoder_attention_mask
+            )
         else:
             encoder_extended_attention_mask = None
 
@@ -978,15 +1013,21 @@ class MegatronBertModel(MegatronBertPreTrainedModel):
             return_dict=return_dict,
         )
         sequence_output = encoder_outputs[0]
-        pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
+        pooled_output = (
+            self.pooler(sequence_output) if self.pooler is not None else None
+        )
 
         if not return_dict:
             return (sequence_output, pooled_output) + encoder_outputs[1:]
 
-        return (
-            sequence_output,
-            pooled_output,
-            *encoder_outputs[1:])
+        return BaseModelOutputWithPoolingAndCrossAttentions(
+            last_hidden_state=sequence_output,
+            pooler_output=pooled_output,
+            past_key_values=encoder_outputs.past_key_values,
+            hidden_states=encoder_outputs.hidden_states,
+            attentions=encoder_outputs.attentions,
+            cross_attentions=encoder_outputs.cross_attentions,
+        )
 
 
 class MegatronBertForPreTraining(MegatronBertPreTrainedModel):
@@ -994,6 +1035,7 @@ class MegatronBertForPreTraining(MegatronBertPreTrainedModel):
     Its function is to fine-tune the various natural language processing tasks
     by pre-training and learning the context of the language.
     """
+
     _keys_to_ignore_on_load_missing = ["cls.predictions.decoder"]
 
     def __init__(self, config):
@@ -1018,18 +1060,18 @@ class MegatronBertForPreTraining(MegatronBertPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
 
     def construct(
-            self,
-            input_ids=None,
-            attention_mask=None,
-            token_type_ids=None,
-            position_ids=None,
-            head_mask=None,
-            inputs_embeds=None,
-            labels=None,
-            next_sentence_label=None,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
+        self,
+        input_ids=None,
+        attention_mask=None,
+        token_type_ids=None,
+        position_ids=None,
+        head_mask=None,
+        inputs_embeds=None,
+        labels=None,
+        next_sentence_label=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
     ) -> Union[Tuple, Tuple]:
         r"""
         labels (`mindspore.int32` of shape `(batch_size, sequence_length)`, *optional*):
@@ -1052,7 +1094,9 @@ class MegatronBertForPreTraining(MegatronBertPreTrainedModel):
         Example:
 
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         outputs = self.bert(
             input_ids,
@@ -1067,25 +1111,31 @@ class MegatronBertForPreTraining(MegatronBertPreTrainedModel):
         )
 
         sequence_output, pooled_output = outputs[:2]
-        prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
+        prediction_scores, seq_relationship_score = self.cls(
+            sequence_output, pooled_output
+        )
 
         total_loss = None
         if labels is not None and next_sentence_label is not None:
             loss_fct = CrossEntropyLoss()
-            masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
-            next_sentence_loss = loss_fct(seq_relationship_score.view(-1, 2), next_sentence_label.view(-1))
+            masked_lm_loss = loss_fct(
+                prediction_scores.view(-1, self.config.vocab_size), labels.view(-1)
+            )
+            next_sentence_loss = loss_fct(
+                seq_relationship_score.view(-1, 2), next_sentence_label.view(-1)
+            )
             total_loss = masked_lm_loss + next_sentence_loss
 
         if not return_dict:
             output = (prediction_scores, seq_relationship_score) + outputs[2:]
             return ((total_loss,) + output) if total_loss is not None else output
 
-        return (
-            total_loss,
-            prediction_scores,
-            seq_relationship_score,
-            outputs[3],
-            outputs[4],
+        return MegatronBertForPreTrainingOutput(
+            loss=total_loss,
+            prediction_logits=prediction_scores,
+            seq_relationship_logits=seq_relationship_score,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
         )
 
 
@@ -1093,6 +1143,7 @@ class MegatronBertForCausalLM(MegatronBertPreTrainedModel):
     """
     causal lm
     """
+
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
     _keys_to_ignore_on_load_missing = [r"position_ids", r"cls.predictions.decoder"]
 
@@ -1100,7 +1151,9 @@ class MegatronBertForCausalLM(MegatronBertPreTrainedModel):
         super().__init__(config)
 
         if not config.is_decoder:
-            logger.warning("If you want to use `MegatronBertForCausalLM` as a standalone, add `is_decoder=True.`")
+            logger.warning(
+                "If you want to use `MegatronBertForCausalLM` as a standalone, add `is_decoder=True.`"
+            )
 
         self.bert = MegatronBertModel(config, add_pooling_layer=False)
         self.cls = MegatronBertOnlyMLMHead(config)
@@ -1121,21 +1174,21 @@ class MegatronBertForCausalLM(MegatronBertPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
 
     def construct(
-            self,
-            input_ids=None,
-            attention_mask=None,
-            token_type_ids=None,
-            position_ids=None,
-            head_mask=None,
-            inputs_embeds=None,
-            encoder_hidden_states=None,
-            encoder_attention_mask=None,
-            labels=None,
-            past_key_values=None,
-            use_cache=None,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
+        self,
+        input_ids=None,
+        attention_mask=None,
+        token_type_ids=None,
+        position_ids=None,
+        head_mask=None,
+        inputs_embeds=None,
+        encoder_hidden_states=None,
+        encoder_attention_mask=None,
+        labels=None,
+        past_key_values=None,
+        use_cache=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
     ) -> Union[Tuple, Tuple]:
         r"""
         encoder_hidden_states  (`mindspore.float32` of shape
@@ -1171,7 +1224,9 @@ class MegatronBertForCausalLM(MegatronBertPreTrainedModel):
         Returns:
 
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
         if labels is not None:
             use_cache = False
 
@@ -1200,26 +1255,29 @@ class MegatronBertForCausalLM(MegatronBertPreTrainedModel):
             shifted_prediction_scores = prediction_scores[:, :-1, :]
             labels = labels[:, 1:]
             loss_fct = CrossEntropyLoss()
-            lm_loss = loss_fct(shifted_prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            lm_loss = loss_fct(
+                shifted_prediction_scores.view(-1, self.config.vocab_size),
+                labels.view(-1),
+            )
 
         if not return_dict:
             output = (prediction_scores,) + outputs[2:]
             return ((lm_loss,) + output) if lm_loss is not None else output
 
-        return (
-            lm_loss,
-            prediction_scores,
-            past_key_values,
-            outputs[3],
-            outputs[4],
-            outputs[5],
+        return CausalLMOutputWithCrossAttentions(
+            loss=lm_loss,
+            logits=prediction_scores,
+            past_key_values=outputs.past_key_values,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+            cross_attentions=outputs.cross_attentions,
         )
 
     def prepare_inputs_for_generation(
-            self,
-            input_ids,
-            past_key_values=None,
-            attention_mask=None,
+        self,
+        input_ids,
+        past_key_values=None,
+        attention_mask=None,
     ):
         """
         prepare_inputs_for_generation is used for generating sequences of text using the model.
@@ -1262,7 +1320,7 @@ class MegatronBertForCausalLM(MegatronBertPreTrainedModel):
         return {
             "input_ids": input_ids,
             "attention_mask": attention_mask,
-            "past_key_values": past_key_values
+            "past_key_values": past_key_values,
         }
 
     def reorder_cache(self, past, beam_idx):
@@ -1273,7 +1331,11 @@ class MegatronBertForCausalLM(MegatronBertPreTrainedModel):
         """
         reordered_past = ()
         for layer_past in past:
-            reordered_past += (tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),)
+            reordered_past += (
+                tuple(
+                    past_state.index_select(0, beam_idx) for past_state in layer_past
+                ),
+            )
         return reordered_past
 
 
@@ -1286,6 +1348,7 @@ class MegatronBertForMaskedLM(MegatronBertPreTrainedModel):
     (i.e., replaced with special [MASK] tokens) and the model is asked to predict these masked
     words based on the context of other words.
     """
+
     _keys_to_ignore_on_load_unexpected = [r"pooler", r"seq_relationship"]
     _keys_to_ignore_on_load_missing = [r"position_ids", r"predictions.decoder"]
 
@@ -1295,7 +1358,8 @@ class MegatronBertForMaskedLM(MegatronBertPreTrainedModel):
         if config.is_decoder:
             logger.warning(
                 "If you want to use `MegatronBertForMaskedLM` make sure `config.is_decoder=False` "
-                "for bi-directional self-attention.")
+                "for bi-directional self-attention."
+            )
 
         self.bert = MegatronBertModel(config, add_pooling_layer=False)
         self.cls = MegatronBertOnlyMLMHead(config)
@@ -1316,19 +1380,19 @@ class MegatronBertForMaskedLM(MegatronBertPreTrainedModel):
         self.cls.predictions.decoder = new_embeddings
 
     def construct(
-            self,
-            input_ids=None,
-            attention_mask=None,
-            token_type_ids=None,
-            position_ids=None,
-            head_mask=None,
-            inputs_embeds=None,
-            encoder_hidden_states=None,
-            encoder_attention_mask=None,
-            labels=None,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
+        self,
+        input_ids=None,
+        attention_mask=None,
+        token_type_ids=None,
+        position_ids=None,
+        head_mask=None,
+        inputs_embeds=None,
+        encoder_hidden_states=None,
+        encoder_attention_mask=None,
+        labels=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
     ) -> Union[Tuple, Tuple]:
         r"""
         labels (`mindspore.int32` of shape `(batch_size, sequence_length)`, *optional*):
@@ -1338,7 +1402,9 @@ class MegatronBertForMaskedLM(MegatronBertPreTrainedModel):
             tokens with labels in `[0, ..., config.vocab_size]`
         """
 
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         outputs = self.bert(
             input_ids,
@@ -1360,17 +1426,21 @@ class MegatronBertForMaskedLM(MegatronBertPreTrainedModel):
         masked_lm_loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()  # -100 index = padding token
-            masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = loss_fct(
+                prediction_scores.view(-1, self.config.vocab_size), labels.view(-1)
+            )
 
         if not return_dict:
             output = (prediction_scores,) + outputs[2:]
-            return ((masked_lm_loss,) + output) if masked_lm_loss is not None else output
+            return (
+                ((masked_lm_loss,) + output) if masked_lm_loss is not None else output
+            )
 
-        return (
-            masked_lm_loss,
-            prediction_scores,
-            outputs[3],
-            outputs[4],
+        return MaskedLMOutput(
+            loss=masked_lm_loss,
+            logits=prediction_scores,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
         )
 
     def prepare_inputs_for_generation(self, input_ids, attention_mask=None):
@@ -1418,8 +1488,13 @@ class MegatronBertForMaskedLM(MegatronBertPreTrainedModel):
         #  add a dummy token
         if self.config.pad_token_id is None:
             raise ValueError("The PAD token should be defined for generation")
-        attention_mask = ops.cat([attention_mask, attention_mask.new_zeros((attention_mask.shape[0], 1))], axis=-1)
-        dummy_token = numpy.full((effective_batch_size, 1), self.config.pad_token_id, dtype=Tensor.long)
+        attention_mask = ops.cat(
+            [attention_mask, attention_mask.new_zeros((attention_mask.shape[0], 1))],
+            axis=-1,
+        )
+        dummy_token = numpy.full(
+            (effective_batch_size, 1), self.config.pad_token_id, dtype=Tensor.long
+        )
         input_ids = ops.cat([input_ids, dummy_token], axis=1)
 
         return {"input_ids": input_ids, "attention_mask": attention_mask}
@@ -1440,6 +1515,7 @@ class MegatronBertForNextSentencePrediction(MegatronBertPreTrainedModel):
         the middle is added with a [SEP] token to separate the two sentences, and the end
         is also added with a [SEP] token.
     """
+
     _keys_to_ignore_on_load_unexpected = [r"predictions"]
 
     def __init__(self, config):
@@ -1452,18 +1528,18 @@ class MegatronBertForNextSentencePrediction(MegatronBertPreTrainedModel):
         self.post_init()
 
     def construct(
-            self,
-            input_ids=None,
-            attention_mask=None,
-            token_type_ids=None,
-            position_ids=None,
-            head_mask=None,
-            inputs_embeds=None,
-            labels=None,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
-            # **kwargs
+        self,
+        input_ids=None,
+        attention_mask=None,
+        token_type_ids=None,
+        position_ids=None,
+        head_mask=None,
+        inputs_embeds=None,
+        labels=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
+        # **kwargs
     ) -> Union[Tuple, Tuple]:
         r"""
         labels (`mindspore.int32` of shape `(batch_size,)`, *optional*):
@@ -1478,16 +1554,9 @@ class MegatronBertForNextSentencePrediction(MegatronBertPreTrainedModel):
 
 
         """
-
-        # if "next_sentence_label" in kwargs:
-        #     warnings.warn(
-        #         "The `next_sentence_label` argument is deprecated and will be removed in a future
-        #         version, use `labels` instead.",
-        #         FutureWarning,
-        #     )
-        #     labels = kwargs.pop("next_sentence_label")
-
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         outputs = self.bert(
             input_ids,
@@ -1508,17 +1577,23 @@ class MegatronBertForNextSentencePrediction(MegatronBertPreTrainedModel):
         next_sentence_loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()
-            next_sentence_loss = loss_fct(seq_relationship_scores.view(-1, 2), labels.view(-1))
+            next_sentence_loss = loss_fct(
+                seq_relationship_scores.view(-1, 2), labels.view(-1)
+            )
 
         if not return_dict:
             output = (seq_relationship_scores,) + outputs[2:]
-            return ((next_sentence_loss,) + output) if next_sentence_loss is not None else output
+            return (
+                ((next_sentence_loss,) + output)
+                if next_sentence_loss is not None
+                else output
+            )
 
-        return (
-            next_sentence_loss,
-            seq_relationship_scores,
-            outputs[3],
-            outputs[4],
+        return NextSentencePredictorOutput(
+            loss=next_sentence_loss,
+            logits=seq_relationship_scores,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
         )
 
 
@@ -1542,17 +1617,17 @@ class MegatronBertForSequenceClassification(MegatronBertPreTrainedModel):
         self.post_init()
 
     def construct(
-            self,
-            input_ids=None,
-            attention_mask=None,
-            token_type_ids=None,
-            position_ids=None,
-            head_mask=None,
-            inputs_embeds=None,
-            labels=None,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
+        self,
+        input_ids=None,
+        attention_mask=None,
+        token_type_ids=None,
+        position_ids=None,
+        head_mask=None,
+        inputs_embeds=None,
+        labels=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
     ) -> Union[Tuple, Tuple]:
         r"""
         labels (`mindspore.int32` of shape `(batch_size,)`, *optional*):
@@ -1561,7 +1636,9 @@ class MegatronBertForSequenceClassification(MegatronBertPreTrainedModel):
             If `config.num_labels == 1` a regression loss is computed (Mean-Square loss),
             If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         outputs = self.bert(
             input_ids,
@@ -1585,7 +1662,9 @@ class MegatronBertForSequenceClassification(MegatronBertPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype in (Tensor.long, Tensor.int)):
+                elif self.num_labels > 1 and (
+                    labels.dtype in (Tensor.long, Tensor.int)
+                ):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1606,11 +1685,11 @@ class MegatronBertForSequenceClassification(MegatronBertPreTrainedModel):
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
 
-        return (
-            loss,
-            logits,
-            outputs[3],
-            outputs[4],
+        return SequenceClassifierOutput(
+            loss=loss,
+            logits=logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
         )
 
 
@@ -1657,17 +1736,17 @@ class MegatronBertForMultipleChoice(MegatronBertPreTrainedModel):
         self.post_init()
 
     def construct(
-            self,
-            input_ids=None,
-            attention_mask=None,
-            token_type_ids=None,
-            position_ids=None,
-            head_mask=None,
-            inputs_embeds=None,
-            labels=None,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
+        self,
+        input_ids=None,
+        attention_mask=None,
+        token_type_ids=None,
+        position_ids=None,
+        head_mask=None,
+        inputs_embeds=None,
+        labels=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
     ) -> Union[Tuple, Tuple]:
         r"""
         labels (`mindspore.int32` of shape `(batch_size,)`, *optional*):
@@ -1676,15 +1755,36 @@ class MegatronBertForMultipleChoice(MegatronBertPreTrainedModel):
             is the size of the second dimension of the input tensors.
             (See `input_ids` above)
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
+        num_choices = (
+            input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
+        )
 
-        input_ids = input_ids.view(-1, input_ids.shape[-1]) if input_ids is not None else None
-        attention_mask = attention_mask.view(-1, attention_mask.size(-1)) if attention_mask is not None else None
-        token_type_ids = token_type_ids.view(-1, token_type_ids.size(-1)) if token_type_ids is not None else None
-        position_ids = position_ids.view(-1, position_ids.size(-1)) if position_ids is not None else None
-        inputs_embeds = (inputs_embeds.view(-1, inputs_embeds.size(-2),
-                                            inputs_embeds.size(-1)) if inputs_embeds is not None else None)
+        input_ids = (
+            input_ids.view(-1, input_ids.shape[-1]) if input_ids is not None else None
+        )
+        attention_mask = (
+            attention_mask.view(-1, attention_mask.size(-1))
+            if attention_mask is not None
+            else None
+        )
+        token_type_ids = (
+            token_type_ids.view(-1, token_type_ids.size(-1))
+            if token_type_ids is not None
+            else None
+        )
+        position_ids = (
+            position_ids.view(-1, position_ids.size(-1))
+            if position_ids is not None
+            else None
+        )
+        inputs_embeds = (
+            inputs_embeds.view(-1, inputs_embeds.size(-2), inputs_embeds.size(-1))
+            if inputs_embeds is not None
+            else None
+        )
 
         outputs = self.bert(
             input_ids,
@@ -1713,11 +1813,11 @@ class MegatronBertForMultipleChoice(MegatronBertPreTrainedModel):
             output = (reshaped_logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
 
-        return (
-            loss,
-            reshaped_logits,
-            outputs[3],
-            outputs[4],
+        return MultipleChoiceModelOutput(
+            loss=loss,
+            logits=reshaped_logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
         )
 
 
@@ -1755,6 +1855,7 @@ class MegatronBertForTokenClassification(MegatronBertPreTrainedModel):
     requires fine-tuning using annotated token classification datasets to better adapt to new
     token classification tasks.
     """
+
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
     def __init__(self, config):
@@ -1769,24 +1870,26 @@ class MegatronBertForTokenClassification(MegatronBertPreTrainedModel):
         self.post_init()
 
     def construct(
-            self,
-            input_ids=None,
-            attention_mask=None,
-            token_type_ids=None,
-            position_ids=None,
-            head_mask=None,
-            inputs_embeds=None,
-            labels=None,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
+        self,
+        input_ids=None,
+        attention_mask=None,
+        token_type_ids=None,
+        position_ids=None,
+        head_mask=None,
+        inputs_embeds=None,
+        labels=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
     ) -> Union[Tuple, Tuple]:
         r"""
         labels (`mindspore.int32` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the token classification loss. Indices should be in
             `[0, ..., config.num_labels - 1]`.
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         outputs = self.bert(
             input_ids,
@@ -1814,11 +1917,11 @@ class MegatronBertForTokenClassification(MegatronBertPreTrainedModel):
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
 
-        return (
-            loss,
-            logits,
-            outputs[3],
-            outputs[4],
+        return TokenClassifierOutput(
+            loss=loss,
+            logits=logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
         )
 
 
@@ -1863,6 +1966,7 @@ class MegatronBertForQuestionAnswering(MegatronBertPreTrainedModel):
     pre-trained model, and thus requires fine-tuning using annotated question-answering datasets
     to better adapt to new question-answering tasks.
     """
+
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
     def __init__(self, config):
@@ -1876,18 +1980,18 @@ class MegatronBertForQuestionAnswering(MegatronBertPreTrainedModel):
         self.post_init()
 
     def construct(
-            self,
-            input_ids=None,
-            attention_mask=None,
-            token_type_ids=None,
-            position_ids=None,
-            head_mask=None,
-            inputs_embeds=None,
-            start_positions=None,
-            end_positions=None,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
+        self,
+        input_ids=None,
+        attention_mask=None,
+        token_type_ids=None,
+        position_ids=None,
+        head_mask=None,
+        inputs_embeds=None,
+        start_positions=None,
+        end_positions=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
     ) -> Union[Tuple, Tuple]:
         r"""
         start_positions (`mindspore.int32` of shape `(batch_size,)`, *optional*):
@@ -1902,7 +2006,9 @@ class MegatronBertForQuestionAnswering(MegatronBertPreTrainedModel):
             Position outside of the sequence
             are not taken into account for computing the loss.
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         outputs = self.bert(
             input_ids,
@@ -1944,23 +2050,24 @@ class MegatronBertForQuestionAnswering(MegatronBertPreTrainedModel):
             output = (start_logits, end_logits) + outputs[2:]
             return ((total_loss,) + output) if total_loss is not None else output
 
-        return (
-            total_loss,
-            start_logits,
-            end_logits,
-            outputs[3],
-            outputs[4],
+        return QuestionAnsweringModelOutput(
+            loss=total_loss,
+            start_logits=start_logits,
+            end_logits=end_logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
         )
 
+
 __all__ = [
-        "MegatronBertForCausalLM",
-        "MegatronBertForMaskedLM",
-        "MegatronBertForMultipleChoice",
-        "MegatronBertForNextSentencePrediction",
-        "MegatronBertForPreTraining",
-        "MegatronBertForQuestionAnswering",
-        "MegatronBertForSequenceClassification",
-        "MegatronBertForTokenClassification",
-        "MegatronBertModel",
-        "MegatronBertPreTrainedModel",
-    ]
+    "MegatronBertForCausalLM",
+    "MegatronBertForMaskedLM",
+    "MegatronBertForMultipleChoice",
+    "MegatronBertForNextSentencePrediction",
+    "MegatronBertForPreTraining",
+    "MegatronBertForQuestionAnswering",
+    "MegatronBertForSequenceClassification",
+    "MegatronBertForTokenClassification",
+    "MegatronBertModel",
+    "MegatronBertPreTrainedModel",
+]

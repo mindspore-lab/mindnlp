@@ -24,7 +24,7 @@ import os
 from abc import abstractmethod
 
 from mindnlp.configs import DEFAULT_ROOT
-from mindnlp.utils import cache_file
+from mindnlp.utils import cached_file
 from mindnlp.workflow.utils import cut_chinese_sent
 
 
@@ -119,7 +119,7 @@ class Work(metaclass=abc.ABCMeta):
             if not os.path.exists(path=path):
                 downloaded = False
             if not downloaded:
-                cache_file(filename=file_name, cache_dir=cache_dir, url=url, md5sum=md5)
+                cached_file(filename=file_name, cache_dir=cache_dir, url=url, md5sum=md5)
 
     def _check_predictor_type(self):
         """

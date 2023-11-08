@@ -17,7 +17,7 @@
 # ============================================================================
 """MindNLP gpt config"""
 from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 __all__ = ['GPTConfig']
 
@@ -27,7 +27,7 @@ CONFIG_ARCHIVE_MAP = {
     model: MINDNLP_CONFIG_URL_BASE.format('gpt', model) for model in GPT_SUPPORT_LIST
 }
 
-class GPTConfig(PreTrainedConfig):
+class GPTConfig(PretrainedConfig):
     r"""
     GPT config
     """

@@ -14,7 +14,7 @@
 # ============================================================================
 """ Moss model configuration"""
 from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 
 __all__ = ['MossConfig']
@@ -26,7 +26,7 @@ CONFIG_ARCHIVE_MAP = {
 }
 
 
-class MossConfig(PreTrainedConfig):
+class MossConfig(PretrainedConfig):
     """
     Configuration for moss
     """

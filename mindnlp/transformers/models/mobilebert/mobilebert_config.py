@@ -18,14 +18,14 @@
 MobileBERT model configuration
 """
 
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 
 MOBILEBERT_SUPPORT_LIST = [
     "mobilebert-uncased",
 ]
 
-class MobileBertConfig(PreTrainedConfig):
+class MobileBertConfig(PretrainedConfig):
     """
     MobileBertConfig
     """

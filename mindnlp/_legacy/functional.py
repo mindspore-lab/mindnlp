@@ -16,6 +16,11 @@
 # pylint: disable=W0622
 # pylint: disable=E1123
 # pylint: disable=E1120
+# pylint: disable=missing-function-docstring
+# pylint: disable=consider-using-enumerate
+# pylint: disable=unused-argument
+# pylint: disable=too-many-branches
+# pylint: disable=too-many-statements
 
 """Custom functional api for legacy mindspore"""
 import builtins
@@ -88,41 +93,49 @@ def split(x, size, axis=0):
         return ops.split(x, axis, num)
     return ops.split(x, split_size_or_sections=size, axis=axis)
 
+
 def chunk(input, chunks, axis=0):
     """inner chunk"""
     if less_min_api_compatible:
         return ops.split(input, axis, chunks)
     return ops.chunk(input, chunks, axis)
 
+
 def addmm(x, mat1, mat2, *, beta=1, alpha=1):
     """inner addmm"""
     _matmul_op = _get_cache_prim(ops.MatMul)()
     return beta * x + alpha * (_matmul_op(mat1, mat2))
+
 
 def tril(input_x, diagonal=0):
     """inner tril"""
     _tril_op = _get_cache_prim(Tril)(diagonal)
     return _tril_op(input_x)
 
+
 def softmax(inputs, axis=-1):
     """inner softmax"""
     _softmax_op = _get_cache_prim(ops.Softmax)(axis)
     return _softmax_op(inputs)
+
 
 def sqrt(x):
     """inner sqrt"""
     _sqrt = _get_cache_prim(ops.Sqrt)()
     return _sqrt(x)
 
+
 def relu(x):
     """inner relu."""
     relu_ = _get_cache_prim(ops.ReLU)()
     return relu_(x)
 
+
 def gelu(input_x, approximate='none'):
     """inner gelu"""
     if approximate not in ['none', 'tanh']:
-        raise ValueError("For ops.gelu, approximate value should be either 'none' or 'tanh'.")
+        raise ValueError(
+            "For ops.gelu, approximate value should be either 'none' or 'tanh'.")
 
     output = _get_cache_prim(ops.GeLU)()(input_x)
 
@@ -135,9 +148,11 @@ def gelu(input_x, approximate='none'):
 
     return output
 
+
 def is_floating_point(x):
     """inner is_floating_point"""
     return x.dtype in [mindspore.float32, mindspore.float16, mindspore.float64]
+
 
 def zeros_like(x, *, dtype=None):
     """inner zeros_like"""
@@ -147,12 +162,14 @@ def zeros_like(x, *, dtype=None):
     output = output.astype(_dtype)
     return output
 
+
 def linear(x, weight, bias):
     """inner linear"""
     out = ops.matmul(x, weight.swapaxes(-1, -2))
     if bias is not None:
         out = out + bias
     return out
+
 
 def _in_projection(
     q,
@@ -161,9 +178,9 @@ def _in_projection(
     w_q,
     w_k,
     w_v,
-    b_q = None,
-    b_k = None,
-    b_v = None,
+    b_q=None,
+    b_k=None,
+    b_v=None,
 ):
     r"""
     Performs the in-projection step of the attention operation. This is simply
@@ -194,13 +211,20 @@ def _in_projection(
          - v': :math:`[Vdims..., Eq]`
     """
     Eq, Ek, Ev = q.shape[-1], k.shape[-1], v.shape[-1]
-    assert w_q.shape == (Eq, Eq), f"expecting query weights shape of {(Eq, Eq)}, but got {w_q.shape}"
-    assert w_k.shape == (Eq, Ek), f"expecting key weights shape of {(Eq, Ek)}, but got {w_k.shape}"
-    assert w_v.shape == (Eq, Ev), f"expecting value weights shape of {(Eq, Ev)}, but got {w_v.shape}"
-    assert b_q is None or b_q.shape == (Eq,), f"expecting query bias shape of {(Eq,)}, but got {b_q.shape}"
-    assert b_k is None or b_k.shape == (Eq,), f"expecting key bias shape of {(Eq,)}, but got {b_k.shape}"
-    assert b_v is None or b_v.shape == (Eq,), f"expecting value bias shape of {(Eq,)}, but got {b_v.shape}"
+    assert w_q.shape == (
+        Eq, Eq), f"expecting query weights shape of {(Eq, Eq)}, but got {w_q.shape}"
+    assert w_k.shape == (
+        Eq, Ek), f"expecting key weights shape of {(Eq, Ek)}, but got {w_k.shape}"
+    assert w_v.shape == (
+        Eq, Ev), f"expecting value weights shape of {(Eq, Ev)}, but got {w_v.shape}"
+    assert b_q is None or b_q.shape == (
+        Eq,), f"expecting query bias shape of {(Eq,)}, but got {b_q.shape}"
+    assert b_k is None or b_k.shape == (
+        Eq,), f"expecting key bias shape of {(Eq,)}, but got {b_k.shape}"
+    assert b_v is None or b_v.shape == (
+        Eq,), f"expecting value bias shape of {(Eq,)}, but got {b_v.shape}"
     return linear(q, w_q, b_q), linear(k, w_k, b_k), linear(v, w_v, b_v)
+
 
 def _in_projection_packed(q, k, v, w, b, k_is_v, q_is_k):
     r"""
@@ -246,6 +270,7 @@ def _in_projection_packed(q, k, v, w, b, k_is_v, q_is_k):
         b_q, b_k, b_v = ops.split(b, output_num=3)
     return linear(q, w_q, b_q), linear(k, w_k, b_k), linear(v, w_v, b_v)
 
+
 def _scaled_dot_product_attention(query, key, value, attn_mask, dropout_p, is_causal, is_training):
     embed_size = query.shape[-1]
     scaling_factor = sqrt(sqrt(Tensor(embed_size, mindspore.float32)))
@@ -264,6 +289,7 @@ def _scaled_dot_product_attention(query, key, value, attn_mask, dropout_p, is_ca
     output = ops.matmul(attn, value)
 
     return (output, attn)
+
 
 def _mha_shape_check(query, key, value, key_padding_mask, attn_mask, num_heads):
     # Verifies the expected shape for `query, `key`, `value`, `key_padding_mask` and `attn_mask`
@@ -311,6 +337,7 @@ def _mha_shape_check(query, key, value, key_padding_mask, attn_mask, num_heads):
 
     return is_batched
 
+
 def multi_head_attention_forward(
     query,
     key,
@@ -326,14 +353,14 @@ def multi_head_attention_forward(
     out_proj_weight,
     out_proj_bias,
     training: bool = True,
-    key_padding_mask = None,
-    attn_mask = None,
+    key_padding_mask=None,
+    attn_mask=None,
     use_separate_proj_weight: bool = False,
-    q_proj_weight = None,
-    k_proj_weight = None,
-    v_proj_weight = None,
-    static_k = None,
-    static_v = None,
+    q_proj_weight=None,
+    k_proj_weight=None,
+    v_proj_weight=None,
+    static_k=None,
+    static_v=None,
     average_attn_weights: bool = True,
     is_causal: bool = False,
     k_is_v: bool = False,
@@ -400,7 +427,8 @@ def multi_head_attention_forward(
           head of shape :math:`(num_heads, L, S)` when input is unbatched or :math:`(N, num_heads, L, S)`.
     """
 
-    is_batched = _mha_shape_check(query, key, value, key_padding_mask, attn_mask, num_heads)
+    is_batched = _mha_shape_check(
+        query, key, value, key_padding_mask, attn_mask, num_heads)
 
     # For unbatched input, we expand_dims at the expected batch-dim to pretend that the input
     # is batched, run the computation and before returning squeeze the
@@ -425,7 +453,8 @@ def multi_head_attention_forward(
         f"was expecting embedding dimension of {embed_dim_to_check}, but got {embed_dim}"
 
     head_dim = embed_dim // num_heads
-    assert head_dim * num_heads == embed_dim, f"embed_dim {embed_dim} not divisible by num_heads {num_heads}"
+    assert head_dim * \
+        num_heads == embed_dim, f"embed_dim {embed_dim} not divisible by num_heads {num_heads}"
     if use_separate_proj_weight:
         # allow MHA to have different embedding dimensions when separate projection weights are used
         assert key.shape[:2] == value.shape[:2], \
@@ -438,7 +467,8 @@ def multi_head_attention_forward(
     #
     if not use_separate_proj_weight:
         assert in_proj_weight is not None, "use_separate_proj_weight is False but in_proj_weight is None"
-        q, k, v = _in_projection_packed(query, key, value, in_proj_weight, in_proj_bias, k_is_v, q_is_k)
+        q, k, v = _in_projection_packed(
+            query, key, value, in_proj_weight, in_proj_bias, k_is_v, q_is_k)
     else:
         assert q_proj_weight is not None, "use_separate_proj_weight is True but q_proj_weight is None"
         assert k_proj_weight is not None, "use_separate_proj_weight is True but k_proj_weight is None"
@@ -447,7 +477,8 @@ def multi_head_attention_forward(
             b_q = b_k = b_v = None
         else:
             b_q, b_k, b_v = ops.split(in_proj_bias, output_num=3)
-        q, k, v = _in_projection(query, key, value, q_proj_weight, k_proj_weight, v_proj_weight, b_q, b_k, b_v)
+        q, k, v = _in_projection(
+            query, key, value, q_proj_weight, k_proj_weight, v_proj_weight, b_q, b_k, b_v)
 
     # prep attention mask
     if attn_mask is not None:
@@ -461,15 +492,16 @@ def multi_head_attention_forward(
             correct_2d_size = (tgt_len, src_len)
             if attn_mask.shape != correct_2d_size:
                 raise RuntimeError(f"The shape of the 2D attn_mask is {attn_mask.shape}, "
-                                    "but should be {correct_2d_size}.")
+                                   "but should be {correct_2d_size}.")
             attn_mask = attn_mask.expand_dims(0)
         elif attn_mask.ndim == 3:
             correct_3d_size = (bsz * num_heads, tgt_len, src_len)
             if attn_mask.shape != correct_3d_size:
                 raise RuntimeError(f"The shape of the 3D attn_mask is {attn_mask.shape}, "
-                                    "but should be {correct_3d_size}.")
+                                   "but should be {correct_3d_size}.")
         else:
-            raise RuntimeError(f"attn_mask's dimension {attn_mask.ndim} is not supported")
+            raise RuntimeError(
+                f"attn_mask's dimension {attn_mask.ndim} is not supported")
 
     # add bias along batch dimension (currently second)
     if bias_k is not None and bias_v is not None:
@@ -556,13 +588,15 @@ def multi_head_attention_forward(
 
     attn_output, attn_output_weights = _scaled_dot_product_attention(
         q, k, v, attn_mask, dropout_p, is_causal, training)
-    attn_output = attn_output.transpose(2, 0, 1, 3).view(bsz * tgt_len, embed_dim)
+    attn_output = attn_output.transpose(
+        2, 0, 1, 3).view(bsz * tgt_len, embed_dim)
 
     attn_output = linear(attn_output, out_proj_weight, out_proj_bias)
     attn_output = attn_output.view(tgt_len, bsz, attn_output.shape[1])
 
     # optionally average attention weights over heads
-    attn_output_weights = attn_output_weights.view(bsz, num_heads, tgt_len, src_len)
+    attn_output_weights = attn_output_weights.view(
+        bsz, num_heads, tgt_len, src_len)
     if average_attn_weights:
         attn_output_weights = attn_output_weights.sum(axis=1) / num_heads
 
@@ -572,6 +606,7 @@ def multi_head_attention_forward(
         attn_output_weights = attn_output_weights.squeeze(0)
     return attn_output, attn_output_weights
 
+
 def _cast_type(x, to_type):
     """cast input to the specified type or cast input to tensor"""
     if isinstance(x, Tensor):
@@ -580,11 +615,13 @@ def _cast_type(x, to_type):
         x = scalar_to_tensor_(x, to_type)
     return x
 
+
 def _get_type(x):
     """get the dtype of input"""
     if isinstance(x, Tensor):
         return x.dtype
     return type(x)
+
 
 def _get_max_type(start, end, step):
     """get max input type with `level`"""
@@ -600,7 +637,8 @@ def _get_max_type(start, end, step):
 
     type_map = {'Float64': '3', 'Float32': '2', "<class 'float'>": '2', 'Int64': '1', "<class 'int'>": '1',
                 'Int32': '0'}
-    type_map_reverse = {'3': mstype.float64, '2': mstype.float32, '1': mstype.int64, '0': mstype.int32}
+    type_map_reverse = {'3': mstype.float64,
+                        '2': mstype.float32, '1': mstype.int64, '0': mstype.int32}
     type_level = [type_map.get(i) for i in arg_type_map]
     max_level = builtins.max(type_level)
     return type_map_reverse.get(max_level)
@@ -644,7 +682,8 @@ def argmax(input, dim=None, keepdim=False):
         out = out.expand_dims(dim)
     return out
 
-def full(size, fill_value, *, dtype=None): # pylint: disable=redefined-outer-name
+
+def full(size, fill_value, *, dtype=None):  # pylint: disable=redefined-outer-name
     """
     Create a Tensor of the specified shape and fill it with the specified value.
 
@@ -678,7 +717,8 @@ def full(size, fill_value, *, dtype=None): # pylint: disable=redefined-outer-nam
          [0. 0. 0.]]
     """
     if not isinstance(size, (list, tuple)):
-        raise TypeError(f"For 'ops.full', 'size' must be a tuple or list of ints, but got {type(size)}.")
+        raise TypeError(
+            f"For 'ops.full', 'size' must be a tuple or list of ints, but got {type(size)}.")
     if dtype is None:
         dtype = mstype.int64
     if isinstance(size, list):
@@ -686,12 +726,14 @@ def full(size, fill_value, *, dtype=None): # pylint: disable=redefined-outer-nam
     fill_ = _get_cache_prim(ops.Fill)()
     return fill_(dtype, size, fill_value)
 
+
 def arange(start=0, end=None, step=1, *, dtype=None):
     """inner arange"""
     res = Tensor(np.arange(start, end, step))
     if dtype is not None:
         res = res.astype(dtype)
     return res
+
 
 def where(condition, x, y):
     r"""
@@ -726,7 +768,8 @@ def where(condition, x, y):
          [2. 1.]]
     """
     if not isinstance(condition, Tensor):
-        raise TypeError(f"For 'where', 'condition' must be a Tensor, but got {type(condition)}.")
+        raise TypeError(
+            f"For 'where', 'condition' must be a Tensor, but got {type(condition)}.")
     if isinstance(x, (int, float)):
         if not isinstance(y, Tensor):
             raise TypeError(f"For 'where', at least one of 'x' and 'y' should be Tensor, \
@@ -744,6 +787,7 @@ def where(condition, x, y):
     _select = _get_cache_prim(ops.Select)()
     return _select(condition, x, y)
 
+
 @constexpr
 def get_max_value(x, y, z):
     """get max value"""
@@ -752,6 +796,7 @@ def get_max_value(x, y, z):
     if y >= x and y >= z:
         return y
     return z
+
 
 @constexpr
 def _calc_broadcast_shape(cond_shape, x_shape, y_shape):
@@ -768,17 +813,21 @@ def _calc_broadcast_shape(cond_shape, x_shape, y_shape):
         y_element = 1 if i >= len(y_reverse) else y_reverse[i]
         broadcast_element = get_max_value(cond_element, x_element, y_element)
         if cond_element not in (1, broadcast_element):
-            raise ValueError(f"For select, condition input can not broadcast at index {i}")
+            raise ValueError(
+                f"For select, condition input can not broadcast at index {i}")
         if x_element not in (1, broadcast_element):
-            raise ValueError(f"For select, x input can not broadcast at index {i}")
+            raise ValueError(
+                f"For select, x input can not broadcast at index {i}")
         if y_element not in (1, broadcast_element):
-            raise ValueError(f"For select, y input can not broadcast at index {i}")
+            raise ValueError(
+                f"For select, y input can not broadcast at index {i}")
         converted_shape.append(broadcast_element)
         i = i + 1
     converted_shape.reverse()
     return tuple(converted_shape)
 
-def broadcast_to(input, shape): # pylint: disable=redefined-outer-name
+
+def broadcast_to(input, shape):  # pylint: disable=redefined-outer-name
     """
     Broadcasts input tensor to a given shape. The dim of input shape must be smaller
     than or equal to that of target shape. Suppose input shape is :math:`(x_1, x_2, ..., x_m)`,
@@ -853,6 +902,7 @@ def broadcast_to(input, shape): # pylint: disable=redefined-outer-name
     _broadcast_to = _get_cache_prim(ops.BroadcastTo)(shape)
     return _broadcast_to(input)
 
+
 @constexpr
 def _canonicalize_axis(axis, ndim):
     """
@@ -871,7 +921,8 @@ def _canonicalize_axis(axis, ndim):
         if not isinstance(ax, int):
             raise TypeError(f'axis should be integers, not {type(ax)}')
         if not -ndim <= ax < ndim:
-            raise ValueError(f'axis {ax} is out of bounds for array of dimension {ndim}')
+            raise ValueError(
+                f'axis {ax} is out of bounds for array of dimension {ndim}')
 
     def canonicalizer(ax):
         return ax + ndim if ax < 0 else ax
@@ -912,6 +963,7 @@ def rank(input_x):
     rank_ = _get_cache_prim(ops.Rank)()
     return rank_(input_x)
 
+
 @constexpr
 def _tuple_setitem(tup, idx, value):
     """
@@ -948,6 +1000,7 @@ def _list_comprehensions(obj, item=None, return_tuple=False):
     if return_tuple:
         return tuple(res)
     return res
+
 
 def _tensor_split_sub_tensors(x, indices_or_sections, axis):
     """
@@ -988,15 +1041,17 @@ def _tensor_split_sub_int(x, indices_or_sections, axis):
     else:
         num_long_tensor = length_along_dim % indices_or_sections
         num_short_tensor = indices_or_sections - num_long_tensor
-        length1 = num_long_tensor * (length_along_dim // indices_or_sections + 1)
+        length1 = num_long_tensor * \
+            (length_along_dim // indices_or_sections + 1)
         length2 = length_along_dim - length1
         start1 = _list_comprehensions(rank(x), 0, True)
         size1 = _tuple_setitem(arr_shape, axis, length1)
         start2 = _tuple_setitem(start1, axis, length1)
         size2 = _tuple_setitem(arr_shape, axis, length2)
         res = ops.Split(axis, num_long_tensor)(tensor_slice(x, start1, size1)) + \
-              ops.Split(axis, num_short_tensor)(tensor_slice(x, start2, size2))
+            ops.Split(axis, num_short_tensor)(tensor_slice(x, start2, size2))
     return res
+
 
 def strided_slice(input_x,
                   begin,
@@ -1216,29 +1271,35 @@ def tensor_split(input, indices_or_sections, axis=0):
         raise TypeError(f'expect `x` is a Tensor, but got {type(input)}')
 
     if not isinstance(axis, int):
-        raise TypeError(f"Type of Argument `axis` should be integer but got {type(axis)}")
+        raise TypeError(
+            f"Type of Argument `axis` should be integer but got {type(axis)}")
     handle_axis = _canonicalize_axis(axis, input.ndim)
     if isinstance(indices_or_sections, int):
         if indices_or_sections > 0:
-            res = _tensor_split_sub_int(input, indices_or_sections, handle_axis)
+            res = _tensor_split_sub_int(
+                input, indices_or_sections, handle_axis)
         else:
             raise ValueError(f"For tensor_split, the value of 'indices_or_sections' must be more than zero "
                              f"but got {indices_or_sections}")
     elif isinstance(indices_or_sections, (list, tuple)):
         for item in indices_or_sections:
             if not isinstance(item, int):
-                raise TypeError(f"Each element in 'indices_or_sections' should be integer, but got {type(item)}.")
-        res = _tensor_split_sub_tensors(input, indices_or_sections, handle_axis)
+                raise TypeError(
+                    f"Each element in 'indices_or_sections' should be integer, but got {type(item)}.")
+        res = _tensor_split_sub_tensors(
+            input, indices_or_sections, handle_axis)
     else:
-        raise TypeError(f"Type of Argument `indices_or_sections` should be integer, tuple(int) or list(int), " \
+        raise TypeError(f"Type of Argument `indices_or_sections` should be integer, tuple(int) or list(int), "
                         f"but got {type(indices_or_sections)}")
 
     return res
+
 
 def sigmoid(x):
     """inner sigmoid"""
     sigmoid_ = _get_cache_prim(ops.Sigmoid)()
     return sigmoid_(x)
+
 
 def reverse(x, axis):
     """
@@ -1280,3 +1341,332 @@ def reverse(x, axis):
     _gather = _get_cache_prim(ops.Gather)()
     output = _gather(x, reversed_indexes, axis)
     return output
+
+
+def einsum_label_to_index(label):
+    if label == '.':
+        return 52
+    NUM_OF_LETTERS = ord('z') - ord('a') + 1
+    return (ord(label) - ord('A')) if (label.isupper()) else (NUM_OF_LETTERS + (ord(label) - ord('a')))
+
+
+def maybe_wrap_dim(dim: int, dim_post_expr: int, wrap_scalar: bool = True):
+    if dim_post_expr <= 0:
+        assert wrap_scalar
+        dim_post_expr = 1
+    min = -dim_post_expr
+    max = dim_post_expr - 1
+    assert not (dim < min or dim > max)
+    if dim < 0:
+        dim += dim_post_expr
+    return dim
+
+
+def dim_list_to_bitset(opt_dims, ndims):
+    if opt_dims:
+        seen = [False] * (max(opt_dims)+1)
+        for dim in opt_dims:
+            dim = maybe_wrap_dim(dim, ndims)
+            seen[dim] = True
+    else:
+        seen = [True for _ in range(ndims)]
+    return seen
+
+
+def sumproduct_pair(left_, right_, sum_dims_, keep_dim_):
+    assert left_.ndim == right_.ndim, "number of dimensions must match"
+    if len(sum_dims_) == 0:
+        return ops.mul(left_, right_)
+
+    dim = left_.ndim
+    sum_dims = dim_list_to_bitset(sum_dims_, dim)
+
+    lro, lo, ro = [], [], []
+    lro_size, lo_size, ro_size, sum_size = 1, 1, 1, 1
+    left = left_
+    right = right_
+
+    for i in range(dim):
+        sl = left.shape[i] > 1
+        sr = right.shape[i] > 1
+        if sum_dims[i]:
+            if sl and sr:
+                assert left.shape[i] == right.shape[i], "non-broadcast dimensions must match"
+                sum_size *= left.shape[i]
+            elif sl:
+                left = ops.sum(left, i, keepdim=True)
+            elif sr:
+                right = ops.sum(right, i, keepdim=True)
+        elif sl and sr:
+            assert left.shape[i] == right.shape[i], "non-broadcast dimensions must match"
+            lro.append(i)
+            lro_size *= left.shape[i]
+        elif sl:
+            lo.append(i)
+            lo_size *= left.shape[i]
+        else:
+            ro.append(i)
+            ro_size *= right.shape[i]
+
+    out_size = []
+    for d in lro:
+        out_size.append(left.shape[d])
+    for d in lo:
+        out_size.append(left.shape[d])
+    for d in sum_dims_:
+        out_size.append(1)
+    for d in ro:
+        out_size.append(right.shape[d])
+
+    lpermutation = lro.copy()
+    lpermutation += lo
+    lpermutation += sum_dims_
+    lpermutation += ro
+
+    rpermutation = lro.copy()
+    rpermutation += sum_dims_
+    rpermutation += ro
+    rpermutation += lo
+
+    opermutation = [-1]*(len(lro)+len(lo)+len(sum_dims_)+len(ro))
+    i = 0
+    for it in lro:
+        opermutation[it] = i
+        i += 1
+    for it in lo:
+        opermutation[it] = i
+        i += 1
+    for it in sum_dims_:
+        opermutation[it] = i
+        i += 1
+    for it in ro:
+        opermutation[it] = i
+        i += 1
+
+    left = ops.transpose(left, tuple(lpermutation)).reshape(
+        lro_size, lo_size, sum_size)
+    right = ops.transpose(right, tuple(rpermutation)).view(
+        lro_size, sum_size, ro_size)
+
+    result = ops.bmm(left, right)
+    result = result.view(*out_size).transpose(*opermutation)
+
+    if not keep_dim_:
+        sizes = list(result.shape)
+        for i in range(dim-1, 0, -1):
+            if sum_dims[i]:
+                sizes.pop(i)
+        result = result.view(*sizes)
+
+    return result
+
+ELLIPSIS = 52
+
+def einsum(equation, *operands):
+    assert operands, "einsum(): must provide at least one operand"
+
+    arrow_pos = equation.find("->")
+    num_ops = len(operands)
+    op_labels = [[] for _ in range(num_ops)]
+    lhs = equation[0: arrow_pos]
+
+    curr_op = 0
+    found_ell = False
+    for i, label in enumerate(lhs):
+        if label == ' ':
+            continue
+        if label == '.':
+            assert not found_ell, f"einsum(): found {curr_op} for operand for which an ellipsis was already found"
+            assert i + 2 < len(lhs) and lhs[i + 1] == '.', f"einsum(): found {curr_op} for operand that is not part of any ellipsis"
+            op_labels[curr_op].append(ELLIPSIS)
+            found_ell = True
+        elif label == ',':
+            curr_op += 1
+            assert curr_op < num_ops, "einsum(): fewer operands were provided than specified in the equation"
+            found_ell = False
+        else:
+            assert str.isalpha(label), f"einsum(): invalid subscript given at index {i} in the equation string, subscripts must be in [a-zA-Z]"
+            op_labels[curr_op].append(einsum_label_to_index(label))
+
+    assert curr_op == num_ops - 1, "einsum(): more operands were provided than specified in the equation"
+    # Labels must be within [a-zA-Z].
+    TOTAL_LABELS = 52
+    label_count = [0] * TOTAL_LABELS
+    # The maximum number of dimensions covered by any ellipsis, needed when
+    # unsqueezing missing dimensions from operands to permute and broadcast
+    ell_num_dim = 0
+
+    # Compute label frequency and number of dimensions covered by ellipsis
+    # We do this after parsing labels to make it more readable and simpler
+    # to compute the number of dimensions covered by ellipsis.
+    for i, operand in enumerate(operands):
+        labels = op_labels[i]
+        ndims = operand.ndim
+        nlabels = len(labels)
+        has_ellipsis = False
+
+        for label in labels:
+            if label == ELLIPSIS:
+                nlabels -= 1
+                has_ellipsis = True
+                ell_num_dim = max(ell_num_dim, ndims - nlabels)
+            else:
+                label_count[label] += 1
+        if has_ellipsis:
+            assert nlabels <= ndims, f"einsum(): the number of subscripts in the equation ({nlabels}" \
+                                     f") is more than the number of dimensions ({ndims}) for operand {i}"
+        else:
+            assert nlabels == ndims, f"einsum(): the number of subscripts in the equation ({nlabels}" \
+                                     f") does not match the number of dimensions (" \
+                                     f"{ndims}) for operand {i} and no ellipsis was given"
+
+    # We want to align the dimensions of every input tensor to have
+    # shape out_dims + sum_dims. For this, we create a mapping of label
+    # to index into the permuted shape.
+    label_perm_index = [-1] * TOTAL_LABELS
+    # Current index in the permuted shape
+    perm_index = 0
+    # Start index of ellipsis dimensions in the permuted shape
+    ell_index = 0
+    found_ell = False
+
+    if arrow_pos == -1:
+    # Implicit output is ellipsis (...) + labels seen only once
+        perm_index = ell_num_dim
+        found_ell = True
+        for label, _label_count in enumerate(label_count):
+            if _label_count == 1:
+                label_perm_index[label] = perm_index
+                perm_index += 1
+    else:
+        rhs = equation[arrow_pos + 2:]
+        for i, label in enumerate(rhs):
+            if label == ' ':
+                continue
+            if label == '.':
+                assert not found_ell, "einsum(): found \'.\' for output but an ellipsis (...) was already found"
+                assert i + 2 < len(rhs) and rhs[i + 1] == '.', "einsum(): found \'.\' for output that is not part of any ellipsis (...)"
+                ell_index = perm_index
+                perm_index += ell_num_dim
+                found_ell = True
+            else:
+                assert str.isalpha(label), f"einsum(): invalid subscript given at index {len(lhs) + 2 + i} " \
+                                           f"in the equation string, subscripts must be in [a-zA-Z]"
+
+                index = einsum_label_to_index(label)
+                label_perm_index[index] = perm_index
+                perm_index += 1
+
+    out_size = perm_index
+    if not found_ell:
+        ell_index = perm_index
+        perm_index += ell_num_dim
+
+    for label in range(TOTAL_LABELS):
+        if label_count[label] > 0 and label_perm_index[label] == -1:
+            label_perm_index[label] = perm_index
+            perm_index += 1
+
+    # Here we unsqueeze missing dimensions to make all operands have the same
+    # number of dimensions. We take diagonals for repeated labels within the
+    # same operand. Finally we permute the operands to align dimensions as
+    # per the perm_out_index we computed above.
+    permuted_operands = []
+    for i, operand in enumerate(operands):
+        perm_shape = [-1] * perm_index
+        label_dim = [-1] * TOTAL_LABELS
+        operand = operands[i]
+        labels = op_labels[i]
+        original_sizes = operand.shape
+
+        j = 0
+        for label in labels:
+            if label == ELLIPSIS:
+                # Add missing dimensions covered by the ellipsis
+                num_missing_dim = ell_num_dim - \
+                    (len(original_sizes) - len(labels) + 1)
+                for k in range(num_missing_dim):
+                    operand = ops.unsqueeze(operand, j)
+                for k in range(ell_num_dim):
+                    perm_shape[ell_index + k] = j
+                    j += 1
+            elif label_dim[label] != -1:
+                dim = label_dim[label]
+                operand = ops.diagonal(operand, offset=0, dim1=dim, dim2=j)
+                operand = ops.moveaxis(operand, -1, dim)
+            else:
+                label_dim[label] = j
+                perm_shape[label_perm_index[label]] = j
+                j += 1
+
+        # Add dimensions for missing labels
+        for idx, index in enumerate(perm_shape):
+            if index == -1:
+                operand = ops.unsqueeze(operand, -1)
+                perm_shape[idx] = j
+                j += 1
+
+        operand = ops.transpose(operand, tuple(perm_shape))
+        permuted_operands.append(operand)
+
+    # Check if operands broadcast and keep track of last operand with
+    # dimension size != 1 for optimizing reductions
+    dim_last_op = [0] * perm_index
+    has_zero_size_dim = False
+    for dim in range(perm_index):
+        broadcast_size = permuted_operands[0].shape[dim]
+        for i in range(1, len(operands)):
+            dim_size = permuted_operands[i].shape[dim]
+            if broadcast_size != dim_size and broadcast_size != 1 and dim_size != 1:
+                raise RuntimeError("einsum(): operands do not broadcast with remapped shapes [original->remapped]")
+            if dim_size != 1:
+                broadcast_size = dim_size
+                dim_last_op[dim] = i
+        has_zero_size_dim = has_zero_size_dim or (broadcast_size == 0)
+
+    # Compute result
+    result = permuted_operands[0]
+    if has_zero_size_dim:
+        out_shape = [-1] * out_size
+        for i in range(out_size):
+            out_shape[i] = permuted_operands[dim_last_op[i]].shape[i]
+        return ops.zeros(out_shape)
+
+    # Sum out or squeeze dimensions that are size 1 for all later operands
+    dim = out_size
+    for i in range(dim, perm_index):
+        if dim_last_op[i] == 0:
+            if result.shape[dim] == 1:
+                result = ops.squeeze(result, dim)
+                dim -= 1
+            else:
+                result = ops.sum(result, dim)
+                dim -= 1
+        dim += 1
+
+    for i in range(1, num_ops):
+        operand = permuted_operands[i]
+        sum_dims = []
+
+        # Sum out or squeeze dimensions that are size 1 for all later operands
+        dim = out_size
+        for j in range(dim, perm_index):
+            if dim_last_op[j] < i:
+                operand = ops.squeeze(operand, dim)
+                dim -= 1
+            elif dim_last_op[j] == i:
+                if result.shape[dim] == 1:
+                    operand = ops.sum(operand, dim)
+                    result = ops.squeeze(result, dim)
+                    dim -= 1
+                else:
+                    sum_dims.append(dim)
+            dim += 1
+        if len(sum_dims) == 0:
+            result = result.mul(operand)
+        elif len(sum_dims) == len(result.shape):
+            result = result.flatten().dot(operand.flatten())
+        else:
+            result = sumproduct_pair(
+                result, operand, sum_dims, False)
+    return result

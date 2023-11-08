@@ -25,6 +25,7 @@ from mindspore.common.initializer import initializer, Normal, Zero, One
 from mindnlp.transformers.activations import ACT2FN
 from .moss_configuration import MossConfig
 from ...modeling_utils import PreTrainedModel
+from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
 
 _CHECKPOINT_FOR_DOC = "fnlp/moss-moon-003-base"
 _CONFIG_FOR_DOC = "MossConfig"
@@ -122,10 +123,10 @@ class MossAttention(nn.Cell):
         Merges attn_head_size dim and num_attn_heads dim into n_ctx
         """
         if len(tensor.shape) == 5:
-            # tensor = ops.permute(tensor,(0, 1, 3, 2, 4)).contiguous()
+            # tensor = ops.permute(tensor,(0, 1, 3, 2, 4))
             tensor = ops.permute(tensor, (0, 1, 3, 2, 4))
         elif len(tensor.shape) == 4:
-            # tensor = ops.permute(tensor, (0, 2, 1, 3)).contiguous()
+            # tensor = ops.permute(tensor, (0, 2, 1, 3))
             tensor = ops.permute(tensor, (0, 2, 1, 3))
         else:
             raise ValueError(
@@ -628,11 +629,11 @@ class MossModel(MossPreTrainedModel):
         if not return_dict:
             return tuple(v for v in [hidden_states, presents, all_hidden_states, all_self_attentions] if v is not None)
 
-        return (
-            hidden_states,
-            presents,
-            all_hidden_states,
-            all_self_attentions,
+        return BaseModelOutputWithPast(
+            last_hidden_state=hidden_states,
+            past_key_values=presents,
+            hidden_states=all_hidden_states,
+            attentions=all_self_attentions,
         )
 
 
@@ -736,7 +737,7 @@ class MossForCausalLM(MossPreTrainedModel):
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        transformer_outputs = self.transformer(
+        outputs = self.transformer(
             input_ids,
             past_key_values=past_key_values,
             attention_mask=attention_mask,
@@ -749,18 +750,18 @@ class MossForCausalLM(MossPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-        hidden_states = transformer_outputs[0]
+        hidden_states = outputs[0]
 
         # make sure sampling in fp16 works correctly and
         # compute loss in fp32 to match with mesh-tf version
         # https://github.com/EleutherAI/gpt-neo/blob/89ce74164da2fb16179106f54e2269b5da8db333/models/gpt2/gpt2.py#L179
-        lm_logits = self.lm_head(hidden_states).to(mindspore.float32)
+        logits = self.lm_head(hidden_states).to(mindspore.float32)
 
         loss = None
         if labels is not None:
             # Shift so that tokens < n predict n
-            shift_logits = lm_logits[..., :-1, :].contiguous()
-            shift_labels = labels[..., 1:].contiguous()
+            shift_logits = logits[..., :-1, :]
+            shift_labels = labels[..., 1:]
             # Flatten the tokens
             loss_fct = CrossEntropyLoss()
             loss = loss_fct(
@@ -769,15 +770,15 @@ class MossForCausalLM(MossPreTrainedModel):
             loss = loss.to(hidden_states.dtype)
 
         if not return_dict:
-            output = (lm_logits,) + transformer_outputs[1:]
+            output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
 
-        return (
-            loss,
-            lm_logits,
-            transformer_outputs.past_key_values,
-            transformer_outputs.hidden_states,
-            transformer_outputs.attentions,
+        return CausalLMOutputWithPast(
+            loss=loss,
+            logits=logits,
+            past_key_values=outputs.past_key_values,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
         )
 
     @staticmethod

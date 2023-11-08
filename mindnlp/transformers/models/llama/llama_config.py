@@ -20,10 +20,10 @@
 # limitations under the License.
 """ LLaMA model configuration"""
 
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 
-class LlamaConfig(PreTrainedConfig):
+class LlamaConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`LlamaModel`]. It is used to instantiate an LLaMA
     model according to the specified arguments, defining the model architecture. Instantiating a configuration with the

@@ -19,12 +19,12 @@ import numpy as np
 from mindspore.dataset.text.transforms import Implementation
 from mindspore import Tensor
 from tokenizers import Tokenizer
-from mindnlp.configs import MINDNLP_TOKENIZER_CONFIG_URL_BASE
+from mindnlp.configs import MS_TOKENIZER_CONFIG_URL_BASE
 from .gpt_bigcode_config import GPT_BIGCODE_SUPPORT_LIST
 from ...tokenization_utils import PreTrainedTokenizer
 
 PRETRAINED_VOCAB_MAP = {
-    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format('gpt_bigcode', model) for model in GPT_BIGCODE_SUPPORT_LIST
+    model: MS_TOKENIZER_CONFIG_URL_BASE.format(model) for model in GPT_BIGCODE_SUPPORT_LIST
 }
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {

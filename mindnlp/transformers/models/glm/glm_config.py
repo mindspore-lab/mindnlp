@@ -19,11 +19,11 @@
 GLM Model Config
 """
 
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 
 
-class GLMConfig(PreTrainedConfig):
+class GLMConfig(PretrainedConfig):
     """
     GLMConfig
     """
