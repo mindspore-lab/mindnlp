@@ -326,23 +326,23 @@ class GraphormerMultiheadAttention(nn.Cell):
             raise AssertionError("Self-attention requires query, key and value to be of the same size.")
 
         self.k_proj = quant_noise(
-            nn.Dense(self.kdim, config.embedding_dim, bias=config.bias),
+            nn.Dense(self.kdim, config.embedding_dim, has_bias=config.bias),
             config.q_noise,
             config.qn_block_size,
         )
         self.v_proj = quant_noise(
-            nn.Dense(self.vdim, config.embedding_dim, bias=config.bias),
+            nn.Dense(self.vdim, config.embedding_dim, has_bias=config.bias),
             config.q_noise,
             config.qn_block_size,
         )
         self.q_proj = quant_noise(
-            nn.Dense(config.embedding_dim, config.embedding_dim, bias=config.bias),
+            nn.Dense(config.embedding_dim, config.embedding_dim, has_bias=config.bias),
             config.q_noise,
             config.qn_block_size,
         )
 
         self.out_proj = quant_noise(
-            nn.Dense(config.embedding_dim, config.embedding_dim, bias=config.bias),
+            nn.Dense(config.embedding_dim, config.embedding_dim, has_bias=config.bias),
             config.q_noise,
             config.qn_block_size,
         )
@@ -508,7 +508,7 @@ class GraphormerGraphEncoderLayer(nn.Cell):
         self.self_attn = GraphormerMultiheadAttention(config)
 
         # layer norm associated with the self attention layer
-        self.self_attn_layer_norm = nn.LayerNorm(self.embedding_dim)
+        self.self_attn_layer_norm = nn.LayerNorm([self.embedding_dim])
 
         self.fc1 = self.build_fc(
             self.embedding_dim,
@@ -524,7 +524,7 @@ class GraphormerGraphEncoderLayer(nn.Cell):
         )
 
         # layer norm associated with the position wise feed-forward NN
-        self.final_layer_norm = nn.LayerNorm(self.embedding_dim)
+        self.final_layer_norm = nn.LayerNorm([self.embedding_dim])
 
     def build_fc(
         self, input_dim: int, output_dim: int, q_noise: float, qn_block_size: int
@@ -591,7 +591,7 @@ class GraphormerGraphEncoder(nn.Cell):
 
         if config.q_noise > 0:
             self.quant_noise = quant_noise(
-                nn.Dense(self.embedding_dim, self.embedding_dim, bias=False),
+                nn.Dense(self.embedding_dim, self.embedding_dim, has_bias=False),
                 config.q_noise,
                 config.qn_block_size,
             )
@@ -599,12 +599,12 @@ class GraphormerGraphEncoder(nn.Cell):
             self.quant_noise = None
 
         if config.encoder_normalize_before:
-            self.emb_layer_norm = nn.LayerNorm(self.embedding_dim)
+            self.emb_layer_norm = nn.LayerNorm([self.embedding_dim])
         else:
             self.emb_layer_norm = None
 
         if config.pre_layernorm:
-            self.final_layer_norm = nn.LayerNorm(self.embedding_dim)
+            self.final_layer_norm = nn.LayerNorm([self.embedding_dim])
 
         if self.layerdrop > 0.0:
             self.layers = LayerDropModuleList(p=self.layerdrop)
@@ -696,7 +696,7 @@ class GraphormerDecoderHead(nn.Cell):
         super().__init__()
         """num_classes should be 1 for regression, or the number of classes for classification"""
         self.lm_output_learned_bias = nn.Parameter(torch.zeros(1))
-        self.classifier = nn.Dense(embedding_dim, num_classes, bias=False)
+        self.classifier = nn.Dense(embedding_dim, num_classes, has_bias=False)
         self.num_classes = num_classes
 
     def construct(self, input_nodes: Tensor, **unused) -> Tensor:
@@ -754,9 +754,9 @@ class GraphormerPreTrainedModel(PreTrainedModel):
             if module.bias is not None:
                 module.bias.data.zero_()
         elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=0.02)
+            module.embedding_table.data.normal_(mean=0.0, std=0.02)
             if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
+                module.embedding_table.data[module.padding_idx].zero_()
         elif isinstance(module, GraphormerMultiheadAttention):
             module.q_proj.weight.data.normal_(mean=0.0, std=0.02)
             module.k_proj.weight.data.normal_(mean=0.0, std=0.02)
@@ -800,7 +800,7 @@ class GraphormerModel(GraphormerPreTrainedModel):
 
         self.lm_head_transform_weight = nn.Dense(config.embedding_dim, config.embedding_dim)
         self.activation_fn = ACT2FN[config.activation_fn]
-        self.layer_norm = nn.LayerNorm(config.embedding_dim)
+        self.layer_norm = nn.LayerNorm([config.embedding_dim])
 
         self.post_init()
 

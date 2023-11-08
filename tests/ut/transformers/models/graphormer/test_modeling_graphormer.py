@@ -24,11 +24,11 @@ from mindnlp.transformers.models.graphormer.configuration_graphormer import Grap
 from mindnlp.transformers.models.graphormer.modeling_graphormer import(
     GraphormerModel,
     GraphormerForGraphClassification,
-    GRAPHORMER_PRETRAINED_MODEL_ARCHIVE_LIST    
-)
-from .utils.test_configuration_common import(
-    ConfigTester
-)
+    GRAPHORMER_PRETRAINED_MODEL_ARCHIVE_LIST)
+
+from ...test_configuration_common import ConfigTester
+from ...test_modeling_common import ModelTesterMixin, _config_zero_init, ids_tensor
+
 
 class GraphormerModelTester:
     def __init__(

@@ -14,7 +14,7 @@
 # limitations under the License.
 """ Graphormer model configuration"""
 
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 import logging
 
 
@@ -27,7 +27,7 @@ GRAPHORMER_PRETRAINED_CONFIG_ARCHIVE_MAP = {
 }
 
 
-class GraphormerConfig(PreTrainedConfig):
+class GraphormerConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`~GraphormerModel`]. It is used to instantiate an
     Graphormer model according to the specified arguments, defining the model architecture. Instantiating a
