@@ -393,15 +393,19 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         """
         output_embeddings.weight = input_embeddings.embedding_table
         output_embeddings._params['weight'] = input_embeddings.embedding_table
-        if output_embeddings.has_bias:
-            output_embeddings.bias.set_data(ops.pad(
-                output_embeddings.bias.data,
-                (0, output_embeddings.weight.shape[0] -
-                 output_embeddings.bias.shape[0]),
-                "constant",
-                0,
-            ))
-        if hasattr(output_embeddings, "out_features") and hasattr(input_embeddings, "num_embeddings"):
+        if getattr(output_embeddings, "bias", None) is not None:
+            if output_embeddings.weight.shape[0] == output_embeddings.bias.shape[0]:
+                pass
+            else:
+                # instantial a new Parameter since mindspore.Parameter do not support assign_value with different shape
+                output_embeddings.bias = Parameter(ops.pad(
+                    output_embeddings.bias.data,
+                    (0, output_embeddings.weight.shape[0] -
+                    output_embeddings.bias.shape[0]),
+                    "constant",
+                    0,
+                ))
+        if hasattr(output_embeddings, "out_channels") and hasattr(input_embeddings, "vocab_size"):
             output_embeddings.out_channels = input_embeddings.vocab_size
 
     def resize_token_embeddings(
@@ -760,7 +764,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     if pname_in_net in keys_unexpected:
                         keys_unexpected.remove(pname_in_net)
                     continue
-                new_param = param_dict.get(param_name, None)
+                new_param = param_dict.pop(param_name, None)
                 if new_param is not None:
                     if new_param.shape != param.shape:
                         if not ignore_mismatched_sizes:

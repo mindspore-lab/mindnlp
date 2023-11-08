@@ -584,7 +584,7 @@ class GenerationMixin:
 
         if bos_token_id is None:
             raise ValueError("`bos_token_id` has to be defined when no `input_ids` are provided.")
-        return ops.ones((1, 1), dtype=mindspore.float32) * bos_token_id
+        return ops.ones((1, 1), dtype=mindspore.int64) * bos_token_id
 
     def _prepare_attention_mask_for_generation(
         self,
@@ -1298,7 +1298,6 @@ class GenerationMixin:
             )
         else:
             input_ids = inputs_tensor if model_input_name == "input_ids" else model_kwargs.pop("input_ids")
-
         if streamer is not None:
             streamer.put(input_ids)
 
@@ -2022,7 +2021,7 @@ class GenerationMixin:
             # if eos_token was found in one sentence, set sentence to finished
             if eos_token_id_tensor is not None:
                 unfinished_sequences = unfinished_sequences.mul(
-                    next_tokens.tile(eos_token_id_tensor.shape[0], 1).ne(eos_token_id_tensor.unsqueeze(1)).prod(dim=0)
+                    next_tokens.tile((eos_token_id_tensor.shape[0], 1)).ne(eos_token_id_tensor.unsqueeze(1)).prod(axis=0)
                 )
 
                 # stop when each sentence is finished
@@ -2272,7 +2271,7 @@ class GenerationMixin:
             # if eos_token was found in one sentence, set sentence to finished
             if eos_token_id_tensor is not None:
                 unfinished_sequences = unfinished_sequences.mul(
-                    next_tokens.tile(eos_token_id_tensor.shape[0], 1).ne(eos_token_id_tensor.unsqueeze(1)).prod(dim=0)
+                    next_tokens.tile((eos_token_id_tensor.shape[0], 1)).ne(eos_token_id_tensor.unsqueeze(1)).prod(axis=0)
                 )
 
                 # stop when each sentence is finished
@@ -2544,7 +2543,7 @@ class GenerationMixin:
             # if eos_token was found in one sentence, set sentence to finished
             if eos_token_id_tensor is not None:
                 unfinished_sequences = unfinished_sequences.mul(
-                    next_tokens.tile(eos_token_id_tensor.shape[0], 1).ne(eos_token_id_tensor.unsqueeze(1)).prod(dim=0)
+                    next_tokens.tile((eos_token_id_tensor.shape[0], 1)).ne(eos_token_id_tensor.unsqueeze(1)).prod(axis=0)
                 )
 
                 # stop when each sentence is finished
@@ -4146,9 +4145,9 @@ class GenerationMixin:
 
                 # 1.3. stop assistant generation on EOS
                 if eos_token_id_tensor is not None:
-                    last_assistant_token_is_eos = new_token.tile(eos_token_id_tensor.shape[0], 1)
+                    last_assistant_token_is_eos = new_token.tile((eos_token_id_tensor.shape[0], 1))
                     last_assistant_token_is_eos = (
-                        ~last_assistant_token_is_eos.ne(eos_token_id_tensor.unsqueeze(1)).prod(dim=0).bool()
+                        ~last_assistant_token_is_eos.ne(eos_token_id_tensor.unsqueeze(1)).prod(axis=0).bool()
                     )
                     if last_assistant_token_is_eos:
                         break
@@ -4283,9 +4282,9 @@ class GenerationMixin:
             if eos_token_id_tensor is not None:
                 unfinished_sequences = unfinished_sequences.mul(
                     input_ids[:, -1]
-                    .tile(eos_token_id_tensor.shape[0], 1)
+                    .tile((eos_token_id_tensor.shape[0], 1))
                     .ne(eos_token_id_tensor.unsqueeze(1))
-                    .prod(dim=0)
+                    .prod(axis=0)
                 )
 
                 # stop when each sentence is finished

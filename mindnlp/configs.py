@@ -28,10 +28,10 @@ MS_CONFIG_URL_BASE = "https://modelscope.cn/api/v1/models/mindnlp/{}/repo?Revisi
 MS_TOKENIZER_CONFIG_URL_BASE = "https://modelscope.cn/api/v1/models/mindnlp/{}/repo?Revision=master&FilePath=tokenizer.json"
 MS_MODEL_URL_BASE = "https://modelscope.cn/api/v1/models/mindnlp/{}/repo?Revision=master&FilePath=mindspore.ckpt"
 # for huggingface url
-HF_CONFIG_URL_BASE = 'https://huggingface.co/{}/resolve/main/config.json'
-HF_TOKENIZER_CONFIG_URL_BASE = 'https://huggingface.co/{}/resolve/main/tokenizer.json'
-HF_MODEL_URL_BASE = 'https://huggingface.co/{}/resolve/main/pytorch_model.bin'
-HF_VOCAB_URL_BASE = 'https://huggingface.co/{}/resolve/main/vocab.txt'
+HF_CONFIG_URL_BASE = 'https://hf-mirror.com/{}/resolve/main/config.json'
+HF_TOKENIZER_CONFIG_URL_BASE = 'https://hf-mirror.com/{}/resolve/main/tokenizer.json'
+HF_MODEL_URL_BASE = 'https://hf-mirror.com/{}/resolve/main/pytorch_model.bin'
+HF_VOCAB_URL_BASE = 'https://hf-mirror.com/{}/resolve/main/vocab.txt'
 # for mindnlp obs storage
 MINDNLP_CONFIG_URL_BASE =  "https://download.mindspore.cn/toolkits/mindnlp/models/{}/{}/config.json"
 MINDNLP_MODEL_URL_BASE =  "https://download.mindspore.cn/toolkits/mindnlp/models/{}/{}/mindspore.ckpt"

@@ -27,8 +27,6 @@ from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask
 
-# import mindspore
-# mindspore.set_context(pynative_synchronize=True)
 
 if is_mindspore_available():
     import mindspore
