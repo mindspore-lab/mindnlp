@@ -1,4 +1,4 @@
-# Copyright 2021 Huawei Technologies Co., Ltd
+# Copyright 2022 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,15 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=import-outside-toplevel
+"""
+Utils for engine
+"""
+import random
+import numpy as np
 
-"""
-Common utils
-"""
-from .generic import *
-from .decompress import unzip, untar, ungz
-from .download import cached_file, copy_func
-from .compatibility import *
-from .import_utils import requires_backends, is_mindspore_available, OptionalDependencyNotAvailable, is_sentencepiece_available, \
-is_tokenizers_available, direct_transformers_import
-from .testing_utils import require_mindspore
-from .save import convert_file_size_to_int
+from mindnlp.utils import is_mindspore_available
+
+def set_seed(seed: int):
+    """
+    Helper function for reproducible behavior to set the seed in `random`, `numpy`, `torch` and/or `tf` (if installed).
+
+    Args:
+        seed (`int`): The seed to set.
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    if is_mindspore_available():
+        import mindspore
+        mindspore.set_seed(seed)

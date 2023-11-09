@@ -22,6 +22,7 @@ import warnings
 import numpy as np
 
 from mindnlp.utils import is_mindspore_available, require_mindspore
+from mindnlp.engine.utils import set_seed
 from ..test_modeling_common import floats_tensor, ids_tensor
 from .test_framework_agnostic import GenerationIntegrationTestsMixin
 
@@ -314,7 +315,7 @@ class GenerationTesterMixin:
         output_hidden_states=False,
         return_dict_in_generate=False,
     ):
-        mindspore.set_seed(0)
+        set_seed(1234)
         model_kwargs = {"attention_mask": attention_mask} if attention_mask is not None else {}
         output_generate = model.generate(
             input_ids,
@@ -331,8 +332,7 @@ class GenerationTesterMixin:
             **process_kwargs,
             **model_kwargs,
         )
-
-        mindspore.set_seed(0)
+        set_seed(1234)
         kwargs = {}
         if model.config.is_encoder_decoder:
             encoder_outputs, input_ids, attention_mask = self._get_encoder_outputs(
@@ -351,6 +351,7 @@ class GenerationTesterMixin:
         logits_processor.append(InfNanRemoveLogitsProcessor())
 
         model_kwargs = {"attention_mask": attention_mask} if attention_mask is not None else {}
+
         output_sample = model.sample(
             input_ids.repeat_interleave(num_return_sequences, dim=0),
             max_length=max_length,
@@ -441,7 +442,7 @@ class GenerationTesterMixin:
         output_hidden_states=False,
         return_dict_in_generate=False,
     ):
-        mindspore.set_seed(0)
+        set_seed(1234)
         model_kwargs = {"attention_mask": attention_mask} if attention_mask is not None else {}
         output_generate = model.generate(
             input_ids,
@@ -457,7 +458,7 @@ class GenerationTesterMixin:
             **model_kwargs,
         )
         # beam_search does not automatically interleave `batch_size` dim for `num_beams`
-        mindspore.set_seed(0)
+        set_seed(1234)
         kwargs = {}
         if model.config.is_encoder_decoder:
             encoder_outputs, input_ids, attention_mask = self._get_encoder_outputs(
@@ -1774,7 +1775,7 @@ class GenerationTesterMixin:
             self.assertListEqual(outputs_from_ids.tolist(), outputs_from_embeds.tolist())
 
             # But if we pass different inputs_embeds, we should get different outputs
-            mindspore.set_seed(0)
+            set_seed(1234)
             random_embeds = ops.rand_like(inputs_embeds)
             outputs_from_rand_embeds = model.generate(input_ids, inputs_embeds=random_embeds)
             with self.assertRaises(AssertionError):
@@ -2609,12 +2610,12 @@ class GenerationIntegrationTests(unittest.TestCase, GenerationIntegrationTestsMi
 
         # Only some seeds will work both on CPU/GPU for a fixed `expectation` value.
         # The selected seed is not guaranteed to work on all torch versions.
-        mindspore.set_seed(1)
+        set_seed(1)
         eos_token_id = 846
         generated_tokens = model.generate(**tokens, eos_token_id=eos_token_id, **generation_kwargs)
         self.assertTrue(expectation == len(generated_tokens[0]))
 
-        mindspore.set_seed(1)
+        set_seed(1)
         eos_token_id = [846, 198]
         generated_tokens = model.generate(**tokens, eos_token_id=eos_token_id, **generation_kwargs)
         self.assertTrue(expectation == len(generated_tokens[0]))
