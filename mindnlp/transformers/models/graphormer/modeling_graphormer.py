@@ -420,11 +420,11 @@ class GraphormerMultiheadAttention(nn.Cell):
 
         q *= self.scaling
 
-        q = q.contiguous().view(tgt_len, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
+        q = q.view(tgt_len, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
         if k is not None:
-            k = k.contiguous().view(-1, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
+            k = k.view(-1, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
         if v is not None:
-            v = v.contiguous().view(-1, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
+            v = v.view(-1, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
 
         if (k is None) or not (k.shape[1] == src_len):
             raise AssertionError("The shape of the key generated in the attention is incorrect")
@@ -670,7 +670,6 @@ class GraphormerGraphEncoder(nn.Cell):
         inner_states = []
         if not last_state_only:
             inner_states.append(input_nodes)
-
         for layer in self.layers:
             input_nodes, _ = layer(
                 input_nodes,

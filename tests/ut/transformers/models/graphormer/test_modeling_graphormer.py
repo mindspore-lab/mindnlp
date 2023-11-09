@@ -29,7 +29,6 @@ from mindnlp.transformers.models.graphormer.modeling_graphormer import(
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, _config_zero_init, ids_tensor
 
-
 class GraphormerModelTester:
     def __init__(
         self,
@@ -130,7 +129,6 @@ class GraphormerModelTester:
         labels = ids_tensor([self.batch_size], self.num_classes)
 
         config = self.get_config()
-
         return config, attn_bias, attn_edge_type, spatial_pos, in_degree, out_degree, input_nodes, input_edges, labels
 
     def get_config(self):
@@ -454,21 +452,21 @@ class GraphormerModelTest(ModelTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model(*config_and_inputs)
 
-    @unittest.skip(reason="Skip temporarily")
-    def test_for_graph_classification(self):
+    # @unittest.skip(reason="Skip temporarily")
+    def test_czfor_graph_classification(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_for_graph_classification(*config_and_inputs)
 
-    # @slow TODO separate slow tests
-    def not_performed_model_from_pretrained(self):
+    @unittest.skip(reason="Skip slow")
+    def test_model_from_pretrained(self):
         for model_name in GRAPHORMER_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
             model = GraphormerForGraphClassification.from_pretrained(model_name)
             self.assertIsNotNone(model)
 
 
 class GraphormerModelIntegrationTest(unittest.TestCase):
-    # @slow
-    def not_performed_inference_graph_classification(self):
+    @unittest.skip(reason="Skip slow")
+    def test_inference_graph_classification(self):
         model = GraphormerForGraphClassification.from_pretrained("clefourrier/graphormer-base-pcqm4mv2")
 
         # Actual real graph data from the MUTAG dataset
