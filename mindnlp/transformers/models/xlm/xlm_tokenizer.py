@@ -40,14 +40,8 @@ from collections import OrderedDict
 from typing import Dict, List, Optional, Tuple, Union
 from collections.abc import Mapping, Sized
 from tokenizers import AddedToken
-from mindnlp.configs import MINDNLP_TOKENIZER_CONFIG_URL_BASE
-from .xlm_config import XLM_SUPPORT_LIST
 from ...tokenization_utils import PreTrainedTokenizer
 
-
-PRETRAINED_VOCAB_MAP = {
-    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format('xlm', model) for model in XLM_SUPPORT_LIST
-}
 
 # class MissingType:
 #     "MissingType"
@@ -364,7 +358,6 @@ class XLMTokenizer(PreTrainedTokenizer):
     """
 
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
-    pretrained_vocab_map = PRETRAINED_VOCAB_MAP
     model_input_names: List[str] = ["input_ids", "token_type_ids", "attention_mask"]
     padding_side: str = "right"
     truncation_side: str = "right"

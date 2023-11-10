@@ -15,7 +15,7 @@
 """
 Bert Model config
 """
-from mindnlp.configs import MS_CONFIG_URL_BASE
+
 from ...configuration_utils import PretrainedConfig
 
 
@@ -32,9 +32,6 @@ BERT_SUPPORT_LIST = [
     "bert-large-cased-whole-word-masking"
 ]
 
-CONFIG_ARCHIVE_MAP = {
-    model: MS_CONFIG_URL_BASE.format(model) for model in BERT_SUPPORT_LIST
-}
 
 
 class BertConfig(PretrainedConfig):
@@ -43,7 +40,6 @@ class BertConfig(PretrainedConfig):
     """
 
     model_type = "bert"
-    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     def __init__(
         self,

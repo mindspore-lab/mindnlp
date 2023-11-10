@@ -15,14 +15,11 @@
 """
 TinyBert Models config
 """
-from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
+
 from ...configuration_utils import PretrainedConfig
 
 TINYBERT_SUPPORT_LIST = ['tinybert_4L_zh', 'tinybert_6L_zh']
 
-CONFIG_ARCHIVE_MAP = {
-    model: MINDNLP_CONFIG_URL_BASE.format('tinybert', model) for model in TINYBERT_SUPPORT_LIST
-}
 
 class TinyBertConfig(PretrainedConfig):
     """
@@ -50,7 +47,6 @@ class TinyBertConfig(PretrainedConfig):
         initializer_range: The sttdev of the truncated_normal_initializer for
             initializing all weight matrices.
     """
-    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     def __init__(self,
                  vocab_size=21128,

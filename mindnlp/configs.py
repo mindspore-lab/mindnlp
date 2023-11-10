@@ -17,23 +17,24 @@ Global configs
 """
 import os
 
-CONFIG_NAME = "config.json"
 WEIGHTS_NAME = "mindspore.ckpt"
+PT_WEIGHTS_NAME = "pytorch_model.bin"
+WEIGHTS_INDEX_NAME = "mindspore.ckpt.index.json"
+PT_WEIGHTS_INDEX_NAME = "pytorch_model.bin.index.json"
+
+CONFIG_NAME = "config.json"
 GENERATION_CONFIG_NAME = "generation_config.json"
 TOKENIZER_CONFIG_FILE = "tokenizer_config.json"
 
 DEFAULT_ROOT = os.path.join(os.getcwd(), ".mindnlp")
 # for modelscope models
-MS_CONFIG_URL_BASE = "https://modelscope.cn/api/v1/models/mindnlp/{}/repo?Revision=master&FilePath=config.json"
-MS_TOKENIZER_CONFIG_URL_BASE = "https://modelscope.cn/api/v1/models/mindnlp/{}/repo?Revision=master&FilePath=tokenizer.json"
-MS_MODEL_URL_BASE = "https://modelscope.cn/api/v1/models/mindnlp/{}/repo?Revision=master&FilePath=mindspore.ckpt"
+MS_URL_BASE = "https://modelscope.cn/api/v1/models/mindnlp/{}/repo?Revision=master&FilePath={}"
 # for huggingface url
-HF_CONFIG_URL_BASE = 'https://hf-mirror.com/{}/resolve/main/config.json'
-HF_TOKENIZER_CONFIG_URL_BASE = 'https://hf-mirror.com/{}/resolve/main/tokenizer.json'
-HF_MODEL_URL_BASE = 'https://hf-mirror.com/{}/resolve/main/pytorch_model.bin'
-HF_VOCAB_URL_BASE = 'https://hf-mirror.com/{}/resolve/main/vocab.txt'
-# for mindnlp obs storage
-MINDNLP_CONFIG_URL_BASE =  "https://download.mindspore.cn/toolkits/mindnlp/models/{}/{}/config.json"
-MINDNLP_MODEL_URL_BASE =  "https://download.mindspore.cn/toolkits/mindnlp/models/{}/{}/mindspore.ckpt"
-MINDNLP_TOKENIZER_CONFIG_URL_BASE =  "https://download.mindspore.cn/toolkits/mindnlp/models/{}/{}/tokenizer.json"
-MINDNLP_VOCAB_URL_BASE =  "https://download.mindspore.cn/toolkits/mindnlp/models/{}/{}/vocab.txt"
+HF_URL_BASE = 'https://hf-mirror.com/{}/resolve/main/{}'
+
+ENV_VARS_TRUE_VALUES = {"1", "ON", "YES", "TRUE"}
+MINDNLP_CACHE = os.getenv("MINDNLP_CACHE", DEFAULT_ROOT)
+
+REPO_TYPE_DATASET = "dataset"
+REPO_TYPE_MODEL = "model"
+REPO_TYPES = [None, REPO_TYPE_MODEL, REPO_TYPE_DATASET]

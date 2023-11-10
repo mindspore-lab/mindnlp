@@ -31,16 +31,10 @@ from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
 from mindnlp._legacy.nn import Dropout, Matmul
 from mindnlp._legacy.functional import split, softmax, arange
-from mindnlp.configs import MINDNLP_MODEL_URL_BASE
-from .gpt_config import GPTConfig, GPT_SUPPORT_LIST
+from .gpt_config import GPTConfig
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import Conv1D, SequenceSummary, prune_conv1d_layer, find_pruneable_heads_and_indices
 from ...activations import ACT2FN
-
-
-PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MINDNLP_MODEL_URL_BASE.format('gpt', model) for model in GPT_SUPPORT_LIST
-}
 
 
 def torch_to_mindspore(pth_file, **kwargs):
@@ -231,7 +225,7 @@ class Block(nn.Cell):
 class GPTPreTrainedModel(PreTrainedModel):
     """BertPretrainedModel"""
     convert_torch_to_mindspore = torch_to_mindspore
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
     config_class = GPTConfig
     base_model_prefix = 'transformer'
 

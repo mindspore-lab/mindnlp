@@ -19,13 +19,8 @@ T5Tokenizer
 import numpy as np
 from mindspore.dataset.text.transforms import Implementation
 from tokenizers import Tokenizer
-from mindnlp.configs import MS_TOKENIZER_CONFIG_URL_BASE
-from .t5_config import T5_SUPPORT_LIST
 from ...tokenization_utils import PreTrainedTokenizer
 
-PRETRAINED_VOCAB_MAP = {
-    model: MS_TOKENIZER_CONFIG_URL_BASE.format(model) for model in T5_SUPPORT_LIST
-}
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
     "t5-small": 512,
@@ -50,7 +45,6 @@ class T5Tokenizer(PreTrainedTokenizer):
     """
 
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
-    pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
     def __init__(self, vocab: str, **kwargs):
         super().__init__()

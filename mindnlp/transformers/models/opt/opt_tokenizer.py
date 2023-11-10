@@ -5,15 +5,7 @@ OPTTokenizer
 import numpy as np
 from mindspore.dataset.text.transforms import Implementation
 from tokenizers import Tokenizer
-from mindnlp.configs import MINDNLP_TOKENIZER_CONFIG_URL_BASE, HF_TOKENIZER_CONFIG_URL_BASE
-from .opt_config import OPT_SUPPORT_LIST
 from ...tokenization_utils import PreTrainedTokenizer
-
-PRETRAINED_VOCAB_MAP = {
-    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format('opt', model) for model in OPT_SUPPORT_LIST
-}
-# TODO:
-PRETRAINED_VOCAB_MAP['facebook/opt-350m'] = HF_TOKENIZER_CONFIG_URL_BASE.format('facebook/opt-350m')
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
     "opt": 1024,
@@ -29,7 +21,6 @@ class OPTTokenizer(PreTrainedTokenizer):
         """
 
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
-    pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
     def __init__(
         self,

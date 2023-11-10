@@ -25,16 +25,10 @@ from mindspore import nn, ops
 from mindspore import Parameter, Tensor
 from mindspore.common.initializer import initializer, TruncatedNormal, Normal
 from mindnlp._legacy.nn import Dropout, Matmul
-from mindnlp.configs import MS_MODEL_URL_BASE
 from mindnlp.modules.functional import make_causal_mask, finfo
-from .configuration_bert import BertConfig, BERT_SUPPORT_LIST
+from .configuration_bert import BertConfig
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
-
-
-PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MS_MODEL_URL_BASE.format("bert", model) for model in BERT_SUPPORT_LIST
-}
 
 
 def torch_to_mindspore(pth_file, **kwargs):
@@ -575,7 +569,7 @@ class MSBertPreTrainedModel(PreTrainedModel):
     """BertPretrainedModel"""
 
     convert_torch_to_mindspore = torch_to_mindspore
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
     config_class = BertConfig
     base_model_prefix = "bert"
 

@@ -33,8 +33,7 @@ from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindspore.common.initializer import initializer, Normal
 from mindspore import log as logger
 
-from mindnlp.configs import MS_MODEL_URL_BASE
-from .configuration_xlm_roberta import XLMRobertaConfig, XLM_ROBERTA_SUPPORT_LIST
+from .configuration_xlm_roberta import XLMRobertaConfig
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
@@ -48,11 +47,6 @@ from ...modeling_outputs import (
     SequenceClassifierOutput,
     TokenClassifierOutput,
 )
-
-PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MS_MODEL_URL_BASE.format(model) for model in XLM_ROBERTA_SUPPORT_LIST
-}
-
 
 
 def torch_to_mindspore(pth_file):
@@ -600,7 +594,7 @@ class XLMRobertaPreTrainedModel(PreTrainedModel):
     """
 
     convert_torch_to_mindspore = torch_to_mindspore
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
     config_class = XLMRobertaConfig
     base_model_prefix = "roberta"
     supports_gradient_checkpointing = False

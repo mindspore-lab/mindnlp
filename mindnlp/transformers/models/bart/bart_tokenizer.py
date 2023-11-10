@@ -4,13 +4,8 @@ BartTokenizer
 import numpy as np
 from mindspore.dataset.text.transforms import Implementation
 from tokenizers import Tokenizer
-from mindnlp.configs import HF_TOKENIZER_CONFIG_URL_BASE
-from .bart_config import BART_SUPPORT_LIST
 from ...tokenization_utils import PreTrainedTokenizer
 
-PRETRAINED_VOCAB_MAP = {
-    model: HF_TOKENIZER_CONFIG_URL_BASE.format(model) for model in BART_SUPPORT_LIST
-}
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
     "facebook/bart-base": 1024,
@@ -29,7 +24,6 @@ class BartTokenizer(PreTrainedTokenizer):
             return_token (bool): Whether to return token. If True: return tokens. False: return ids. Default: True.
     """
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
-    pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
     def __init__(
         self,

@@ -15,7 +15,6 @@
 # limitations under the License.
 # pylint: disable=too-many-instance-attributes
 """ XLM configuration"""
-from mindnlp.configs import HF_CONFIG_URL_BASE
 from ...configuration_utils import PretrainedConfig
 
 XLM_SUPPORT_LIST = [
@@ -29,10 +28,6 @@ XLM_SUPPORT_LIST = [
     "xlm-mlm-17-1280",
     "xlm-mlm-enro-1024",
 ]
-
-CONFIG_ARCHIVE_MAP = {
-    model: HF_CONFIG_URL_BASE.format(model) for model in XLM_SUPPORT_LIST
-}
 
 class XLMConfig(PretrainedConfig):
     """
@@ -145,7 +140,6 @@ class XLMConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
     model_type = "xlm"
     attribute_map = {
         "hidden_size": "emb_dim",

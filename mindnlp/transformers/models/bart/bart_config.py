@@ -15,7 +15,7 @@
 """
 Bart Model config
 """
-from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
+
 from ...configuration_utils import PretrainedConfig
 
 __all__ = ['BartConfig']
@@ -23,16 +23,10 @@ __all__ = ['BartConfig']
 BART_SUPPORT_LIST = ["facebook/bart-large", "facebook/bart-base", "facebook/bart-large-mnli",
                      "facebook/bart-large-cnn", "facebook/bart-large-xsum", "yjernite/bart_eli5"]
 
-CONFIG_ARCHIVE_MAP = {
-    model: MINDNLP_CONFIG_URL_BASE.format('bart', model) for model in BART_SUPPORT_LIST
-}
-
 class BartConfig(PretrainedConfig):
     """
     Configuration for Bart
     """
-
-    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     def __init__(
         self,

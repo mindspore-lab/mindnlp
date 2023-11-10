@@ -16,20 +16,10 @@
 Ernie Tokenizer
 """
 
-import re
 import numpy as np
 from mindspore.dataset.text.transforms import Implementation
 from tokenizers import Tokenizer
-from mindnlp.configs import MINDNLP_TOKENIZER_CONFIG_URL_BASE
-from .ernie_config import ERNIE_SUPPORT_LIST
 from ...tokenization_utils import PreTrainedTokenizer
-
-PRETRAINED_VOCAB_MAP = {
-    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format(
-        re.search(r"^[^-]*", model).group(), model
-    )
-    for model in ERNIE_SUPPORT_LIST
-}
 
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
@@ -71,7 +61,6 @@ class ErnieTokenizer(PreTrainedTokenizer):
     """
 
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
-    pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
     def __init__(self, vocab: str, **kwargs):
         return_token = kwargs.pop("return_token", False)

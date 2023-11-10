@@ -23,13 +23,8 @@ from mindspore.dataset.text import Vocab as msVocab
 from tokenizers import Tokenizer
 from tokenizers.implementations import BertWordPieceTokenizer
 from mindnlp.vocab import Vocab
-from mindnlp.configs import HF_TOKENIZER_CONFIG_URL_BASE
-from .megatron_bert_config import MEGATRONBERT_SUPPORT_LIST
 from ...tokenization_utils import PreTrainedTokenizer
 
-PRETRAINED_VOCAB_MAP = {
-    model: HF_TOKENIZER_CONFIG_URL_BASE.format(model) for model in MEGATRONBERT_SUPPORT_LIST
-}
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
     "nvidia/Erlangshen-MegatronBert-1.3B-NLI": 512,
@@ -54,7 +49,6 @@ class MegatronBertTokenizer(PreTrainedTokenizer):
     """
 
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
-    pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
     def __init__(
             self,

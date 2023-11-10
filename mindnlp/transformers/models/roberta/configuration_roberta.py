@@ -14,26 +14,14 @@
 # ============================================================================
 """ RoBERTa configuration"""
 from mindnlp.utils import logging
-from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
+
 from ...configuration_utils import PretrainedConfig
 
 logger = logging.get_logger(__name__)
 
-ROBERTA_SUPPORT_LIST = [
-    'roberta-base',
-    'roberta-large',
-    'roberta-large-mnli',
-]
-
-CONFIG_ARCHIVE_MAP = {
-    model: MINDNLP_CONFIG_URL_BASE.format('roberta', model) for model in ROBERTA_SUPPORT_LIST
-}
-
-
 class RobertaConfig(PretrainedConfig):
     """Roberta Config."""
     model_type = "roberta"
-    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     def __init__(
         self,

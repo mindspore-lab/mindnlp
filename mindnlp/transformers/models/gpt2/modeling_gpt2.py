@@ -29,16 +29,12 @@ from mindspore import log as logger
 from mindspore.common.initializer import initializer, Normal
 from mindnlp._legacy.functional import split, where, arange, softmax
 from mindnlp._legacy.nn import Dropout, Matmul
-from mindnlp.configs import MINDNLP_MODEL_URL_BASE
-from .gpt2_config import GPT2Config, GPT2_SUPPORT_LIST
+from .gpt2_config import GPT2Config
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import SequenceSummary, Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
 
-
-PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MINDNLP_MODEL_URL_BASE.format('gpt2', model) for model in GPT2_SUPPORT_LIST
-}
+GPT2_SUPPORT_LIST = ["gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl", "distilgpt2"]
 
 
 __all__ = ['GPT2DoubleHeadsModel', 'GPT2ForSequenceClassification',
@@ -405,7 +401,7 @@ class GPT2PreTrainedModel(PreTrainedModel):
     """
     config_class = GPT2Config
     convert_torch_to_mindspore = torch_to_mindspore
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
     base_model_prefix = "transformer"
     is_parallelizable = True
     supports_gradient_checkpointing = True

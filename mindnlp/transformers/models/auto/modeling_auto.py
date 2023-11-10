@@ -31,6 +31,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
     [
         # Base model mapping
         ("bert", "BertModel"),
+        ("roberta", "RobertaModel"),
     ]
 )
 
@@ -45,6 +46,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
     [
         # Model with LM heads mapping
         ("bert", "BertForMaskedLM"),
+        ("roberta", "RobertaForMaskedLM"),
     ]
 )
 
@@ -52,6 +54,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
     [
         # Model for Causal LM mapping
         ("bert", "BertLMHeadModel"),
+        ("roberta", "RobertaLMHeadModel"),
     ]
 )
 
