@@ -32,8 +32,7 @@ from mindspore import Parameter, Tensor
 
 from mindnlp._legacy.nn import Dropout
 from mindnlp._legacy.functional import arange
-from mindnlp.configs import MS_MODEL_URL_BASE
-from .t5_config import T5Config, T5_SUPPORT_LIST
+from .t5_config import T5Config
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
 
@@ -42,9 +41,8 @@ __all__ = ['T5Attention', 'T5DenseActDense', 'T5DenseGatedActDense', 'T5EncoderM
            'T5ForConditionalGeneration', 'T5LayerCrossAttention', 'T5Stack', 'T5LayerSelfAttention',
            'T5LayerNorm', 'T5Model', 'T5LayerFF', 'T5Block', 'T5PreTrainedModel']
 
-PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MS_MODEL_URL_BASE.format(model) for model in T5_SUPPORT_LIST
-}
+T5_SUPPORT_LIST = ["t5-small", "t5-base", "t5-large", "t5-3b", "t5-11b", "ChatYuan-large-v2"]
+
 
 def torch_to_mindspore(pth_file, **kwargs):
     """torch to mindspore."""
@@ -554,7 +552,7 @@ class T5PreTrainedModel(PreTrainedModel):
     config_class = T5Config
     base_model_prefix = "transformer"
     convert_torch_to_mindspore = torch_to_mindspore
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
     is_parallelizable = True
     supports_gradient_checkpointing = True
     _no_split_modules = ["T5Block"]

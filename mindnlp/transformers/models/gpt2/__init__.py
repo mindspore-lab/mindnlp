@@ -15,12 +15,12 @@
 """
 GPT2 Models init
 """
-from . import gpt2, gpt2_config, gpt2_tokenizer
-from .gpt2 import *
+from . import gpt2_config, gpt2_tokenizer, modeling_gpt2
+from .modeling_gpt2 import *
 from .gpt2_config import *
 from .gpt2_tokenizer import *
 
 __all__ = []
-__all__.extend(gpt2.__all__)
+__all__.extend(modeling_gpt2.__all__)
 __all__.extend(gpt2_config.__all__)
 __all__.extend(gpt2_tokenizer.__all__)

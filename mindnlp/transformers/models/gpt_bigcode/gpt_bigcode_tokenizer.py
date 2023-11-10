@@ -19,13 +19,8 @@ import numpy as np
 from mindspore.dataset.text.transforms import Implementation
 from mindspore import Tensor
 from tokenizers import Tokenizer
-from mindnlp.configs import MS_TOKENIZER_CONFIG_URL_BASE
-from .gpt_bigcode_config import GPT_BIGCODE_SUPPORT_LIST
 from ...tokenization_utils import PreTrainedTokenizer
 
-PRETRAINED_VOCAB_MAP = {
-    model: MS_TOKENIZER_CONFIG_URL_BASE.format(model) for model in GPT_BIGCODE_SUPPORT_LIST
-}
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
     "gpt_bigcode": 2048,
@@ -42,7 +37,6 @@ class GPTBigCodeTokenizer(PreTrainedTokenizer):
         """
 
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
-    pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
     def __init__(
         self,

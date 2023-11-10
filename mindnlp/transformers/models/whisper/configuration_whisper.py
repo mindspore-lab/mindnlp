@@ -16,7 +16,6 @@
 """ Whisper model configuration"""
 
 from mindnlp.utils import logging
-from mindnlp.configs import HF_CONFIG_URL_BASE
 from ...configuration_utils import PretrainedConfig
 
 
@@ -26,10 +25,6 @@ WHISPER_SUPPORT_LIST = [
     "openai/whisper-base"
 ]
 
-
-CONFIG_ARCHIVE_MAP = {
-    model: HF_CONFIG_URL_BASE.format(model) for model in WHISPER_SUPPORT_LIST
-}
 
 # fmt: off
 NON_SPEECH_TOKENS = [

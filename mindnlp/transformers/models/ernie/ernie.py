@@ -17,21 +17,15 @@
 Ernie Models
 """
 
-import re
 from typing import Optional, Tuple
 
 import mindspore
 from mindspore import nn, ops, Tensor, Parameter
 from mindspore.common.initializer import TruncatedNormal,initializer
-from mindnlp.configs import MINDNLP_MODEL_URL_BASE
-from .ernie_config import ErnieConfig,ERNIE_SUPPORT_LIST
+from .ernie_config import ErnieConfig
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 
-PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MINDNLP_MODEL_URL_BASE.format(re.search(r"^[^-]*", model).group(), model)
-    for model in ERNIE_SUPPORT_LIST
-}
 
 __all__ = [
     "ErnieModel",
@@ -128,7 +122,7 @@ class ErniePretrainedModel(PreTrainedModel):
     """
 
     config_class = ErnieConfig
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
 
     # TODO
     def get_input_embeddings(self):

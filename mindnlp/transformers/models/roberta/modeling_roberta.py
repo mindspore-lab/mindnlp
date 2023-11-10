@@ -29,9 +29,8 @@ from mindspore import Parameter
 from mindspore.common.initializer import initializer
 
 from mindnlp.utils import logging
-from mindnlp.configs import MINDNLP_MODEL_URL_BASE
 from mindnlp._legacy.functional import einsum
-from .configuration_roberta import RobertaConfig, ROBERTA_SUPPORT_LIST
+from .configuration_roberta import RobertaConfig
 from ..bert.modeling_bert import BertPreTrainedModel
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
@@ -46,10 +45,12 @@ from ...modeling_outputs import (
 from ...activations import ACT2FN
 from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
 
-PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MINDNLP_MODEL_URL_BASE.format("roberta", model)
-    for model in ROBERTA_SUPPORT_LIST
-}
+
+ROBERTA_SUPPORT_LIST = [
+    'roberta-base',
+    'roberta-large',
+    'roberta-large-mnli',
+]
 
 logger = logging.get_logger(__name__)
 
@@ -565,7 +566,7 @@ class RobertaPooler(nn.Cell):
 class RobertaPreTrainedModel(BertPreTrainedModel):
     """Roberta Pretrained Model."""
 
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
     config_class = RobertaConfig
     base_model_prefix = "roberta"
 

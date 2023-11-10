@@ -15,7 +15,7 @@
 """
 model nezha config
 """
-from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
+
 from ...configuration_utils import PretrainedConfig
 
 __all__ = ["NezhaConfig"]
@@ -27,16 +27,11 @@ NEZHA_SUPPORT_LIST = [
     "nezha-large-wwm"
 ]
 
-CONFIG_ARCHIVE_MAP = {
-    model: MINDNLP_CONFIG_URL_BASE.format('nezha', model) for model in NEZHA_SUPPORT_LIST
-}
 
 class NezhaConfig(PretrainedConfig):
     """
     Configuration for Nezha
     """
-
-    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     def __init__(
         self,

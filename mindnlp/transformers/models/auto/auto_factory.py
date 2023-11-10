@@ -417,7 +417,7 @@ class _BaseAutoModelClass:
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
         config = kwargs.pop("config", None)
-
+        from_pt = kwargs.get('from_pt', False)
         if not isinstance(config, PretrainedConfig):
             kwargs_orig = copy.deepcopy(kwargs)
             # ensure not to pollute the config object with torch_dtype="auto" - since it's
@@ -433,13 +433,13 @@ class _BaseAutoModelClass:
                 return_unused_kwargs=True,
                 **kwargs,
             )
-
             # if torch_dtype=auto was passed here, ensure to pass it on
             if kwargs_orig.get("torch_dtype", None) == "auto":
                 kwargs["torch_dtype"] = "auto"
             if kwargs_orig.get("quantization_config", None) is not None:
                 kwargs["quantization_config"] = kwargs_orig["quantization_config"]
 
+        kwargs['from_pt'] = from_pt
         if type(config) in cls._model_mapping.keys():
             model_class = _get_model_class(config, cls._model_mapping)
             return model_class.from_pretrained(

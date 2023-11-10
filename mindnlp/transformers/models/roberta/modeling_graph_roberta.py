@@ -21,15 +21,10 @@ from mindspore import nn, ops
 from mindspore import Parameter
 from mindspore.common.initializer import initializer
 
-from mindnlp.configs import MINDNLP_MODEL_URL_BASE
 from mindnlp._legacy.nn import Dropout
+from .configuration_roberta import RobertaConfig
 from ..bert.modeling_bert import BertModel, BertPreTrainedModel
-from .configuration_roberta import RobertaConfig, ROBERTA_SUPPORT_LIST
 
-
-PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MINDNLP_MODEL_URL_BASE.format('roberta', model) for model in ROBERTA_SUPPORT_LIST
-}
 
 class MSRobertaEmbeddings(nn.Cell):
     """
@@ -119,13 +114,13 @@ class MSRobertaEmbeddings(nn.Cell):
 
 class MSRobertaPreTrainedModel(BertPreTrainedModel):
     """Roberta Pretrained Model."""
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
     config_class = RobertaConfig
     base_model_prefix = "roberta"
 
 class MSRobertaModel(BertModel):
     """Roberta Model"""
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
     config_class = RobertaConfig
     base_model_prefix = "roberta"
 

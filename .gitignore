@@ -146,7 +146,6 @@ cmp/
 .mindnlp/
 
 # txt files
-*.txt
 !requirements.txt
 
 # mindspore profiler

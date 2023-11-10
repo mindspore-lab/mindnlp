@@ -7,24 +7,17 @@
 """
 PanGu_Alpha Models config
 """
-from mindnlp.configs import HF_CONFIG_URL_BASE
 from ...configuration_utils import PretrainedConfig
 
 
 
 PANGU_ALPHA_SUPPORT_LIST = ['pangu-350M', 'pangu-2_6B', 'pangu-13B']
 
-CONFIG_ARCHIVE_MAP = {
-    model: HF_CONFIG_URL_BASE.format('sunzeyeah/' + model) for model in PANGU_ALPHA_SUPPORT_LIST
-}
-
 
 class PanGuAlphaConfig(PretrainedConfig):
     """
     Configuration for PanGu_Alpha
     """
-
-    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     def __init__(
         self,

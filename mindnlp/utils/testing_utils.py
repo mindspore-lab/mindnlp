@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ============================================================================
 # pylint: disable=invalid-name
 # pylint: disable=missing-function-docstring
 # pylint: disable=unspecified-encoding
@@ -77,6 +78,10 @@ else:
 if is_mindspore_available():
     from mindspore import ops
 
+
+DUMMY_UNKNOWN_IDENTIFIER = "julien-c/dummy-unknown"
+SMALL_MODEL_IDENTIFIER = "julien-c/bert-xsmall-dummy"
+
 def parse_flag_from_env(key, default=False):
     try:
         value = os.environ[key]
@@ -114,28 +119,6 @@ def require_mindspore(test_case):
 
     """
     return unittest.skipUnless(is_mindspore_available(), "test requires MindSpore")(test_case)
-
-
-def get_tests_dir(append_path=None):
-    """
-    Args:
-        append_path: optional path to append to the tests dir path
-
-    Return:
-        The full path to the `tests` dir, so that the tests can be invoked from anywhere. Optionally `append_path` is
-        joined after the `tests` dir the former is provided.
-
-    """
-    # this function caller's __file__
-    caller__file__ = inspect.stack()[1][1]
-    tests_dir = os.path.abspath(os.path.dirname(caller__file__))
-
-    while not tests_dir.endswith("tests"):
-        tests_dir = os.path.dirname(tests_dir)
-
-    if append_path:
-        return os.path.join(tests_dir, append_path)
-    return tests_dir
 
 def cmd_exists(cmd):
     return shutil.which(cmd) is not None
@@ -976,23 +959,6 @@ def nested_simplify(obj, decimals=3):
     raise RuntimeError(f"Not supported: {type(obj)}")
 
 
-def check_json_file_has_correct_format(file_path):
-    with open(file_path, "r") as f:
-        lines = f.readlines()
-        if len(lines) == 1:
-            # length can only be 1 if dict is empty
-            assert lines[0] == "{}"
-        else:
-            # otherwise make sure json has correct format (at least 3 lines)
-            assert len(lines) >= 3
-            # each key one line, ident should be 2, min length is 3
-            assert lines[0].strip() == "{"
-            for _ in lines[1:-1]:
-                left_indent = len(lines[1]) - len(lines[1].lstrip())
-                assert left_indent == 2
-            assert lines[-1].strip() == "}"
-
-
 def to_2tuple(x):
     if isinstance(x, collections.abc.Iterable):
         return x
@@ -1303,3 +1269,40 @@ def _device_agnostic_dispatch(device: str, dispatch_table: Dict[str, Callable], 
     if fn is None:
         return None
     return fn(*args, **kwargs)
+
+def get_tests_dir(append_path=None):
+    """
+    Args:
+        append_path: optional path to append to the tests dir path
+
+    Return:
+        The full path to the `tests` dir, so that the tests can be invoked from anywhere. Optionally `append_path` is
+        joined after the `tests` dir the former is provided.
+
+    """
+    # this function caller's __file__
+    caller__file__ = inspect.stack()[1][1]
+    tests_dir = os.path.abspath(os.path.dirname(caller__file__))
+
+    while not tests_dir.endswith("tests"):
+        tests_dir = os.path.dirname(tests_dir)
+
+    if append_path:
+        return os.path.join(tests_dir, append_path)
+    return tests_dir
+
+def check_json_file_has_correct_format(file_path):
+    with open(file_path, "r") as f:
+        lines = f.readlines()
+        if len(lines) == 1:
+            # length can only be 1 if dict is empty
+            assert lines[0] == "{}"
+        else:
+            # otherwise make sure json has correct format (at least 3 lines)
+            assert len(lines) >= 3
+            # each key one line, ident should be 2, min length is 3
+            assert lines[0].strip() == "{"
+            for _ in lines[1:-1]:
+                left_indent = len(lines[1]) - len(lines[1].lstrip())
+                assert left_indent == 2
+            assert lines[-1].strip() == "}"

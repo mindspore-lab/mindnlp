@@ -27,8 +27,7 @@ from mindspore import nn, ops, Tensor
 from mindspore import log as logger
 from mindspore.nn import CrossEntropyLoss, BCEWithLogitsLoss, MSELoss
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.configs import MINDNLP_MODEL_URL_BASE
-from .opt_config import OPTConfig, OPT_SUPPORT_LIST
+from .opt_config import OPTConfig
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import Conv1D
@@ -39,10 +38,6 @@ from ...modeling_outputs import (
     QuestionAnsweringModelOutput,
     SequenceClassifierOutputWithPast,
 )
-
-PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MINDNLP_MODEL_URL_BASE.format('opt', model) for model in OPT_SUPPORT_LIST
-}
 
 __all__ = ['OPTAttention', 'OPTModel', 'OPTDecoder', 'OPTForCausalLM']
 
@@ -413,7 +408,7 @@ class OPTPreTrainedModel(PreTrainedModel):
 
     config_class = OPTConfig
     convert_torch_to_mindspore = torch_to_mindspore
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
     _no_split_Cells = ["OPTDecoderLayer"]

@@ -32,16 +32,11 @@ from mindspore import ops, nn, Parameter,Tensor
 from mindspore.common.initializer import Normal, initializer
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
-from mindnlp.configs import MINDNLP_MODEL_URL_BASE
-from .xlm_config import XLMConfig,XLM_SUPPORT_LIST
+from .xlm_config import XLMConfig
 from ...activations import get_activation
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import SequenceSummary, SQuADHead
 
-
-PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MINDNLP_MODEL_URL_BASE.format('xlm', model) for model in XLM_SUPPORT_LIST
-}
 
 def torch_to_mindspore(pth_file, **kwargs):
     """convert torch checkpoint to mindspore"""
@@ -62,19 +57,14 @@ def torch_to_mindspore(pth_file, **kwargs):
 
     for k, v in state_dict.items():
         if 'embeddings.weight' in k:
-            print(k)
             k = k.replace('embeddings.weight', 'embeddings.embedding_table')
         if 'layer_norm_emb.weight' in k:
-            print(k)
             k = k.replace('layer_norm_emb.weight', 'layer_norm_emb.gamma')
         if 'layer_norm_emb.bias' in k:
-            print(k)
             k = k.replace('layer_norm_emb.bias', 'layer_norm_emb.beta')
         if 'weight' in k and 'layer_norm' in k:
-            print(k)
             k = k.replace('weight', 'gamma')
         if 'bias' in k and 'layer_norm' in k:
-            print(k)
             k = k.replace('bias', 'beta')
         ms_ckpt.append({'name': k, 'data': Tensor(v.numpy())})
 
@@ -310,7 +300,7 @@ class XLMPreTrainedModel(PreTrainedModel):
     load_tf_weights = None
     base_model_prefix = "transformer"
     convert_torch_to_mindspore = torch_to_mindspore
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
 
 
     # TODO

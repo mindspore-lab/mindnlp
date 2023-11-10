@@ -19,13 +19,8 @@ NezhaTokenizer
 import numpy as np
 from mindspore.dataset.text.transforms import Implementation
 from tokenizers.implementations import BertWordPieceTokenizer
-from mindnlp.configs import HF_VOCAB_URL_BASE
-from .nezha_config import NEZHA_SUPPORT_LIST
 from ...tokenization_utils import PreTrainedTokenizer
 
-PRETRAINED_VOCAB_MAP = {
-    model: HF_VOCAB_URL_BASE.format("sijunhe/" + model) for model in NEZHA_SUPPORT_LIST
-}
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
     "nezha-cn-base": 512,
@@ -44,7 +39,6 @@ class NezhaTokenizer(PreTrainedTokenizer):
     """
 
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
-    pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
     def __init__(self, vocab: str, **kwargs):
         super().__init__()

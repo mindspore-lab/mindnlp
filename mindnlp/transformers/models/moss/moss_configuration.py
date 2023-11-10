@@ -13,17 +13,13 @@
 # limitations under the License.
 # ============================================================================
 """ Moss model configuration"""
-from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
+
 from ...configuration_utils import PretrainedConfig
 
 
 __all__ = ['MossConfig']
 
 Moss_SUPPORT_LIST = ["moss"]
-
-CONFIG_ARCHIVE_MAP = {
-    model: MINDNLP_CONFIG_URL_BASE.format('moss', model) for model in Moss_SUPPORT_LIST
-}
 
 
 class MossConfig(PretrainedConfig):
@@ -37,7 +33,6 @@ class MossConfig(PretrainedConfig):
         "num_attention_heads": "n_head",
         "num_hidden_layers": "n_layer",
     }
-    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
     def __init__(
             self,
             vocab_size=107008,

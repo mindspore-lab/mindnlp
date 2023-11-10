@@ -13,12 +13,9 @@
 # limitations under the License.
 # ============================================================================
 """ ChatGLM model configuration """
-from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
+
 from ...configuration_utils import PretrainedConfig
 
-CONFIG_ARCHIVE_MAP = {
-    'chatglm-6b': MINDNLP_CONFIG_URL_BASE.format('glm', 'chatglm-6b')
-}
 
 class ChatGLMConfig(PretrainedConfig):
     r"""
@@ -69,7 +66,6 @@ class ChatGLMConfig(PretrainedConfig):
     ```
 """
     model_type = "chatglm"
-    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     def __init__(
             self,

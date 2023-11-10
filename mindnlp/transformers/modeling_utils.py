@@ -13,16 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=E1128
-# pylint: disable=C0103
-# pylint: disable=C0412
-# pylint: disable=W0642
-# pylint: disable=W0212
-# pylint: disable=W0201
-# pylint: disable=C0413
-# pylint: disable=R0916
-# pylint: disable=W1203
-# pylint: disable=W0613
+# pylint: disable=import-outside-toplevel
+# pylint: disable=invalid-name
+# pylint: disable=assignment-from-none
+# pylint: disable=logging-fstring-interpolation
+# pylint: disable=too-many-branches
+# pylint: disable=too-many-statements
+# pylint: disable=too-many-boolean-expressions
+# pylint: disable=unused-argument
+# pylint: disable=attribute-defined-outside-init
+# pylint: disable=self-cls-assignment
 """
 Abstract class for Pretrained models.
 """
@@ -35,18 +35,13 @@ from tqdm.autonotebook import tqdm
 import numpy as np
 
 import mindspore
+from mindspore import load_checkpoint, save_checkpoint
 from mindspore import nn, ops, Tensor, Parameter
-from mindspore.train.serialization import save_checkpoint
 
-from mindnlp.configs import HF_MODEL_URL_BASE, DEFAULT_ROOT
-from mindnlp.utils.download import cached_path, get_checkpoint_shard_files
-from mindnlp.utils import less_min_pynative_first, convert_file_size_to_int, logging
+from mindnlp.configs import MS_URL_BASE, HF_URL_BASE, PT_WEIGHTS_NAME, WEIGHTS_NAME, WEIGHTS_INDEX_NAME, PT_WEIGHTS_INDEX_NAME
+from mindnlp.utils.download import is_remote_url, download_url, cached_file, get_checkpoint_shard_files
+from mindnlp.utils import convert_file_size_to_int, logging
 from mindnlp._legacy.functional import arange
-
-if less_min_pynative_first:
-    from mindspore import load_checkpoint
-else:
-    from mindnlp._legacy.utils import load_checkpoint
 
 from .generation import GenerationMixin
 from .configuration_utils import PretrainedConfig
@@ -54,9 +49,6 @@ from .generation.configuration_utils import GenerationConfig
 
 logger = logging.get_logger(__name__)
 
-WEIGHTS_NAME = "mindspore.ckpt"
-WEIGHTS_INDEX_NAME = "mindspore.ckpt.index.json"
-HF_WEIGHTS_INDEX_NAME = "pytorch_model.bin.index.json"
 _init_weights = True
 
 class CellUtilMixin:
@@ -219,7 +211,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
     Abstract class for Pretrained models
     """
     config_class = None
-    pretrained_model_archive_map = {}
     base_model_prefix = ""
     main_input_name = "input_ids"
 
@@ -250,6 +241,19 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
         """
         self.init_weights()
+
+    @classmethod
+    def _from_config(cls, config, **kwargs):
+        """
+        All context managers that the model should be initialized under go here.
+
+        Args:
+            torch_dtype (`torch.dtype`, *optional*):
+                Override the default `torch.dtype` and load the model under this dtype.
+        """
+        model = cls(config, **kwargs)
+
+        return model
 
     def init_weights(self):
         """
@@ -625,7 +629,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
     ):
         """from_pretrained"""
         state_dict = kwargs.pop("state_dict", None)
-        cache_dir = kwargs.pop("cache_dir", os.path.join(DEFAULT_ROOT, 'models'))
+        cache_dir = kwargs.pop("cache_dir", None)
         from_pt = kwargs.pop("from_pt", False)
         force_download = kwargs.pop("force_download", False)
         resume_download = kwargs.pop("resume_download", False)
@@ -633,6 +637,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         local_files_only = kwargs.pop("local_files_only", False)
         _fast_init = kwargs.pop("_fast_init", True)
         output_loading_info = kwargs.pop("output_loading_info", False)
+        subfolder = kwargs.pop("subfolder", "")
+        variant = kwargs.pop("variant", None)
 
         is_sharded = False
         # Load config if we don't provide a configuration
@@ -653,62 +659,128 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         else:
             model_kwargs = kwargs
 
+        endpoint = HF_URL_BASE if from_pt else MS_URL_BASE
         # Load model
         if pretrained_model_name_or_path is not None:
-            if pretrained_model_name_or_path in cls.pretrained_model_archive_map and not from_pt:
-                archive_file = cls.pretrained_model_archive_map[pretrained_model_name_or_path]
-                cache_dir = os.path.join(cache_dir, pretrained_model_name_or_path)
-            elif os.path.isdir(pretrained_model_name_or_path):
-                archive_file = os.path.join(pretrained_model_name_or_path, "mindspore.ckpt")
-                cache_dir = pretrained_model_name_or_path
-            elif os.path.isfile(pretrained_model_name_or_path):
+            pretrained_model_name_or_path = str(pretrained_model_name_or_path)
+            is_local = os.path.isdir(pretrained_model_name_or_path)
+            if is_local:
+                if from_pt and os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, subfolder, PT_WEIGHTS_NAME)
+                ):
+                    # Load from a TF 2.0 checkpoint in priority if from_tf
+                    archive_file = os.path.join(pretrained_model_name_or_path, subfolder, PT_WEIGHTS_NAME)
+                elif os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_NAME, variant))
+                ):
+                    # Load from a PyTorch checkpoint
+                    archive_file = os.path.join(
+                        pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_NAME, variant)
+                    )
+                elif os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_INDEX_NAME, variant))
+                ):
+                    # Load from a sharded PyTorch checkpoint
+                    archive_file = os.path.join(
+                        pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_INDEX_NAME, variant)
+                    )
+                    is_sharded = True
+                # At this stage we don't have a weight file so we will raise an error.
+                else:
+                    raise EnvironmentError(
+                        f"Error no file named {_add_variant(WEIGHTS_NAME, variant)}, {PT_WEIGHTS_NAME},"
+                        f" found in directory {pretrained_model_name_or_path}."
+                    )
+            elif os.path.isfile(os.path.join(subfolder, pretrained_model_name_or_path)):
                 archive_file = pretrained_model_name_or_path
-                cache_dir = None
-            elif from_pt:
-                archive_file = HF_MODEL_URL_BASE.format(pretrained_model_name_or_path)
-                cache_dir = os.path.join(cache_dir, pretrained_model_name_or_path)
+                is_local = True
+            elif is_remote_url(pretrained_model_name_or_path):
+                filename = pretrained_model_name_or_path
+                resolved_archive_file = download_url(pretrained_model_name_or_path)
             else:
-                raise ValueError(
-                    f'not found model of {pretrained_model_name_or_path}.')
+                # set correct filename
+                if from_pt:
+                    filename = _add_variant(PT_WEIGHTS_NAME, variant)
+                else:
+                    filename = _add_variant(WEIGHTS_NAME, variant)
 
-            # redirect to the cache, if necessary
-            try:
-                resolved_archive_file = cached_path(
-                    archive_file,
-                    cache_dir=cache_dir,
-                    proxies=proxies)
+                try:
+                    # Load from URL or cache if already cached
+                    cached_file_kwargs = {
+                        "cache_dir": cache_dir,
+                        "force_download": force_download,
+                        "proxies": proxies,
+                        "resume_download": resume_download,
+                        "local_files_only": local_files_only,
+                        "subfolder": subfolder,
+                        "_raise_exceptions_for_missing_entries": False,
+                        'endpoint': endpoint
+                    }
+                    resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
 
-                if resolved_archive_file is None:
-                    base_url = '/'.join(archive_file.split('/')[:-1])
-                    archive_file = base_url + '/' + HF_WEIGHTS_INDEX_NAME if from_pt else \
-                        base_url + '/' + WEIGHTS_INDEX_NAME
-
-                    resolved_archive_file = cached_path(
-                        archive_file,
-                        cache_dir=cache_dir,
-                        proxies=proxies)
-
-                    if resolved_archive_file is not None:
-                        cache_dir = os.path.join(cache_dir, 'shard_ckpt')
-                        cached_filenames, _ = get_checkpoint_shard_files(
-                            index_filename=resolved_archive_file,
-                            cache_dir=cache_dir,
-                            url=base_url,
-                            proxies=proxies
+                    # Since we set _raise_exceptions_for_missing_entries=False, we don't get an exception but a None
+                    # result when internet is up, the repo and revision exist, but the file does not.
+                    if resolved_archive_file is None and filename == _add_variant(WEIGHTS_NAME, variant):
+                        # Maybe the checkpoint is sharded, we try to grab the index name in this case.
+                        resolved_archive_file = cached_file(
+                            pretrained_model_name_or_path,
+                            _add_variant(WEIGHTS_INDEX_NAME, variant),
+                            **cached_file_kwargs,
                         )
-                        is_sharded = True
-                    else:
+                        if resolved_archive_file is not None:
+                            is_sharded = True
+
+                    if resolved_archive_file is None and filename == _add_variant(PT_WEIGHTS_NAME, variant):
+                        # Maybe the checkpoint is sharded, we try to grab the index name in this case.
+                        resolved_archive_file = cached_file(
+                            pretrained_model_name_or_path,
+                            _add_variant(PT_WEIGHTS_INDEX_NAME, variant),
+                            **cached_file_kwargs,
+                        )
+                        if resolved_archive_file is not None:
+                            is_sharded = True
+
+                    if resolved_archive_file is None:
                         raise EnvironmentError(
-                            f"Couldn't reach server at '{archive_file}' to download pretrained weights.")
+                            f"{pretrained_model_name_or_path} does not appear to have a file named"
+                            f" {_add_variant(WEIGHTS_NAME, variant)}, {_add_variant(PT_WEIGHTS_NAME, variant)}"
+                        )
+                except EnvironmentError:
+                    # Raise any environment error raise by `cached_file`. It will have a helpful error message adapted
+                    # to the original exception.
+                    raise
+                except Exception as exc:
+                    # For any other exception, we throw a generic error.
+                    raise EnvironmentError(
+                        f"Can't load the model for '{pretrained_model_name_or_path}'. If you were trying to load it"
+                        ", make sure you don't have a local directory with the"
+                        f" same name. Otherwise, make sure '{pretrained_model_name_or_path}' is the correct path to a"
+                        f" directory containing a file named {_add_variant(WEIGHTS_NAME, variant)},"
+                        f" {_add_variant(PT_WEIGHTS_NAME, variant)}."
+                    ) from exc
 
-            except EnvironmentError as exc:
-                raise exc
-
-            if resolved_archive_file == archive_file:
-                logger.info("loading weights file %s", archive_file)
+            if is_local:
+                logger.info(f"loading weights file {archive_file}")
+                resolved_archive_file = archive_file
             else:
-                logger.info("loading weights file %s from cache at %s",
-                            archive_file, resolved_archive_file)
+                logger.info(f"loading weights file {filename} from cache at {resolved_archive_file}")
+        else:
+            resolved_archive_file = None
+
+        if is_sharded:
+            # rsolved_archive_file becomes a list of files that point to the different checkpoint shards in this case.
+            resolved_archive_file, _ = get_checkpoint_shard_files(
+                pretrained_model_name_or_path,
+                resolved_archive_file,
+                cache_dir=cache_dir,
+                force_download=force_download,
+                proxies=proxies,
+                resume_download=resume_download,
+                local_files_only=local_files_only,
+                subfolder=subfolder,
+                endpoint=endpoint
+            )
+
 
         if pretrained_model_name_or_path is None and state_dict is None:
             raise ValueError("the argument 'pretrained_model_name_or_path' should be "
@@ -722,16 +794,16 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         if from_pt:
             if is_sharded:
                 converted_filenames = []
-                for name in cached_filenames:
-                    converted = cls.convert_torch_to_mindspore(
+                for name in resolved_archive_file:
+                    converted = convert_torch_to_mindspore(
                         str(name))
                     converted_filenames.append(converted)
             else:
-                resolved_archive_file = cls.convert_torch_to_mindspore(
+                resolved_archive_file = convert_torch_to_mindspore(
                     str(resolved_archive_file))
         else:
             if is_sharded:
-                converted_filenames = cached_filenames
+                converted_filenames = resolved_archive_file
 
         def load_ckpt(resolved_archive_file):
             try:
@@ -760,7 +832,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     param_name = param.name
                 if id(param) in param_id_set:
                     # for tied params
-                    keys_missing.remove(pname_in_net)
+                    if pname_in_net in keys_missing:
+                        keys_missing.remove(pname_in_net)
 
                     if pname_in_net in keys_unexpected:
                         keys_unexpected.remove(pname_in_net)
@@ -785,6 +858,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             return keys_unexpected, keys_missing
 
         all_keys_unexpected = None
+
         if state_dict is None:
             if is_sharded:
                 all_keys_unexpected = []
@@ -796,8 +870,9 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     gc.collect()
             else:
                 state_dict = load_ckpt(resolved_archive_file)
-
-        all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
+                all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
+        else:
+            all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
 
         if cls._keys_to_ignore_on_load_missing is not None:
             for pat in cls._keys_to_ignore_on_load_missing:
@@ -908,6 +983,17 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                         par_new_name = cell_name + '.' + par_new_name
 
                     yield par_new_name, par
+
+    def num_parameters(self, only_trainable=False):
+        """return parameters count"""
+        total = 0
+        param_set = set()
+        for param in self.get_parameters():
+            param_id = id(param)
+            if param_id not in param_set and (only_trainable or param.requires_grad):
+                total += param.size
+            param_set.add(param_id)
+        return total
 
     def parameters_dict(self, recurse=True):
         """
@@ -1181,3 +1267,37 @@ def dtype_byte_size(dtype):
         raise ValueError(f"`dtype` is not a valid dtype: {dtype}.")
     bit_size = int(bit_search.groups()[0])
     return bit_size // 8
+
+def convert_torch_to_mindspore(pth_file):
+    """convert torch checkpoint to mindspore"""
+    try:
+        import torch
+    except Exception as exc:
+        raise ImportError("'import torch' failed, please install torch by "
+                          "`pip install torch` or instructions from 'https://pytorch.org'") \
+                          from exc
+
+    logger.info('Starting checkpoint conversion.')
+    ms_ckpt = []
+    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
+
+    for key, value in state_dict.items():
+        if 'LayerNorm' in key or 'layer_norm' in key:
+            if '.weight' in key:
+                key = key.replace('.weight', '.gamma')
+            if '.bias' in key:
+                key = key.replace('.bias', '.beta')
+        if 'embeddings' in key or 'embedding' in key:
+            key = key.replace('weight', 'embedding_table')
+        ms_ckpt.append({'name': key, 'data': Tensor(value.numpy())})
+
+    ms_ckpt_path = pth_file.replace('pytorch_model', 'mindspore')
+    ms_ckpt_path = pth_file.replace('.bin', '.ckpt')
+    if not os.path.exists(ms_ckpt_path):
+        try:
+            save_checkpoint(ms_ckpt, ms_ckpt_path)
+        except Exception as exc:
+            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, '
+                               f'please checkout the path.') from exc
+
+    return ms_ckpt_path

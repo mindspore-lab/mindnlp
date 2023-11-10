@@ -9,3 +9,5 @@ torch
 sentencepiece
 regex
 modelscope
+parameterized
+jinja2
