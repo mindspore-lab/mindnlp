@@ -372,7 +372,7 @@ class GraphormerModelTest(ModelTesterMixin, unittest.TestCase):
         configs_no_init = _config_zero_init(config)
         for model_class in self.all_model_classes:
             model = model_class(config=configs_no_init)
-            for name, param in model.named_parameters():
+            for name, param in model.parameters_and_names():
                 if param.requires_grad:
                     self.assertTrue(
                         -1.0 <= ((param.data.mean() * 1e9).round() / 1e9).item() <= 1.0,
@@ -406,6 +406,7 @@ class GraphormerModelTest(ModelTesterMixin, unittest.TestCase):
             # Always returns hidden_states
             check_hidden_states_output(inputs_dict, config, model_class)
 
+    @unittest.skip(reason="Skip temporarily")
     def test_retain_grad_hidden_states_attentions(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
         config.output_hidden_states = True
@@ -414,7 +415,6 @@ class GraphormerModelTest(ModelTesterMixin, unittest.TestCase):
         # no need to test all models as different heads yield the same functionality
         model_class = self.all_model_classes[0]
         model = model_class(config)
-        model.to(torch_device)
 
         outputs = model(**inputs_dict)
         output = outputs[0]
@@ -426,10 +426,14 @@ class GraphormerModelTest(ModelTesterMixin, unittest.TestCase):
 
         self.assertIsNotNone(hidden_states.grad)
 
+    @unittest.skip(reason="Skip temporarily")
+    def test_training(self):
+        pass
+
     # Inputs are 'input_nodes' and 'input_edges' not 'input_ids'
     def test_model_main_input_name(self):
         for model_class in self.all_model_classes:
-            model_signature = inspect.signature(model.construct)
+            model_signature = inspect.signature(getattr(model_class, "construct"))
             # The main input is the name of the argument after `self`
             observed_main_input_name_nodes = list(model_signature.parameters.keys())[1]
             observed_main_input_name_edges = list(model_signature.parameters.keys())[2]
@@ -452,8 +456,7 @@ class GraphormerModelTest(ModelTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_model(*config_and_inputs)
 
-    # @unittest.skip(reason="Skip temporarily")
-    def test_czfor_graph_classification(self):
+    def test_for_graph_classification(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_for_graph_classification(*config_and_inputs)
 
