@@ -473,15 +473,15 @@ class GraphormerMultiheadAttention(nn.Cell):
         if list(attn.shape) != [bsz * self.num_heads, tgt_len, self.head_dim]:
             raise AssertionError("The attention generated do not match the expected dimensions.")
 
-        attn = attn.swapaxes(0, 1).contiguous().view(tgt_len, bsz, embedding_dim)
+        attn = attn.swapaxes(0, 1).view(tgt_len, bsz, embedding_dim)
         attn: Tensor = self.out_proj(attn)
 
         attn_weights = None
         if need_weights:
-            attn_weights = attn_weights_float.contiguous().view(bsz, self.num_heads, tgt_len, src_len).swapaxes(1, 0)
+            attn_weights = attn_weights_float.view(bsz, self.num_heads, tgt_len, src_len).swapaxes(1, 0)
             if not need_head_weights:
                 # average attention weights over heads
-                attn_weights = attn_weights.mean(dim=0)
+                attn_weights = attn_weights.mean(axis=0)
 
         return attn, attn_weights
 
@@ -899,7 +899,7 @@ class GraphormerForGraphClassification(GraphormerPreTrainedModel):
         outputs, hidden_states = encoder_outputs["last_hidden_state"], encoder_outputs["hidden_states"]
 
         head_outputs = self.classifier(outputs)
-        logits = head_outputs[:, 0, :].contiguous()
+        logits = head_outputs[:, 0, :]
 
         loss = None
         if labels is not None:
