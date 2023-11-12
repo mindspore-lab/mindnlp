@@ -251,7 +251,7 @@ class AutoformerMeanScaler(nn.Cell):
         self.default_scale = default_scale
 
     @torch.no_grad()#todo
-    def forward(
+    def construct(
         self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor
     ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
         # shape: (N, [C], T=1)
@@ -299,7 +299,7 @@ class AutoformerNOPScaler(nn.Cell):
         self.dim = dim
         self.keepdim = keepdim
 
-    def forward(
+    def construct(
         self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor
     ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
         scale = ops.ones_like(data, requires_grad=False).mean(dim=self.dim, keepdim=self.keepdim)
@@ -939,7 +939,6 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
         inputs_embeds: Optional[mindspore.FloatTensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutput]:
         r"""
         Args:
@@ -966,14 +965,13 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
             output_hidden_states (`bool`, *optional*):
                 Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors
                 for more detail.
-            return_dict (`bool`, *optional*):
-                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
+            #return_dict (`bool`, *optional*):
+            #    Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         hidden_states = self.value_embedding(inputs_embeds)
         embed_pos = self.embed_positions(inputs_embeds.size())
@@ -1034,8 +1032,6 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
         if output_hidden_states:
             encoder_states = encoder_states + (hidden_states,)
 
-        if not return_dict:
-            return tuple(v for v in [hidden_states, encoder_states, all_attentions] if v is not None)
         return BaseModelOutput(
             last_hidden_state=hidden_states, hidden_states=encoder_states, attentions=all_attentions
         )
@@ -1083,7 +1079,6 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
     ) -> Union[Tuple, AutoFormerDecoderOutput]:
         r"""
         Args:
@@ -1144,15 +1139,14 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
             output_hidden_states (`bool`, *optional*):
                 Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors
                 for more detail.
-            return_dict (`bool`, *optional*):
-                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
+            #return_dict (`bool`, *optional*):
+            #    Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
         """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
         use_cache = use_cache if use_cache is not None else self.config.use_cache
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         input_shape = inputs_embeds.size()[:-1]
 
@@ -1248,12 +1242,7 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
             all_hidden_states += (hidden_states,)
 
         next_cache = next_decoder_cache if use_cache else None
-        if not return_dict:
-            return tuple(
-                v
-                for v in [hidden_states, trend, next_cache, all_hidden_states, all_self_attns, all_cross_attentions]
-                if v is not None
-            )
+
         return AutoFormerDecoderOutput(
             last_hidden_state=hidden_states,
             trend=trend,
@@ -1457,7 +1446,6 @@ class AutoformerModel(AutoformerPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         use_cache: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
     ) -> Union[AutoformerModelOutput, Tuple]:
         r"""
         Returns:
@@ -1494,7 +1482,6 @@ class AutoformerModel(AutoformerPreTrainedModel):
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
         use_cache = use_cache if use_cache is not None else self.config.use_cache
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_inputs, temporal_features, loc, scale, static_feat = self.create_network_inputs(
             past_values=past_values,
@@ -1519,14 +1506,6 @@ class AutoformerModel(AutoformerPreTrainedModel):
                 head_mask=head_mask,
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-            )
-        # If the user passed a tuple for encoder_outputs, we wrap it in a BaseModelOutput when return_dict=True
-        elif return_dict and not isinstance(encoder_outputs, BaseModelOutput):
-            encoder_outputs = BaseModelOutput(
-                last_hidden_state=encoder_outputs[0],
-                hidden_states=encoder_outputs[1] if len(encoder_outputs) > 1 else None,
-                attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
             )
 
         if future_values is not None:
@@ -1571,28 +1550,11 @@ class AutoformerModel(AutoformerPreTrainedModel):
                 use_cache=use_cache,
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
             )
         else:
             decoder_outputs = AutoFormerDecoderOutput()
 
-        if not return_dict:
-            return decoder_outputs + encoder_outputs + (loc, scale, static_feat)
-
-        return AutoformerModelOutput(
-            last_hidden_state=decoder_outputs.last_hidden_state,
-            trend=decoder_outputs.trend,
-            past_key_values=decoder_outputs.past_key_values,
-            decoder_hidden_states=decoder_outputs.hidden_states,
-            decoder_attentions=decoder_outputs.attentions,
-            cross_attentions=decoder_outputs.cross_attentions,
-            encoder_last_hidden_state=encoder_outputs.last_hidden_state,
-            encoder_hidden_states=encoder_outputs.hidden_states,
-            encoder_attentions=encoder_outputs.attentions,
-            loc=loc,
-            scale=scale,
-            static_features=static_feat,
-        )
+        return decoder_outputs + encoder_outputs + (loc, scale, static_feat)
 
 
 class AutoformerForPrediction(AutoformerPreTrainedModel):
@@ -1654,7 +1616,6 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         use_cache: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
     ) -> Union[Seq2SeqTSPredictionOutput, Tuple]:
         r"""
         Returns:
@@ -1703,7 +1664,6 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         >>> mean_prediction = outputs.sequences.mean(dim=1)
         ```"""
 
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if future_values is not None:
             use_cache = False
 
@@ -1724,7 +1684,6 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
             output_hidden_states=output_hidden_states,
             output_attentions=output_attentions,
             use_cache=use_cache,
-            return_dict=return_dict,
         )
 
         prediction_loss = None
@@ -1747,24 +1706,10 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
 
             prediction_loss = weighted_average(loss, weights=loss_weights)
 
-        if not return_dict:
-            outputs = ((params,) + outputs[2:]) if params is not None else outputs[2:]
-            return ((prediction_loss,) + outputs) if prediction_loss is not None else outputs
 
-        return Seq2SeqTSPredictionOutput(
-            loss=prediction_loss,
-            params=params,
-            past_key_values=outputs.past_key_values,
-            decoder_hidden_states=outputs.decoder_hidden_states,
-            decoder_attentions=outputs.decoder_attentions,
-            cross_attentions=outputs.cross_attentions,
-            encoder_last_hidden_state=outputs.encoder_last_hidden_state,
-            encoder_hidden_states=outputs.encoder_hidden_states,
-            encoder_attentions=outputs.encoder_attentions,
-            loc=outputs.loc,
-            scale=outputs.scale,
-            static_features=outputs.static_features,
-        )
+        outputs = ((params,) + outputs[2:]) if params is not None else outputs[2:]
+        return ((prediction_loss,) + outputs) if prediction_loss is not None else outputs
+
 
     @torch.no_grad()
     def generate(
@@ -1875,7 +1820,6 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
             future_values=None,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=True,
             use_cache=False,
         )
 

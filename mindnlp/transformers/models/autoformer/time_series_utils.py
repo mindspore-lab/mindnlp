@@ -20,15 +20,15 @@ from typing import Callable, Dict, Optional, Tuple
 import mindspore
 import mindspore.nn as nn
 import mindspore.ops as ops
-#from torch.distributions import (
-#    AffineTransform,
-#    Distribution,
-#    Independent,
-#    NegativeBinomial,
-#    Normal,
-#    StudentT,
-#    TransformedDistribution,
-#)
+from mindspore.nn.probability.distribution import (
+    AffineTransform,
+    Distribution,
+    Independent,
+    NegativeBinomial,
+    Normal,
+    StudentT,
+    TransformedDistribution,
+)
 
 
 class AffineTransformed(TransformedDistribution):

@@ -15,7 +15,7 @@
 """ Autoformer model configuration"""
 from typing import List, Optional
 from mindnlp.configs import MS_CONFIG_URL_BASE
-from ...configuration_utils import PreTrainedConfig
+from ...configuration_utils import PretrainedConfig
 
 AUTOFORMER_SUPPORT_LIST = [
     "huggingface/autoformer-tourism-monthly", #todo
@@ -26,7 +26,7 @@ CONFIG_ARCHIVE_MAP = {
 }
 
 
-class AutoformerConfig(PreTrainedConfig):
+class AutoformerConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of an [`AutoformerModel`]. It is used to instantiate an
     Autoformer model according to the specified arguments, defining the model architecture. Instantiating a

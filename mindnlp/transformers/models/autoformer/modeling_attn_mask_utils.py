@@ -14,7 +14,6 @@
 from typing import List, Optional, Tuple, Union
 
 import mindspore
-import mindspore.nn as nn
 import mindspore.ops as ops
 import numpy as np
 
