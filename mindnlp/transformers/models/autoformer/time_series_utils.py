@@ -17,18 +17,18 @@
 Time series distributional output classes and utilities.
 """
 from typing import Callable, Dict, Optional, Tuple
-
-import torch
-from torch import nn
-from torch.distributions import (
-    AffineTransform,
-    Distribution,
-    Independent,
-    NegativeBinomial,
-    Normal,
-    StudentT,
-    TransformedDistribution,
-)
+import mindspore
+import mindspore.nn as nn
+import mindspore.ops as ops
+#from torch.distributions import (
+#    AffineTransform,
+#    Distribution,
+#    Independent,
+#    NegativeBinomial,
+#    Normal,
+#    StudentT,
+#    TransformedDistribution,
+#)
 
 
 class AffineTransformed(TransformedDistribution):
@@ -60,27 +60,27 @@ class AffineTransformed(TransformedDistribution):
         return self.variance.sqrt()
 
 
-class ParameterProjection(nn.Module):
+class ParameterProjection(nn.Cell):
     def __init__(
-        self, in_features: int, args_dim: Dict[str, int], domain_map: Callable[..., Tuple[torch.Tensor]], **kwargs
+        self, in_features: int, args_dim: Dict[str, int], domain_map: Callable[..., Tuple[mindspore.Tensor]], **kwargs
     ) -> None:
         super().__init__(**kwargs)
         self.args_dim = args_dim
-        self.proj = nn.ModuleList([nn.Linear(in_features, dim) for dim in args_dim.values()])
+        self.proj = nn.CellList([nn.Dense(in_features, dim) for dim in args_dim.values()])
         self.domain_map = domain_map
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor]:
+    def construct(self, x: mindspore.Tensor) -> Tuple[mindspore.Tensor]:
         params_unbounded = [proj(x) for proj in self.proj]
 
         return self.domain_map(*params_unbounded)
 
 
-class LambdaLayer(nn.Module):
+class LambdaLayer(nn.Cell):
     def __init__(self, function):
         super().__init__()
         self.function = function
 
-    def forward(self, x, *args):
+    def construct(self, x, *args):
         return self.function(x, *args)
 
 
@@ -102,8 +102,8 @@ class DistributionOutput:
     def distribution(
         self,
         distr_args,
-        loc: Optional[torch.Tensor] = None,
-        scale: Optional[torch.Tensor] = None,
+        loc: Optional[mindspore.Tensor] = None,
+        scale: Optional[mindspore.Tensor] = None,
     ) -> Distribution:
         distr = self._base_distribution(distr_args)
         if loc is None and scale is None:
@@ -134,7 +134,7 @@ class DistributionOutput:
         """
         return 0.0
 
-    def get_parameter_projection(self, in_features: int) -> nn.Module:
+    def get_parameter_projection(self, in_features: int) -> nn.Cell:
         r"""
         Return the parameter projection layer that maps the input to the appropriate parameters of the distribution.
         """
@@ -144,7 +144,7 @@ class DistributionOutput:
             domain_map=LambdaLayer(self.domain_map),
         )
 
-    def domain_map(self, *args: torch.Tensor):
+    def domain_map(self, *args: mindspore.Tensor):
         r"""
         Converts arguments to the right shape and domain. The domain depends on the type of distribution, while the
         correct shape is obtained by reshaping the trailing axis in such a way that the returned tensors define a
@@ -153,12 +153,12 @@ class DistributionOutput:
         raise NotImplementedError()
 
     @staticmethod
-    def squareplus(x: torch.Tensor) -> torch.Tensor:
+    def squareplus(x: mindspore.Tensor) -> mindspore.Tensor:
         r"""
         Helper to map inputs to the positive orthant by applying the square-plus operation. Reference:
         https://twitter.com/jon_barron/status/1387167648669048833
         """
-        return (x + torch.sqrt(torch.square(x) + 4.0)) / 2.0
+        return (x + ops.sqrt(ops.square(x) + 4.0)) / 2.0
 
 
 class StudentTOutput(DistributionOutput):
@@ -170,7 +170,7 @@ class StudentTOutput(DistributionOutput):
     distribution_class: type = StudentT
 
     @classmethod
-    def domain_map(cls, df: torch.Tensor, loc: torch.Tensor, scale: torch.Tensor):
+    def domain_map(cls, df: mindspore.Tensor, loc: mindspore.Tensor, scale: mindspore.Tensor):
         scale = cls.squareplus(scale).clamp_min(torch.finfo(scale.dtype).eps)
         df = 2.0 + cls.squareplus(df)
         return df.squeeze(-1), loc.squeeze(-1), scale.squeeze(-1)
@@ -185,7 +185,7 @@ class NormalOutput(DistributionOutput):
     distribution_class: type = Normal
 
     @classmethod
-    def domain_map(cls, loc: torch.Tensor, scale: torch.Tensor):
+    def domain_map(cls, loc: mindspore.Tensor, scale: mindspore.Tensor):
         scale = cls.squareplus(scale).clamp_min(torch.finfo(scale.dtype).eps)
         return loc.squeeze(-1), scale.squeeze(-1)
 
@@ -199,7 +199,7 @@ class NegativeBinomialOutput(DistributionOutput):
     distribution_class: type = NegativeBinomial
 
     @classmethod
-    def domain_map(cls, total_count: torch.Tensor, logits: torch.Tensor):
+    def domain_map(cls, total_count: mindspore.Tensor, logits: mindspore.Tensor):
         total_count = cls.squareplus(total_count)
         return total_count.squeeze(-1), logits.squeeze(-1)
 
@@ -214,7 +214,7 @@ class NegativeBinomialOutput(DistributionOutput):
     # transformation since negative binomial should return integers. Instead
     # we scale the parameters.
     def distribution(
-        self, distr_args, loc: Optional[torch.Tensor] = None, scale: Optional[torch.Tensor] = None
+        self, distr_args, loc: Optional[mindspore.Tensor] = None, scale: Optional[mindspore.Tensor] = None
     ) -> Distribution:
         total_count, logits = distr_args
 

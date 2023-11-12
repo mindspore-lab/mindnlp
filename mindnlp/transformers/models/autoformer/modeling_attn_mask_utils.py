@@ -13,8 +13,10 @@
 # limitations under the License.
 from typing import List, Optional, Tuple, Union
 
-import torch
-
+import mindspore
+import mindspore.nn as nn
+import mindspore.ops as ops
+import numpy as np
 
 class AttentionMaskConverter:
     """
@@ -46,9 +48,9 @@ class AttentionMaskConverter:
         batch_size: int,
         query_length: int,
         key_value_length: int,
-        dtype: torch.dtype = torch.float32,
-        device: Union[torch.device, "str"] = "cpu",
-    ) -> torch.Tensor:
+        dtype: mindspore.dtype = mindspore.float32,
+        device: Union[mindspore.device, "str"] = "cpu",#todo
+    ) -> mindspore.Tensor:
         """
         Creates a causal 4D mask of (bsz, head_dim=1, query_length, key_value_length) shape and adds large negative
         bias to upper right hand triangular matrix (causal mask).
@@ -76,11 +78,11 @@ class AttentionMaskConverter:
 
     def to_4d(
         self,
-        attention_mask_2d: torch.Tensor,
+        attention_mask_2d: mindspore.Tensor,
         query_length: int,
         key_value_length: Optional[int] = None,
-        dtype: torch.dtype = torch.float32,
-    ) -> torch.Tensor:
+        dtype: mindspore.dtype = mindspore.float32,
+    ) -> mindspore.Tensor:
         """
         Converts 2D attention mask to 4D attention mask by expanding mask to (bsz, head_dim=1, query_length,
         key_value_length) shape and by adding a large negative bias to not-attended positions. If attention_mask is
@@ -118,9 +120,9 @@ class AttentionMaskConverter:
 
     @staticmethod
     def _make_causal_mask(
-        input_ids_shape: torch.Size,
-        dtype: torch.dtype,
-        device: torch.device,
+        input_ids_shape: ops.Size,
+        dtype: mindspore.dtype,
+        device: mindspore.device,
         past_key_values_length: int = 0,
         sliding_window: Optional[int] = None,
     ):
@@ -128,26 +130,27 @@ class AttentionMaskConverter:
         Make causal mask used for bi-directional self-attention.
         """
         bsz, tgt_len = input_ids_shape
-        mask = torch.full((tgt_len, tgt_len), torch.finfo(dtype).min, device=device)
-        mask_cond = torch.arange(mask.size(-1), device=device)
+        mask = ops.full((tgt_len, tgt_len), np.finfo(
+            mindspore.dtype_to_nptype(dtype)).min, device=device)
+        mask_cond = ops.arange(mask.size(-1), device=device)
         mask.masked_fill_(mask_cond < (mask_cond + 1).view(mask.size(-1), 1), 0)
 
         mask = mask.to(dtype)
 
         if past_key_values_length > 0:
-            mask = torch.cat([torch.zeros(tgt_len, past_key_values_length, dtype=dtype, device=device), mask], dim=-1)
+            mask = ops.cat([ops.zeros(tgt_len, past_key_values_length, dtype=dtype, device=device), mask], dim=-1)
 
         # add lower triangular sliding window mask if necessary
         if sliding_window is not None:
             diagonal = past_key_values_length - sliding_window + 1
 
-            context_mask = 1 - torch.triu(torch.ones_like(mask, dtype=torch.int), diagonal=diagonal)
-            mask.masked_fill_(context_mask.bool(), torch.finfo(dtype).min)
+            context_mask = 1 - ops.triu(ops.ones_like(mask, dtype=mindspore.int32), diagonal=diagonal)
+            mask.masked_fill_(context_mask.bool(), np.finfo(mindspore.dtype_to_nptype(dtype)).min)
 
         return mask[None, None, :, :].expand(bsz, 1, tgt_len, tgt_len + past_key_values_length)
 
     @staticmethod
-    def _expand_mask(mask: torch.Tensor, dtype: torch.dtype, tgt_len: Optional[int] = None):
+    def _expand_mask(mask: mindspore.Tensor, dtype: mindspore.dtype, tgt_len: Optional[int] = None):
         """
         Expands attention_mask from `[bsz, seq_len]` to `[bsz, 1, tgt_seq_len, src_seq_len]`.
         """
@@ -162,9 +165,9 @@ class AttentionMaskConverter:
 
 
 def _prepare_4d_causal_attention_mask(
-    attention_mask: Optional[torch.Tensor],
-    input_shape: Union[torch.Size, Tuple, List],
-    inputs_embeds: torch.Tensor,
+    attention_mask: Optional[mindspore.Tensor],
+    input_shape: Union[ops.Size, Tuple, List],
+    inputs_embeds: mindspore.Tensor,
     past_key_values_length: int,
     sliding_window: Optional[int] = None,
 ):
@@ -201,7 +204,7 @@ def _prepare_4d_causal_attention_mask(
     return attention_mask
 
 
-def _prepare_4d_attention_mask(mask: torch.Tensor, dtype: torch.dtype, tgt_len: Optional[int] = None):
+def _prepare_4d_attention_mask(mask: mindspore.Tensor, dtype: mindspore.dtype, tgt_len: Optional[int] = None):
     """
     Creates a non-causal 4D mask of shape `(batch_size, 1, query_length, key_value_length)` from a 2D mask of shape
     `(batch_size, key_value_length)`
@@ -218,9 +221,9 @@ def _prepare_4d_attention_mask(mask: torch.Tensor, dtype: torch.dtype, tgt_len: 
 
 
 def _create_4d_causal_attention_mask(
-    input_shape: Union[torch.Size, Tuple, List],
-    dtype: torch.dtype,
-    device: torch.device,
+    input_shape: Union[ops.Size, Tuple, List],
+    dtype: mindspore.dtype,
+    device: mindspore.device,
     past_key_values_length: int = 0,
     sliding_window: Optional[int] = None,
 ):

@@ -5,12 +5,9 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
-#import torch
-#import torch.utils.checkpoint
-#from torch import nn
 import mindspore
-
-from mindspore import nn
+from mindspore import nn, ops
+from mindspore.common.initializer import initializer, TruncatedNormal, Normal
 
 
 from ...activations import ACT2FN
@@ -23,15 +20,9 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from .time_series_utils import NegativeBinomialOutput, NormalOutput, StudentTOutput
-#from ...utils import add_start_docstrings, add_start_docstrings_to_model_forward, logging, replace_return_docstrings
 from mindspore import log as logger
 
 from .configuration_autoformer import AutoformerConfig
-
-
-#logger = logging.get_logger(__name__)
-
-#_CONFIG_FOR_DOC = "AutoformerConfig"
 
 
 @dataclass
@@ -75,12 +66,12 @@ class AutoFormerDecoderOutput(ModelOutput):
             weighted average in the cross-attention heads.
     """
 
-    last_hidden_state: torch.FloatTensor = None
-    trend: torch.FloatTensor = None
-    past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
-    hidden_states: Optional[Tuple[torch.FloatTensor]] = None
-    attentions: Optional[Tuple[torch.FloatTensor]] = None
-    cross_attentions: Optional[Tuple[torch.FloatTensor]] = None
+    last_hidden_state: mindspore.FloatTensor = None
+    trend: mindspore.FloatTensor = None
+    past_key_values: Optional[Tuple[Tuple[mindspore.FloatTensor]]] = None
+    hidden_states: Optional[Tuple[mindspore.FloatTensor]] = None
+    attentions: Optional[Tuple[mindspore.FloatTensor]] = None
+    cross_attentions: Optional[Tuple[mindspore.FloatTensor]] = None
 
 
 @dataclass
@@ -143,18 +134,18 @@ class AutoformerModelOutput(ModelOutput):
             Static features of each time series' in a batch which are copied to the covariates at inference time.
     """
 
-    last_hidden_state: torch.FloatTensor = None
-    trend: torch.FloatTensor = None
-    past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
-    decoder_hidden_states: Optional[Tuple[torch.FloatTensor]] = None
-    decoder_attentions: Optional[Tuple[torch.FloatTensor]] = None
-    cross_attentions: Optional[Tuple[torch.FloatTensor]] = None
-    encoder_last_hidden_state: Optional[torch.FloatTensor] = None
-    encoder_hidden_states: Optional[Tuple[torch.FloatTensor]] = None
-    encoder_attentions: Optional[Tuple[torch.FloatTensor]] = None
-    loc: Optional[torch.FloatTensor] = None
-    scale: Optional[torch.FloatTensor] = None
-    static_features: Optional[torch.FloatTensor] = None
+    last_hidden_state: mindspore.FloatTensor = None
+    trend: mindspore.FloatTensor = None
+    past_key_values: Optional[Tuple[Tuple[mindspore.FloatTensor]]] = None
+    decoder_hidden_states: Optional[Tuple[mindspore.FloatTensor]] = None
+    decoder_attentions: Optional[Tuple[mindspore.FloatTensor]] = None
+    cross_attentions: Optional[Tuple[mindspore.FloatTensor]] = None
+    encoder_last_hidden_state: Optional[mindspore.FloatTensor] = None
+    encoder_hidden_states: Optional[Tuple[mindspore.FloatTensor]] = None
+    encoder_attentions: Optional[Tuple[mindspore.FloatTensor]] = None
+    loc: Optional[mindspore.FloatTensor] = None
+    scale: Optional[mindspore.FloatTensor] = None
+    static_features: Optional[mindspore.FloatTensor] = None
 
 
 AUTOFORMER_PRETRAINED_MODEL_ARCHIVE_LIST = [
@@ -164,7 +155,7 @@ AUTOFORMER_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.TimeSeriesFeatureEmbedder with TimeSeries->Autoformer
-class AutoformerFeatureEmbedder(nn.Module):
+class AutoformerFeatureEmbedder(nn.Cell):
     """
     Embed a sequence of categorical features.
 
@@ -181,15 +172,16 @@ class AutoformerFeatureEmbedder(nn.Module):
         self.num_features = len(cardinalities)
         self.embedders = nn.ModuleList([nn.Embedding(c, d) for c, d in zip(cardinalities, embedding_dims)])
 
-    def forward(self, features: torch.Tensor) -> torch.Tensor:
+    def construct(self, features: mindspore.Tensor) -> mindspore.Tensor:
         if self.num_features > 1:
             # we slice the last dimension, giving an array of length
             # self.num_features with shape (N,T) or (N)
-            cat_feature_slices = torch.chunk(features, self.num_features, dim=-1)
+            cat_feature_slices = ops.chunk(
+                features, self.num_features, dim=-1)
         else:
             cat_feature_slices = [features]
 
-        return torch.cat(
+        return ops.cat(
             [
                 embed(cat_feature_slice.squeeze(-1))
                 for embed, cat_feature_slice in zip(self.embedders, cat_feature_slices)
@@ -199,7 +191,7 @@ class AutoformerFeatureEmbedder(nn.Module):
 
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.TimeSeriesStdScaler with TimeSeries->Autoformer
-class AutoformerStdScaler(nn.Module):
+class AutoformerStdScaler(nn.Cell):
     """
     Standardize features by calculating the mean and scaling along some given dimension `dim`, and then normalizes it
     by subtracting from the mean and dividing by the standard deviation.
@@ -221,19 +213,19 @@ class AutoformerStdScaler(nn.Module):
         self.keepdim = keepdim
         self.minimum_scale = minimum_scale
 
-    @torch.no_grad()
-    def forward(self, data: torch.Tensor, weights: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    @torch.no_grad()#todo
+    def construct(self, data: mindspore.Tensor, weights: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
         denominator = weights.sum(self.dim, keepdim=self.keepdim)
         denominator = denominator.clamp_min(1.0)
         loc = (data * weights).sum(self.dim, keepdim=self.keepdim) / denominator
 
         variance = (((data - loc) * weights) ** 2).sum(self.dim, keepdim=self.keepdim) / denominator
-        scale = torch.sqrt(variance + self.minimum_scale)
+        scale = ops.sqrt(variance + self.minimum_scale)
         return (data - loc) / scale, loc, scale
 
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.TimeSeriesMeanScaler with TimeSeries->Autoformer
-class AutoformerMeanScaler(nn.Module):
+class AutoformerMeanScaler(nn.Cell):
     """
     Computes a scaling factor as the weighted average absolute value along dimension `dim`, and scales the data
     accordingly.
@@ -258,40 +250,40 @@ class AutoformerMeanScaler(nn.Module):
         self.minimum_scale = minimum_scale
         self.default_scale = default_scale
 
-    @torch.no_grad()
+    @torch.no_grad()#todo
     def forward(
-        self, data: torch.Tensor, observed_indicator: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor
+    ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
         # shape: (N, [C], T=1)
         ts_sum = (data * observed_indicator).abs().sum(self.dim, keepdim=True)
         num_observed = observed_indicator.sum(self.dim, keepdim=True)
 
-        scale = ts_sum / torch.clamp(num_observed, min=1)
+        scale = ts_sum / ops.clamp(num_observed, min=1)
 
         # If `default_scale` is provided, we use it, otherwise we use the scale
         # of the batch.
         if self.default_scale is None:
             batch_sum = ts_sum.sum(dim=0)
-            batch_observations = torch.clamp(num_observed.sum(0), min=1)
-            default_scale = torch.squeeze(batch_sum / batch_observations)
+            batch_observations = ops.clamp(num_observed.sum(0), min=1)
+            default_scale = ops.squeeze(batch_sum / batch_observations)
         else:
-            default_scale = self.default_scale * torch.ones_like(scale)
+            default_scale = self.default_scale * ops.ones_like(scale)
 
         # apply default scale where there are no observations
-        scale = torch.where(num_observed > 0, scale, default_scale)
+        scale = ops.where(num_observed > 0, scale, default_scale)
 
         # ensure the scale is at least `self.minimum_scale`
-        scale = torch.clamp(scale, min=self.minimum_scale)
+        scale = ops.clamp(scale, min=self.minimum_scale)
         scaled_data = data / scale
 
         if not self.keepdim:
             scale = scale.squeeze(dim=self.dim)
 
-        return scaled_data, torch.zeros_like(scale), scale
+        return scaled_data, ops.zeros_like(scale), scale
 
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.TimeSeriesNOPScaler with TimeSeries->Autoformer
-class AutoformerNOPScaler(nn.Module):
+class AutoformerNOPScaler(nn.Cell):
     """
     Assigns a scaling factor equal to 1 along dimension `dim`, and therefore applies no scaling to the input data.
 
@@ -308,15 +300,15 @@ class AutoformerNOPScaler(nn.Module):
         self.keepdim = keepdim
 
     def forward(
-        self, data: torch.Tensor, observed_indicator: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        scale = torch.ones_like(data, requires_grad=False).mean(dim=self.dim, keepdim=self.keepdim)
-        loc = torch.zeros_like(data, requires_grad=False).mean(dim=self.dim, keepdim=self.keepdim)
+        self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor
+    ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
+        scale = ops.ones_like(data, requires_grad=False).mean(dim=self.dim, keepdim=self.keepdim)
+        loc = ops.zeros_like(data, requires_grad=False).mean(dim=self.dim, keepdim=self.keepdim)
         return data, loc, scale
 
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.weighted_average
-def weighted_average(input_tensor: torch.Tensor, weights: Optional[torch.Tensor] = None, dim=None) -> torch.Tensor:
+def weighted_average(input_tensor: mindspore.Tensor, weights: Optional[mindspore.Tensor] = None, dim=None) -> mindspore.Tensor:
     """
     Computes the weighted average of a given tensor across a given `dim`, masking values associated with weight zero,
     meaning instead of `nan * 0 = nan` you will get `0 * 0 = 0`.
@@ -333,15 +325,15 @@ def weighted_average(input_tensor: torch.Tensor, weights: Optional[torch.Tensor]
         `torch.FloatTensor`: The tensor with values averaged along the specified `dim`.
     """
     if weights is not None:
-        weighted_tensor = torch.where(weights != 0, input_tensor * weights, torch.zeros_like(input_tensor))
-        sum_weights = torch.clamp(weights.sum(dim=dim) if dim else weights.sum(), min=1.0)
+        weighted_tensor = mindspore.Tensor.where(weights != 0, input_tensor * weights, ops.zeros_like(input_tensor))
+        sum_weights = ops.clamp(weights.sum(dim=dim) if dim else weights.sum(), min=1.0)
         return (weighted_tensor.sum(dim=dim) if dim else weighted_tensor.sum()) / sum_weights
     else:
         return input_tensor.mean(dim=dim)
 
-
+#todo
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.nll
-def nll(input: torch.distributions.Distribution, target: torch.Tensor) -> torch.Tensor:
+def nll(input: torch.distributions.Distribution, target: mindspore.Tensor) -> mindspore.Tensor:
     """
     Computes the negative log likelihood loss from input distribution with respect to target.
     """
@@ -357,46 +349,47 @@ class AutoformerSinusoidalPositionalEmbedding(nn.Embedding):
         self.weight = self._init_weight(self.weight)
 
     @staticmethod
-    def _init_weight(out: nn.Parameter) -> nn.Parameter:
+    def _init_weight(out: mindspore.Parameter) -> mindspore.Parameter:
         """
         Identical to the XLM create_sinusoidal_embeddings except features are not interleaved. The cos features are in
         the 2nd half of the vector. [dim // 2:]
         """
-        n_pos, dim = out.shape
+        n_pos, dim = out.shape#todo
         position_enc = np.array(
             [[pos / np.power(10000, 2 * (j // 2) / dim) for j in range(dim)] for pos in range(n_pos)]
         )
         out.requires_grad = False  # set early to avoid an error in pytorch-1.8+
         sentinel = dim // 2 if dim % 2 == 0 else (dim // 2) + 1
-        out[:, 0:sentinel] = torch.FloatTensor(np.sin(position_enc[:, 0::2]))
-        out[:, sentinel:] = torch.FloatTensor(np.cos(position_enc[:, 1::2]))
+        out[:, 0:sentinel] = mindspore.Tensor(np.sin(position_enc[:, 0::2]))
+        out[:, sentinel:] = mindspore.Tensor(np.cos(position_enc[:, 1::2]))
         out.detach_()
         return out
 
-    @torch.no_grad()
-    def forward(self, input_ids_shape: torch.Size, past_key_values_length: int = 0) -> torch.Tensor:
+    @torch.no_grad()#todo
+    def construct(self, input_ids_shape: mindspore.Tensor.shape, past_key_values_length: int = 0) -> mindspore.Tensor:
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
         bsz, seq_len = input_ids_shape[:2]
-        positions = torch.arange(
-            past_key_values_length, past_key_values_length + seq_len, dtype=torch.long, device=self.weight.device
+        positions = ops.arange(
+            past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
         )
-        return super().forward(positions)
+        return super().construct(positions)
 
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.TimeSeriesValueEmbedding with TimeSeries->Autoformer
-class AutoformerValueEmbedding(nn.Module):
+class AutoformerValueEmbedding(nn.Cell):
     def __init__(self, feature_size, d_model):
         super().__init__()
-        self.value_projection = nn.Linear(in_features=feature_size, out_features=d_model, bias=False)
+        self.value_projection = nn.Dense(
+            in_channels=feature_size, out_channels=d_model, has_bias=False)
 
-    def forward(self, x):
+    def construct(self, x):
         return self.value_projection(x)
 
 
 # Class based on
 # https://github.com/thuml/Autoformer/blob/c6a0694ff484753f2d986cc0bb1f99ee850fc1a8/layers/Autoformer_EncDec.py#L39
 # where AutoformerSeriesDecompositionLayer is series_decomp + moving_average
-class AutoformerSeriesDecompositionLayer(nn.Module):
+class AutoformerSeriesDecompositionLayer(nn.Cell):
     """
     Returns the trend and the seasonal parts of the time series. Calculated as:
 
@@ -408,13 +401,13 @@ class AutoformerSeriesDecompositionLayer(nn.Module):
         self.kernel_size = config.moving_average
         self.avg = nn.AvgPool1d(kernel_size=self.kernel_size, stride=1, padding=0)
 
-    def forward(self, x):
+    def construct(self, x):
         """Input shape: Batch x Time x EMBED_DIM"""
         # padding on the both ends of time series
         num_of_pads = (self.kernel_size - 1) // 2
         front = x[:, 0:1, :].repeat(1, num_of_pads, 1)
         end = x[:, -1:, :].repeat(1, num_of_pads, 1)
-        x_padded = torch.cat([front, x, end], dim=1)
+        x_padded = ops.cat([front, x, end], dim=1)
 
         # calculate the trend and seasonal part of the series
         x_trend = self.avg(x_padded.permute(0, 2, 1)).permute(0, 2, 1)
@@ -425,7 +418,7 @@ class AutoformerSeriesDecompositionLayer(nn.Module):
 # Class based on
 # https://github.com/thuml/Autoformer/blob/c6a0694ff484753f2d986cc0bb1f99ee850fc1a8/layers/Autoformer_EncDec.py#L6
 # where AutoformerLayernorm is my_Layernorm
-class AutoformerLayernorm(nn.Module):
+class AutoformerLayernorm(nn.Cell):
     """
     Special designed layer normalization for the seasonal part, calculated as: AutoformerLayernorm(x) = nn.LayerNorm(x)
     - torch.mean(nn.LayerNorm(x))
@@ -435,13 +428,13 @@ class AutoformerLayernorm(nn.Module):
         super().__init__()
         self.layernorm = nn.LayerNorm(config.d_model)
 
-    def forward(self, x):
+    def construct(self, x):
         x_hat = self.layernorm(x)
-        bias = torch.mean(x_hat, dim=1).unsqueeze(1).repeat(1, x.shape[1], 1)
+        bias = ops.mean(x_hat, dim=1).unsqueeze(1).repeat(1, x.shape[1], 1)
         return x_hat - bias
 
 
-class AutoformerAttention(nn.Module):
+class AutoformerAttention(nn.Cell):
     """
     AutoCorrelation Mechanism with the following two phases:
         (1) period-based dependencies discovery (2) time delay aggregation
@@ -471,25 +464,25 @@ class AutoformerAttention(nn.Module):
         self.scaling = self.head_dim**-0.5
         self.is_decoder = is_decoder
 
-        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
-        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
-        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
-        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
+        self.k_proj = nn.Dense(embed_dim, embed_dim, bias=bias)
+        self.v_proj = nn.Dense(embed_dim, embed_dim, bias=bias)
+        self.q_proj = nn.Dense(embed_dim, embed_dim, bias=bias)
+        self.out_proj = nn.Dense(embed_dim, embed_dim, bias=bias)
 
         self.autocorrelation_factor = autocorrelation_factor
 
-    def _shape(self, tensor: torch.Tensor, seq_len: int, bsz: int):
+    def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
 
-    def forward(
+    def construct(
         self,
-        hidden_states: torch.Tensor,
-        key_value_states: Optional[torch.Tensor] = None,
-        past_key_value: Optional[Tuple[torch.Tensor]] = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        layer_head_mask: Optional[torch.Tensor] = None,
+        hidden_states: mindspore.Tensor,
+        key_value_states: Optional[mindspore.Tensor] = None,
+        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        layer_head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
-    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
+    ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
 
         # if key_value_states are provided this layer is used as a cross-attention layer
@@ -520,8 +513,8 @@ class AutoformerAttention(nn.Module):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = torch.cat([past_key_value[0], key_states], dim=2)
-            value_states = torch.cat([past_key_value[1], value_states], dim=2)
+            key_states = ops.cat([past_key_value[0], key_states], dim=2)
+            value_states = ops.cat([past_key_value[1], value_states], dim=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -548,17 +541,17 @@ class AutoformerAttention(nn.Module):
         values_time_length = value_states.size(1)
         if queries_time_length > values_time_length:
             query_states = query_states[:, : (queries_time_length - values_time_length), :]
-            zeros = torch.zeros_like(query_states).float()
-            value_states = torch.cat([value_states, zeros], dim=1)
-            key_states = torch.cat([key_states, zeros], dim=1)
+            zeros = ops.zeros_like(query_states).float()
+            value_states = ops.cat([value_states, zeros], dim=1)
+            key_states = ops.cat([key_states, zeros], dim=1)
         else:
             value_states = value_states[:, :queries_time_length, :]
             key_states = key_states[:, :queries_time_length, :]
 
-        query_states_fft = torch.fft.rfft(query_states, n=tgt_len, dim=1)
-        key_states_fft = torch.fft.rfft(key_states, n=tgt_len, dim=1)
-        attn_weights = query_states_fft * torch.conj(key_states_fft)
-        attn_weights = torch.fft.irfft(attn_weights, n=tgt_len, dim=1)  # Autocorrelation(Q,K)
+        query_states_fft = ops.fft.rfft(query_states, n=tgt_len, dim=1)
+        key_states_fft = ops.fft.rfft(key_states, n=tgt_len, dim=1)
+        attn_weights = query_states_fft * ops.conj(key_states_fft)
+        attn_weights = ops.fft.irfft(attn_weights, n=tgt_len, dim=1)  # Autocorrelation(Q,K)
 
         src_len = key_states.size(1)
         channel = key_states.size(2)
@@ -602,39 +595,39 @@ class AutoformerAttention(nn.Module):
 
         # find top k autocorrelations delays
         top_k = int(self.autocorrelation_factor * math.log(time_length))
-        autocorrelations_mean_on_head_channel = torch.mean(autocorrelations, dim=(1, -1))  # bsz x tgt_len
+        autocorrelations_mean_on_head_channel = ops.mean(autocorrelations, dim=(1, -1))  # bsz x tgt_len
         if self.training:
-            autocorrelations_mean_on_bsz = torch.mean(autocorrelations_mean_on_head_channel, dim=0)
-            _, top_k_delays_index = torch.topk(autocorrelations_mean_on_bsz, top_k)
-            top_k_autocorrelations = torch.stack(
+            autocorrelations_mean_on_bsz = ops.mean(autocorrelations_mean_on_head_channel, dim=0)
+            _, top_k_delays_index = ops.topk(autocorrelations_mean_on_bsz, top_k)
+            top_k_autocorrelations = ops.stack(
                 [autocorrelations_mean_on_head_channel[:, top_k_delays_index[i]] for i in range(top_k)], dim=-1
             )
         else:
-            top_k_autocorrelations, top_k_delays_index = torch.topk(
+            top_k_autocorrelations, top_k_delays_index = ops.topk(
                 autocorrelations_mean_on_head_channel, top_k, dim=1
             )
 
-        top_k_autocorrelations = torch.softmax(top_k_autocorrelations, dim=-1)  # bsz x top_k
+        top_k_autocorrelations = ops.softmax(top_k_autocorrelations, dim=-1)  # bsz x top_k
 
         # compute aggregation: value_states.roll(delay) * top_k_autocorrelations(delay)
         if not self.training:
             # used for compute values_states.roll(delay) in inference
             tmp_values = value_states.repeat(1, 2, 1)
             init_index = (
-                torch.arange(time_length)
+                ops.arange(time_length)
                 .view(1, -1, 1)
                 .repeat(bsz * self.num_heads, 1, channel)
                 .to(value_states.device)
             )
 
-        delays_agg = torch.zeros_like(value_states).float()  # bsz x time_length x channel
+        delays_agg = ops.zeros_like(value_states).float()  # bsz x time_length x channel
         for i in range(top_k):
             # compute value_states roll delay
             if not self.training:
                 tmp_delay = init_index + top_k_delays_index[:, i].view(-1, 1, 1).repeat(
                     self.num_heads, tgt_len, channel
                 )
-                value_states_roll_delay = torch.gather(tmp_values, dim=1, index=tmp_delay)
+                value_states_roll_delay = ops.gather(tmp_values, dim=1, index=tmp_delay)
             else:
                 value_states_roll_delay = value_states.roll(shifts=-int(top_k_delays_index[i]), dims=1)
 
@@ -664,7 +657,7 @@ class AutoformerAttention(nn.Module):
         return attn_output, attn_weights_reshaped, past_key_value
 
 
-class AutoformerEncoderLayer(nn.Module):
+class AutoformerEncoderLayer(nn.Cell):
     def __init__(self, config: AutoformerConfig):
         super().__init__()
         self.embed_dim = config.d_model
@@ -678,19 +671,19 @@ class AutoformerEncoderLayer(nn.Module):
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
-        self.fc1 = nn.Linear(self.embed_dim, config.encoder_ffn_dim)
-        self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Dense(self.embed_dim, config.encoder_ffn_dim)
+        self.fc2 = nn.Dense(config.encoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = AutoformerLayernorm(config)
         self.decomp1 = AutoformerSeriesDecompositionLayer(config)
         self.decomp2 = AutoformerSeriesDecompositionLayer(config)
 
-    def forward(
+    def construct(
         self,
-        hidden_states: torch.FloatTensor,
-        attention_mask: torch.FloatTensor,
-        layer_head_mask: torch.FloatTensor,
+        hidden_states: mindspore.Tensor,
+        attention_mask: mindspore.Tensor,
+        layer_head_mask: mindspore.Tensor,
         output_attentions: Optional[bool] = False,
-    ) -> Tuple[torch.FloatTensor, Optional[torch.FloatTensor]]:
+    ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor]]:
         """
         Args:
             hidden_states (`torch.FloatTensor`): input to the layer of shape `(batch, seq_len, embed_dim)`
@@ -709,7 +702,7 @@ class AutoformerEncoderLayer(nn.Module):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         # added layer norm here as an improvement
         hidden_states = self.self_attn_layer_norm(hidden_states)
@@ -717,18 +710,18 @@ class AutoformerEncoderLayer(nn.Module):
 
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = nn.functional.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states, _ = self.decomp2(hidden_states)
         hidden_states = self.final_layer_norm(hidden_states)
 
-        if hidden_states.dtype == torch.float16 and (
-            torch.isinf(hidden_states).any() or torch.isnan(hidden_states).any()
+        if hidden_states.dtype == mindspore.float16 and (
+            ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any()
         ):
-            clamp_value = torch.finfo(hidden_states.dtype).max - 1000
-            hidden_states = torch.clamp(hidden_states, min=-clamp_value, max=clamp_value)
+            clamp_value = np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).max - 1000
+            hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
 
@@ -738,7 +731,7 @@ class AutoformerEncoderLayer(nn.Module):
         return outputs
 
 
-class AutoformerDecoderLayer(nn.Module):
+class AutoformerDecoderLayer(nn.Cell):
     def __init__(self, config: AutoformerConfig):
         super().__init__()
         self.embed_dim = config.d_model
@@ -763,8 +756,8 @@ class AutoformerDecoderLayer(nn.Module):
             autocorrelation_factor=config.autocorrelation_factor,
         )
         self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
-        self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
-        self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
+        self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
+        self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = AutoformerLayernorm(config)
 
         self.decomp1 = AutoformerSeriesDecompositionLayer(config)
@@ -782,18 +775,18 @@ class AutoformerDecoderLayer(nn.Module):
             bias=False,
         )
 
-    def forward(
+    def construct(
         self,
-        hidden_states: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-        encoder_hidden_states: Optional[torch.Tensor] = None,
-        encoder_attention_mask: Optional[torch.Tensor] = None,
-        layer_head_mask: Optional[torch.Tensor] = None,
-        cross_attn_layer_head_mask: Optional[torch.Tensor] = None,
-        past_key_value: Optional[Tuple[torch.Tensor]] = None,
+        hidden_states: mindspore.Tensor,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        encoder_hidden_states: Optional[mindspore.Tensor] = None,
+        encoder_attention_mask: Optional[mindspore.Tensor] = None,
+        layer_head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_layer_head_mask: Optional[mindspore.Tensor] = None,
+        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
         output_attentions: Optional[bool] = False,
         use_cache: Optional[bool] = True,
-    ) -> Tuple[torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
+    ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
         """
         Args:
             hidden_states (`torch.FloatTensor`): input to the layer of shape `(batch, seq_len, embed_dim)`
@@ -828,7 +821,7 @@ class AutoformerDecoderLayer(nn.Module):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states, trend1 = self.decomp1(hidden_states)
         # added layer norm here as an improvement
@@ -850,7 +843,7 @@ class AutoformerDecoderLayer(nn.Module):
                 past_key_value=cross_attn_past_key_value,
                 output_attentions=output_attentions,
             )
-            hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
             hidden_states, trend2 = self.decomp2(hidden_states)
             # added layer norm here as an improvement
@@ -862,9 +855,9 @@ class AutoformerDecoderLayer(nn.Module):
         # Fully Connected
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = nn.functional.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states, trend3 = self.decomp3(hidden_states)
         hidden_states = self.final_layer_norm(hidden_states)
@@ -891,167 +884,24 @@ class AutoformerPreTrainedModel(PreTrainedModel):
     main_input_name = "past_values"
     supports_gradient_checkpointing = True
 
-    def _init_weights(self, module):
+    def _init_weights(self, cell):
         std = self.config.init_std
-        if isinstance(module, (nn.Linear, nn.Conv1d)):
-            module.weight.data.normal_(mean=0.0, std=std)
-            if module.bias is not None:
-                module.bias.data.zero_()
-        elif isinstance(module, AutoformerSinusoidalPositionalEmbedding):
+        if isinstance(cell, (nn.Dense, nn.Conv1d)):
+            cell.weight.set_data(initializer(Normal(std),
+                                             cell.weight.shape,
+                                             cell.weight.dtype))
+            if cell.has_bias:
+                cell.bias.set_data(initializer(
+                    'zeros', cell.bias.shape, cell.bias.dtype))
+        elif isinstance(cell, AutoformerSinusoidalPositionalEmbedding):
             pass
-        elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=std)
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
-
-
-AUTOFORMER_START_DOCSTRING = r"""
-    This model inherits from [`PreTrainedModel`]. Check the superclass documentation for the generic methods the
-    library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
-    etc.)
-
-    This model is also a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass.
-    Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
-    and behavior.
-
-    Parameters:
-        config ([`AutoformerConfig`]):
-            Model configuration class with all the parameters of the model. Initializing with a config file does not
-            load the weights associated with the model, only the configuration. Check out the
-            [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-"""
-
-AUTOFORMER_INPUTS_DOCSTRING = r"""
-    Args:
-        past_values (`torch.FloatTensor` of shape `(batch_size, sequence_length)`):
-            Past values of the time series, that serve as context in order to predict the future. These values may
-            contain lags, i.e. additional values from the past which are added in order to serve as "extra context".
-            The `past_values` is what the Transformer encoder gets as input (with optional additional features, such as
-            `static_categorical_features`, `static_real_features`, `past_time_features`).
-
-            The sequence length here is equal to `context_length` + `max(config.lags_sequence)`.
-
-            Missing values need to be replaced with zeros.
-
-        past_time_features (`torch.FloatTensor` of shape `(batch_size, sequence_length, num_features)`, *optional*):
-            Optional time features, which the model internally will add to `past_values`. These could be things like
-            "month of year", "day of the month", etc. encoded as vectors (for instance as Fourier features). These
-            could also be so-called "age" features, which basically help the model know "at which point in life" a
-            time-series is. Age features have small values for distant past time steps and increase monotonically the
-            more we approach the current time step.
-
-            These features serve as the "positional encodings" of the inputs. So contrary to a model like BERT, where
-            the position encodings are learned from scratch internally as parameters of the model, the Time Series
-            Transformer requires to provide additional time features.
-
-            The Autoformer only learns additional embeddings for `static_categorical_features`.
-
-        past_observed_mask (`torch.BoolTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Boolean mask to indicate which `past_values` were observed and which were missing. Mask values selected in
-            `[0, 1]`:
-
-            - 1 for values that are **observed**,
-            - 0 for values that are **missing** (i.e. NaNs that were replaced by zeros).
-
-        static_categorical_features (`torch.LongTensor` of shape `(batch_size, number of static categorical features)`, *optional*):
-            Optional static categorical features for which the model will learn an embedding, which it will add to the
-            values of the time series.
-
-            Static categorical features are features which have the same value for all time steps (static over time).
-
-            A typical example of a static categorical feature is a time series ID.
-
-        static_real_features (`torch.FloatTensor` of shape `(batch_size, number of static real features)`, *optional*):
-            Optional static real features which the model will add to the values of the time series.
-
-            Static real features are features which have the same value for all time steps (static over time).
-
-            A typical example of a static real feature is promotion information.
-
-        future_values (`torch.FloatTensor` of shape `(batch_size, prediction_length)`):
-            Future values of the time series, that serve as labels for the model. The `future_values` is what the
-            Transformer needs to learn to output, given the `past_values`.
-
-            See the demo notebook and code snippets for details.
-
-            Missing values need to be replaced with zeros.
-
-        future_time_features (`torch.FloatTensor` of shape `(batch_size, prediction_length, num_features)`, *optional*):
-            Optional time features, which the model internally will add to `future_values`. These could be things like
-            "month of year", "day of the month", etc. encoded as vectors (for instance as Fourier features). These
-            could also be so-called "age" features, which basically help the model know "at which point in life" a
-            time-series is. Age features have small values for distant past time steps and increase monotonically the
-            more we approach the current time step.
-
-            These features serve as the "positional encodings" of the inputs. So contrary to a model like BERT, where
-            the position encodings are learned from scratch internally as parameters of the model, the Time Series
-            Transformer requires to provide additional features.
-
-            The Autoformer only learns additional embeddings for `static_categorical_features`.
-
-        attention_mask (`torch.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on certain token indices. Mask values selected in `[0, 1]`:
-
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-
-            [What are attention masks?](../glossary#attention-mask)
-
-        decoder_attention_mask (`torch.LongTensor` of shape `(batch_size, target_sequence_length)`, *optional*):
-            Mask to avoid performing attention on certain token indices. By default, a causal mask will be used, to
-            make sure the model can only look at previous inputs in order to predict the future.
-
-        head_mask (`torch.Tensor` of shape `(encoder_layers, encoder_attention_heads)`, *optional*):
-            Mask to nullify selected heads of the attention modules in the encoder. Mask values selected in `[0, 1]`:
-
-            - 1 indicates the head is **not masked**,
-            - 0 indicates the head is **masked**.
-
-        decoder_head_mask (`torch.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-            Mask to nullify selected heads of the attention modules in the decoder. Mask values selected in `[0, 1]`:
-
-            - 1 indicates the head is **not masked**,
-            - 0 indicates the head is **masked**.
-
-        cross_attn_head_mask (`torch.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
-            Mask to nullify selected heads of the cross-attention modules. Mask values selected in `[0, 1]`:
-
-            - 1 indicates the head is **not masked**,
-            - 0 indicates the head is **masked**.
-
-        encoder_outputs (`tuple(tuple(torch.FloatTensor)`, *optional*):
-            Tuple consists of `last_hidden_state`, `hidden_states` (*optional*) and `attentions` (*optional*)
-            `last_hidden_state` of shape `(batch_size, sequence_length, hidden_size)` (*optional*) is a sequence of
-            hidden-states at the output of the last layer of the encoder. Used in the cross-attention of the decoder.
-        past_key_values (`tuple(tuple(torch.FloatTensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
-            Tuple of `tuple(torch.FloatTensor)` of length `config.n_layers`, with each tuple having 2 tensors of shape
-            `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of shape
-            `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`.
-
-            Contains pre-computed hidden-states (key and values in the self-attention blocks and in the cross-attention
-            blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
-
-            If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those that
-            don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of all
-            `decoder_input_ids` of shape `(batch_size, sequence_length)`.
-        inputs_embeds (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation. This
-            is useful if you want more control over how to convert `input_ids` indices into associated vectors than the
-            model's internal embedding lookup matrix.
-
-        use_cache (`bool`, *optional*):
-            If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
-            `past_key_values`).
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
-
+        elif isinstance(cell, nn.Embedding):
+            cell.embedding_table.set_data(initializer(Normal(std),
+                                                      cell.embedding_table.shape,
+                                                      cell.embedding_table.dtype))
+            if cell.padding_idx is not None:
+                cell.embedding_table[cell.padding_idx].set_data(initializer(
+                    'zeros', cell.embedding_table[cell.padding_idx].shape, cell.embedding_table[cell.padding_idx].dtype))
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.TimeSeriesTransformerEncoder with TimeSeriesTransformer->Autoformer,TimeSeries->Autoformer
 class AutoformerEncoder(AutoformerPreTrainedModel):
@@ -1075,18 +925,18 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
         self.embed_positions = AutoformerSinusoidalPositionalEmbedding(
             config.context_length + config.prediction_length, config.d_model
         )
-        self.layers = nn.ModuleList([AutoformerEncoderLayer(config) for _ in range(config.encoder_layers)])
+        self.layers = nn.CellList([AutoformerEncoderLayer(config) for _ in range(config.encoder_layers)])
         self.layernorm_embedding = nn.LayerNorm(config.d_model)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
 
-    def forward(
+    def construct(
         self,
-        attention_mask: Optional[torch.Tensor] = None,
-        head_mask: Optional[torch.Tensor] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.FloatTensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
@@ -1129,7 +979,7 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
         embed_pos = self.embed_positions(inputs_embeds.size())
 
         hidden_states = self.layernorm_embedding(hidden_states + embed_pos)
-        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # expand attention_mask
         if attention_mask is not None:
@@ -1153,7 +1003,7 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
             to_drop = False
             if self.training:
-                dropout_probability = torch.rand([])
+                dropout_probability = ops.rand([])
                 if dropout_probability < self.layerdrop:  # skip the layer
                     to_drop = True
 
@@ -1210,26 +1060,26 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
         self.embed_positions = AutoformerSinusoidalPositionalEmbedding(
             config.context_length + config.prediction_length, config.d_model
         )
-        self.layers = nn.ModuleList([AutoformerDecoderLayer(config) for _ in range(config.decoder_layers)])
+        self.layers = nn.CellList([AutoformerDecoderLayer(config) for _ in range(config.decoder_layers)])
         self.layernorm_embedding = nn.LayerNorm(config.d_model)
 
         # https://github.com/thuml/Autoformer/blob/e6371e24f2ae2dd53e472edefdd5814c5176f864/models/Autoformer.py#L74
-        self.seasonality_projection = nn.Linear(config.d_model, config.feature_size)
+        self.seasonality_projection = nn.Dense(config.d_model, config.feature_size)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
 
-    def forward(
+    def construct(
         self,
-        trend: Optional[torch.Tensor] = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        encoder_hidden_states: Optional[torch.FloatTensor] = None,
-        encoder_attention_mask: Optional[torch.LongTensor] = None,
-        head_mask: Optional[torch.Tensor] = None,
-        cross_attn_head_mask: Optional[torch.Tensor] = None,
-        past_key_values: Optional[List[torch.FloatTensor]] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
+        trend: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        encoder_hidden_states: Optional[mindspore.Tensor] = None,
+        encoder_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        past_key_values: Optional[List[mindspore.Tensor]] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
@@ -1318,7 +1168,7 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
             inputs_embeds.size(), past_key_values_length=self.config.context_length - self.config.label_length
         )
         hidden_states = self.layernorm_embedding(hidden_states + embed_pos)
-        hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
@@ -1340,7 +1190,7 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
             if self.training:
-                dropout_probability = torch.rand([])
+                dropout_probability = ops.rand([])
                 if dropout_probability < self.layerdrop:
                     continue
 
@@ -1414,10 +1264,7 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
         )
 
 
-@add_start_docstrings(
-    "The bare Autoformer Model outputting raw hidden-states without any specific head on top.",
-    AUTOFORMER_START_DOCSTRING,
-)
+
 class AutoformerModel(AutoformerPreTrainedModel):
     def __init__(self, config: AutoformerConfig):
         super().__init__(config)
@@ -1449,8 +1296,8 @@ class AutoformerModel(AutoformerPreTrainedModel):
         return self.config.context_length + max(self.config.lags_sequence)
 
     def get_lagged_subsequences(
-        self, sequence: torch.Tensor, subsequences_length: int, shift: int = 0
-    ) -> torch.Tensor:
+        self, sequence: mindspore.Tensor, subsequences_length: int, shift: int = 0
+    ) -> mindspore.Tensor:
         """
         Returns lagged subsequences of a given sequence. Returns a tensor of shape (batch_size, subsequences_length,
         feature_size, indices_length), containing lagged subsequences. Specifically, lagged[i, j, :, k] = sequence[i,
@@ -1484,18 +1331,18 @@ class AutoformerModel(AutoformerPreTrainedModel):
             lagged_values.append(sequence[:, begin_index:end_index, ...])
 
         # return as stacked tensor in the feature dimension
-        return torch.stack(lagged_values, dim=-1)
+        return ops.stack(lagged_values, dim=-1)
 
     def create_network_inputs(
         self,
-        past_values: torch.Tensor,
-        past_time_features: torch.Tensor,
-        static_categorical_features: Optional[torch.Tensor] = None,
-        static_real_features: Optional[torch.Tensor] = None,
-        past_observed_mask: Optional[torch.Tensor] = None,
-        future_values: Optional[torch.Tensor] = None,
-        future_time_features: Optional[torch.Tensor] = None,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        past_values: mindspore.Tensor,
+        past_time_features: mindspore.Tensor,
+        static_categorical_features: Optional[mindspore.Tensor] = None,
+        static_real_features: Optional[mindspore.Tensor] = None,
+        past_observed_mask: Optional[mindspore.Tensor] = None,
+        future_values: Optional[mindspore.Tensor] = None,
+        future_time_features: Optional[mindspore.Tensor] = None,
+    ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
         """
         Creates the inputs for the network given the past and future values, time features, and static features.
 
@@ -1530,7 +1377,7 @@ class AutoformerModel(AutoformerPreTrainedModel):
         """
         # time feature
         time_feat = (
-            torch.cat(
+            ops.cat(
                 (
                     past_time_features[:, self._past_length - self.config.context_length :, ...],
                     future_time_features,
@@ -1543,14 +1390,14 @@ class AutoformerModel(AutoformerPreTrainedModel):
 
         # target
         if past_observed_mask is None:
-            past_observed_mask = torch.ones_like(past_values)
+            past_observed_mask = ops.ones_like(past_values)
 
         context = past_values[:, -self.config.context_length :]
         observed_context = past_observed_mask[:, -self.config.context_length :]
         _, loc, scale = self.scaler(context, observed_context)
 
         inputs = (
-            (torch.cat((past_values, future_values), dim=1) - loc) / scale
+            (ops.cat((past_values, future_values), dim=1) - loc) / scale
             if future_values is not None
             else (past_values - loc) / scale
         )
@@ -1558,17 +1405,17 @@ class AutoformerModel(AutoformerPreTrainedModel):
         # static features
         log_abs_loc = loc.abs().log1p() if self.config.input_size == 1 else loc.squeeze(1).abs().log1p()
         log_scale = scale.log() if self.config.input_size == 1 else scale.squeeze(1).log()
-        static_feat = torch.cat((log_abs_loc, log_scale), dim=1)
+        static_feat = ops.cat((log_abs_loc, log_scale), dim=1)
 
         if static_real_features is not None:
-            static_feat = torch.cat((static_real_features, static_feat), dim=1)
+            static_feat = ops.cat((static_real_features, static_feat), dim=1)
         if static_categorical_features is not None:
             embedded_cat = self.embedder(static_categorical_features)
-            static_feat = torch.cat((embedded_cat, static_feat), dim=1)
+            static_feat = ops.cat((embedded_cat, static_feat), dim=1)
         expanded_static_feat = static_feat.unsqueeze(1).expand(-1, time_feat.shape[1], -1)
 
         # all features
-        features = torch.cat((expanded_static_feat, time_feat), dim=-1)
+        features = ops.cat((expanded_static_feat, time_feat), dim=-1)
 
         # lagged features
         subsequences_length = (
@@ -1592,23 +1439,21 @@ class AutoformerModel(AutoformerPreTrainedModel):
     def get_decoder(self):
         return self.decoder
 
-    @add_start_docstrings_to_model_forward(AUTOFORMER_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=AutoformerModelOutput, config_class=_CONFIG_FOR_DOC)
-    def forward(
+    def construct(
         self,
-        past_values: torch.Tensor,
-        past_time_features: torch.Tensor,
-        past_observed_mask: torch.Tensor,
-        static_categorical_features: Optional[torch.Tensor] = None,
-        static_real_features: Optional[torch.Tensor] = None,
-        future_values: Optional[torch.Tensor] = None,
-        future_time_features: Optional[torch.Tensor] = None,
-        decoder_attention_mask: Optional[torch.LongTensor] = None,
-        head_mask: Optional[torch.Tensor] = None,
-        decoder_head_mask: Optional[torch.Tensor] = None,
-        cross_attn_head_mask: Optional[torch.Tensor] = None,
-        encoder_outputs: Optional[List[torch.FloatTensor]] = None,
-        past_key_values: Optional[List[torch.FloatTensor]] = None,
+        past_values: mindspore.Tensor,
+        past_time_features: mindspore.Tensor,
+        past_observed_mask: mindspore.Tensor,
+        static_categorical_features: Optional[mindspore.Tensor] = None,
+        static_real_features: Optional[mindspore.Tensor] = None,
+        future_values: Optional[mindspore.Tensor] = None,
+        future_time_features: Optional[mindspore.Tensor] = None,
+        decoder_attention_mask: Optional[mindspore.LongTensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        decoder_head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        encoder_outputs: Optional[List[mindspore.FloatTensor]] = None,
+        past_key_values: Optional[List[mindspore.FloatTensor]] = None,
         output_hidden_states: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         use_cache: Optional[bool] = None,
@@ -1662,7 +1507,7 @@ class AutoformerModel(AutoformerPreTrainedModel):
         )
 
         if encoder_outputs is None:
-            enc_input = torch.cat(
+            enc_input = ops.cat(
                 (
                     transformer_inputs[:, : self.config.context_length, ...],
                     temporal_features[:, : self.config.context_length, ...],
@@ -1691,25 +1536,25 @@ class AutoformerModel(AutoformerPreTrainedModel):
                 transformer_inputs[:, : self.config.context_length, ...]
             )
             mean = (
-                torch.mean(transformer_inputs[:, : self.config.context_length, ...], dim=1)
+                ops.mean(transformer_inputs[:, : self.config.context_length, ...], dim=1)
                 .unsqueeze(1)
                 .repeat(1, self.config.prediction_length, 1)
             )
-            zeros = torch.zeros(
+            zeros = ops.zeros(
                 [transformer_inputs.shape[0], self.config.prediction_length, transformer_inputs.shape[2]],
                 device=enc_input.device,
             )
 
-            decoder_input = torch.cat(
+            decoder_input = ops.cat(
                 (
-                    torch.cat((seasonal_input[:, -self.config.label_length :, ...], zeros), dim=1),
+                    ops.cat((seasonal_input[:, -self.config.label_length :, ...], zeros), dim=1),
                     temporal_features[:, self.config.context_length - self.config.label_length :, ...],
                 ),
                 dim=-1,
             )
-            trend_init = torch.cat(
+            trend_init = ops.cat(
                 (
-                    torch.cat((trend_input[:, -self.config.label_length :, ...], mean), dim=1),
+                    ops.cat((trend_input[:, -self.config.label_length :, ...], mean), dim=1),
                     temporal_features[:, self.config.context_length - self.config.label_length :, ...],
                 ),
                 dim=-1,
@@ -1750,10 +1595,6 @@ class AutoformerModel(AutoformerPreTrainedModel):
         )
 
 
-@add_start_docstrings(
-    "The Autoformer Model with a distribution head on top for time-series forecasting.",
-    AUTOFORMER_START_DOCSTRING,
-)
 class AutoformerForPrediction(AutoformerPreTrainedModel):
     def __init__(self, config: AutoformerConfig):
         super().__init__(config)
@@ -1794,24 +1635,22 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
             sliced_params = [p[:, -trailing_n:] for p in params]
         return self.distribution_output.distribution(sliced_params, loc=loc, scale=scale)
 
-    @add_start_docstrings_to_model_forward(AUTOFORMER_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=Seq2SeqTSPredictionOutput, config_class=_CONFIG_FOR_DOC)
-    def forward(
+    def construct(
         self,
-        past_values: torch.Tensor,
-        past_time_features: torch.Tensor,
-        past_observed_mask: torch.Tensor,
-        static_categorical_features: Optional[torch.Tensor] = None,
-        static_real_features: Optional[torch.Tensor] = None,
-        future_values: Optional[torch.Tensor] = None,
-        future_time_features: Optional[torch.Tensor] = None,
-        future_observed_mask: Optional[torch.Tensor] = None,
-        decoder_attention_mask: Optional[torch.LongTensor] = None,
-        head_mask: Optional[torch.Tensor] = None,
-        decoder_head_mask: Optional[torch.Tensor] = None,
-        cross_attn_head_mask: Optional[torch.Tensor] = None,
-        encoder_outputs: Optional[List[torch.FloatTensor]] = None,
-        past_key_values: Optional[List[torch.FloatTensor]] = None,
+        past_values: mindspore.Tensor,
+        past_time_features: mindspore.Tensor,
+        past_observed_mask: mindspore.Tensor,
+        static_categorical_features: Optional[mindspore.Tensor] = None,
+        static_real_features: Optional[mindspore.Tensor] = None,
+        future_values: Optional[mindspore.Tensor] = None,
+        future_time_features: Optional[mindspore.Tensor] = None,
+        future_observed_mask: Optional[mindspore.Tensor] = None,
+        decoder_attention_mask: Optional[mindspore.LongTensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        decoder_head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        encoder_outputs: Optional[List[mindspore.Tensor]] = None,
+        past_key_values: Optional[List[mindspore.Tensor]] = None,
         output_hidden_states: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         use_cache: Optional[bool] = None,
@@ -1899,7 +1738,7 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
             loss = self.loss(distribution, future_values)
 
             if future_observed_mask is None:
-                future_observed_mask = torch.ones_like(future_values)
+                future_observed_mask = ops.ones_like(future_values)
 
             if len(self.target_shape) == 0:
                 loss_weights = future_observed_mask
@@ -1930,12 +1769,12 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
     @torch.no_grad()
     def generate(
         self,
-        past_values: torch.Tensor,
-        past_time_features: torch.Tensor,
-        future_time_features: torch.Tensor,
-        past_observed_mask: Optional[torch.Tensor] = None,
-        static_categorical_features: Optional[torch.Tensor] = None,
-        static_real_features: Optional[torch.Tensor] = None,
+        past_values: mindspore.Tensor,
+        past_time_features: mindspore.Tensor,
+        future_time_features: mindspore.Tensor,
+        past_observed_mask: Optional[mindspore.Tensor] = None,
+        static_categorical_features: Optional[mindspore.Tensor] = None,
+        static_real_features: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
     ) -> SampleTSPredictionOutput:
@@ -2054,10 +1893,10 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
             past_values.repeat_interleave(repeats=num_parallel_samples, dim=0) - repeated_loc
         ) / repeated_scale
 
-        time_features = torch.cat((past_time_features, future_time_features), dim=1)
+        time_features = ops.cat((past_time_features, future_time_features), dim=1)
 
         expanded_static_feat = static_feat.unsqueeze(1).expand(-1, time_features.shape[1], -1)
-        features = torch.cat((expanded_static_feat, time_features), dim=-1)
+        features = ops.cat((expanded_static_feat, time_features), dim=-1)
         repeated_features = features.repeat_interleave(repeats=num_parallel_samples, dim=0)
 
         repeated_enc_last_hidden = enc_last_hidden.repeat_interleave(repeats=num_parallel_samples, dim=0)
@@ -2069,22 +1908,22 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         reshaped_lagged_sequence = lagged_sequence.reshape(lags_shape[0], lags_shape[1], -1)
         seasonal_input, trend_input = self.model.decomposition_layer(reshaped_lagged_sequence)
 
-        mean = torch.mean(reshaped_lagged_sequence, dim=1).unsqueeze(1).repeat(1, self.config.prediction_length, 1)
-        zeros = torch.zeros(
+        mean = ops.mean(reshaped_lagged_sequence, dim=1).unsqueeze(1).repeat(1, self.config.prediction_length, 1)
+        zeros = ops.zeros(
             [reshaped_lagged_sequence.shape[0], self.config.prediction_length, reshaped_lagged_sequence.shape[2]],
             device=reshaped_lagged_sequence.device,
         )
 
-        decoder_input = torch.cat(
+        decoder_input = ops.cat(
             (
-                torch.cat((seasonal_input[:, -self.config.label_length :, ...], zeros), dim=1),
+                ops.cat((seasonal_input[:, -self.config.label_length :, ...], zeros), dim=1),
                 repeated_features[:, -self.config.prediction_length - self.config.label_length :, ...],
             ),
             dim=-1,
         )
-        trend_init = torch.cat(
+        trend_init = ops.cat(
             (
-                torch.cat((trend_input[:, -self.config.label_length :, ...], mean), dim=1),
+                ops.cat((trend_input[:, -self.config.label_length :, ...], mean), dim=1),
                 repeated_features[:, -self.config.prediction_length - self.config.label_length :, ...],
             ),
             dim=-1,
