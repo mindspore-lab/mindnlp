@@ -25,14 +25,17 @@ import math
 import mindspore
 import numpy as np
 from mindspore import nn, ops, Tensor, Parameter, dtype_to_nptype
-from mindspore import log as logger
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.utils import logging
 from mindnlp._legacy.functional import split, where, arange, softmax
 from mindnlp._legacy.nn import Dropout, Matmul
 from .gpt2_config import GPT2Config
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import SequenceSummary, Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
+
+logger = logging.get_logger(__name__)
 
 GPT2_SUPPORT_LIST = ["gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl", "distilgpt2"]
 
@@ -44,7 +47,6 @@ def torch_to_mindspore(pth_file, **kwargs):
     """torch to mindspore."""
     prefix = kwargs.get("prefix", "")
 
-    import logging
     try:
         import torch
     except Exception as exc:
@@ -54,7 +56,7 @@ def torch_to_mindspore(pth_file, **kwargs):
 
     from mindspore.train.serialization import save_checkpoint
 
-    logging.info('Starting checkpoint conversion.')
+    logger.info('Starting checkpoint conversion.')
     ms_ckpt = []
     state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
 

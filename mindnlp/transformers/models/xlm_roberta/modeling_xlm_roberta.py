@@ -31,8 +31,7 @@ import mindspore
 from mindspore import nn, ops, Parameter, Tensor
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindspore.common.initializer import initializer, Normal
-from mindspore import log as logger
-
+from mindnlp.utils import logging
 from .configuration_xlm_roberta import XLMRobertaConfig
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
@@ -48,6 +47,8 @@ from ...modeling_outputs import (
     TokenClassifierOutput,
 )
 
+
+logger = logging.get_logger(__name__)
 
 def torch_to_mindspore(pth_file):
     """convert torch checkpoint to mindspore"""

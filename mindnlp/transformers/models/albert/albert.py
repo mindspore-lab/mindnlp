@@ -20,9 +20,9 @@ import mindspore
 import mindspore.numpy as mnp
 from mindspore import nn
 from mindspore import ops
-from mindspore.common.initializer import initializer, TruncatedNormal, Normal
-from ...modeling_utils import PreTrainedModel
+from mindspore.common.initializer import initializer, Normal
 from .albert_config import AlbertConfig
+from ...modeling_utils import PreTrainedModel
 
 activation_map = {
     'relu': nn.ReLU(),
@@ -49,16 +49,13 @@ class AlbertEmbeddings(nn.Cell):
         super().__init__()
         self.word_embeddings = nn.Embedding(
             config.vocab_size,
-            config.embedding_size,
-            embedding_table=TruncatedNormal(config.initializer_range))
+            config.embedding_size)
         self.position_embeddings = nn.Embedding(
             config.max_position_embeddings,
-            config.embedding_size,
-            embedding_table=TruncatedNormal(config.initializer_range))
+            config.embedding_size)
         self.token_type_embeddings = nn.Embedding(
             config.type_vocab_size,
             config.embedding_size,
-            embedding_table=TruncatedNormal(config.initializer_range),
             dtype=mindspore.int32)
         self.layer_norm = nn.LayerNorm(
             (config.embedding_size,),

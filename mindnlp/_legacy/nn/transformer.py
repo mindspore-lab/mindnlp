@@ -15,12 +15,10 @@
 # pylint: disable=C0103
 """Transformer modules."""
 import copy
-import math
 from typing import Optional
 import mindspore
 from mindspore import nn, ops, Parameter, Tensor
-from mindspore.common.initializer import initializer, XavierUniform, HeUniform, Uniform, \
-    _calculate_fan_in_and_fan_out
+from mindspore.common.initializer import initializer, XavierUniform
 from mindnlp._legacy.initializer import XavierNormal
 from mindnlp._legacy.functional import multi_head_attention_forward, relu, gelu
 from .dropout import Dropout
@@ -28,12 +26,6 @@ from .dropout import Dropout
 
 class Linear(nn.Dense):
     """inner Linear."""
-    def __init__(self, in_channels, out_channels, has_bias=True):
-        fan_in, _ = _calculate_fan_in_and_fan_out((out_channels, in_channels))
-        bound = 1 / math.sqrt(fan_in)
-        super().__init__(in_channels, out_channels, weight_init=HeUniform(math.sqrt(5)),
-                         bias_init=Uniform(bound), has_bias=has_bias, activation=None)
-
 
 class MultiheadAttention(nn.Cell):
     r"""

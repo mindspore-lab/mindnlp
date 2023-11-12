@@ -1290,7 +1290,6 @@ class GenerationTesterMixin:
             beam_kwargs, beam_scorer = self._get_constrained_beam_scorer_and_kwargs(
                 input_ids.shape[0], max_length, constraints, num_return_sequences=num_return_sequences
             )
-
             output_generate, output_beam_search = self._constrained_beam_search_generate(
                 model=model,
                 input_ids=input_ids,

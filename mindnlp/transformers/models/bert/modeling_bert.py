@@ -29,11 +29,10 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, List, Union
 import numpy as np
 import mindspore
-from mindspore import nn, ops
-from mindspore import Parameter, Tensor
-from mindspore import log as logger
+from mindspore import nn, ops, Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
-from mindnlp._legacy.functional import einsum
+
+from mindnlp.utils import logging
 from mindnlp.utils import ModelOutput
 from .configuration_bert import BertConfig
 from ...modeling_utils import PreTrainedModel
@@ -51,6 +50,8 @@ from ...modeling_outputs import (
 )
 
 from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
+
+logger = logging.get_logger(__name__)
 
 BERT_SUPPORT_LIST = [
     "bert-base-uncased",
@@ -256,11 +257,11 @@ class BertSelfAttention(nn.Cell):
             positional_embedding = positional_embedding.to(dtype=query_layer.dtype)  # fp16 compatibility
 
             if self.position_embedding_type == "relative_key":
-                relative_position_scores = einsum("bhld,lrd->bhlr", query_layer, positional_embedding.broadcast_to((query_length, -1, -1)))
+                relative_position_scores = ops.einsum("bhld,lrd->bhlr", query_layer, positional_embedding.broadcast_to((query_length, -1, -1)))
                 attention_scores = attention_scores + relative_position_scores
             elif self.position_embedding_type == "relative_key_query":
-                relative_position_scores_query = einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
-                relative_position_scores_key = einsum("bhrd,lrd->bhlr", key_layer, positional_embedding)
+                relative_position_scores_query = ops.einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
+                relative_position_scores_key = ops.einsum("bhrd,lrd->bhlr", key_layer, positional_embedding)
                 attention_scores = attention_scores + relative_position_scores_query + relative_position_scores_key
 
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
@@ -567,13 +568,15 @@ class BertPooler(nn.Cell):
     """
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size, activation='tanh')
+        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.activation = nn.Tanh()
 
     def construct(self, hidden_states):
         # We "pool" the model by simply taking the hidden state corresponding.
         # to the first token
         first_token_tensor = hidden_states[:, 0]
         pooled_output = self.dense(first_token_tensor)
+        pooled_output = self.activation(pooled_output)
         return pooled_output
 
 

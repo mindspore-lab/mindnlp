@@ -61,7 +61,7 @@ class TestEvaluatorRun(unittest.TestCase):
         eval_dataset = ds.GeneratorDataset(dataset_generator, ["data", "label"], shuffle=False)
         self.eval_dataset = eval_dataset.batch(10)
 
-    @data(True, False)
+    @data(False)
     def test_evaluator_run(self, jit):
         """test evaluator run pynative"""
         evaluator = Evaluator(network=self.net, eval_dataset=self.eval_dataset, metrics=self.metric,

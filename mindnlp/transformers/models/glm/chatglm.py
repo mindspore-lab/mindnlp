@@ -28,17 +28,18 @@ import re
 from typing import Optional, Tuple, List, Callable, Dict, Any
 import numpy as np
 import mindspore
-from mindspore import nn, ops
+from mindspore import nn, ops, Tensor
 from mindspore.nn import CrossEntropyLoss, LayerNorm
-from mindspore import log as logger
-from mindspore import Tensor
 
+from mindnlp.utils import logging
 from mindnlp.modules import functional as F
 from .chatglm_config import ChatGLMConfig
 from ...modeling_utils import PreTrainedModel
 from ...generation.configuration_utils import GenerationConfig
 from ...generation.logits_process import LogitsProcessor, LogitsProcessorList
 from ...generation.stopping_criteria import StoppingCriteriaList
+
+logger = logging.get_logger(__name__)
 
 
 def torch_to_mindspore(pth_file, **kwargs):

@@ -20,6 +20,7 @@
 load dataset from modelscope
 """
 import os
+import logging
 from typing import Union, Optional, Sequence, Mapping
 from mindspore.dataset import GeneratorDataset
 
@@ -35,6 +36,8 @@ from modelscope.msdatasets.data_loader.data_loader_manager import (
 from datasets import Dataset
 from datasets.utils.file_utils import is_relative_path
 
+loggerd = logging.getLogger()
+loggerd.setLevel(logging.WARNING)
 
 class TransferIterableDataset():
     """TransferDataset for Huggingface Dataset."""
