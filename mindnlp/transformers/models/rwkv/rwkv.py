@@ -30,10 +30,11 @@ import mindspore
 from mindspore import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.nn import CrossEntropyLoss
-from mindspore import log as logger
-
+from mindnlp.utils import logging
 from ...modeling_utils import PreTrainedModel
 from .rwkv_config import RwkvConfig
+
+logger = logging.get_logger(__name__)
 
 RWKV_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "RWKV/rwkv-4-169m-pile",

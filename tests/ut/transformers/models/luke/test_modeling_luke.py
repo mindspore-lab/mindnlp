@@ -26,8 +26,6 @@ from mindspore import Tensor
 
 from mindnlp.transformers.models.luke import luke_config, luke
 
-mindspore.set_context(pynative_synchronize=True)
-
 
 class TestModelingLUKE(unittest.TestCase):
     r"""

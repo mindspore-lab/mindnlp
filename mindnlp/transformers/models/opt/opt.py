@@ -24,9 +24,10 @@ from typing import List, Optional, Tuple, Union, Any
 import mindspore
 import numpy as np
 from mindspore import nn, ops, Tensor
-from mindspore import log as logger
 from mindspore.nn import CrossEntropyLoss, BCEWithLogitsLoss, MSELoss
 from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.utils import logging
 from .opt_config import OPTConfig
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
@@ -38,6 +39,8 @@ from ...modeling_outputs import (
     QuestionAnsweringModelOutput,
     SequenceClassifierOutputWithPast,
 )
+
+logger = logging.get_logger(__name__)
 
 __all__ = ['OPTAttention', 'OPTModel', 'OPTDecoder', 'OPTForCausalLM']
 
@@ -1003,8 +1006,8 @@ class OPTForQuestionAnswering(OPTPreTrainedModel):
 
         logits = self.qa_outputs(hidden_states)
         start_logits, end_logits = logits.split(1, dim=-1)
-        start_logits = start_logits.squeeze(-1).contiguous()
-        end_logits = end_logits.squeeze(-1).contiguous()
+        start_logits = start_logits.squeeze(-1)
+        end_logits = end_logits.squeeze(-1)
 
         total_loss = None
         if start_positions is not None and end_positions is not None:

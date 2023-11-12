@@ -50,7 +50,7 @@ class TestGRU(unittest.TestCase):
 
     def test_gru_fp16(self):
         """test simple gru with fp16"""
-        rnn = StaticGRU(self.input_size, self.hidden_size, batch_first=True)
+        rnn = StaticGRU(self.input_size, self.hidden_size, batch_first=True).to_float(mindspore.float16)
         inputs = Tensor(self.x, mindspore.float16)
         output, h = rnn(inputs)
 

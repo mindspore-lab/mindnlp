@@ -213,7 +213,7 @@ class Attention(nn.Cell):
             scores = scores + mask  # (bs, n_local_heads, slen, cache_len + slen)
         scores = ops.softmax(scores.astype(mindspore.float32), axis=-1).astype(x_q.dtype)
         output = ops.matmul(scores, values)  # (bs, n_local_heads, slen, head_dim)
-        output = ops.transpose(output, (0, 2, 1, 3)).view(bsz, seqlen, -1) # .contiguous()???
+        output = ops.transpose(output, (0, 2, 1, 3)).view(bsz, seqlen, -1)
         return self.w_o(output)
 
 

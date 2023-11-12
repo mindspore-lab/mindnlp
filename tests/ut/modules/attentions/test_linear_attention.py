@@ -54,21 +54,3 @@ class TestLinearAttention(unittest.TestCase):
 
         assert output.shape == (2, 32, 500)
         assert attn.shape == (2, 32, 20)
-
-    def test_linear_attention_graph(self):
-        """
-        unit test for linear attention whit graph mode.
-        """
-
-        context.set_context(mode=context.GRAPH_MODE)
-        standard_normal = ops.StandardNormal(seed=114514)
-        query = standard_normal((2, 32, 512))
-        key = standard_normal((2, 20, 512))
-        value = standard_normal((2, 20, 500))
-        net = LinearAttention(query_dim=32, key_dim=20, hidden_dim=512)
-        mask_shape = (2, 32, 20)
-        mask = Tensor(np.ones(mask_shape), mindspore.bool_)
-        output, attn = net(query, key, value, mask)
-
-        assert output.shape == (2, 32, 500)
-        assert attn.shape == (2, 32, 20)

@@ -337,7 +337,7 @@ class WhisperAttention(nn.Cell):
 
     # Copied from transformers.models.bart.modeling_bart.BartAttention._shape with BART->whisper
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2).contiguous()
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
     # Copied from transformers.models.bart.modeling_bart.BartAttention.forward with BART->whisper
     def construct(
@@ -385,7 +385,6 @@ class WhisperAttention(nn.Cell):
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-
         if self.is_decoder:
             # if cross_attention save Tuple(mindspore.Tensor, mindspore.Tensor) of all cross attention key/value_states.
             # Further calls to cross_attention layer can then reuse all cross-attention
@@ -442,7 +441,6 @@ class WhisperAttention(nn.Cell):
         attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
 
         attn_output = ops.bmm(attn_probs, value_states)
-
         if attn_output.shape != (bsz * self.num_heads, tgt_len, self.head_dim):
             raise ValueError(
                 f"`attn_output` should be of size {(bsz * self.num_heads, tgt_len, self.head_dim)}, but is"
@@ -455,7 +453,6 @@ class WhisperAttention(nn.Cell):
         # Use the `embed_dim` from the config (stored in the class) rather than `hidden_state` because `attn_output` can be
         # partitioned across GPUs when using tensor-parallelism.
         attn_output = attn_output.reshape(bsz, tgt_len, self.embed_dim)
-
         attn_output = self.out_proj(attn_output)
 
         return attn_output, attn_weights_reshaped, past_key_value
@@ -634,6 +631,7 @@ class WhisperDecoderLayer(nn.Cell):
                 past_key_value=cross_attn_past_key_value,
                 output_attentions=output_attentions,
             )
+
             hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
 
@@ -800,7 +798,7 @@ class WhisperEncoder(WhisperPreTrainedModel):
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
             to_drop = False
             if self.training:
-                dropout_probability = ops.rand([])
+                dropout_probability = ops.rand((1,))
                 if dropout_probability < self.layerdrop:  # skip the layer
                     to_drop = True
 
@@ -1013,12 +1011,11 @@ class WhisperDecoder(WhisperPreTrainedModel):
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
             if self.training:
-                dropout_probability = ops.rand([])
+                dropout_probability = ops.rand((1,))
                 if dropout_probability < self.layerdrop:
                     continue
 
             past_key_value = past_key_values[idx] if past_key_values is not None else None
-
             layer_outputs = decoder_layer(
                 hidden_states,
                 attention_mask=attention_mask,
@@ -1194,7 +1191,6 @@ class WhisperModel(WhisperPreTrainedModel):
                 hidden_states=encoder_outputs[1] if len(encoder_outputs) > 1 else None,
                 attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
             )
-
         # decoder outputs consists of (dec_features, past_key_value, dec_hidden, dec_attn)
         decoder_outputs = self.decoder(
             input_ids=decoder_input_ids,

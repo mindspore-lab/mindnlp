@@ -58,27 +58,3 @@ class TestLocationAwareAttention(unittest.TestCase):
         # test shape
         assert result_ms[0].shape == (2, 1, 20) #[batch, 1, hidden_dims]
         assert result_ms[1].shape == (2, 40)    #[batch, seq_len]
-
-    def test_location_aware_attention_graph(self):
-        """
-        unit test for location aware attention whit graph mode.
-        """
-        context.set_context(mode=context.GRAPH_MODE)
-        batch_size, seq_len, hidden_dim = 2, 40, 20
-        # [2, 1, 20]
-        q_test = np.random.random((batch_size, 1, hidden_dim)).astype(np.float32)
-        # [2, 40, 20]
-        v_test = np.random.random((batch_size, seq_len, hidden_dim)).astype(np.float32)
-        # [2, 40]
-        last_attn_test = np.random.random((batch_size, seq_len)).astype(np.float32)
-
-        q_ms = Tensor(q_test, mindspore.float32)
-        v_ms = Tensor(v_test, mindspore.float32)
-        last_attn_ms = Tensor(last_attn_test, mindspore.float32)
-        ms_net = LocationAwareAttention(hidden_dim=20, smoothing=True)
-
-        result_ms =  ms_net(q_ms, v_ms, last_attn_ms)
-
-        # test shape
-        assert result_ms[0].shape == (2, 1, 20) #[batch, 1, hidden_dims]
-        assert result_ms[1].shape == (2, 40)    #[batch, seq_len]

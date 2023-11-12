@@ -16,14 +16,8 @@
 """gradient accumulator"""
 
 import mindspore
-from mindspore import ops
-from mindspore import Tensor, Parameter
-from mindnlp.utils import less_min_pynative_first
-
-if less_min_pynative_first:
-    from mindspore import ms_class as jit_class
-else:
-    from mindspore import jit_class
+from mindspore import ops, Tensor, Parameter
+from mindspore import jit_class
 
 
 @jit_class

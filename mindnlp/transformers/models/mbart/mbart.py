@@ -21,7 +21,6 @@ import math
 import random
 from typing import List, Optional, Tuple, Union
 import numpy as np
-from mindspore import log as logger
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 import mindspore
 from mindspore import Tensor, Parameter
@@ -29,6 +28,7 @@ from mindspore import nn, ops
 from mindspore import dtype as mstype
 from mindspore.common.initializer import initializer, Normal
 
+from mindnlp.utils import logging
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -42,6 +42,8 @@ from ...modeling_outputs import (
 from ...modeling_utils import PreTrainedModel
 from .mbart_config import MBartConfig
 
+
+logger = logging.get_logger(__name__)
 
 def shift_tokens_right(input_ids: Tensor, pad_token_id: int):
     """

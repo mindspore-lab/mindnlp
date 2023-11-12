@@ -473,6 +473,7 @@ def download(
     url = build_download_url(repo_id, filename, repo_type=repo_type, endpoint=endpoint)
     # check model whether exist
     model_url = url[: url.rfind('/')].replace('resolve/main', '')
+
     req = requests.get(model_url, timeout=10, proxies=proxies)
     status = req.status_code
     if status == 404:

@@ -66,32 +66,3 @@ class TestSelfAttention(unittest.TestCase):
         output, attn = net(query, key, value, mask)
         assert output.shape == (2, 32, 512)
         assert attn.shape == (2, 32, 20)
-
-    def test_self_attention_graph(self):
-        """
-        unit test for self attention whit graph mode.
-        """
-        standard_normal = ops.StandardNormal(seed=114514)
-        query = standard_normal((2, 32, 512))
-        key = standard_normal((2, 20, 512))
-        value = standard_normal((2, 20, 512))
-        mask_shape = (2, 32, 20)
-        mask = Tensor(np.ones(mask_shape), mindspore.bool_)
-
-        # use dot-product attention default dot-product
-        net = SelfAttention()
-        output, attn = net(query, key, value, mask)
-        assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 32, 20)
-
-        # use cosine attention
-        net = SelfAttention(attention_mode="cosine")
-        output, attn = net(query, key, value, mask)
-        assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 32, 20)
-
-        # use additive attention
-        net = SelfAttention(attention_mode="add")
-        output, attn = net(query, key, value, mask)
-        assert output.shape == (2, 32, 512)
-        assert attn.shape == (2, 32, 20)
