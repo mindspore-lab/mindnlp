@@ -1,4 +1,5 @@
 # coding=utf-8
+# Copyright 2022 Huawei Technologies Co., Ltd
 # Copyright 2018 Google AI, Google Brain and the HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ============================================================================
 # pylint: disable=invalid-name
 # pylint: disable=logging-fstring-interpolation
 # pylint: disable=inconsistent-return-statements

@@ -16,11 +16,10 @@
 utils for trainer.
 """
 
-from mindspore import ops
+from mindspore import ops, value_and_grad
 
 from mindnlp import ms_jit
 from mindnlp._legacy.amp import all_finite, init_status
-from ..grad import value_and_grad
 
 def get_default_forward_fn_with_loss_fn(network, loss_fn, loss_scaler):
     """get default forward function with loss function"""
