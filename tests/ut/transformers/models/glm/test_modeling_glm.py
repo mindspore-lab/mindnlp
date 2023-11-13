@@ -22,8 +22,9 @@ import mindspore
 from mindspore import Tensor
 
 from mindnlp.transformers.models.glm import glm, glm_config
+from .....common import MindNLPTestCase
 
-class TestModelingGlm(unittest.TestCase):
+class TestModelingGlm(MindNLPTestCase):
     """
     Test Glm
     """

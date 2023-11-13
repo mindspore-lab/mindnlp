@@ -25,8 +25,9 @@ from mindspore import context
 from mindspore import Tensor
 
 from mindnlp.modules import SelfAttention
+from ....common import MindNLPTestCase
 
-class TestSelfAttention(unittest.TestCase):
+class TestSelfAttention(MindNLPTestCase):
     r"""
     Test module Self Attention
     """

@@ -25,9 +25,10 @@ import numpy as np
 from mindspore import Tensor
 
 from mindnlp.transformers.models.luke import luke_config, luke
+from .....common import MindNLPTestCase
 
 
-class TestModelingLUKE(unittest.TestCase):
+class TestModelingLUKE(MindNLPTestCase):
     r"""
     Test LUKE
     """

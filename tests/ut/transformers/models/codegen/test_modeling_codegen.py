@@ -20,8 +20,9 @@ from mindspore import Tensor
 
 import mindnlp
 from mindnlp.transformers.models.codegen import codegen_config, codegen
+from .....common import MindNLPTestCase
 
-class TestModelingCodeGen(unittest.TestCase):
+class TestModelingCodeGen(MindNLPTestCase):
     r"""
     Test CodeGen
     """

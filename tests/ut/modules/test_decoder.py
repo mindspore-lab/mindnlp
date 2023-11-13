@@ -15,8 +15,6 @@
 """
 Test Decoder
 """
-
-import unittest
 import numpy as np
 
 import mindspore
@@ -25,9 +23,9 @@ from mindspore import context
 from mindspore import Tensor
 
 from mindnlp.modules import RNNDecoder
+from ...common import MindNLPTestCase
 
-
-class TestRNNDecoder(unittest.TestCase):
+class TestRNNDecoder(MindNLPTestCase):
     r"""
     Test module RNN Decoder
     """
@@ -70,7 +68,7 @@ class TestRNNDecoder(unittest.TestCase):
         assert attn_scores.shape == (8, 16, 16)
 
 
-class TestLSTMDecoder(unittest.TestCase):
+class TestLSTMDecoder(MindNLPTestCase):
     r"""
     Test module LSTM Decoder
     """
@@ -115,7 +113,7 @@ class TestLSTMDecoder(unittest.TestCase):
         assert attn_scores.shape == (8, 16, 16)
 
 
-class TestGRUDecoder(unittest.TestCase):
+class TestGRUDecoder(MindNLPTestCase):
     r"""
     Test module GRU Decoder
     """

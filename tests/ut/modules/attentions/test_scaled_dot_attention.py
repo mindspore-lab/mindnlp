@@ -21,9 +21,9 @@ import mindspore
 from mindspore import Tensor
 from mindspore import context
 from mindnlp.modules import ScaledDotAttention
+from ....common import MindNLPTestCase
 
-
-class TestScaledDotAttention(unittest.TestCase):
+class TestScaledDotAttention(MindNLPTestCase):
     r"""
     Test module ScaledDotAttention
     """

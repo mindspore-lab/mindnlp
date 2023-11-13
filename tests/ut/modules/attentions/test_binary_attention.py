@@ -14,7 +14,6 @@
 # ============================================================================
 """Test Binary Attention"""
 
-import unittest
 import numpy as np
 
 import mindspore
@@ -24,9 +23,9 @@ from mindspore import context
 from mindspore import Tensor
 
 from mindnlp.modules import BinaryAttention
+from ....common import MindNLPTestCase
 
-
-class TestBinaryAttention(unittest.TestCase):
+class TestBinaryAttention(MindNLPTestCase):
     r"""
     Test module Binary Attention
     """

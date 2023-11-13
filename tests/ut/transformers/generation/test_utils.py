@@ -25,7 +25,7 @@ from mindnlp.utils import is_mindspore_available, require_mindspore
 from mindnlp.engine.utils import set_seed
 from ..test_modeling_common import floats_tensor, ids_tensor
 from .test_framework_agnostic import GenerationIntegrationTestsMixin
-
+from ....common import MindNLPTestCase
 
 if is_mindspore_available():
     import mindspore
@@ -1944,7 +1944,7 @@ class GenerationTesterMixin:
 
 
 @require_mindspore
-class GenerationIntegrationTests(unittest.TestCase, GenerationIntegrationTestsMixin):
+class GenerationIntegrationTests(MindNLPTestCase, GenerationIntegrationTestsMixin):
     # setting framework_dependent_parameters needs to be gated, just like its contents' imports
     if is_mindspore_available():
         framework_dependent_parameters = {

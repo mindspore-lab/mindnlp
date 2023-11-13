@@ -30,9 +30,10 @@ from mindnlp.transformers.models.llama.llama import (
     LlamaForSequenceClassification,
 )
 from mindnlp.transformers import LlamaConfig
+from .....common import MindNLPTestCase
 
 
-class TestModelingLlama(unittest.TestCase):
+class TestModelingLlama(MindNLPTestCase):
     """
     Test Llama
     """

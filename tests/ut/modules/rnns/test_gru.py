@@ -15,15 +15,13 @@
 # pylint: disable=C0103
 
 """test gru."""
-
-import unittest
 import mindspore
 import numpy as np
 from mindspore import Tensor, nn
 from mindnlp.modules import StaticGRU
+from ....common import MindNLPTestCase
 
-
-class TestGRU(unittest.TestCase):
+class TestGRU(MindNLPTestCase):
     """test gru"""
     def setUp(self):
         self.input_size, self.hidden_size = 16, 32

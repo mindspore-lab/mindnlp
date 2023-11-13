@@ -17,7 +17,6 @@
 Test TinyBert
 """
 import pytest
-import unittest
 import numpy as np
 import mindspore
 from mindspore import ops
@@ -29,7 +28,9 @@ from mindnlp.transformers.models.tinybert.tinybert import TinyBertConfig, TinyBe
     TinyBertModel, TinyBertForPreTraining, TinyBertFitForPreTraining, TinyBertForNextSentencePrediction, \
     TinyBertForMaskedLM, TinyBertForSentencePairClassification, TinyBertForSequenceClassification
 
-class TestTinyBert(unittest.TestCase):
+from .....common import MindNLPTestCase
+
+class TestTinyBert(MindNLPTestCase):
     """
     Test TinyBert Models
     """

@@ -34,8 +34,9 @@ from mindnlp.transformers.models.mobilebert.mobilebert import MobileBertSelfAtte
     MobileBertOnlyNSPHead, MobileBertForNextSentencePrediction, MobileBertForSequenceClassification, \
     MobileBertForQuestionAnswering, MobileBertForMultipleChoice, MobileBertForTokenClassification,\
     MobileBertConfig
+from .....common import MindNLPTestCase
 
-class TestMobileBert(unittest.TestCase):
+class TestMobileBert(MindNLPTestCase):
     """
     Test TinyBert Models
     """

@@ -205,7 +205,6 @@ class RwkvSelfAttention(nn.Cell):
         )
 
         if layer_state is not None:
-            print(layer_state)
             state[2][:, :, self.layer_id] = layer_state[0]
             state[3][:, :, self.layer_id] = layer_state[1]
             state[4][:, :, self.layer_id] = layer_state[2]

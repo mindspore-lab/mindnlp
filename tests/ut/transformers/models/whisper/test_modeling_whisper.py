@@ -43,7 +43,7 @@ from mindnlp.utils.import_utils import is_datasets_available, is_mindspore_avail
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, _config_zero_init, floats_tensor, ids_tensor
-
+from .....common import MindNLPTestCase
 
 if is_datasets_available():
     import datasets
@@ -277,7 +277,7 @@ class WhisperModelTester:
 
 
 @require_mindspore
-class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
+class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
     all_model_classes = (WhisperModel, WhisperForConditionalGeneration) if is_mindspore_available() else ()
     all_generative_model_classes = (WhisperForConditionalGeneration,) if is_mindspore_available() else ()
     pipeline_model_mapping = (
@@ -397,7 +397,6 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCas
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            model
             model.set_train(False)
 
             inputs = copy.deepcopy(self._prepare_for_class(inputs_dict, model_class))
@@ -545,7 +544,6 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCas
             inputs_dict["output_hidden_states"] = False
             config.return_dict = True
             model = model_class(config)
-            model
             model.set_train(False)
 
             subsampled_encoder_seq_length = model._get_feat_extract_output_lengths(encoder_seq_length)
@@ -633,7 +631,6 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCas
         for model_class in self.all_model_classes:
             config = copy.deepcopy(original_config)
             model = model_class(config)
-            model
 
             if self.model_tester.is_training is False:
                 model.set_train(False)
@@ -877,7 +874,7 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCas
 
 
 # @require_mindspore
-# class WhisperModelIntegrationTests(unittest.TestCase):
+# class WhisperModelIntegrationTests(MindNLPTestCase):
 #     @cached_property
 #     def default_processor(self):
 #         return WhisperProcessor.from_pretrained("openai/whisper-base")
@@ -1460,7 +1457,7 @@ class WhisperEncoderModelTester:
 
 
 @require_mindspore
-class WhisperEncoderModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
+class WhisperEncoderModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
     all_model_classes = (WhisperForAudioClassification,) if is_mindspore_available() else ()
     is_encoder_decoder = False
     fx_compatible = False
@@ -1743,7 +1740,7 @@ class WhisperStandaloneDecoderModelTester:
 
 
 @require_mindspore
-class WhisperStandaloneDecoderModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
+class WhisperStandaloneDecoderModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
     all_model_classes = (WhisperDecoder, WhisperForCausalLM) if is_mindspore_available() else ()
     all_generative_model_classes = (WhisperForCausalLM,) if is_mindspore_available() else ()
     fx_comptatible = False

@@ -15,7 +15,6 @@
 # ============================================================================
 """Test Additive Attention"""
 
-import unittest
 import numpy as np
 
 import mindspore
@@ -25,9 +24,9 @@ from mindspore import Tensor
 from mindspore import context
 
 from mindnlp.modules import AdditiveAttention
+from ....common import MindNLPTestCase
 
-
-class TestAdditiveAttention(unittest.TestCase):
+class TestAdditiveAttention(MindNLPTestCase):
     r"""
     Test module Additive Attention
     """

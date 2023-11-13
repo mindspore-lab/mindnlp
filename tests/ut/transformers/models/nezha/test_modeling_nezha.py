@@ -17,7 +17,6 @@ Test Nezha
 """
 import gc
 import os
-import unittest
 import random
 import numpy as np
 
@@ -49,8 +48,10 @@ from mindnlp.transformers.models.nezha.nezha import (NezhaConfig,
                                   NezhaForTokenClassification,
                                   NezhaForQuestionAnswering)
 
+from .....common import MindNLPTestCase
 
-class TestNezhaBasicModule(unittest.TestCase):
+
+class TestNezhaBasicModule(MindNLPTestCase):
     r"""
     Test Nezha Basic Module
     """
@@ -197,7 +198,7 @@ class TestNezhaBasicModule(unittest.TestCase):
         assert outputs[1].shape == (4, 16, 2)
 
 
-class TestModelingNezha(unittest.TestCase):
+class TestModelingNezha(MindNLPTestCase):
     r"""
     Test Nezha Model
     """

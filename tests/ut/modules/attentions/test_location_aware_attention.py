@@ -16,15 +16,16 @@
 # pylint: disable=import-outside-toplevel
 """Test Location Aware Attention"""
 
-import unittest
 import numpy as np
 
 import mindspore
 
 from mindspore import Tensor, context
 from mindnlp.modules import LocationAwareAttention
+from ....common import MindNLPTestCase
 
-class TestLocationAwareAttention(unittest.TestCase):
+
+class TestLocationAwareAttention(MindNLPTestCase):
     r"""
     Test module Location Aware Attention
     """
