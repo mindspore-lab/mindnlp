@@ -1290,7 +1290,8 @@ def convert_torch_to_mindspore(pth_file):
                 key = key.replace('.weight', '.gamma')
             if '.bias' in key:
                 key = key.replace('.bias', '.beta')
-        if 'embeddings' in key or 'embedding' in key:
+        if 'embeddings' in key or 'embedding' in key and \
+            'embedding_hidden_mapping_in' not in key: # for albert
             key = key.replace('weight', 'embedding_table')
         ms_ckpt.append({'name': key, 'data': Tensor(value.numpy())})
 

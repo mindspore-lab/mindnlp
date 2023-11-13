@@ -490,7 +490,8 @@ class SpmConverter(Converter):
 
         if model_type == 1:
             tokenizer = Tokenizer(Unigram(vocab_scores, unk_id))
-        elif model_type == 2:
+            return tokenizer
+        if model_type == 2:
             _, merges = SentencePieceExtractor(self.original_tokenizer.vocab_file).extract()
             bpe_vocab = {word: i for i, (word, score) in enumerate(vocab_scores)}
             tokenizer = Tokenizer(
@@ -505,7 +506,6 @@ class SpmConverter(Converter):
         raise RuntimeError(
             "You're trying to run a `Unigram` model but you're file was trained with a different algorithm"
         )
-
 
     def normalizer(self, proto):
         precompiled_charsmap = proto.normalizer_spec.precompiled_charsmap

@@ -44,7 +44,7 @@ from mindnlp.transformers import (
 )
 from mindnlp.utils import logging, require_mindspore, is_mindspore_available
 from mindnlp.transformers.tokenization_utils import AddedToken
-from mindnlp.utils.testing_utils import get_tests_dir, check_json_file_has_correct_format
+from mindnlp.utils.testing_utils import get_tests_dir, check_json_file_has_correct_format, run_test_in_subprocess
 
 if is_mindspore_available():
     from mindspore import nn
