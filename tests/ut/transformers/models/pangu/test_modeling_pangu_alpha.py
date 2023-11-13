@@ -16,7 +16,6 @@
 """Test PanGu_Alpha"""
 import gc
 import os
-import unittest
 import pytest
 import numpy as np
 
@@ -26,8 +25,10 @@ from mindnlp.transformers import PanGuAlphaConfig
 from mindnlp.transformers.models.pangu.pangu_alpha import PanGuAlphaAttention, PanGuAlphaMLP, PanGuAlphaBlock, \
                                         PanGuAlphaModel, PanGuAlphaForCausalLM
 
+from .....common import MindNLPTestCase
 
-class TestModelingPanGuAlpha(unittest.TestCase):
+
+class TestModelingPanGuAlpha(MindNLPTestCase):
     """
     Test PanGu-Alpha
     """

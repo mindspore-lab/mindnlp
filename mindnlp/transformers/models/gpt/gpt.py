@@ -32,8 +32,8 @@ from mindspore.common.initializer import initializer, Normal
 from mindnlp._legacy.nn import Dropout, Matmul
 from mindnlp._legacy.functional import split, softmax, arange
 from .gpt_config import GPTConfig
-from ...modeling_utils import PreTrainedModel
-from ...ms_utils import Conv1D, SequenceSummary, prune_conv1d_layer, find_pruneable_heads_and_indices
+from ...modeling_utils import PreTrainedModel, SequenceSummary
+from ...ms_utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
 from ...activations import ACT2FN
 
 

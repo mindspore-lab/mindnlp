@@ -29,9 +29,10 @@ from mindspore import Tensor
 from mindnlp import ms_jit
 from mindnlp.transformers.models.gpt.gpt import GPTConfig, GPTModel, MLP, Attention, Block, \
     GPTLMHeadModel, GPTDoubleHeadsModel, GPTForSequenceClassification
+from .....common import MindNLPTestCase
 
 @ddt
-class TestModelingGPT(unittest.TestCase):
+class TestModelingGPT(MindNLPTestCase):
     r"""
     Test GPT
     """

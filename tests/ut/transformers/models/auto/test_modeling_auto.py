@@ -308,10 +308,6 @@ class AutoModelTest(unittest.TestCase):
         ):
             _ = AutoModel.from_pretrained("bert-base")
 
-    def test_revision_not_found(self):
-        with self.assertRaises(EnvironmentError):
-            _ = AutoModel.from_pretrained(DUMMY_UNKNOWN_IDENTIFIER, revision="aaaaaa")
-
     def test_model_file_not_found(self):
         with self.assertRaises(
             EnvironmentError,

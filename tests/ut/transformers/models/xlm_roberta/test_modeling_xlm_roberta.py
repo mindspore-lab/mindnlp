@@ -16,15 +16,14 @@
 # ============================================================================
 """test xlm roberta"""
 
-import unittest
 import pytest
 
 import numpy as np
 import mindspore
 from mindnlp.transformers import XLMRobertaModel
+from .....common import MindNLPTestCase
 
-
-class XLMRobertaModelIntegrationTest(unittest.TestCase):
+class XLMRobertaModelIntegrationTest(MindNLPTestCase):
     """XLMRobertaModelIntegrationTest"""
     @pytest.mark.download
     def test_xlm_roberta_base(self):

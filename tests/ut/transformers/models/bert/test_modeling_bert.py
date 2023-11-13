@@ -26,6 +26,7 @@ from mindnlp.utils import logging
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask
+from .....common import MindNLPTestCase
 
 
 if is_mindspore_available():
@@ -431,7 +432,7 @@ class BertModelTester:
 
 
 @require_mindspore
-class BertModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
+class BertModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
     all_model_classes = (
         (
             BertModel,
@@ -605,7 +606,7 @@ class BertModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
 
 @require_mindspore
-class BertModelIntegrationTest(unittest.TestCase):
+class BertModelIntegrationTest(MindNLPTestCase):
 
     def test_inference_no_head_absolute_embedding(self):
         model = BertModel.from_pretrained("bert-base-uncased")

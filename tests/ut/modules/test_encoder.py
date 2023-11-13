@@ -15,8 +15,6 @@
 """
 Test Encoder
 """
-
-import unittest
 import numpy as np
 
 import mindspore
@@ -25,8 +23,9 @@ from mindspore import context
 from mindspore import Tensor
 
 from mindnlp.modules import RNNEncoder, CNNEncoder, StaticGRU, StaticLSTM
+from ...common import MindNLPTestCase
 
-class TestLSTMEncoder(unittest.TestCase):
+class TestLSTMEncoder(MindNLPTestCase):
     r"""
     Test module LSTM Encoder
     """
@@ -62,7 +61,7 @@ class TestLSTMEncoder(unittest.TestCase):
         assert mask.shape == (8, 16)
 
 
-class TestGRUEncoder(unittest.TestCase):
+class TestGRUEncoder(MindNLPTestCase):
     r"""
     Test module GRU Encoder
     """
@@ -96,7 +95,7 @@ class TestGRUEncoder(unittest.TestCase):
         assert hiddens_n.shape == (2, 8, 16)
         assert mask.shape == (8, 16)
 
-class TestCNNEncoder(unittest.TestCase):
+class TestCNNEncoder(MindNLPTestCase):
     r"""
     Test module CNN Encoder
     """

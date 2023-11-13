@@ -14,8 +14,6 @@
 # limitations under the License.
 # ============================================================================
 """Test Cosine Attention"""
-
-import unittest
 import numpy as np
 
 import mindspore
@@ -25,9 +23,9 @@ from mindspore import Tensor
 from mindspore import context
 
 from mindnlp.modules import CosineAttention
+from ....common import MindNLPTestCase
 
-
-class TestCosineAttention(unittest.TestCase):
+class TestCosineAttention(MindNLPTestCase):
     r"""
     Test module Cosine Attention
     """

@@ -24,9 +24,10 @@ import mindspore
 from mindspore import Tensor
 
 from mindnlp.transformers.models.gpt_bigcode import gpt_bigcode_config, gpt_bigcode, gpt_bigcode_tokenizer
+from .....common import MindNLPTestCase
 
 
-class TestModelingGPTBigCode(unittest.TestCase):
+class TestModelingGPTBigCode(MindNLPTestCase):
     r"""
     Test GPTBigCode
     """

@@ -25,9 +25,10 @@ from mindspore import Tensor
 from mindnlp.transformers.models.gpt2 import modeling_gpt2
 
 from mindnlp.transformers.models.gpt2 import gpt2_config
+from .....common import MindNLPTestCase
 
 
-class TestModelingGPT2(unittest.TestCase):
+class TestModelingGPT2(MindNLPTestCase):
     r"""
     Test GPT2
     """

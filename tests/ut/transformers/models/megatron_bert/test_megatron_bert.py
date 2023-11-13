@@ -5,9 +5,10 @@ import numpy as np
 import mindspore
 from mindspore import Tensor
 from mindnlp.transformers.models.megatron_bert import megatron_bert
+from .....common import MindNLPTestCase
 
 
-class TestModelingMegatronBert(unittest.TestCase):
+class TestModelingMegatronBert(MindNLPTestCase):
     """
     test megatronBert
     """

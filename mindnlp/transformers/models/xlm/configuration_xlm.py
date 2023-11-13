@@ -1,7 +1,6 @@
 # coding=utf-8
 # Copyright 2019-present, Facebook, Inc and the HuggingFace Inc. team.
-# Copyright 2023 Huawei Technologies Co., Ltd
-
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,21 +12,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=too-many-instance-attributes
 """ XLM configuration"""
+from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
 
-XLM_SUPPORT_LIST = [
-    "xlm-clm-ende-1024",
-    "xlm-mlm-en-2048", 
-    "xlm-mlm-xnli15-1024", 
-    "xlm-mlm-100-1280", 
-    "xlm-mlm-enfr-1024",
-    "xlm-mlm-tlm-xnli15-1024",
-    "xlm-clm-enfr-1024",
-    "xlm-mlm-17-1280",
-    "xlm-mlm-enro-1024",
-]
+
+logger = logging.get_logger(__name__)
+
+XLM_PRETRAINED_CONFIG_ARCHIVE_MAP = {
+    "xlm-mlm-en-2048": "https://huggingface.co/xlm-mlm-en-2048/resolve/main/config.json",
+    "xlm-mlm-ende-1024": "https://huggingface.co/xlm-mlm-ende-1024/resolve/main/config.json",
+    "xlm-mlm-enfr-1024": "https://huggingface.co/xlm-mlm-enfr-1024/resolve/main/config.json",
+    "xlm-mlm-enro-1024": "https://huggingface.co/xlm-mlm-enro-1024/resolve/main/config.json",
+    "xlm-mlm-tlm-xnli15-1024": "https://huggingface.co/xlm-mlm-tlm-xnli15-1024/resolve/main/config.json",
+    "xlm-mlm-xnli15-1024": "https://huggingface.co/xlm-mlm-xnli15-1024/resolve/main/config.json",
+    "xlm-clm-enfr-1024": "https://huggingface.co/xlm-clm-enfr-1024/resolve/main/config.json",
+    "xlm-clm-ende-1024": "https://huggingface.co/xlm-clm-ende-1024/resolve/main/config.json",
+    "xlm-mlm-17-1280": "https://huggingface.co/xlm-mlm-17-1280/resolve/main/config.json",
+    "xlm-mlm-100-1280": "https://huggingface.co/xlm-mlm-100-1280/resolve/main/config.json",
+}
+
 
 class XLMConfig(PretrainedConfig):
     """
@@ -140,6 +144,7 @@ class XLMConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
+
     model_type = "xlm"
     attribute_map = {
         "hidden_size": "emb_dim",
@@ -147,15 +152,6 @@ class XLMConfig(PretrainedConfig):
         "num_hidden_layers": "n_layers",
         "n_words": "vocab_size",  # For backward compatibility
     }
-    def __setattr__(self, key, value):
-        if key in super().__getattribute__("attribute_map"):
-            key = super().__getattribute__("attribute_map")[key]
-        super().__setattr__(key, value)
-
-    def __getattribute__(self, key):
-        if key != "attribute_map" and key in super().__getattribute__("attribute_map"):
-            key = super().__getattribute__("attribute_map")[key]
-        return super().__getattribute__(key)
 
     def __init__(
         self,

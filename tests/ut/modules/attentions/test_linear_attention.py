@@ -25,9 +25,9 @@ from mindspore import Tensor
 from mindspore import context
 
 from mindnlp.modules import LinearAttention
+from ....common import MindNLPTestCase
 
-
-class TestLinearAttention(unittest.TestCase):
+class TestLinearAttention(MindNLPTestCase):
     r"""
     Test module Linear Attention
     """

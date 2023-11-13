@@ -13,16 +13,16 @@
 # limitations under the License.
 # ============================================================================
 """Test Bloom"""
-import unittest
 import pytest
 import numpy as np
 
 from mindspore import Tensor
 import mindnlp
 from mindnlp.transformers import BloomConfig, BloomModel
+from .....common import MindNLPTestCase
 
 
-class TestModelingBloom(unittest.TestCase):
+class TestModelingBloom(MindNLPTestCase):
     r"""
     Test Bloom
     """

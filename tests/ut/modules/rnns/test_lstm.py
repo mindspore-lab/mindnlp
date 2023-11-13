@@ -20,9 +20,9 @@ import mindspore
 import numpy as np
 from mindspore import Tensor, nn
 from mindnlp.modules import StaticLSTM
+from ....common import MindNLPTestCase
 
-
-class TestLSTM(unittest.TestCase):
+class TestLSTM(MindNLPTestCase):
     """test lstm"""
     def setUp(self):
         self.input_size, self.hidden_size = 16, 32

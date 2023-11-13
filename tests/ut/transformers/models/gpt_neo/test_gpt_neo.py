@@ -22,9 +22,10 @@ import mindspore
 
 from mindspore import Tensor
 from mindnlp.transformers.models.gpt_neo import gpt_neo, gpt_neo_config
+from .....common import MindNLPTestCase
 
 
-class TestModelingGPTNeo(unittest.TestCase):
+class TestModelingGPTNeo(MindNLPTestCase):
     """
     Test GPTNeo
     """

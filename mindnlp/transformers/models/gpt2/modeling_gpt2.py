@@ -32,8 +32,8 @@ from mindnlp._legacy.functional import split, where, arange, softmax
 from mindnlp._legacy.nn import Dropout, Matmul
 from .gpt2_config import GPT2Config
 from ...activations import ACT2FN
-from ...modeling_utils import PreTrainedModel
-from ...ms_utils import SequenceSummary, Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
+from ...modeling_utils import PreTrainedModel, SequenceSummary
+from ...ms_utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
 
 logger = logging.get_logger(__name__)
 
