@@ -331,13 +331,13 @@ def weighted_average(input_tensor: mindspore.Tensor, weights: Optional[mindspore
     else:
         return input_tensor.mean(dim=dim)
 
-#todo
+
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.nll
-def nll(input: torch.distributions.Distribution, target: mindspore.Tensor) -> mindspore.Tensor:
+def nll(input: nn.probability.distribution.distribution, target: mindspore.Tensor) -> mindspore.Tensor:
     """
     Computes the negative log likelihood loss from input distribution with respect to target.
     """
-    return -input.log_prob(target)
+    return -input.log_prob(target)#todo
 
 
 # Copied from transformers.models.marian.modeling_marian.MarianSinusoidalPositionalEmbedding with Marian->Autoformer
@@ -410,7 +410,7 @@ class AutoformerSeriesDecompositionLayer(nn.Cell):
         x_padded = ops.cat([front, x, end], dim=1)
 
         # calculate the trend and seasonal part of the series
-        x_trend = self.avg(x_padded.permute(0, 2, 1)).permute(0, 2, 1)
+        x_trend = self.avg(x_padded.transpose(0, 2, 1)).transpose(0, 2, 1)
         x_seasonal = x - x_trend
         return x_seasonal, x_trend
 
@@ -472,7 +472,7 @@ class AutoformerAttention(nn.Cell):
         self.autocorrelation_factor = autocorrelation_factor
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2).contiguous()
 
     def construct(
         self,
@@ -646,7 +646,7 @@ class AutoformerAttention(nn.Cell):
             )
 
         attn_output = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim)
-        attn_output = attn_output.transpose(1, 2)
+        attn_output = attn_output.swapaxes(1, 2)
 
         # Use the `embed_dim` from the config (stored in the class) rather than `hidden_state` because `attn_output` can be
         # partitioned across GPUs when using tensor-parallelism.
@@ -866,7 +866,8 @@ class AutoformerDecoderLayer(nn.Cell):
             residual_trend = trend1 + trend2 + trend3
         else:
             residual_trend = trend1 + trend3
-        residual_trend = self.trend_projection(residual_trend.permute(0, 2, 1)).transpose(1, 2)
+        residual_trend = self.trend_projection(
+            residual_trend.transpose(0, 2, 1)).swapaxes(1, 2)
         outputs = ((hidden_states, residual_trend),)
 
         if output_attentions:
