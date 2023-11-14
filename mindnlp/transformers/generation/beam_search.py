@@ -212,7 +212,7 @@ class BeamSearchScorer(BeamScorer):
                         beam_index = None
 
                     self._beam_hyps[batch_group_idx].add(
-                        input_ids[batch_beam_idx].clone(),
+                        input_ids[batch_beam_idx].copy(),
                         next_score.asnumpy().item(),
                         beam_indices=beam_index,
                     )
@@ -326,7 +326,6 @@ class BeamSearchScorer(BeamScorer):
             decoded[i, : sent_lengths[i]] = hypo
 
             if indices is not None:
-                print(best_idx)
                 indices[i, : len(best_idx)] = ops.stack(best_idx)
 
             if sent_lengths[i] < sent_max_len:

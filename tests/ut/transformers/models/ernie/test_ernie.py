@@ -34,10 +34,10 @@ from mindnlp.transformers.models.ernie.ernie import (
     ErniePretrainingHeads
 )
 
-import mindnlp
+from .....common import MindNLPTestCase
 
 
-class TestModelingErnie(unittest.TestCase):
+class TestModelingErnie(MindNLPTestCase):
     r"""
     Test Ernie
     """

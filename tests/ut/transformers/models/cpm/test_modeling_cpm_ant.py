@@ -19,9 +19,10 @@ import numpy as np
 from mindspore import Tensor
 import mindnlp
 from mindnlp.transformers import CpmAntModel, CpmAntForCausalLM, CpmAntConfig
+from .....common import MindNLPTestCase
 
 
-class TestModelingCpmAnt(unittest.TestCase):
+class TestModelingCpmAnt(MindNLPTestCase):
     r"""
     Test Cpm Ant
     """

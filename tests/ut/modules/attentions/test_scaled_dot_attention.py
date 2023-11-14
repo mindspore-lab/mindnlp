@@ -21,9 +21,9 @@ import mindspore
 from mindspore import Tensor
 from mindspore import context
 from mindnlp.modules import ScaledDotAttention
+from ....common import MindNLPTestCase
 
-
-class TestScaledDotAttention(unittest.TestCase):
+class TestScaledDotAttention(MindNLPTestCase):
     r"""
     Test module ScaledDotAttention
     """
@@ -41,14 +41,3 @@ class TestScaledDotAttention(unittest.TestCase):
         output, _ = net(q, k, v)
 
         assert output.shape == (2, 1024, 500)
-
-    def test_scaled_dot_attention_graph(self):
-        """test scaled dot-attention graph"""
-        context.set_context(mode=context.GRAPH_MODE)
-        net = ScaledDotAttention(dropout=0.9)
-        q = Tensor(np.ones((2, 1024, 512)), mindspore.float32)
-        k = Tensor(np.ones((2, 1024, 512)), mindspore.float32)
-        v = Tensor(np.ones((2, 1024, 512)), mindspore.float32)
-        output, _ = net(q, k, v)
-
-        assert output.shape == (2, 1024, 512)

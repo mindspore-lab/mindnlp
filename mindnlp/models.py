@@ -17,10 +17,11 @@
 """
 Models folder compatible
 """
-from mindspore import log as logger
 from . import transformers
 from .transformers import *
+from .utils import logging
 
+logger = logging.get_logger(__name__)
 logger.warning('`mindnlp.models` will be deprecated, please use `mindspore.transformers` instead.')
 
 __all__ = transformers.__all__

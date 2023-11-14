@@ -22,7 +22,7 @@ import warnings
 from typing import Union
 from mindspore.dataset import TextBaseDataset
 from mindnlp.configs import DEFAULT_ROOT
-from mindnlp.utils import cached_file
+from mindnlp.utils.download import get_from_cache
 
 class Vocab:
     r"""
@@ -248,7 +248,7 @@ class Vocab:
 
         cache_dir = os.path.join(root, "vocabs")
         download_file_name = re.sub(r".+/", "", url)
-        path, _ = cached_file(filename=download_file_name, cache_dir=cache_dir, url=url)
+        path = get_from_cache(download_file_name=download_file_name, cache_dir=cache_dir, url=url)
 
         with open(path, 'r', encoding='utf-8') as file:
             file.readline()

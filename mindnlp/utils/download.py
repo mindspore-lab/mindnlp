@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=C0103
+# pylint: disable=invalid-name
+# pylint: disable=unused-argument
+# pylint: disable=simplifiable-if-expression
+# pylint: disable=missing-function-docstring
+# pylint: disable=too-many-return-statements
+# pylint: disable=unspecified-encoding
 """
 Download functions
 """
@@ -24,16 +29,52 @@ import re
 import json
 import types
 import functools
-from typing import Union, Optional
+import tempfile
+from typing import Union, Optional, Dict, Any
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
-import requests
 from tqdm.autonotebook import tqdm
-from requests.exceptions import ProxyError, SSLError
+import requests
+from requests.exceptions import ProxyError, SSLError, HTTPError
 
-from mindnlp.configs import DEFAULT_ROOT
-from .errors import ModelNotFoundError
+from mindnlp.configs import DEFAULT_ROOT, ENV_VARS_TRUE_VALUES, MINDNLP_CACHE, REPO_TYPES
+from .errors import (
+    EntryNotFoundError,
+    LocalEntryNotFoundError,
+    RepositoryNotFoundError,
+    ModelNotFoundError
+)
+from . import logging
 
+logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
+
+_CACHED_NO_EXIST = object()
+_CACHED_NO_EXIST_T = Any
+
+_is_offline_mode = True if os.environ.get("TRANSFORMERS_OFFLINE", "0").upper() in ENV_VARS_TRUE_VALUES else False
+
+def is_offline_mode():
+    return _is_offline_mode
+
+def is_remote_url(url_or_filename):
+    parsed = urlparse(url_or_filename)
+    return parsed.scheme in ("http", "https")
+
+def download_url(url, proxies=None):
+    """
+    Downloads a given url in a temporary file. This function is not safe to use in multiple processes. Its only use is
+    for deprecated behavior allowing to download config/models with a single url instead of using the Hub.
+
+    Args:
+        url (`str`): The url of the file to download.
+        proxies (`Dict[str, str]`, *optional*):
+            A dictionary of proxy servers to use by protocol or endpoint, e.g., `{'http': 'foo.bar:3128',
+            'http://hostname': 'foo.bar:4012'}.` The proxies are used on each request.
+
+    Returns:
+        `str`: The location of the temporary file where the url was downloaded.
+    """
+    return http_get(url, tempfile.gettempdir(), download_file_name='tmp_' + url.split('/')[-1], proxies=proxies)
 
 def copy_func(f):
     """Returns a copy of a function f."""
@@ -127,14 +168,14 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None)
         if retry_cnt < retry_limit:
             retry_cnt += 1
         else:
-            raise RuntimeError(
+            raise HTTPError(
                 f"Download from {url} failed. " "Retry limit reached")
 
         req = requests.get(url, stream=True, timeout=10, proxies=proxies)
 
         status = req.status_code
         if status == 404:
-            raise ModelNotFoundError(f"Can not found url: {url}")
+            raise EntryNotFoundError(f"Can not found url: {url}")
 
         tmp_file_path = file_path + "_tmp"
         total_size = req.headers.get("content-length")
@@ -223,120 +264,223 @@ def get_filepath(path: str):
 
 
 def cached_file(
+    path_or_repo_id: Union[str, os.PathLike],
     filename: str,
-    cache_dir: str = None,
-    url: str = None,
-    md5sum=None,
-    download_file_name=None,
-    proxies=None,
+    cache_dir: Optional[Union[str, os.PathLike]] = None,
+    force_download: bool = False,
+    resume_download: bool = False,
+    proxies: Optional[Dict[str, str]] = None,
+    local_files_only: bool = False,
+    subfolder: str = "",
+    repo_type: Optional[str] = None,
+    user_agent: Optional[Union[str, Dict[str, str]]] = None,
+    endpoint: str = None,
+    _raise_exceptions_for_missing_entries: bool = True,
+    _raise_exceptions_for_connection_errors: bool = True,
 ):
-    r"""
-    If there is the file in cache_dir, return the path; if there is no such file, use the url to download.
+    """
+    Tries to locate a file in a local folder and repo, downloads and cache it if necessary.
 
     Args:
-        filename (str): The name of the required dataset file.
-        cache_dir (str): The path of save the file.
-        url (str): The url of the required dataset file.
-        md5sum (str): The true md5sum of download file.
-        download_file_name(str): The name of the downloaded file.\
-            (This parameter is required if the end of the link is not the downloaded file name.)
-        proxies (dict): a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
+        path_or_repo_id (`str` or `os.PathLike`):
+            This can be either:
+
+            - a string, the *model id* of a model repo on huggingface.co.
+            - a path to a *directory* potentially containing the file.
+        filename (`str`):
+            The name of the file to locate in `path_or_repo`.
+        cache_dir (`str` or `os.PathLike`, *optional*):
+            Path to a directory in which a downloaded pretrained model configuration should be cached if the standard
+            cache should not be used.
+        force_download (`bool`, *optional*, defaults to `False`):
+            Whether or not to force to (re-)download the configuration files and override the cached versions if they
+            exist.
+        resume_download (`bool`, *optional*, defaults to `False`):
+            Whether or not to delete incompletely received file. Attempts to resume the download if such a file exists.
+        proxies (`Dict[str, str]`, *optional*):
+            A dictionary of proxy servers to use by protocol or endpoint, e.g., `{'http': 'foo.bar:3128',
+            'http://hostname': 'foo.bar:4012'}.` The proxies are used on each request.
+        token (`str` or *bool*, *optional*):
+            The token to use as HTTP bearer authorization for remote files. If `True`, will use the token generated
+            when running `huggingface-cli login` (stored in `~/.huggingface`).
+        local_files_only (`bool`, *optional*, defaults to `False`):
+            If `True`, will only try to load the tokenizer configuration from local files.
+        subfolder (`str`, *optional*, defaults to `""`):
+            In case the relevant files are located inside a subfolder of the model repo on huggingface.co, you can
+            specify the folder name here.
+        repo_type (`str`, *optional*):
+            Specify the repo type (useful when downloading from a space for instance).
+
+    <Tip>
+
+    Passing `token=True` is required when you want to use a private model.
+
+    </Tip>
 
     Returns:
-        - str, If `path` is a folder containing a file, return `{path}\{filename}`;
-          if `path` is a folder containing multiple files or a single file, return `path`.
-
-    Raises:
-        TypeError: If `filename` is not a string.
-        TypeError: If `cache_dir` is not a string.
-        TypeError: If `url` is not a string.
-        RuntimeError: If `filename` is None.
+        `Optional[str]`: Returns the resolved file (to the cache folder if downloaded from a repo).
 
     Examples:
-        >>> filename = 'aclImdb_v1'
-        >>> path, filename = cached_file(filename)
-        >>> print(path, filename)
-        '{home}\.text' 'aclImdb_v1.tar.gz'
 
-    """
-    if cache_dir is None:
-        cache_dir = get_cache_path()
+    ```python
+    # Download a model weight from the Hub and cache it.
+    model_weights_file = cached_file("bert-base-uncased", "pytorch_model.bin")
+    ```"""
+    # Private arguments
+    #     _raise_exceptions_for_missing_entries: if False, do not raise an exception for missing entries but return
+    #         None.
+    #     _raise_exceptions_for_connection_errors: if False, do not raise an exception for connection errors but return
+    #         None.
+    #     _commit_hash: passed when we are chaining several calls to various files (e.g. when loading a tokenizer or
+    #         a pipeline). If files are cached for this commit hash, avoid calls to head and get from the cache.
+    if is_offline_mode() and not local_files_only:
+        logger.info("Offline mode: forcing local_files_only=True")
+        local_files_only = True
+    if subfolder is None:
+        subfolder = ""
 
-    path = cached_path(
-        filename_or_url=url,
-        cache_dir=cache_dir,
-        md5sum=md5sum,
-        download_file_name=download_file_name,
-        proxies=proxies,
-    )
-
-    return path, filename
-
-
-def cached_path(
-    filename_or_url: str,
-    cache_dir: str = None,
-    md5sum=None,
-    download_file_name=None,
-    proxies=None,
-):
-    r"""
-    If there is the file in cache_dir, return the path; if there is no such file, use the url to download.
-
-    Args:
-        filename_or_url (str): The name or url of the required file .
-        cache_dir (str): The path of save the file.
-        folder_name (str): The additional folder to which the dataset is cached.(under the `cache_dir`)
-        md5sum (str): The true md5sum of download file.
-        download_file_name(str): The name of the downloaded file.\
-            (This parameter is required if the end of the link is not the downloaded file name.)
-        proxies (dict): a dict to identify proxies,for example: {"https": "https://127.0.0.1:7890"}.
-
-    Returns:
-        - str, If `path` is a folder containing a file, return `{path}\{filename}`;
-          if `path` is a folder containing multiple files or a single file, return `path`.
-
-    Raises:
-        TypeError: If `path` is not a string.
-        RuntimeError: If `path` is None.
-
-    Examples:
-        >>> path = "https://mindspore-website.obs.myhuaweicloud.com/notebook/datasets/aclImdb_v1.tar.gz"
-        >>> path, filename = cached_path(path)
-        >>> print(path, filename)
-        '{home}\.text\aclImdb_v1.tar.gz' 'aclImdb_v1.tar.gz'
-
-    """
-    parsed = urlparse(filename_or_url)
-
-    if parsed.scheme == "":
-        if os.path.exists(filename_or_url):
-            return filename_or_url
+    path_or_repo_id = str(path_or_repo_id)
+    full_filename = os.path.join(subfolder, filename)
+    if os.path.isdir(path_or_repo_id):
+        resolved_file = os.path.join(os.path.join(path_or_repo_id, subfolder), filename)
+        if not os.path.isfile(resolved_file):
+            if _raise_exceptions_for_missing_entries:
+                raise EnvironmentError(
+                    f"{path_or_repo_id} does not appear to have a file named {full_filename}."
+                )
+            return None
+        return resolved_file
 
     if cache_dir is None:
-        dataset_cache = get_cache_path()
-    else:
-        dataset_cache = cache_dir
+        cache_dir = MINDNLP_CACHE
+    if isinstance(cache_dir, Path):
+        cache_dir = str(cache_dir)
 
-    if (
-        parsed.scheme == ""
-        and os.path.exists(os.path.join(dataset_cache, filename_or_url))
-    ):
-        return os.path.join(dataset_cache, filename_or_url)
-
-    if parsed.scheme in ("http", "https"):
-        return get_from_cache(
-            filename_or_url,
-            dataset_cache,
-            md5sum=md5sum,
-            download_file_name=download_file_name,
-            proxies=proxies,
+    if not force_download:
+        # If the file is cached under that commit hash, we return it directly.
+        resolved_file = try_to_load_from_cache(
+            path_or_repo_id, full_filename, cache_dir=cache_dir, repo_type=repo_type
         )
-    if parsed.scheme == "":
-        raise FileNotFoundError(
-            f"file {filename_or_url} not found in {dataset_cache}.")
-    raise ValueError(
-        f"unable to parse {filename_or_url} as a URL or as a local path")
+        if resolved_file is not None:
+            if resolved_file is not object():
+                return resolved_file
+            if not _raise_exceptions_for_missing_entries:
+                return None
+            raise EnvironmentError(f"Could not locate {full_filename} inside {path_or_repo_id}.")
+
+    try:
+        # Load from URL or cache if already cached
+        resolved_file = download(
+            path_or_repo_id,
+            filename,
+            subfolder=None if len(subfolder) == 0 else subfolder,
+            repo_type=repo_type,
+            cache_dir=cache_dir,
+            user_agent=user_agent,
+            force_download=force_download,
+            proxies=proxies,
+            resume_download=resume_download,
+            local_files_only=local_files_only,
+            endpoint=endpoint
+        )
+    except RepositoryNotFoundError as e:
+        raise EnvironmentError(
+            f"{path_or_repo_id} is not a local folder and is nost a valid model identifier "
+        ) from e
+    except LocalEntryNotFoundError as e:
+        # We try to see if we have a cached version (not up to date):
+        resolved_file = try_to_load_from_cache(path_or_repo_id, full_filename, cache_dir=cache_dir)
+        if resolved_file is not None and resolved_file != _CACHED_NO_EXIST:
+            return resolved_file
+        if not _raise_exceptions_for_missing_entries or not _raise_exceptions_for_connection_errors:
+            return None
+        raise EnvironmentError(
+            f"We couldn't connect to '{endpoint.format(path_or_repo_id, filename)}' to load this file, couldn't find it in the"
+            f" cached files and it looks like {path_or_repo_id} is not the path to a directory containing a file named"
+            f" {full_filename}.\nCheckout your internet connection or see how to run the library in offline mode at"
+        ) from e
+    except EntryNotFoundError as e:
+        if not _raise_exceptions_for_missing_entries:
+            return None
+        raise EnvironmentError(
+            f"{path_or_repo_id} does not appear to have a file named {full_filename}. Checkout "
+            f"'{endpoint.format(path_or_repo_id, full_filename)}' for available files."
+        ) from e
+    except HTTPError as err:
+        # First we try to see if we have a cached version (not up to date):
+        resolved_file = try_to_load_from_cache(path_or_repo_id, full_filename, cache_dir=cache_dir)
+        if resolved_file is not None and resolved_file != object():
+            return resolved_file
+        if not _raise_exceptions_for_connection_errors:
+            return None
+
+        raise EnvironmentError(f"There was a specific connection error when trying to load {path_or_repo_id}:\n{err}") from err
+
+    return resolved_file
+
+
+def download(
+    repo_id: str,
+    filename: str,
+    *,
+    subfolder: Optional[str] = None,
+    repo_type: Optional[str] = None,
+    cache_dir: Union[str, Path, None] = None,
+    local_dir: Union[str, Path, None] = None,
+    user_agent: Union[Dict, str, None] = None,
+    force_download: bool = False,
+    proxies: Optional[Dict] = None,
+    resume_download: bool = False,
+    local_files_only: bool = False,
+    endpoint: Optional[str] = None,
+) -> str:
+    """Download a given file if it's not already present in the local cache.
+    """
+    if cache_dir is None:
+        cache_dir = MINDNLP_CACHE
+    if isinstance(cache_dir, Path):
+        cache_dir = str(cache_dir)
+    if isinstance(local_dir, Path):
+        local_dir = str(local_dir)
+
+    if subfolder == "":
+        subfolder = None
+    if subfolder is not None:
+        # This is used to create a URL, and not a local path, hence the forward slash.
+        filename = f"{subfolder}/{filename}"
+
+    if repo_type is None:
+        repo_type = "model"
+    if repo_type not in REPO_TYPES:
+        raise ValueError(f"Invalid repo type: {repo_type}. Accepted repo types are: {str(REPO_TYPES)}")
+
+    storage_folder = os.path.join(cache_dir, repo_type, repo_id)
+    os.makedirs(storage_folder, exist_ok=True)
+
+    # cross platform transcription of filename, to be used as a local file path.
+    relative_filename = os.path.join(*filename.split("/"))
+    if os.name == "nt":
+        if relative_filename.startswith("..\\") or "\\..\\" in relative_filename:
+            raise ValueError(
+                f"Invalid filename: cannot handle filename '{relative_filename}' on Windows. Please ask the repository"
+                " owner to rename this file."
+            )
+
+    pointer_path = os.path.join(storage_folder, relative_filename)
+    if os.path.exists(pointer_path) and not force_download:
+        return pointer_path
+
+    url = build_download_url(repo_id, filename, repo_type=repo_type, endpoint=endpoint)
+    # check model whether exist
+    model_url = url[: url.rfind('/')].replace('resolve/main', '')
+
+    req = requests.get(model_url, timeout=10, proxies=proxies)
+    status = req.status_code
+    if status == 404:
+        raise RepositoryNotFoundError(f"Can not found model: {repo_id}")
+
+    pointer_path = http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies)
+    return pointer_path
 
 
 def match_file(filename: str, cache_dir: str) -> str:
@@ -432,9 +576,12 @@ def get_from_cache(
         return None
 
 def try_to_load_from_cache(
+    repo_id: str,
     filename: str,
     cache_dir: Union[str, Path, None] = None,
-) -> Optional[str]:
+    revision: Optional[str] = None,
+    repo_type: Optional[str] = None,
+) -> Union[str, _CACHED_NO_EXIST_T, None]:
     """
     Explores the cache to return the latest cached file for a given revision if found.
 
@@ -443,8 +590,15 @@ def try_to_load_from_cache(
     Args:
         cache_dir (`str` or `os.PathLike`):
             The folder where the cached files lie.
+        repo_id (`str`):
+            The ID of the repo on huggingface.co.
         filename (`str`):
             The filename to look for inside `repo_id`.
+        revision (`str`, *optional*):
+            The specific model version to use. Will default to `"main"` if it's not provided and no `commit_hash` is
+            provided either.
+        repo_type (`str`, *optional*):
+            The type of the repository. Will default to `"model"`.
 
     Returns:
         `Optional[str]` or `_CACHED_NO_EXIST`:
@@ -452,22 +606,78 @@ def try_to_load_from_cache(
             - The exact path to the cached file if it's found in the cache
             - A special value `_CACHED_NO_EXIST` if the file does not exist at the given commit hash and this fact was
               cached.
+
+    Example:
+
+    ```python
+    from huggingface_hub import try_to_load_from_cache, _CACHED_NO_EXIST
+
+    filepath = try_to_load_from_cache()
+    if isinstance(filepath, str):
+        # file exists and is cached
+        ...
+    elif filepath is _CACHED_NO_EXIST:
+        # non-existence of file is cached
+        ...
+    else:
+        # file is not cached
+        ...
+    ```
     """
-    if not os.path.isdir(cache_dir):
+    if revision is None:
+        revision = "main"
+    if repo_type is None:
+        repo_type = "model"
+    if repo_type not in REPO_TYPES:
+        raise ValueError(f"Invalid repo type: {repo_type}. Accepted repo types are: {str(REPO_TYPES)}")
+    if cache_dir is None:
+        cache_dir = MINDNLP_CACHE
+
+    object_id = repo_id.replace("/", "--")
+    repo_cache = os.path.join(cache_dir, f"{repo_type}s--{object_id}")
+    if not os.path.isdir(repo_cache):
         # No cache for this model
         return None
 
-    cached_file_ = os.path.join(cache_dir, filename)
+    refs_dir = os.path.join(repo_cache, "refs")
+    snapshots_dir = os.path.join(repo_cache, "snapshots")
+    no_exist_dir = os.path.join(repo_cache, ".no_exist")
 
-    return cached_file_ if os.path.isfile(cached_file_) else None
+    # Resolve refs (for instance to convert main to the associated commit sha)
+    if os.path.isdir(refs_dir):
+        revision_file = os.path.join(refs_dir, revision)
+        if os.path.isfile(revision_file):
+            with open(revision_file) as f:
+                revision = f.read()
+
+    # Check if file is cached as "no_exist"
+    if os.path.isfile(os.path.join(no_exist_dir, revision, filename)):
+        return _CACHED_NO_EXIST
+
+    # Check if revision folder exists
+    if not os.path.exists(snapshots_dir):
+        return None
+    cached_shas = os.listdir(snapshots_dir)
+    if revision not in cached_shas:
+        # No cache for this revision and we won't try to return a random revision
+        return None
+
+    # Check if file exists in cache
+    cache_file = os.path.join(snapshots_dir, revision, filename)
+    return cache_file if os.path.isfile(cache_file) else None
 
 
 def get_checkpoint_shard_files(
+    pretrained_model_name_or_path,
     index_filename,
     cache_dir=None,
-    url=None,
     force_download=False,
     proxies=None,
+    resume_download=False,
+    local_files_only=False,
+    user_agent=None,
+    subfolder="",
+    endpoint=None,
 ):
     """
     For a given model:
@@ -479,10 +689,11 @@ def get_checkpoint_shard_files(
     For the description of each arg, see [`PreTrainedModel.from_pretrained`]. `index_filename` is the full path to the
     index (downloaded and cached if `pretrained_model_name_or_path` is a model ID on the Hub).
     """
-    if not os.path.isfile(index_filename):
-        raise ValueError(f"Can't find a checkpoint index ({index_filename}) in {cache_dir}.")
 
-    with open(index_filename, "r", encoding='utf-8') as f:
+    if not os.path.isfile(index_filename):
+        raise ValueError(f"Can't find a checkpoint index ({index_filename}) in {pretrained_model_name_or_path}.")
+
+    with open(index_filename, "r") as f:
         index = json.loads(f.read())
 
     shard_filenames = sorted(set(index["weight_map"].values()))
@@ -491,31 +702,59 @@ def get_checkpoint_shard_files(
     sharded_metadata["weight_map"] = index["weight_map"].copy()
 
     # First, let's deal with local folder.
-    if os.path.isdir(cache_dir):
-        shard_filenames = [os.path.join(cache_dir, f) for f in shard_filenames]
+    if os.path.isdir(pretrained_model_name_or_path):
+        shard_filenames = [os.path.join(pretrained_model_name_or_path, subfolder, f) for f in shard_filenames]
         return shard_filenames, sharded_metadata
 
     # At this stage pretrained_model_name_or_path is a model identifier on the Hub
     cached_filenames = []
     # Check if the model is already cached or not. We only try the last checkpoint, this should cover most cases of
     # downloaded (if interrupted).
-    last_shard = try_to_load_from_cache(shard_filenames[-1], cache_dir=cache_dir)
+    last_shard = try_to_load_from_cache(
+        pretrained_model_name_or_path, shard_filenames[-1], cache_dir=cache_dir
+    )
     show_progress_bar = last_shard is None or force_download
     for shard_filename in tqdm(shard_filenames, desc="Downloading shards", disable=not show_progress_bar):
+        try:
             # Load from URL
-        cached_filename = cached_path(
-            '/'.join([url, shard_filename]),
-            cache_dir,
-            proxies=proxies
-        )
+            cached_filename = cached_file(
+                pretrained_model_name_or_path,
+                shard_filename,
+                cache_dir=cache_dir,
+                force_download=force_download,
+                proxies=proxies,
+                resume_download=resume_download,
+                local_files_only=local_files_only,
+                user_agent=user_agent,
+                subfolder=subfolder,
+                endpoint=endpoint
+            )
         # We have already dealt with RepositoryNotFoundError and RevisionNotFoundError when getting the index, so
         # we don't have to catch them here.
-        if cached_filename is None:
+        except EntryNotFoundError as exc:
             raise EnvironmentError(
-                f"{cache_dir} does not appear to have a file named {shard_filename} which is "
+                f"{pretrained_model_name_or_path} does not appear to have a file named {shard_filename} which is "
                 "required according to the checkpoint index."
-            )
+            ) from exc
+        except HTTPError as exc:
+            raise EnvironmentError(
+                f"We couldn't connect to '{endpoint}' to load {shard_filename}. You should try"
+                " again after checking your internet connection."
+            ) from exc
 
         cached_filenames.append(cached_filename)
 
     return cached_filenames, sharded_metadata
+
+
+def build_download_url(
+    repo_id: str,
+    filename: str,
+    *,
+    subfolder: Optional[str] = None,
+    repo_type: Optional[str] = None,
+    endpoint: Optional[str] = None,
+) -> str:
+    """Construct the URL of a file from the given information.
+    """
+    return endpoint.format(repo_id, filename)

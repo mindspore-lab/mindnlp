@@ -108,66 +108,66 @@ class TestTrainerRun(unittest.TestCase):
         self.metric = Accuracy()
         # 5. define trainer
 
-    @data(False)
-    def test_pure_trainer(self, jit):
+
+    def test_pure_trainer(self):
         """test_pure_trainer"""
         # 6. trainer run
         pure_trainer = Trainer(network=self.net, train_dataset=self.train_dataset, eval_dataset=self.eval_dataset,
                                 metrics=self.metric, epochs=2, optimizer=self.optimizer,
-                                loss_fn=self.loss_fn, jit=jit)
+                                loss_fn=self.loss_fn)
         pure_trainer.run(tgt_columns='label')
 
-    @data(False)
-    def test_trainer_timer(self, jit):
+
+    def test_trainer_timer(self):
         """test_trainer_timer"""
         trainer = Trainer(network=self.net, train_dataset=self.train_dataset, eval_dataset=self.eval_dataset,
                           metrics=self.metric, epochs=2, optimizer=self.optimizer, loss_fn=self.loss_fn,
-                          callbacks=self.timer_callback_epochs, jit=jit)
+                          callbacks=self.timer_callback_epochs)
         trainer.run(tgt_columns='label')
 
-    @data(False)
-    def test_trainer_earlystop(self, jit):
+
+    def test_trainer_earlystop(self):
         """test_trainer_earlystop"""
         trainer = Trainer(network=self.net, train_dataset=self.train_dataset, eval_dataset=self.eval_dataset,
                           metrics=self.metric, epochs=6, optimizer=self.optimizer, loss_fn=self.loss_fn,
-                          callbacks=self.earlystop_callback, jit=jit)
+                          callbacks=self.earlystop_callback)
         trainer.run(tgt_columns='label')
 
-    @data(False)
-    def test_trainer_bestmodel(self, jit):
+
+    def test_trainer_bestmodel(self):
         """test_trainer_bestmodel"""
         trainer = Trainer(network=self.net, train_dataset=self.train_dataset, eval_dataset=self.eval_dataset,
                           metrics=self.metric, epochs=4, optimizer=self.optimizer, loss_fn=self.loss_fn,
-                          callbacks=self.bestmodel_callback, jit=jit)
+                          callbacks=self.bestmodel_callback)
         trainer.run(tgt_columns='label')
 
-    @data(False)
-    def test_trainer_checkpoint(self, jit):
+
+    def test_trainer_checkpoint(self):
         """test_trainer_checkpoint"""
         trainer = Trainer(network=self.net, train_dataset=self.train_dataset, eval_dataset=self.eval_dataset,
                           metrics=self.metric, epochs=7, optimizer=self.optimizer, loss_fn=self.loss_fn,
-                          callbacks=self.checkpoint_callback, jit=jit)
+                          callbacks=self.checkpoint_callback)
         trainer.run(tgt_columns='label')
 
-    @data(False)
-    def test_different_model(self, jit):
+
+    def test_different_model(self):
         """test_different_model"""
         trainer = Trainer(network=self.net_2, train_dataset=self.train_dataset, eval_dataset=self.eval_dataset,
                           metrics=self.metric, epochs=2, optimizer=self.optimizer,
-                          loss_fn=self.loss_fn, jit=jit)
+                          loss_fn=self.loss_fn)
         trainer.run(tgt_columns='length')
 
-    @data(False)
-    def test_no_eval_in_trainer(self, jit):
+
+    def test_no_eval_in_trainer(self):
         """test_eval_in_trainer"""
         trainer = Trainer(network=self.net, train_dataset=self.train_dataset, epochs=2,
-                          optimizer=self.optimizer, loss_fn=self.loss_fn, jit=jit)
+                          optimizer=self.optimizer, loss_fn=self.loss_fn)
         trainer.run(tgt_columns='length')
 
-    @data(False)
-    def test_train_object_netword(self, jit):
+
+    def test_train_object_netword(self):
         """test_eval_in_trainer"""
         net = MyModelWithLoss()
         trainer = Trainer(network=net, train_dataset=self.train_dataset, epochs=2,
-                          optimizer=self.optimizer, jit=jit)
+                          optimizer=self.optimizer)
         trainer.run()

@@ -24,6 +24,7 @@ import mindspore
 from mindspore import Tensor
 
 from mindnlp.transformers import ChatGLMForConditionalGeneration, ChatGLMTokenizer
+from .....common import MindNLPTestCase
 
 def set_random_seed(seed):
     """set random seed"""
@@ -57,7 +58,7 @@ def get_model_and_tokenizer():
     return model, tokenizer
 
 
-class ChatGLMGenerationTest(unittest.TestCase):
+class ChatGLMGenerationTest(MindNLPTestCase):
     """ChatGLM generation test."""
     @pytest.mark.skipif(True, reason="not ready")
     def test_chat(self):

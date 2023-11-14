@@ -130,6 +130,7 @@ save/
 
 # ms files
 kernel_meta/
+kernel_meta*/
 rank_0/
 
 .vscode/
@@ -146,7 +147,6 @@ cmp/
 .mindnlp/
 
 # txt files
-*.txt
 !requirements.txt
 
 # mindspore profiler

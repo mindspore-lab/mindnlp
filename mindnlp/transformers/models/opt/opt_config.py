@@ -13,17 +13,13 @@
 # limitations under the License.
 # ============================================================================
 """ OPT model configuration"""
-from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
+
 from ...configuration_utils import PretrainedConfig
 
 
 __all__ = ['OPTConfig']
 
 OPT_SUPPORT_LIST = ["opt-350m"]
-
-CONFIG_ARCHIVE_MAP = {
-    model: MINDNLP_CONFIG_URL_BASE.format('opt', model) for model in OPT_SUPPORT_LIST
-}
 
 
 OPT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
@@ -42,7 +38,6 @@ class OPTConfig(PretrainedConfig):
     """
     model_type = "opt"
     keys_to_ignore_at_inference = ["past_key_values"]
-    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     def __init__(
         self,

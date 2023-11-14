@@ -22,11 +22,13 @@ import numpy as np
 import mindspore
 
 from mindspore import Tensor
+from mindnlp.transformers.models.gpt2 import modeling_gpt2
 
-from mindnlp.transformers.models.gpt2 import gpt2_config, gpt2
+from mindnlp.transformers.models.gpt2 import gpt2_config
+from .....common import MindNLPTestCase
 
 
-class TestModelingGPT2(unittest.TestCase):
+class TestModelingGPT2(MindNLPTestCase):
     r"""
     Test GPT2
     """
@@ -41,7 +43,7 @@ class TestModelingGPT2(unittest.TestCase):
         r"""
         Test GPT2 Attention
         """
-        model = gpt2.GPT2Attention(self.config)
+        model = modeling_gpt2.GPT2Attention(self.config)
 
         hidden_states = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512, self.config.n_embd)), mindspore.float32)
 
@@ -52,7 +54,7 @@ class TestModelingGPT2(unittest.TestCase):
         r"""
         Test GPT2 MLP
         """
-        model = gpt2.GPT2MLP(self.config.n_inner, self.config)
+        model = modeling_gpt2.GPT2MLP(self.config.n_inner, self.config)
 
         hidden_states = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512, self.config.n_embd)), mindspore.float32)
 
@@ -64,7 +66,7 @@ class TestModelingGPT2(unittest.TestCase):
         Test GPT2 Block
         """
         layer_idx = 0
-        model = gpt2.GPT2Block(self.config, layer_idx)
+        model = modeling_gpt2.GPT2Block(self.config, layer_idx)
 
         hidden_states = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512, self.config.n_embd)), mindspore.float32)
 
@@ -75,7 +77,7 @@ class TestModelingGPT2(unittest.TestCase):
         r"""
         Test GPT2 Model
         """
-        model = gpt2.GPT2Model(self.config)
+        model = modeling_gpt2.GPT2Model(self.config)
 
         input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512)))
 
@@ -88,7 +90,7 @@ class TestModelingGPT2(unittest.TestCase):
         r"""
         Test GPT2 LMHead Model
         """
-        model = gpt2.GPT2LMHeadModel(self.config)
+        model = modeling_gpt2.GPT2LMHeadModel(self.config)
 
         input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512)))
 
@@ -101,7 +103,7 @@ class TestModelingGPT2(unittest.TestCase):
         r"""
         Test model GPT2 Model with pynative mode
         """
-        model = gpt2.GPT2DoubleHeadsModel(self.config)
+        model = modeling_gpt2.GPT2DoubleHeadsModel(self.config)
 
         input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512)))
 
@@ -116,7 +118,7 @@ class TestModelingGPT2(unittest.TestCase):
         r"""
         Test GPT2 For Sequence Classification
         """
-        model = gpt2.GPT2ForSequenceClassification(self.config)
+        model = modeling_gpt2.GPT2ForSequenceClassification(self.config)
 
         input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512)))
 
@@ -129,7 +131,7 @@ class TestModelingGPT2(unittest.TestCase):
         r"""
         Test model GPT2 Model with pynative mode
         """
-        model = gpt2.GPT2ForTokenClassification(self.config)
+        model = modeling_gpt2.GPT2ForTokenClassification(self.config)
 
         input_ids = Tensor(np.random.randint(0, self.config.vocab_size, (2, 512)))
 
@@ -139,17 +141,17 @@ class TestModelingGPT2(unittest.TestCase):
     @pytest.mark.download
     def test_from_pretrained(self):
         """test from pretrained"""
-        _ = gpt2.GPT2Model.from_pretrained('gpt2')
+        _ = modeling_gpt2.GPT2Model.from_pretrained('gpt2')
 
     @pytest.mark.download
     def test_gpt2_lm_head_model_from_pretrained(self):
         """test from pretrained"""
-        _ = gpt2.GPT2LMHeadModel.from_pretrained('gpt2', from_pt=True)
+        _ = modeling_gpt2.GPT2LMHeadModel.from_pretrained('gpt2', from_pt=True)
 
     @pytest.mark.download
     def test_from_pretrained_from_pt(self):
         """test from pt"""
-        _ = gpt2.GPT2Model.from_pretrained('gpt2', from_pt=True)
+        _ = modeling_gpt2.GPT2Model.from_pretrained('gpt2', from_pt=True)
 
     def tearDown(self) -> None:
         gc.collect()

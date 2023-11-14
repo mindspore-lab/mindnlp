@@ -13,12 +13,10 @@
 # limitations under the License.
 # ============================================================================
 """Test CLIP"""
-import unittest
 import numpy as np
 import mindspore
 from mindspore import Tensor
 
-import mindnlp
 from mindnlp.transformers import CLIPTextConfig, CLIPVisionConfig, CLIPConfig
 from mindnlp.transformers.models.clip.clip import (CLIPVisionEmbeddings,
                            CLIPTextEmbeddings,
@@ -34,9 +32,10 @@ from mindnlp.transformers.models.clip.clip import (CLIPVisionEmbeddings,
                            CLIPTextModelWithProjection,
                            CLIPVisionModelWithProjection,
                            )
+from .....common import MindNLPTestCase
 
 
-class TestModelingCLIP(unittest.TestCase):
+class TestModelingCLIP(MindNLPTestCase):
     """
     Test for clip model
     """

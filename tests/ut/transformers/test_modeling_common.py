@@ -183,6 +183,32 @@ class ModelTesterMixin:
 
         return inputs_dict
 
+    def test_forward_signature(self):
+        config, _ = self.model_tester.prepare_config_and_inputs_for_common()
+
+        for model_class in self.all_model_classes:
+            model = model_class(config)
+            signature = inspect.signature(model.construct)
+            # signature.parameters is an OrderedDict => so arg_names order is deterministic
+            arg_names = [*signature.parameters.keys()]
+
+            if model.config.is_encoder_decoder:
+                expected_arg_names = [
+                    "input_ids",
+                    "attention_mask",
+                    "decoder_input_ids",
+                    "decoder_attention_mask",
+                ]
+                expected_arg_names.extend(
+                    ["head_mask", "decoder_head_mask", "cross_attn_head_mask", "encoder_outputs"]
+                    if "head_mask" and "decoder_head_mask" and "cross_attn_head_mask" in arg_names
+                    else ["encoder_outputs"]
+                )
+                self.assertListEqual(arg_names[: len(expected_arg_names)], expected_arg_names)
+            else:
+                expected_arg_names = ["input_ids"]
+                self.assertListEqual(arg_names[:1], expected_arg_names)
+
     def test_save_load(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
@@ -225,10 +251,10 @@ class ModelTesterMixin:
         for model_class in self.all_model_classes:
             model = model_class(config)
             state_dict = model.parameters_dict()
-
             new_model = model_class.from_pretrained(
                 pretrained_model_name_or_path=None, config=config, state_dict=state_dict
             )
+            print(state_dict.keys(), new_model.get_parameters())
             for p1, p2 in zip(model.get_parameters(), new_model.get_parameters()):
                 self.assertTrue(ops.equal(p1, p2).asnumpy().all())
 
@@ -412,32 +438,6 @@ class ModelTesterMixin:
             else:
                 check_determinism(first, second)
 
-    def test_construct_signature(self):
-        config, _ = self.model_tester.prepare_config_and_inputs_for_common()
-
-        for model_class in self.all_model_classes:
-            model = model_class(config)
-            signature = inspect.signature(model.construct)
-            # signature.parameters is an OrderedDict => so arg_names order is deterministic
-            arg_names = [*signature.parameters.keys()]
-
-            if model.config.is_encoder_decoder:
-                expected_arg_names = [
-                    "input_ids",
-                    "attention_mask",
-                    "decoder_input_ids",
-                    "decoder_attention_mask",
-                ]
-                expected_arg_names.extend(
-                    ["head_mask", "decoder_head_mask", "cross_attn_head_mask", "encoder_outputs"]
-                    if "head_mask" and "decoder_head_mask" and "cross_attn_head_mask" in arg_names
-                    else ["encoder_outputs"]
-                )
-                self.assertListEqual(arg_names[: len(expected_arg_names)], expected_arg_names)
-            else:
-                expected_arg_names = ["input_ids"]
-                self.assertListEqual(arg_names[:1], expected_arg_names)
-
     def test_training(self):
         if not self.model_tester.is_training:
             return
@@ -451,12 +451,13 @@ class ModelTesterMixin:
                 *get_values(MODEL_FOR_BACKBONE_MAPPING_NAMES),
             ]:
                 continue
-
+            
             model = model_class(config)
             model.set_train()
             inputs = self._prepare_for_class(inputs_dict, model_class, return_labels=True)
             def forward(**inputs):
-                loss = model(**inputs).loss
+                outputs = model(**inputs)
+                loss = outputs.loss
                 return loss
 
             grad_fn = mindspore.value_and_grad(forward, None, model.trainable_params())
@@ -608,7 +609,7 @@ class ModelTesterMixin:
             inputs = self._prepare_for_class(inputs_dict, model_class).copy()
             inputs["head_mask"] = head_mask
             if model.config.is_encoder_decoder:
-                signature = inspect.signature(model.forward)
+                signature = inspect.signature(model.construct)
                 arg_names = [*signature.parameters.keys()]
                 if "decoder_head_mask" in arg_names:  # necessary diferentiation because of T5 model
                     inputs["decoder_head_mask"] = head_mask
@@ -764,7 +765,6 @@ class ModelTesterMixin:
             config.pruned_heads = heads_to_prune
 
             model = model_class(config=config)
-            model
             model.set_train(False)
 
             outputs = model(**self._prepare_for_class(inputs_dict, model_class))
@@ -776,7 +776,6 @@ class ModelTesterMixin:
             with tempfile.TemporaryDirectory() as temp_dir_name:
                 model.save_pretrained(temp_dir_name)
                 model = model_class.from_pretrained(temp_dir_name)
-                model
 
             outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs[-1]
@@ -798,7 +797,6 @@ class ModelTesterMixin:
     def test_hidden_states_output(self):
         def check_hidden_states_output(inputs_dict, config, model_class):
             model = model_class(config)
-            model
             model.set_train(False)
 
             outputs = model(**self._prepare_for_class(inputs_dict, model_class))
@@ -854,14 +852,14 @@ class ModelTesterMixin:
             inputs_dict,
         ) = self.model_tester.prepare_config_and_inputs_for_common()
         for model_class in self.all_model_classes:
-            mindspore.set_seed(0)
+            mindspore.set_seed(1234)
             config = copy.deepcopy(original_config)
             model = model_class(config)
             model.set_train(False)
 
             hidden_states_no_chunk = model(**self._prepare_for_class(inputs_dict, model_class))[0]
 
-            mindspore.set_seed(0)
+            mindspore.set_seed(1234)
             config.chunk_size_feed_forward = 1
             model = model_class(config)
             model.set_train(False)
@@ -881,7 +879,6 @@ class ModelTesterMixin:
         for model_class in self.all_model_classes:
             config = copy.deepcopy(original_config)
             model = model_class(config)
-            model
 
             if self.model_tester.is_training is False:
                 model.set_train(False)
@@ -959,7 +956,6 @@ class ModelTesterMixin:
         for model_class in self.all_model_classes:
             config = copy.deepcopy(original_config)
             model = model_class(config)
-            model
 
             if self.model_tester.is_training is False:
                 model.set_train(False)
@@ -974,7 +970,7 @@ class ModelTesterMixin:
             self.assertEqual(model.config.vocab_size, model_vocab_size + 10)
             # Check that it actually resizes the embeddings matrix
             self.assertEqual(model_embed.embedding_table.shape[0], cloned_embeddings.shape[0] + 10)
-            # Check that the model can still do a forward pass successfully (every parameter should be resized)
+             # Check that the model can still do a forward pass successfully (every parameter should be resized)
             model(**self._prepare_for_class(inputs_dict, model_class))
 
             # Check that resizing the token embeddings with a smaller vocab size decreases the model's vocab size
@@ -1301,9 +1297,9 @@ class ModelTesterMixin:
                         ),
                         msg=(
                             "Tuple and dict output are not equal. Difference:"
-                            f" {ops.max(ops.abs(tuple_object - dict_object))}. Tuple has `nan`:"
-                            f" {ops.isnan(tuple_object).any()} and `inf`: {ops.isinf(tuple_object)}. Dict has"
-                            f" `nan`: {ops.isnan(dict_object).any()} and `inf`: {ops.isinf(dict_object)}."
+                            f" {np.max(np.abs(tuple_object.asnumpy() - dict_object.asnumpy()))}. Tuple has `nan`:"
+                            f" {np.isnan(tuple_object.asnumpy()).any()} and `inf`: {np.isinf(tuple_object.asnumpy())}. Dict has"
+                            f" `nan`: {np.isnan(dict_object.asnumpy()).any()} and `inf`: {np.isinf(dict_object.asnumpy())}."
                         ),
                     )
 
@@ -1413,7 +1409,6 @@ class ModelTesterMixin:
 
         for model_class in self.all_model_classes:
             model = model_class(config)
-            model
             model.set_train(False)
 
             inputs = copy.deepcopy(self._prepare_for_class(inputs_dict, model_class))

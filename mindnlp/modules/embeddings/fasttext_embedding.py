@@ -22,7 +22,7 @@ from itertools import islice
 import numpy as np
 from mindspore import ops
 from mindspore import Tensor
-from mindnlp.utils import cached_file, unzip
+from mindnlp.utils import get_from_cache, unzip
 from mindnlp.abc.modules.embedding import TokenEmbedding
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp._legacy.nn import Dropout
@@ -95,7 +95,7 @@ class Fasttext(TokenEmbedding):
         url = cls.urls[name]
         download_file_name = re.sub(r".+/", "", url)
         fasttext_file_name = f"wiki-news-{dims}d-{name}.vec"
-        path, _ = cached_file(filename=download_file_name, cache_dir=cache_dir, url=url)
+        path, _ = get_from_cache(download_file_name=download_file_name, cache_dir=cache_dir, url=url)
         decompress_path = os.path.join(cache_dir, fasttext_file_name)
         if not os.path.exists(decompress_path):
             unzip(path, cache_dir)

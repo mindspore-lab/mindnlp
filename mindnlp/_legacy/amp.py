@@ -20,7 +20,7 @@ Auto mixed precision api.
 
 import mindspore
 from mindspore import nn, ops
-from mindspore import Tensor, Parameter, context, ms_class
+from mindspore import Tensor, Parameter, context, jit_class
 from mindspore.ops import constexpr
 import mindspore.common.dtype as mstype
 from mindnlp.modules import StaticGRU, StaticLSTM
@@ -184,7 +184,7 @@ def all_finite(inputs, status=None):
     outputs = _hypermap(_partial(_is_finite), inputs)
     return ops.stack(outputs).all()
 
-@ms_class
+@jit_class
 class LossScaler():
     """
     Basic LossScaler.

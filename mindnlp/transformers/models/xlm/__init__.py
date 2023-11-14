@@ -15,13 +15,13 @@
 """
 XLM Models init
 """
-from . import xlm, xlm_config, xlm_tokenizer
+from . import configuration_xlm, modeling_xlm, tokenization_xlm
 
-from .xlm_config import *
-from .xlm import *
-from .xlm_tokenizer import *
+from .configuration_xlm import *
+from .modeling_xlm import *
+from .tokenization_xlm import *
 
 __all__ = []
-__all__.extend(xlm.__all__)
-__all__.extend(xlm_config.__all__)
-__all__.extend(xlm_tokenizer.__all__)
+__all__.extend(modeling_xlm.__all__)
+__all__.extend(configuration_xlm.__all__)
+__all__.extend(tokenization_xlm.__all__)

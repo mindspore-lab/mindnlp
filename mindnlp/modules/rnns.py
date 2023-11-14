@@ -12,28 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=C0103
-# pylint: disable=W0123
-# pylint: disable=W0212
-# pylint: disable=C0412
-
+# pylint: disable=invalid-name
+# pylint: disable=eval-used
 '''RNN operators module, include RNN, GRU, LSTM'''
 import math
 import numpy as np
 from mindspore import nn, ops, context
 from mindspore import Tensor, Parameter, ParameterTuple
-from mindspore import log as logger
 from mindspore.common.initializer import initializer, Uniform
 from mindspore.ops.primitive import constexpr
 from mindspore.ops.operations._rl_inner_ops import CudnnGRU
 from mindspore.ops._primitive_cache import _get_cache_prim
-from mindnlp.utils import less_min_pynative_first
-if less_min_pynative_first:
-    from mindnlp._legacy.nn import Dropout
-    from mindnlp._legacy.functional import tensor_split, sigmoid, reverse
-else:
-    from mindspore.nn import Dropout
-    from mindspore.ops import tensor_split, sigmoid, reverse
+from mindspore.nn import Dropout
+from mindspore.ops import tensor_split, sigmoid, reverse
+
+from mindnlp.utils import logging
+
+logger = logging.get_logger(__name__)
 
 @constexpr
 def _init_state(shape, dtype, is_lstm):

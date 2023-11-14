@@ -1381,8 +1381,9 @@ class BartForSequenceClassification(BartPretrainedModel):
 
         eos_mask = ops.equal(input_ids, self.config.eos_token_id)
 
-        if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
-            raise ValueError("All examples must have the same number of <eos> tokens.")
+        # do not support unique_consecutive on Ascend
+        # if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
+        #     raise ValueError("All examples must have the same number of <eos> tokens.")
 
         sentence_representation = hidden_states[eos_mask].view(
             hidden_states.shape[0], -1, hidden_states.shape[-1]
