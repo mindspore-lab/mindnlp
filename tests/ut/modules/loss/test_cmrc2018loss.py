@@ -15,16 +15,16 @@
 # pylint: disable=ungrouped-imports
 """Test CMRC2018Loss"""
 
-import unittest
 import numpy as np
 import mindspore
 from ddt import ddt, data
 from mindspore import Tensor
 from mindnlp.modules import CMRC2018Loss
 from mindnlp import ms_jit
+from ....common import MindNLPTestCase
 
 @ddt
-class TestCMRC2018Loss(unittest.TestCase):
+class TestCMRC2018Loss(MindNLPTestCase):
     r"""
     Test CMRC2018Loss
     """

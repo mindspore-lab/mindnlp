@@ -16,18 +16,15 @@
 MindNLP library.
 """
 
+import mindspore
+from mindspore import jit as ms_jit
+from mindnlp import injection
+from mindnlp import transformers
 from mindnlp.dataset import load_dataset
-from mindnlp.utils import less_min_pynative_first
 from mindnlp.workflow.workflow import Workflow
 from mindnlp.vocab import Vocab
-from mindnlp import injection
 
-if less_min_pynative_first:
-    from mindspore import context
-    from mindspore import ms_function as ms_jit
-    context.set_context(mode=context.PYNATIVE_MODE)
-else:
-    from mindspore import jit as ms_jit
-
+if mindspore.get_context('device_target') == 'Ascend':
+    mindspore.set_context(ascend_config={"jit_compile": False})
 
 __all__ = ['ms_jit', 'load_dataset', 'Workflow', 'Vocab']

@@ -18,7 +18,6 @@ import unittest
 from mindspore import Tensor
 from mindnlp.modules.embeddings.glove_embedding import Glove
 
-
 class TestGlove(unittest.TestCase):
     r"""
     Test module Glove

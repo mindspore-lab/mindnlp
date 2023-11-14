@@ -18,12 +18,9 @@
     </a>
 </p>
 
+[Installation](#installation) |
 [Introduction](#introduction) |
 [Quick Links](#quick-links) |
-[Installation](#installation) |
-[Get Started](#get-started) |
-[Tutorials](#tutorials) |
-[Notes](#notes)
 
 ### News 📢
 
@@ -40,6 +37,7 @@
 
     model = BertModel.from_pretrained('bert-base-cased')
     ```
+
 ### Installation
 
 Version Compatibility:
@@ -86,6 +84,57 @@ The master branch works with **MindSpore master**.
 - [Examples](./examples)
 - [LLMs](./llm)
 - ...
+
+
+### Supported models
+
+The table below represents the current support in the library for each of those models, whether they have support in Pynative mode or Graph mode.
+
+| Model                         | Pynative support | Graph Support |
+|-------------------------------|------------------|---------------|
+| ALBERT                        | ❌                | ✅             |
+| Autoformer                    | TODO                | ❌             |
+| Bark                          | TODO                | ❌             |
+| BART                          | ✅                | ❌             |
+| BERT                          | ✅                | ✅             |
+| BLOOM                         | ✅                | ❌             |
+| CLIP                          | ✅                | ❌             |
+| CodeGen                       | ✅                | ❌             |
+| CodeLlama                     | ✅                | ❌             |
+| ConvBERT                      | TODO                | ❌             |
+| CPM                           | ✅                | ❌             |
+| CPM-Ant                       | ✅                | ❌             |
+| CPM-Bee                       | ✅                | ❌             |
+| EnCodec                       | TODO               | ❌             |
+| ERNIE                         | ✅                | ❌             |
+| Falcon                        | TODO                | ❌             |
+| GLM                           | ✅                | ❌             |
+| GPT Neo                       | ✅                | ❌             |
+| GPT NeoX                      | TODO                | ❌             |
+| GPTBigCode                    | ✅                | ❌             |
+| Graphormer                    | TODO               | ❌             |
+| LLaMA                         | ✅                | ❌             |
+| Llama2                        | TODO               | ❌             |
+| Longformer                    | ✅                | ❌             |
+| LongT5                        | TODO               | ❌             |
+| LUKE                          | ✅                | ❌             |
+| MaskFormer                    | ✅                | ❌             |
+| mBART-50                      | ✅                | ❌             |
+| Megatron-BERT                 | ✅                | ❌             |
+| Megatron-GPT2                 | ✅                | ❌             |
+| MobileBERT                    | ✅                | ❌             |
+| Moss                          | ✅                | ❌             |
+| OpenAI GPT                    | ✅                | ❌             |
+| OpenAI GPT-2                  | ✅                | ✅             |
+| OPT                           | ✅                | ❌             |
+| Pangu                         | ✅                | ❌             |
+| RoBERTa                       | ✅                | ✅             |
+| RWKV                          | ✅                | ❌             |
+| T5                            | ✅                | ❌             |
+| TimeSformer                   | TODO               | ❌             |
+| Whisper                       | ✅                | ❌             |
+| XLM                           | ✅                | ❌             |
+| XLM-RoBERTa                   | ✅                | ❌             |
 
 
 <!-- ## Tutorials

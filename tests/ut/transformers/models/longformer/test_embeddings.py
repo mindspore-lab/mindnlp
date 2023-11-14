@@ -26,9 +26,10 @@ from mindnlp.transformers.models.longformer.longformer import LongformerEmbeddin
     LongformerEncoder, LongformerPooler, LongformerLMHead, LongformerModel, \
     LongformerForMaskedLM, LongformerForSequenceClassification, LongformerClassificationHead, \
     LongformerForQuestionAnswering, LongformerForTokenClassification, LongformerForMultipleChoice
+from .....common import MindNLPTestCase
 
 
-class TestModelingEmbeddings(unittest.TestCase):
+class TestModelingEmbeddings(MindNLPTestCase):
     r"""
     Test model bert
     """

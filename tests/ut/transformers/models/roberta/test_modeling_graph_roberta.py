@@ -18,14 +18,15 @@ import numpy as np
 from ddt import ddt, data
 
 import mindspore
-import unittest
 from mindspore import Tensor
 
 import mindnlp
 from mindnlp.transformers import RobertaConfig, RobertaModel
+from .....common import MindNLPTestCase
+
 
 @ddt
-class TestModelingRoberta(unittest.TestCase):
+class TestModelingRoberta(MindNLPTestCase):
     r"""
     Test model bert
     """

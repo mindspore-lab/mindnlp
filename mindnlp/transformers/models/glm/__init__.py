@@ -18,17 +18,15 @@
 """
 Glm Model init
 """
-from . import glm, chatglm, glm_config, chatglm_config, chatglm_tokenizer
+from . import glm, chatglm, glm_config, chatglm_config
 
 from .glm import *
 from .glm_config import *
 from .chatglm import *
 from .chatglm_config import *
-from .chatglm_tokenizer import *
 
 __all__ = []
 __all__.extend(glm.__all__)
 __all__.extend(glm_config.__all__)
 __all__.extend(chatglm.__all__)
 __all__.extend(chatglm_config.__all__)
-__all__.extend(chatglm_tokenizer.__all__)

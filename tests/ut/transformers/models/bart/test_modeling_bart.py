@@ -23,9 +23,10 @@ from mindspore import Tensor
 import mindnlp
 from mindnlp.transformers import BartConfig
 from mindnlp.transformers.models.bart import bart
+from .....common import MindNLPTestCase
 
 
-class TestModelingBart(unittest.TestCase):
+class TestModelingBart(MindNLPTestCase):
     """
     Test Bart
     """

@@ -31,15 +31,10 @@ from mindspore import nn
 from mindspore import Parameter, Tensor, ops
 from mindspore.common.initializer import initializer, Normal
 from mindnlp._legacy.nn import Matmul
-from mindnlp.configs import MINDNLP_MODEL_URL_BASE
 from mindnlp.transformers.activations import ACT2FN
 
-from .pangu_alpha_config import PANGU_ALPHA_SUPPORT_LIST, PanGuAlphaConfig
+from .pangu_alpha_config import PanGuAlphaConfig
 from ...modeling_utils import PreTrainedModel
-
-PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MINDNLP_MODEL_URL_BASE.format('pangu', model) for model in PANGU_ALPHA_SUPPORT_LIST
-}
 
 
 def torch_to_mindspore(pth_file, **kwargs):
@@ -233,7 +228,7 @@ class PanGuAlphaPreTrainedModel(PreTrainedModel):
     """
     config_class = PanGuAlphaConfig
     convert_torch_to_mindspore = torch_to_mindspore
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
     base_model_prefix = "transformer"
     supports_gradient_checkpointing = True
 

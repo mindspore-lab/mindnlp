@@ -1167,3 +1167,103 @@ class UnbatchedClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):
         unconditional_logits = ops.log_softmax(logits[:, -1], axis=-1)
         out = self.guidance_scale * (scores - unconditional_logits) + unconditional_logits
         return out
+
+class WhisperTimeStampLogitsProcessor(LogitsProcessor):
+    r"""
+
+    [`LogitsProcessor`] that modifies the logits for the generation of timestamps in the transcription. When the input
+    tokens are at a specific threshold, the processor sets the scores to negative infinity. The processor makes sure
+    that timestamp tokens appear in pairs, by masking out the logits that would break this pairing pattern. This is
+    done to maintain the consistency and structure of generated timestamps. It also ensures that when the predicted
+    probability of sampling any of the timestamp token is greater than any individual non-timestamp token, those
+    non-timestamp logits are set to negative infinity. This is done to ensure the generation of timestamps over other
+    potential tokens.
+
+
+    See [the paper](https://arxiv.org/abs/2212.04356) for more information.
+
+    Args:
+        generate_config (`GenerateConfig`):
+            The generate config used to generate the output. The following parameters are required:
+                eos_token_id (`int`, *optional*, defaults to 50257):
+                    The id of the *end-of-sequence* token.
+                no_timestamps_token_id (`int`, *optional*, defaults to 50363):
+                    The id of the `"<|notimestamps|>"` token.
+                max_initial_timestamp_index (`int`, *optional*, defaults to 1):
+                    Used to set the maximum value of the initial timestamp. This is used to prevent the model from
+                    predicting timestamps that are too far in the future.
+
+    Examples:
+    ``` python
+    >>> import torch
+    >>> from transformers import AutoProcessor, WhisperForConditionalGeneration,GenerationConfig
+    >>> from datasets import load_dataset
+
+    >>> processor = AutoProcessor.from_pretrained("openai/whisper-tiny.en")
+    >>> model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
+    >>> ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+    >>> inputs = processor(ds[3]["audio"]["array"], return_tensors="pt")
+    >>> input_features = inputs.input_features
+
+    >>> #Displaying timestamps
+    >>> generated_ids = model.generate(inputs=input_features, return_timestamps=True)
+    >>> transcription = processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
+    >>> print("Transcription:", transcription)
+    Transcription: <|startoftranscript|><|0.00|> He has grave doubts whether Sir Frederick Layton's work is really Greek after all, and can<|6.44|><|6.44|> discover in it but little of rocky Ithaca.<|9.44|><|endoftext|>
+
+
+    >>> #No timestamps & change EOS:
+    >>> #This allows the user to select a specific token to terminate the sequence on, in this case it's the word "can"(460)
+    >>> model.generation_config.eos_token_id = 460
+    >>> generated_ids = model.generate(inputs=input_features,return_timestamps=False)
+    >>> transcription = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+    >>> print("Transcription:", transcription)
+    Transcription:  He has grave doubts whether Sir Frederick Layton's work is really Greek after all and can
+    ```
+    """
+
+    def __init__(self, generate_config):  # support for the kwargs
+        self.eos_token_id = generate_config.eos_token_id
+        self.no_timestamps_token_id = generate_config.no_timestamps_token_id
+        self.timestamp_begin = generate_config.no_timestamps_token_id + 1
+
+        self.begin_index = len(generate_config.forced_decoder_ids) + 2
+        if generate_config.forced_decoder_ids[-1][1] == self.no_timestamps_token_id:
+            self.begin_index -= 1
+        self.max_initial_timestamp_index = generate_config.max_initial_timestamp_index
+
+    def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        # suppress <|notimestamps|> which is handled by without_timestamps
+        scores[:, self.no_timestamps_token_id] = -float("inf")
+
+        if input_ids.shape[1] == self.begin_index - 1:
+            scores[:, :] = -float("inf")
+            scores[:, self.timestamp_begin] = 0
+            return scores
+
+        # timestamps have to appear in pairs, except directly before eos_token; mask logits accordingly
+        for k in range(input_ids.shape[0]):
+            seq = list(input_ids[k, self.begin_index :].tolist())
+            last_was_timestamp = len(seq) >= 1 and seq[-1] >= self.timestamp_begin
+            penultimate_was_timestamp = len(seq) < 2 or seq[-2] >= self.timestamp_begin
+
+            if last_was_timestamp:
+                if penultimate_was_timestamp:  # has to be non-timestamp
+                    scores[k, self.timestamp_begin :] = -float("inf")
+                else:  # cannot be normal text tokens
+                    scores[k, : self.eos_token_id] = -float("inf")
+
+            # apply the `max_initial_timestamp` option
+            if input_ids.shape[1] == self.begin_index and self.max_initial_timestamp_index is not None:
+                last_allowed = self.timestamp_begin + self.max_initial_timestamp_index
+                scores[:, last_allowed + 1 :] = -float("inf")
+
+        # if sum of probability over timestamps is above any other token, sample timestamp
+        logprobs = ops.log_softmax(scores.float(), axis=-1)
+        for k in range(input_ids.shape[0]):
+            timestamp_logprob = logprobs[k, self.timestamp_begin :].logsumexp(axis=-1)
+            max_text_token_logprob = logprobs[k, : self.timestamp_begin].max()
+            if timestamp_logprob > max_text_token_logprob:
+                scores[k, : self.timestamp_begin] = -float("inf")
+
+        return scores

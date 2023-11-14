@@ -21,18 +21,16 @@ import mindspore
 from mindspore import nn
 from mindspore import ops
 from mindspore import Tensor, Parameter
-from mindspore import log as logger
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.configs import MINDNLP_MODEL_URL_BASE
-from .nezha_config import NezhaConfig, NEZHA_SUPPORT_LIST
+from mindnlp.utils import logging
+from .nezha_config import NezhaConfig
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import prune_linear_layer, find_pruneable_heads_and_indices, apply_chunking_to_forward
 from ...activations import ACT2FN
 
-PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MINDNLP_MODEL_URL_BASE.format('nezha', model) for model in NEZHA_SUPPORT_LIST
-}
+
+logger = logging.get_logger(__name__)
 
 __all__ = [
         "NezhaForNextSentencePrediction",
@@ -609,7 +607,7 @@ class NezhaPreTrainedModel(PreTrainedModel):
     config_class = NezhaConfig
     base_model_prefix = "nezha"
     supports_gradient_checkpointing = True
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
     _keys_to_ignore_on_load_missing = [r"positions_encoding"]
 
     def _init_weights(self, cell):

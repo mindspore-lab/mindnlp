@@ -7,7 +7,7 @@ import numpy as np
 from ddt import ddt, data
 import mindspore
 from mindspore import ops
-from mindnlp import less_min_pynative_first
+from mindnlp.utils.compatibility import less_min_pynative_first
 from mindnlp.modules import TransformerEncoder, TransformerEncoderLayer
 
 @ddt

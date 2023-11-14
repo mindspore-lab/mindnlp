@@ -31,11 +31,13 @@ from mindspore import Tensor
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, LayerNorm, MSELoss
 from mindspore.nn import GELU as BloomGelu
 from mindspore.common.initializer import initializer, Normal
-from mindspore import log as logger
+from mindnlp.utils import logging
 
 from ...modeling_utils import PreTrainedModel
 from .bloom_config import BloomConfig
 
+
+logger = logging.get_logger(__name__)
 
 def torch_to_mindspore(pth_file, **kwargs):
     """torch to mindspore."""

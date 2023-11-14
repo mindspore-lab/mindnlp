@@ -22,7 +22,7 @@ from itertools import islice
 import numpy as np
 from mindspore import ops
 from mindspore import Tensor
-from mindnlp.utils import cached_file, unzip
+from mindnlp.utils import get_from_cache, unzip
 from mindnlp.abc.modules.embedding import TokenEmbedding
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp._legacy.nn import Dropout
@@ -96,7 +96,7 @@ class Glove(TokenEmbedding):
         url = cls.urls[name]
         download_file_name = re.sub(r".+/", "", url)
         glove_file_name = f"glove.{name}.{dims}d.txt"
-        path, _ = cached_file(filename=download_file_name, cache_dir=cache_dir, url=url)
+        path, _ = get_from_cache(download_file_name=download_file_name, cache_dir=cache_dir, url=url)
         decompress_path = os.path.join(cache_dir, glove_file_name)
         if not os.path.exists(decompress_path):
             unzip(path, cache_dir)

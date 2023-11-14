@@ -15,8 +15,6 @@
 """
 Ernie config
 """
-import re
-from mindnlp.configs import MINDNLP_CONFIG_URL_BASE
 from ...configuration_utils import PretrainedConfig
 
 ERNIE_SUPPORT_LIST = [
@@ -46,18 +44,12 @@ ERNIE_SUPPORT_LIST = [
     "ernie-3.0-tiny-nano-v1-zh"
 ]
 
-CONFIG_ARCHIVE_MAP = {
-    model: MINDNLP_CONFIG_URL_BASE.format(re.search(r"^[^-]*", model).group(), model)
-    for model in ERNIE_SUPPORT_LIST
-}
 
 
 class ErnieConfig(PretrainedConfig):
     """
     Configuration for Ernie.
     """
-
-    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     def __init__(
         self,
@@ -107,8 +99,6 @@ class UIEConfig(PretrainedConfig):
     """
     Configuration for UIE.
     """
-
-    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     def __init__(
         self,

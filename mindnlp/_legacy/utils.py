@@ -17,7 +17,6 @@
 import numpy as np
 
 from mindspore import Tensor
-from mindspore import log as logger
 from mindspore.train.serialization import _parse_ckpt_proto, \
     tensor_to_np_type, tensor_to_ms_type
 
@@ -25,6 +24,10 @@ try:
     from mindspore.train.serialization import _load_mapparameter as _load_map_parameter
 except:
     from mindspore.train.serialization import _load_map_parameter
+
+from mindnlp.utils import logging
+
+logger = logging.get_logger(__name__)
 
 
 def load_checkpoint(ckpt_file_name):

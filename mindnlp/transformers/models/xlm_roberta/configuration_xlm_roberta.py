@@ -16,17 +16,13 @@
 # limitations under the License.
 # ============================================================================
 """ XLM-RoBERTa configuration"""
-from mindnlp.configs import MS_CONFIG_URL_BASE
+
 from ...configuration_utils import PretrainedConfig
 
 XLM_ROBERTA_SUPPORT_LIST = [
     "xlm-roberta-base",
     "xlm-roberta-large"
 ]
-
-CONFIG_ARCHIVE_MAP = {
-    model: MS_CONFIG_URL_BASE.format(model) for model in XLM_ROBERTA_SUPPORT_LIST
-}
 
 class XLMRobertaConfig(PretrainedConfig):
     r"""
@@ -97,7 +93,6 @@ class XLMRobertaConfig(PretrainedConfig):
     >>> configuration = model.config
     ```"""
     model_type = "xlm-roberta"
-    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     def __init__(
         self,

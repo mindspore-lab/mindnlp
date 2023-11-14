@@ -27,8 +27,7 @@ from mindspore import nn
 from mindspore import ops
 from mindspore import Tensor
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.configs import MS_MODEL_URL_BASE
-from .gpt_bigcode_config import GPTBigCodeConfig, GPT_BIGCODE_SUPPORT_LIST
+from .gpt_bigcode_config import GPTBigCodeConfig
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -40,10 +39,6 @@ from ...modeling_outputs import (
 
 __all__ = ['GPTBigCodeAttention', 'GPTBigCodeMLP', 'GPTBigCodeBlock', 'GPTBigCodePreTrainedModel', 'GPTBigCodeModel',
            'GPTBigCodeForTokenClassification', 'GPTBigCodeForSequenceClassification', 'GPTBigCodeForCausalLM']
-
-PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MS_MODEL_URL_BASE.format(model) for model in GPT_BIGCODE_SUPPORT_LIST
-}
 
 
 def upcast_masked_softmax(
@@ -391,7 +386,7 @@ class GPTBigCodePreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["GPTBigCodeBlock"]
     _skip_keys_device_placement = "past_key_values"
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
 
     def _init_weights(self, cell):
         """Initialize the weights."""

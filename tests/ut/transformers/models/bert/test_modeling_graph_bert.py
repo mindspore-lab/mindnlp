@@ -15,7 +15,6 @@
 """Test Bert"""
 from packaging import version
 import pytest
-import unittest
 import numpy as np
 from ddt import ddt, data
 
@@ -25,10 +24,10 @@ from mindspore import Tensor
 import mindnlp
 from mindnlp.utils.compatibility import MS_VERSION
 from mindnlp.transformers import BertConfig, MSBertModel
-
+from .....common import MindNLPTestCase
 
 @ddt
-class TestModelingBert(unittest.TestCase):
+class TestModelingBert(MindNLPTestCase):
     r"""
     Test model bert
     """

@@ -27,7 +27,6 @@ import sentencepiece as spm
 import mindspore
 from tokenizers import AddedToken
 from ...tokenization_utils import PreTrainedTokenizer
-# from mindnlp.configs import HF_TOKENIZER_CONFIG_URL_BASE
 
 LLAMA_SUPPORT_LIST = [
     "meta-llama/Llama-2-7b-hf",
@@ -137,12 +136,12 @@ class LlamaTokenizer(PreTrainedTokenizer):
         """Execute method."""
         return self.tokenize(text_input)
 
-    def _execute_py(self, text_input):
+    def _execute_py(self, text):
         """Execute method."""
-        return self._tokenize(text_input)
+        return self._tokenize(text)
 
-    def tokenize(self, text_input) -> List[str]:
-        return self._execute_py(text_input)
+    def tokenize(self, text) -> List[str]:
+        return self._execute_py(text)
 
     def batch_encode(self, texts, max_length, **kwargs):
         """Implement basic encode logic for encoding a sequence of sequences or a pair of sequences."""
@@ -181,7 +180,7 @@ class LlamaTokenizer(PreTrainedTokenizer):
         }
 
 
-    def _tokenize(self, text_input):
+    def _tokenize(self, text):
         """
         Returns a tokenized string.
 
@@ -191,9 +190,9 @@ class LlamaTokenizer(PreTrainedTokenizer):
         `unk_token`. Here is an example with `unk_token = "<unk>"` and `unk_token_length = 4`.
         `self.tokenizer.sp_model.encode("<unk> Hey", out_type = str)[4:]`.
         """
-        text_input = self._convert_to_unicode(text_input)
+        text = self._convert_to_unicode(text)
 
-        tokens = self._tokenizer.encode(text_input, out_type=str)
+        tokens = self._tokenizer.encode(text, out_type=str)
         if self.return_token:
             return tokens
         # return ids

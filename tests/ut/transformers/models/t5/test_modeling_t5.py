@@ -16,7 +16,6 @@
 """Test T5"""
 import gc
 import os
-import unittest
 import pytest
 import numpy as np
 
@@ -42,8 +41,9 @@ from mindnlp.transformers import (
     T5EncoderModel,
 )
 
+from .....common import MindNLPTestCase
 
-class TestModelingT5(unittest.TestCase):
+class TestModelingT5(MindNLPTestCase):
     r"""
     Test T5
     """

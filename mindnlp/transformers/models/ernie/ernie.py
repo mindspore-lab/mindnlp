@@ -17,21 +17,15 @@
 Ernie Models
 """
 
-import re
 from typing import Optional, Tuple
 
 import mindspore
 from mindspore import nn, ops, Tensor, Parameter
-from mindspore.common.initializer import TruncatedNormal,initializer
-from mindnlp.configs import MINDNLP_MODEL_URL_BASE
-from .ernie_config import ErnieConfig,ERNIE_SUPPORT_LIST
+from mindspore.common.initializer import initializer
+from .ernie_config import ErnieConfig
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 
-PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MINDNLP_MODEL_URL_BASE.format(re.search(r"^[^-]*", model).group(), model)
-    for model in ERNIE_SUPPORT_LIST
-}
 
 __all__ = [
     "ErnieModel",
@@ -51,26 +45,24 @@ class ErnieEmbeddings(nn.Cell):
     Ernie Embeddings for word, position and token_type embeddings.
     """
 
-    def __init__(self, config: ErnieConfig, embedding_table):
+    def __init__(self, config: ErnieConfig):
         super().__init__()
 
         self.word_embeddings = nn.Embedding(
-            config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id, embedding_table=embedding_table
+            config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id
         )
         self.position_embeddings = nn.Embedding(
-            config.max_position_embeddings, config.hidden_size, embedding_table=embedding_table
+            config.max_position_embeddings, config.hidden_size
         )
         self.type_vocab_size = config.type_vocab_size
         if self.type_vocab_size > 0:
             self.token_type_embeddings = nn.Embedding(
-                config.type_vocab_size, config.hidden_size, embedding_table=embedding_table
+                config.type_vocab_size, config.hidden_size
             )
         self.use_task_id = config.use_task_id
         self.task_id = config.task_id
         if self.use_task_id:
-            self.task_type_embeddings = nn.Embedding(
-                config.task_type_vocab_size, config.hidden_size, embedding_table=embedding_table
-            )
+            self.task_type_embeddings = nn.Embedding(config.task_type_vocab_size, config.hidden_size)
         self.layer_norm = nn.LayerNorm([config.hidden_size])
         self.dropout = nn.Dropout(config.hidden_dropout_prob, p=0.5)
 
@@ -128,7 +120,7 @@ class ErniePretrainedModel(PreTrainedModel):
     """
 
     config_class = ErnieConfig
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
 
     # TODO
     def get_input_embeddings(self):
@@ -174,10 +166,9 @@ class ErniePooler(nn.Cell):
     """
     Ernie Pooler.
     """
-    def __init__(self, config: ErnieConfig, weight_init):
+    def __init__(self, config: ErnieConfig):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size,
-                              config.hidden_size, weight_init=weight_init)
+        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
         self.activation = nn.Tanh()
 
     def construct(self, hidden_states):
@@ -201,9 +192,7 @@ class ErnieModel(ErniePretrainedModel):
         self.pad_token_id = config.pad_token_id
         self.initializer_range = config.initializer_range
         self.nheads = config.num_attention_heads
-        embedding_table = TruncatedNormal(sigma=self.initializer_range)
-        self.embeddings = ErnieEmbeddings(
-            config=config, embedding_table=embedding_table)
+        self.embeddings = ErnieEmbeddings(config=config)
         encoder_layer = nn.TransformerEncoderLayer(
             config.hidden_size,
             config.num_attention_heads,
@@ -215,7 +204,7 @@ class ErnieModel(ErniePretrainedModel):
         self.encoder = nn.TransformerEncoder(
             encoder_layer, num_layers=config.num_hidden_layers
         )
-        self.pooler = ErniePooler(config, weight_init=embedding_table)
+        self.pooler = ErniePooler(config)
         self.apply(self.init_weights)
 
     def get_input_embeddings(self):
@@ -585,11 +574,9 @@ class ErnieLMPredictionHead(nn.Cell):
     def __init__(
         self,
         config: ErnieConfig,
-        weight_attr='normal',
     ):
         super().__init__()
-        self.transform = nn.Dense(
-            config.hidden_size, config.hidden_size, weight_init=weight_attr)
+        self.transform = nn.Dense(config.hidden_size, config.hidden_size)
         self.activation = ACT2FN[config.hidden_act]
         self.layer_norm = nn.LayerNorm([config.hidden_size])
         # self.decoder_weight = (
@@ -633,13 +620,10 @@ class ErniePretrainingHeads(nn.Cell):
     def __init__(
         self,
         config: ErnieConfig,
-        weight_attr='normal',
     ):
         super().__init__()
-        self.predictions = ErnieLMPredictionHead(
-            config, weight_attr)
-        self.seq_relationship = nn.Dense(
-            config.hidden_size, 2, weight_init=weight_attr)
+        self.predictions = ErnieLMPredictionHead(config)
+        self.seq_relationship = nn.Dense(config.hidden_size, 2)
 
     def construct(self, sequence_output, pooled_output, masked_positions=None):
         r"""
@@ -659,11 +643,7 @@ class ErnieForPretraining(ErniePretrainedModel):
     def __init__(self, config: ErnieConfig):
         super().__init__(config)
         self.ernie = ErnieModel(config)
-        embedding_table = TruncatedNormal(sigma=self.ernie.initializer_range)
-        self.cls = ErniePretrainingHeads(
-            config=config,
-            weight_attr=embedding_table,
-        )
+        self.cls = ErniePretrainingHeads(config=config)
 
         self.apply(self.init_weights)
 

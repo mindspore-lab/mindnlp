@@ -16,21 +16,10 @@
 UIE Tokenizer
 """
 
-import re
-from typing import Optional
 import numpy as np
 from tokenizers import Tokenizer
 from mindspore.dataset.text.transforms import Implementation
-from mindnlp.configs import MINDNLP_TOKENIZER_CONFIG_URL_BASE
-from .ernie_config import ERNIE_SUPPORT_LIST
 from ...tokenization_utils import PreTrainedTokenizer
-
-PRETRAINED_VOCAB_MAP = {
-    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format(
-        re.search(r"^[^-]*", model).group(), model
-    )
-    for model in ERNIE_SUPPORT_LIST
-}
 
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
@@ -61,7 +50,6 @@ class UIETokenizer(PreTrainedTokenizer):
     """
 
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
-    pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
     def __init__(self, vocab: str, **kwargs):
         return_token = kwargs.pop("return_token", False)
@@ -74,39 +62,6 @@ class UIETokenizer(PreTrainedTokenizer):
         self.implementation = Implementation.PY
 
         super().__init__(**kwargs)
-
-    def __call__(
-        self,
-        text_input,
-        pair=None,
-        max_length: Optional[int] = None,
-        truncation: bool = None,
-        padding: bool = False,
-        return_token_type_ids: Optional[bool] = None,
-        return_attention_mask: Optional[bool] = None,
-        return_offsets_mapping: bool = False,
-        return_position_ids: bool = False,
-    ):
-        """
-        Call method for input conversion for eager mode with C++ implementation.
-        """
-        if isinstance(text_input, str):
-            text_input = np.array(text_input)
-        elif not isinstance(text_input, np.ndarray):
-            raise TypeError(
-                f"Input should be a text line in 1-D NumPy format, got {type(text_input)}."
-            )
-        return self._execute_py(
-            text_input,
-            pair,
-            max_length,
-            truncation,
-            padding,
-            return_token_type_ids,
-            return_attention_mask,
-            return_offsets_mapping,
-            return_position_ids,
-        )
 
     def execute_py(
         self,

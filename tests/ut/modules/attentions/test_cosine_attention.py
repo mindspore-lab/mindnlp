@@ -14,8 +14,6 @@
 # limitations under the License.
 # ============================================================================
 """Test Cosine Attention"""
-
-import unittest
 import numpy as np
 
 import mindspore
@@ -25,9 +23,9 @@ from mindspore import Tensor
 from mindspore import context
 
 from mindnlp.modules import CosineAttention
+from ....common import MindNLPTestCase
 
-
-class TestCosineAttention(unittest.TestCase):
+class TestCosineAttention(MindNLPTestCase):
     r"""
     Test module Cosine Attention
     """
@@ -53,22 +51,4 @@ class TestCosineAttention(unittest.TestCase):
         output, attn = net(query, key, value, mask=mask)
 
         assert output.shape == (2, 32, 500)
-        assert attn.shape == (2, 32, 20)
-
-    def test_cosine_attention_graph(self):
-        """
-        unit test for cosine attention whit graph mode.
-        """
-
-        context.set_context(mode=context.GRAPH_MODE)
-        standard_normal = ops.StandardNormal(seed=114514)
-        query = standard_normal((2, 32, 512))
-        key = standard_normal((2, 20, 512))
-        value = standard_normal((2, 20, 512))
-        mask_shape = (2, 32, 20)
-        mask = Tensor(np.ones(mask_shape), mindspore.bool_)
-        net = CosineAttention()
-        output, attn = net(query, key, value, mask=mask)
-
-        assert output.shape == (2, 32, 512)
         assert attn.shape == (2, 32, 20)

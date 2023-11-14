@@ -2,19 +2,19 @@ import re
 import requests
 import os
 
-def gen_url(os, py_version):
+def gen_url(os_name, py_version):
     hf_url = 'https://huggingface.co/lvyufeng/mindspore-daily/resolve/main/'
     whl_name = 'mindspore-newest-cp{}-cp{}-{}.whl'
     py_version = py_version.replace('.', '')
 
-    if os == 'ubuntu-latest':
+    if os_name == 'ubuntu-latest' or 'linux' in os_name:
         platform = 'linux_x86_64'
-    elif os == 'macos-latest':
+    elif os_name == 'macos-latest' or 'mac' in os_name:
         platform = 'macosx_10_15_x86_64'
-    elif os == 'windows-latest':
+    elif os_name == 'windows-latest':
         platform = 'win_amd64'
     else:
-        raise ValueError(f'not support this operate system {os}')
+        raise ValueError(f'not support this operate system {os_name}')
     
     py_version2 = py_version if py_version != '37' else py_version + 'm'
     whl_name = whl_name.format(py_version, py_version2, platform)

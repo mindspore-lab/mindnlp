@@ -4,8 +4,13 @@ pylint
 pytest
 ddt
 datasets
-tokenizers
 torch
 sentencepiece
 regex
 modelscope
+parameterized
+jinja2
+sacremoses
+librosa
+soundfile
+tokenizers

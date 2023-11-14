@@ -29,7 +29,8 @@ from typing import Dict, Optional, Union
 
 from mindnlp.utils import cached_file, is_sentencepiece_available, is_tokenizers_available, logging
 from ...configuration_utils import PretrainedConfig, EncoderDecoderConfig
-from ...tokenization_utils import PreTrainedTokenizer
+from ...tokenization_utils import PreTrainedTokenizer # pylint: disable=cyclic-import
+from ...tokenization_utils_base import TOKENIZER_CONFIG_FILE # pylint: disable=cyclic-import
 from .auto_factory import _LazyAutoMapping
 from .configuration_auto import (
     CONFIG_MAPPING_NAMES,
@@ -536,8 +537,15 @@ def get_tokenizer_config(
 
     resolved_config_file = cached_file(
         pretrained_model_name_or_path,
+        TOKENIZER_CONFIG_FILE,
         cache_dir=cache_dir,
+        force_download=force_download,
+        resume_download=resume_download,
         proxies=proxies,
+        local_files_only=local_files_only,
+        subfolder=subfolder,
+        _raise_exceptions_for_missing_entries=False,
+        _raise_exceptions_for_connection_errors=False,
     )
     if resolved_config_file is None:
         logger.info("Could not locate the tokenizer configuration file, will try to use the model config instead.")

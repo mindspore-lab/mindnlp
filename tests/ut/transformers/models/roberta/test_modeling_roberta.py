@@ -15,7 +15,6 @@
 # limitations under the License.
 # ============================================================================
 """Test Roberta"""
-import unittest
 import pytest
 import numpy as np
 
@@ -26,7 +25,7 @@ from mindnlp.utils.testing_utils import TestCasePlus
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask
-
+from .....common import MindNLPTestCase
 
 if is_mindspore_available():
     import mindspore
@@ -370,7 +369,7 @@ class RobertaModelTester:
 
 
 @require_mindspore
-class RobertaModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
+class RobertaModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
     all_model_classes = (
         (
             RobertaForCausalLM,

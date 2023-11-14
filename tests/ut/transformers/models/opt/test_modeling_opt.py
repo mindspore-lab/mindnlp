@@ -14,7 +14,6 @@
 # ============================================================================
 # pylint: disable=C0103
 """Test OPT"""
-import unittest
 import numpy as np
 import mindspore
 import pytest
@@ -22,9 +21,9 @@ from mindspore.ops import functional
 from mindspore import Tensor
 from mindnlp.transformers.models.opt import opt, opt_config
 from mindnlp.transformers import OPTModel, OPTForCausalLM, OPTTokenizer
+from .....common import MindNLPTestCase
 
-
-class OPTModelTest(unittest.TestCase):
+class OPTModelTest(MindNLPTestCase):
     r"""
     OPT Model Test
     """
@@ -70,7 +69,7 @@ class OPTModelTest(unittest.TestCase):
 
 
 
-class OPTModelIntegrationTests(unittest.TestCase):
+class OPTModelIntegrationTests(MindNLPTestCase):
     r"""
     Test OPT Model Integration
     """
@@ -106,7 +105,7 @@ class OPTModelIntegrationTests(unittest.TestCase):
         assert np.allclose(output[0, :3, :3].numpy(), expected_slice.numpy(), atol=5e-4)
 
 
-class OPTEmbeddingsTest(unittest.TestCase):
+class OPTEmbeddingsTest(MindNLPTestCase):
     r"""
     Test OPT Embeddings
     """
@@ -200,7 +199,7 @@ class OPTEmbeddingsTest(unittest.TestCase):
 
 # TODO: Do generation test
 @pytest.mark.skip
-class OPTGenerationTest(unittest.TestCase):
+class OPTGenerationTest(MindNLPTestCase):
     r"""
     Test GPT2 Generation
     """

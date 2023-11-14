@@ -23,7 +23,7 @@ from mindnlp._legacy.nn import Dropout
 from mindnlp._legacy.functional import arange
 
 from .cpm_config import CpmConfig
-from ..gpt2.gpt2 import GPT2PreTrainedModel, GPT2Block
+from ..gpt2.modeling_gpt2 import GPT2PreTrainedModel, GPT2Block
 
 PRETRAINED_MODEL_ARCHIVE_MAP = {
     "TsinghuaAI/CPM-Generate": "https://huggingface.co/TsinghuaAI/CPM-Generate/resolve/main/pytorch_model.bin"
@@ -35,7 +35,7 @@ class CpmPreTrainedModel(GPT2PreTrainedModel):
     models.
     """
     config_class = CpmConfig
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
     base_model_prefix = "transformer"
 
 

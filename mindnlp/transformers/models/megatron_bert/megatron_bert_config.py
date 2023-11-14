@@ -1,5 +1,4 @@
 """ MEGATRON_BERT model configuration"""
-from mindnlp.configs import HF_CONFIG_URL_BASE
 from ...configuration_utils import PretrainedConfig
 
 __all__ = ['MegatronBertConfig']
@@ -10,9 +9,6 @@ MEGATRONBERT_SUPPORT_LIST = ["megatronbert-1.3b-NLI",
                              "nvidia/megatron-bert-cased-345m",
                              ]
 
-CONFIG_ARCHIVE_MAP = {
-    model: HF_CONFIG_URL_BASE.format(model) for model in MEGATRONBERT_SUPPORT_LIST
-}
 
 class MegatronBertConfig(PretrainedConfig):
     r"""

@@ -1,10 +1,11 @@
 # Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2020 The HuggingFace Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,16 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=E1128
-# pylint: disable=C0103
-# pylint: disable=C0412
-# pylint: disable=W0642
-# pylint: disable=W0212
-# pylint: disable=W0201
-# pylint: disable=C0413
-# pylint: disable=R0916
-# pylint: disable=W1203
-# pylint: disable=W0613
+# pylint: disable=import-outside-toplevel
+# pylint: disable=invalid-name
+# pylint: disable=assignment-from-none
+# pylint: disable=logging-fstring-interpolation
+# pylint: disable=too-many-branches
+# pylint: disable=too-many-statements
+# pylint: disable=too-many-boolean-expressions
+# pylint: disable=unused-argument
+# pylint: disable=attribute-defined-outside-init
+# pylint: disable=self-cls-assignment
 """
 Abstract class for Pretrained models.
 """
@@ -29,33 +30,27 @@ import os
 import gc
 import re
 import json
+from dataclasses import dataclass
 from typing import Union, Optional, Tuple, OrderedDict, Callable, Dict, List
 from tqdm.autonotebook import tqdm
 import numpy as np
 
 import mindspore
+from mindspore import load_checkpoint, save_checkpoint
 from mindspore import nn, ops, Tensor, Parameter
-from mindspore.train.serialization import save_checkpoint
 
-from mindnlp.configs import HF_MODEL_URL_BASE, DEFAULT_ROOT
-from mindnlp.utils.download import cached_path, get_checkpoint_shard_files
-from mindnlp.utils import less_min_pynative_first, convert_file_size_to_int, logging
+from mindnlp.configs import MS_URL_BASE, HF_URL_BASE, PT_WEIGHTS_NAME, WEIGHTS_NAME, WEIGHTS_INDEX_NAME, PT_WEIGHTS_INDEX_NAME
+from mindnlp.utils.download import is_remote_url, download_url, cached_file, get_checkpoint_shard_files
+from mindnlp.utils import convert_file_size_to_int, logging, ModelOutput
 from mindnlp._legacy.functional import arange
-
-if less_min_pynative_first:
-    from mindspore import load_checkpoint
-else:
-    from mindnlp._legacy.utils import load_checkpoint
 
 from .generation import GenerationMixin
 from .configuration_utils import PretrainedConfig
 from .generation.configuration_utils import GenerationConfig
+from .activations import get_activation
 
 logger = logging.get_logger(__name__)
 
-WEIGHTS_NAME = "mindspore.ckpt"
-WEIGHTS_INDEX_NAME = "mindspore.ckpt.index.json"
-HF_WEIGHTS_INDEX_NAME = "pytorch_model.bin.index.json"
 _init_weights = True
 
 class CellUtilMixin:
@@ -218,7 +213,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
     Abstract class for Pretrained models
     """
     config_class = None
-    pretrained_model_archive_map = {}
     base_model_prefix = ""
     main_input_name = "input_ids"
 
@@ -249,6 +243,19 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
         """
         self.init_weights()
+
+    @classmethod
+    def _from_config(cls, config, **kwargs):
+        """
+        All context managers that the model should be initialized under go here.
+
+        Args:
+            torch_dtype (`torch.dtype`, *optional*):
+                Override the default `torch.dtype` and load the model under this dtype.
+        """
+        model = cls(config, **kwargs)
+
+        return model
 
     def init_weights(self):
         """
@@ -624,7 +631,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
     ):
         """from_pretrained"""
         state_dict = kwargs.pop("state_dict", None)
-        cache_dir = kwargs.pop("cache_dir", os.path.join(DEFAULT_ROOT, 'models'))
+        cache_dir = kwargs.pop("cache_dir", None)
         from_pt = kwargs.pop("from_pt", False)
         force_download = kwargs.pop("force_download", False)
         resume_download = kwargs.pop("resume_download", False)
@@ -632,6 +639,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         local_files_only = kwargs.pop("local_files_only", False)
         _fast_init = kwargs.pop("_fast_init", True)
         output_loading_info = kwargs.pop("output_loading_info", False)
+        subfolder = kwargs.pop("subfolder", "")
+        variant = kwargs.pop("variant", None)
 
         is_sharded = False
         # Load config if we don't provide a configuration
@@ -652,62 +661,128 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         else:
             model_kwargs = kwargs
 
+        endpoint = HF_URL_BASE if from_pt else MS_URL_BASE
         # Load model
         if pretrained_model_name_or_path is not None:
-            if pretrained_model_name_or_path in cls.pretrained_model_archive_map and not from_pt:
-                archive_file = cls.pretrained_model_archive_map[pretrained_model_name_or_path]
-                cache_dir = os.path.join(cache_dir, pretrained_model_name_or_path)
-            elif os.path.isdir(pretrained_model_name_or_path):
-                archive_file = os.path.join(pretrained_model_name_or_path, "mindspore.ckpt")
-                cache_dir = pretrained_model_name_or_path
-            elif os.path.isfile(pretrained_model_name_or_path):
+            pretrained_model_name_or_path = str(pretrained_model_name_or_path)
+            is_local = os.path.isdir(pretrained_model_name_or_path)
+            if is_local:
+                if from_pt and os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, subfolder, PT_WEIGHTS_NAME)
+                ):
+                    # Load from a TF 2.0 checkpoint in priority if from_tf
+                    archive_file = os.path.join(pretrained_model_name_or_path, subfolder, PT_WEIGHTS_NAME)
+                elif os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_NAME, variant))
+                ):
+                    # Load from a PyTorch checkpoint
+                    archive_file = os.path.join(
+                        pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_NAME, variant)
+                    )
+                elif os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_INDEX_NAME, variant))
+                ):
+                    # Load from a sharded PyTorch checkpoint
+                    archive_file = os.path.join(
+                        pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_INDEX_NAME, variant)
+                    )
+                    is_sharded = True
+                # At this stage we don't have a weight file so we will raise an error.
+                else:
+                    raise EnvironmentError(
+                        f"Error no file named {_add_variant(WEIGHTS_NAME, variant)}, {PT_WEIGHTS_NAME},"
+                        f" found in directory {pretrained_model_name_or_path}."
+                    )
+            elif os.path.isfile(os.path.join(subfolder, pretrained_model_name_or_path)):
                 archive_file = pretrained_model_name_or_path
-                cache_dir = None
-            elif from_pt:
-                archive_file = HF_MODEL_URL_BASE.format(pretrained_model_name_or_path)
-                cache_dir = os.path.join(cache_dir, pretrained_model_name_or_path)
+                is_local = True
+            elif is_remote_url(pretrained_model_name_or_path):
+                filename = pretrained_model_name_or_path
+                resolved_archive_file = download_url(pretrained_model_name_or_path)
             else:
-                raise ValueError(
-                    f'not found model of {pretrained_model_name_or_path}.')
+                # set correct filename
+                if from_pt:
+                    filename = _add_variant(PT_WEIGHTS_NAME, variant)
+                else:
+                    filename = _add_variant(WEIGHTS_NAME, variant)
 
-            # redirect to the cache, if necessary
-            try:
-                resolved_archive_file = cached_path(
-                    archive_file,
-                    cache_dir=cache_dir,
-                    proxies=proxies)
+                try:
+                    # Load from URL or cache if already cached
+                    cached_file_kwargs = {
+                        "cache_dir": cache_dir,
+                        "force_download": force_download,
+                        "proxies": proxies,
+                        "resume_download": resume_download,
+                        "local_files_only": local_files_only,
+                        "subfolder": subfolder,
+                        "_raise_exceptions_for_missing_entries": False,
+                        'endpoint': endpoint
+                    }
+                    resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
 
-                if resolved_archive_file is None:
-                    base_url = '/'.join(archive_file.split('/')[:-1])
-                    archive_file = base_url + '/' + HF_WEIGHTS_INDEX_NAME if from_pt else \
-                        base_url + '/' + WEIGHTS_INDEX_NAME
-
-                    resolved_archive_file = cached_path(
-                        archive_file,
-                        cache_dir=cache_dir,
-                        proxies=proxies)
-
-                    if resolved_archive_file is not None:
-                        cache_dir = os.path.join(cache_dir, 'shard_ckpt')
-                        cached_filenames, _ = get_checkpoint_shard_files(
-                            index_filename=resolved_archive_file,
-                            cache_dir=cache_dir,
-                            url=base_url,
-                            proxies=proxies
+                    # Since we set _raise_exceptions_for_missing_entries=False, we don't get an exception but a None
+                    # result when internet is up, the repo and revision exist, but the file does not.
+                    if resolved_archive_file is None and filename == _add_variant(WEIGHTS_NAME, variant):
+                        # Maybe the checkpoint is sharded, we try to grab the index name in this case.
+                        resolved_archive_file = cached_file(
+                            pretrained_model_name_or_path,
+                            _add_variant(WEIGHTS_INDEX_NAME, variant),
+                            **cached_file_kwargs,
                         )
-                        is_sharded = True
-                    else:
+                        if resolved_archive_file is not None:
+                            is_sharded = True
+
+                    if resolved_archive_file is None and filename == _add_variant(PT_WEIGHTS_NAME, variant):
+                        # Maybe the checkpoint is sharded, we try to grab the index name in this case.
+                        resolved_archive_file = cached_file(
+                            pretrained_model_name_or_path,
+                            _add_variant(PT_WEIGHTS_INDEX_NAME, variant),
+                            **cached_file_kwargs,
+                        )
+                        if resolved_archive_file is not None:
+                            is_sharded = True
+
+                    if resolved_archive_file is None:
                         raise EnvironmentError(
-                            f"Couldn't reach server at '{archive_file}' to download pretrained weights.")
+                            f"{pretrained_model_name_or_path} does not appear to have a file named"
+                            f" {_add_variant(WEIGHTS_NAME, variant)}, {_add_variant(PT_WEIGHTS_NAME, variant)}"
+                        )
+                except EnvironmentError:
+                    # Raise any environment error raise by `cached_file`. It will have a helpful error message adapted
+                    # to the original exception.
+                    raise
+                except Exception as exc:
+                    # For any other exception, we throw a generic error.
+                    raise EnvironmentError(
+                        f"Can't load the model for '{pretrained_model_name_or_path}'. If you were trying to load it"
+                        ", make sure you don't have a local directory with the"
+                        f" same name. Otherwise, make sure '{pretrained_model_name_or_path}' is the correct path to a"
+                        f" directory containing a file named {_add_variant(WEIGHTS_NAME, variant)},"
+                        f" {_add_variant(PT_WEIGHTS_NAME, variant)}."
+                    ) from exc
 
-            except EnvironmentError as exc:
-                raise exc
-
-            if resolved_archive_file == archive_file:
-                logger.info("loading weights file %s", archive_file)
+            if is_local:
+                logger.info(f"loading weights file {archive_file}")
+                resolved_archive_file = archive_file
             else:
-                logger.info("loading weights file %s from cache at %s",
-                            archive_file, resolved_archive_file)
+                logger.info(f"loading weights file {filename} from cache at {resolved_archive_file}")
+        else:
+            resolved_archive_file = None
+
+        if is_sharded:
+            # rsolved_archive_file becomes a list of files that point to the different checkpoint shards in this case.
+            resolved_archive_file, _ = get_checkpoint_shard_files(
+                pretrained_model_name_or_path,
+                resolved_archive_file,
+                cache_dir=cache_dir,
+                force_download=force_download,
+                proxies=proxies,
+                resume_download=resume_download,
+                local_files_only=local_files_only,
+                subfolder=subfolder,
+                endpoint=endpoint
+            )
+
 
         if pretrained_model_name_or_path is None and state_dict is None:
             raise ValueError("the argument 'pretrained_model_name_or_path' should be "
@@ -721,16 +796,16 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         if from_pt:
             if is_sharded:
                 converted_filenames = []
-                for name in cached_filenames:
-                    converted = cls.convert_torch_to_mindspore(
+                for name in resolved_archive_file:
+                    converted = convert_torch_to_mindspore(
                         str(name))
                     converted_filenames.append(converted)
             else:
-                resolved_archive_file = cls.convert_torch_to_mindspore(
+                resolved_archive_file = convert_torch_to_mindspore(
                     str(resolved_archive_file))
         else:
             if is_sharded:
-                converted_filenames = cached_filenames
+                converted_filenames = resolved_archive_file
 
         def load_ckpt(resolved_archive_file):
             try:
@@ -757,9 +832,11 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     param_name = param.name.replace(f'{prefix}.', '')
                 else:
                     param_name = param.name
+
                 if id(param) in param_id_set:
                     # for tied params
-                    keys_missing.remove(pname_in_net)
+                    if pname_in_net in keys_missing:
+                        keys_missing.remove(pname_in_net)
 
                     if pname_in_net in keys_unexpected:
                         keys_unexpected.remove(pname_in_net)
@@ -784,6 +861,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             return keys_unexpected, keys_missing
 
         all_keys_unexpected = None
+
         if state_dict is None:
             if is_sharded:
                 all_keys_unexpected = []
@@ -795,8 +873,9 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     gc.collect()
             else:
                 state_dict = load_ckpt(resolved_archive_file)
-
-        all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
+                all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
+        else:
+            all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
 
         if cls._keys_to_ignore_on_load_missing is not None:
             for pat in cls._keys_to_ignore_on_load_missing:
@@ -806,6 +885,31 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             for pat in cls._keys_to_ignore_on_load_unexpected:
                 all_keys_unexpected = [k for k in all_keys_unexpected if re.search(pat, k) is None]
 
+
+        # make sure token embedding weights are still tied if needed
+        model.tie_weights()
+
+        # Set model in evaluation mode to deactivate DropOut modules by default
+        model.set_train(False)
+
+        kwargs['from_pt'] = from_pt
+        # If it is a model with generation capabilities, attempt to load the generation config
+        if model.can_generate() and pretrained_model_name_or_path is not None:
+            try:
+                model.generation_config = GenerationConfig.from_pretrained(
+                    pretrained_model_name_or_path,
+                    cache_dir=cache_dir,
+                    force_download=force_download,
+                    resume_download=resume_download,
+                    proxies=proxies,
+                    local_files_only=local_files_only,
+                    subfolder=subfolder,
+                    **kwargs,
+                )
+            except OSError as exc:
+                raise ValueError(
+                    "Generation config file not found, using a generation config created from the model config."
+                ) from exc
 
         if output_loading_info:
             loading_info = {
@@ -846,15 +950,17 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
         logger.info(f"Model weights saved in {output_model_file}")
 
-    def can_generate(self) -> bool:
+    @classmethod
+    def can_generate(cls) -> bool:
         """
         Returns whether this model can generate sequences with `.generate()`.
 
         Returns:
             `bool`: Whether this model can generate sequences with `.generate()`.
         """
-        # Detects whether `prepare_inputs_for_generation` has been overwritten, which is a requirement for generation
-        if "GenerationMixin" in str(self.prepare_inputs_for_generation.__func__):
+        # Detects whether `prepare_inputs_for_generation` has been overwritten, which is a requirement for generation.
+        # Alternativelly, the model can also have a custom `generate` function.
+        if "GenerationMixin" in str(cls.prepare_inputs_for_generation) and "GenerationMixin" in str(cls.generate):
             return False
         return True
 
@@ -907,6 +1013,17 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                         par_new_name = cell_name + '.' + par_new_name
 
                     yield par_new_name, par
+
+    def num_parameters(self, only_trainable=False):
+        """return parameters count"""
+        total = 0
+        param_set = set()
+        for param in self.get_parameters():
+            param_id = id(param)
+            if param_id not in param_set and (only_trainable or param.requires_grad):
+                total += param.size
+            param_set.add(param_id)
+        return total
 
     def parameters_dict(self, recurse=True):
         """
@@ -1180,3 +1297,410 @@ def dtype_byte_size(dtype):
         raise ValueError(f"`dtype` is not a valid dtype: {dtype}.")
     bit_size = int(bit_search.groups()[0])
     return bit_size // 8
+
+def convert_torch_to_mindspore(pth_file):
+    """convert torch checkpoint to mindspore"""
+    try:
+        import torch
+    except Exception as exc:
+        raise ImportError("'import torch' failed, please install torch by "
+                          "`pip install torch` or instructions from 'https://pytorch.org'") \
+                          from exc
+
+    logger.info('Starting checkpoint conversion.')
+    ms_ckpt = []
+    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
+
+    for key, value in state_dict.items():
+        if 'LayerNorm' in key or 'layer_norm' in key:
+            if '.weight' in key:
+                key = key.replace('.weight', '.gamma')
+            if '.bias' in key:
+                key = key.replace('.bias', '.beta')
+        if 'embeddings' in key or 'embedding' in key or 'embed_' in key and \
+            'embedding_hidden_mapping_in' not in key: # for albert
+            key = key.replace('weight', 'embedding_table')
+        ms_ckpt.append({'name': key, 'data': Tensor(value.numpy())})
+
+    ms_ckpt_path = pth_file.replace('pytorch_model', 'mindspore')
+    ms_ckpt_path = ms_ckpt_path.replace('.bin', '.ckpt')
+    if not os.path.exists(ms_ckpt_path):
+        try:
+            save_checkpoint(ms_ckpt, ms_ckpt_path)
+        except Exception as exc:
+            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, '
+                               f'please checkout the path.') from exc
+
+    return ms_ckpt_path
+
+class PoolerStartLogits(nn.Cell):
+    """
+    Compute SQuAD start logits from sequence hidden states.
+
+    Args:
+        config ([`PretrainedConfig`]):
+            The config used by the model, will be used to grab the `hidden_size` of the model.
+    """
+
+    def __init__(self, config: PretrainedConfig):
+        super().__init__()
+        self.dense = nn.Dense(config.hidden_size, 1)
+
+    def construct(
+        self, hidden_states: mindspore.Tensor, p_mask: Optional[mindspore.Tensor] = None
+    ) -> mindspore.Tensor:
+        """
+        Args:
+            hidden_states (`mindspore.Tensor` of shape `(batch_size, seq_len, hidden_size)`):
+                The final hidden states of the model.
+            p_mask (`mindspore.Tensor` of shape `(batch_size, seq_len)`, *optional*):
+                Mask for tokens at invalid position, such as query and special symbols (PAD, SEP, CLS). 1.0 means token
+                should be masked.
+
+        Returns:
+            `mindspore.Tensor`: The start logits for SQuAD.
+        """
+        x = self.dense(hidden_states).squeeze(-1)
+
+        if p_mask is not None:
+            if get_parameter_dtype(self) == mindspore.float16:
+                x = x * (1 - p_mask) - 65500 * p_mask
+            else:
+                x = x * (1 - p_mask) - 1e30 * p_mask
+
+        return x
+
+
+class PoolerEndLogits(nn.Cell):
+    """
+    Compute SQuAD end logits from sequence hidden states.
+
+    Args:
+        config ([`PretrainedConfig`]):
+            The config used by the model, will be used to grab the `hidden_size` of the model and the `layer_norm_eps`
+            to use.
+    """
+
+    def __init__(self, config: PretrainedConfig):
+        super().__init__()
+        self.dense_0 = nn.Dense(config.hidden_size * 2, config.hidden_size)
+        self.activation = nn.Tanh()
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.dense_1 = nn.Dense(config.hidden_size, 1)
+
+    def construct(
+        self,
+        hidden_states: mindspore.Tensor,
+        start_states: Optional[mindspore.Tensor] = None,
+        start_positions: Optional[mindspore.Tensor] = None,
+        p_mask: Optional[mindspore.Tensor] = None,
+    ) -> mindspore.Tensor:
+        """
+        Args:
+            hidden_states (`mindspore.Tensor` of shape `(batch_size, seq_len, hidden_size)`):
+                The final hidden states of the model.
+            start_states (`mindspore.Tensor` of shape `(batch_size, seq_len, hidden_size)`, *optional*):
+                The hidden states of the first tokens for the labeled span.
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                The position of the first token for the labeled span.
+            p_mask (`mindspore.Tensor` of shape `(batch_size, seq_len)`, *optional*):
+                Mask for tokens at invalid position, such as query and special symbols (PAD, SEP, CLS). 1.0 means token
+                should be masked.
+
+        <Tip>
+
+        One of `start_states` or `start_positions` should be not `None`. If both are set, `start_positions` overrides
+        `start_states`.
+
+        </Tip>
+
+        Returns:
+            `mindspore.Tensor`: The end logits for SQuAD.
+        """
+        assert (
+            start_states is not None or start_positions is not None
+        ), "One of start_states, start_positions should be not None"
+        if start_positions is not None:
+            slen, hsz = hidden_states.shape[-2:]
+            start_positions = start_positions[:, None, None].broadcast_to((-1, -1, hsz))  # shape (bsz, 1, hsz)
+            start_states = hidden_states.gather_elements(-2, start_positions)  # shape (bsz, 1, hsz)
+            start_states = start_states.broadcast_to((-1, slen, -1))  # shape (bsz, slen, hsz)
+
+        x = self.dense_0(ops.cat([hidden_states, start_states], axis=-1))
+        x = self.activation(x)
+        x = self.LayerNorm(x)
+        x = self.dense_1(x).squeeze(-1)
+
+        if p_mask is not None:
+            if get_parameter_dtype(self) == mindspore.float16:
+                x = x * (1 - p_mask) - 65500 * p_mask
+            else:
+                x = x * (1 - p_mask) - 1e30 * p_mask
+
+        return x
+
+
+class PoolerAnswerClass(nn.Cell):
+    """
+    Compute SQuAD 2.0 answer class from classification and start tokens hidden states.
+
+    Args:
+        config ([`PretrainedConfig`]):
+            The config used by the model, will be used to grab the `hidden_size` of the model.
+    """
+
+    def __init__(self, config):
+        super().__init__()
+        self.dense_0 = nn.Dense(config.hidden_size * 2, config.hidden_size)
+        self.activation = nn.Tanh()
+        self.dense_1 = nn.Dense(config.hidden_size, 1, has_bias=False)
+
+    def construct(
+        self,
+        hidden_states: mindspore.Tensor,
+        start_states: Optional[mindspore.Tensor] = None,
+        start_positions: Optional[mindspore.Tensor] = None,
+        cls_index: Optional[mindspore.Tensor] = None,
+    ) -> mindspore.Tensor:
+        """
+        Args:
+            hidden_states (`mindspore.Tensor` of shape `(batch_size, seq_len, hidden_size)`):
+                The final hidden states of the model.
+            start_states (`mindspore.Tensor` of shape `(batch_size, seq_len, hidden_size)`, *optional*):
+                The hidden states of the first tokens for the labeled span.
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                The position of the first token for the labeled span.
+            cls_index (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Position of the CLS token for each sentence in the batch. If `None`, takes the last token.
+
+        <Tip>
+
+        One of `start_states` or `start_positions` should be not `None`. If both are set, `start_positions` overrides
+        `start_states`.
+
+        </Tip>
+
+        Returns:
+            `mindspore.Tensor`: The SQuAD 2.0 answer class.
+        """
+        # No dependency on end_feature so that we can obtain one single `cls_logits` for each sample.
+        hsz = hidden_states.shape[-1]
+        assert (
+            start_states is not None or start_positions is not None
+        ), "One of start_states, start_positions should be not None"
+        if start_positions is not None:
+            start_positions = start_positions[:, None, None].broadcast_to((-1, -1, hsz))  # shape (bsz, 1, hsz)
+            start_states = hidden_states.gather_elements(-2, start_positions).squeeze(-2)  # shape (bsz, hsz)
+
+        if cls_index is not None:
+            cls_index = cls_index[:, None, None].broadcast_to((-1, -1, hsz))  # shape (bsz, 1, hsz)
+            cls_token_state = hidden_states.gather_elements(-2, cls_index).squeeze(-2)  # shape (bsz, hsz)
+        else:
+            cls_token_state = hidden_states[:, -1, :]  # shape (bsz, hsz)
+
+        x = self.dense_0(ops.cat([start_states, cls_token_state], axis=-1))
+        x = self.activation(x)
+        x = self.dense_1(x).squeeze(-1)
+
+        return x
+
+@dataclass
+class SquadHeadOutput(ModelOutput):
+    """
+    Base class for outputs of question answering models using a [`~modeling_utils.SQuADHead`].
+
+    Args:
+        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned if both `start_positions` and `end_positions` are provided):
+            Classification loss as the sum of start token, end token (and is_impossible if provided) classification
+            losses.
+        start_top_log_probs (`mindspore.Tensor` of shape `(batch_size, config.start_n_top)`, *optional*, returned if `start_positions` or `end_positions` is not provided):
+            Log probabilities for the top config.start_n_top start token possibilities (beam-search).
+        start_top_index (`mindspore.Tensor` of shape `(batch_size, config.start_n_top)`, *optional*, returned if `start_positions` or `end_positions` is not provided):
+            Indices for the top config.start_n_top start token possibilities (beam-search).
+        end_top_log_probs (`mindspore.Tensor` of shape `(batch_size, config.start_n_top * config.end_n_top)`, *optional*, returned if `start_positions` or `end_positions` is not provided):
+            Log probabilities for the top `config.start_n_top * config.end_n_top` end token possibilities
+            (beam-search).
+        end_top_index (`mindspore.Tensor` of shape `(batch_size, config.start_n_top * config.end_n_top)`, *optional*, returned if `start_positions` or `end_positions` is not provided):
+            Indices for the top `config.start_n_top * config.end_n_top` end token possibilities (beam-search).
+        cls_logits (`mindspore.Tensor` of shape `(batch_size,)`, *optional*, returned if `start_positions` or `end_positions` is not provided):
+            Log probabilities for the `is_impossible` label of the answers.
+
+    """
+
+    loss: Optional[mindspore.Tensor] = None
+    start_top_log_probs: Optional[mindspore.Tensor] = None
+    start_top_index: Optional[mindspore.Tensor] = None
+    end_top_log_probs: Optional[mindspore.Tensor] = None
+    end_top_index: Optional[mindspore.Tensor] = None
+    cls_logits: Optional[mindspore.Tensor] = None
+
+
+class SQuADHead(nn.Cell):
+    r"""
+    A SQuAD head inspired by XLNet.
+
+    Args:
+        config ([`PretrainedConfig`]):
+            The config used by the model, will be used to grab the `hidden_size` of the model and the `layer_norm_eps`
+            to use.
+    """
+
+    def __init__(self, config):
+        super().__init__()
+        self.start_n_top = config.start_n_top
+        self.end_n_top = config.end_n_top
+
+        self.start_logits = PoolerStartLogits(config)
+        self.end_logits = PoolerEndLogits(config)
+        self.answer_class = PoolerAnswerClass(config)
+
+    def construct(
+        self,
+        hidden_states: mindspore.Tensor,
+        start_positions: Optional[mindspore.Tensor] = None,
+        end_positions: Optional[mindspore.Tensor] = None,
+        cls_index: Optional[mindspore.Tensor] = None,
+        is_impossible: Optional[mindspore.Tensor] = None,
+        p_mask: Optional[mindspore.Tensor] = None,
+        return_dict: bool = False,
+    ) -> Union[SquadHeadOutput, Tuple[mindspore.Tensor]]:
+        """
+        Args:
+            hidden_states (`mindspore.Tensor` of shape `(batch_size, seq_len, hidden_size)`):
+                Final hidden states of the model on the sequence tokens.
+            start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Positions of the first token for the labeled span.
+            end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Positions of the last token for the labeled span.
+            cls_index (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Position of the CLS token for each sentence in the batch. If `None`, takes the last token.
+            is_impossible (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Whether the question has a possible answer in the paragraph or not.
+            p_mask (`mindspore.Tensor` of shape `(batch_size, seq_len)`, *optional*):
+                Mask for tokens at invalid position, such as query and special symbols (PAD, SEP, CLS). 1.0 means token
+                should be masked.
+            return_dict (`bool`, *optional*, defaults to `False`):
+                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
+
+        Returns:
+        """
+        start_logits = self.start_logits(hidden_states, p_mask=p_mask)
+
+        if start_positions is not None and end_positions is not None:
+            # If we are on multi-GPU, let's remove the dimension added by batch splitting
+            for x in (start_positions, end_positions, cls_index, is_impossible):
+                if x is not None and x.ndim > 1:
+                    x = x.squeeze(-1)
+
+            # during training, compute the end logits based on the ground truth of the start position
+            end_logits = self.end_logits(hidden_states, start_positions=start_positions, p_mask=p_mask)
+
+            start_loss = ops.cross_entropy(start_logits, start_positions)
+            end_loss = ops.cross_entropy(end_logits, end_positions)
+            total_loss = (start_loss + end_loss) / 2
+
+            if cls_index is not None and is_impossible is not None:
+                # Predict answerability from the representation of CLS and START
+                cls_logits = self.answer_class(hidden_states, start_positions=start_positions, cls_index=cls_index)
+                cls_loss = ops.binary_cross_entropy_with_logits(cls_logits, is_impossible)
+
+                # note(zhiliny): by default multiply the loss by 0.5 so that the scale is comparable to start_loss and end_loss
+                total_loss += cls_loss * 0.5
+
+            return SquadHeadOutput(loss=total_loss) if return_dict else (total_loss,)
+
+        # during inference, compute the end logits based on beam search
+        _, slen, hsz = hidden_states.shape
+        start_log_probs = ops.softmax(start_logits, axis=-1)  # shape (bsz, slen)
+
+        start_top_log_probs, start_top_index = ops.topk(
+            start_log_probs, self.start_n_top, dim=-1
+        )  # shape (bsz, start_n_top)
+        start_top_index_exp = start_top_index.unsqueeze(-1).broadcast_to((-1, -1, hsz))  # shape (bsz, start_n_top, hsz)
+        start_states = ops.gather_elements(hidden_states, -2, start_top_index_exp)  # shape (bsz, start_n_top, hsz)
+        start_states = start_states.unsqueeze(1).broadcast_to((-1, slen, -1, -1))  # shape (bsz, slen, start_n_top, hsz)
+
+        hidden_states_expanded = hidden_states.unsqueeze(2).expand_as(
+            start_states
+        )  # shape (bsz, slen, start_n_top, hsz)
+        p_mask = p_mask.unsqueeze(-1) if p_mask is not None else None
+        end_logits = self.end_logits(hidden_states_expanded, start_states=start_states, p_mask=p_mask)
+        end_log_probs = ops.softmax(end_logits, axis=1)  # shape (bsz, slen, start_n_top)
+
+        end_top_log_probs, end_top_index = ops.topk(
+            end_log_probs, self.end_n_top, dim=1
+        )  # shape (bsz, end_n_top, start_n_top)
+        end_top_log_probs = end_top_log_probs.view(-1, self.start_n_top * self.end_n_top)
+        end_top_index = end_top_index.view(-1, self.start_n_top * self.end_n_top)
+
+        start_states = ops.einsum("blh,bl->bh", hidden_states, start_log_probs)
+        cls_logits = self.answer_class(hidden_states, start_states=start_states, cls_index=cls_index)
+
+        if not return_dict:
+            return (start_top_log_probs, start_top_index, end_top_log_probs, end_top_index, cls_logits)
+        return SquadHeadOutput(
+            start_top_log_probs=start_top_log_probs,
+            start_top_index=start_top_index,
+            end_top_log_probs=end_top_log_probs,
+            end_top_index=end_top_index,
+            cls_logits=cls_logits,
+        )
+
+
+class SequenceSummary(nn.Cell):
+    """
+    GPTDoubleHeadsModel and GPT2DoubleHeadsModel class that self.multiple_choice_head
+    """
+
+    def __init__(self, config):
+        super().__init__()
+
+        self.summary_type = getattr(config, "summary_type", "last")
+        if self.summary_type == "attn":
+            raise NotImplementedError
+
+        self.summary = nn.Identity()
+        if hasattr(config, "summary_use_proj") and config.summary_use_proj:
+            if hasattr(config, "summary_proj_to_labels") and config.summary_proj_to_labels and config.num_labels > 0:
+                num_classes = config.num_labels
+            else:
+                num_classes = config.hidden_size
+            self.summary = nn.Dense(config.hidden_size, num_classes)
+
+        activation_string = getattr(config, "summary_activation", None)
+        self.activation = get_activation(activation_string) if activation_string else nn.Identity()
+
+        self.first_dropout = nn.Identity()
+        if hasattr(config, "summary_first_dropout") and config.summary_first_dropout > 0:
+            self.first_dropout = nn.Dropout(p=config.summary_first_dropout)
+
+        self.last_dropout = nn.Identity()
+        if hasattr(config, "summary_last_dropout") and config.summary_last_dropout > 0:
+            self.last_dropout = nn.Dropout(p=config.summary_last_dropout)
+
+    def construct(self, hidden_states: Tensor, cls_index: Optional[Tensor] = None) -> Tensor:
+        if self.summary_type == "last":
+            output = hidden_states[:, -1, :]
+        elif self.summary_type == "first":
+            output = hidden_states[:, 0, :]
+        elif self.summary_type == "mean":
+            output = hidden_states.mean(dim=1)
+        elif self.summary_type == "cls_index":
+            if cls_index is None:
+                cls_index = ops.fill(
+                    mindspore.int64,
+                    hidden_states[..., :1, :].shape,
+                    hidden_states.shape[-2] - 1,
+                )
+            else:
+                cls_index = cls_index.expand_dims(-1).expand_dims(-1)
+                cls_index = cls_index.expand((-1,) * (cls_index.ndim - 1) + (hidden_states.shape[-1],))
+            output = hidden_states.gather_elements(-2, cls_index).squeeze(-2)  # shape (bsz, XX, hidden_size)
+        else:
+            output = hidden_states
+
+        output = self.first_dropout(output)
+        output = self.summary(output)
+        output = self.activation(output)
+        output = self.last_dropout(output)
+        return output

@@ -28,22 +28,18 @@ import re
 from typing import Optional, Tuple, List, Callable, Dict, Any
 import numpy as np
 import mindspore
-from mindspore import nn, ops
+from mindspore import nn, ops, Tensor
 from mindspore.nn import CrossEntropyLoss, LayerNorm
-from mindspore import log as logger
-from mindspore import Tensor
 
+from mindnlp.utils import logging
 from mindnlp.modules import functional as F
-from mindnlp.configs import MINDNLP_MODEL_URL_BASE
 from .chatglm_config import ChatGLMConfig
 from ...modeling_utils import PreTrainedModel
 from ...generation.configuration_utils import GenerationConfig
 from ...generation.logits_process import LogitsProcessor, LogitsProcessorList
 from ...generation.stopping_criteria import StoppingCriteriaList
 
-PRETRAINED_MODEL_ARCHIVE_MAP = {
-    'chatglm-6b': MINDNLP_MODEL_URL_BASE.format('glm', 'chatglm-6b')
-}
+logger = logging.get_logger(__name__)
 
 
 def torch_to_mindspore(pth_file, **kwargs):
@@ -555,7 +551,7 @@ class ChatGLMPreTrainedModel(PreTrainedModel):
     config_class = ChatGLMConfig
     base_model_prefix = "transformer"
     _no_split_modules = ["GLMBlock"]
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
     convert_torch_to_mindspore = torch_to_mindspore
     _keys_to_ignore_on_load_unexpected = [r'inv_freq']
 

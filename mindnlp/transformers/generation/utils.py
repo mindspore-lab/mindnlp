@@ -608,41 +608,81 @@ class GenerationMixin:
     ) -> Dict[str, Any]:
         # 1. get encoder
         encoder = self.get_encoder()
-
-        # 2. prepare encoder args and encoder kwargs from model kwargs
+        # 2. Prepare encoder args and encoder kwargs from model kwargs.
         irrelevant_prefix = ["decoder_", "cross_attn", "use_cache"]
         encoder_kwargs = {
             argument: value
             for argument, value in model_kwargs.items()
             if not any(argument.startswith(p) for p in irrelevant_prefix)
         }
+        encoder_signature = set(inspect.signature(encoder.construct).parameters)
+        encoder_accepts_wildcard = "kwargs" in encoder_signature or "model_kwargs" in encoder_signature
+        if not encoder_accepts_wildcard:
+            encoder_kwargs = {
+                argument: value for argument, value in encoder_kwargs.items() if argument in encoder_signature
+            }
 
         # 3. make sure that encoder returns `ModelOutput`
         model_input_name = model_input_name if model_input_name is not None else self.main_input_name
         encoder_kwargs["return_dict"] = True
         encoder_kwargs[model_input_name] = inputs_tensor
-        model_kwargs["encoder_outputs"] = encoder(**encoder_kwargs)
+        model_kwargs["encoder_outputs"]: ModelOutput = encoder(**encoder_kwargs)
 
         return model_kwargs
 
     def _prepare_decoder_input_ids_for_generation(
         self,
         batch_size: int,
+        model_input_name: str,
+        model_kwargs: Dict[str, mindspore.Tensor],
         decoder_start_token_id: int = None,
         bos_token_id: int = None,
-        model_kwargs: Optional[Dict[str, mindspore.Tensor]] = None,
-    ) -> mindspore.Tensor:
+    ) -> Tuple[mindspore.Tensor, Dict[str, mindspore.Tensor]]:
+        """Prepares `decoder_input_ids` for generation with encoder-decoder models"""
+        # 1. Check whether the user has defined `decoder_input_ids` manually. To facilitate in terms of input naming,
+        # we also allow the user to pass it under `input_ids`, if the encoder does not use it as the main input.
         if model_kwargs is not None and "decoder_input_ids" in model_kwargs:
-            return model_kwargs.pop("decoder_input_ids")
+            decoder_input_ids = model_kwargs.pop("decoder_input_ids")
+        elif "input_ids" in model_kwargs and model_input_name != "input_ids":
+            decoder_input_ids = model_kwargs.pop("input_ids")
+        else:
+            decoder_input_ids = None
+
+        # 2. Encoder-decoder models expect the `decoder_input_ids` to start with a special token. Let's ensure that.
         decoder_start_token_id = self._get_decoder_start_token_id(decoder_start_token_id, bos_token_id)
-        return ops.ones((batch_size, 1), dtype=mindspore.float32) * decoder_start_token_id
+        decoder_input_ids_start = ops.ones((batch_size, 1), dtype=mindspore.int64) * decoder_start_token_id
+        # no user input -> use decoder_start_token_id as decoder_input_ids
+        if decoder_input_ids is None:
+            decoder_input_ids = decoder_input_ids_start
+        # exception: Donut checkpoints have task-specific decoder starts and don't expect a BOS token
+        elif self.config.model_type == "vision-encoder-decoder" and "donut" in self.name_or_path.lower():
+            pass
+        # user input but doesn't start with decoder_start_token_id -> prepend decoder_start_token_id (and adjust
+        # decoder_attention_mask if provided)
+        elif (decoder_input_ids[:, 0] != decoder_start_token_id).all().item():
+            decoder_input_ids = ops.cat([decoder_input_ids_start, decoder_input_ids], axis=-1)
+            if "decoder_attention_mask" in model_kwargs:
+                decoder_attention_mask = model_kwargs["decoder_attention_mask"]
+                decoder_attention_mask = ops.cat(
+                    (ops.ones_like(decoder_attention_mask)[:, :1], decoder_attention_mask),
+                    axis=-1,
+                )
+                model_kwargs["decoder_attention_mask"] = decoder_attention_mask
+
+        return decoder_input_ids, model_kwargs
+
 
     def _get_decoder_start_token_id(self, decoder_start_token_id: int = None, bos_token_id: int = None) -> int:
+        decoder_start_token_id = (
+            decoder_start_token_id
+            if decoder_start_token_id is not None
+            else self.generation_config.decoder_start_token_id
+        )
         bos_token_id = bos_token_id if bos_token_id is not None else self.generation_config.bos_token_id
 
         if decoder_start_token_id is not None:
             return decoder_start_token_id
-        if bos_token_id is not None:
+        elif bos_token_id is not None:
             return bos_token_id
         raise ValueError(
             "`decoder_start_token_id` or `bos_token_id` has to be defined for encoder-decoder generation."
@@ -1300,7 +1340,6 @@ class GenerationMixin:
             input_ids = inputs_tensor if model_input_name == "input_ids" else model_kwargs.pop("input_ids")
         if streamer is not None:
             streamer.put(input_ids)
-
         # 6. Prepare `max_length` depending on other stopping criteria.
         input_ids_length = input_ids.shape[-1]
         has_default_max_length = kwargs.get("max_length") is None and generation_config.max_length is not None
@@ -1317,7 +1356,6 @@ class GenerationMixin:
 
         # 7. determine generation mode
         generation_mode = self._get_generation_mode(generation_config, assistant_model)
-
         if streamer is not None and (generation_config.num_beams > 1):
             raise ValueError(
                 "`streamer` cannot be used with beam search (yet!). Make sure that `num_beams` is set to 1."
@@ -1977,10 +2015,10 @@ class GenerationMixin:
                 next_step_decoder_attentions = ()
                 if output_attentions:
                     for layer in outputs.cross_attentions:
-                        layer = ops.stack(ops.split(layer, top_k, dim=0))[list(range(batch_size)), selected_idx, ...]
+                        layer = ops.stack(ops.split(layer, top_k, axis=0))[list(range(batch_size)), selected_idx, ...]
                         next_step_cross_attentions += (layer,)
                     for layer in outputs.decoder_attentions:
-                        layer = ops.stack(ops.split(layer, top_k, dim=0))[list(range(batch_size)), selected_idx, ...]
+                        layer = ops.stack(ops.split(layer, top_k, axis=0))[list(range(batch_size)), selected_idx, ...]
                         next_step_decoder_attentions += (layer,)
                 outputs = Seq2SeqLMOutput(
                     past_key_values=next_past_key_values,
@@ -2253,7 +2291,6 @@ class GenerationMixin:
 
             # argmax
             next_tokens = ops.argmax(next_tokens_scores, dim=-1)
-
             # finished sentences should have their next token be a padding token
             if eos_token_id is not None:
                 if pad_token_id is None:
@@ -2524,7 +2561,7 @@ class GenerationMixin:
 
             # sample
             probs = ops.softmax(next_token_scores, axis=-1)
-            next_tokens = ops.multinomial(probs, num_samples=1).squeeze(1).astype(mindspore.int64)
+            next_tokens = ops.multinomial(probs, num_samples=1, replacement=False).squeeze(1).astype(mindspore.int64)
 
             # finished sentences should have their next token be a padding token
             if eos_token_id is not None:
@@ -3131,7 +3168,7 @@ class GenerationMixin:
 
             probs = ops.softmax(next_token_scores, axis=-1)
 
-            next_tokens = ops.multinomial(probs, num_samples=2 * num_beams)
+            next_tokens = ops.multinomial(probs, num_samples=2 * num_beams, replacement=False)
             next_token_scores = ops.gather_elements(next_token_scores, -1, next_tokens)
 
             next_token_scores, _indices = ops.sort(next_token_scores, descending=True, axis=1)
@@ -4186,7 +4223,7 @@ class GenerationMixin:
             # 3. Obtain the next tokens from the original model logits.
             if do_sample:
                 probs = ops.softmax(new_logits, axis=-1)
-                selected_tokens = ops.multinomial(probs[0, :, :], num_samples=1).squeeze(1)[None, :]
+                selected_tokens = ops.multinomial(probs[0, :, :], num_samples=1, replacement=False).squeeze(1)[None, :]
             else:
                 selected_tokens = new_logits.argmax(axis=-1)
 
