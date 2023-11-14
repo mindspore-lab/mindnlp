@@ -29,16 +29,6 @@ from mindnlp.transformers import WhisperConfig
 from mindnlp.utils.generic import cached_property
 from mindnlp.utils.testing_utils import require_mindspore
 from mindnlp.utils.import_utils import is_datasets_available, is_mindspore_available
-# from transformers.testing_utils import (
-#     is_pt_flax_cross_test,
-#     require_flash_attn,
-#     require_torch,
-#     require_torch_fp16,
-#     require_torch_gpu,
-#     require_torchaudio,
-#     slow,
-#     torch_device,
-# )
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
@@ -54,15 +44,16 @@ if is_mindspore_available():
     from mindspore import ops
 
     from mindnlp.transformers import (
-        # WhisperFeatureExtractor,
+        WhisperFeatureExtractor,
         WhisperForAudioClassification,
         WhisperForCausalLM,
         WhisperForConditionalGeneration,
         WhisperModel,
-        # WhisperProcessor,
+        WhisperProcessor,
     )
     from mindnlp.transformers.models.whisper.modeling_whisper import WhisperDecoder, WhisperEncoder, sinusoids
 
+mindspore.set_context(pynative_synchronize=True)
 
 def prepare_whisper_inputs_dict(
     config,
@@ -873,467 +864,464 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
         model.generate(input_features, max_new_tokens=1, prompt_ids=prompt_ids)
 
 
-# @require_mindspore
-# class WhisperModelIntegrationTests(MindNLPTestCase):
-#     @cached_property
-#     def default_processor(self):
-#         return WhisperProcessor.from_pretrained("openai/whisper-base")
-
-#     def _load_datasamples(self, num_samples):
-#         ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
-#         # automatic decoding with librispeech
-#         speech_samples = ds.sort("id").select(range(num_samples))[:num_samples]["audio"]
-
-#         return [x["array"] for x in speech_samples]
-
-
-#     def test_tiny_logits_librispeech(self):
-#         set_seed(0)
-#         model = WhisperModel.from_pretrained("openai/whisper-tiny")
-#         input_speech = self._load_datasamples(1)
-#         feature_extractor = WhisperFeatureExtractor()
-#         input_features = feature_extractor(input_speech, return_tensors="pt").input_features
-
-#         logits = model(
-#             input_features,
-#             decoder_input_ids=mindspore.tensor([[50258, 50259, 50359]]),
-#             output_hidden_states=False,
-#             output_attentions=False,
-#             return_dict=False,
-#             use_cache=False,
-#         )
-
-#         # fmt: off
-#         EXPECTED_LOGITS = mindspore.tensor(
-#             [
-#                 2.9892, -6.7607, 5.7348, 3.6096, 0.2152, -5.7321, 4.8855, -1.6407,
-#                 0.2823, -1.5718, 10.4269, 3.4427, 0.0219, -8.0612, 3.4784, 8.4246,
-#                 4.0575, -2.2864, 11.1084, 0.9963, 0.9884, -8.5154, -3.5469, -9.3713,
-#                 0.9786, 3.5435, 7.4850, -5.2579, -1.4366, 10.4841
-#             ]
-#         )
-#         # fmt: on
-#         self.assertTrue(np.allclose(logits[0][0, 0, :30].cpu(), EXPECTED_LOGITS, atol=1e-4))
-
-#         # fmt: off
-#         EXPECTED_GENERATION = mindspore.tensor(
-#             [
-#                 -1.4651, -2.6944, 2.7821, 2.3793, 4.0738, 0.0188, -3.3203, 1.9836,
-#                 0.0520, 0.7095, 1.1063, 0.2952, -3.6786, -0.5249, 0.3105, 4.7691,
-#                 1.1562, 1.3046, 0.5810, -0.3624, 1.7006, 1.3424, 0.9817, 2.1958,
-#                 1.8775, -5.7046, -0.7679, 4.0113, 2.6848, 2.8609
-#             ]
-#         )
-#         # fmt: on
-
-#         head_logits = logits[0] @ model.decoder.embed_tokens.weight.T
-#         self.assertTrue(np.allclose(head_logits[0, 0, :30].cpu(), EXPECTED_GENERATION, atol=1e-4))
-
-
-#     def test_small_en_logits_librispeech(self):
-#         set_seed(0)
-#         model = WhisperModel.from_pretrained("openai/whisper-small.en")
-
-#         input_speech = self._load_datasamples(1)
-
-#         feaure_extractor = WhisperFeatureExtractor()
-#         input_features = feaure_extractor(input_speech, return_tensors="pt").input_features
-
-#         logits = model(
-#             input_features,
-#             decoder_input_ids=mindspore.tensor([[model.config.decoder_start_token_id]]),
-#             output_hidden_states=False,
-#             output_attentions=False,
-#             use_cache=False,
-#         )
-
-#         logits = logits.last_hidden_state @ model.decoder.embed_tokens.weight.T
-
-#         # fmt: off
-#         EXPECTED_LOGITS = mindspore.tensor(
-#             [
-#                 -3.6784, -7.7211, -9.5070, -11.9286, -7.6489, -9.7026, -5.6188,
-#                 -8.0104, -4.6238, -5.1833, -9.0485, -3.4079, -5.4874, -2.6935,
-#                 -6.3479, -7.3398, -6.9558, -7.6867, -7.4748, -8.3463, -9.9781,
-#                 -10.8389, -10.3105, -11.7201, -9.7261, -7.1590, -5.9272, -12.4509,
-#                 -11.1146, -8.1918
-#             ]
-#         )
-#         # fmt: on
-#         self.assertTrue(np.allclose(logits[0, 0, :30].cpu(), EXPECTED_LOGITS, atol=1e-4))
-
-
-#     def test_large_logits_librispeech(self):
-#         set_seed(0)
-
-#         torch_device = "cpu"
-#         model = WhisperModel.from_pretrained("openai/whisper-large")
-#         model
-
-#         input_speech = self._load_datasamples(1)
-
-#         processor = WhisperProcessor.from_pretrained("openai/whisper-large")
-#         processed_inputs = processor(
-#             audio=input_speech, text="This part of the speech", add_special_tokens=False, return_tensors="pt"
-#         )
-#         input_features = processed_inputs.input_features
-#         decoder_input_ids = processed_inputs.labels
-
-#         logits = model(
-#             input_features,
-#             decoder_input_ids=decoder_input_ids,
-#             output_hidden_states=False,
-#             output_attentions=False,
-#             use_cache=False,
-#         )
-
-#         logits = logits.last_hidden_state @ model.decoder.embed_tokens.weight.T
-
-#         # fmt: off
-#         EXPECTED_LOGITS = mindspore.tensor(
-#             [
-#                 2.1382, 0.9381, 4.4671, 3.5589, 2.4022, 3.8576, -0.6521, 2.5472,
-#                 1.8301, 1.9957, 2.3432, 1.4678, 0.5459, 2.2597, 1.5179, 2.5357,
-#                 1.1624, 0.6194, 1.0757, 1.8259, 2.4076, 1.6601, 2.3503, 1.3376,
-#                 1.9891, 1.8635, 3.8931, 5.3699, 4.4772, 3.9184
-#             ]
-#         )
-#         # fmt: on
-
-#         self.assertTrue(np.allclose(logits[0, 0, :30].cpu(), EXPECTED_LOGITS, atol=1e-4))
-
-
-#     def test_tiny_en_generation(self):
-#         set_seed(0)
-#         processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en")
-#         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
-#         model.config.decoder_start_token_id = 50257
-
-#         input_speech = self._load_datasamples(1)
-#         input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="pt").input_features
-
-#         generated_ids = model.generate(input_features, num_beams=5, max_length=20)
-#         transcript = processor.tokenizer.batch_decode(generated_ids)[0]
-
-#         EXPECTED_TRANSCRIPT = (
-#             "<|startoftranscript|><|notimestamps|> Mr. Quilter is the apostle of the middle"
-#             " classes, and we are glad to"
-#         )
-#         self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
-
-
-#     def test_tiny_generation(self):
-#         set_seed(0)
-#         processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
-#         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
-
-#         input_speech = self._load_datasamples(1)
-#         input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="pt").input_features
-
-#         generated_ids = model.generate(input_features, num_beams=5, max_length=20)
-#         transcript = processor.tokenizer.decode(generated_ids[0])
-
-#         EXPECTED_TRANSCRIPT = (
-#             "<|startoftranscript|><|en|><|transcribe|><|notimestamps|> Mr. Quilter is the apostle of the middle"
-#             " classes and we are glad"
-#         )
-#         self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
-
-
-#     def test_large_generation(self):
-#         set_seed(0)
-#         processor = WhisperProcessor.from_pretrained("openai/whisper-large")
-#         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large")
-
-#         input_speech = self._load_datasamples(1)
-#         input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="pt").input_features
-#         generated_ids = model.generate(
-#             input_features, do_sample=False, max_length=20, language="<|en|>", task="transcribe"
-#         )
-#         transcript = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-
-#         EXPECTED_TRANSCRIPT = " Mr. Quilter is the apostle of the middle classes and we are glad"
-#         self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
-
-
-#     def test_large_generation_multilingual(self):
-#         torch_device = "cpu"
-#         processor = WhisperProcessor.from_pretrained("openai/whisper-large")
-#         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large")
-
-#         ds = load_dataset("common_voice", "ja", split="test", streaming=True)
-#         ds = ds.cast_column("audio", datasets.Audio(sampling_rate=16_000))
-#         input_speech = next(iter(ds))["audio"]["array"]
-#         input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="pt").input_features
-
-#         generated_ids = model.generate(
-#             input_features, do_sample=False, max_length=20, language="<|ja|>", task="transcribe"
-#         )
-#         transcript = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-
-#         EXPECTED_TRANSCRIPT = "木村さんに電話を貸してもらいました"
-#         self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
-
-#         generated_ids = model.generate(
-#             input_features, do_sample=False, max_length=20, language="<|en|>", task="transcribe"
-#         )
-#         transcript = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-
-#         EXPECTED_TRANSCRIPT = " Kimura-san called me."
-#         self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
-
-#         generated_ids = model.generate(
-#             input_features, do_sample=False, max_length=20, language="<|ja|>", task="translate"
-#         )
-#         transcript = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-
-#         EXPECTED_TRANSCRIPT = " I borrowed a phone from Kimura san"
-#         self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
-
-
-#     def test_large_batched_generation(self):
-#         set_seed(0)
-#         processor = WhisperProcessor.from_pretrained("openai/whisper-large")
-#         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large")
-
-#         input_speech = self._load_datasamples(4)
-#         input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="pt").input_features
-#         generated_ids = model.generate(input_features, max_length=20, task="translate")
-
-#         # fmt: off
-#         EXPECTED_LOGITS = mindspore.tensor(
-#             [
-#                 [50258, 50259, 50358, 50363, 2221, 13, 2326, 388, 391, 307, 264, 50244, 295, 264, 2808, 5359, 293, 321, 366, 5404],
-#                 [50258, 50259, 50358, 50363, 6966, 307, 2221, 13, 2326, 388, 391, 311, 9060, 1570, 1880, 813, 702, 1871, 13, 50257],
-#                 [50258, 50259, 50358, 50363, 634, 5112, 505, 300, 412, 341, 42729, 3196, 295, 264, 1064, 11, 365, 5272, 293, 12904],
-#                 [50258, 50259, 50358, 50363, 634, 575, 12525, 22618, 1968, 6144, 35617, 20084, 1756, 311, 589, 307, 534, 10281, 934, 439]
-#             ]
-#         )
-#         # fmt: on
-
-#         self.assertTrue(np.allclose(generated_ids, EXPECTED_LOGITS))
-
-#         # fmt: off
-#         EXPECTED_TRANSCRIPT = [
-#             " Mr. Quilter is the apostle of the middle classes and we are glad",
-#             " Nor is Mr. Quilter's manner less interesting than his matter.",
-#             " He tells us that at this festive season of the year, with Christmas and roast",
-#             " He has grave doubts whether Sir Frederick Layton's work is really Greek after all",
-#         ]
-#         # fmt: on
-
-#         transcript = processor.batch_decode(generated_ids, skip_special_tokens=True)
-#         self.assertListEqual(transcript, EXPECTED_TRANSCRIPT)
-
-
-#     def test_tiny_en_batched_generation(self):
-#         set_seed(0)
-#         processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en")
-#         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
-
-#         input_speech = self._load_datasamples(4)
-#         input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="pt").input_features
-#         generated_ids = model.generate(input_features, max_length=20).to("cpu")
-
-#         # fmt: off
-#         EXPECTED_LOGITS = mindspore.tensor(
-#             [
-#                 [50257, 50362, 1770, 13, 2264, 346, 353, 318, 262, 46329, 286, 262, 3504, 6097, 11, 290, 356, 389, 9675, 284],
-#                 [50257, 50362, 5414, 318, 1770, 13, 2264, 346, 353, 338, 5642, 1342, 3499, 621, 465, 2300, 13, 50256, 50256, 50256],
-#                 [50257, 50362, 679, 4952, 514, 326, 379, 428, 43856, 1622, 286, 262, 614, 11, 351, 6786, 290, 32595, 12023, 28236],
-#                 [50257, 50362, 679, 468, 12296, 17188, 1771, 7361, 26113, 18881, 1122, 338, 670, 318, 1107, 8312, 706, 477, 290, 460]
-#             ]
-
-#         )
-#         # fmt: on
-
-#         self.assertTrue(np.allclose(generated_ids, EXPECTED_LOGITS))
-
-#         # fmt: off
-#         EXPECTED_TRANSCRIPT = [
-#             " Mr. Quilter is the apostle of the middle classes, and we are glad to",
-#             " Nor is Mr. Quilter's manner less interesting than his matter.",
-#             " He tells us that at this festive season of the year, with Christmas and roast beef looming",
-#             " He has grave doubts whether Sir Frederick Layton's work is really Greek after all and can",
-#         ]
-#         # fmt: on
-
-#         transcript = processor.batch_decode(generated_ids, skip_special_tokens=True)
-#         self.assertListEqual(transcript, EXPECTED_TRANSCRIPT)
-
-
-#     def test_tiny_timestamp_generation(self):
-#         set_seed(0)
-#         processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
-#         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
-
-#         input_speech = np.concatenate(self._load_datasamples(4))
-#         input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="pt").input_features
-#         generated_ids = model.generate(input_features, max_length=448, return_timestamps=True).to("cpu")
-
-#         # fmt: off
-#         EXPECTED_OUTPUT = mindspore.tensor([50258, 50259, 50359, 50364, 2221, 13, 2326, 388, 391, 307, 264, 50244, 295, 264, 2808, 5359, 11, 293, 321, 366, 5404, 281, 2928, 702, 14943, 13, 50692, 50692, 6966, 307, 2221, 13, 2326, 388, 391, 311, 9060, 1570, 1880, 813, 702, 1871, 13, 50926, 50926, 634, 5112, 505, 300, 412, 341, 42729, 3196, 295, 264, 1064, 11, 365, 5272, 293, 12904, 9256, 450, 10539, 51208, 51208, 949, 505, 11, 14138, 10117, 490, 3936, 293, 1080, 3542, 5160, 881, 26336, 281, 264, 1575, 13, 51552, 51552, 634, 575, 12525, 22618, 1968, 6144, 35617, 7354, 1292, 6, 589, 307, 534, 10281, 934, 439, 11, 293, 51836, 51836, 50257])
-#         # fmt: on
-
-#         self.assertTrue(np.allclose(generated_ids, EXPECTED_OUTPUT))
-
-#         EXPECTED_TRANSCRIPT = [
-#             {
-#                 "text": (
-#                     " Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel. Nor is"
-#                     " Mr. Quilter's manner less interesting than his matter. He tells us that at this festive season"
-#                     " of the year, with Christmas and roast beef looming before us, similarly drawn from eating and"
-#                     " its results occur most readily to the mind. He has grave doubts whether Sir Frederick Latins'"
-#                     " work is really Greek after all, and"
-#                 ),
-#                 "offsets": [
-#                     {
-#                         "text": (
-#                             " Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel."
-#                         ),
-#                         "timestamp": (0.0, 6.5600000000000005),
-#                     },
-#                     {
-#                         "text": " Nor is Mr. Quilter's manner less interesting than his matter.",
-#                         "timestamp": (6.5600000000000005, 11.24),
-#                     },
-#                     {
-#                         "text": (
-#                             " He tells us that at this festive season of the year, with Christmas and roast beef"
-#                             " looming"
-#                         ),
-#                         "timestamp": (11.24, 16.88),
-#                     },
-#                     {
-#                         "text": (
-#                             " before us, similarly drawn from eating and its results occur most readily to the mind."
-#                         ),
-#                         "timestamp": (16.88, 23.76),
-#                     },
-#                     {
-#                         "text": (
-#                             " He has grave doubts whether Sir Frederick Latins' work is really Greek after all, and"
-#                         ),
-#                         "timestamp": (23.76, 29.44),
-#                     },
-#                 ],
-#             }
-#         ]
-
-#         transcript = processor.batch_decode(generated_ids, skip_special_tokens=True, output_offsets=True)
-#         self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
-
-
-#     def test_tiny_token_timestamp_generation(self):
-#         set_seed(0)
-#         processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
-#         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
-#         model.generation_config.alignment_heads = [[2, 2], [3, 0], [3, 2], [3, 3], [3, 4], [3, 5]]
-
-#         input_speech = self._load_datasamples(4)
-#         input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="pt").input_features
-
-#         generate_outputs = model.generate(
-#             input_features, max_length=448, return_timestamps=True, return_token_timestamps=True
-#         )
-
-#         self.assertEqual(generate_outputs.sequences.shape, generate_outputs.token_timestamps.shape)
-
-#         # fmt: off
-#         EXPECTED_OUTPUT = mindspore.tensor([
-#             [ 0.0000, 0.0000, 0.0000, 0.0000, 0.4800, 0.8200, 0.9600, 1.1200, 1.1200, 1.2200, 1.5000, 1.7200, 2.0000, 2.3400, 2.5000, 2.6600, 3.1800, 3.5600, 3.6800, 3.8000, 4.1000, 4.3000, 4.5800, 4.9400, 5.3800, 12.4200, 12.8400, 26.9200, 26.9200, 26.9200, 26.9200, 26.9200, 26.9200, 26.9200, 26.9200, 26.9200, 26.9200, 26.9200, 26.9400, 26.9400, 26.9400, 26.9400, 29.8400 ],
-#             [ 0.0000, 0.0000, 0.0000, 0.0000, 0.5200, 0.9000, 1.1400, 1.4200, 1.5200, 1.6800, 1.6800, 1.8800, 2.1000, 2.2200, 2.6200, 3.1400, 3.5800, 3.9600, 4.4000, 17.3000, 17.3000, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7400, 26.7400, 26.7400, 26.7400, 26.7400, 26.7400, 28.0000 ],
-#             [ 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.7600, 1.0000, 1.4200, 1.8000, 1.9400, 2.1800, 2.5200, 3.0200, 3.3200, 3.5400, 3.9400, 4.5600, 4.9200, 5.2800, 5.5600, 5.9000, 6.1600, 6.3000, 6.4800, 6.4800, 6.6400, 7.8200, 7.9600, 8.2200, 8.6000, 8.9200, 9.2200, 9.5200, 9.7200, 10.0600, 10.5400, 10.8800, 11.2600, 11.5400, 11.7400, 12.0800, 15.6800, 15.6800],
-#             [ 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.7400, 1.0400, 1.3200, 1.6800, 2.1400, 2.4800, 2.7800, 3.0800, 3.1600, 3.4000, 3.6000, 4.0200, 4.2200, 4.8600, 5.2400, 5.7400, 6.3400, 6.6200, 6.7600, 6.7600, 6.8600, 7.2400, 7.4200, 7.6800, 7.9200, 8.4800, 8.7600, 9.2000, 9.2000, 9.4200, 15.8200, 15.8200, 29.6400, 29.6600, 29.6600, 29.6600, 29.6600, 29.7600]
-#         ])
-#         # fmt: on
-
-#         self.assertTrue(np.allclose(generate_outputs.token_timestamps.to("cpu"), EXPECTED_OUTPUT))
-
-
-#     def test_tiny_specaugment_librispeech(self):
-#         torch_device = "cpu"
-#         set_seed(0)
-#         # Apply SpecAugment
-#         model = WhisperModel.from_pretrained("openai/whisper-tiny", apply_spec_augment=True)
-#         # Set model to training mode to enable SpecAugment
-#         model.train()
-#         input_speech = self._load_datasamples(1)
-#         feature_extractor = WhisperFeatureExtractor()
-#         input_features = feature_extractor(input_speech, return_tensors="pt").input_features
-
-#         with torch.no_grad():
-#             logits = model(
-#                 input_features,
-#                 decoder_input_ids=mindspore.tensor([[50258, 50259, 50359]]),
-#                 output_hidden_states=False,
-#                 output_attentions=False,
-#                 return_dict=False,
-#                 use_cache=False,
-#             )
-
-#         # fmt: off
-#         EXPECTED_LOGITS = mindspore.tensor(
-#             [
-#                 0.9362, -4.7105, 5.0879, 3.9642, 1.0013, -6.0096, 4.7285, -3.1847,
-#                 -0.8648, 1.9631, 6.2653, 3.6936, 0.3575, -4.5818, 3.0564, 7.8712,
-#                 2.9951, 0.6848, 9.9497, -2.6638, 1.1571, -6.8546, -1.4333, -7.7584,
-#                 1.1200, 3.9030, 4.4655, -4.4919, -1.1703, 9.6241
-#             ]
-#         )
-#         # fmt: on
-#         self.assertTrue(np.allclose(logits[0][0, 0, :30].cpu(), EXPECTED_LOGITS, atol=1e-4))
-
-
-#     def test_generate_with_prompt_ids(self):
-#         processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
-#         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
-#         input_speech = self._load_datasamples(4)[-1:]
-#         input_features = processor(input_speech, return_tensors="pt").input_features
-
-#         output_without_prompt = model.generate(input_features)
-#         prompt_ids = processor.get_prompt_ids("Leighton")
-#         output_with_prompt = model.generate(input_features, prompt_ids=prompt_ids)
-
-#         expected_without_prompt = "<|startoftranscript|><|en|><|transcribe|><|notimestamps|> He has grave doubts whether Sir Frederick Layton's work is really Greek after all and can discover in it but little of Rocky Ithaca.<|endoftext|>"
-#         expected_with_prompt = "<|startofprev|> Leighton<|startoftranscript|><|en|><|transcribe|><|notimestamps|> He has grave doubts whether Sir Frederick Leighton's work is really Greek after all and can discover in it but little of Rocky Ithaca.<|endoftext|>"
-#         self.assertEqual(processor.decode(output_without_prompt[0]), expected_without_prompt)
-#         self.assertEqual(processor.decode(output_with_prompt[0]), expected_with_prompt)
-
-
-#     def test_generate_with_prompt_ids_and_forced_decoder_ids(self):
-#         processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
-#         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
-#         input_speech = self._load_datasamples(1)
-#         input_features = processor(input_speech, return_tensors="pt").input_features
-#         task = "translate"
-#         language = "de"
-#         expected_tokens = [f"<|{task}|>", f"<|{language}|>"]
-#         prompt = "test prompt"
-#         prompt_ids = processor.get_prompt_ids(prompt)
-
-#         output = model.generate(input_features, task=task, language=language, prompt_ids=prompt_ids)
-#         text = processor.decode(output[0])
-
-#         self.assertTrue(prompt in text)
-#         self.assertTrue(all(token in text for token in expected_tokens))
-
-
-#     def test_generate_with_prompt_ids_and_no_non_prompt_forced_decoder_ids(self):
-#         processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en")
-#         model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
-#         input_speech = self._load_datasamples(1)
-#         input_features = processor(input_speech, return_tensors="pt").input_features
-#         prompt = "test prompt"
-#         prompt_ids = processor.get_prompt_ids(prompt)
-
-#         model.generation_config.forced_decoder_ids = None
-#         model.config.forced_decoder_ids = None
-
-#         output = model.generate(input_features, prompt_ids=prompt_ids, return_timestamps=True)
-#         text = processor.decode(output[0])
-
-#         self.assertTrue(prompt in text)
+@require_mindspore
+class WhisperModelIntegrationTests(MindNLPTestCase):
+    @cached_property
+    def default_processor(self):
+        return WhisperProcessor.from_pretrained("openai/whisper-base", from_pt=True)
+
+    def _load_datasamples(self, num_samples):
+        ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
+        # automatic decoding with librispeech
+        speech_samples = ds.sort("id").select(range(num_samples))[:num_samples]["audio"]
+
+        return [x["array"] for x in speech_samples]
+
+
+    def test_tiny_logits_librispeech(self):
+        set_seed(0)
+        model = WhisperModel.from_pretrained("openai/whisper-tiny", from_pt=True)
+        input_speech = self._load_datasamples(1)
+        feature_extractor = WhisperFeatureExtractor()
+        input_features = feature_extractor(input_speech, return_tensors="ms").input_features
+
+        logits = model(
+            input_features,
+            decoder_input_ids=mindspore.tensor([[50258, 50259, 50359]]),
+            output_hidden_states=False,
+            output_attentions=False,
+            return_dict=False,
+            use_cache=False,
+        )
+
+        # fmt: off
+        EXPECTED_LOGITS = mindspore.tensor(
+            [
+                2.9892, -6.7607, 5.7348, 3.6096, 0.2152, -5.7321, 4.8855, -1.6407,
+                0.2823, -1.5718, 10.4269, 3.4427, 0.0219, -8.0612, 3.4784, 8.4246,
+                4.0575, -2.2864, 11.1084, 0.9963, 0.9884, -8.5154, -3.5469, -9.3713,
+                0.9786, 3.5435, 7.4850, -5.2579, -1.4366, 10.4841
+            ]
+        )
+        # fmt: on
+        self.assertTrue(np.allclose(logits[0][0, 0, :30].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=1e-4))
+
+        # fmt: off
+        EXPECTED_GENERATION = mindspore.tensor(
+            [
+                -1.4651, -2.6944, 2.7821, 2.3793, 4.0738, 0.0188, -3.3203, 1.9836,
+                0.0520, 0.7095, 1.1063, 0.2952, -3.6786, -0.5249, 0.3105, 4.7691,
+                1.1562, 1.3046, 0.5810, -0.3624, 1.7006, 1.3424, 0.9817, 2.1958,
+                1.8775, -5.7046, -0.7679, 4.0113, 2.6848, 2.8609
+            ]
+        )
+        # fmt: on
+
+        head_logits = logits[0] @ model.decoder.embed_tokens.weight.T
+        self.assertTrue(np.allclose(head_logits[0, 0, :30].asnumpy(), EXPECTED_GENERATION.asnumpy(), atol=1e-4))
+
+
+    def test_small_en_logits_librispeech(self):
+        set_seed(0)
+        model = WhisperModel.from_pretrained("openai/whisper-small.en", from_pt=True)
+
+        input_speech = self._load_datasamples(1)
+
+        feaure_extractor = WhisperFeatureExtractor()
+        input_features = feaure_extractor(input_speech, return_tensors="ms").input_features
+
+        logits = model(
+            input_features,
+            decoder_input_ids=mindspore.tensor([[model.config.decoder_start_token_id]]),
+            output_hidden_states=False,
+            output_attentions=False,
+            use_cache=False,
+        )
+
+        logits = logits.last_hidden_state @ model.decoder.embed_tokens.embedding_table.T
+
+        # fmt: off
+        EXPECTED_LOGITS = mindspore.tensor(
+            [
+                -3.6784, -7.7211, -9.5070, -11.9286, -7.6489, -9.7026, -5.6188,
+                -8.0104, -4.6238, -5.1833, -9.0485, -3.4079, -5.4874, -2.6935,
+                -6.3479, -7.3398, -6.9558, -7.6867, -7.4748, -8.3463, -9.9781,
+                -10.8389, -10.3105, -11.7201, -9.7261, -7.1590, -5.9272, -12.4509,
+                -11.1146, -8.1918
+            ]
+        )
+        print(logits[0, 0, :30].asnumpy() - EXPECTED_LOGITS.asnumpy())
+        # fmt: on
+        self.assertTrue(np.allclose(logits[0, 0, :30].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=1e-4))
+
+
+    def test_large_logits_librispeech(self):
+        set_seed(0)
+
+        model = WhisperModel.from_pretrained("openai/whisper-large", from_pt=True)
+
+        input_speech = self._load_datasamples(1)
+
+        processor = WhisperProcessor.from_pretrained("openai/whisper-large", from_pt=True)
+        processed_inputs = processor(
+            audio=input_speech, text="This part of the speech", add_special_tokens=False, return_tensors="ms"
+        )
+        input_features = processed_inputs.input_features
+        decoder_input_ids = processed_inputs.labels
+
+        logits = model(
+            input_features,
+            decoder_input_ids=decoder_input_ids,
+            output_hidden_states=False,
+            output_attentions=False,
+            use_cache=False,
+        )
+
+        logits = logits.last_hidden_state @ model.decoder.embed_tokens.embedding_table.T
+
+        # fmt: off
+        EXPECTED_LOGITS = mindspore.tensor(
+            [
+                2.1382, 0.9381, 4.4671, 3.5589, 2.4022, 3.8576, -0.6521, 2.5472,
+                1.8301, 1.9957, 2.3432, 1.4678, 0.5459, 2.2597, 1.5179, 2.5357,
+                1.1624, 0.6194, 1.0757, 1.8259, 2.4076, 1.6601, 2.3503, 1.3376,
+                1.9891, 1.8635, 3.8931, 5.3699, 4.4772, 3.9184
+            ]
+        )
+        # fmt: on
+
+        self.assertTrue(np.allclose(logits[0, 0, :30].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=1e-4))
+
+
+    def test_tiny_en_generation(self):
+        set_seed(0)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en", from_pt=True)
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en", from_pt=True)
+        model.config.decoder_start_token_id = 50257
+
+        input_speech = self._load_datasamples(1)
+        input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
+
+        generated_ids = model.generate(input_features, num_beams=5, max_length=20)
+        transcript = processor.tokenizer.batch_decode(generated_ids)[0]
+
+        EXPECTED_TRANSCRIPT = (
+            "<|startoftranscript|><|notimestamps|> Mr. Quilter is the apostle of the middle"
+            " classes, and we are glad to"
+        )
+        self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
+
+
+    def test_tiny_generation(self):
+        set_seed(0)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny", from_pt=True)
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny", from_pt=True)
+
+        input_speech = self._load_datasamples(1)
+        input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
+
+        generated_ids = model.generate(input_features, num_beams=5, max_length=20)
+        transcript = processor.tokenizer.decode(generated_ids[0])
+
+        EXPECTED_TRANSCRIPT = (
+            "<|startoftranscript|><|en|><|transcribe|><|notimestamps|> Mr. Quilter is the apostle of the middle"
+            " classes and we are glad"
+        )
+        self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
+
+
+    def test_large_generation(self):
+        set_seed(0)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-large", from_pt=True)
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large", from_pt=True)
+
+        input_speech = self._load_datasamples(1)
+        input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
+        generated_ids = model.generate(
+            input_features, do_sample=False, max_length=20, language="<|en|>", task="transcribe"
+        )
+        transcript = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+
+        EXPECTED_TRANSCRIPT = " Mr. Quilter is the apostle of the middle classes and we are glad"
+        self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
+
+
+    def test_large_generation_multilingual(self):
+        processor = WhisperProcessor.from_pretrained("openai/whisper-large", from_pt=True)
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large", from_pt=True)
+
+        ds = load_dataset("common_voice", "ja", split="test", streaming=True)
+        ds = ds.cast_column("audio", datasets.Audio(sampling_rate=16_000))
+        input_speech = next(iter(ds))["audio"]["array"]
+        input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
+
+        generated_ids = model.generate(
+            input_features, do_sample=False, max_length=20, language="<|ja|>", task="transcribe"
+        )
+        transcript = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+
+        EXPECTED_TRANSCRIPT = "木村さんに電話を貸してもらいました"
+        self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
+
+        generated_ids = model.generate(
+            input_features, do_sample=False, max_length=20, language="<|en|>", task="transcribe"
+        )
+        transcript = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+
+        EXPECTED_TRANSCRIPT = " Kimura-san called me."
+        self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
+
+        generated_ids = model.generate(
+            input_features, do_sample=False, max_length=20, language="<|ja|>", task="translate"
+        )
+        transcript = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+
+        EXPECTED_TRANSCRIPT = " I borrowed a phone from Kimura san"
+        self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
+
+
+    def test_large_batched_generation(self):
+        set_seed(0)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-large", from_pt=True)
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large", from_pt=True)
+
+        input_speech = self._load_datasamples(4)
+        input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
+        generated_ids = model.generate(input_features, max_length=20, task="translate")
+
+        # fmt: off
+        EXPECTED_LOGITS = mindspore.tensor(
+            [
+                [50258, 50259, 50358, 50363, 2221, 13, 2326, 388, 391, 307, 264, 50244, 295, 264, 2808, 5359, 293, 321, 366, 5404],
+                [50258, 50259, 50358, 50363, 6966, 307, 2221, 13, 2326, 388, 391, 311, 9060, 1570, 1880, 813, 702, 1871, 13, 50257],
+                [50258, 50259, 50358, 50363, 634, 5112, 505, 300, 412, 341, 42729, 3196, 295, 264, 1064, 11, 365, 5272, 293, 12904],
+                [50258, 50259, 50358, 50363, 634, 575, 12525, 22618, 1968, 6144, 35617, 20084, 1756, 311, 589, 307, 534, 10281, 934, 439]
+            ]
+        )
+        # fmt: on
+
+        self.assertTrue(np.allclose(generated_ids.asnumpy(), EXPECTED_LOGITS.asnumpy()))
+
+        # fmt: off
+        EXPECTED_TRANSCRIPT = [
+            " Mr. Quilter is the apostle of the middle classes and we are glad",
+            " Nor is Mr. Quilter's manner less interesting than his matter.",
+            " He tells us that at this festive season of the year, with Christmas and roast",
+            " He has grave doubts whether Sir Frederick Layton's work is really Greek after all",
+        ]
+        # fmt: on
+
+        transcript = processor.batch_decode(generated_ids, skip_special_tokens=True)
+        self.assertListEqual(transcript, EXPECTED_TRANSCRIPT)
+
+
+    def test_tiny_en_batched_generation(self):
+        set_seed(0)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en", from_pt=True)
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en", from_pt=True)
+
+        input_speech = self._load_datasamples(4)
+        input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
+        generated_ids = model.generate(input_features, max_length=20)
+
+        # fmt: off
+        EXPECTED_LOGITS = mindspore.tensor(
+            [
+                [50257, 50362, 1770, 13, 2264, 346, 353, 318, 262, 46329, 286, 262, 3504, 6097, 11, 290, 356, 389, 9675, 284],
+                [50257, 50362, 5414, 318, 1770, 13, 2264, 346, 353, 338, 5642, 1342, 3499, 621, 465, 2300, 13, 50256, 50256, 50256],
+                [50257, 50362, 679, 4952, 514, 326, 379, 428, 43856, 1622, 286, 262, 614, 11, 351, 6786, 290, 32595, 12023, 28236],
+                [50257, 50362, 679, 468, 12296, 17188, 1771, 7361, 26113, 18881, 1122, 338, 670, 318, 1107, 8312, 706, 477, 290, 460]
+            ]
+
+        )
+        # fmt: on
+
+        self.assertTrue(np.allclose(generated_ids.asnumpy(), EXPECTED_LOGITS.asnumpy()))
+
+        # fmt: off
+        EXPECTED_TRANSCRIPT = [
+            " Mr. Quilter is the apostle of the middle classes, and we are glad to",
+            " Nor is Mr. Quilter's manner less interesting than his matter.",
+            " He tells us that at this festive season of the year, with Christmas and roast beef looming",
+            " He has grave doubts whether Sir Frederick Layton's work is really Greek after all and can",
+        ]
+        # fmt: on
+
+        transcript = processor.batch_decode(generated_ids, skip_special_tokens=True)
+        self.assertListEqual(transcript, EXPECTED_TRANSCRIPT)
+
+
+    def test_tiny_timestamp_generation(self):
+        set_seed(0)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny", from_pt=True)
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny", from_pt=True)
+
+        input_speech = np.concatenate(self._load_datasamples(4))
+        input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
+        generated_ids = model.generate(input_features, max_length=448, return_timestamps=True)
+
+        # fmt: off
+        EXPECTED_OUTPUT = mindspore.tensor([50258, 50259, 50359, 50364, 2221, 13, 2326, 388, 391, 307, 264, 50244, 295, 264, 2808, 5359, 11, 293, 321, 366, 5404, 281, 2928, 702, 14943, 13, 50692, 50692, 6966, 307, 2221, 13, 2326, 388, 391, 311, 9060, 1570, 1880, 813, 702, 1871, 13, 50926, 50926, 634, 5112, 505, 300, 412, 341, 42729, 3196, 295, 264, 1064, 11, 365, 5272, 293, 12904, 9256, 450, 10539, 51208, 51208, 949, 505, 11, 14138, 10117, 490, 3936, 293, 1080, 3542, 5160, 881, 26336, 281, 264, 1575, 13, 51552, 51552, 634, 575, 12525, 22618, 1968, 6144, 35617, 7354, 1292, 6, 589, 307, 534, 10281, 934, 439, 11, 293, 51836, 51836, 50257])
+        # fmt: on
+
+        self.assertTrue(np.allclose(generated_ids.asnumpy(), EXPECTED_OUTPUT.asnumpy()))
+
+        EXPECTED_TRANSCRIPT = [
+            {
+                "text": (
+                    " Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel. Nor is"
+                    " Mr. Quilter's manner less interesting than his matter. He tells us that at this festive season"
+                    " of the year, with Christmas and roast beef looming before us, similarly drawn from eating and"
+                    " its results occur most readily to the mind. He has grave doubts whether Sir Frederick Latins'"
+                    " work is really Greek after all, and"
+                ),
+                "offsets": [
+                    {
+                        "text": (
+                            " Mr. Quilter is the apostle of the middle classes, and we are glad to welcome his gospel."
+                        ),
+                        "timestamp": (0.0, 6.5600000000000005),
+                    },
+                    {
+                        "text": " Nor is Mr. Quilter's manner less interesting than his matter.",
+                        "timestamp": (6.5600000000000005, 11.24),
+                    },
+                    {
+                        "text": (
+                            " He tells us that at this festive season of the year, with Christmas and roast beef"
+                            " looming"
+                        ),
+                        "timestamp": (11.24, 16.88),
+                    },
+                    {
+                        "text": (
+                            " before us, similarly drawn from eating and its results occur most readily to the mind."
+                        ),
+                        "timestamp": (16.88, 23.76),
+                    },
+                    {
+                        "text": (
+                            " He has grave doubts whether Sir Frederick Latins' work is really Greek after all, and"
+                        ),
+                        "timestamp": (23.76, 29.44),
+                    },
+                ],
+            }
+        ]
+
+        transcript = processor.batch_decode(generated_ids, skip_special_tokens=True, output_offsets=True)
+        self.assertEqual(transcript, EXPECTED_TRANSCRIPT)
+
+
+    def test_tiny_token_timestamp_generation(self):
+        set_seed(0)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny", from_pt=True)
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny", from_pt=True)
+        model.generation_config.alignment_heads = [[2, 2], [3, 0], [3, 2], [3, 3], [3, 4], [3, 5]]
+
+        input_speech = self._load_datasamples(4)
+        input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
+
+        generate_outputs = model.generate(
+            input_features, max_length=448, return_timestamps=True, return_token_timestamps=True
+        )
+
+        self.assertEqual(generate_outputs.sequences.shape, generate_outputs.token_timestamps.shape)
+
+        # fmt: off
+        EXPECTED_OUTPUT = mindspore.tensor([
+            [ 0.0000, 0.0000, 0.0000, 0.0000, 0.4800, 0.8200, 0.9600, 1.1200, 1.1200, 1.2200, 1.5000, 1.7200, 2.0000, 2.3400, 2.5000, 2.6600, 3.1800, 3.5600, 3.6800, 3.8000, 4.1000, 4.3000, 4.5800, 4.9400, 5.3800, 12.4200, 12.8400, 26.9200, 26.9200, 26.9200, 26.9200, 26.9200, 26.9200, 26.9200, 26.9200, 26.9200, 26.9200, 26.9200, 26.9400, 26.9400, 26.9400, 26.9400, 29.8400 ],
+            [ 0.0000, 0.0000, 0.0000, 0.0000, 0.5200, 0.9000, 1.1400, 1.4200, 1.5200, 1.6800, 1.6800, 1.8800, 2.1000, 2.2200, 2.6200, 3.1400, 3.5800, 3.9600, 4.4000, 17.3000, 17.3000, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7200, 26.7400, 26.7400, 26.7400, 26.7400, 26.7400, 26.7400, 28.0000 ],
+            [ 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.7600, 1.0000, 1.4200, 1.8000, 1.9400, 2.1800, 2.5200, 3.0200, 3.3200, 3.5400, 3.9400, 4.5600, 4.9200, 5.2800, 5.5600, 5.9000, 6.1600, 6.3000, 6.4800, 6.4800, 6.6400, 7.8200, 7.9600, 8.2200, 8.6000, 8.9200, 9.2200, 9.5200, 9.7200, 10.0600, 10.5400, 10.8800, 11.2600, 11.5400, 11.7400, 12.0800, 15.6800, 15.6800],
+            [ 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.7400, 1.0400, 1.3200, 1.6800, 2.1400, 2.4800, 2.7800, 3.0800, 3.1600, 3.4000, 3.6000, 4.0200, 4.2200, 4.8600, 5.2400, 5.7400, 6.3400, 6.6200, 6.7600, 6.7600, 6.8600, 7.2400, 7.4200, 7.6800, 7.9200, 8.4800, 8.7600, 9.2000, 9.2000, 9.4200, 15.8200, 15.8200, 29.6400, 29.6600, 29.6600, 29.6600, 29.6600, 29.7600]
+        ])
+        print(generate_outputs.token_timestamps.asnumpy() - EXPECTED_OUTPUT.asnumpy())
+        # fmt: on
+        self.assertTrue(np.allclose(generate_outputs.token_timestamps.asnumpy(), EXPECTED_OUTPUT.asnumpy(), 1e-3))
+
+
+    def test_tiny_specaugment_librispeech(self):
+        set_seed(0)
+        # Apply SpecAugment
+        model = WhisperModel.from_pretrained("openai/whisper-tiny", apply_spec_augment=True, from_pt=True)
+        # Set model to training mode to enable SpecAugment
+        model.set_train()
+        input_speech = self._load_datasamples(1)
+        feature_extractor = WhisperFeatureExtractor()
+        input_features = feature_extractor(input_speech, return_tensors="ms").input_features
+
+        logits = model(
+            input_features,
+            decoder_input_ids=mindspore.tensor([[50258, 50259, 50359]]),
+            output_hidden_states=False,
+            output_attentions=False,
+            return_dict=False,
+            use_cache=False,
+        )
+
+        # fmt: off
+        EXPECTED_LOGITS = mindspore.tensor(
+            [
+                0.9362, -4.7105, 5.0879, 3.9642, 1.0013, -6.0096, 4.7285, -3.1847,
+                -0.8648, 1.9631, 6.2653, 3.6936, 0.3575, -4.5818, 3.0564, 7.8712,
+                2.9951, 0.6848, 9.9497, -2.6638, 1.1571, -6.8546, -1.4333, -7.7584,
+                1.1200, 3.9030, 4.4655, -4.4919, -1.1703, 9.6241
+            ]
+        )
+        print(logits[0][0, 0, :30].asnumpy() - EXPECTED_LOGITS.asnumpy())
+        # fmt: on
+        self.assertTrue(np.allclose(logits[0][0, 0, :30].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=1e-4))
+
+
+    def test_generate_with_prompt_ids(self):
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny", from_pt=True)
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny", from_pt=True)
+        input_speech = self._load_datasamples(4)[-1:]
+        input_features = processor(input_speech, return_tensors="ms").input_features
+
+        output_without_prompt = model.generate(input_features)
+        prompt_ids = processor.get_prompt_ids("Leighton")
+        output_with_prompt = model.generate(input_features, prompt_ids=prompt_ids)
+
+        expected_without_prompt = "<|startoftranscript|><|en|><|transcribe|><|notimestamps|> He has grave doubts whether Sir Frederick Layton's work is really Greek after all and can discover in it but little of Rocky Ithaca.<|endoftext|>"
+        expected_with_prompt = "<|startofprev|> Leighton<|startoftranscript|><|en|><|transcribe|><|notimestamps|> He has grave doubts whether Sir Frederick Leighton's work is really Greek after all and can discover in it but little of Rocky Ithaca.<|endoftext|>"
+        self.assertEqual(processor.decode(output_without_prompt[0]), expected_without_prompt)
+        self.assertEqual(processor.decode(output_with_prompt[0]), expected_with_prompt)
+
+
+    def test_generate_with_prompt_ids_and_forced_decoder_ids(self):
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny", from_pt=True)
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny", from_pt=True)
+        input_speech = self._load_datasamples(1)
+        input_features = processor(input_speech, return_tensors="ms").input_features
+        task = "translate"
+        language = "de"
+        expected_tokens = [f"<|{task}|>", f"<|{language}|>"]
+        prompt = "test prompt"
+        prompt_ids = processor.get_prompt_ids(prompt)
+
+        output = model.generate(input_features, task=task, language=language, prompt_ids=prompt_ids)
+        text = processor.decode(output[0])
+
+        self.assertTrue(prompt in text)
+        self.assertTrue(all(token in text for token in expected_tokens))
+
+
+    def test_generate_with_prompt_ids_and_no_non_prompt_forced_decoder_ids(self):
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en", from_pt=True)
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en", from_pt=True)
+        input_speech = self._load_datasamples(1)
+        input_features = processor(input_speech, return_tensors="ms").input_features
+        prompt = "test prompt"
+        prompt_ids = processor.get_prompt_ids(prompt)
+
+        model.generation_config.forced_decoder_ids = None
+        model.config.forced_decoder_ids = None
+
+        output = model.generate(input_features, prompt_ids=prompt_ids, return_timestamps=True)
+        text = processor.decode(output[0])
+
+        self.assertTrue(prompt in text)
 
 
 def prepare_whisper_encoder_inputs_dict(config, input_features, head_mask=None):

@@ -27,6 +27,8 @@ CONFIG_NAME = "config.json"
 GENERATION_CONFIG_NAME = "generation_config.json"
 TOKENIZER_CONFIG_FILE = "tokenizer_config.json"
 
+FEATURE_EXTRACTOR_NAME = "preprocessor_config.json"
+
 DEFAULT_ROOT = os.path.join(os.getcwd(), ".mindnlp")
 # for modelscope models
 MS_URL_BASE = "https://modelscope.cn/api/v1/models/mindnlp/{}/repo?Revision=master&FilePath={}"

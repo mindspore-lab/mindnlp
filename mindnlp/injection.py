@@ -14,6 +14,7 @@
 # ============================================================================
 # pylint: disable=global-variable-not-assigned
 # pylint: disable=redefined-builtin
+# pylint: disable=invalid-name
 """
 Injection mindspore.nn for MindNLP
 """
@@ -111,6 +112,54 @@ ops.dense = fp16_patch_decorator(dense)
 ops.einsum = einsum
 # conv1d
 ops.conv1d = fp16_patch_decorator(ops.conv1d)
+
+# unfold
+def _get_unfold_indices(input_shape, dimension, size, step):
+    if dimension < 0:
+        dimension += len(input_shape)
+    indices = []
+    for i in range(0, input_shape[dimension] - size + 1, step):
+        indices.append(list(range(i, i + size)))
+
+    return indices, dimension
+
+def unfold(self, dimension, size, step):
+    """torch-like unfold"""
+    _indices, _dimension = _get_unfold_indices(self.shape, dimension, size, step)
+    indices = mindspore.Tensor(_indices).astype(mindspore.int32)
+    output = ops.gather(self, indices, axis=_dimension)
+    output = ops.moveaxis(output, _dimension + 1, -1)
+    return output
+
+Tensor.unfold = unfold
+StubTensor.unfold = unfold
+
+# var_mean
+def var_mean(input, axis=None, *, correction=1, keepdims=False):
+    """torch-like var_mean"""
+    axis = Validator.check_and_canonicalize_axes(axis, input.ndim)
+    x_mean = ops.mean(input, axis, True)
+    x_sub = ops.sub(input, x_mean)
+    x_pow = ops.pow(x_sub, 2)
+    x_sum = ops.sum(x_pow, axis, keepdims)
+    res_mean = ops.mean(input, axis, keepdims)
+    nums = 1
+    if not axis:
+        nums = input.size
+    else:
+        for ax in axis:
+            nums *= input.shape[ax]
+    return ops.true_divide(x_sum, nums - correction), res_mean
+
+ops.var_mean = var_mean
+
+# std_mean
+def std_mean(input, axis=None, *, correction=1, keepdims=False):
+    """torch-like std_mean"""
+    output = var_mean(input, axis, correction=correction, keepdims=keepdims)
+    return ops.pow(output[0], 0.5), output[1]
+
+ops.std_mean = std_mean
 
 if DEVICE_TARGET == 'Ascend':
     # cumsum
