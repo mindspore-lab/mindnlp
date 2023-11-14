@@ -11,7 +11,7 @@ from mindspore.common.initializer import initializer, TruncatedNormal, Normal
 
 
 from ...activations import ACT2FN
-from .modeling_attn_mask_utils import _prepare_4d_attention_mask
+from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
 from ...modeling_outputs import (
     BaseModelOutput,
     ModelOutput,
@@ -19,7 +19,7 @@ from ...modeling_outputs import (
     Seq2SeqTSPredictionOutput,
 )
 from ...modeling_utils import PreTrainedModel
-from .time_series_utils import NegativeBinomialOutput, NormalOutput, StudentTOutput
+from ...time_series_utils import NegativeBinomialOutput, NormalOutput, StudentTOutput
 from mindspore import log as logger
 
 from .configuration_autoformer import AutoformerConfig

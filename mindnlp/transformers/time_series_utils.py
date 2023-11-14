@@ -20,6 +20,7 @@ from typing import Callable, Dict, Optional, Tuple
 import mindspore
 import mindspore.nn as nn
 import mindspore.ops as ops
+import numpy as np
 from mindspore.nn.probability.distribution import (
     AffineTransform,
     Distribution,
@@ -171,7 +172,8 @@ class StudentTOutput(DistributionOutput):
 
     @classmethod
     def domain_map(cls, df: mindspore.Tensor, loc: mindspore.Tensor, scale: mindspore.Tensor):
-        scale = cls.squareplus(scale).clamp_min(torch.finfo(scale.dtype).eps)
+        scale = cls.squareplus(scale).clamp_min(
+            np.finfo(mindspore.dtype_to_nptype(scale.dtype)).eps)
         df = 2.0 + cls.squareplus(df)
         return df.squeeze(-1), loc.squeeze(-1), scale.squeeze(-1)
 
@@ -186,7 +188,7 @@ class NormalOutput(DistributionOutput):
 
     @classmethod
     def domain_map(cls, loc: mindspore.Tensor, scale: mindspore.Tensor):
-        scale = cls.squareplus(scale).clamp_min(torch.finfo(scale.dtype).eps)
+        scale = cls.squareplus(scale).clamp_min(np.finfo(mindspore.dtype_to_nptype(scale.dtype)).eps)
         return loc.squeeze(-1), scale.squeeze(-1)
 
 
