@@ -7,7 +7,7 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 import mindspore
 from mindspore import nn, ops
-from mindspore.common.initializer import initializer, TruncatedNormal, Normal
+from mindspore.common.initializer import initializer, Normal
 
 
 from ...activations import ACT2FN
@@ -66,12 +66,12 @@ class AutoFormerDecoderOutput(ModelOutput):
             weighted average in the cross-attention heads.
     """
 
-    last_hidden_state: mindspore.FloatTensor = None
-    trend: mindspore.FloatTensor = None
-    past_key_values: Optional[Tuple[Tuple[mindspore.FloatTensor]]] = None
-    hidden_states: Optional[Tuple[mindspore.FloatTensor]] = None
-    attentions: Optional[Tuple[mindspore.FloatTensor]] = None
-    cross_attentions: Optional[Tuple[mindspore.FloatTensor]] = None
+    last_hidden_state: mindspore.Tensor = None
+    trend: mindspore.Tensor = None
+    past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
+    cross_attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
 @dataclass
@@ -134,18 +134,18 @@ class AutoformerModelOutput(ModelOutput):
             Static features of each time series' in a batch which are copied to the covariates at inference time.
     """
 
-    last_hidden_state: mindspore.FloatTensor = None
-    trend: mindspore.FloatTensor = None
-    past_key_values: Optional[Tuple[Tuple[mindspore.FloatTensor]]] = None
-    decoder_hidden_states: Optional[Tuple[mindspore.FloatTensor]] = None
-    decoder_attentions: Optional[Tuple[mindspore.FloatTensor]] = None
-    cross_attentions: Optional[Tuple[mindspore.FloatTensor]] = None
-    encoder_last_hidden_state: Optional[mindspore.FloatTensor] = None
-    encoder_hidden_states: Optional[Tuple[mindspore.FloatTensor]] = None
-    encoder_attentions: Optional[Tuple[mindspore.FloatTensor]] = None
-    loc: Optional[mindspore.FloatTensor] = None
-    scale: Optional[mindspore.FloatTensor] = None
-    static_features: Optional[mindspore.FloatTensor] = None
+    last_hidden_state: mindspore.Tensor = None
+    trend: mindspore.Tensor = None
+    past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
+    decoder_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    decoder_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    cross_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    encoder_last_hidden_state: Optional[mindspore.Tensor] = None
+    encoder_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    encoder_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    loc: Optional[mindspore.Tensor] = None
+    scale: Optional[mindspore.Tensor] = None
+    static_features: Optional[mindspore.Tensor] = None
 
 
 AUTOFORMER_PRETRAINED_MODEL_ARCHIVE_LIST = [
@@ -170,14 +170,14 @@ class AutoformerFeatureEmbedder(nn.Cell):
         super().__init__()
 
         self.num_features = len(cardinalities)
-        self.embedders = nn.ModuleList([nn.Embedding(c, d) for c, d in zip(cardinalities, embedding_dims)])
+        self.embedders = nn.CellList([nn.Embedding(c, d) for c, d in zip(cardinalities, embedding_dims)])
 
     def construct(self, features: mindspore.Tensor) -> mindspore.Tensor:
         if self.num_features > 1:
             # we slice the last dimension, giving an array of length
             # self.num_features with shape (N,T) or (N)
             cat_feature_slices = ops.chunk(
-                features, self.num_features, dim=-1)
+                features, self.num_features, axis=-1)
         else:
             cat_feature_slices = [features]
 
@@ -186,7 +186,7 @@ class AutoformerFeatureEmbedder(nn.Cell):
                 embed(cat_feature_slice.squeeze(-1))
                 for embed, cat_feature_slice in zip(self.embedders, cat_feature_slices)
             ],
-            dim=-1,
+            axis=-1,
         )
 
 
@@ -213,13 +213,12 @@ class AutoformerStdScaler(nn.Cell):
         self.keepdim = keepdim
         self.minimum_scale = minimum_scale
 
-    @torch.no_grad()#todo
     def construct(self, data: mindspore.Tensor, weights: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
-        denominator = weights.sum(self.dim, keepdim=self.keepdim)
-        denominator = denominator.clamp_min(1.0)
-        loc = (data * weights).sum(self.dim, keepdim=self.keepdim) / denominator
+        denominator = weights.sum(self.dim, keepdims=self.keepdim)
+        denominator = denominator.clamp(min=1.0)
+        loc = (data * weights).sum(self.dim, keepdims=self.keepdim) / denominator
 
-        variance = (((data - loc) * weights) ** 2).sum(self.dim, keepdim=self.keepdim) / denominator
+        variance = (((data - loc) * weights) ** 2).sum(self.dim, keepdims=self.keepdim) / denominator
         scale = ops.sqrt(variance + self.minimum_scale)
         return (data - loc) / scale, loc, scale
 
@@ -250,20 +249,19 @@ class AutoformerMeanScaler(nn.Cell):
         self.minimum_scale = minimum_scale
         self.default_scale = default_scale
 
-    @torch.no_grad()#todo
     def construct(
         self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor
     ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
         # shape: (N, [C], T=1)
-        ts_sum = (data * observed_indicator).abs().sum(self.dim, keepdim=True)
-        num_observed = observed_indicator.sum(self.dim, keepdim=True)
+        ts_sum = (data * observed_indicator).abs().sum(self.dim, keepdims=True)
+        num_observed = observed_indicator.sum(self.dim, keepdims=True)
 
         scale = ts_sum / ops.clamp(num_observed, min=1)
 
         # If `default_scale` is provided, we use it, otherwise we use the scale
         # of the batch.
         if self.default_scale is None:
-            batch_sum = ts_sum.sum(dim=0)
+            batch_sum = ts_sum.sum(axis=0)
             batch_observations = ops.clamp(num_observed.sum(0), min=1)
             default_scale = ops.squeeze(batch_sum / batch_observations)
         else:
@@ -277,7 +275,7 @@ class AutoformerMeanScaler(nn.Cell):
         scaled_data = data / scale
 
         if not self.keepdim:
-            scale = scale.squeeze(dim=self.dim)
+            scale = scale.squeeze(axis=self.dim)
 
         return scaled_data, ops.zeros_like(scale), scale
 
@@ -302,8 +300,9 @@ class AutoformerNOPScaler(nn.Cell):
     def construct(
         self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor
     ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
-        scale = ops.ones_like(data, requires_grad=False).mean(dim=self.dim, keepdim=self.keepdim)
-        loc = ops.zeros_like(data, requires_grad=False).mean(dim=self.dim, keepdim=self.keepdim)
+        scale = ops.ones_like(data, requires_grad=False).mean(axis=self.dim, keepdims=self.keepdim)
+        loc = ops.zeros_like(data, requires_grad=False).mean(
+            axis=self.dim, keepdims=self.keepdim)
         return data, loc, scale
 
 
@@ -326,10 +325,11 @@ def weighted_average(input_tensor: mindspore.Tensor, weights: Optional[mindspore
     """
     if weights is not None:
         weighted_tensor = mindspore.Tensor.where(weights != 0, input_tensor * weights, ops.zeros_like(input_tensor))
-        sum_weights = ops.clamp(weights.sum(dim=dim) if dim else weights.sum(), min=1.0)
-        return (weighted_tensor.sum(dim=dim) if dim else weighted_tensor.sum()) / sum_weights
+        sum_weights = ops.clamp(weights.sum(
+            axis=dim) if dim else weights.sum(), min=1.0)
+        return (weighted_tensor.sum(axis=dim) if dim else weighted_tensor.sum()) / sum_weights
     else:
-        return input_tensor.mean(dim=dim)
+        return input_tensor.mean(axis=dim)
 
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.nll
@@ -337,7 +337,7 @@ def nll(input: nn.probability.distribution.distribution, target: mindspore.Tenso
     """
     Computes the negative log likelihood loss from input distribution with respect to target.
     """
-    return -input.log_prob(target)#todo
+    return -input.log_prob(target)
 
 
 # Copied from transformers.models.marian.modeling_marian.MarianSinusoidalPositionalEmbedding with Marian->Autoformer
@@ -354,7 +354,7 @@ class AutoformerSinusoidalPositionalEmbedding(nn.Embedding):
         Identical to the XLM create_sinusoidal_embeddings except features are not interleaved. The cos features are in
         the 2nd half of the vector. [dim // 2:]
         """
-        n_pos, dim = out.shape#todo
+        n_pos, dim = out.shape
         position_enc = np.array(
             [[pos / np.power(10000, 2 * (j // 2) / dim) for j in range(dim)] for pos in range(n_pos)]
         )
@@ -365,7 +365,6 @@ class AutoformerSinusoidalPositionalEmbedding(nn.Embedding):
         out.detach_()
         return out
 
-    @torch.no_grad()#todo
     def construct(self, input_ids_shape: mindspore.Tensor.shape, past_key_values_length: int = 0) -> mindspore.Tensor:
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
         bsz, seq_len = input_ids_shape[:2]
@@ -407,7 +406,7 @@ class AutoformerSeriesDecompositionLayer(nn.Cell):
         num_of_pads = (self.kernel_size - 1) // 2
         front = x[:, 0:1, :].repeat(1, num_of_pads, 1)
         end = x[:, -1:, :].repeat(1, num_of_pads, 1)
-        x_padded = ops.cat([front, x, end], dim=1)
+        x_padded = ops.cat([front, x, end], axis=1)
 
         # calculate the trend and seasonal part of the series
         x_trend = self.avg(x_padded.transpose(0, 2, 1)).transpose(0, 2, 1)
@@ -430,7 +429,7 @@ class AutoformerLayernorm(nn.Cell):
 
     def construct(self, x):
         x_hat = self.layernorm(x)
-        bias = ops.mean(x_hat, dim=1).unsqueeze(1).repeat(1, x.shape[1], 1)
+        bias = ops.mean(x_hat, axis=1).unsqueeze(1).repeat(1, x.shape[1], 1)
         return x_hat - bias
 
 
@@ -472,7 +471,7 @@ class AutoformerAttention(nn.Cell):
         self.autocorrelation_factor = autocorrelation_factor
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2).contiguous()
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
     def construct(
         self,
@@ -489,7 +488,7 @@ class AutoformerAttention(nn.Cell):
         # for the decoder
         is_cross_attention = key_value_states is not None
 
-        bsz, tgt_len, _ = hidden_states.size()
+        bsz, tgt_len, _ = hidden_states.shape
 
         # get query proj
         query_states = self.q_proj(hidden_states)
@@ -513,8 +512,8 @@ class AutoformerAttention(nn.Cell):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.cat([past_key_value[0], key_states], dim=2)
-            value_states = ops.cat([past_key_value[1], value_states], dim=2)
+            key_states = ops.cat([past_key_value[0], key_states], axis=2)
+            value_states = ops.cat([past_key_value[1], value_states], axis=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -537,44 +536,45 @@ class AutoformerAttention(nn.Cell):
 
         # (1) period-based dependencies discovery
         # Resize (truncation or zero filling)
-        queries_time_length = query_states.size(1)
-        values_time_length = value_states.size(1)
+        queries_time_length = query_states.shape[1]
+        values_time_length = value_states.shape[1]
         if queries_time_length > values_time_length:
             query_states = query_states[:, : (queries_time_length - values_time_length), :]
             zeros = ops.zeros_like(query_states).float()
-            value_states = ops.cat([value_states, zeros], dim=1)
-            key_states = ops.cat([key_states, zeros], dim=1)
+            value_states = ops.cat([value_states, zeros], axis=1)
+            key_states = ops.cat([key_states, zeros], axis=1)
         else:
             value_states = value_states[:, :queries_time_length, :]
             key_states = key_states[:, :queries_time_length, :]
 
-        query_states_fft = ops.fft.rfft(query_states, n=tgt_len, dim=1)
-        key_states_fft = ops.fft.rfft(key_states, n=tgt_len, dim=1)
+        query_states_fft = ops.fft.rfft(query_states, n=tgt_len, axis=1)
+        key_states_fft = ops.fft.rfft(key_states, n=tgt_len, axis=1)
         attn_weights = query_states_fft * ops.conj(key_states_fft)
-        attn_weights = ops.fft.irfft(attn_weights, n=tgt_len, dim=1)  # Autocorrelation(Q,K)
+        attn_weights = ops.fft.irfft(
+            attn_weights, n=tgt_len, axis=1)  # Autocorrelation(Q,K)
 
-        src_len = key_states.size(1)
-        channel = key_states.size(2)
+        src_len = key_states.shape[1]
+        channel = key_states.shape[2]
 
-        if attn_weights.size() != (bsz * self.num_heads, tgt_len, channel):
+        if attn_weights.shape != (bsz * self.num_heads, tgt_len, channel):
             raise ValueError(
                 f"Attention weights should be of size {(bsz * self.num_heads, tgt_len, channel)}, but is"
-                f" {attn_weights.size()}"
+                f" {attn_weights.shape}"
             )
 
         if attention_mask is not None:
-            if attention_mask.size() != (bsz, 1, tgt_len, src_len):
+            if attention_mask.shape != (bsz, 1, tgt_len, src_len):
                 raise ValueError(
-                    f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.size()}"
+                    f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.shape}"
                 )
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         if layer_head_mask is not None:
-            if layer_head_mask.size() != (self.num_heads,):
+            if layer_head_mask.shape != (self.num_heads,):
                 raise ValueError(
                     f"Head mask for a single layer should be of size {(self.num_heads,)}, but is"
-                    f" {layer_head_mask.size()}"
+                    f" {layer_head_mask.shape}"
                 )
             attn_weights = layer_head_mask.view(1, -1, 1, 1) * attn_weights.view(bsz, self.num_heads, tgt_len, channel)
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, channel)
@@ -590,24 +590,27 @@ class AutoformerAttention(nn.Cell):
             attn_weights_reshaped = None
 
         # time delay aggregation
-        time_length = value_states.size(1)
+        time_length = value_states.shape[1]
         autocorrelations = attn_weights.view(bsz, self.num_heads, tgt_len, channel)
 
         # find top k autocorrelations delays
         top_k = int(self.autocorrelation_factor * math.log(time_length))
-        autocorrelations_mean_on_head_channel = ops.mean(autocorrelations, dim=(1, -1))  # bsz x tgt_len
+        autocorrelations_mean_on_head_channel = ops.mean(
+            autocorrelations, axis=(1, -1))  # bsz x tgt_len
         if self.training:
-            autocorrelations_mean_on_bsz = ops.mean(autocorrelations_mean_on_head_channel, dim=0)
+            autocorrelations_mean_on_bsz = ops.mean(
+                autocorrelations_mean_on_head_channel, axis=0)
             _, top_k_delays_index = ops.topk(autocorrelations_mean_on_bsz, top_k)
             top_k_autocorrelations = ops.stack(
                 [autocorrelations_mean_on_head_channel[:, top_k_delays_index[i]] for i in range(top_k)], dim=-1
             )
         else:
             top_k_autocorrelations, top_k_delays_index = ops.topk(
-                autocorrelations_mean_on_head_channel, top_k, dim=1
+                autocorrelations_mean_on_head_channel, top_k, axis=1
             )
 
-        top_k_autocorrelations = ops.softmax(top_k_autocorrelations, dim=-1)  # bsz x top_k
+        top_k_autocorrelations = ops.softmax(
+            top_k_autocorrelations, axis=-1)  # bsz x top_k
 
         # compute aggregation: value_states.roll(delay) * top_k_autocorrelations(delay)
         if not self.training:
@@ -617,7 +620,6 @@ class AutoformerAttention(nn.Cell):
                 ops.arange(time_length)
                 .view(1, -1, 1)
                 .repeat(bsz * self.num_heads, 1, channel)
-                .to(value_states.device)
             )
 
         delays_agg = ops.zeros_like(value_states).float()  # bsz x time_length x channel
@@ -627,7 +629,8 @@ class AutoformerAttention(nn.Cell):
                 tmp_delay = init_index + top_k_delays_index[:, i].view(-1, 1, 1).repeat(
                     self.num_heads, tgt_len, channel
                 )
-                value_states_roll_delay = ops.gather(tmp_values, dim=1, index=tmp_delay)
+                value_states_roll_delay = ops.gather(
+                    tmp_values, axis=1, index=tmp_delay)
             else:
                 value_states_roll_delay = value_states.roll(shifts=-int(top_k_delays_index[i]), dims=1)
 
@@ -637,12 +640,12 @@ class AutoformerAttention(nn.Cell):
             )
             delays_agg += value_states_roll_delay * top_k_autocorrelations_at_delay
 
-        attn_output = delays_agg.contiguous()
+        attn_output = delays_agg
 
-        if attn_output.size() != (bsz * self.num_heads, tgt_len, self.head_dim):
+        if attn_output.shape != (bsz * self.num_heads, tgt_len, self.head_dim):
             raise ValueError(
                 f"`attn_output` should be of size {(bsz * self.num_heads, tgt_len, self.head_dim)}, but is"
-                f" {attn_output.size()}"
+                f" {attn_output.shape}"
             )
 
         attn_output = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim)
@@ -937,7 +940,7 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
         self,
         attention_mask: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
-        inputs_embeds: Optional[mindspore.FloatTensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutput]:
@@ -975,7 +978,7 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
         )
 
         hidden_states = self.value_embedding(inputs_embeds)
-        embed_pos = self.embed_positions(inputs_embeds.size())
+        embed_pos = self.embed_positions(inputs_embeds.shape)
 
         hidden_states = self.layernorm_embedding(hidden_states + embed_pos)
         hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
@@ -990,10 +993,10 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
 
         # check if head_mask has a correct number of layers specified if desired
         if head_mask is not None:
-            if head_mask.size()[0] != (len(self.layers)):
+            if head_mask.shape[0] != (len(self.layers)):
                 raise ValueError(
                     f"The head_mask should be specified for {len(self.layers)} layers, but it is for"
-                    f" {head_mask.size()[0]}."
+                    f" {head_mask.shape[0]}."
                 )
 
         for idx, encoder_layer in enumerate(self.layers):
@@ -1149,7 +1152,7 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
         )
         use_cache = use_cache if use_cache is not None else self.config.use_cache
 
-        input_shape = inputs_embeds.size()[:-1]
+        input_shape = inputs_embeds.shape[:-1]
 
         # expand encoder attention mask
         if encoder_hidden_states is not None and encoder_attention_mask is not None:
@@ -1160,7 +1163,7 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
 
         hidden_states = self.value_embedding(inputs_embeds)
         embed_pos = self.embed_positions(
-            inputs_embeds.size(), past_key_values_length=self.config.context_length - self.config.label_length
+            inputs_embeds.shape, past_key_values_length=self.config.context_length - self.config.label_length
         )
         hidden_states = self.layernorm_embedding(hidden_states + embed_pos)
         hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
@@ -1174,10 +1177,10 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
         # check if head_mask/cross_attn_head_mask has a correct number of layers specified if desired
         for attn_mask, mask_name in zip([head_mask, cross_attn_head_mask], ["head_mask", "cross_attn_head_mask"]):
             if attn_mask is not None:
-                if attn_mask.size()[0] != (len(self.layers)):
+                if attn_mask.shape[0] != (len(self.layers)):
                     raise ValueError(
                         f"The `{mask_name}` should be specified for {len(self.layers)} layers, but it is for"
-                        f" {head_mask.size()[0]}."
+                        f" {head_mask.shape[0]}."
                     )
 
         for idx, decoder_layer in enumerate(self.layers):
@@ -1321,7 +1324,7 @@ class AutoformerModel(AutoformerPreTrainedModel):
             lagged_values.append(sequence[:, begin_index:end_index, ...])
 
         # return as stacked tensor in the feature dimension
-        return ops.stack(lagged_values, dim=-1)
+        return ops.stack(lagged_values, axis=-1)
 
     def create_network_inputs(
         self,
@@ -1372,7 +1375,7 @@ class AutoformerModel(AutoformerPreTrainedModel):
                     past_time_features[:, self._past_length - self.config.context_length :, ...],
                     future_time_features,
                 ),
-                dim=1,
+                axis=1,
             )
             if future_values is not None
             else past_time_features[:, self._past_length - self.config.context_length :, ...]
@@ -1387,7 +1390,7 @@ class AutoformerModel(AutoformerPreTrainedModel):
         _, loc, scale = self.scaler(context, observed_context)
 
         inputs = (
-            (ops.cat((past_values, future_values), dim=1) - loc) / scale
+            (ops.cat((past_values, future_values), axis=1) - loc) / scale
             if future_values is not None
             else (past_values - loc) / scale
         )
@@ -1395,17 +1398,18 @@ class AutoformerModel(AutoformerPreTrainedModel):
         # static features
         log_abs_loc = loc.abs().log1p() if self.config.input_size == 1 else loc.squeeze(1).abs().log1p()
         log_scale = scale.log() if self.config.input_size == 1 else scale.squeeze(1).log()
-        static_feat = ops.cat((log_abs_loc, log_scale), dim=1)
+        static_feat = ops.cat((log_abs_loc, log_scale), axis=1)
 
         if static_real_features is not None:
-            static_feat = ops.cat((static_real_features, static_feat), dim=1)
+            static_feat = ops.cat((static_real_features, static_feat), axis=1)
         if static_categorical_features is not None:
             embedded_cat = self.embedder(static_categorical_features)
-            static_feat = ops.cat((embedded_cat, static_feat), dim=1)
-        expanded_static_feat = static_feat.unsqueeze(1).expand(-1, time_feat.shape[1], -1)
+            static_feat = ops.cat((embedded_cat, static_feat), axis=1)
+        expanded_static_feat = static_feat.unsqueeze(
+            1).broadcast_to(-1, time_feat.shape[1], -1)
 
         # all features
-        features = ops.cat((expanded_static_feat, time_feat), dim=-1)
+        features = ops.cat((expanded_static_feat, time_feat), axis=-1)
 
         # lagged features
         subsequences_length = (
@@ -1438,12 +1442,12 @@ class AutoformerModel(AutoformerPreTrainedModel):
         static_real_features: Optional[mindspore.Tensor] = None,
         future_values: Optional[mindspore.Tensor] = None,
         future_time_features: Optional[mindspore.Tensor] = None,
-        decoder_attention_mask: Optional[mindspore.LongTensor] = None,
+        decoder_attention_mask: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
         decoder_head_mask: Optional[mindspore.Tensor] = None,
         cross_attn_head_mask: Optional[mindspore.Tensor] = None,
-        encoder_outputs: Optional[List[mindspore.FloatTensor]] = None,
-        past_key_values: Optional[List[mindspore.FloatTensor]] = None,
+        encoder_outputs: Optional[List[mindspore.Tensor]] = None,
+        past_key_values: Optional[List[mindspore.Tensor]] = None,
         output_hidden_states: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         use_cache: Optional[bool] = None,
@@ -1500,7 +1504,7 @@ class AutoformerModel(AutoformerPreTrainedModel):
                     transformer_inputs[:, : self.config.context_length, ...],
                     temporal_features[:, : self.config.context_length, ...],
                 ),
-                dim=-1,
+                axis=-1,
             )
             encoder_outputs = self.encoder(
                 inputs_embeds=enc_input,
@@ -1516,28 +1520,30 @@ class AutoformerModel(AutoformerPreTrainedModel):
                 transformer_inputs[:, : self.config.context_length, ...]
             )
             mean = (
-                ops.mean(transformer_inputs[:, : self.config.context_length, ...], dim=1)
+                ops.mean(
+                    transformer_inputs[:, : self.config.context_length, ...], axis=1)
                 .unsqueeze(1)
                 .repeat(1, self.config.prediction_length, 1)
             )
             zeros = ops.zeros(
                 [transformer_inputs.shape[0], self.config.prediction_length, transformer_inputs.shape[2]],
-                device=enc_input.device,
             )
 
             decoder_input = ops.cat(
                 (
-                    ops.cat((seasonal_input[:, -self.config.label_length :, ...], zeros), dim=1),
+                    ops.cat(
+                        (seasonal_input[:, -self.config.label_length:, ...], zeros), axis=1),
                     temporal_features[:, self.config.context_length - self.config.label_length :, ...],
                 ),
-                dim=-1,
+                axis=-1,
             )
             trend_init = ops.cat(
                 (
-                    ops.cat((trend_input[:, -self.config.label_length :, ...], mean), dim=1),
+                    ops.cat(
+                        (trend_input[:, -self.config.label_length:, ...], mean), axis=1),
                     temporal_features[:, self.config.context_length - self.config.label_length :, ...],
                 ),
-                dim=-1,
+                axis=-1,
             )
 
             decoder_outputs = self.decoder(
@@ -1591,8 +1597,7 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
     def get_decoder(self):
         return self.model.get_decoder()
 
-    @torch.jit.ignore
-    def output_distribution(self, params, loc=None, scale=None, trailing_n=None) -> torch.distributions.Distribution:
+    def output_distribution(self, params, loc=None, scale=None, trailing_n=None) -> nn.probability.distribution.Distribution:
         sliced_params = params
         if trailing_n is not None:
             sliced_params = [p[:, -trailing_n:] for p in params]
@@ -1703,7 +1708,8 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
             if len(self.target_shape) == 0:
                 loss_weights = future_observed_mask
             else:
-                loss_weights, _ = future_observed_mask.min(dim=-1, keepdim=False)
+                loss_weights, _ = future_observed_mask.min(
+                    axis=-1, keepdims=False)
 
             prediction_loss = weighted_average(loss, weights=loss_weights)
 
@@ -1712,7 +1718,7 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         return ((prediction_loss,) + outputs) if prediction_loss is not None else outputs
 
 
-    @torch.no_grad()
+
     def generate(
         self,
         past_values: mindspore.Tensor,
@@ -1831,20 +1837,25 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         static_feat = outputs.static_features
 
         num_parallel_samples = self.config.num_parallel_samples
-        repeated_loc = loc.repeat_interleave(repeats=num_parallel_samples, dim=0)
-        repeated_scale = scale.repeat_interleave(repeats=num_parallel_samples, dim=0)
+        repeated_loc = loc.repeat_interleave(repeats=num_parallel_samples, axis=0)
+        repeated_scale = scale.repeat_interleave(
+            repeats=num_parallel_samples, axis=0)
 
         repeated_past_values = (
-            past_values.repeat_interleave(repeats=num_parallel_samples, dim=0) - repeated_loc
+            past_values.repeat_interleave(
+                repeats=num_parallel_samples, axis=0) - repeated_loc
         ) / repeated_scale
 
-        time_features = ops.cat((past_time_features, future_time_features), dim=1)
+        time_features = ops.cat((past_time_features, future_time_features), axis=1)
 
-        expanded_static_feat = static_feat.unsqueeze(1).expand(-1, time_features.shape[1], -1)
-        features = ops.cat((expanded_static_feat, time_features), dim=-1)
-        repeated_features = features.repeat_interleave(repeats=num_parallel_samples, dim=0)
+        expanded_static_feat = static_feat.unsqueeze(
+            1).broadcast_to(-1, time_features.shape[1], -1)
+        features = ops.cat((expanded_static_feat, time_features), axis=-1)
+        repeated_features = features.repeat_interleave(
+            repeats=num_parallel_samples, axis=0)
 
-        repeated_enc_last_hidden = enc_last_hidden.repeat_interleave(repeats=num_parallel_samples, dim=0)
+        repeated_enc_last_hidden = enc_last_hidden.repeat_interleave(
+            repeats=num_parallel_samples, axis=0)
 
         lagged_sequence = self.model.get_lagged_subsequences(
             sequence=repeated_past_values, subsequences_length=self.config.context_length
@@ -1853,25 +1864,27 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         reshaped_lagged_sequence = lagged_sequence.reshape(lags_shape[0], lags_shape[1], -1)
         seasonal_input, trend_input = self.model.decomposition_layer(reshaped_lagged_sequence)
 
-        mean = ops.mean(reshaped_lagged_sequence, dim=1).unsqueeze(1).repeat(1, self.config.prediction_length, 1)
+        mean = ops.mean(reshaped_lagged_sequence, axis=1).unsqueeze(
+            1).repeat(1, self.config.prediction_length, 1)
         zeros = ops.zeros(
             [reshaped_lagged_sequence.shape[0], self.config.prediction_length, reshaped_lagged_sequence.shape[2]],
-            device=reshaped_lagged_sequence.device,
         )
 
         decoder_input = ops.cat(
             (
-                ops.cat((seasonal_input[:, -self.config.label_length :, ...], zeros), dim=1),
+                ops.cat(
+                    (seasonal_input[:, -self.config.label_length:, ...], zeros), axis=1),
                 repeated_features[:, -self.config.prediction_length - self.config.label_length :, ...],
             ),
-            dim=-1,
+            axis=-1,
         )
         trend_init = ops.cat(
             (
-                ops.cat((trend_input[:, -self.config.label_length :, ...], mean), dim=1),
+                ops.cat(
+                    (trend_input[:, -self.config.label_length:, ...], mean), axis=1),
                 repeated_features[:, -self.config.prediction_length - self.config.label_length :, ...],
             ),
-            dim=-1,
+            axis=-1,
         )
         decoder_outputs = decoder(
             trend=trend_init, inputs_embeds=decoder_input, encoder_hidden_states=repeated_enc_last_hidden
