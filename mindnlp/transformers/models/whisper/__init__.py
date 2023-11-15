@@ -15,10 +15,16 @@
 """
 Bert Model.
 """
-from . import modeling_whisper, configuration_whisper
+from . import modeling_whisper, configuration_whisper, tokenization_whisper, processing_whisper, feature_extraction_whisper
 from .modeling_whisper import *
 from .configuration_whisper import *
+from .processing_whisper import *
+from .tokenization_whisper import *
+from .feature_extraction_whisper import *
 
 __all__ = []
 __all__.extend(modeling_whisper.__all__)
+__all__.extend(tokenization_whisper.__all__)
+__all__.extend(processing_whisper.__all__)
 __all__.extend(configuration_whisper.__all__)
+__all__.extend(feature_extraction_whisper.__all__)

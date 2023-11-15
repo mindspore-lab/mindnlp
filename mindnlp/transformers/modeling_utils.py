@@ -886,6 +886,31 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 all_keys_unexpected = [k for k in all_keys_unexpected if re.search(pat, k) is None]
 
 
+        # make sure token embedding weights are still tied if needed
+        model.tie_weights()
+
+        # Set model in evaluation mode to deactivate DropOut modules by default
+        model.set_train(False)
+
+        kwargs['from_pt'] = from_pt
+        # If it is a model with generation capabilities, attempt to load the generation config
+        if model.can_generate() and pretrained_model_name_or_path is not None:
+            try:
+                model.generation_config = GenerationConfig.from_pretrained(
+                    pretrained_model_name_or_path,
+                    cache_dir=cache_dir,
+                    force_download=force_download,
+                    resume_download=resume_download,
+                    proxies=proxies,
+                    local_files_only=local_files_only,
+                    subfolder=subfolder,
+                    **kwargs,
+                )
+            except OSError as exc:
+                raise ValueError(
+                    "Generation config file not found, using a generation config created from the model config."
+                ) from exc
+
         if output_loading_info:
             loading_info = {
                 "missing_keys": keys_missing,
@@ -925,15 +950,17 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
         logger.info(f"Model weights saved in {output_model_file}")
 
-    def can_generate(self) -> bool:
+    @classmethod
+    def can_generate(cls) -> bool:
         """
         Returns whether this model can generate sequences with `.generate()`.
 
         Returns:
             `bool`: Whether this model can generate sequences with `.generate()`.
         """
-        # Detects whether `prepare_inputs_for_generation` has been overwritten, which is a requirement for generation
-        if "GenerationMixin" in str(self.prepare_inputs_for_generation.__func__):
+        # Detects whether `prepare_inputs_for_generation` has been overwritten, which is a requirement for generation.
+        # Alternativelly, the model can also have a custom `generate` function.
+        if "GenerationMixin" in str(cls.prepare_inputs_for_generation) and "GenerationMixin" in str(cls.generate):
             return False
         return True
 
@@ -1290,7 +1317,7 @@ def convert_torch_to_mindspore(pth_file):
                 key = key.replace('.weight', '.gamma')
             if '.bias' in key:
                 key = key.replace('.bias', '.beta')
-        if 'embeddings' in key or 'embedding' in key and \
+        if 'embeddings' in key or 'embedding' in key or 'embed_' in key and \
             'embedding_hidden_mapping_in' not in key: # for albert
             key = key.replace('weight', 'embedding_table')
         ms_ckpt.append({'name': key, 'data': Tensor(value.numpy())})

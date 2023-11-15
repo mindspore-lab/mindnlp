@@ -70,17 +70,6 @@ class CPMTokenizer(PreTrainedTokenizer):
         self.return_token = return_token
         self.implementation = Implementation.PY
 
-    def __call__(self, text_input):
-        """
-        Call method for input conversion for eager mode with C++ implementation.
-        """
-        if isinstance(text_input, str):
-            text_input = np.array(text_input)
-        elif not isinstance(text_input, np.ndarray):
-            raise TypeError(
-                f"Input should be a text line in 1-D NumPy format, got {type(text_input)}.")
-        return super().__call__(text_input)
-
     def execute_py(self, text_input):
         """
         Execute method.

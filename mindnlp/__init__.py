@@ -19,6 +19,7 @@ MindNLP library.
 import mindspore
 from mindspore import jit as ms_jit
 from mindnlp import injection
+from mindnlp import transformers
 from mindnlp.dataset import load_dataset
 from mindnlp.workflow.workflow import Workflow
 from mindnlp.vocab import Vocab

@@ -22,18 +22,17 @@
 
 import os
 import warnings
-from pathlib import Path
 from typing import Optional, Union
 
-from mindnlp.utils import copy_func, direct_transformers_import, logging
+from mindnlp import transformers
+from mindnlp.utils import logging
 import mindnlp.transformers.models.auto as auto_module
 
 
 logger = logging.get_logger(__name__)
 
 # Dynamically import the Transformers module to grab the attribute classes of the processor form their names.
-transformers_module = direct_transformers_import(Path(__file__).parent)
-
+transformers_module = transformers
 
 AUTO_TO_BASE_CLASS_MAPPING = {
     "AutoTokenizer": "PreTrainedTokenizerBase",
@@ -237,10 +236,3 @@ class ProcessorMixin:
     def model_input_names(self):
         first_attribute = getattr(self, self.attributes[0])
         return getattr(first_attribute, "model_input_names", None)
-
-
-ProcessorMixin.push_to_hub = copy_func(ProcessorMixin.push_to_hub)
-if ProcessorMixin.push_to_hub.__doc__ is not None:
-    ProcessorMixin.push_to_hub.__doc__ = ProcessorMixin.push_to_hub.__doc__.format(
-        object="processor", object_class="AutoProcessor", object_files="processor files"
-    )
