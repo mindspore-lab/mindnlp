@@ -717,27 +717,27 @@ class GraphormerPreTrainedModel(PreTrainedModel):
     main_input_name_nodes = "input_nodes"
     main_input_name_edges = "input_edges"
 
-    def normal_(self, data: Tensor):
-        # with FSDP, module params will be on CUDA, so we cast them back to CPU
-        # so that the RNG is consistent with and without FSDP
-        data.copy_(data.cpu().normal_(mean=0.0, std=0.02).to(data.device))
-
     def init_graphormer_params(self, module: Union[nn.Dense, nn.Embedding, GraphormerMultiheadAttention]):
         """
         Initialize the weights specific to the Graphormer Model.
         """
         if isinstance(module, nn.Dense):
-            self.normal_(module.weight.data)
-            if module.bias is not None:
-                module.bias.data.zero_()
+            module.weight.set_data(init_normal(module.weight, sigma=0.02, mean=0.0))
+            if module.has_bias:
+                module.bias.set_data(init_zero(module.bias))
         if isinstance(module, nn.Embedding):
-            self.normal_(module.weight.data)
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
+            embedding_table = init_normal(module.embedding_table, sigma=0.02, mean=0.0)
+            if module.padding_idx:
+                embedding_table[module.padding_idx] = 0
+
+            module.embedding_table.set_data(embedding_table)
         if isinstance(module, GraphormerMultiheadAttention):
-            self.normal_(module.q_proj.weight.data)
-            self.normal_(module.k_proj.weight.data)
-            self.normal_(module.v_proj.weight.data)
+            module.q_proj.weight.set_data(init_normal(module.q_proj.weight,
+                                                      sigma=0.02, mean=0.0))
+            module.k_proj.weight.set_data(init_normal(module.k_proj.weight,
+                                                      sigma=0.02, mean=0.0))
+            module.v_proj.weight.set_data(init_normal(module.v_proj.weight,
+                                                      sigma=0.02, mean=0.0))
 
     def _init_weights(
         self,

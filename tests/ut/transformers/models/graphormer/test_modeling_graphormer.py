@@ -202,7 +202,7 @@ class GraphormerModelTester:
             spatial_pos=spatial_pos,
             input_edges=input_edges,
             attn_edge_type=attn_edge_type,
-            labels=labels,
+            labels=labels
         )
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
 
