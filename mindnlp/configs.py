@@ -16,7 +16,6 @@
 Global configs
 """
 import os
-import warnings
 
 WEIGHTS_NAME = "mindspore.ckpt"
 PT_WEIGHTS_NAME = "pytorch_model.bin"
@@ -33,14 +32,7 @@ DEFAULT_ROOT = os.path.join(os.getcwd(), ".mindnlp")
 # for modelscope models
 MS_URL_BASE = "https://modelscope.cn/api/v1/models/mindnlp/{}/repo?Revision=master&FilePath={}"
 # for huggingface url
-http_proxy = os.environ.get("http_proxy")
-
-if http_proxy:
-    warnings.warn('Detect `http_proxy` in environ variable, we will use `https://huggingface.co/` as default'
-                   'huggingface endpoint.')
-    HF_ENDPOINT = 'https://huggingface.co/'
-else:
-    HF_ENDPOINT = 'https://hf-mirror.com/'
+HF_ENDPOINT = os.environ.get("HF_ENDPOINT", 'https://hf-mirror.com/')
 
 HF_URL_BASE = HF_ENDPOINT + '{}/resolve/main/{}'
 
