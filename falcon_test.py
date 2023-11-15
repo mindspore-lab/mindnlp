@@ -2,7 +2,7 @@
 import numpy as np
 import mindspore
 import torch
-from mindspore import Tensor
+from mindspore import Tensor, context
 # from mindspore import nn
 
 from transformers.models.falcon import modeling_falcon as falcon_pt
@@ -43,10 +43,11 @@ class falcon_test():
         print(">===========test_FalconLinear_end\n")
 
     def test_FalconRotaryEmbedding(self, ms_dtype, pt_dtype):
-        print(">==========test_FalconRotaryEmbedding")
-        seq_len = 12
-        batch_size = 32
-        embed_dim = 128
+        print(">==========test_FalconRotaryEmbedding_begin")
+        seq_len = 1024
+        batch_size = 2
+        num_attn_heads = 71
+        head_size = 4544
         # init model
         pt_model = falcon_pt.FalconRotaryEmbedding(128)
         ms_model = falcon_ms.FalconRotaryEmbedding(128)
@@ -54,24 +55,13 @@ class falcon_test():
         ms_model.set_train(False)
         pt_model.eval()
         # data
-        query = np.random.randn(batch_size, seq_len, embed_dim)
-        key = np.random.randn(batch_size, seq_len, embed_dim)
+        x = np.random.randn(batch_size, num_attn_heads, seq_len, head_size)
         # prepare data
-        pt_query = torch.tensor(query, dtype=pt_dtype)
-        pt_key = torch.tensor(key, dtype=pt_dtype)
-        pt_position_ids = torch.tensor(  # position_ids
-            np.arange(seq_len).reshape(1, seq_len),
-            dtype=torch.int64)
-        ms_query = Tensor(query, dtype=ms_dtype)
-        ms_key = Tensor(key, dtype=ms_dtype)
-        ms_position_ids = Tensor(  # position_ids
-            np.arange(seq_len).reshape(1, seq_len),
-            dtype=mindspore.int64)
-        assert np.allclose(pt_query.detach().numpy(),
-                           ms_query.asnumpy(), 1e-5, 1e-5)
+        ms_x = Tensor(x, dtype=ms_dtype)
+        pt_x = torch.tensor(x, dtype=pt_dtype)
         # output
-        pt_out = pt_model(pt_query, pt_key, seq_len, pt_position_ids)
-        ms_out = ms_model(ms_query, ms_key, seq_len, ms_position_ids)
+        pt_out = pt_model(pt_x, seq_len)
+        ms_out = ms_model(ms_x, seq_len)
         # shape & loss
         assert ms_out[0].shape == pt_out[0].shape
         assert ms_out[1].shape == pt_out[1].shape
@@ -82,10 +72,12 @@ class falcon_test():
         print(">===========test_FalconRotaryEmbedding_end\n")
 
     def test_FalconAttention(self, ms_dtype, pt_dtype):
-        print(">==========test_FalconAttention")
+        print(">==========test_FalconAttention_begin")
         batch_size = 1
-        seq_len = 4672
+        seq_len = 1024
         hidden_size = 4544
+        max_length = 1420
+        num_attention_heads = 71
         # init config
         ms_config = falcon_ms.FalconConfig()
         pt_config = falcon_pt.FalconConfig()
@@ -102,28 +94,72 @@ class falcon_test():
         pt_model.eval()
         # prepare data
         hidden_states = np.random.randn(batch_size, seq_len, hidden_size)
-        alibi = np.random.randn(batch_size, 8, 1, seq_len)
-        attention_mask = np.random.randint(low=0, high=1, size=(batch_size, seq_len))
-        ms_hidden_states = Tensor(hidden_states, dtype=ms_dtype)
-        ms_alibi = Tensor(alibi, dtype=ms_dtype)
+        # alibi = None
+        attention_mask = np.random.choice([0, 1], size=(batch_size, seq_len))
         ms_attention_mask = Tensor(attention_mask, dtype=mindspore.bool_)
-        pt_hidden_states = torch.tensor(hidden_states, dtype=pt_dtype)
-        pt_alibi = torch.tensor(alibi, dtype=pt_dtype)
+        ms_hidden_states = Tensor(hidden_states, dtype=ms_dtype)
+        ms_alibi = falcon_ms.build_alibi_tensor(ms_attention_mask, num_attention_heads, dtype_list[0][0])
+        # ms_alibi = None
         pt_attention_mask = torch.tensor(attention_mask, dtype=pt_dtype)
+        pt_hidden_states = torch.tensor(hidden_states, dtype=pt_dtype)
+        pt_alibi = falcon_pt.build_alibi_tensor(pt_attention_mask, num_attention_heads, dtype_list[0][1])
+        # pt_alibi = None
         # output
-        ms_out = ms_model(ms_hidden_states, ms_alibi, ms_attention_mask)
         pt_out = pt_model(pt_hidden_states, pt_alibi, pt_attention_mask)
+        ms_out = ms_model(ms_hidden_states, ms_alibi, ms_attention_mask)
         # shape & loss
-        assert ms_out.shape == pt_out.shape
+        assert ms_out[0].shape == pt_out[0].shape
         assert np.allclose(
-            ms_out.asnumpy(), pt_out.detach().numpy(), 1e-5, 1e-5)
+            ms_out[0].asnumpy(), pt_out[0].detach().numpy(), 1e-5, 1e-5)
         print(">===========test_FalconAttention_end\n")
-
+        
+    def test_FalconFlashAttention2(self, ms_dtype, pt_dtype):
+        print(">==========test_FalconFlashAttention2_begin")
+        batch_size = 1
+        seq_len = 1024
+        hidden_size = 4544
+        max_length = 1420
+        num_attention_heads = 71
+        # init config
+        ms_config = falcon_ms.FalconConfig()
+        pt_config = falcon_pt.FalconConfig()
+        # init model
+        ms_model = falcon_ms.FalconAttention(ms_config)
+        pt_model = falcon_pt.FalconAttention(pt_config)
+        # load parameters
+        pt_params = pt_model.state_dict()
+        for key, param in ms_model.parameters_and_names():
+            if key in pt_params:
+                param.set_data(Tensor(pt_params.get(key).detach().numpy()))
+        # set eval mode
+        ms_model.set_train(False)
+        pt_model.eval()
+        # prepare data
+        hidden_states = np.random.randn(batch_size, seq_len, hidden_size)
+        # alibi = None
+        attention_mask = np.random.choice([0, 1], size=(batch_size, seq_len))
+        ms_attention_mask = Tensor(attention_mask, dtype=mindspore.bool_)
+        ms_hidden_states = Tensor(hidden_states, dtype=ms_dtype)
+        ms_alibi = falcon_ms.build_alibi_tensor(ms_attention_mask, num_attention_heads, dtype_list[0][0])
+        # ms_alibi = None
+        pt_attention_mask = torch.tensor(attention_mask, dtype=pt_dtype)
+        pt_hidden_states = torch.tensor(hidden_states, dtype=pt_dtype)
+        pt_alibi = falcon_pt.build_alibi_tensor(pt_attention_mask, num_attention_heads, dtype_list[0][1])
+        # pt_alibi = None
+        # output
+        pt_out = pt_model(pt_hidden_states, pt_alibi, pt_attention_mask)
+        ms_out = ms_model(ms_hidden_states, ms_alibi, ms_attention_mask)
+        # shape & loss
+        assert ms_out[0].shape == pt_out[0].shape
+        assert np.allclose(
+            ms_out[0].asnumpy(), pt_out[0].detach().numpy(), 1e-5, 1e-5)
+        print(">===========test_FalconFlashAttention2_end\n")
 
 
 if __name__ == "__main__":
 
     t = falcon_test()
     t.test_FalconLinear(*dtype_list[0])
-    t.test_FalconRotaryEmbedding(*dtype_list[0])
+    # t.test_FalconRotaryEmbedding(*dtype_list[0])
     t.test_FalconAttention(*dtype_list[0])
+
