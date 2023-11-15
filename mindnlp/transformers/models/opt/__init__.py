@@ -15,12 +15,10 @@
 """
 OPT Models init
 """
-from . import opt, opt_config, opt_tokenizer
-from .opt import *
-from .opt_config import *
-from .opt_tokenizer import *
+from . import configuration_opt, modeling_opt
+from .modeling_opt import *
+from .configuration_opt import *
 
 __all__ = []
-__all__.extend(opt.__all__)
-__all__.extend(opt_config.__all__)
-__all__.extend(opt_tokenizer.__all__)
+__all__.extend(modeling_opt.__all__)
+__all__.extend(configuration_opt.__all__)

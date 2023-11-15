@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # pylint: disable=redefined-outer-name
+# pylint: disable=invalid-name
 """
 Audio processing functions to extract features from audio waveforms. This code is pure numpy to support all frameworks
 and remove unnecessary dependencies.

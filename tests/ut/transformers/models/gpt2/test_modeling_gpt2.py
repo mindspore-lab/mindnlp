@@ -24,7 +24,7 @@ import mindspore
 from mindspore import Tensor
 from mindnlp.transformers.models.gpt2 import modeling_gpt2
 
-from mindnlp.transformers.models.gpt2 import gpt2_config
+from mindnlp.transformers.models.gpt2 import configuration_gpt2
 from .....common import MindNLPTestCase
 
 
@@ -37,7 +37,7 @@ class TestModelingGPT2(MindNLPTestCase):
         """
         Set up.
         """
-        self.config = gpt2_config.GPT2Config(n_layer=2, n_embd=128, n_head=8, n_inner=256, pad_token_id=0)
+        self.config = configuration_gpt2.GPT2Config(n_layer=2, n_embd=128, n_head=8, n_inner=256, pad_token_id=0)
 
     def test_gpt2_attention(self):
         r"""
