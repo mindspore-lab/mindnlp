@@ -15,7 +15,7 @@
 
 from mindnlp.transformers import XLMConfig
 from mindnlp.utils import is_mindspore_available
-from mindnlp.utils.testing_utils import require_mindspore
+from mindnlp.utils.testing_utils import require_mindspore, slow
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
@@ -498,6 +498,7 @@ class XLMModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
             )
         pass
 
+    @slow
     def test_model_from_pretrained(self):
         for model_name in XLM_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
             model = XLMModel.from_pretrained(model_name)
@@ -506,6 +507,7 @@ class XLMModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
 
 @require_mindspore
 class XLMModelLanguageGenerationTest(MindNLPTestCase):
+    @slow
     def test_lm_generate_xlm_mlm_en_2048(self):
         model = XLMWithLMHeadModel.from_pretrained("xlm-mlm-en-2048")
 
