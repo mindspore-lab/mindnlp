@@ -712,8 +712,8 @@ class WhisperEncoder(WhisperPreTrainedModel):
         self.max_source_positions = config.max_source_positions
         self.embed_scale = math.sqrt(embed_dim) if config.scale_embedding else 1.0
 
-        self.conv1 = nn.Conv1d(self.num_mel_bins, embed_dim, kernel_size=3, padding=1, pad_mode='pad')
-        self.conv2 = nn.Conv1d(embed_dim, embed_dim, kernel_size=3, stride=2, padding=1, pad_mode='pad')
+        self.conv1 = nn.Conv1d(self.num_mel_bins, embed_dim, kernel_size=3, padding=1, pad_mode='pad', has_bias=True)
+        self.conv2 = nn.Conv1d(embed_dim, embed_dim, kernel_size=3, stride=2, padding=1, pad_mode='pad', has_bias=True)
 
         self.embed_positions = nn.Embedding(self.max_source_positions, embed_dim)
         self.embed_positions.embedding_table.requires_grad = False
@@ -1115,7 +1115,7 @@ class WhisperModel(WhisperPreTrainedModel):
                 min_masks=self.config.mask_time_min_masks,
             )
             mask_time_indices = mindspore.tensor(mask_time_indices, dtype=mindspore.bool_)
-            mask_time_indices = mask_time_indices[:, None].expand(-1, hidden_size, -1)
+            mask_time_indices = mask_time_indices[:, None].broadcast_to((-1, hidden_size, -1))
             input_features[mask_time_indices] = 0
 
         if self.config.mask_feature_prob > 0 and self.training:
