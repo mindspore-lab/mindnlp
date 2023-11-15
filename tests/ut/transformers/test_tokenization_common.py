@@ -44,7 +44,7 @@ from mindnlp.transformers import (
 )
 from mindnlp.utils import logging, require_mindspore, is_mindspore_available
 from mindnlp.transformers.tokenization_utils import AddedToken
-from mindnlp.utils.testing_utils import get_tests_dir, check_json_file_has_correct_format, run_test_in_subprocess
+from mindnlp.utils.testing_utils import get_tests_dir, check_json_file_has_correct_format, run_test_in_subprocess, slow
 
 if is_mindspore_available():
     from mindspore import nn
@@ -2365,6 +2365,7 @@ class TokenizerTesterMixin:
             tokenizer.add_special_tokens({"pad_token": "<PAD>"})
 
     @require_mindspore
+    @slow
     def test_mindspore_encode_plus_sent_to_model(self):
         from mindnlp.transformers import MODEL_MAPPING, TOKENIZER_MAPPING
 
@@ -2412,6 +2413,7 @@ class TokenizerTesterMixin:
 
  
     @require_mindspore
+    @slow
     def test_np_encode_plus_sent_to_model(self):
         from mindnlp.transformers import MODEL_MAPPING, TOKENIZER_MAPPING
 

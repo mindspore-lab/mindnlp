@@ -456,7 +456,6 @@ class GenerationConfig:
 
         config_path = os.path.join(pretrained_model_name, config_file_name)
         config_path = str(config_path)
-
         endpoint = HF_URL_BASE if from_pt else MS_URL_BASE
         is_local = os.path.exists(config_path)
         if os.path.isfile(os.path.join(subfolder, config_path)):

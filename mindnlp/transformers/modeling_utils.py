@@ -904,12 +904,13 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     proxies=proxies,
                     local_files_only=local_files_only,
                     subfolder=subfolder,
+                    endpoint=endpoint,
                     **kwargs,
                 )
-            except OSError as exc:
-                raise ValueError(
+            except OSError:
+                logger.warning(
                     "Generation config file not found, using a generation config created from the model config."
-                ) from exc
+                )
 
         if output_loading_info:
             loading_info = {

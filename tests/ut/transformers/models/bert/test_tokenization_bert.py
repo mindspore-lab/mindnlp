@@ -19,6 +19,7 @@ import unittest
 
 from mindspore.dataset import GeneratorDataset
 
+from mindnlp.utils.testing_utils import slow
 from mindnlp.transformers import BertTokenizerFast
 from mindnlp.transformers.models.bert.tokenization_bert import (
     VOCAB_FILES_NAMES,
@@ -240,6 +241,7 @@ class BertTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
             [rust_tokenizer.tokenize(t) for t in ["Test", "\xad", "test"]], [["[UNK]"], [], ["[UNK]"]]
         )
 
+    @slow
     def test_sequence_builders(self):
         tokenizer = self.tokenizer_class.from_pretrained("bert-base-uncased")
 
