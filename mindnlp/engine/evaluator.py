@@ -17,11 +17,12 @@ Evaluator for testing.
 """
 from inspect import signature
 from tqdm.autonotebook import tqdm
-from mindspore import log
 from mindnlp import ms_jit
 from mindnlp.abc import Metric
 from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContext
+from mindnlp.utils import ModelOutput, logging
 
+logger = logging.get_logger(__name__)
 
 class Evaluator:
     r"""
@@ -55,6 +56,8 @@ class Evaluator:
         def _run_step(*args, **kwargs):
             """Core process of each step."""
             outputs = network(*args, **kwargs)
+            if isinstance(outputs, ModelOutput):
+                return outputs.logits
             return outputs
         if jit:
             return ms_jit(_run_step)
@@ -189,7 +192,7 @@ class Evaluator:
         """Check and prepare target columns for training."""
         out_columns = []
         if tgt_columns is None:
-            log.warning("In the process of training model, tgt_column can not be None.")
+            logger.warning("In the process of training model, tgt_column can not be None.")
             return []
         if isinstance(tgt_columns, str):
             out_columns.append(tgt_columns)
