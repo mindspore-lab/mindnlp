@@ -404,8 +404,8 @@ class AutoformerSeriesDecompositionLayer(nn.Cell):
         """Input shape: Batch x Time x EMBED_DIM"""
         # padding on the both ends of time series
         num_of_pads = (self.kernel_size - 1) // 2
-        front = x[:, 0:1, :].repeat(1, num_of_pads, 1)
-        end = x[:, -1:, :].repeat(1, num_of_pads, 1)
+        front = x[:, 0:1, :].repeat((1, num_of_pads, 1))
+        end = x[:, -1:, :].repeat((1, num_of_pads, 1))
         x_padded = ops.cat([front, x, end], axis=1)
 
         # calculate the trend and seasonal part of the series
@@ -429,7 +429,7 @@ class AutoformerLayernorm(nn.Cell):
 
     def construct(self, x):
         x_hat = self.layernorm(x)
-        bias = ops.mean(x_hat, axis=1).unsqueeze(1).repeat(1, x.shape[1], 1)
+        bias = ops.mean(x_hat, axis=1).unsqueeze(1).repeat((1, x.shape[1], 1))
         return x_hat - bias
 
 
@@ -615,11 +615,11 @@ class AutoformerAttention(nn.Cell):
         # compute aggregation: value_states.roll(delay) * top_k_autocorrelations(delay)
         if not self.training:
             # used for compute values_states.roll(delay) in inference
-            tmp_values = value_states.repeat(1, 2, 1)
+            tmp_values = value_states.repeat((1, 2, 1))
             init_index = (
                 ops.arange(time_length)
                 .view(1, -1, 1)
-                .repeat(bsz * self.num_heads, 1, channel)
+                .repeat((bsz * self.num_heads, 1, channel))
             )
 
         delays_agg = ops.zeros_like(value_states).float()  # bsz x time_length x channel
@@ -627,7 +627,7 @@ class AutoformerAttention(nn.Cell):
             # compute value_states roll delay
             if not self.training:
                 tmp_delay = init_index + top_k_delays_index[:, i].view(-1, 1, 1).repeat(
-                    self.num_heads, tgt_len, channel
+                    (self.num_heads, tgt_len, channel)
                 )
                 value_states_roll_delay = ops.gather(
                     tmp_values, axis=1, index=tmp_delay)
@@ -636,7 +636,7 @@ class AutoformerAttention(nn.Cell):
 
             # aggregation
             top_k_autocorrelations_at_delay = (
-                top_k_autocorrelations[:, i].view(-1, 1, 1).repeat(self.num_heads, tgt_len, channel)
+                top_k_autocorrelations[:, i].view(-1, 1, 1).repeat((self.num_heads, tgt_len, channel))
             )
             delays_agg += value_states_roll_delay * top_k_autocorrelations_at_delay
 
@@ -1523,7 +1523,7 @@ class AutoformerModel(AutoformerPreTrainedModel):
                 ops.mean(
                     transformer_inputs[:, : self.config.context_length, ...], axis=1)
                 .unsqueeze(1)
-                .repeat(1, self.config.prediction_length, 1)
+                .repeat((1, self.config.prediction_length, 1))
             )
             zeros = ops.zeros(
                 [transformer_inputs.shape[0], self.config.prediction_length, transformer_inputs.shape[2]],
@@ -1865,7 +1865,7 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         seasonal_input, trend_input = self.model.decomposition_layer(reshaped_lagged_sequence)
 
         mean = ops.mean(reshaped_lagged_sequence, axis=1).unsqueeze(
-            1).repeat(1, self.config.prediction_length, 1)
+            1).repeat((1, self.config.prediction_length, 1))
         zeros = ops.zeros(
             [reshaped_lagged_sequence.shape[0], self.config.prediction_length, reshaped_lagged_sequence.shape[2]],
         )

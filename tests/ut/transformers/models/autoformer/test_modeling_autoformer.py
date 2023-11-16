@@ -20,24 +20,22 @@ import unittest
 
 from huggingface_hub import hf_hub_download
 
-from transformers import is_torch_available
-from transformers.testing_utils import is_flaky, require_torch, slow, torch_device
+from mindnlp.utils.testing_utils import is_flaky, is_mindspore_available
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
-from ...test_pipeline_mixin import PipelineTesterMixin
 
 
 TOLERANCE = 1e-4
 
-if is_torch_available():
-    import torch
+if is_mindspore_available():
+    import mindspore
+    from mindspore import ops
+    from mindnlp.transformers.models.autoformer.modeling_autoformer import AutoformerConfig, AutoformerForPrediction, AutoformerModel
 
-    from transformers import AutoformerConfig, AutoformerForPrediction, AutoformerModel
-    from transformers.models.autoformer.modeling_autoformer import AutoformerDecoder, AutoformerEncoder
+    from mindnlp.transformers.models.autoformer.modeling_autoformer import AutoformerDecoder, AutoformerEncoder
 
 
-@require_torch
 class AutoformerModelTester:
     def __init__(
         self,
@@ -146,7 +144,7 @@ class AutoformerModelTester:
         return config, inputs_dict
 
     def check_encoder_decoder_model_standalone(self, config, inputs_dict):
-        model = AutoformerModel(config=config).to(torch_device).eval()
+        model = AutoformerModel(config=config).eval()
         outputs = model(**inputs_dict)
 
         encoder_last_hidden_state = outputs.encoder_last_hidden_state
@@ -156,56 +154,53 @@ class AutoformerModelTester:
             encoder = model.get_encoder()
             encoder.save_pretrained(tmpdirname)
             encoder = AutoformerEncoder.from_pretrained(
-                tmpdirname).to(torch_device)
+                tmpdirname)
 
         transformer_inputs, feature, _, _, _ = model.create_network_inputs(
             **inputs_dict)
         seasonal_input, trend_input = model.decomposition_layer(
             transformer_inputs[:, : config.context_length, ...])
 
-        enc_input = torch.cat(
+        enc_input = ops.cat(
             (transformer_inputs[:, : config.context_length, ...],
              feature[:, : config.context_length, ...]),
-            dim=-1,
+            axis=-1,
         )
         encoder_last_hidden_state_2 = encoder(inputs_embeds=enc_input)[0]
         self.parent.assertTrue(
             (encoder_last_hidden_state_2 - encoder_last_hidden_state).abs().max().item() < 1e-3)
 
         mean = (
-            torch.mean(
-                transformer_inputs[:, : config.context_length, ...], dim=1)
+            ops.mean(
+                transformer_inputs[:, : config.context_length, ...], axis=1)
             .unsqueeze(1)
             .repeat(1, config.prediction_length, 1)
         )
-        zeros = torch.zeros(
-            [transformer_inputs.shape[0], config.prediction_length,
-                transformer_inputs.shape[2]],
-            device=enc_input.device,
-        )
+        zeros = ops.zeros([transformer_inputs.shape[0], config.prediction_length,
+                transformer_inputs.shape[2]])
 
-        dec_input = torch.cat(
+        dec_input = ops.cat(
             (
-                torch.cat(
-                    (seasonal_input[:, -config.label_length:, ...], zeros), dim=1),
+                ops.cat(
+                    (seasonal_input[:, -config.label_length:, ...], zeros), axis=1),
                 feature[:, config.context_length - config.label_length:, ...],
             ),
-            dim=-1,
+            axis=-1,
         )
-        trend_init = torch.cat(
+        trend_init = ops.cat(
             (
-                torch.cat(
-                    (trend_input[:, -config.label_length:, ...], mean), dim=1),
+                ops.cat(
+                    (trend_input[:, -config.label_length:, ...], mean), axis=1),
                 feature[:, config.context_length - config.label_length:, ...],
             ),
-            dim=-1,
+            axis=-1,
         )
 
         with tempfile.TemporaryDirectory() as tmpdirname:
             decoder = model.get_decoder()
             decoder.save_pretrained(tmpdirname)
             decoder = AutoformerDecoder.from_pretrained(
-                tmpdirname).to(torch_device)
+                tmpdirname)
 
         last_hidden_state_2 = decoder(
             trend=trend_init,
@@ -217,14 +212,14 @@ class AutoformerModelTester:
             (last_hidden_state_2 - last_hidden_state).abs().max().item() < 1e-3)
 
 
-@require_torch
-class AutoformerModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase):
+
+class AutoformerModelTest(ModelTesterMixin, unittest.TestCase):
     all_model_classes = (
-        AutoformerModel, AutoformerForPrediction) if is_torch_available() else ()
+        AutoformerModel, AutoformerForPrediction) if is_mindspore_available() else ()
     all_generative_model_classes = (
-        AutoformerForPrediction,) if is_torch_available() else ()
+        AutoformerForPrediction,) if is_mindspore_available() else ()
     pipeline_model_mapping = {
-        "feature-extraction": AutoformerModel} if is_torch_available() else {}
+        "feature-extraction": AutoformerModel} if is_mindspore_available() else {}
     test_pruning = False
     test_head_masking = False
     test_missing_keys = False
@@ -346,11 +341,9 @@ class AutoformerModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCa
             inputs_dict["output_hidden_states"] = False
             config.return_dict = True
             model = model_class(config)
-            model.to(torch_device)
             model.eval()
-            with torch.no_grad():
-                outputs = model(
-                    **self._prepare_for_class(inputs_dict, model_class))
+
+            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.encoder_attentions if config.is_encoder_decoder else outputs.attentions
             self.assertEqual(
                 len(attentions), self.model_tester.num_hidden_layers)
@@ -359,11 +352,9 @@ class AutoformerModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCa
             del inputs_dict["output_attentions"]
             config.output_attentions = True
             model = model_class(config)
-            model.to(torch_device)
+
             model.eval()
-            with torch.no_grad():
-                outputs = model(
-                    **self._prepare_for_class(inputs_dict, model_class))
+            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.encoder_attentions
             self.assertEqual(
                 len(attentions), self.model_tester.num_hidden_layers)
@@ -417,11 +408,8 @@ class AutoformerModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCa
         inputs_dict["output_attentions"] = True
         inputs_dict["output_hidden_states"] = True
         model = model_class(config)
-        model.to(torch_device)
         model.eval()
-        with torch.no_grad():
-            outputs = model(
-                **self._prepare_for_class(inputs_dict, model_class))
+        outputs = model(**self._prepare_for_class(inputs_dict, model_class))
 
         self.assertEqual(out_len + 2, len(outputs))
 
@@ -442,20 +430,18 @@ class AutoformerModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCa
 def prepare_batch(filename="train-batch.pt"):
     file = hf_hub_download(
         repo_id="hf-internal-testing/tourism-monthly-batch", filename=filename, repo_type="dataset")
-    batch = torch.load(file, map_location=torch_device)
+    batch = mindspore.load(file)
     return batch
 
 
-@require_torch
-@slow
+
 class AutoformerModelIntegrationTests(unittest.TestCase):
     def test_inference_no_head(self):
         model = AutoformerModel.from_pretrained(
-            "huggingface/autoformer-tourism-monthly").to(torch_device)
+            "huggingface/autoformer-tourism-monthly")
         batch = prepare_batch()
 
-        with torch.no_grad():
-            output = model(
+        output = model(
                 past_values=batch["past_values"],
                 past_time_features=batch["past_time_features"],
                 past_observed_mask=batch["past_observed_mask"],
@@ -464,57 +450,52 @@ class AutoformerModelIntegrationTests(unittest.TestCase):
                 future_time_features=batch["future_time_features"],
             )[0]
 
-        expected_shape = torch.Size(
-            (64, model.config.prediction_length +
+        expected_shape = (64, model.config.prediction_length +
              model.config.label_length, model.config.feature_size)
-        )
+
         self.assertEqual(output.shape, expected_shape)
 
-        expected_slice = torch.tensor(
-            [[0.3593, -1.3398, 0.6330], [0.2279, 1.5396, -0.1792], [0.0450, 1.3225, -0.2335]], device=torch_device
+        expected_slice = mindspore.tensor(
+            [[0.3593, -1.3398, 0.6330], [0.2279, 1.5396, -0.1792], [0.0450, 1.3225, -0.2335]]
         )
-        self.assertTrue(torch.allclose(
-            output[0, :3, :3], expected_slice, atol=TOLERANCE))
+        self.assertTrue(mindspore.allclose(
+            output[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=TOLERANCE))
 
     def test_inference_head(self):
         model = AutoformerForPrediction.from_pretrained(
-            "huggingface/autoformer-tourism-monthly").to(torch_device)
+            "huggingface/autoformer-tourism-monthly")
         batch = prepare_batch("val-batch.pt")
-        with torch.no_grad():
-            output = model(
+        output = model(
                 past_values=batch["past_values"],
                 past_time_features=batch["past_time_features"],
                 past_observed_mask=batch["past_observed_mask"],
                 static_categorical_features=batch["static_categorical_features"],
             ).encoder_last_hidden_state
-        expected_shape = torch.Size(
-            (64, model.config.context_length, model.config.d_model))
+        expected_shape = (64, model.config.context_length, model.config.d_model)
         self.assertEqual(output.shape, expected_shape)
 
-        expected_slice = torch.tensor(
-            [[-0.0734, -0.9036, 0.8358], [4.7186, 2.4113, 1.9581], [1.7953, 2.3558, 1.2970]], device=torch_device
+        expected_slice = mindspore.tensor(
+            [[-0.0734, -0.9036, 0.8358], [4.7186, 2.4113, 1.9581], [1.7953, 2.3558, 1.2970]]
         )
-        self.assertTrue(torch.allclose(
-            output[0, :3, :3], expected_slice, atol=TOLERANCE))
+        self.assertTrue(mindspore.allclose(
+            output[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=TOLERANCE))
 
     def test_seq_to_seq_generation(self):
         model = AutoformerForPrediction.from_pretrained(
-            "huggingface/autoformer-tourism-monthly").to(torch_device)
+            "huggingface/autoformer-tourism-monthly")
         batch = prepare_batch("val-batch.pt")
-        with torch.no_grad():
-            outputs = model.generate(
+        outputs = model.generate(
                 static_categorical_features=batch["static_categorical_features"],
                 past_time_features=batch["past_time_features"],
                 past_values=batch["past_values"],
                 future_time_features=batch["future_time_features"],
                 past_observed_mask=batch["past_observed_mask"],
             )
-        expected_shape = torch.Size(
-            (64, model.config.num_parallel_samples, model.config.prediction_length))
+        expected_shape = (64, model.config.num_parallel_samples, model.config.prediction_length)
         self.assertEqual(outputs.sequences.shape, expected_shape)
 
-        expected_slice = torch.tensor(
-            [3130.6763, 4056.5293, 7053.0786], device=torch_device)
-        mean_prediction = outputs.sequences.mean(dim=1)
-        self.assertTrue(torch.allclose(
-            mean_prediction[0, -3:], expected_slice, rtol=1e-1))
+        expected_slice = mindspore.tensor(
+            [3130.6763, 4056.5293, 7053.0786])
+        mean_prediction = outputs.sequences.mean(axis=1)
+        self.assertTrue(mindspore.allclose(
+            mean_prediction[0, -3:].asnumpy(), expected_slice.asnumpy(), rtol=1e-1))
