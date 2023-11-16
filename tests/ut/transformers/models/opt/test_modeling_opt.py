@@ -41,7 +41,7 @@ if is_mindspore_available():
         OPTModel,
     )
 
-mindspore.set_context(pynative_synchronize=True)
+mindspore.set_context(pynative_synchronize=True, device_target='CPU')
 
 def prepare_opt_inputs_dict(
     config,
