@@ -1304,7 +1304,7 @@ def get_tests_dir(append_path=None):
     return tests_dir
 
 def check_json_file_has_correct_format(file_path):
-    with open(file_path, "r") as f:
+    with open(file_path, "r", encoding='utf-8') as f:
         lines = f.readlines()
         if len(lines) == 1:
             # length can only be 1 if dict is empty

@@ -874,15 +874,17 @@ class OPTForSequenceClassification(OPTPreTrainedModel):
         logits = self.score(hidden_states)
 
         if input_ids is not None:
-            batch_size, _ = input_ids.shape[:2]
+            batch_size, sequence_length = input_ids.shape[:2]
         else:
-            batch_size, _ = inputs_embeds.shape[:2]
+            batch_size, sequence_length = inputs_embeds.shape[:2]
 
         if self.config.pad_token_id is None:
             sequence_lengths = -1
         else:
             if input_ids is not None:
                 sequence_lengths = ops.eq(input_ids, self.config.pad_token_id).long().argmax(-1) - 1
+                if mindspore.get_context('device_target') == 'CPU':
+                    sequence_lengths = ops.where(sequence_lengths == -1, sequence_length -1, sequence_lengths)
             else:
                 sequence_lengths = -1
                 logger.warning(
