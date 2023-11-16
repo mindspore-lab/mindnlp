@@ -9,7 +9,7 @@ import mindspore
 from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
-
+from mindspore import log as logger
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
 from ...modeling_outputs import (
@@ -20,7 +20,6 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from ...time_series_utils import NegativeBinomialOutput, NormalOutput, StudentTOutput
-from mindspore import log as logger
 
 from .configuration_autoformer import AutoformerConfig
 
@@ -298,7 +297,7 @@ class AutoformerNOPScaler(nn.Cell):
         self.keepdim = keepdim
 
     def construct(
-        self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor
+        self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor  # pylint: disable=unused-argument
     ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
         scale = ops.ones_like(data, requires_grad=False).mean(axis=self.dim, keepdims=self.keepdim)
         loc = ops.zeros_like(data, requires_grad=False).mean(
@@ -328,16 +327,15 @@ def weighted_average(input_tensor: mindspore.Tensor, weights: Optional[mindspore
         sum_weights = ops.clamp(weights.sum(
             axis=dim) if dim else weights.sum(), min=1.0)
         return (weighted_tensor.sum(axis=dim) if dim else weighted_tensor.sum()) / sum_weights
-    else:
-        return input_tensor.mean(axis=dim)
+    return input_tensor.mean(axis=dim)
 
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.nll
-def nll(input: nn.probability.distribution.distribution, target: mindspore.Tensor) -> mindspore.Tensor:
+def nll(input_distribution: nn.probability.distribution.distribution, target: mindspore.Tensor) -> mindspore.Tensor:
     """
     Computes the negative log likelihood loss from input distribution with respect to target.
     """
-    return -input.log_prob(target)
+    return -input_distribution.log_prob(target)
 
 
 # Copied from transformers.models.marian.modeling_marian.MarianSinusoidalPositionalEmbedding with Marian->Autoformer
@@ -365,9 +363,10 @@ class AutoformerSinusoidalPositionalEmbedding(nn.Embedding):
         out.detach_()
         return out
 
-    def construct(self, input_ids_shape: mindspore.Tensor.shape, past_key_values_length: int = 0) -> mindspore.Tensor:
+    def construct(self, input_ids_shape: mindspore.Tensor.shape, past_key_values_length: int = 0) -> mindspore.Tensor:  # pylint:disable=arguments-renamed
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
-        bsz, seq_len = input_ids_shape[:2]
+        #bsz, seq_len = input_ids_shape[:2]
+        seq_len = input_ids_shape[1]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
         )
@@ -376,6 +375,9 @@ class AutoformerSinusoidalPositionalEmbedding(nn.Embedding):
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.TimeSeriesValueEmbedding with TimeSeries->Autoformer
 class AutoformerValueEmbedding(nn.Cell):
+    r"""
+    #todo add docstring
+    """
     def __init__(self, feature_size, d_model):
         super().__init__()
         self.value_projection = nn.Dense(
@@ -463,10 +465,10 @@ class AutoformerAttention(nn.Cell):
         self.scaling = self.head_dim**-0.5
         self.is_decoder = is_decoder
 
-        self.k_proj = nn.Dense(embed_dim, embed_dim, bias=bias)
-        self.v_proj = nn.Dense(embed_dim, embed_dim, bias=bias)
-        self.q_proj = nn.Dense(embed_dim, embed_dim, bias=bias)
-        self.out_proj = nn.Dense(embed_dim, embed_dim, bias=bias)
+        self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
+        self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
         self.autocorrelation_factor = autocorrelation_factor
 
@@ -602,11 +604,11 @@ class AutoformerAttention(nn.Cell):
                 autocorrelations_mean_on_head_channel, axis=0)
             _, top_k_delays_index = ops.topk(autocorrelations_mean_on_bsz, top_k)
             top_k_autocorrelations = ops.stack(
-                [autocorrelations_mean_on_head_channel[:, top_k_delays_index[i]] for i in range(top_k)], dim=-1
+                [autocorrelations_mean_on_head_channel[:, top_k_delays_index[i]] for i in range(top_k)], axis=-1
             )
         else:
             top_k_autocorrelations, top_k_delays_index = ops.topk(
-                autocorrelations_mean_on_head_channel, top_k, axis=1
+                autocorrelations_mean_on_head_channel, top_k, dim=1
             )
 
         top_k_autocorrelations = ops.softmax(
@@ -629,8 +631,8 @@ class AutoformerAttention(nn.Cell):
                 tmp_delay = init_index + top_k_delays_index[:, i].view(-1, 1, 1).repeat(
                     (self.num_heads, tgt_len, channel)
                 )
-                value_states_roll_delay = ops.gather(
-                    tmp_values, axis=1, index=tmp_delay)
+                value_states_roll_delay = ops.gather_elements(
+                    tmp_values, dim=1, index=tmp_delay)
             else:
                 value_states_roll_delay = value_states.roll(shifts=-int(top_k_delays_index[i]), dims=1)
 
@@ -661,6 +663,9 @@ class AutoformerAttention(nn.Cell):
 
 
 class AutoformerEncoderLayer(nn.Cell):
+    r"""
+    #todo add docstring
+    """
     def __init__(self, config: AutoformerConfig):
         super().__init__()
         self.embed_dim = config.d_model
@@ -735,6 +740,9 @@ class AutoformerEncoderLayer(nn.Cell):
 
 
 class AutoformerDecoderLayer(nn.Cell):
+    r"""
+    #todo add docstring
+    """
     def __init__(self, config: AutoformerConfig):
         super().__init__()
         self.embed_dim = config.d_model
@@ -774,8 +782,8 @@ class AutoformerDecoderLayer(nn.Cell):
             kernel_size=3,
             stride=1,
             padding=1,
-            padding_mode="circular",
-            bias=False,
+            pad_mode="pad",#todo
+            has_bias=False,
         )
 
     def construct(
@@ -883,6 +891,9 @@ class AutoformerDecoderLayer(nn.Cell):
 
 
 class AutoformerPreTrainedModel(PreTrainedModel):
+    r"""
+    #todo add docstring
+    """
     config_class = AutoformerConfig
     base_model_prefix = "model"
     main_input_name = "past_values"
@@ -1259,6 +1270,9 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
 
 
 class AutoformerModel(AutoformerPreTrainedModel):
+    r"""
+    # todo add docstring
+    """
     def __init__(self, config: AutoformerConfig):
         super().__init__(config)
 
@@ -1428,9 +1442,15 @@ class AutoformerModel(AutoformerPreTrainedModel):
         return reshaped_lagged_sequence, features, loc, scale, static_feat
 
     def get_encoder(self):
+        r"""
+        # todo add docstring
+        """
         return self.encoder
 
     def get_decoder(self):
+        r"""
+        # todo add docstring
+        """
         return self.decoder
 
     def construct(
@@ -1565,6 +1585,9 @@ class AutoformerModel(AutoformerPreTrainedModel):
 
 
 class AutoformerForPrediction(AutoformerPreTrainedModel):
+    r"""
+    # todo add docstring
+    """
     def __init__(self, config: AutoformerConfig):
         super().__init__(config)
         self.model = AutoformerModel(config)
@@ -1589,15 +1612,27 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         self.post_init()
 
     def output_params(self, decoder_output):
+        r"""
+        #todo add docstring
+        """
         return self.parameter_projection(decoder_output[:, -self.config.prediction_length :, :])
 
     def get_encoder(self):
+        r"""
+        #todo add docstring
+        """
         return self.model.get_encoder()
 
     def get_decoder(self):
+        r"""
+        #todo add docstring
+        """
         return self.model.get_decoder()
 
     def output_distribution(self, params, loc=None, scale=None, trailing_n=None) -> nn.probability.distribution.Distribution:
+        r"""
+        #todo add docstring
+        """
         sliced_params = params
         if trailing_n is not None:
             sliced_params = [p[:, -trailing_n:] for p in params]

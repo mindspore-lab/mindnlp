@@ -18,8 +18,8 @@ Time series distributional output classes and utilities.
 """
 from typing import Callable, Dict, Optional, Tuple
 import mindspore
-import mindspore.nn as nn
-import mindspore.ops as ops
+from mindspore import nn
+from mindspore import ops
 import numpy as np
 from mindspore.nn.probability.distribution import (
     AffineTransform,
@@ -33,27 +33,27 @@ from mindspore.nn.probability.distribution import (
 
 
 class AffineTransformed(TransformedDistribution):
+    '''
+    # todo 
+    '''
     def __init__(self, base_distribution: Distribution, loc=None, scale=None, event_dim=0):
         self.scale = 1.0 if scale is None else scale
         self.loc = 0.0 if loc is None else loc
 
         super().__init__(base_distribution, [AffineTransform(loc=self.loc, scale=self.scale, event_dim=event_dim)])
 
-    @property
     def mean(self):
         """
         Returns the mean of the distribution.
         """
         return self.base_dist.mean * self.scale + self.loc
 
-    @property
     def variance(self):
         """
         Returns the variance of the distribution.
         """
         return self.base_dist.variance * self.scale**2
 
-    @property
     def stddev(self):
         """
         Returns the standard deviation of the distribution.
@@ -62,6 +62,9 @@ class AffineTransformed(TransformedDistribution):
 
 
 class ParameterProjection(nn.Cell):
+    """
+    # todo
+    """
     def __init__(
         self, in_features: int, args_dim: Dict[str, int], domain_map: Callable[..., Tuple[mindspore.Tensor]], **kwargs
     ) -> None:
@@ -77,6 +80,9 @@ class ParameterProjection(nn.Cell):
 
 
 class LambdaLayer(nn.Cell):
+    """
+    #todo
+    """
     def __init__(self, function):
         super().__init__()
         self.function = function
@@ -86,6 +92,9 @@ class LambdaLayer(nn.Cell):
 
 
 class DistributionOutput:
+    """
+    # todo
+    """
     distribution_class: type
     in_features: int
     args_dim: Dict[str, int]
@@ -97,8 +106,7 @@ class DistributionOutput:
     def _base_distribution(self, distr_args):
         if self.dim == 1:
             return self.distribution_class(*distr_args)
-        else:
-            return Independent(self.distribution_class(*distr_args), 1)
+        return Independent(self.distribution_class(*distr_args), 1)
 
     def distribution(
         self,
@@ -106,11 +114,13 @@ class DistributionOutput:
         loc: Optional[mindspore.Tensor] = None,
         scale: Optional[mindspore.Tensor] = None,
     ) -> Distribution:
+        r"""
+        # todo
+        """
         distr = self._base_distribution(distr_args)
         if loc is None and scale is None:
             return distr
-        else:
-            return AffineTransformed(distr, loc=loc, scale=scale, event_dim=self.event_dim)
+        return AffineTransformed(distr, loc=loc, scale=scale, event_dim=self.event_dim)
 
     @property
     def event_shape(self) -> Tuple:
@@ -154,7 +164,7 @@ class DistributionOutput:
         raise NotImplementedError()
 
     @staticmethod
-    def squareplus(x: mindspore.Tensor) -> mindspore.Tensor:
+    def squareplus(x: mindspore.Tensor) -> mindspore.Tensor:  # pylint: disable=invalid-name
         r"""
         Helper to map inputs to the positive orthant by applying the square-plus operation. Reference:
         https://twitter.com/jon_barron/status/1387167648669048833
@@ -209,8 +219,7 @@ class NegativeBinomialOutput(DistributionOutput):
         total_count, logits = distr_args
         if self.dim == 1:
             return self.distribution_class(total_count=total_count, logits=logits)
-        else:
-            return Independent(self.distribution_class(total_count=total_count, logits=logits), 1)
+        return Independent(self.distribution_class(total_count=total_count, logits=logits), 1)
 
     # Overwrites the parent class method. We cannot scale using the affine
     # transformation since negative binomial should return integers. Instead

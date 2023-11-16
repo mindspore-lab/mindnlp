@@ -14,7 +14,7 @@
 # ============================================================================
 """ Autoformer model configuration"""
 from typing import List, Optional
-from mindnlp.configs import MS_CONFIG_URL_BASE
+from mindnlp.configs import MS_URL_BASE
 from ...configuration_utils import PretrainedConfig
 
 AUTOFORMER_SUPPORT_LIST = [
@@ -22,7 +22,7 @@ AUTOFORMER_SUPPORT_LIST = [
 ]
 
 CONFIG_ARCHIVE_MAP = {
-    model: MS_CONFIG_URL_BASE.format(model) for model in AUTOFORMER_SUPPORT_LIST # todo
+    model: MS_URL_BASE.format(model) for model in AUTOFORMER_SUPPORT_LIST # todo
 }
 
 
@@ -144,6 +144,7 @@ class AutoformerConfig(PretrainedConfig):
         loss: str = "nll",
         input_size: int = 1,
         lags_sequence: List[int] = [1, 2, 3, 4, 5, 6, 7],
+        # todo #pylint: disable=dangerous-default-value
         scaling: bool = True,
         num_time_features: int = 0,
         num_dynamic_real_features: int = 0,
@@ -241,6 +242,5 @@ class AutoformerConfig(PretrainedConfig):
             + self.num_static_real_features
             + self.input_size * 2  # the log1p(abs(loc)) and log(scale) features
         )
-    
 
 __all__ = ["AutoformerConfig"]
