@@ -16,14 +16,10 @@
 Ernie Model init
 """
 
-from .import ernie, ernie_config, ernie_tokenizer, uie_tokenizer
-from .ernie_config import *
-from .ernie import *
-from .ernie_tokenizer import *
-from .uie_tokenizer import *
+from .import configuration_ernie, modeling_ernie
+from .configuration_ernie import *
+from .modeling_ernie import *
 
 __all__ = []
-__all__.extend(ernie.__all__)
-__all__.extend(ernie_config.__all__)
-__all__.extend(ernie_tokenizer.__all__)
-__all__.extend(uie_tokenizer.__all__)
+__all__.extend(modeling_ernie.__all__)
+__all__.extend(configuration_ernie.__all__)
