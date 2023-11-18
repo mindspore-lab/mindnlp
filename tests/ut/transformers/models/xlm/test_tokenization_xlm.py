@@ -19,6 +19,7 @@ import os
 import unittest
 
 from mindnlp.transformers.models.xlm.tokenization_xlm import VOCAB_FILES_NAMES, XLMTokenizer
+from mindnlp.utils.testing_utils import slow
 
 from ...test_tokenization_common import TokenizerTesterMixin
 
@@ -82,6 +83,7 @@ class XLMTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         input_bpe_tokens = [14, 15, 20]
         self.assertListEqual(tokenizer.convert_tokens_to_ids(input_tokens), input_bpe_tokens)
 
+    @slow
     def test_sequence_builders(self):
         tokenizer = XLMTokenizer.from_pretrained("xlm-mlm-en-2048")
 

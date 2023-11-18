@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=wrong-import-position
 """
 MindNLP library.
 """
+import os
+os.environ["HF_ENDPOINT"] = 'https://hf-mirror.com/'
 
 import mindspore
 from mindspore import jit as ms_jit

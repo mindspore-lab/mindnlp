@@ -53,7 +53,7 @@ jobs:
     needs: pylint-check
     strategy:
       matrix:
-        os: [lvyufeng-hosted-linux, lvyufeng-hosted-mac, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python: [3.8, 3.9]
     runs-on: ${{ matrix.os }}
     steps:
@@ -78,14 +78,9 @@ jobs:
       run: |
         python .github/install_mindspore.py
         pip install -r download.txt
-    - name: Test with pytest on linux and macos
-      if: matrix.os != 'windows-latest'
+    - name: Test with pytest
       run: |
         pytest -c pytest.ini -m 'not download and not gpu_only' tests/ut
-    - name: Test with pytest on windows
-      if: matrix.os == 'windows-latest'
-      run: |
-        pytest -c pytest.ini -m 'not download and not gpu_only' tests/ut --ignore=tests/ut/transformers
 
   release-test:
     needs: pylint-check

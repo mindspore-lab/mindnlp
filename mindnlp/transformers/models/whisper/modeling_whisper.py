@@ -12,13 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=too-many-lines
-# pylint: disable=invalid-name
 # pylint: disable=missing-class-docstring
-# pylint: disable=arguments-renamed
-# pylint: disable=unused-argument
 # pylint: disable=missing-function-docstring
-""" PyTorch Whisper model."""
+# pylint: disable=unused-argument
+# pylint: disable=arguments-renamed
+# pylint: disable=invalid-name
+""" MindSpore Whisper model."""
 
 import math
 from typing import Optional, Tuple, Union

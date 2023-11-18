@@ -20,7 +20,7 @@ import numpy as np
 
 from mindnlp.transformers import RobertaConfig
 from mindnlp.utils import is_mindspore_available, require_mindspore
-from mindnlp.utils.testing_utils import TestCasePlus
+from mindnlp.utils.testing_utils import TestCasePlus, slow
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
@@ -478,7 +478,7 @@ class RobertaModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
         self.model_tester.create_and_check_for_question_answering(*config_and_inputs)
 
 
-    @pytest.mark.download
+    @slow
     def test_model_from_pretrained(self):
         for model_name in ROBERTA_SUPPORT_LIST[:1]:
             model = RobertaModel.from_pretrained(model_name)
@@ -529,7 +529,7 @@ class RobertaModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
 @require_mindspore
 class RobertaModelIntegrationTest(TestCasePlus):
 
-    @pytest.mark.download
+    @slow
     def test_inference_masked_lm(self):
         model = RobertaForMaskedLM.from_pretrained("roberta-base")
 
@@ -544,7 +544,7 @@ class RobertaModelIntegrationTest(TestCasePlus):
         self.assertTrue(np.allclose(output[:, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
 
 
-    @pytest.mark.download
+    @slow
     def test_inference_no_head(self):
         model = RobertaModel.from_pretrained("roberta-base")
 
@@ -558,7 +558,7 @@ class RobertaModelIntegrationTest(TestCasePlus):
         self.assertTrue(np.allclose(output[:, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
 
 
-    @pytest.mark.download
+    @slow
     def test_inference_classification_head(self):
         model = RobertaForSequenceClassification.from_pretrained("roberta-large-mnli")
 

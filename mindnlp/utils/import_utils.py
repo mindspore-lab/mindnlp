@@ -56,6 +56,7 @@ _pytest_available = _is_package_available("pytest")
 _datasets_available = _is_package_available("datasets")
 _sentencepiece_available = _is_package_available("sentencepiece")
 _tokenizers_available = _is_package_available("tokenizers")
+_modelscope_available = _is_package_available('modelscope')
 _mindspore_version, _mindspore_available = _is_package_available("mindspore", return_version=True)
 
 def is_mindspore_available():
@@ -72,6 +73,9 @@ def is_sentencepiece_available():
 
 def is_tokenizers_available():
     return _tokenizers_available
+
+def is_modelscope_available():
+    return _modelscope_available
 
 def is_protobuf_available():
     if importlib.util.find_spec("google") is None:

@@ -1,13 +1,28 @@
+# coding=utf-8
+# Copyright 2021- NVIDIA Corporation and The HuggingFace Inc. team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """ MEGATRON_BERT model configuration"""
+
+from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
 
-__all__ = ['MegatronBertConfig']
 
-MEGATRONBERT_SUPPORT_LIST = ["megatronbert-1.3b-NLI",
-                             "megatron-bert-large-swedish-cased-165-zero-shot",
-                             "nvidia/megatron-bert-uncased-345m",
-                             "nvidia/megatron-bert-cased-345m",
-                             ]
+logger = logging.get_logger(__name__)
+
+MEGATRON_BERT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
+    # See all MEGATRON_BERT models at https://huggingface.co/models?filter=bert
+}
 
 
 class MegatronBertConfig(PretrainedConfig):
@@ -16,8 +31,11 @@ class MegatronBertConfig(PretrainedConfig):
     MEGATRON_BERT model according to the specified arguments, defining the model architecture. Instantiating a
     configuration with the defaults will yield a similar configuration to that of the MEGATRON_BERT
     [nvidia/megatron-bert-uncased-345m](https://huggingface.co/nvidia/megatron-bert-uncased-345m) architecture.
+
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
+
+
     Args:
         vocab_size (`int`, *optional*, defaults to 29056):
             Vocabulary size of the MEGATRON_BERT model. Defines the number of different tokens that can be represented
@@ -57,32 +75,43 @@ class MegatronBertConfig(PretrainedConfig):
         use_cache (`bool`, *optional*, defaults to `True`):
             Whether or not the model should return the last key/values attentions (not used by all models). Only
             relevant if `config.is_decoder=True`.
+
+    Examples:
+
+    ```python
+    >>> from transformers import MegatronBertConfig, MegatronBertModel
+
+    >>> # Initializing a MEGATRON_BERT bert-base-uncased style configuration
+    >>> configuration = MegatronBertConfig()
+
+    >>> # Initializing a model (with random weights) from the bert-base-uncased style configuration
+    >>> model = MegatronBertModel(configuration)
+
+    >>> # Accessing the model configuration
+    >>> configuration = model.config
+    ```"""
     model_type = "megatron-bert"
-    """
 
     def __init__(
-            self,
-            vocab_size=29056,
-            hidden_size=1024,
-            num_hidden_layers=24,
-            num_attention_heads=16,
-            intermediate_size=4096,
-            hidden_act="gelu",
-            hidden_dropout_prob=0.1,
-            attention_probs_dropout_prob=0.1,
-            max_position_embeddings=512,
-            type_vocab_size=2,
-            initializer_range=0.02,
-            layer_norm_eps=1e-12,
-            pad_token_id=0,
-            position_embedding_type="absolute",
-            use_cache=True,
-            **kwargs
+        self,
+        vocab_size=29056,
+        hidden_size=1024,
+        num_hidden_layers=24,
+        num_attention_heads=16,
+        intermediate_size=4096,
+        hidden_act="gelu",
+        hidden_dropout_prob=0.1,
+        attention_probs_dropout_prob=0.1,
+        max_position_embeddings=512,
+        type_vocab_size=2,
+        initializer_range=0.02,
+        layer_norm_eps=1e-12,
+        pad_token_id=0,
+        position_embedding_type="absolute",
+        use_cache=True,
+        **kwargs,
     ):
-        super().__init__(
-            pad_token_id=pad_token_id,
-            **kwargs
-        )
+        super().__init__(pad_token_id=pad_token_id, **kwargs)
 
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
@@ -98,3 +127,5 @@ class MegatronBertConfig(PretrainedConfig):
         self.layer_norm_eps = layer_norm_eps
         self.position_embedding_type = position_embedding_type
         self.use_cache = use_cache
+
+__all__ = ['MegatronBertConfig']
