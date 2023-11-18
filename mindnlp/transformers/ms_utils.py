@@ -68,7 +68,7 @@ def prune_conv1d_layer(layer, index, axis=1):
         beta_l = layer.bias
     else:
         beta_l = layer.bias[index]
-    new_size = list(layer.weight.shape())
+    new_size = list(layer.weight.shape)
     new_size[axis] = len(index)
     new_layer = Conv1D(new_size[1], new_size[0])
     new_layer.weight.requires_grad = False
