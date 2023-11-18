@@ -81,7 +81,7 @@ if is_mindspore_available():
         MODEL_MAPPING,
     )
     from mindnlp.transformers.models.bert.modeling_bert import BERT_SUPPORT_LIST
-    from mindnlp.transformers.models.gpt2.modeling_gpt2 import GPT2_SUPPORT_LIST
+    from mindnlp.transformers.models.gpt2.modeling_gpt2 import GPT2_PRETRAINED_MODEL_ARCHIVE_LIST
     from mindnlp.transformers.models.t5.modeling_t5 import T5_SUPPORT_LIST
 
 
