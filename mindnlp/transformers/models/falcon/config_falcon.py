@@ -22,6 +22,8 @@ FALCON_PRETRAINED_CONFIG_ARCHIVE_MAP = {
     "tiiuae/falcon-7b": "https://huggingface.co/tiiuae/falcon-7b/resolve/main/config.json",
 }
 
+__all__ = ["FalconConfig"]
+
 model_type = "falcon"
 keys_to_ignore_at_inference = ["past_key_values"]
 

@@ -7,7 +7,8 @@ from mindspore import Tensor, context
 
 from transformers.models.falcon import modeling_falcon as falcon_pt
 from mindnlp.transformers.models.falcon import falcon as falcon_ms
-
+from transformers.models.t5 import modeling_t5 as t5_pt
+from transformers
 
 dtype_list = [(mindspore.float32, torch.float32)]
 
