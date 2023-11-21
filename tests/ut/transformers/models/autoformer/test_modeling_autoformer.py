@@ -17,3 +17,19 @@
 import inspect
 import tempfile
 import unittest
+
+from huggingface_hub import hf_hub_download
+
+from mindnlp.utils.testing_utils import is_flaky, is_mindspore_available
+
+from ...test_configuration_common import ConfigTester
+from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
+
+TOLERANCE = 1e-4
+
+if is_mindspore_available():
+    import mindspore
+    from mindspore import ops
+    from mindnlp.transformers.models.autoformer.modeling_autoformer import AutoformerConfig#, AutoformerForPrediction, AutoformerModel
+
+    #from mindnlp.transformers.models.autoformer.modeling_autoformer import AutoformerDecoder, AutoformerEncoder
