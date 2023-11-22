@@ -15,6 +15,7 @@
 """
 BaiChuan Model.
 """
+from . import baichuan, baichuan_config
 
 from .baichuan import *
 from .baichuan_config import *
