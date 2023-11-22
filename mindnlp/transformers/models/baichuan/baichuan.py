@@ -14,10 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.\
 # ============================================================================
-# pylint
+# pylint: disable=C0103
 """
 MindNlp BaiChuan model
 """
+
+import math
+from typing import List, Optional, Tuple, Union
+import numpy as np
+import mindspore
+from mindspore import Tensor, Parameter
+from mindspore import nn, ops
+from mindspore.common.initializer import initializer, Normal
+from mindspore import dtype as mstype
+from mindnlp.utils import logging
 
 from .baichuan_config import BaiChuanConfig
 from ...modeling_utils import PreTrainedModel
@@ -26,14 +36,6 @@ from ...modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast
 )
-from mindnlp.utils import logging
-import math
-from typing import List, Optional, Tuple, Union
-import numpy as np
-import mindspore
-from mindspore import Tensor, Parameter
-from mindspore import nn, ops
-from mindspore import dtype as mstype
 
 logger = logging.get_logger(__name__)
 
@@ -83,6 +85,10 @@ def _expand_mask(mask: Tensor, dtype: mstype, tgt_len: Optional[int] = None):
 
 
 class RMSNorm(nn.Cell):
+    """
+    RMSNorm
+    """
+
     def __init__(self, hidden_size, eps=1e-6):
         """
         RMSNorm is equivalent to T5LayerNorm
@@ -92,7 +98,7 @@ class RMSNorm(nn.Cell):
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
-        variance = hidden_states.to(mindspore.float32).pow(2).mean(-1, keepdim=True)
+        variance = hidden_states.to(mindspore.float32).pow(2).mean(-1, keep_dims=True)
         hidden_states = hidden_states * ops.rsqrt(variance + self.variance_epsilon)
 
         # convert into half-precision if necessary
@@ -103,10 +109,13 @@ class RMSNorm(nn.Cell):
 
 
 class RotaryEmbedding(nn.Cell):
+    """
+    RotaryEmbedding
+    """
+
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         super().__init__()
-        inv_freq = 1.0 / (base ** (ops.arange(0, dim, 2).float() / dim))
-        self.register_buffer("inv_freq", inv_freq)
+        self.inv_freq = 1.0 / (base ** (ops.arange(0, dim, 2).float() / dim))
 
         # Build here to make `torch.jit.trace` work.
         self.max_seq_len_cached = max_position_embeddings
@@ -114,8 +123,8 @@ class RotaryEmbedding(nn.Cell):
         freqs = ops.einsum("i,j->ij", t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
         emb = ops.cat((freqs, freqs), axis=-1)
-        self.register_buffer("cos_cached", emb.cos()[None, None, :, :], persistent=False)
-        self.register_buffer("sin_cached", emb.sin()[None, None, :, :], persistent=False)
+        self.cos_cached = emb.cos()[None, None, :, :]
+        self.sin_cached = emb.sin()[None, None, :, :]
 
     def construct(self, x, seq_len=None):
         # x: [bs, num_attention_heads, seq_len, head_size]
@@ -142,6 +151,9 @@ def rotate_half(x):
 
 
 def apply_rotary_pos_emb(q, k, cos, sin, position_ids):
+    """
+    Apply rotary positional embeddings to input queries (q) and keys (k).
+    """
     # The first two dimensions of cos and sin are always 1, so we can `squeeze` them.
     cos = cos.squeeze(1).squeeze(0)  # [seq_len, dim]
     sin = sin.squeeze(1).squeeze(0)  # [seq_len, dim]
@@ -153,6 +165,10 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids):
 
 
 class MLP(nn.Cell):
+    """
+    MLP
+    """
+
     def __init__(
             self,
             hidden_size: int,
@@ -190,7 +206,7 @@ class Attention(nn.Cell):
         self.rotary_emb = RotaryEmbedding(self.head_dim, max_position_embeddings=self.max_position_embeddings)
 
     def _shape(self, tensor: Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2).contiguous()
 
     def construct(
             self,
@@ -201,16 +217,17 @@ class Attention(nn.Cell):
             output_attentions: bool = False,
             use_cache: bool = False,
     ) -> Tuple[Tensor, Optional[Tensor], Optional[Tuple[Tensor]]]:
-        bsz, q_len, _ = hidden_states.size()
+        bsz, q_len, _ = hidden_states.shape
 
         proj = self.W_pack(hidden_states)
-        proj = proj.unflatten(-1, (3, self.hidden_size)).unsqueeze(0).transpose(0, -2).squeeze(-2)
-        query_states = proj[0].view(bsz, q_len, self.num_heads, self.head_dim).transpose(1,
-                                                                                         2)  # batch_size x source_len x hidden_size
-        key_states = proj[1].view(bsz, q_len, self.num_heads, self.head_dim).transpose(1,
-                                                                                       2)  # batch_size x target_len x head_size
-        value_states = proj[2].view(bsz, q_len, self.num_heads, self.head_dim).transpose(1,
-                                                                                         2)  # batch_size x source_len x hidden_size
+        m = nn.Unflatten(-1, (3, self.hidden_size))
+        proj = m(proj).unsqueeze(0).swapaxes(0, -2).squeeze(-2)
+        query_states = proj[0].view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1,
+                                                                                        2)  # batch_size x source_len x hidden_size
+        key_states = proj[1].view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1,
+                                                                                      2)  # batch_size x target_len x head_size
+        value_states = proj[2].view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1,
+                                                                                        2)  # batch_size x source_len x hidden_size
 
         kv_seq_len = key_states.shape[-2]
         if past_key_value is not None:
@@ -226,18 +243,18 @@ class Attention(nn.Cell):
 
         past_key_value = (key_states, value_states) if use_cache else None
 
-        attn_weights = ops.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
+        attn_weights = ops.matmul(query_states, key_states.swapaxes(2, 3)) / math.sqrt(self.head_dim)
 
-        if attn_weights.size() != (bsz, self.num_heads, q_len, kv_seq_len):
+        if attn_weights.shape != (bsz, self.num_heads, q_len, kv_seq_len):
             raise ValueError(
                 f"Attention weights should be of size {(bsz, self.num_heads, q_len, kv_seq_len)}, but is"
-                f" {attn_weights.size()}"
+                f" {attn_weights.shape}"
             )
 
         if attention_mask is not None:
-            if attention_mask.size() != (bsz, 1, q_len, kv_seq_len):
+            if attention_mask.shape != (bsz, 1, q_len, kv_seq_len):
                 raise ValueError(
-                    f"Attention mask should be of size {(bsz, 1, q_len, kv_seq_len)}, but is {attention_mask.size()}"
+                    f"Attention mask should be of size {(bsz, 1, q_len, kv_seq_len)}, but is {attention_mask.shape}"
                 )
             attn_weights = attn_weights + attention_mask
             attn_weights = ops.maximum(attn_weights,
@@ -247,13 +264,13 @@ class Attention(nn.Cell):
         attn_weights = ops.softmax(attn_weights, axis=-1).astype(query_states.dtype)
         attn_output = ops.matmul(attn_weights, value_states)
 
-        if attn_output.size() != (bsz, self.num_heads, q_len, self.head_dim):
+        if attn_output.shape != (bsz, self.num_heads, q_len, self.head_dim):
             raise ValueError(
                 f"`attn_output` should be of size {(bsz, self.num_heads, q_len, self.head_dim)}, but is"
-                f" {attn_output.size()}"
+                f" {attn_output.shape}"
             )
 
-        attn_output = attn_output.transpose(1, 2)
+        attn_output = attn_output.swapaxes(1, 2)
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
 
         attn_output = self.o_proj(attn_output)
@@ -265,6 +282,10 @@ class Attention(nn.Cell):
 
 
 class DecoderLayer(nn.Cell):
+    """
+    DecoderLayer
+    """
+
     def __init__(self, config: BaiChuanConfig):
         super().__init__()
         self.hidden_size = config.hidden_size
@@ -332,7 +353,10 @@ class DecoderLayer(nn.Cell):
         return outputs
 
 
-class PreTrainedModel(PreTrainedModel):
+class BaiChuanPreTrainedModel(PreTrainedModel):
+    """
+    BaiChuanPreTrainedModel
+    """
     config_class = BaiChuanConfig
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
@@ -342,11 +366,15 @@ class PreTrainedModel(PreTrainedModel):
     def _init_weights(self, module):
         std = self.config.initializer_range
         if isinstance(module, nn.Dense):
-            module.weight.data.normal_(mean=0.0, std=std)
+            # module.weight.data.normal_(mean=0.0, std=std)
+            module.weight.set_data(initializer(Normal(
+                sigma=std, mean=0.0)), module.weight.shape, module.weight.dtype)
             if module.bias is not None:
                 module.bias.data.zero_()
         elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=std)
+            # module.weight.data.normal_(mean=0.0, std=std)
+            module.weight.set_data(initializer(Normal(
+                sigma=std, mean=0.0)), module.weight.shape, module.weight.dtype)
             if module.padding_idx is not None:
                 module.weight.data[module.padding_idx].zero_()
 
@@ -355,7 +383,7 @@ class PreTrainedModel(PreTrainedModel):
             module.gradient_checkpointing = value
 
 
-class Model(PreTrainedModel):
+class Model(BaiChuanPreTrainedModel):
     """
     Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`DecoderLayer`]
     Args:
@@ -367,19 +395,19 @@ class Model(PreTrainedModel):
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
 
-        self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
+        self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=self.padding_idx)
         self.layers = nn.CellList([DecoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.norm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
-        self.post_init()
+        # self.post_init()
 
     def get_input_embeddings(self):
         return self.embed_tokens
 
-    def set_input_embeddings(self, value):
-        self.embed_tokens = value
+    def set_input_embeddings(self, new_embeddings):
+        self.embed_tokens = new_embeddings
 
     # Copied from transformers.models.bart.modeling_bart.BartDecoder._prepare_decoder_attention_mask
     def _prepare_decoder_attention_mask(self, attention_mask, input_shape, inputs_embeds, past_key_values_length):
@@ -395,9 +423,7 @@ class Model(PreTrainedModel):
 
         if attention_mask is not None:
             # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
-            expanded_attn_mask = _expand_mask(attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1]).to(
-                inputs_embeds.device
-            )
+            expanded_attn_mask = _expand_mask(attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1])
             combined_attention_mask = (
                 expanded_attn_mask if combined_attention_mask is None else expanded_attn_mask + combined_attention_mask
             )
@@ -427,7 +453,7 @@ class Model(PreTrainedModel):
         # retrieve input_ids and inputs_embeds
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both decoder_input_ids and decoder_inputs_embeds at the same time")
-        elif input_ids is not None:
+        if input_ids is not None:
             batch_size, seq_length = input_ids.shape
         elif inputs_embeds is not None:
             batch_size, seq_length, _ = inputs_embeds.shape
@@ -532,7 +558,11 @@ class Model(PreTrainedModel):
         )
 
 
-class BaiChuanForCausalLM(PreTrainedModel):
+class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
+    """
+    BaiChuanForCausalLM
+    """
+
     def __init__(self, config):
         super().__init__(config)
         self.model = Model(config)
@@ -540,13 +570,13 @@ class BaiChuanForCausalLM(PreTrainedModel):
         self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
-        self.post_init()
+        # self.post_init()
 
     def get_input_embeddings(self):
         return self.model.embed_tokens
 
-    def set_input_embeddings(self, value):
-        self.model.embed_tokens = value
+    def set_input_embeddings(self, new_embeddings):
+        self.model.embed_tokens = new_embeddings
 
     def get_output_embeddings(self):
         return self.lm_head
@@ -555,9 +585,15 @@ class BaiChuanForCausalLM(PreTrainedModel):
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
+        """
+        set_decoder
+        """
         self.model = decoder
 
     def get_decoder(self):
+        """
+        get_decoder
+        """
         return self.model
 
     def construct(
@@ -580,7 +616,7 @@ class BaiChuanForCausalLM(PreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
-        outputs = self.model.decoder(
+        outputs = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
             position_ids=position_ids,
@@ -605,7 +641,6 @@ class BaiChuanForCausalLM(PreTrainedModel):
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
             # Enable model parallelism
-            shift_labels = shift_labels.to(shift_logits.device)
             loss = loss_fct(shift_logits, shift_labels)
 
         if not return_dict:
@@ -656,3 +691,15 @@ class BaiChuanForCausalLM(PreTrainedModel):
         for layer_past in past_key_values:
             reordered_past += (tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),)
         return reordered_past
+
+
+__all__ = [
+    "RMSNorm",
+    "RotaryEmbedding",
+    "MLP",
+    "Attention",
+    "DecoderLayer",
+    "BaiChuanPreTrainedModel",
+    "Model",
+    "BaiChuanForCausalLM"
+]
