@@ -92,7 +92,7 @@ The table below represents the current support in the library for each of those 
 
 | Model                         | Pynative support | Graph Support |
 |-------------------------------|------------------|---------------|
-| ALBERT                        | ❌                | ✅             |
+| ALBERT                        | ✅                | ✅             |
 | Autoformer                    | TODO                | ❌             |
 | Bark                          | TODO                | ❌             |
 | BART                          | ✅                | ❌             |

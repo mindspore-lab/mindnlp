@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2020 The HuggingFace Team. All rights reserved.
+# Copyright 2022 The HuggingFace Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,17 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
+import tempfile
+import unittest
 import numpy as np
 
-from mindnlp.transformers import BertConfig
+from mindnlp.transformers import ErnieConfig
 from mindnlp.transformers.models.auto import get_values
-from mindnlp.utils.testing_utils import CaptureLogger, require_mindspore, is_mindspore_available, slow
-from mindnlp.utils import logging
+from mindnlp.utils.testing_utils import slow, require_mindspore, is_mindspore_available
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask
-from .....common import MindNLPTestCase
 
 
 if is_mindspore_available():
@@ -31,21 +32,20 @@ if is_mindspore_available():
 
     from mindnlp.transformers import (
         MODEL_FOR_PRETRAINING_MAPPING,
-        BertForMaskedLM,
-        BertForMultipleChoice,
-        BertForNextSentencePrediction,
-        BertForPreTraining,
-        BertForQuestionAnswering,
-        BertForSequenceClassification,
-        BertForTokenClassification,
-        BertLMHeadModel,
-        BertModel,
+        ErnieForCausalLM,
+        ErnieForMaskedLM,
+        ErnieForMultipleChoice,
+        ErnieForNextSentencePrediction,
+        ErnieForPreTraining,
+        ErnieForQuestionAnswering,
+        ErnieForSequenceClassification,
+        ErnieForTokenClassification,
+        ErnieModel,
     )
+    from mindnlp.transformers.models.ernie.modeling_ernie import ERNIE_PRETRAINED_MODEL_ARCHIVE_LIST
 
-    from mindnlp.transformers.models.bert.modeling_bert import BERT_SUPPORT_LIST
 
-
-class BertModelTester:
+class ErnieModelTester:
     def __init__(
         self,
         parent,
@@ -121,7 +121,7 @@ class BertModelTester:
         """
         Returns a tiny configuration by default.
         """
-        return BertConfig(
+        return ErnieConfig(
             vocab_size=self.vocab_size,
             hidden_size=self.hidden_size,
             num_hidden_layers=self.num_hidden_layers,
@@ -166,8 +166,8 @@ class BertModelTester:
     def create_and_check_model(
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
-        model = BertModel(config=config)
-        
+        model = ErnieModel(config=config)
+
         model.set_train(False)
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids)
         result = model(input_ids, token_type_ids=token_type_ids)
@@ -188,8 +188,8 @@ class BertModelTester:
         encoder_attention_mask,
     ):
         config.add_cross_attention = True
-        model = BertModel(config)
-        
+        model = ErnieModel(config)
+
         model.set_train(False)
         result = model(
             input_ids,
@@ -220,8 +220,8 @@ class BertModelTester:
         encoder_hidden_states,
         encoder_attention_mask,
     ):
-        model = BertLMHeadModel(config=config)
-        
+        model = ErnieForCausalLM(config=config)
+
         model.set_train(False)
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
@@ -229,8 +229,8 @@ class BertModelTester:
     def create_and_check_for_masked_lm(
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
-        model = BertForMaskedLM(config=config)
-        
+        model = ErnieForMaskedLM(config=config)
+
         model.set_train(False)
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.vocab_size))
@@ -248,8 +248,8 @@ class BertModelTester:
         encoder_attention_mask,
     ):
         config.add_cross_attention = True
-        model = BertLMHeadModel(config=config)
-        
+        model = ErnieForCausalLM(config=config)
+
         model.set_train(False)
         result = model(
             input_ids,
@@ -282,7 +282,7 @@ class BertModelTester:
     ):
         config.is_decoder = True
         config.add_cross_attention = True
-        model = BertLMHeadModel(config=config).set_train(False)
+        model = ErnieForCausalLM(config=config).set_train(False)
 
         # first forward pass
         outputs = model(
@@ -319,7 +319,7 @@ class BertModelTester:
         )["hidden_states"][0]
 
         # select random slice
-        random_slice_idx = ids_tensor((1,), output_from_past.shape[-1])
+        random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
         output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx]
         output_from_past_slice = output_from_past[:, :, random_slice_idx]
 
@@ -331,8 +331,8 @@ class BertModelTester:
     def create_and_check_for_next_sequence_prediction(
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
-        model = BertForNextSentencePrediction(config=config)
-        
+        model = ErnieForNextSentencePrediction(config=config)
+
         model.set_train(False)
         result = model(
             input_ids,
@@ -345,8 +345,8 @@ class BertModelTester:
     def create_and_check_for_pretraining(
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
-        model = BertForPreTraining(config=config)
-        
+        model = ErnieForPreTraining(config=config)
+
         model.set_train(False)
         result = model(
             input_ids,
@@ -361,8 +361,8 @@ class BertModelTester:
     def create_and_check_for_question_answering(
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
-        model = BertForQuestionAnswering(config=config)
-        
+        model = ErnieForQuestionAnswering(config=config)
+
         model.set_train(False)
         result = model(
             input_ids,
@@ -378,8 +378,8 @@ class BertModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         config.num_labels = self.num_labels
-        model = BertForSequenceClassification(config)
-        
+        model = ErnieForSequenceClassification(config)
+
         model.set_train(False)
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=sequence_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.num_labels))
@@ -388,8 +388,8 @@ class BertModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         config.num_labels = self.num_labels
-        model = BertForTokenClassification(config=config)
-        
+        model = ErnieForTokenClassification(config=config)
+
         model.set_train(False)
         result = model(input_ids, attention_mask=input_mask, token_type_ids=token_type_ids, labels=token_labels)
         self.parent.assertEqual(result.logits.shape, (self.batch_size, self.seq_length, self.num_labels))
@@ -398,8 +398,8 @@ class BertModelTester:
         self, config, input_ids, token_type_ids, input_mask, sequence_labels, token_labels, choice_labels
     ):
         config.num_choices = self.num_choices
-        model = BertForMultipleChoice(config=config)
-        
+        model = ErnieForMultipleChoice(config=config)
+
         model.set_train(False)
         multiple_choice_inputs_ids = input_ids.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
         multiple_choice_token_type_ids = token_type_ids.unsqueeze(1).broadcast_to((-1, self.num_choices, -1))
@@ -428,37 +428,36 @@ class BertModelTester:
 
 
 @require_mindspore
-class BertModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
+class ErnieModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     all_model_classes = (
         (
-            BertModel,
-            BertLMHeadModel,
-            BertForMaskedLM,
-            BertForMultipleChoice,
-            BertForNextSentencePrediction,
-            BertForPreTraining,
-            BertForQuestionAnswering,
-            BertForSequenceClassification,
-            BertForTokenClassification,
+            ErnieForCausalLM,
+            ErnieForMaskedLM,
+            ErnieForMultipleChoice,
+            ErnieForNextSentencePrediction,
+            ErnieForPreTraining,
+            ErnieForQuestionAnswering,
+            ErnieForSequenceClassification,
+            ErnieForTokenClassification,
         )
         if is_mindspore_available()
         else ()
     )
-    all_generative_model_classes = (BertLMHeadModel,) if is_mindspore_available() else ()
+    all_generative_model_classes = (ErnieForCausalLM,) if is_mindspore_available() else ()
     pipeline_model_mapping = (
         {
-            "feature-extraction": BertModel,
-            "fill-mask": BertForMaskedLM,
-            "question-answering": BertForQuestionAnswering,
-            "text-classification": BertForSequenceClassification,
-            "text-generation": BertLMHeadModel,
-            "token-classification": BertForTokenClassification,
-            "zero-shot": BertForSequenceClassification,
+            "feature-extraction": ErnieModel,
+            "fill-mask": ErnieForMaskedLM,
+            "question-answering": ErnieForQuestionAnswering,
+            "text-classification": ErnieForSequenceClassification,
+            "text-generation": ErnieForCausalLM,
+            "token-classification": ErnieForTokenClassification,
+            "zero-shot": ErnieForSequenceClassification,
         }
         if is_mindspore_available()
         else {}
     )
-    fx_compatible = True
+    fx_compatible = False
 
     # special case for ForPreTraining model
     def _prepare_for_class(self, inputs_dict, model_class, return_labels=False):
@@ -467,16 +466,14 @@ class BertModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
         if return_labels:
             if model_class in get_values(MODEL_FOR_PRETRAINING_MAPPING):
                 inputs_dict["labels"] = ops.zeros(
-                    (self.model_tester.batch_size, self.model_tester.seq_length), dtype=mindspore.int64
-                )
+                    (self.model_tester.batch_size, self.model_tester.seq_length), dtype=mindspore.int64)
                 inputs_dict["next_sentence_label"] = ops.zeros(
-                    self.model_tester.batch_size, dtype=mindspore.int64
-                )
+                    self.model_tester.batch_size, dtype=mindspore.int64)
         return inputs_dict
 
     def setUp(self):
-        self.model_tester = BertModelTester(self)
-        self.config_tester = ConfigTester(self, config_class=BertConfig, hidden_size=37)
+        self.model_tester = ErnieModelTester(self)
+        self.config_tester = ConfigTester(self, config_class=ErnieConfig, hidden_size=37)
 
     def test_config(self):
         self.config_tester.run_common_tests()
@@ -568,77 +565,8 @@ class BertModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_for_token_classification(*config_and_inputs)
 
-    def test_for_warning_if_padding_and_no_attention_mask(self):
-        (
-            config,
-            input_ids,
-            token_type_ids,
-            input_mask,
-            sequence_labels,
-            token_labels,
-            choice_labels,
-        ) = self.model_tester.prepare_config_and_inputs()
-
-        # Set pad tokens in the input_ids
-        input_ids[0, 0] = config.pad_token_id
-
-        # Check for warnings if the attention_mask is missing.
-        logger = logging.get_logger("mindnlp.transformers.modeling_utils")
-        # clear cache so we can test the warning is emitted (from `warning_once`).
-        logger.warning_once.cache_clear()
-
-        with CaptureLogger(logger) as cl:
-            model = BertModel(config=config)
-            
-            model.set_train(False)
-            model(input_ids, attention_mask=None, token_type_ids=token_type_ids)
-        self.assertIn("We strongly recommend passing in an `attention_mask`", cl.out)
-
     @slow
     def test_model_from_pretrained(self):
-        for model_name in BERT_SUPPORT_LIST[:1]:
-            model = BertModel.from_pretrained(model_name)
+        for model_name in ERNIE_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
+            model = ErnieModel.from_pretrained(model_name, from_pt=True)
             self.assertIsNotNone(model)
-
-
-@require_mindspore
-class BertModelIntegrationTest(MindNLPTestCase):
-    @slow
-    def test_inference_no_head_absolute_embedding(self):
-        model = BertModel.from_pretrained("bert-base-uncased")
-        input_ids = mindspore.tensor([[0, 345, 232, 328, 740, 140, 1695, 69, 6078, 1588, 2]])
-        attention_mask = mindspore.tensor([[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
-        output = model(input_ids, attention_mask=attention_mask)[0]
-        expected_shape = (1, 11, 768)
-        self.assertEqual(output.shape, expected_shape)
-        expected_slice = mindspore.tensor([[[0.4249, 0.1008, 0.7531], [0.3771, 0.1188, 0.7467], [0.4152, 0.1098, 0.7108]]])
-        print(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy())
-        self.assertTrue(np.allclose(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
-
-    @slow
-    def test_inference_no_head_relative_embedding_key(self):
-        model = BertModel.from_pretrained("zhiheng-huang/bert-base-uncased-embedding-relative-key", from_pt=True)
-        input_ids = mindspore.tensor([[0, 345, 232, 328, 740, 140, 1695, 69, 6078, 1588, 2]])
-        attention_mask = mindspore.tensor([[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
-        output = model(input_ids, attention_mask=attention_mask)[0]
-        expected_shape = (1, 11, 768)
-        self.assertEqual(output.shape, expected_shape)
-        expected_slice = mindspore.tensor(
-            [[[0.0756, 0.3142, -0.5128], [0.3761, 0.3462, -0.5477], [0.2052, 0.3760, -0.1240]]]
-        )
-        print(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy())
-        self.assertTrue(np.allclose(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
-
-    @slow
-    def test_inference_no_head_relative_embedding_key_query(self):
-        model = BertModel.from_pretrained("zhiheng-huang/bert-base-uncased-embedding-relative-key-query", from_pt=True)
-        input_ids = mindspore.tensor([[0, 345, 232, 328, 740, 140, 1695, 69, 6078, 1588, 2]])
-        attention_mask = mindspore.tensor([[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
-        output = model(input_ids, attention_mask=attention_mask)[0]
-        expected_shape = (1, 11, 768)
-        self.assertEqual(output.shape, expected_shape)
-        expected_slice = mindspore.tensor(
-            [[[0.6496, 0.3784, 0.8203], [0.8148, 0.5656, 0.2636], [-0.0681, 0.5597, 0.7045]]]
-        )
-
-        self.assertTrue(np.allclose(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-3))

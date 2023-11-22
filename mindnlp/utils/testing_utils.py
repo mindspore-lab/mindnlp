@@ -82,6 +82,7 @@ if is_mindspore_available():
 DUMMY_UNKNOWN_IDENTIFIER = "julien-c/dummy-unknown"
 SMALL_MODEL_IDENTIFIER = "julien-c/bert-xsmall-dummy"
 
+
 def parse_flag_from_env(key, default=False):
     try:
         value = os.environ[key]
@@ -96,6 +97,17 @@ def parse_flag_from_env(key, default=False):
             # More values are supported, but let's keep the message simple.
             raise ValueError(f"If set, {key} must be yes or no.") from exc
     return _value
+
+_run_slow_tests = parse_flag_from_env("RUN_SLOW", default=False)
+
+def slow(test_case):
+    """
+    Decorator marking a test as slow.
+
+    Slow tests are skipped by default. Set the RUN_SLOW environment variable to a truthy value to run them.
+
+    """
+    return unittest.skipUnless(_run_slow_tests, "test is slow")(test_case)
 
 
 def parse_int_from_env(key, default=None):
@@ -1292,7 +1304,7 @@ def get_tests_dir(append_path=None):
     return tests_dir
 
 def check_json_file_has_correct_format(file_path):
-    with open(file_path, "r") as f:
+    with open(file_path, "r", encoding='utf-8') as f:
         lines = f.readlines()
         if len(lines) == 1:
             # length can only be 1 if dict is empty

@@ -254,7 +254,6 @@ class ModelTesterMixin:
             new_model = model_class.from_pretrained(
                 pretrained_model_name_or_path=None, config=config, state_dict=state_dict
             )
-            print(state_dict.keys(), new_model.get_parameters())
             for p1, p2 in zip(model.get_parameters(), new_model.get_parameters()):
                 self.assertTrue(ops.equal(p1, p2).asnumpy().all())
 

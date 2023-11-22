@@ -1,13 +1,12 @@
 requests
 tqdm
-pylint
+pylint==2.17
 pytest
 ddt
 datasets
 torch
 sentencepiece
 regex
-modelscope
 parameterized
 jinja2
 sacremoses

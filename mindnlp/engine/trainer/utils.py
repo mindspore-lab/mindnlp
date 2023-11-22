@@ -20,6 +20,7 @@ from mindspore import ops, value_and_grad
 
 from mindnlp import ms_jit
 from mindnlp._legacy.amp import all_finite, init_status
+from mindnlp.utils import ModelOutput
 
 def get_default_forward_fn_with_loss_fn(network, loss_fn, loss_scaler):
     """get default forward function with loss function"""
@@ -30,6 +31,8 @@ def get_default_forward_fn_with_loss_fn(network, loss_fn, loss_scaler):
         logits = network(*args, **kwargs)
         if isinstance(logits, tuple):
             logits_list += logits
+        elif isinstance(logits, ModelOutput):
+            logits_list += (logits.logits,)
         else:
             logits_list += (logits,)
 
@@ -47,6 +50,8 @@ def get_default_forward_fn_without_loss_fn(network, loss_scaler):
         outputs = network(*args, **kwargs)
         if isinstance(outputs, tuple):
             outputs_list += outputs
+        elif isinstance(outputs, ModelOutput):
+            outputs_list += (outputs.loss,)
         else:
             outputs_list += (outputs,)
 

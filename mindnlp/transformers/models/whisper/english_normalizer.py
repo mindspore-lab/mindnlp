@@ -17,6 +17,7 @@
 # pylint: disable=too-many-branches
 # pylint: disable=redefined-builtin
 # pylint: disable=too-many-statements
+# pylint: disable=invalid-name
 """English normalizer."""
 import re
 import unicodedata

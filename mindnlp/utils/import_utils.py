@@ -16,6 +16,7 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=logging-fstring-interpolation
 # pylint: disable=inconsistent-return-statements
+# pylint: disable=wrong-import-position
 """
 Import utilities: Utilities related to imports and our lazy inits.
 """
@@ -28,7 +29,12 @@ from collections import OrderedDict
 from functools import wraps
 from typing import Tuple, Union
 import importlib.util
-import importlib_metadata
+if sys.version_info >= (3, 8):
+    # For Python 3.8 and later
+    from importlib import metadata as importlib_metadata
+else:
+    # For Python versions earlier than 3.8
+    import importlib_metadata
 
 from . import logging
 
@@ -56,6 +62,7 @@ _pytest_available = _is_package_available("pytest")
 _datasets_available = _is_package_available("datasets")
 _sentencepiece_available = _is_package_available("sentencepiece")
 _tokenizers_available = _is_package_available("tokenizers")
+_modelscope_available = _is_package_available('modelscope')
 _mindspore_version, _mindspore_available = _is_package_available("mindspore", return_version=True)
 
 def is_mindspore_available():
@@ -72,6 +79,9 @@ def is_sentencepiece_available():
 
 def is_tokenizers_available():
     return _tokenizers_available
+
+def is_modelscope_available():
+    return _modelscope_available
 
 def is_protobuf_available():
     if importlib.util.find_spec("google") is None:

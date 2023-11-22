@@ -16,12 +16,12 @@
 GPT Model.
 """
 
-from . import gpt, gpt_config, gpt_tokenizer
+from . import configuration_gpt, gpt, tokenization_gpt
 from .gpt import *
-from .gpt_config import *
-from .gpt_tokenizer import *
+from .configuration_gpt import *
+from .tokenization_gpt import *
 
 __all__ = []
 __all__.extend(gpt.__all__)
-__all__.extend(gpt_config.__all__)
-__all__.extend(gpt_tokenizer.__all__)
+__all__.extend(configuration_gpt.__all__)
+__all__.extend(tokenization_gpt.__all__)

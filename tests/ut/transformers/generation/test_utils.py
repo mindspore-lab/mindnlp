@@ -22,6 +22,7 @@ import warnings
 import numpy as np
 
 from mindnlp.utils import is_mindspore_available, require_mindspore
+from mindnlp.utils.testing_utils import slow
 from mindnlp.engine.utils import set_seed
 from ..test_modeling_common import floats_tensor, ids_tensor
 from .test_framework_agnostic import GenerationIntegrationTestsMixin
@@ -1473,6 +1474,7 @@ class GenerationTesterMixin:
         return
 
 
+    @slow
     def test_assisted_decoding_matches_greedy_search(self):
         # This test ensures that the assisted generation does not introduce output changes over greedy search.
         # It breaks the pattern in the tests above, for multiple reasons:
@@ -1959,6 +1961,7 @@ class GenerationIntegrationTests(MindNLPTestCase, GenerationIntegrationTestsMixi
             "return_tensors": "pt",
         }
 
+    @slow
     def test_diverse_beam_search(self):
         # PT-only test: TF doesn't have a diverse beam search implementation
         article = """Justin Timberlake and Jessica Biel, welcome to parenthood.
@@ -2261,6 +2264,7 @@ class GenerationIntegrationTests(MindNLPTestCase, GenerationIntegrationTestsMixi
 
         self.assertTrue(np.allclose(transition_scores_sum, outputs.sequences_scores, atol=1e-3))
 
+    @slow
     def test_beam_search_example_integration(self):
         # PT-only test: TF doesn't have a BeamSearchScorer
         # exactly the example provided in the docstrings of beam search, which previously
@@ -2340,6 +2344,7 @@ class GenerationIntegrationTests(MindNLPTestCase, GenerationIntegrationTestsMixi
             ],
         )
 
+    @slow
     def test_constrained_beam_search_mixed(self):
         # PT-only test: TF doesn't have constrained beam search
         model = GPT2LMHeadModel.from_pretrained("gpt2")
@@ -2380,6 +2385,7 @@ class GenerationIntegrationTests(MindNLPTestCase, GenerationIntegrationTestsMixi
             ],
         )
 
+    @slow
     def test_constrained_beam_search_mixed_mixin(self):
         # PT-only test: TF doesn't have constrained beam search
         model = GPT2LMHeadModel.from_pretrained("gpt2")
@@ -2417,6 +2423,7 @@ class GenerationIntegrationTests(MindNLPTestCase, GenerationIntegrationTestsMixi
             ],
         )
 
+    @slow
     def test_cfg_mixin(self):
         model = GPT2LMHeadModel.from_pretrained("gpt2")
         tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
@@ -2456,6 +2463,7 @@ class GenerationIntegrationTests(MindNLPTestCase, GenerationIntegrationTestsMixi
             ],
         )
 
+    @slow
     def test_constrained_beam_search_example_translation_mixin(self):
         # PT-only test: TF doesn't have constrained beam search
         tokenizer = AutoTokenizer.from_pretrained("t5-base")
@@ -2480,6 +2488,7 @@ class GenerationIntegrationTests(MindNLPTestCase, GenerationIntegrationTestsMixi
 
         self.assertListEqual(outputs, ["Wie alt sind Sie?"])
 
+    @slow
     def test_constrained_beam_search_example_integration(self):
         # PT-only test: TF doesn't have constrained beam search
         tokenizer = AutoTokenizer.from_pretrained("t5-base")

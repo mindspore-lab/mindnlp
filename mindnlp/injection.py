@@ -161,6 +161,49 @@ def std_mean(input, axis=None, *, correction=1, keepdims=False):
 
 ops.std_mean = std_mean
 
+# masked_fill
+def masked_fill(inputs, mask, value):
+    """patched masked_fill"""
+    masked_value = ops.fill(inputs.dtype, inputs.shape, value)
+    return ops.select(mask, masked_value, inputs)
+
+def _masked_fill(self, mask, value):
+    return masked_fill(self, mask, value)
+
+ops.masked_fill = masked_fill
+Tensor.masked_fill = _masked_fill
+StubTensor.masked_fill = _masked_fill
+
+# ops.std
+def std(input, axis=None, ddof=0, keepdims=False):
+    """patched std"""
+    # Calculate mean
+    mean = ops.mean(input, axis=axis, keep_dims=keepdims)
+
+    # Squared differences from the mean
+    squared_diff = (input - mean)**2
+
+    # Sum along the specified dimension
+    if axis is not None:
+        sum_along_dim = ops.sum(squared_diff, dim=axis, keepdim=keepdims)
+    else:
+        sum_along_dim = squared_diff.sum()
+
+    # Calculate the correction factor
+    factor = 1.0 / (input.shape[axis] - ddof) if axis is not None else 1.0 / (input.size - ddof)
+
+    # Calculate the standard deviation
+    out = ops.sqrt(factor * sum_along_dim)
+
+    return out
+
+def _std(self, axis=None, ddof=0, keepdims=False):
+    return std(self, axis, ddof, keepdims)
+
+ops.std = std
+Tensor.std = _std
+StubTensor.std = _std
+
 if DEVICE_TARGET == 'Ascend':
     # cumsum
     ops.cumsum = int32_patch_decorator(ops.cumsum)
@@ -339,6 +382,66 @@ class Conv1d(_Conv):
         return ops.conv1d(x, self.weight, self.bias, stride=self.stride, pad_mode=self.pad_mode,
                           padding=self.padding, dilation=self.dilation, groups=self.group)
 
+class LayerNorm(nn.Cell):
+    r"""
+    Applies Layer Normalization over a mini-batch of inputs.
+    """
+
+    def __init__(self,
+                 normalized_shape,
+                 begin_norm_axis=-1,
+                 begin_params_axis=-1,
+                 gamma_init='ones',
+                 beta_init='zeros',
+                 epsilon=1e-7,
+                 dtype=mstype.float32,
+                 elementwise_affine=True
+                 ):
+        """Initialize LayerNorm."""
+        super().__init__()
+        if not isinstance(normalized_shape, (tuple, list)):
+            raise TypeError(f"For '{self.cls_name}', the type of 'normalized_shape' must be tuple[int] or list[int], "
+                            f"but got {normalized_shape} and the type is {type(normalized_shape)}.")
+        if not normalized_shape:
+            raise ValueError(
+                f"Expected normalized_shape to be at least 1-dimensional, i.e., containing at "
+                f"least one element, but got normalized_shape = {normalized_shape}"
+            )
+        self.normalized_shape = normalized_shape
+        self.begin_norm_axis = begin_norm_axis
+        self.begin_params_axis = begin_params_axis
+        self.epsilon = epsilon
+        self.gamma = Parameter(initializer(
+            gamma_init, normalized_shape, dtype=dtype), name="gamma")
+        self.beta = Parameter(initializer(
+            beta_init, normalized_shape, dtype=dtype), name="beta")
+        self.layer_norm = ops.LayerNorm(begin_norm_axis=self.begin_norm_axis,
+                                      begin_params_axis=self.begin_params_axis,
+                                      epsilon=self.epsilon)
+        self.elementwise_affine = elementwise_affine
+
+    def construct(self, input_x):
+        if self.elementwise_affine:
+            y, _, _ = self.layer_norm(input_x, self.gamma.astype(input_x.dtype), self.beta.astype(input_x.dtype))
+        else:
+            y, _, _ = self.layer_norm(input_x, ops.ones(self.normalized_shape, input_x.dtype),
+                                      ops.zeros(self.normalized_shape, input_x.dtype),)
+        return y
+
+    def extend_repr(self):
+        return f'normalized_shape={self.normalized_shape}, begin_norm_axis={self.begin_norm_axis}, ' \
+               f'begin_params_axis={self.begin_params_axis}, gamma={self.gamma}, beta={self.beta}'
+
+
+def half(self):
+    """patched nn.Cell.half"""
+    for param in self.get_parameters():
+        if param.dtype in (mindspore.float32, mindspore.float16):
+            param.set_dtype(mindspore.float16)
+
+nn.Cell.half = half
+
+nn.LayerNorm = LayerNorm
 nn.Conv1d = Conv1d
 nn.Embedding = Embedding
 nn.Dense = Dense

@@ -21,8 +21,7 @@ import os
 from typing import Optional, List, Union
 from inspect import signature
 from tqdm.autonotebook import tqdm
-from mindspore import nn, Tensor
-from mindspore import log, context
+from mindspore import nn, Tensor, context
 from mindspore import save_checkpoint
 from mindspore.dataset.engine import Dataset, TakeDataset
 
@@ -35,7 +34,9 @@ from mindnlp.engine.evaluator import Evaluator
 from mindnlp._legacy.amp import auto_mixed_precision, StaticLossScaler, NoLossScaler
 from mindnlp.engine.trainer.utils import get_default_forward_fn_with_loss_fn, \
     get_default_forward_fn_without_loss_fn, get_default_train_step_fn
+from mindnlp.utils import logging
 
+logger = logging.get_logger(__name__)
 
 class Trainer:
     r"""
@@ -89,7 +90,7 @@ class Trainer:
         self.check_gradients = check_gradients
 
         if isinstance(train_dataset, TakeDataset):
-            log.warning("The `train_dataset` is split after the 'batch' operation, "
+            logger.warning("The `train_dataset` is split after the 'batch' operation, "
                         "which will slow down the training speed and recompile the neural network"
                         "please split it first, and then use 'map' operation.")
 
@@ -187,8 +188,8 @@ class Trainer:
             tgt_columns (Optional[list[str], str]): Target label column names for loss function.
 
         """
-        if self.obj_network and tgt_columns is not None:
-            log.warning("'tgt_columns' does not take effect when 'loss_fn' is `None`.")
+        if self.obj_network and tgt_columns is not None and self.evaluator is None:
+            logger.warning("'tgt_columns' does not take effect when 'loss_fn' is `None` and not do evaluation.")
 
         self._prepare_train_func()
 
@@ -308,7 +309,7 @@ class Trainer:
         remain_data_keys = set(data.keys()) - used_col
 
         if remain_data_keys:
-            log.warning(f'{remain_data_keys} is not match inputs arguments of network or function.')
+            logger.warning(f'{remain_data_keys} is not match inputs arguments of network or function.')
 
         return inputs
 
@@ -316,7 +317,7 @@ class Trainer:
         """Check and prepare target columns for training."""
         out_columns = []
         if tgt_columns is None:
-            log.warning("In the process of training model, tgt_column can not be None.")
+            logger.warning("In the process of training model, tgt_column can not be None.")
             return []
         if not isinstance(tgt_columns, (str, list)):
             raise TypeError(f"Expect tgt_columns to be list or str. Got {type(tgt_columns)}.")
@@ -350,7 +351,7 @@ class Trainer:
         """set amp"""
         self.network = auto_mixed_precision(self.network, level)
         if loss_scaler is None:
-            log.warning("Trainer will use 'StaticLossScaler' with `scale_value=2 ** 10` when `loss_scaler` is None.")
+            logger.warning("Trainer will use 'StaticLossScaler' with `scale_value=2 ** 10` when `loss_scaler` is None.")
             self.loss_scaler = StaticLossScaler(2 ** 10)
         else:
             self.loss_scaler = loss_scaler

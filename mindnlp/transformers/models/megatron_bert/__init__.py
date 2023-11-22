@@ -16,12 +16,10 @@
 """
 megatron_bert Model init
 """
-from . import megatron_bert, megatron_bert_config, megatron_bert_tokenizer
-from .megatron_bert_config import *
-from .megatron_bert import *
-from .megatron_bert_tokenizer import *
+from . import configuration_megatron_bert, modeling_megatron_bert
+from .configuration_megatron_bert import *
+from .modeling_megatron_bert import *
 
 __all__ = []
-__all__.extend(megatron_bert.__all__)
-__all__.extend(megatron_bert_config.__all__)
-__all__.extend(megatron_bert_tokenizer.__all__)
+__all__.extend(modeling_megatron_bert.__all__)
+__all__.extend(configuration_megatron_bert.__all__)
