@@ -1313,12 +1313,14 @@ def convert_torch_to_mindspore(pth_file):
     state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
 
     for key, value in state_dict.items():
-        if 'LayerNorm' in key or 'layer_norm' in key:
+        if 'LayerNorm' in key or 'layer_norm' in key or 'ln' in key:
             if '.weight' in key:
                 key = key.replace('.weight', '.gamma')
             if '.bias' in key:
                 key = key.replace('.bias', '.beta')
-        if 'embeddings' in key or 'embedding' in key or 'embed_' in key and \
+        if 'wpe' in key or 'wte' in key or \
+            'embeddings' in key or 'embedding' in key or \
+            'embed_' in key or '_embed' in key and \
             'embedding_hidden_mapping_in' not in key: # for albert
             key = key.replace('weight', 'embedding_table')
         ms_ckpt.append({'name': key, 'data': Tensor(value.numpy())})
@@ -1695,7 +1697,7 @@ class SequenceSummary(nn.Cell):
                 )
             else:
                 cls_index = cls_index.expand_dims(-1).expand_dims(-1)
-                cls_index = cls_index.expand((-1,) * (cls_index.ndim - 1) + (hidden_states.shape[-1],))
+                cls_index = cls_index.broadcast_to((-1,) * (cls_index.ndim - 1) + (hidden_states.shape[-1],))
             output = hidden_states.gather_elements(-2, cls_index).squeeze(-2)  # shape (bsz, XX, hidden_size)
         else:
             output = hidden_states

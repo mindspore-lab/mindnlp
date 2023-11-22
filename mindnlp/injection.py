@@ -174,6 +174,36 @@ ops.masked_fill = masked_fill
 Tensor.masked_fill = _masked_fill
 StubTensor.masked_fill = _masked_fill
 
+# ops.std
+def std(input, axis=None, ddof=0, keepdims=False):
+    """patched std"""
+    # Calculate mean
+    mean = ops.mean(input, axis=axis, keep_dims=keepdims)
+
+    # Squared differences from the mean
+    squared_diff = (input - mean)**2
+
+    # Sum along the specified dimension
+    if axis is not None:
+        sum_along_dim = ops.sum(squared_diff, dim=axis, keepdim=keepdims)
+    else:
+        sum_along_dim = squared_diff.sum()
+
+    # Calculate the correction factor
+    factor = 1.0 / (input.shape[axis] - ddof) if axis is not None else 1.0 / (input.size - ddof)
+
+    # Calculate the standard deviation
+    out = ops.sqrt(factor * sum_along_dim)
+
+    return out
+
+def _std(self, axis=None, ddof=0, keepdims=False):
+    return std(self, axis, ddof, keepdims)
+
+ops.std = std
+Tensor.std = _std
+StubTensor.std = _std
+
 if DEVICE_TARGET == 'Ascend':
     # cumsum
     ops.cumsum = int32_patch_decorator(ops.cumsum)
