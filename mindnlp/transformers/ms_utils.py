@@ -24,6 +24,7 @@ from mindspore.common.initializer import initializer, Normal
 
 from mindnlp._legacy.nn import Matmul
 
+ALL_LAYERNORM_LAYERS = [nn.LayerNorm]
 
 class Conv1D(nn.Cell):
     """

@@ -128,7 +128,7 @@ class GPT2Attention(nn.Cell):
             # if only "normal" attention layer implements causal mask
             query_length, key_length = query.shape[-2], key.shape[-2]
             causal_mask = self.bias[:, :, key_length - query_length : key_length, :key_length]
-            mask_value = np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min
+            mask_value = float(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min)
             # Need to be a tensor, otherwise we get error: `RuntimeError: expected scalar type float but found double`.
             mask_value = ops.full([], mask_value, dtype=attn_weights.dtype)
             attn_weights = ops.where(causal_mask, attn_weights.astype(attn_weights.dtype), mask_value)
@@ -175,7 +175,7 @@ class GPT2Attention(nn.Cell):
             # if only "normal" attention layer implements causal mask
             query_length, key_length = query.shape[-2], key.shape[-2]
             causal_mask = self.bias[:, :, key_length - query_length : key_length, :key_length]
-            mask_value = np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min
+            mask_value = float(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min)
             # Need to be a tensor, otherwise we get error: `RuntimeError: expected scalar type float but found double`.
             mask_value = mindspore.Tensor(mask_value, dtype=attn_weights.dtype)
             attn_weights = ops.where(causal_mask, attn_weights, mask_value)
@@ -546,7 +546,7 @@ class GPT2Model(GPT2PreTrainedModel):
             # Since we are adding it to the raw scores before the softmax, this is
             # effectively the same as removing these entirely.
             attention_mask = attention_mask.to(dtype=self.dtype)  # fp16 compatibility
-            attention_mask = (1.0 - attention_mask) * np.finfo(mindspore.dtype_to_nptype(self.dtype)).min
+            attention_mask = (1.0 - attention_mask) * float(np.finfo(mindspore.dtype_to_nptype(self.dtype)).min)
 
         # If a 2D or 3D attention mask is provided for the cross-attention
         # we need to make broadcastable to [batch_size, num_heads, seq_length, seq_length]

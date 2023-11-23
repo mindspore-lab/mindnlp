@@ -42,7 +42,8 @@ from .errors import (
     EntryNotFoundError,
     LocalEntryNotFoundError,
     RepositoryNotFoundError,
-    ModelNotFoundError
+    ModelNotFoundError,
+    GatedRepoError
 )
 from . import logging
 
@@ -176,7 +177,8 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None)
         status = req.status_code
         if status == 404:
             raise EntryNotFoundError(f"Can not found url: {url}")
-
+        if status == 401:
+            raise GatedRepoError('You should have authorization to access the model.')
         tmp_file_path = file_path + "_tmp"
         total_size = req.headers.get("content-length")
         with open(tmp_file_path, "wb") as file:
@@ -383,6 +385,12 @@ def cached_file(
             local_files_only=local_files_only,
             endpoint=endpoint
         )
+    except GatedRepoError as e:
+        if not _raise_exceptions_for_missing_entries:
+            return None
+        raise EnvironmentError(
+            f"{path_or_repo_id} does not appear to have authorization to access."
+        ) from e
     except RepositoryNotFoundError as e:
         raise EnvironmentError(
             f"{path_or_repo_id} is not a local folder and is nost a valid model identifier "
@@ -406,6 +414,7 @@ def cached_file(
             f"{path_or_repo_id} does not appear to have a file named {full_filename}. Checkout "
             f"'{endpoint.format(path_or_repo_id, full_filename)}' for available files."
         ) from e
+
     except HTTPError as err:
         # First we try to see if we have a cached version (not up to date):
         resolved_file = try_to_load_from_cache(path_or_repo_id, full_filename, cache_dir=cache_dir)
@@ -467,6 +476,7 @@ def download(
             )
 
     pointer_path = os.path.join(storage_folder, relative_filename)
+
     if os.path.exists(pointer_path) and not force_download:
         return pointer_path
 
@@ -474,7 +484,7 @@ def download(
     # check model whether exist
     model_url = url[: url.rfind('/')].replace('resolve/main', '')
 
-    req = requests.get(model_url, timeout=10, proxies=proxies)
+    req = requests.get(model_url, timeout=3, proxies=proxies, verify=False)
     status = req.status_code
     if status == 404:
         raise RepositoryNotFoundError(f"Can not found model: {repo_id}")

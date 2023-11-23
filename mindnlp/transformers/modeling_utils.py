@@ -670,19 +670,27 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 if from_pt and os.path.isfile(
                     os.path.join(pretrained_model_name_or_path, subfolder, PT_WEIGHTS_NAME)
                 ):
-                    # Load from a TF 2.0 checkpoint in priority if from_tf
+                    # Load from a PyTorch checkpoint
                     archive_file = os.path.join(pretrained_model_name_or_path, subfolder, PT_WEIGHTS_NAME)
                 elif os.path.isfile(
                     os.path.join(pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_NAME, variant))
                 ):
-                    # Load from a PyTorch checkpoint
+                    # Load from a MindSpore checkpoint
                     archive_file = os.path.join(
                         pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_NAME, variant)
                     )
+                elif from_pt and os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, subfolder, _add_variant(PT_WEIGHTS_INDEX_NAME, variant))
+                ):
+                    # Load from a sharded PyTorch checkpoint
+                    archive_file = os.path.join(
+                        pretrained_model_name_or_path, subfolder, _add_variant(PT_WEIGHTS_INDEX_NAME, variant)
+                    )
+                    is_sharded = True
                 elif os.path.isfile(
                     os.path.join(pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_INDEX_NAME, variant))
                 ):
-                    # Load from a sharded PyTorch checkpoint
+                    # Load from a sharded MindSpore checkpoint
                     archive_file = os.path.join(
                         pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_INDEX_NAME, variant)
                     )
@@ -819,6 +827,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         keys_missing = list(model.parameters_dict().keys())
         param_id_set = set()
 
+
         def load_param_into_net(model: nn.Cell, param_dict: dict, prefix: str):
             keys_unexpected = list(param_dict.keys())
 
@@ -850,10 +859,9 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                                             f'\n\tYou may consider adding `ignore_mismatched_sizes=True` in the model `from_pretrained` method.')
                         logger.warning(f'The shape of parameter `{param.name} is {param.shape}, but got mismatch parameter'
                                         f' `{param_name} with shape {new_param.shape} in checkpoint, ')
-                        param = Parameter(new_param, param.name)
+                        param = Parameter(new_param.data, param.name)
                     else:
-                        param.set_dtype(new_param.dtype)
-                        param.assign_value(new_param)
+                        param.set_data(new_param)
                     keys_unexpected.remove(param_name)
                     keys_missing.remove(param.name)
                     param_id_set.add(id(param))
@@ -1308,10 +1316,16 @@ def convert_torch_to_mindspore(pth_file):
                           "`pip install torch` or instructions from 'https://pytorch.org'") \
                           from exc
 
+    ms_ckpt_path = pth_file.replace('pytorch_model', 'mindspore')
+    ms_ckpt_path = ms_ckpt_path.replace('.bin', '.ckpt')
+    if os.path.exists(ms_ckpt_path):
+        return ms_ckpt_path
+
     logger.info('Starting checkpoint conversion.')
     ms_ckpt = []
-    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
+    state_dict = torch.load(pth_file, map_location='cpu')
 
+    has_bf16 = False
     for key, value in state_dict.items():
         if 'LayerNorm' in key or 'layer_norm' in key or 'ln' in key:
             if '.weight' in key:
@@ -1323,16 +1337,23 @@ def convert_torch_to_mindspore(pth_file):
             'embed_' in key or '_embed' in key and \
             'embedding_hidden_mapping_in' not in key: # for albert
             key = key.replace('weight', 'embedding_table')
-        ms_ckpt.append({'name': key, 'data': Tensor(value.numpy())})
 
-    ms_ckpt_path = pth_file.replace('pytorch_model', 'mindspore')
-    ms_ckpt_path = ms_ckpt_path.replace('.bin', '.ckpt')
-    if not os.path.exists(ms_ckpt_path):
-        try:
-            save_checkpoint(ms_ckpt, ms_ckpt_path)
-        except Exception as exc:
-            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, '
-                               f'please checkout the path.') from exc
+        if value.dtype == torch.bfloat16:
+            data = Tensor(value.to(torch.float).numpy())
+            if not has_bf16:
+                has_bf16 = True
+        else:
+            data = Tensor(value.numpy())
+        ms_ckpt.append({'name': key, 'data': data})
+
+    if has_bf16:
+        logger.warning("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
+
+    try:
+        save_checkpoint(ms_ckpt, ms_ckpt_path)
+    except Exception as exc:
+        raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, '
+                            f'please checkout the path.') from exc
 
     return ms_ckpt_path
 

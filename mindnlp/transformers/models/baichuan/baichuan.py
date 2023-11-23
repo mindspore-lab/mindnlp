@@ -80,7 +80,7 @@ def _expand_mask(mask: Tensor, dtype: mstype, tgt_len: Optional[int] = None):
 
     return inverted_mask.masked_fill(
         inverted_mask.to(mindspore.bool_),
-        np.finfo(mindspore.dtype_to_nptype(dtype)).min,
+        mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min),
     )
 
 
@@ -117,7 +117,6 @@ class RotaryEmbedding(nn.Cell):
         super().__init__()
         self.inv_freq = 1.0 / (base ** (ops.arange(0, dim, 2).float() / dim))
 
-        # Build here to make `torch.jit.trace` work.
         self.max_seq_len_cached = max_position_embeddings
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
         freqs = ops.einsum("i,j->ij", t, self.inv_freq)
@@ -507,23 +506,6 @@ class Model(BaiChuanPreTrainedModel):
             past_key_value = past_key_values[idx] if past_key_values is not None else None
 
             # TODO: how checkpoint
-            # if self.gradient_checkpointing and self.training:
-
-            #     def create_custom_forward(module):
-            #         def custom_forward(*inputs):
-            #             # None for past_key_value
-            #             return module(*inputs, output_attentions, None)
-
-            #         return custom_forward
-
-            #     layer_outputs = torch.utils.checkpoint.checkpoint(
-            #         create_custom_forward(decoder_layer),
-            #         hidden_states,
-            #         attention_mask,
-            #         position_ids,
-            #         None,
-            #     )
-            # else:
             layer_outputs = decoder_layer(
                 hidden_states,
                 attention_mask=attention_mask,

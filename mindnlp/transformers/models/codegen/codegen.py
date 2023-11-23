@@ -27,11 +27,6 @@ from ...modeling_utils import PreTrainedModel
 from .codegen_config import CodeGenConfig
 from ...activations import ACT2FN
 
-
-_CHECKPOINT_FOR_DOC = "Salesforce/codegen-2B-mono"
-_CONFIG_FOR_DOC = "CodeGenConfig"
-
-
 #
 def fixed_pos_embedding(tensor, seq_dim=1, seq_len=None):
     """

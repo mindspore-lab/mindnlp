@@ -28,6 +28,7 @@ from mindspore import Tensor
 from mindnlp.transformers.models.baichuan import baichuan, baichuan_config
 from .....common import MindNLPTestCase
 
+mindspore.set_context(pynative_synchronize=True)
 
 class TestModelingBaiChuan(MindNLPTestCase):
     r"""
@@ -63,7 +64,7 @@ class TestModelingBaiChuan(MindNLPTestCase):
         Test Model
         """
         model = baichuan.Model(self.config)
-        input_ids = Tensor(np.random.randn(1, 128), mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, 100, (1, 128)), mindspore.int32)
         outputs = model(input_ids=input_ids)
         assert outputs[0].shape == (1, 128, 128)
 
@@ -72,7 +73,7 @@ class TestModelingBaiChuan(MindNLPTestCase):
         Test BaiChuanForCausalLM
         """
         model = baichuan.BaiChuanForCausalLM(self.config)
-        input_ids = Tensor(np.random.randn(1, 128), mindspore.int32)
+        input_ids = Tensor(np.random.randint(0, 100, (1, 128)), mindspore.int32)
         outputs = model(input_ids=input_ids)
         assert outputs[0].shape == (1, 128, 1000)
 
