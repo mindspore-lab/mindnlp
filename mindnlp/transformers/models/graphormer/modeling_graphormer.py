@@ -17,6 +17,7 @@
 import math
 from typing import Iterable, Iterator, List, Optional, Tuple, Union
 
+import numpy as np
 import mindspore as ms
 from mindspore import nn, ops
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
@@ -726,8 +727,8 @@ class GraphormerPreTrainedModel(PreTrainedModel):
             if module.has_bias:
                 module.bias.set_data(init_zero(module.bias))
         if isinstance(module, nn.Embedding):
-            embedding_table = np.random.normal(loc=0.0, scale=0.02, shape=module.embedding_table.shape)
-            if cell.padding_idx:
+            embedding_table = np.random.normal(loc=0.0, scale=0.02, size=module.embedding_table.shape)
+            if module.padding_idx:
                 embedding_table[cell.padding_idx] = 0
 
             module.embedding_table.set_data(Tensor(embedding_table, module.embedding_table.dtype))
@@ -754,8 +755,8 @@ class GraphormerPreTrainedModel(PreTrainedModel):
             if module.has_bias:
                 module.bias.set_data(init_zero(module.bias))
         elif isinstance(module, nn.Embedding):
-            embedding_table = np.random.normal(loc=0.0, scale=0.02, shape=module.embedding_table.shape)
-            if cell.padding_idx:
+            embedding_table = np.random.normal(loc=0.0, scale=0.02, size=module.embedding_table.shape)
+            if module.padding_idx:
                 embedding_table[cell.padding_idx] = 0
 
             module.embedding_table.set_data(Tensor(embedding_table, module.embedding_table.dtype))
