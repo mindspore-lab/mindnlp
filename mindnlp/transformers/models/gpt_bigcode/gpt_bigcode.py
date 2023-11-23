@@ -19,8 +19,9 @@
 # pylint: disable=C0415
 # pylint: disable=C0103
 
+import math
 from typing import List, Optional, Tuple, Union
-
+from functools import partial
 import numpy as np
 import mindspore
 from mindspore import nn
@@ -390,16 +391,17 @@ class GPTBigCodePreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights."""
+        if isinstance(cell, (GPTBigCodeMLP, GPTBigCodeAttention)):
+            sigma = self.config.initializer_range / math.sqrt(2 * self.config.n_layer)
+            cell.c_proj.weight.set_data(initializer(Normal(sigma=sigma),cell.c_proj.weight.shape, cell.c_proj.weight.dtype))
         if isinstance(cell, nn.Dense):
-            # Slightly different from the TF version which uses truncated_normal for initialization
-            # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+            cell.weight.set_data(initializer(Normal(sigma=self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
             if cell.has_bias:
                 cell.bias.set_data(initializer(
                     'zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            embedding_table = initializer(Normal(self.config.initializer_range),
+            embedding_table = initializer(Normal(sigma=self.config.initializer_range),
                                           cell.embedding_table.shape,
                                           cell.embedding_table.dtype)
             if cell.padding_idx is not None:
@@ -415,6 +417,30 @@ class GPTBigCodePreTrainedModel(PreTrainedModel):
         if isinstance(module, GPTBigCodeModel):
             module.gradient_checkpointing = value
 
+    def _set_gradient_checkpointing(self, module, value=False):
+        if isinstance(module, GPTBigCodeModel):
+            module.gradient_checkpointing = value
+
+
+    def _backward_compatibility_gradient_checkpointing(self):
+        """
+        Support gradient_checkpointing.
+        """
+        if self.supports_gradient_checkpointing and getattr(self.config, "gradient_checkpointing", False):
+            self.gradient_checkpointing_enable()
+            # Remove the attribute now that is has been consumed, so it's no saved in the config.
+            delattr(self.config, "gradient_checkpointing")
+
+    def gradient_checkpointing_enable(self):
+        """
+        Activates gradient checkpointing for the current model.
+        Note that in other frameworks this feature can be referred to as "activation checkpointing" or "checkpoint
+        activations".
+        """
+        if not self.supports_gradient_checkpointing:
+            raise ValueError(
+                f"{self.__class__.__name__} does not support gradient checkpointing.")
+        self.apply(partial(self._set_gradient_checkpointing, value=True))
 
 class GPTBigCodeModel(GPTBigCodePreTrainedModel):
     """GPT BigCode Model"""
@@ -498,7 +524,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
             past_length = 0
             past_key_values = tuple([None] * len(self.h))
         else:
-            past_length = past_key_values[0].size(-2)
+            past_length = past_key_values[0].shape[-2]
 
         if attention_mask is not None and len(attention_mask.shape) == 2 and position_ids is None:
             # create position_ids on the fly for batch generation
@@ -735,7 +761,7 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
             # Flatten the tokens
             loss_fct = nn.CrossEntropyLoss()
             loss = loss_fct(
-                shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+                shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1).to(mindspore.int32))
 
         if not return_dict:
             output = (lm_logits,) + transformer_outputs[1:]
@@ -750,6 +776,16 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
             cross_attentions=transformer_outputs.cross_attentions,
         )
 
+    @staticmethod
+    def _reorder_cache(
+        past_key_values: Tuple[Tuple[mindspore.Tensor]], beam_idx: mindspore.Tensor
+    ) -> Tuple[Tuple[mindspore.Tensor]]:
+        """
+        This function is used to re-order the `past_key_values` cache if [`~PreTrainedModel.beam_search`] or
+        [`~PreTrainedModel.beam_sample`] is called. This is required to match `past_key_values` with the correct
+        beam_idx at every generation step.
+        """
+        return tuple(layer_past.index_select(0, beam_idx) for layer_past in past_key_values)
 
 class GPTBigCodeForSequenceClassification(GPTBigCodePreTrainedModel):
     """GPT BigCode for Sequence Classification"""
@@ -819,7 +855,7 @@ class GPTBigCodeForSequenceClassification(GPTBigCodePreTrainedModel):
             else:
                 sequence_lengths = -1
 
-        pooled_logits = logits[:, sequence_lengths]
+        pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
 
         loss = None
         if labels is not None:
