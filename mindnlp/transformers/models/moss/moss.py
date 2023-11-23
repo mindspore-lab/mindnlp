@@ -548,7 +548,7 @@ class MossModel(MossPreTrainedModel):
             attention_mask = attention_mask.to(
                 dtype=self.dtype)  # fp16 compatibility
             attention_mask = (1.0 - attention_mask) * \
-                             np.finfo(mindspore.dtype_to_nptype(self.dtype)).min
+                             float(np.finfo(mindspore.dtype_to_nptype(self.dtype)).min)
 
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head

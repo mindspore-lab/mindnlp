@@ -2331,6 +2331,7 @@ class GenerationMixin:
 
             # argmax
             next_tokens = ops.argmax(next_tokens_scores, dim=-1)
+
             # finished sentences should have their next token be a padding token
             if eos_token_id is not None:
                 if pad_token_id is None:

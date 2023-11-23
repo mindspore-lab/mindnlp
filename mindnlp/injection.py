@@ -204,6 +204,15 @@ ops.std = std
 Tensor.std = _std
 StubTensor.std = _std
 
+# Tensor.__contains__
+def _contains(self, key):
+    eq_res = ops.equal(self, key)
+    res = ops.any(eq_res)
+    return bool(res)
+
+Tensor.__contains__ = _contains
+StubTensor.__contains__ = _contains
+
 if DEVICE_TARGET == 'Ascend':
     # cumsum
     ops.cumsum = int32_patch_decorator(ops.cumsum)
