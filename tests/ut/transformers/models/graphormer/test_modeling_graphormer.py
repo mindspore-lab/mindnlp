@@ -20,15 +20,22 @@ import os
 import tempfile
 import unittest
 
+from mindnlp.utils import is_mindspore_available
 from mindnlp.transformers.models.graphormer.configuration_graphormer import GraphormerConfig
-from mindnlp.transformers.models.graphormer.modeling_graphormer import(
-    GraphormerModel,
-    GraphormerForGraphClassification,
-    GRAPHORMER_PRETRAINED_MODEL_ARCHIVE_LIST)
 
-from
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, _config_zero_init, ids_tensor
+
+from mindnlp.utils.testing_utils import (
+    require_mindspore,
+    slow
+)
+
+if is_mindspore_available():
+    from mindnlp.transformers.models.graphormer.modeling_graphormer import(
+        GraphormerModel,
+        GraphormerForGraphClassification,
+        GRAPHORMER_PRETRAINED_MODEL_ARCHIVE_LIST)
 
 class GraphormerModelTester:
     def __init__(
@@ -232,7 +239,7 @@ class GraphormerModelTester:
         }
         return config, inputs_dict
 
-
+@require_mindspore
 class GraphormerModelTest(ModelTesterMixin, unittest.TestCase):
     all_model_classes = (GraphormerForGraphClassification,)
     all_generative_model_classes = ()
@@ -445,17 +452,15 @@ class GraphormerModelTest(ModelTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_for_graph_classification(*config_and_inputs)
 
-    @unittest.skip(reason="Skip temporarily")
-    # @slow
+    @slow
     def test_model_from_pretrained(self):
         for model_name in GRAPHORMER_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
             model = GraphormerForGraphClassification.from_pretrained(model_name, from_pt=True)
             self.assertIsNotNone(model)
 
-
+@require_mindspore
 class GraphormerModelIntegrationTest(unittest.TestCase):
-    @unittest.skip(reason="Skip temporarily")
-    # @slow
+    @slow
     def test_inference_graph_classification(self):
         model = GraphormerForGraphClassification.from_pretrained("clefourrier/graphormer-base-pcqm4mv2",
                                                                  from_pt=True)
