@@ -359,6 +359,10 @@ class GraphormerModelTest(ModelTesterMixin, unittest.TestCase):
     def test_model_common_attributes(self):
         pass
 
+    @unittest.skip(reason="Graphormer does not share common arg names")
+    def test_forward_signature(self):
+        pass
+
     def test_initialization(self):
         def _config_zero_init(config):
             configs_no_init = copy.deepcopy(config)
@@ -460,17 +464,18 @@ class GraphormerModelTest(ModelTesterMixin, unittest.TestCase):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_for_graph_classification(*config_and_inputs)
 
-    @unittest.skip(reason="Skip slow")
+    @slow
     def test_model_from_pretrained(self):
         for model_name in GRAPHORMER_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = GraphormerForGraphClassification.from_pretrained(model_name)
+            model = GraphormerForGraphClassification.from_pretrained(model_name, from_pt=True)
             self.assertIsNotNone(model)
 
 
 class GraphormerModelIntegrationTest(unittest.TestCase):
-    @unittest.skip(reason="Skip slow")
+    @slow
     def test_inference_graph_classification(self):
-        model = GraphormerForGraphClassification.from_pretrained("clefourrier/graphormer-base-pcqm4mv2")
+        model = GraphormerForGraphClassification.from_pretrained("clefourrier/graphormer-base-pcqm4mv2",
+                                                                 from_pt=True)
 
         # Actual real graph data from the MUTAG dataset
         # fmt: off

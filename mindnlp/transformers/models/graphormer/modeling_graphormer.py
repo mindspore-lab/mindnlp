@@ -313,7 +313,7 @@ class GraphormerMultiheadAttention(nn.Cell):
         self.qkv_same_dim = self.kdim == config.embedding_dim and self.vdim == config.embedding_dim
 
         self.num_heads = config.num_attention_heads
-        self.attention_dropout_module = nn.Dropout(p=1-config.attention_dropout)
+        self.attention_dropout_module = nn.Dropout(p=config.attention_dropout)
 
         self.head_dim = config.embedding_dim // config.num_attention_heads
         if not (self.head_dim * config.num_attention_heads == self.embedding_dim):
@@ -500,9 +500,9 @@ class GraphormerGraphEncoderLayer(nn.Cell):
         self.qn_block_size = config.qn_block_size
         self.pre_layernorm = config.pre_layernorm
 
-        self.dropout_module = nn.Dropout(p=1-config.dropout)
+        self.dropout_module = nn.Dropout(p=config.dropout)
 
-        self.activation_dropout_module = nn.Dropout(p=1-config.activation_dropout)
+        self.activation_dropout_module = nn.Dropout(p=config.activation_dropout)
 
         # Initialize blocks
         self.activation_fn = ACT2FN[config.activation_fn]
@@ -579,7 +579,7 @@ class GraphormerGraphEncoder(nn.Cell):
     def __init__(self, config: GraphormerConfig):
         super().__init__()
 
-        self.dropout_module = nn.Dropout(p=1-config.dropout)
+        self.dropout_module = nn.Dropout(p=config.dropout)
         self.layerdrop = config.layerdrop
         self.embedding_dim = config.embedding_dim
         self.apply_graphormer_init = config.apply_graphormer_init
@@ -726,11 +726,11 @@ class GraphormerPreTrainedModel(PreTrainedModel):
             if module.has_bias:
                 module.bias.set_data(init_zero(module.bias))
         if isinstance(module, nn.Embedding):
-            embedding_table = init_normal(module.embedding_table, sigma=0.02, mean=0.0)
-            if module.padding_idx:
-                embedding_table[module.padding_idx] = 0
+            embedding_table = np.random.normal(loc=0.0, scale=0.02, shape=module.embedding_table.shape)
+            if cell.padding_idx:
+                embedding_table[cell.padding_idx] = 0
 
-            module.embedding_table.set_data(embedding_table)
+            module.embedding_table.set_data(Tensor(embedding_table, module.embedding_table.dtype))
         if isinstance(module, GraphormerMultiheadAttention):
             module.q_proj.weight.set_data(init_normal(module.q_proj.weight,
                                                       sigma=0.02, mean=0.0))
@@ -754,11 +754,11 @@ class GraphormerPreTrainedModel(PreTrainedModel):
             if module.has_bias:
                 module.bias.set_data(init_zero(module.bias))
         elif isinstance(module, nn.Embedding):
-            embedding_table = init_normal(module.embedding_table, sigma=0.02, mean=0.0)
-            if module.padding_idx:
-                embedding_table[module.padding_idx] = 0
+            embedding_table = np.random.normal(loc=0.0, scale=0.02, shape=module.embedding_table.shape)
+            if cell.padding_idx:
+                embedding_table[cell.padding_idx] = 0
 
-            module.embedding_table.set_data(embedding_table)
+            module.embedding_table.set_data(Tensor(embedding_table, module.embedding_table.dtype))
         elif isinstance(module, GraphormerMultiheadAttention):
             module.q_proj.weight.set_data(init_normal(module.q_proj.weight,
                                                       sigma=0.02, mean=0.0))
