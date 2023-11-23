@@ -92,7 +92,7 @@ The table below represents the current support in the library for each of those 
 
 | Model                         | Pynative support | Graph Support |
 |-------------------------------|------------------|---------------|
-| ALBERT                        | ❌                | ✅             |
+| ALBERT                        | ✅                | ✅             |
 | Autoformer                    | TODO                | ❌             |
 | Bark                          | TODO                | ❌             |
 | BART                          | ✅                | ❌             |
@@ -100,7 +100,6 @@ The table below represents the current support in the library for each of those 
 | BLOOM                         | ✅                | ❌             |
 | CLIP                          | ✅                | ❌             |
 | CodeGen                       | ✅                | ❌             |
-| CodeLlama                     | ✅                | ❌             |
 | ConvBERT                      | TODO                | ❌             |
 | CPM                           | ✅                | ❌             |
 | CPM-Ant                       | ✅                | ❌             |
@@ -113,8 +112,9 @@ The table below represents the current support in the library for each of those 
 | GPT NeoX                      | TODO                | ❌             |
 | GPTBigCode                    | ✅                | ❌             |
 | Graphormer                    | TODO               | ❌             |
-| LLaMA                         | ✅                | ❌             |
-| Llama2                        | TODO               | ❌             |
+| Llama                         | ✅                | ❌             |
+| Llama2                        | ✅                | ❌             |
+| CodeLlama                     | ✅                | ❌             |
 | Longformer                    | ✅                | ❌             |
 | LongT5                        | TODO               | ❌             |
 | LUKE                          | ✅                | ❌             |

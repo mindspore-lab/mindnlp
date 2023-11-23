@@ -12,20 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test GPT functions"""
+"""
+BaiChuan Model.
+"""
+from . import baichuan, baichuan_config
 
-import pytest
+from .baichuan import *
+from .baichuan_config import *
 
-from mindnlp.transformers import GPTDoubleHeadsModel
-
-@pytest.mark.download
-def test_resize_embed():
-    """test from pretrained"""
-    model = GPTDoubleHeadsModel.from_pretrained('openai-gpt')
-    assert model.transformer.tokens_embed.vocab_size == model.config.vocab_size
-    num_tokens = model.config.vocab_size
-    model.resize_token_embeddings(num_tokens + 1)
-    assert model.transformer.tokens_embed.vocab_size == num_tokens + 1
-
-    assert id(model.transformer.tokens_embed.embedding_table) == \
-        id(model.lm_head.weight)
+__all__ = []
+__all__.extend(baichuan.__all__)
+__all__.extend(baichuan_config.__all__)

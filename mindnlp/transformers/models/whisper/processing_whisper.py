@@ -1,4 +1,3 @@
-# coding=utf-8
 # Copyright 2022 The HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +16,6 @@
 """
 Speech processor class for Whisper
 """
-
 from ...processing_utils import ProcessorMixin
 
 

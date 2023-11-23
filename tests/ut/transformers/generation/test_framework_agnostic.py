@@ -7,6 +7,7 @@ Framework agnostic tests for generate()-related methods.
 import numpy as np
 
 from mindnlp.transformers import AutoTokenizer
+from mindnlp.utils.testing_utils import slow
 
 
 class GenerationIntegrationTestsMixin:
@@ -335,6 +336,7 @@ class GenerationIntegrationTestsMixin:
 
         self.assertTrue(np.allclose(np.sum(transition_scores, axis=-1), outputs.sequences_scores, atol=1e-3))
 
+    @slow
     def test_transition_scores_early_stopping(self):
         # This is an aggressive test that makes sure that `beam_search's`
         # transition scores are computed correctly for varying `num_return_sequences`, `num_beams` and `batch_size > 1`

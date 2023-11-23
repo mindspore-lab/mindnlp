@@ -18,7 +18,7 @@ import unittest
 import numpy as np
 from mindnlp.transformers import AlbertConfig
 from mindnlp.transformers.models.auto import get_values
-from mindnlp.utils.testing_utils import require_mindspore, is_mindspore_available
+from mindnlp.utils.testing_utils import require_mindspore, is_mindspore_available, slow
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, ids_tensor, random_attention_mask
@@ -317,6 +317,7 @@ class AlbertModelTest(ModelTesterMixin, unittest.TestCase):
             config_and_inputs[0].position_embedding_type = type
             self.model_tester.create_and_check_model(*config_and_inputs)
 
+    @slow
     def test_model_from_pretrained(self):
         for model_name in ALBERT_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
             model = AlbertModel.from_pretrained(model_name)
@@ -325,6 +326,7 @@ class AlbertModelTest(ModelTesterMixin, unittest.TestCase):
 
 @require_mindspore
 class AlbertModelIntegrationTest(unittest.TestCase):
+    @slow
     def test_inference_no_head_absolute_embedding(self):
         model = AlbertModel.from_pretrained("albert-base-v2")
         input_ids = mindspore.tensor([[0, 345, 232, 328, 740, 140, 1695, 69, 6078, 1588, 2]])

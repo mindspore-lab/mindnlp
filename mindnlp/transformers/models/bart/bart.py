@@ -100,7 +100,7 @@ def _expand_mask(mask: Tensor, dtype: mstype, tgt_len: Optional[int] = None):
 
     return inverted_mask.masked_fill(
         inverted_mask.to(mindspore.bool_),
-        np.finfo(mindspore.dtype_to_nptype(dtype)).min,
+        Tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min),
     )
 
 

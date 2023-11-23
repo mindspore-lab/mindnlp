@@ -97,6 +97,7 @@ class PretrainedConfig:
             if not isinstance(self.id2label, dict):
                 raise ValueError("Argument id2label should be a dictionary.")
             num_labels = kwargs.pop("num_labels", None)
+            print(num_labels)
             if num_labels is not None and len(self.id2label) != num_labels:
                 logger.warning(
                     f"You passed along `num_labels={num_labels}` with an incompatible id to label map: "

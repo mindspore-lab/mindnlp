@@ -30,6 +30,7 @@ from mindnlp.utils.testing_utils import (
     SMALL_MODEL_IDENTIFIER,
     RequestCounter,
     require_mindspore,
+    slow
 )
 
 from ..bert.test_modeling_bert import BertModelTester
@@ -80,13 +81,14 @@ if is_mindspore_available():
         MODEL_MAPPING,
     )
     from mindnlp.transformers.models.bert.modeling_bert import BERT_SUPPORT_LIST
-    from mindnlp.transformers.models.gpt2.modeling_gpt2 import GPT2_SUPPORT_LIST
+    from mindnlp.transformers.models.gpt2.modeling_gpt2 import GPT2_PRETRAINED_MODEL_ARCHIVE_LIST
     from mindnlp.transformers.models.t5.modeling_t5 import T5_SUPPORT_LIST
 
 
 @require_mindspore
 class AutoModelTest(unittest.TestCase):
 
+    @slow
     def test_model_from_pretrained(self):
         for model_name in BERT_SUPPORT_LIST[:1]:
             config = AutoConfig.from_pretrained(model_name)
@@ -107,6 +109,7 @@ class AutoModelTest(unittest.TestCase):
             # self.assertEqual(len(loading_info["error_msgs"]), 0)
 
 
+    @slow
     def test_model_for_pretraining_from_pretrained(self):
         for model_name in BERT_SUPPORT_LIST[:1]:
             config = AutoConfig.from_pretrained(model_name)
@@ -121,7 +124,7 @@ class AutoModelTest(unittest.TestCase):
             for key, value in loading_info.items():
                 self.assertEqual(len(value), 0)
 
-
+    @slow
     def test_lmhead_model_from_pretrained(self):
         for model_name in BERT_SUPPORT_LIST[:1]:
             config = AutoConfig.from_pretrained(model_name)
@@ -133,7 +136,8 @@ class AutoModelTest(unittest.TestCase):
             self.assertIsNotNone(model)
             self.assertIsInstance(model, BertForMaskedLM)
 
-    @unittest.skip('not support yet')
+
+    @slow
     def test_model_for_causal_lm(self):
         for model_name in GPT2_SUPPORT_LIST[:1]:
             config = AutoConfig.from_pretrained(model_name)
@@ -146,6 +150,7 @@ class AutoModelTest(unittest.TestCase):
             self.assertIsInstance(model, GPT2LMHeadModel)
 
 
+    @slow
     def test_model_for_masked_lm(self):
         for model_name in BERT_SUPPORT_LIST[:1]:
             config = AutoConfig.from_pretrained(model_name)
@@ -158,6 +163,7 @@ class AutoModelTest(unittest.TestCase):
             self.assertIsInstance(model, BertForMaskedLM)
 
     @unittest.skip('not support yet')
+    @slow
     def test_model_for_encoder_decoder_lm(self):
         for model_name in T5_SUPPORT_LIST[:1]:
             config = AutoConfig.from_pretrained(model_name)
@@ -170,6 +176,7 @@ class AutoModelTest(unittest.TestCase):
             self.assertIsInstance(model, T5ForConditionalGeneration)
 
 
+    @slow
     def test_sequence_classification_model_from_pretrained(self):
         for model_name in BERT_SUPPORT_LIST[:1]:
             config = AutoConfig.from_pretrained(model_name)
@@ -184,6 +191,7 @@ class AutoModelTest(unittest.TestCase):
             self.assertIsInstance(model, BertForSequenceClassification)
 
 
+    @slow
     def test_question_answering_model_from_pretrained(self):
         for model_name in BERT_SUPPORT_LIST[:1]:
             config = AutoConfig.from_pretrained(model_name)
@@ -197,6 +205,7 @@ class AutoModelTest(unittest.TestCase):
 
 
     @unittest.skip('not support yet')
+    @slow
     def test_table_question_answering_model_from_pretrained(self):
         for model_name in TAPAS_PRETRAINED_MODEL_ARCHIVE_LIST[5:6]:
             config = AutoConfig.from_pretrained(model_name)
@@ -211,6 +220,7 @@ class AutoModelTest(unittest.TestCase):
             self.assertIsInstance(model, TapasForQuestionAnswering)
 
 
+    @slow
     def test_token_classification_model_from_pretrained(self):
         for model_name in BERT_SUPPORT_LIST[:1]:
             config = AutoConfig.from_pretrained(model_name)
