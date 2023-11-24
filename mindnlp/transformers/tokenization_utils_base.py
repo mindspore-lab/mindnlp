@@ -2447,6 +2447,10 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
             # for mindspore.dataset
             if isinstance(text, np.ndarray):
                 text = str(text)
+                if isinstance(text_pair, np.ndarray):
+                    text_pair = str(text_pair)
+                elif isinstance(text_pair, list):
+                    text_pair = [str(t) for t in text_pair]
                 return_tensors = 'np'
                 for_ms_ds = True
             # The context manager will send the inputs as normal texts and not text_target, but we shouldn't change the

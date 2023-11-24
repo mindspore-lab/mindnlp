@@ -148,6 +148,7 @@ cmp/
 
 # txt files
 !requirements.txt
+train_with_summ.txt
 
 # mindspore profiler
 RuntimeProfiler*
