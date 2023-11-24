@@ -19,6 +19,7 @@
 Injection mindspore.nn for MindNLP
 """
 import math
+from packaging import version
 import mindspore
 import mindspore.common.dtype as mstype
 from mindspore import nn, ops, Tensor, Parameter
@@ -250,6 +251,14 @@ if DEVICE_TARGET == 'Ascend':
     Tensor.__and__ = bitwise_and
     StubTensor.bitwise_and = bitwise_and
     StubTensor.__and__ = bitwise_and
+
+
+if version.parse(mindspore.__version__) < version.parse('2.2.0'):
+    def eq(self, other):
+        """patched eq"""
+        return ops.equal(self, other)
+    Tensor.eq = eq
+    StubTensor.eq = eq
 
 class Dense(nn.Cell):
     """patched Dense"""

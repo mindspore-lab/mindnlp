@@ -1043,6 +1043,12 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             param_dict[name] = param
         return param_dict
 
+    def trainable_params(self, recurse=True):
+        """
+        fix duplicated weights
+        """
+        return list(set(filter(lambda x: x.requires_grad, self.get_parameters(expand=recurse))))
+
     def check_names_and_refresh_name(self):
         """
         fix ignore tied weights
