@@ -541,8 +541,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         # Self-attention mask.
         query_length = input_shape[-1]
         key_length = past_length + query_length
-        self_attention_mask = Tensor(self.bias[None, key_length -
-                                               query_length: key_length, :key_length], dtype=mindspore.int64)
+        self_attention_mask = self.bias[None, key_length - query_length: key_length, :key_length]
 
         if attention_mask is not None:
             self_attention_mask = self_attention_mask * \
