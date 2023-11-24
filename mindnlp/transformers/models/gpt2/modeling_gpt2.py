@@ -1011,7 +1011,7 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
         else:
             if input_ids is not None:
                 sequence_lengths = ops.eq(input_ids, self.config.pad_token_id).int().argmax(-1) - 1
-                if mindspore.get_context('device_target') == 'CPU':
+                if mindspore.get_context('device_target') != 'GPU':
                     sequence_lengths = ops.where(sequence_lengths == -1, sequence_length -1, sequence_lengths)
 
             else:

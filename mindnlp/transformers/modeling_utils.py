@@ -981,7 +981,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             return
 
         # Check only the first and last input IDs to reduce overhead.
-        if self.config.pad_token_id in input_ids[:, [-1, 0]].asnumpy():
+        if self.config.pad_token_id in input_ids[:, [-1, 0]]:
             warn_string = (
                 "We strongly recommend passing in an `attention_mask` since your input_ids may be padded."
             )

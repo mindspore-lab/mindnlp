@@ -23,7 +23,6 @@ if is_mindspore_available():
         AutoTokenizer
     )
 
-
 class GPTBigCodeModelTester:
     def __init__(
         self,

@@ -18,6 +18,7 @@ MindNLP library.
 """
 import os
 os.environ["HF_ENDPOINT"] = 'https://hf-mirror.com/'
+os.environ["MS_DEV_FORCE_ACL"] = '1'
 
 import mindspore
 from mindspore import jit as ms_jit
