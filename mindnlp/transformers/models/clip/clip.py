@@ -665,7 +665,7 @@ class CLIPModel(CLIPPreTrainedModel):
 
         self.visual_projection = nn.Dense(self.vision_embed_dim, self.projection_dim, has_bias=False)
         self.text_projection = nn.Dense(self.text_embed_dim, self.projection_dim, has_bias=False)
-        self.logit_scale = Parameter(ops.ones([]) * self.config.logit_scale_init_value)
+        self.logit_scale = Parameter(ops.ones((1,)) * self.config.logit_scale_init_value)
 
     def get_text_features(
         self,

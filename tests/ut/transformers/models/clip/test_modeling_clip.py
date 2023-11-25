@@ -34,7 +34,6 @@ from mindnlp.transformers.models.clip.clip import (CLIPVisionEmbeddings,
                            )
 from .....common import MindNLPTestCase
 
-
 class TestModelingCLIP(MindNLPTestCase):
     """
     Test for clip model

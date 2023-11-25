@@ -19,6 +19,8 @@
 Injection mindspore.nn for MindNLP
 """
 import math
+from functools import partial
+from packaging import version
 import mindspore
 import mindspore.common.dtype as mstype
 from mindspore import nn, ops, Tensor, Parameter
@@ -54,10 +56,10 @@ def fp16_patch_decorator(func):
 def int32_patch_decorator(func):
     """int32 patch on ascend"""
     def wrapper(*args, **kwargs):
-        args = [arg.astype(mstype.int32) if isinstance(arg, Tensor) and arg.dtype == mstype.int64 \
+        args = [arg.astype(mstype.int32) if isinstance(arg, Tensor) and arg.dtype in (mstype.int64, mstype.bool_) \
                 else arg for arg in args]
-        has_int64 = any(bool(isinstance(arg, Tensor) and arg.dtype == mstype.int64) for arg in args)
-        kwargs = {k: (v.astype(mstype.int32) if isinstance(v, Tensor) and v.dtype == mstype.int64 else v) \
+        has_int64 = any(bool(isinstance(arg, Tensor) and arg.dtype in (mstype.int64, mstype.bool_)) for arg in args)
+        kwargs = {k: (v.astype(mstype.int32) if isinstance(v, Tensor) and v.dtype in (mstype.int64, mstype.bool_) else v) \
                   for k, v in kwargs.items()}
         result = func(*args, **kwargs)
         if has_int64:
@@ -71,6 +73,10 @@ def bool_patch_decorator(func):
     def wrapper(*args, **kwargs):
         args = [arg.astype(mstype.int32) if isinstance(arg, Tensor) and arg.dtype == mstype.bool_ \
                 else arg for arg in args]
+        if isinstance(args[0], (list, tuple)):
+            # for concat
+            args[0] = [arg.astype(mstype.int32) if isinstance(arg, Tensor) and arg.dtype == mstype.bool_ \
+                else arg for arg in args[0]]
         kwargs = {k: (v.astype(mstype.int32) if isinstance(v, Tensor) and v.dtype == mstype.bool_ else v) \
                   for k, v in kwargs.items()}
         result = func(*args, **kwargs)
@@ -204,9 +210,22 @@ ops.std = std
 Tensor.std = _std
 StubTensor.std = _std
 
+# Tensor.__contains__
+def _contains(self, key):
+    eq_res = ops.equal(self, key)
+    res = ops.any(eq_res)
+    return bool(res)
+
+Tensor.__contains__ = _contains
+StubTensor.__contains__ = _contains
+
 if DEVICE_TARGET == 'Ascend':
     # cumsum
     ops.cumsum = int32_patch_decorator(ops.cumsum)
+    def _cumsum(self, axis):
+        return ops.cumsum(self, axis)
+    Tensor.cumsum = _cumsum
+    StubTensor.cumsum = _cumsum
     # prod
     ops.prod = bool_patch_decorator(ops.prod)
     def prod(self, axis=None, keep_dims=False):
@@ -241,6 +260,20 @@ if DEVICE_TARGET == 'Ascend':
     Tensor.__and__ = bitwise_and
     StubTensor.bitwise_and = bitwise_and
     StubTensor.__and__ = bitwise_and
+    # isclose
+    ops.isclose = partial(ops.isclose, equal_nan=True)
+    # concat
+    ops.cat = bool_patch_decorator(ops.cat)
+    ops.concat = bool_patch_decorator(ops.concat)
+
+
+
+if version.parse(mindspore.__version__) < version.parse('2.2.0'):
+    def eq(self, other):
+        """patched eq"""
+        return ops.equal(self, other)
+    Tensor.eq = eq
+    StubTensor.eq = eq
 
 class Dense(nn.Cell):
     """patched Dense"""

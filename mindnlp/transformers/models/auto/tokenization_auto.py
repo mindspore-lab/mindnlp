@@ -27,6 +27,7 @@ import warnings
 from collections import OrderedDict
 from typing import Dict, Optional, Union
 
+from mindnlp.configs import MS_URL_BASE
 from mindnlp.utils import cached_file, is_sentencepiece_available, is_tokenizers_available, logging
 from ...configuration_utils import PretrainedConfig, EncoderDecoderConfig
 from ...tokenization_utils import PreTrainedTokenizer # pylint: disable=cyclic-import
@@ -535,6 +536,7 @@ def get_tokenizer_config(
             raise ValueError("`token` and `use_auth_token` are both specified. Please set only the argument `token`.")
         token = use_auth_token
 
+    endpoint = MS_URL_BASE
     resolved_config_file = cached_file(
         pretrained_model_name_or_path,
         TOKENIZER_CONFIG_FILE,
@@ -546,6 +548,7 @@ def get_tokenizer_config(
         subfolder=subfolder,
         _raise_exceptions_for_missing_entries=False,
         _raise_exceptions_for_connection_errors=False,
+        endpoint=endpoint
     )
     if resolved_config_file is None:
         logger.info("Could not locate the tokenizer configuration file, will try to use the model config instead.")
@@ -690,7 +693,7 @@ class AutoTokenizer:
 
         # If that did not work, let's try to use the config.
         if config_tokenizer_class is None:
-            if not isinstance(config, PretrainedConfig):
+            if config is None or not isinstance(config, PretrainedConfig):
                 config = AutoConfig.from_pretrained(
                     pretrained_model_name_or_path, trust_remote_code=trust_remote_code, **kwargs
                 )
