@@ -2630,7 +2630,7 @@ class GenerationMixin:
 
             # sample
             probs = ops.softmax(next_token_scores, axis=-1)
-            next_tokens = ops.multinomial(probs, num_samples=1, replacement=False).squeeze(1).astype(mindspore.int64)
+            next_tokens = ops.multinomial(probs, num_samples=1).squeeze(1).astype(mindspore.int64)
 
             # finished sentences should have their next token be a padding token
             if eos_token_id is not None:
