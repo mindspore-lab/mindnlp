@@ -266,7 +266,23 @@ if DEVICE_TARGET == 'Ascend':
     ops.cat = bool_patch_decorator(ops.cat)
     ops.concat = bool_patch_decorator(ops.concat)
 
+def custom_multinomial(probabilities, num_samples, replacement=True):
+    """custom multinomial"""
+    if replacement:
+        # with replacement
+        cumulative_probs = ops.cumsum(probabilities, axis=-1)
+        uniform_samples = ops.rand(probabilities.shape[:-1] + (num_samples,))
+        samples = ops.searchsorted(cumulative_probs, uniform_samples, right=True)
+    else:
+        # without replacement
+        indices = ops.arange(probabilities.shape[-1])
+        shuffled_indices = ops.randperm(probabilities.shape[-1]).unsqueeze(0).broadcast_to((probabilities.shape[:-1], -1))
+        selected_indices = shuffled_indices[:, :num_samples]
+        samples = indices[selected_indices]
+    return samples
 
+if DEVICE_TARGET == 'GPU':
+    ops.multinomial = custom_multinomial
 
 if version.parse(mindspore.__version__) < version.parse('2.2.0'):
     def eq(self, other):
