@@ -15,3 +15,12 @@
 """
 LongT5 Model.
 """
+from . import longt5, longt5_config, longt5_tokenizer
+from .longt5_config import *
+from .longt5 import *
+from .longt5_tokenizer import *
+
+__all__ = []
+__all__.extend(longt5.__all__)
+__all__.extend(longt5_config.__all__)
+__all__.extend(longt5_tokenizer.__all__)
