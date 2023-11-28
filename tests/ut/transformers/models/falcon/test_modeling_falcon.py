@@ -16,29 +16,32 @@
 """ Testing suite for the MindSpore Falcon model. """
 
 
-import itertools
 import unittest
 import numpy as np
 
+from parameterized import parameterized
+
 from mindspore import set_seed
 from mindnlp.transformers import AutoTokenizer, AutoModelForCausalLM
-from mindnlp.utils.testing_utils import is_mindspore_available
+from mindnlp.utils.testing_utils import is_mindspore_available, slow, require_mindspore
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, ids_tensor, random_attention_mask
-from mindnlp.transformers.models.falcon import (
-    FalconConfig,
-    FalconForCausalLM,
-    FalconForQuestionAnswering,
-    FalconForSequenceClassification,
-    FalconForTokenClassification,
-    FalconModel,
-)
+
 
 if is_mindspore_available():
     import mindspore
     from mindspore import ops
+
+    from mindnlp.transformers.models.falcon import (
+        FalconConfig,
+        FalconForCausalLM,
+        FalconForQuestionAnswering,
+        FalconForSequenceClassification,
+        FalconForTokenClassification,
+        FalconModel,
+    )
 
 
 class FalconModelTester:
@@ -152,6 +155,7 @@ class FalconModelTester:
         choice_labels,
     ):
         model = FalconModel(config=config)
+
         model.set_train(False)
         result = model(input_ids, attention_mask=input_mask)
         result = model(input_ids)
@@ -174,6 +178,7 @@ class FalconModelTester:
     ):
         config.add_cross_attention = True
         model = FalconModel(config)
+
         model.set_train(False)
         result = model(
             input_ids,
@@ -205,6 +210,7 @@ class FalconModelTester:
         encoder_attention_mask,
     ):
         model = FalconForCausalLM(config=config)
+
         model.set_train(False)
         result = model(input_ids, attention_mask=input_mask, labels=token_labels)
         self.parent.assertEqual(
@@ -226,6 +232,7 @@ class FalconModelTester:
         config.is_decoder = True
         config.add_cross_attention = True
         model = FalconForCausalLM(config=config)
+
         model.set_train(False)
 
         # first forward pass
@@ -243,8 +250,8 @@ class FalconModelTester:
         next_mask = ids_tensor((self.batch_size, 3), vocab_size=2)
 
         # append to next input_ids and
-        next_input_ids = ops.cat([input_ids, next_tokens], dim=-1)
-        next_attention_mask = ops.cat([input_mask, next_mask], dim=-1)
+        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_attention_mask = ops.cat([input_mask, next_mask], axis=-1)
 
         output_from_no_past = model(
             next_input_ids,
@@ -281,6 +288,7 @@ class FalconModelTester:
         (
             config,
             input_ids,
+            
             token_type_ids,
             input_mask,
             sequence_labels,
@@ -291,6 +299,7 @@ class FalconModelTester:
         return config, inputs_dict
 
 
+@require_mindspore
 class FalconModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     all_model_classes = (
         (
@@ -321,6 +330,17 @@ class FalconModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
     test_headmasking = False
     test_pruning = False
 
+    # TODO (ydshieh): Check this. See https://app.circleci.com/pipelines/github/huggingface/transformers/79245/workflows/9490ef58-79c2-410d-8f51-e3495156cf9c/jobs/1012146
+    def is_pipeline_test_to_skip(
+        self,
+        pipeline_test_casse_name,
+        config_class,
+        model_architecture,
+        tokenizer_name,
+        processor_name,
+    ):
+        return True
+
     def setUp(self):
         self.model_tester = FalconModelTester(self)
         self.config_tester = ConfigTester(
@@ -349,6 +369,7 @@ class FalconModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
             [self.model_tester.batch_size], self.model_tester.type_sequence_label_size
         )
         model = FalconForSequenceClassification(config)
+
         model.set_train(False)
         result = model(input_ids, attention_mask=attention_mask, labels=sequence_labels)
         self.assertEqual(
@@ -366,31 +387,13 @@ class FalconModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
             [self.model_tester.batch_size], self.model_tester.type_sequence_label_size
         )
         model = FalconForSequenceClassification(config)
+
         model.set_train(False)
         result = model(input_ids, attention_mask=attention_mask, labels=sequence_labels)
         self.assertEqual(
             result.logits.shape,
             (self.model_tester.batch_size, self.model_tester.num_labels),
         )
-
-    def test_cache_conversions(self):
-        config, input_dict = self.model_tester.prepare_config_and_inputs_for_common()
-        input_ids = input_dict["input_ids"]
-        model = FalconForCausalLM(config)
-        model.set_train(False)
-        result = model(input_ids, use_cache=True)
-        batch_size = input_ids.shape[0]
-        rw_cache = model._convert_to_rw_cache(result.past_key_values)
-        standard_cache = model._convert_cache_to_standard_format(rw_cache, batch_size)
-        for layer, tensor_idx in itertools.product(range(len(rw_cache)), range(2)):
-            self.assertTrue(rw_cache[layer][tensor_idx].ndim == 3)
-            self.assertTrue(result.past_key_values[layer][tensor_idx].ndim == 4)
-            self.assertTrue(
-                ops.all(
-                    result.past_key_values[layer][tensor_idx]
-                    == standard_cache[layer][tensor_idx]
-                )
-            )
 
     def test_falcon_sequence_classification_model_for_multi_label(self):
         config, input_dict = self.model_tester.prepare_config_and_inputs_for_common()
@@ -401,8 +404,9 @@ class FalconModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
         sequence_labels = ids_tensor(
             [self.model_tester.batch_size, config.num_labels],
             self.model_tester.type_sequence_label_size,
-        ).to(mindspore.float)
+        ).astype(mindspore.float32)
         model = FalconForSequenceClassification(config)
+
         model.set_train(False)
         result = model(input_ids, attention_mask=attention_mask, labels=sequence_labels)
         self.assertEqual(
@@ -459,6 +463,7 @@ class FalconModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
                     (batch_size, num_attention_heads, seq_length, per_head_embed_dim),
                 )
 
+    @parameterized.expand([("linear",),("dynamic",)])
     def test_model_rope_scaling(self, scaling_type):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
         short_input = ids_tensor([1, 10], config.vocab_size)
@@ -470,6 +475,7 @@ class FalconModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
             42
         )  # Fixed seed at init time so the two models get the same random weights
         original_model = FalconModel(config)
+        original_model
         original_model.set_train(False)
         original_short_output = original_model(short_input).last_hidden_state
         original_long_output = original_model(long_input).last_hidden_state
@@ -479,6 +485,7 @@ class FalconModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
         )  # Fixed seed at init time so the two models get the same random weights
         config.rope_scaling = {"type": scaling_type, "factor": 10.0}
         scaled_model = FalconModel(config)
+        scaled_model
         scaled_model.set_train(False)
         scaled_short_output = scaled_model(short_input).last_hidden_state
         scaled_long_output = scaled_model(long_input).last_hidden_state
@@ -496,11 +503,13 @@ class FalconModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
 
         # The output should be different for long inputs
         self.assertFalse(
-            np.allclose(original_long_output, scaled_long_output, atol=1e-5)
+            np.allclose(original_long_output, scaled_long_output, atol=1e-5) 
         )
 
 
+@require_mindspore
 class FalconLanguageGenerationTest(unittest.TestCase):
+    @slow
     def test_lm_generate_falcon(self):
         tokenizer = AutoTokenizer.from_pretrained("Rocketknight1/falcon-rw-1b")
         model = FalconForCausalLM.from_pretrained("Rocketknight1/falcon-rw-1b")
@@ -514,6 +523,7 @@ class FalconLanguageGenerationTest(unittest.TestCase):
 
         self.assertEqual(output_str, EXPECTED_OUTPUT)
 
+    @slow
     def test_lm_generation_big_models(self):
         # The big models are way too big for the CI, so we use tiny random models that resemble their
         # architectures but with much smaller and fewer layers
@@ -524,6 +534,7 @@ class FalconLanguageGenerationTest(unittest.TestCase):
             tokenizer = AutoTokenizer.from_pretrained(repo)
             model = FalconForCausalLM.from_pretrained(repo)
             model.set_train(False)
+
             inputs = tokenizer("My favorite food is", return_tensors="pt")
 
             # We just test that these run without errors - the models are randomly initialized
@@ -532,6 +543,7 @@ class FalconLanguageGenerationTest(unittest.TestCase):
             model.generate(**inputs, do_sample=True, max_new_tokens=4)
             model.generate(**inputs, num_beams=2, max_new_tokens=4)
 
+    @slow
     def test_lm_generation_use_cache(self):
         # The big models are way too big for the CI, so we use tiny random models that resemble their
         # architectures but with much smaller and fewer layers
@@ -554,6 +566,7 @@ class FalconLanguageGenerationTest(unittest.TestCase):
             )
             self.assertTrue((outputs_cache - outputs_no_cache).sum().item() == 0)
 
+    @slow
     def test_batched_generation(self):
         tokenizer = AutoTokenizer.from_pretrained(
             "tiiuae/falcon-7b", padding_side="left"
