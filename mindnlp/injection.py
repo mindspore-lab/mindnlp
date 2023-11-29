@@ -19,6 +19,8 @@
 Injection mindspore.nn for MindNLP
 """
 import math
+from functools import partial
+from packaging import version
 import mindspore
 import mindspore.common.dtype as mstype
 from mindspore import nn, ops, Tensor, Parameter
@@ -54,10 +56,10 @@ def fp16_patch_decorator(func):
 def int32_patch_decorator(func):
     """int32 patch on ascend"""
     def wrapper(*args, **kwargs):
-        args = [arg.astype(mstype.int32) if isinstance(arg, Tensor) and arg.dtype == mstype.int64 \
+        args = [arg.astype(mstype.int32) if isinstance(arg, Tensor) and arg.dtype in (mstype.int64, mstype.bool_) \
                 else arg for arg in args]
-        has_int64 = any(bool(isinstance(arg, Tensor) and arg.dtype == mstype.int64) for arg in args)
-        kwargs = {k: (v.astype(mstype.int32) if isinstance(v, Tensor) and v.dtype == mstype.int64 else v) \
+        has_int64 = any(bool(isinstance(arg, Tensor) and arg.dtype in (mstype.int64, mstype.bool_)) for arg in args)
+        kwargs = {k: (v.astype(mstype.int32) if isinstance(v, Tensor) and v.dtype in (mstype.int64, mstype.bool_) else v) \
                   for k, v in kwargs.items()}
         result = func(*args, **kwargs)
         if has_int64:
@@ -71,6 +73,10 @@ def bool_patch_decorator(func):
     def wrapper(*args, **kwargs):
         args = [arg.astype(mstype.int32) if isinstance(arg, Tensor) and arg.dtype == mstype.bool_ \
                 else arg for arg in args]
+        if isinstance(args[0], (list, tuple)):
+            # for concat
+            args[0] = [arg.astype(mstype.int32) if isinstance(arg, Tensor) and arg.dtype == mstype.bool_ \
+                else arg for arg in args[0]]
         kwargs = {k: (v.astype(mstype.int32) if isinstance(v, Tensor) and v.dtype == mstype.bool_ else v) \
                   for k, v in kwargs.items()}
         result = func(*args, **kwargs)
@@ -216,6 +222,10 @@ StubTensor.__contains__ = _contains
 if DEVICE_TARGET == 'Ascend':
     # cumsum
     ops.cumsum = int32_patch_decorator(ops.cumsum)
+    def _cumsum(self, axis):
+        return ops.cumsum(self, axis)
+    Tensor.cumsum = _cumsum
+    StubTensor.cumsum = _cumsum
     # prod
     ops.prod = bool_patch_decorator(ops.prod)
     def prod(self, axis=None, keep_dims=False):
@@ -250,6 +260,58 @@ if DEVICE_TARGET == 'Ascend':
     Tensor.__and__ = bitwise_and
     StubTensor.bitwise_and = bitwise_and
     StubTensor.__and__ = bitwise_and
+    # isclose
+    ops.isclose = partial(ops.isclose, equal_nan=True)
+    # concat
+    ops.cat = bool_patch_decorator(ops.cat)
+    ops.concat = bool_patch_decorator(ops.concat)
+
+def custom_multinomial(probabilities, num_samples, replacement=True):
+    """custom multinomial"""
+    if replacement:
+        # with replacement
+        cumulative_probs = ops.cumsum(probabilities, axis=-1)
+        uniform_samples = ops.rand(probabilities.shape[:-1] + (num_samples,))
+        samples = ops.searchsorted(cumulative_probs, uniform_samples, right=True)
+    else:
+        # without replacement
+        n_dist = 1
+        if probabilities.ndim > 1:
+            n_dist = probabilities.shape[-2]
+        random_uniform = ops.rand((n_dist * probabilities.shape[-1],))
+        if n_dist != 1:
+            random_uniform = random_uniform.reshape(n_dist, probabilities.shape[-1])
+
+        vals = ops.div(ops.log(random_uniform), probabilities + 1e-6)
+        _, samples = ops.top_k(vals, num_samples)
+
+    return samples
+
+if DEVICE_TARGET == 'GPU':
+    ops.multinomial = custom_multinomial
+
+if version.parse(mindspore.__version__) < version.parse('2.2.0'):
+    def eq(self, other):
+        """patched eq"""
+        return ops.equal(self, other)
+    Tensor.eq = eq
+    StubTensor.eq = eq
+
+
+def _eq(self, other):
+    if not isinstance(other, (int, float, Tensor)):
+        return False
+    if isinstance(other, Tensor) and self.shape != other.shape:
+        return False
+    if id(self) == id(other):
+        return True
+    # bool type is not supported for `Equal` operator in backend.
+    if self.dtype == mstype.bool_ or (isinstance(other, Tensor) and other.dtype == mstype.bool_):
+        self = self.to(mstype.int32)
+        other = other.to(mstype.int32)
+    return ops.eq(self, other)
+
+Parameter.__eq__ = _eq
 
 class Dense(nn.Cell):
     """patched Dense"""
@@ -441,12 +503,10 @@ class LayerNorm(nn.Cell):
         return f'normalized_shape={self.normalized_shape}, begin_norm_axis={self.begin_norm_axis}, ' \
                f'begin_params_axis={self.begin_params_axis}, gamma={self.gamma}, beta={self.beta}'
 
-
 def half(self):
     """patched nn.Cell.half"""
-    for param in self.get_parameters():
-        if param.dtype in (mindspore.float32, mindspore.float16):
-            param.set_dtype(mindspore.float16)
+    self.to_float(mindspore.float16)
+    return self
 
 nn.Cell.half = half
 

@@ -47,7 +47,6 @@ if is_mindspore_available():
         LlamaTokenizer,
     )
 
-mindspore.set_context(pynative_synchronize=True)
 
 class LlamaModelTester:
     def __init__(
@@ -403,7 +402,6 @@ class LlamaModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
 
         output_native = model.generate(**inputs, max_new_tokens=20, do_sample=False)
         output_native = tokenizer.batch_decode(output_native)
-        print(output_native)
 
         # model = LlamaForCausalLM.from_pretrained(
         #     "meta-llama/Llama-2-7b-hf", load_in_4bit=True, device_map={"": 0}, use_flash_attention_2=True

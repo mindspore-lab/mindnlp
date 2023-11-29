@@ -212,7 +212,6 @@ class RobertaSelfAttention(nn.Cell):
         # and values come from an encoder; the attention mask needs to be
         # such that the encoder's padding tokens are not attended to.
         is_cross_attention = encoder_hidden_states is not None
-
         if is_cross_attention and past_key_value is not None:
             # reuse k,v, cross_attentions
             key_layer = past_key_value[0]
@@ -257,7 +256,6 @@ class RobertaSelfAttention(nn.Cell):
                 position_ids_l = ops.arange(query_length, dtype=mindspore.int64).view(-1, 1)
             position_ids_r = ops.arange(key_length, dtype=mindspore.int64).view(1, -1)
             distance = position_ids_l - position_ids_r
-
             positional_embedding = self.distance_embedding(distance + self.max_position_embeddings - 1)
             positional_embedding = positional_embedding.to(dtype=query_layer.dtype)  # fp16 compatibility
 

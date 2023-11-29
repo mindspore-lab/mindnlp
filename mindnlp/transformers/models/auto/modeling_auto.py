@@ -32,6 +32,8 @@ MODEL_MAPPING_NAMES = OrderedDict(
         # Base model mapping
         ("bert", "BertModel"),
         ("roberta", "RobertaModel"),
+        ("gpt_bigcode", "GPTBigCodeModel"),
+        ("t5", "T5Model"),
     ]
 )
 

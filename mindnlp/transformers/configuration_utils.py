@@ -97,7 +97,7 @@ class PretrainedConfig:
             if not isinstance(self.id2label, dict):
                 raise ValueError("Argument id2label should be a dictionary.")
             num_labels = kwargs.pop("num_labels", None)
-            print(num_labels)
+
             if num_labels is not None and len(self.id2label) != num_labels:
                 logger.warning(
                     f"You passed along `num_labels={num_labels}` with an incompatible id to label map: "
@@ -531,6 +531,16 @@ class PretrainedConfig:
         output_dict = self.to_dict()
         with open(os.path.join(save_path, 'config.json'), encoding='utf-8') as f:
             json.dump(output_dict, f, sort_keys=True, indent=2)
+
+    def update(self, config_dict: Dict[str, Any]):
+        """
+        Updates attributes of this class with attributes from `config_dict`.
+
+        Args:
+            config_dict (`Dict[str, Any]`): Dictionary of attributes that should be updated for this class.
+        """
+        for key, value in config_dict.items():
+            setattr(self, key, value)
 
     def save_pretrained(self, save_directory: Union[str, os.PathLike], **kwargs):
         """

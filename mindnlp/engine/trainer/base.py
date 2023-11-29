@@ -188,9 +188,6 @@ class Trainer:
             tgt_columns (Optional[list[str], str]): Target label column names for loss function.
 
         """
-        if self.obj_network and tgt_columns is not None and self.evaluator is None:
-            logger.warning("'tgt_columns' does not take effect when 'loss_fn' is `None` and not do evaluation.")
-
         self._prepare_train_func()
 
         args_dict = vars(self)
@@ -230,10 +227,7 @@ class Trainer:
                     run_context.cur_step_nums += 1
                     self.cur_step_nums += 1
                     self.callback_manager.train_step_begin(run_context)
-                    if self.obj_network:
-                        loss = self.train_fn(**data)
-                    else:
-                        loss = self.train_fn(**data)
+                    loss = self.train_fn(**data)
                     loss_total += loss
                     run_context.loss = loss_total/self.cur_step_nums
                     progress.set_postfix(loss=loss_total/self.cur_step_nums)
@@ -349,6 +343,7 @@ class Trainer:
 
     def set_amp(self, level='O1', loss_scaler=None):
         """set amp"""
+        self.amp_level = level
         self.network = auto_mixed_precision(self.network, level)
         if loss_scaler is None:
             logger.warning("Trainer will use 'StaticLossScaler' with `scale_value=2 ** 10` when `loss_scaler` is None.")
