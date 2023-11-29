@@ -19,6 +19,7 @@ import inspect
 import os
 import tempfile
 import unittest
+import numpy as np
 
 from mindnlp.utils import is_mindspore_available
 from mindnlp.transformers.models.graphormer.configuration_graphormer import GraphormerConfig
@@ -32,6 +33,7 @@ from mindnlp.utils.testing_utils import (
 )
 
 if is_mindspore_available():
+    from mindspore import tensor
     from mindnlp.transformers.models.graphormer.modeling_graphormer import(
         GraphormerModel,
         GraphormerForGraphClassification,
@@ -1274,14 +1276,14 @@ class GraphormerModelIntegrationTest(unittest.TestCase):
 
         output = model(**model_input)["logits"]
 
-        expected_shape = torch.Size((2, 1))
+        expected_shape = (2, 1)
         self.assertEqual(output.shape, expected_shape)
 
-        expected_logs = torch.tensor(
+        expected_logs = tensor(
             [[7.6060], [7.4126]]
         )
 
-        self.assertTrue(torch.allclose(output, expected_logs, atol=1e-4))
+        self.assertTrue(np.allclose(output, expected_logs, atol=1e-4))
 
     r"""
     Test Graphormer
