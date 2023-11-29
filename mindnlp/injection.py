@@ -275,10 +275,16 @@ def custom_multinomial(probabilities, num_samples, replacement=True):
         samples = ops.searchsorted(cumulative_probs, uniform_samples, right=True)
     else:
         # without replacement
-        indices = ops.arange(probabilities.shape[-1])
-        shuffled_indices = ops.randperm(probabilities.shape[-1]).unsqueeze(0).broadcast_to((probabilities.shape[:-1], -1))
-        selected_indices = shuffled_indices[:, :num_samples]
-        samples = indices[selected_indices]
+        n_dist = 1
+        if probabilities.ndim > 1:
+            n_dist = probabilities.shape[-2]
+        random_uniform = ops.rand((n_dist * probabilities.shape[-1],))
+        if n_dist != 1:
+            random_uniform = random_uniform.reshape(n_dist, probabilities.shape[-1])
+
+        vals = ops.div(ops.log(random_uniform), probabilities + 1e-6)
+        _, samples = ops.top_k(vals, num_samples)
+
     return samples
 
 if DEVICE_TARGET == 'GPU':
@@ -290,6 +296,22 @@ if version.parse(mindspore.__version__) < version.parse('2.2.0'):
         return ops.equal(self, other)
     Tensor.eq = eq
     StubTensor.eq = eq
+
+
+def _eq(self, other):
+    if not isinstance(other, (int, float, Tensor)):
+        return False
+    if isinstance(other, Tensor) and self.shape != other.shape:
+        return False
+    if id(self) == id(other):
+        return True
+    # bool type is not supported for `Equal` operator in backend.
+    if self.dtype == mstype.bool_ or (isinstance(other, Tensor) and other.dtype == mstype.bool_):
+        self = self.to(mstype.int32)
+        other = other.to(mstype.int32)
+    return ops.eq(self, other)
+
+Parameter.__eq__ = _eq
 
 class Dense(nn.Cell):
     """patched Dense"""
@@ -481,12 +503,10 @@ class LayerNorm(nn.Cell):
         return f'normalized_shape={self.normalized_shape}, begin_norm_axis={self.begin_norm_axis}, ' \
                f'begin_params_axis={self.begin_params_axis}, gamma={self.gamma}, beta={self.beta}'
 
-
 def half(self):
     """patched nn.Cell.half"""
-    for param in self.get_parameters():
-        if param.dtype in (mindspore.float32, mindspore.float16):
-            param.set_dtype(mindspore.float16)
+    self.to_float(mindspore.float16)
+    return self
 
 nn.Cell.half = half
 

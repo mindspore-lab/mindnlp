@@ -40,7 +40,6 @@ if is_mindspore_available():
     )
     from mindnlp.transformers.models.albert.modeling_albert import ALBERT_PRETRAINED_MODEL_ARCHIVE_LIST
 
-
 class AlbertModelTester:
     def __init__(
         self,

@@ -233,7 +233,7 @@ class GenerationTesterMixin:
             output_hidden_states=output_hidden_states,
         )
         encoder_outputs["last_hidden_state"] = encoder_outputs.last_hidden_state.repeat_interleave(
-            num_interleave, axis=0
+            num_interleave, dim=0
         )
         input_ids = ops.zeros_like(input_ids[:, :1]) + model._get_decoder_start_token_id()
         attention_mask = None
@@ -2284,7 +2284,7 @@ class GenerationIntegrationTests(MindNLPTestCase, GenerationIntegrationTestsMixi
         # add encoder_outputs to model keyword arguments
         model_kwargs = {
             "encoder_outputs": model.get_encoder()(
-                encoder_input_ids.repeat_interleave(num_beams, axis=0), return_dict=True
+                encoder_input_ids.repeat_interleave(num_beams, dim=0), return_dict=True
             )
         }
 
@@ -2506,7 +2506,7 @@ class GenerationIntegrationTests(MindNLPTestCase, GenerationIntegrationTestsMixi
         # add encoder_outputs to model keyword arguments
         model_kwargs = {
             "encoder_outputs": model.get_encoder()(
-                encoder_input_ids.repeat_interleave(num_beams, axis=0), return_dict=True
+                encoder_input_ids.repeat_interleave(num_beams, dim=0), return_dict=True
             )
         }
 

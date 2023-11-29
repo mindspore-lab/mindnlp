@@ -1,10 +1,12 @@
+# coding=utf-8
+# Copyright 2018 Mesh TensorFlow authors, T5 Authors and HuggingFace Inc. team.
 # Copyright 2022 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,73 +14,56 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=C0103
-# pylint: disable=C0415
-# pylint: disable=E0401
+# pylint: disable=invalid-name
+# pylint: disable=arguments-renamed
+# pylint: disable=invalid-unary-operand-type
+# pylint: disable=missing-function-docstring
+# pylint: disable=missing-class-docstring
+""" MindSpore T5 model."""
 
-"""
-T5 model
-"""
-
-import os
-import logging
-import math
 import copy
-import mindspore
+import math
+import warnings
+from typing import List, Optional, Tuple, Union
+
 import numpy as np
-from mindspore import nn
-from mindspore import ops
-from mindspore import Parameter, Tensor
+import mindspore
+from mindspore import nn, ops, Parameter
+from mindspore.common.initializer import initializer, Constant, Normal
 
-from mindnlp._legacy.nn import Dropout
-from mindnlp._legacy.functional import arange
-from .t5_config import T5Config
-from ...modeling_utils import PreTrainedModel
+from mindnlp.utils import (
+    DUMMY_INPUTS,
+    DUMMY_MASK,
+    logging,
+)
 from ...activations import ACT2FN
+from ...modeling_outputs import (
+    BaseModelOutput,
+    BaseModelOutputWithPastAndCrossAttentions,
+    Seq2SeqLMOutput,
+    Seq2SeqModelOutput,
+    Seq2SeqQuestionAnsweringModelOutput,
+    Seq2SeqSequenceClassifierOutput,
+)
+from ...modeling_utils import PreTrainedModel
+from ...ms_utils import ALL_LAYERNORM_LAYERS, find_pruneable_heads_and_indices, prune_linear_layer
+from .configuration_t5 import T5Config
 
 
-__all__ = ['T5Attention', 'T5DenseActDense', 'T5DenseGatedActDense', 'T5EncoderModel',
-           'T5ForConditionalGeneration', 'T5LayerCrossAttention', 'T5Stack', 'T5LayerSelfAttention',
-           'T5LayerNorm', 'T5Model', 'T5LayerFF', 'T5Block', 'T5PreTrainedModel']
+logger = logging.get_logger(__name__)
 
-T5_SUPPORT_LIST = ["t5-small", "t5-base", "t5-large", "t5-3b", "t5-11b", "ChatYuan-large-v2"]
-
-
-def torch_to_mindspore(pth_file, **kwargs):
-    """torch to mindspore."""
-    prefix = kwargs.get("prefix", "")
-
-    try:
-        import torch
-    except Exception as exc:
-        raise ImportError("'import torch' failed, please install torch by "
-                          "`pip install torch` or instructions from 'https://pytorch.org'") \
-        from exc
-
-    from mindspore.train.serialization import save_checkpoint
-
-    logging.info('Starting checkpoint conversion.')
-    ms_ckpt = []
-    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
-
-    for k, v in state_dict.items():
-        if 'shared.weight' in k:
-            k = k.replace('shared.weight', 'decoder.embed_tokens.embedding_table')
-        if 'relative_attention_bias.weight' in k:
-            k = k.replace('relative_attention_bias.weight', 'relative_attention_bias.embedding_table')
-        if prefix:
-            k = prefix + "." + k
-        ms_ckpt.append({'name': k, 'data': Tensor(v.numpy())})
-
-    ms_ckpt_path = pth_file.replace('pytorch_model.bin','mindspore.ckpt')
-    if not os.path.exists(ms_ckpt_path):
-        try:
-            save_checkpoint(ms_ckpt, ms_ckpt_path)
-        except Exception as exc:
-            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, please checkout the path.') \
-            from exc
-
-    return ms_ckpt_path
+####################################################
+# This dict contains ids and associated url
+# for the pretrained weights provided with the models
+####################################################
+T5_PRETRAINED_MODEL_ARCHIVE_LIST = [
+    "t5-small",
+    "t5-base",
+    "t5-large",
+    "t5-3b",
+    "t5-11b",
+    # See all T5 models at https://huggingface.co/models?filter=t5
+]
 
 class T5LayerNorm(nn.Cell):
     """T5LayerNorm"""
@@ -87,18 +72,18 @@ class T5LayerNorm(nn.Cell):
         Construct a layernorm module in the T5 style. No bias and no subtraction of mean.
         """
         super().__init__()
-        self.weight = Parameter(ops.ones(hidden_size, mindspore.float32))
+        self.gamma = Parameter(ops.ones(hidden_size, mindspore.float32), 'gamma')
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
         variance = hidden_states.astype(mindspore.float32).pow(2).mean(-1, keep_dims=True)
         hidden_states = hidden_states / ops.sqrt(variance + self.variance_epsilon)
         # convert into half-precision if necessary
-        if self.weight.dtype in [mindspore.float16]:
-            hidden_states = hidden_states.astype(self.weight.dtype)
+        if self.gamma.dtype in [mindspore.float16, mindspore.bfloat16]:
+            hidden_states = hidden_states.astype(self.gamma.dtype)
+        return self.gamma * hidden_states
 
-        return self.weight * hidden_states
-
+ALL_LAYERNORM_LAYERS.append(T5LayerNorm)
 
 class T5DenseActDense(nn.Cell):
     """T5DenseActDense"""
@@ -106,7 +91,7 @@ class T5DenseActDense(nn.Cell):
         super().__init__()
         self.wi = nn.Dense(config.d_model, config.d_ff, has_bias=False)
         self.wo = nn.Dense(config.d_ff, config.d_model, has_bias=False)
-        self.dropout = Dropout(p=config.dropout_rate)
+        self.dropout = nn.Dropout(p=config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
     def construct(self, hidden_states):
@@ -126,7 +111,7 @@ class T5DenseGatedActDense(nn.Cell):
         self.wi_0 = nn.Dense(config.d_model, config.d_ff, has_bias=False)
         self.wi_1 = nn.Dense(config.d_model, config.d_ff, has_bias=False)
         self.wo = nn.Dense(config.d_ff, config.d_model, has_bias=False)
-        self.dropout = Dropout(p=config.dropout_rate)
+        self.dropout = nn.Dropout(p=config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
     def construct(self, hidden_states):
@@ -141,6 +126,7 @@ class T5DenseGatedActDense(nn.Cell):
         hidden_states = self.wo(hidden_states)
         return hidden_states
 
+
 class T5LayerFF(nn.Cell):
     """T5LayerFF"""
     def __init__(self, config: T5Config):
@@ -151,7 +137,7 @@ class T5LayerFF(nn.Cell):
             self.DenseReluDense = T5DenseActDense(config)
 
         self.layer_norm = T5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
-        self.dropout = Dropout(p=config.dropout_rate)
+        self.dropout = nn.Dropout(p=config.dropout_rate)
 
     def construct(self, hidden_states):
         forwarded_states = self.layer_norm(hidden_states)
@@ -183,42 +169,75 @@ class T5Attention(nn.Cell):
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(self.relative_attention_num_buckets, self.n_heads)
         self.pruned_heads = set()
-        self.gradient_checkpointing = False
+
+    def prune_heads(self, heads):
+        if len(heads) == 0:
+            return
+        heads, index = find_pruneable_heads_and_indices(
+            heads, self.n_heads, self.key_value_proj_dim, self.pruned_heads
+        )
+        # Prune linear layers
+        self.q = prune_linear_layer(self.q, index)
+        self.k = prune_linear_layer(self.k, index)
+        self.v = prune_linear_layer(self.v, index)
+        self.o = prune_linear_layer(self.o, index, axis=1)
+        # Update hyper params
+        self.n_heads = self.n_heads - len(heads)
+        self.inner_dim = self.key_value_proj_dim * self.n_heads
+        self.pruned_heads = self.pruned_heads.union(heads)
 
     @staticmethod
     def _relative_position_bucket(relative_position, bidirectional=True, num_buckets=32, max_distance=128):
+        """
+        Adapted from Mesh Tensorflow:
+        https://github.com/tensorflow/mesh/blob/0cb87fe07da627bf0b7e60475d59f95ed6b5be3d/mesh_tensorflow/transformer/transformer_layers.py#L593
+
+        Translate relative position to a bucket number for relative attention. The relative position is defined as
+        memory_position - query_position, i.e. the distance in tokens from the attending position to the attended-to
+        position. If bidirectional=False, then positive relative positions are invalid. We use smaller buckets for
+        small absolute relative_position and larger buckets for larger absolute relative_positions. All relative
+        positions >=max_distance map to the same bucket. All relative positions <=-max_distance map to the same bucket.
+        This should allow for more graceful generalization to longer sequences than the model has been trained on
+
+        Args:
+            relative_position: an int32 Tensor
+            bidirectional: a boolean - whether the attention is bidirectional
+            num_buckets: an integer
+            max_distance: an integer
+
+        Returns:
+            a Tensor with the same shape as relative_position, containing int32 values in the range [0, num_buckets)
+        """
         relative_buckets = 0
         if bidirectional:
             num_buckets //= 2
-            relative_buckets += (relative_position > 0).astype(mindspore.int64) * num_buckets
+            relative_buckets += (relative_position > 0).to(mindspore.int64) * num_buckets
             relative_position = ops.abs(relative_position)
         else:
-            relative_position = 0 - \
-                ops.minimum(relative_position, ops.zeros(relative_position.shape)).astype(mindspore.int64)
+            relative_position = -ops.minimum(relative_position, ops.zeros_like(relative_position))
         # now relative_position is in the range [0, inf)
+
         # half of the buckets are for exact increments in positions
         max_exact = num_buckets // 2
         is_small = relative_position < max_exact
+
         # The other half of the buckets are for logarithmically bigger bins in positions up to max_distance
         relative_position_if_large = max_exact + (
-            ops.log(relative_position.astype(mindspore.float32) / max_exact)
+            ops.log(relative_position.float() / max_exact)
             / math.log(max_distance / max_exact)
             * (num_buckets - max_exact)
-        ).astype(mindspore.int64)
+        ).to(mindspore.int64)
         relative_position_if_large = ops.minimum(
-            relative_position_if_large, ops.fill(relative_position_if_large.dtype, \
-                                                 relative_position_if_large.shape, num_buckets - 1)
+            relative_position_if_large, ops.full_like(relative_position_if_large, num_buckets - 1)
         )
-        # relative_buckets += ops.where(is_small, relative_position\
-        # , relative_position_if_large) # mindspore 2.0
-        relative_buckets += ops.select(is_small.astype(mindspore.bool_), \
-        relative_position, relative_position_if_large) # mindspore 1.10
+
+        relative_buckets += ops.where(is_small, relative_position, relative_position_if_large)
         return relative_buckets
 
     def compute_bias(self, query_length, key_length):
         """Compute binned relative position bias"""
-        context_position = arange(query_length, dtype=mindspore.int64)[:, None]
-        memory_position = arange(key_length, dtype=mindspore.int64)[None, :]
+        context_position = ops.arange(query_length, dtype=mindspore.int64)[:, None]
+        memory_position = ops.arange(key_length, dtype=mindspore.int64)[None, :]
         relative_position = memory_position - context_position  # shape (query_length, key_length)
         relative_position_bucket = self._relative_position_bucket(
             relative_position,  # shape (query_length, key_length)
@@ -227,7 +246,7 @@ class T5Attention(nn.Cell):
             max_distance=self.relative_attention_max_distance,
         )
         values = self.relative_attention_bias(relative_position_bucket)  # shape (query_length, key_length, num_heads)
-        values = values.transpose([2, 0, 1]).expand_dims(0)  # shape (1, num_heads, query_length, key_length)
+        values = values.permute([2, 0, 1]).unsqueeze(0)  # shape (1, num_heads, query_length, key_length)
         return values
 
     def construct(
@@ -253,9 +272,10 @@ class T5Attention(nn.Cell):
         real_seq_length = seq_length
 
         if past_key_value is not None:
-            assert (
-                len(past_key_value) == 2
-            ), f"past_key_value should have 2 past states: keys and values. Got { len(past_key_value)} past states"
+            if len(past_key_value) != 2:
+                raise ValueError(
+                    f"past_key_value should have 2 past states: keys and values. Got { len(past_key_value)} past states"
+                )
             real_seq_length += past_key_value[0].shape[2] if query_length is None else query_length
 
         key_length = real_seq_length if key_value_states is None else key_value_states.shape[1]
@@ -297,7 +317,6 @@ class T5Attention(nn.Cell):
 
         # get query states
         query_states = shape(self.q(hidden_states))  # (batch_size, n_heads, seq_length, dim_per_head)
-
         # get key/value states
         key_states = project(
             hidden_states, self.k, key_value_states, past_key_value[0] if past_key_value is not None else None
@@ -314,13 +333,10 @@ class T5Attention(nn.Cell):
         if position_bias is None:
             if not self.has_relative_attention_bias:
                 position_bias = ops.zeros(
-                    (1, self.n_heads, real_seq_length, key_length), scores.dtype
+                    (1, self.n_heads, real_seq_length, key_length), dtype=scores.dtype
                 )
-                if self.gradient_checkpointing and self.training:
-                    position_bias.requires_grad = True
             else:
                 position_bias = self.compute_bias(real_seq_length, key_length)
-
             # if key and values are already calculated
             # we want only the last query position bias
             if past_key_value is not None:
@@ -330,20 +346,19 @@ class T5Attention(nn.Cell):
                 position_bias = position_bias + mask  # (batch_size, n_heads, seq_length, key_length)
 
         if self.pruned_heads:
-            mask = ops.ones(position_bias.shape[1], mindspore.float32)
+            mask = ops.ones(position_bias.shape[1])
             mask[list(self.pruned_heads)] = 0
             position_bias_masked = position_bias[:, mask.bool()]
         else:
             position_bias_masked = position_bias
 
         scores += position_bias_masked
-        attn_weights = ops.softmax(scores.astype(mindspore.float32), axis=-1).astype(
+        attn_weights = ops.softmax(scores.float() + 1e-10, axis=-1).astype(
             scores.dtype
         )  # (batch_size, n_heads, seq_length, key_length)
-        if self.training:
-            attn_weights = ops.dropout(
-                attn_weights, p=self.dropout
-            )  # (batch_size, n_heads, seq_length, key_length)
+        attn_weights = ops.dropout(
+            attn_weights, p=self.dropout, training=self.training
+        )  # (batch_size, n_heads, seq_length, key_length)
 
         # Mask heads if we want to
         if layer_head_mask is not None:
@@ -359,13 +374,15 @@ class T5Attention(nn.Cell):
             outputs = outputs + (attn_weights,)
         return outputs
 
+
+
 class T5LayerSelfAttention(nn.Cell):
     """T5LayerSelfAttention"""
     def __init__(self, config, has_relative_attention_bias=False):
         super().__init__()
         self.SelfAttention = T5Attention(config, has_relative_attention_bias=has_relative_attention_bias)
         self.layer_norm = T5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
-        self.dropout = Dropout(p=config.dropout_rate)
+        self.dropout = nn.Dropout(p=config.dropout_rate)
 
     def construct(
         self,
@@ -397,7 +414,7 @@ class T5LayerCrossAttention(nn.Cell):
         super().__init__()
         self.EncDecAttention = T5Attention(config, has_relative_attention_bias=False)
         self.layer_norm = T5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
-        self.dropout = Dropout(p=config.dropout_rate)
+        self.dropout = nn.Dropout(p=config.dropout_rate)
 
     def construct(
         self,
@@ -455,7 +472,6 @@ class T5Block(nn.Cell):
         output_attentions=False,
         # return_dict=True,
     ):
-
         if past_key_value is not None:
             if not self.is_decoder:
                 logging.warning("`past_key_values` is passed to the encoder. Please make sure this is intended.")
@@ -472,7 +488,6 @@ class T5Block(nn.Cell):
             cross_attn_past_key_value = past_key_value[2:]
         else:
             self_attn_past_key_value, cross_attn_past_key_value = None, None
-
         self_attention_outputs = self.layer[0](
             hidden_states,
             attention_mask=attention_mask,
@@ -487,7 +502,7 @@ class T5Block(nn.Cell):
 
         # clamp inf values to enable fp16 training
         if hidden_states.dtype == mindspore.float16 and ops.isinf(hidden_states).any():
-            clamp_value = Tensor(np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).max) - 1000
+            clamp_value = mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).max) - 1000
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         do_cross_attention = self.is_decoder and encoder_hidden_states is not None
@@ -514,7 +529,7 @@ class T5Block(nn.Cell):
 
             # clamp inf values to enable fp16 training
             if hidden_states.dtype == mindspore.float16 and ops.isinf(hidden_states).any():
-                clamp_value = Tensor(np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).max) - 1000
+                clamp_value = mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).max) - 1000
                 hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
             # Combine self attn and cross attn key value states
@@ -529,7 +544,7 @@ class T5Block(nn.Cell):
 
         # clamp inf values to enable fp16 training
         if hidden_states.dtype == mindspore.float16 and ops.isinf(hidden_states).any():
-            clamp_value = Tensor(np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).max) - 1000
+            clamp_value = mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).max) - 1000
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
@@ -544,6 +559,24 @@ class T5Block(nn.Cell):
         # (self-attention weights), (cross-attention position bias),(cross-attention weights)
 
 
+class T5ClassificationHead(nn.Cell):
+    """Head for sentence-level classification tasks."""
+
+    def __init__(self, config: T5Config):
+        super().__init__()
+        self.dense = nn.Dense(config.d_model, config.d_model)
+        self.dropout = nn.Dropout(p=config.classifier_dropout)
+        self.out_proj = nn.Dense(config.d_model, config.num_labels)
+
+    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        hidden_states = self.dropout(hidden_states)
+        hidden_states = self.dense(hidden_states)
+        hidden_states = ops.tanh(hidden_states)
+        hidden_states = self.dropout(hidden_states)
+        hidden_states = self.out_proj(hidden_states)
+        return hidden_states
+
+
 class T5PreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
@@ -551,66 +584,140 @@ class T5PreTrainedModel(PreTrainedModel):
     """
     config_class = T5Config
     base_model_prefix = "transformer"
-    convert_torch_to_mindspore = torch_to_mindspore
 
     is_parallelizable = True
     supports_gradient_checkpointing = True
     _no_split_modules = ["T5Block"]
     _keep_in_fp32_modules = ["wo"]
 
-    # TODO
-    def get_input_embeddings(self):
-        pass
+    @property
+    def dummy_inputs(self):
+        input_ids = mindspore.tensor(DUMMY_INPUTS)
+        input_mask = mindspore.tensor(DUMMY_MASK)
+        dummy_inputs = {
+            "decoder_input_ids": input_ids,
+            "input_ids": input_ids,
+            "decoder_attention_mask": input_mask,
+        }
+        return dummy_inputs
 
-    #TODO
-    def get_position_embeddings(self):
-        pass
+    def _init_weights(self, cell):
+        """Initialize the weights"""
+        factor = self.config.initializer_factor  # Used for testing weights initialization
+        if isinstance(cell, T5LayerNorm):
+            cell.gamma.set_data(initializer(Constant(factor * 1.0), cell.gamma.shape, cell.gamma.dtype))
+        elif isinstance(
+            cell,
+            (T5Model, T5ForConditionalGeneration, T5EncoderModel, T5ForQuestionAnswering),
+        ):
+            # Mesh TensorFlow embeddings initialization
+            # See https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L1624
+            cell.shared.embedding_table.set_data(initializer(Normal(factor * 1.0),
+                                                cell.shared.embedding_table.shape, cell.shared.embedding_table.dtype))
+            if hasattr(cell, "lm_head") and not self.config.tie_word_embeddings:
+                cell.lm_head.weight.set_data(initializer(Normal(factor * 1.0), cell.lm_head.weight.shape, cell.lm_head.weight.dtype))
+            if hasattr(cell, "qa_outputs"):
+                cell.qa_outputs.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
+                                                            cell.qa_outputs.weight.shape, cell.qa_outputs.weight.dtype))
+                cell.qa_outputs.bias.set_data(initializer('zeros', cell.qa_outputs.bias.shape, cell.qa_outputs.bias.dtype))
+        elif isinstance(cell, T5ClassificationHead):
+            cell.dense.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
+                                                cell.dense.weight.shape, cell.dense.weight.dtype))
 
-    #TODO
-    def resize_position_embeddings(self):
-        pass
+            if hasattr(cell.dense, "bias") and cell.dense.bias is not None:
+                cell.dense.bias.set_data(initializer('zeros', cell.dense.bias.shape, cell.dense.bias.dtype))
+            cell.out_proj.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
+                                                cell.out_proj.weight.shape, cell.out_proj.weight.dtype))
 
-    #TODO
-    def set_input_embeddings(self):
-        pass
+            if hasattr(cell.out_proj, "bias") and cell.out_proj.bias is not None:
+                cell.out_proj.bias.set_data(initializer('zeros', cell.out_proj.bias.shape, cell.out_proj.bias.dtype))
+        elif isinstance(cell, T5DenseActDense):
+            # Mesh TensorFlow FF initialization
+            # See https://github.com/tensorflow/mesh/blob/master/mesh_tensorflow/transformer/transformer_layers.py#L56
+            # and https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L89
+            cell.wi.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
+                                                cell.wi.weight.shape, cell.wi.weight.dtype))
+            if hasattr(cell.wi, "bias") and cell.wi.bias is not None:
+                cell.wi.bias.set_data(initializer('zeros', cell.wi.bias.shape, cell.wi.bias.dtype))
 
-    #TODO
-    def post_init(self):
-        pass
+            cell.wo.weight.set_data(initializer(Normal(factor * ((self.config.d_ff) ** -0.5)),
+                                                cell.wo.weight.shape, cell.wo.weight.dtype))
+
+            if hasattr(cell.wo, "bias") and cell.wo.bias is not None:
+                cell.wo.bias.set_data(initializer('zeros', cell.wo.bias.shape, cell.wo.bias.dtype))
+        elif isinstance(cell, T5DenseGatedActDense):
+            cell.wi_0.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
+                                                cell.wi_0.weight.shape, cell.wi_0.weight.dtype))
+            if hasattr(cell.wi_0, "bias") and cell.wi_0.bias is not None:
+                cell.wi_0.bias.set_data(initializer('zeros', cell.wi_0.bias.shape, cell.wi_0.bias.dtype))
+
+            cell.wi_1.weight.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)),
+                                                cell.wi_1.weight.shape, cell.wi_1.weight.dtype))
+            if hasattr(cell.wi_1, "bias") and cell.wi_1.bias is not None:
+                cell.wi_1.bias.set_data(initializer('zeros', cell.wi_1.bias.shape, cell.wi_1.bias.dtype))
+
+            cell.wo.weight.set_data(initializer(Normal(factor * ((self.config.d_ff) ** -0.5)),
+                                                cell.wo.weight.shape, cell.wo.weight.dtype))
+
+            if hasattr(cell.wo, "bias") and cell.wo.bias is not None:
+                cell.wo.bias.set_data(initializer('zeros', cell.wo.bias.shape, cell.wo.bias.dtype))
+        elif isinstance(cell, T5Attention):
+            # Mesh TensorFlow attention initialization to avoid scaling before softmax
+            # See https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/transformer/attention.py#L136
+            d_model = self.config.d_model
+            key_value_proj_dim = self.config.d_kv
+            n_heads = self.config.num_heads
+
+            cell.q.weight.set_data(initializer(Normal(factor * ((d_model * key_value_proj_dim) ** -0.5)),
+                                                cell.q.weight.shape, cell.q.weight.dtype))
+            cell.k.weight.set_data(initializer(Normal(factor * (d_model**-0.5)),
+                                                cell.k.weight.shape, cell.k.weight.dtype))
+            cell.v.weight.set_data(initializer(Normal(factor * (d_model**-0.5)),
+                                                cell.v.weight.shape, cell.v.weight.dtype))
+            cell.o.weight.set_data(initializer(Normal(factor * ((n_heads * key_value_proj_dim) ** -0.5)),
+                                                cell.o.weight.shape, cell.o.weight.dtype))
+            if cell.has_relative_attention_bias:
+                cell.relative_attention_bias.embedding_table.set_data(initializer(Normal(factor * (d_model**-0.5)),
+                                                    cell.relative_attention_bias.embedding_table.shape, cell.relative_attention_bias.embedding_table.dtype))
 
     def _shift_right(self, input_ids):
         decoder_start_token_id = self.config.decoder_start_token_id
         pad_token_id = self.config.pad_token_id
 
-        assert decoder_start_token_id is not None, (
-            "self.model.config.decoder_start_token_id has to be defined. In T5 it is usually set to the pad_token_id."
-            " See T5 docs for more information"
-        )
+        if decoder_start_token_id is None:
+            raise ValueError(
+                "self.model.config.decoder_start_token_id has to be defined. In T5 it is usually set to the pad_token_id. "
+                "See T5 docs for more information."
+            )
 
         # shift inputs to the right
-        shifted_input_ids = ops.zeros(input_ids.shape, input_ids.dtype)
+        shifted_input_ids = input_ids.new_zeros(input_ids.shape)
         shifted_input_ids[..., 1:] = input_ids[..., :-1].copy()
         shifted_input_ids[..., 0] = decoder_start_token_id
 
-        assert pad_token_id is not None, "self.model.config.pad_token_id has to be defined."
+        if pad_token_id is None:
+            raise ValueError("self.model.config.pad_token_id has to be defined.")
         # replace possible -100 values in labels by `pad_token_id`
-        shifted_input_ids = ops.masked_fill(shifted_input_ids, shifted_input_ids == -100, pad_token_id)
+        shifted_input_ids = shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
+
         return shifted_input_ids
 
 
 class T5Stack(T5PreTrainedModel):
     """T5Stack"""
-    def __init__(self, config, embed_tokens=None):
+    def __init__(self, config):
         super().__init__(config)
 
-        self.embed_tokens = embed_tokens
+        self.embed_tokens = nn.Embedding(config.vocab_size, config.d_model)
         self.is_decoder = config.is_decoder
 
         self.block = nn.CellList(
             [T5Block(config, has_relative_attention_bias=bool(i == 0)) for i in range(config.num_layers)]
         )
         self.final_layer_norm = T5LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
-        self.dropout = Dropout(config.dropout_rate)
+        self.dropout = nn.Dropout(p=config.dropout_rate)
+
+        self.post_init()
 
     def get_input_embeddings(self):
         return self.embed_tokens
@@ -681,7 +788,6 @@ class T5Stack(T5PreTrainedModel):
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
         extended_attention_mask = self.get_extended_attention_mask(attention_mask, input_shape)
-
         # If a 2D or 3D attention mask is provided for the cross-attention
         # we need to make broadcastable to [batch_size, num_heads, seq_length, seq_length]
         if self.is_decoder and encoder_hidden_states is not None:
@@ -710,7 +816,6 @@ class T5Stack(T5PreTrainedModel):
             cross_attn_layer_head_mask = cross_attn_head_mask[i]
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
-
 
             layer_outputs = layer_module(
                 hidden_states,
@@ -768,20 +873,23 @@ class T5Stack(T5PreTrainedModel):
                 ]
                 if v is not None
             )
-        output = (hidden_states,)+(present_key_value_state,)+\
-            (all_hidden_states,)+(all_attentions,)+(all_cross_attentions,)
-        return output
+        return BaseModelOutputWithPastAndCrossAttentions(
+            last_hidden_state=hidden_states,
+            past_key_values=present_key_value_states,
+            hidden_states=all_hidden_states,
+            attentions=all_attentions,
+            cross_attentions=all_cross_attentions,
+        )
+
 
 
 class T5Model(T5PreTrainedModel):
     """T5Model"""
-    _keys_to_ignore_on_load_missing = [
-        r"encoder.embed_tokens.weight",
-        r"decoder.embed_tokens.weight",
-    ]
     _keys_to_ignore_on_load_unexpected = [
-        r"decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight",
+        "decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.embedding_table",
     ]
+    _tied_weights_keys = ["encoder.embed_tokens.embedding_table", "decoder.embed_tokens.embedding_table"]
+
 
     def __init__(self, config: T5Config):
         super().__init__(config)
@@ -791,29 +899,42 @@ class T5Model(T5PreTrainedModel):
         encoder_config.is_decoder = False
         encoder_config.use_cache = False
         encoder_config.is_encoder_decoder = False
-        self.encoder = T5Stack(encoder_config, self.shared)
+        self.encoder = T5Stack(encoder_config)
 
         decoder_config = copy.deepcopy(config)
         decoder_config.is_decoder = True
         decoder_config.is_encoder_decoder = False
         decoder_config.num_layers = config.num_decoder_layers
-        self.decoder = T5Stack(decoder_config, self.shared)
+        self.decoder = T5Stack(decoder_config)
+
+        self.post_init()
 
     def get_input_embeddings(self):
         return self.shared
 
     def set_input_embeddings(self, new_embeddings):
         self.shared = new_embeddings
-        self.encoder.set_input_embeddings(new_embeddings)
-        self.decoder.set_input_embeddings(new_embeddings)
+        # self.encoder.set_input_embeddings(new_embeddings)
+        # self.decoder.set_input_embeddings(new_embeddings)
+
+    def _tie_weights(self):
+        if self.config.tie_word_embeddings:
+            self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
+            self._tie_or_clone_weights(self.decoder.embed_tokens, self.shared)
 
     def get_encoder(self):
-        """get encoder"""
         return self.encoder
 
     def get_decoder(self):
-        """get decoder"""
         return self.decoder
+
+    def _prune_heads(self, heads_to_prune):
+        """
+        Prunes heads of the model. heads_to_prune: dict of {layer_num: list of heads to prune in this layer} See base
+        class PreTrainedModel
+        """
+        for layer, heads in heads_to_prune.items():
+            self.encoder.layer[layer].attention.prune_heads(heads)
 
     def construct(
         self,
@@ -872,18 +993,27 @@ class T5Model(T5PreTrainedModel):
             return_dict=return_dict,
         )
 
-        return decoder_outputs + encoder_outputs
+        if not return_dict:
+            return decoder_outputs + encoder_outputs
+
+        return Seq2SeqModelOutput(
+            last_hidden_state=decoder_outputs.last_hidden_state,
+            past_key_values=decoder_outputs.past_key_values,
+            decoder_hidden_states=decoder_outputs.hidden_states,
+            decoder_attentions=decoder_outputs.attentions,
+            cross_attentions=decoder_outputs.cross_attentions,
+            encoder_last_hidden_state=encoder_outputs.last_hidden_state,
+            encoder_hidden_states=encoder_outputs.hidden_states,
+            encoder_attentions=encoder_outputs.attentions,
+        )
+
 
 class T5ForConditionalGeneration(T5PreTrainedModel):
     """T5ForConditionalGeneration"""
-    _keys_to_ignore_on_load_missing = [
-        r"encoder.embed_tokens.weight",
-        r"decoder.embed_tokens.weight",
-        r"lm_head.weight",
-    ]
     _keys_to_ignore_on_load_unexpected = [
-        r"decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight",
+        "decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.embedding_table",
     ]
+    _tied_weights_keys = ["encoder.embed_tokens.embedding_table", "decoder.embed_tokens.embedding_table", "lm_head.weight"]
 
     def __init__(self, config: T5Config):
         super().__init__(config)
@@ -895,39 +1025,41 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
         encoder_config.is_decoder = False
         encoder_config.use_cache = False
         encoder_config.is_encoder_decoder = False
-        self.encoder = T5Stack(encoder_config, self.shared)
+        self.encoder = T5Stack(encoder_config)
 
         decoder_config = copy.deepcopy(config)
         decoder_config.is_decoder = True
         decoder_config.is_encoder_decoder = False
         decoder_config.num_layers = config.num_decoder_layers
-        self.decoder = T5Stack(decoder_config, self.shared)
+        self.decoder = T5Stack(decoder_config)
 
         self.lm_head = nn.Dense(config.d_model, config.vocab_size, has_bias=False)
+
+        self.post_init()
 
     def get_input_embeddings(self):
         return self.shared
 
     def set_input_embeddings(self, new_embeddings):
-        """set input embeddings"""
         self.shared = new_embeddings
-        self.encoder.set_input_embeddings(new_embeddings)
-        self.decoder.set_input_embeddings(new_embeddings)
+        # self.encoder.set_input_embeddings(new_embeddings)
+        # self.decoder.set_input_embeddings(new_embeddings)
+
+    def _tie_weights(self):
+        if self.config.tie_word_embeddings:
+            self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
+            self._tie_or_clone_weights(self.decoder.embed_tokens, self.shared)
 
     def set_output_embeddings(self, new_embeddings):
-        """set output embeddings"""
         self.lm_head = new_embeddings
 
     def get_output_embeddings(self):
-        """get output embeddings"""
         return self.lm_head
 
     def get_encoder(self):
-        """get encoder"""
         return self.encoder
 
     def get_decoder(self):
-        """get decoder"""
         return self.decoder
 
     def construct(
@@ -1000,12 +1132,25 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = nn.CrossEntropyLoss(ignore_index=-100)
-            loss = loss_fct(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1))
+            loss = ops.cross_entropy(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1), ignore_index=-100)
             # TODO(thom): Add z_loss
 
-        output = (lm_logits,) + decoder_outputs[1:] + encoder_outputs
-        return ((loss,) + output) if loss is not None else output
+        if not return_dict:
+            output = (lm_logits,) + decoder_outputs[1:] + encoder_outputs
+            return ((loss,) + output) if loss is not None else output
+
+        return Seq2SeqLMOutput(
+            loss=loss,
+            logits=lm_logits,
+            past_key_values=decoder_outputs.past_key_values,
+            decoder_hidden_states=decoder_outputs.hidden_states,
+            decoder_attentions=decoder_outputs.attentions,
+            cross_attentions=decoder_outputs.cross_attentions,
+            encoder_last_hidden_state=encoder_outputs.last_hidden_state,
+            encoder_hidden_states=encoder_outputs.hidden_states,
+            encoder_attentions=encoder_outputs.attentions,
+        )
+
 
     def prepare_inputs_for_generation(
         self,
@@ -1014,14 +1159,24 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
         attention_mask=None,
         head_mask=None,
         decoder_head_mask=None,
+        decoder_attention_mask=None,
         cross_attn_head_mask=None,
         use_cache=None,
         encoder_outputs=None,
+        **kwargs,
     ):
-        """prepare inputs for generation"""
-        # cut decoder_input_ids if past is used
+        # cut decoder_input_ids if past_key_values is used
         if past_key_values is not None:
-            input_ids = input_ids[:, -1:]
+            past_length = past_key_values[0][0].shape[2]
+
+            # Some generation methods already pass only the last input ID
+            if input_ids.shape[1] > past_length:
+                remove_prefix_length = past_length
+            else:
+                # Default to old behavior: keep only final ID
+                remove_prefix_length = input_ids.shape[1] - 1
+
+            input_ids = input_ids[:, remove_prefix_length:]
 
         return {
             "decoder_input_ids": input_ids,
@@ -1030,23 +1185,23 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
             "attention_mask": attention_mask,
             "head_mask": head_mask,
             "decoder_head_mask": decoder_head_mask,
+            "decoder_attention_mask": decoder_attention_mask,
             "cross_attn_head_mask": cross_attn_head_mask,
             "use_cache": use_cache,
         }
 
     def prepare_decoder_input_ids_from_labels(self, labels: mindspore.Tensor):
-        """prepare decoder input ids from labels"""
         return self._shift_right(labels)
 
-    def _reorder_cache(self, past, beam_idx):
+    def _reorder_cache(self, past_key_values, beam_idx):
         # if decoder past is not included in output
         # speedy decoding is disabled and no need to reorder
-        if past is None:
-            logging.warning("You might want to consider setting `use_cache=True` to speed up decoding")
-            return past
+        if past_key_values is None:
+            logger.warning("You might want to consider setting `use_cache=True` to speed up decoding")
+            return past_key_values
 
         reordered_decoder_past = ()
-        for layer_past_states in past:
+        for layer_past_states in past_key_values:
             # get the correct batch idx from layer past batch dim
             # batch dim of `past` is at 2nd position
             reordered_layer_past_states = ()
@@ -1056,8 +1211,14 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
                     layer_past_state.index_select(0, beam_idx),
                 )
 
-            assert reordered_layer_past_states[0].shape == layer_past_states[0].shape
-            assert len(reordered_layer_past_states) == len(layer_past_states)
+            if reordered_layer_past_states[0].shape != layer_past_states[0].shape:
+                raise ValueError(
+                    f"reordered_layer_past_states[0] shape {reordered_layer_past_states[0].shape} and layer_past_states[0] shape {layer_past_states[0].shape} mismatched"
+                )
+            if len(reordered_layer_past_states) != len(layer_past_states):
+                raise ValueError(
+                    f"length of reordered_layer_past_states {len(reordered_layer_past_states)} and length of layer_past_states {len(layer_past_states)} mismatched"
+                )
 
             reordered_decoder_past = reordered_decoder_past + (reordered_layer_past_states,)
         return reordered_decoder_past
@@ -1065,7 +1226,8 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
 
 class T5EncoderModel(T5PreTrainedModel):
     """T5EncoderModel"""
-    _keys_to_ignore_on_load_missing = [r"encoder.embed_tokens.weight"]
+    _tied_weights_keys = ["encoder.embed_tokens.embedding_table"]
+    _keys_to_ignore_on_load_unexpected = [r"decoder"]
 
     def __init__(self, config: T5Config):
         super().__init__(config)
@@ -1074,7 +1236,9 @@ class T5EncoderModel(T5PreTrainedModel):
         encoder_config = copy.deepcopy(config)
         encoder_config.use_cache = False
         encoder_config.is_encoder_decoder = False
-        self.encoder = T5Stack(encoder_config, self.shared)
+        self.encoder = T5Stack(encoder_config)
+        # Initialize weights and apply final processing
+        self.post_init()
 
     def get_input_embeddings(self):
         return self.shared
@@ -1083,9 +1247,21 @@ class T5EncoderModel(T5PreTrainedModel):
         self.shared = new_embeddings
         self.encoder.set_input_embeddings(new_embeddings)
 
+    def _tie_weights(self):
+        if self.config.tie_word_embeddings:
+            self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
+
     def get_encoder(self):
-        """get encoder"""
         return self.encoder
+
+    def _prune_heads(self, heads_to_prune):
+        """
+        Prunes heads of the model. heads_to_prune: dict of {layer_num: list of heads to prune in this layer} See base
+        class PreTrainedModel
+        """
+        for layer, heads in heads_to_prune.items():
+            self.encoder.block[layer].layer[0].SelfAttention.prune_heads(heads)
+
     def construct(
         self,
         input_ids = None,
@@ -1109,3 +1285,317 @@ class T5EncoderModel(T5PreTrainedModel):
         )
 
         return encoder_outputs
+
+class T5ForSequenceClassification(T5PreTrainedModel):
+    _keys_to_ignore_on_load_unexpected = ["decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.embedding_table"]
+    _tied_weights_keys = ["encoder.embed_tokens.embedding_table", "decoder.embed_tokens.embedding_table"]
+
+    def __init__(self, config: T5Config):
+        super().__init__(config)
+        self.transformer = T5Model(config)
+        self.classification_head = T5ClassificationHead(config)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+
+    def construct(
+        self,
+        input_ids: mindspore.Tensor = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        decoder_input_ids: Optional[mindspore.Tensor] = None,
+        decoder_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        decoder_head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        encoder_outputs: Optional[List[mindspore.Tensor]] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        decoder_inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple, Seq2SeqSequenceClassifierOutput]:
+        r"""
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        Returns:
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        if labels is not None:
+            use_cache = False
+
+        if input_ids is None and inputs_embeds is not None:
+            raise NotImplementedError(
+                f"Passing input embeddings is currently not supported for {self.__class__.__name__}"
+            )
+
+        # Copied from models.bart.modeling_bart.BartModel.forward different to other models, T5 automatically creates
+        # decoder_input_ids from input_ids if no decoder_input_ids are provided
+        if decoder_input_ids is None and decoder_inputs_embeds is None:
+            if input_ids is None:
+                raise ValueError(
+                    "If no `decoder_input_ids` or `decoder_inputs_embeds` are "
+                    "passed, `input_ids` cannot be `None`. Please pass either "
+                    "`input_ids` or `decoder_input_ids` or `decoder_inputs_embeds`."
+                )
+            decoder_input_ids = self._shift_right(input_ids)
+
+        outputs = self.transformer(
+            input_ids,
+            attention_mask=attention_mask,
+            decoder_input_ids=decoder_input_ids,
+            decoder_attention_mask=decoder_attention_mask,
+            head_mask=head_mask,
+            decoder_head_mask=decoder_head_mask,
+            cross_attn_head_mask=cross_attn_head_mask,
+            encoder_outputs=encoder_outputs,
+            inputs_embeds=inputs_embeds,
+            decoder_inputs_embeds=decoder_inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        sequence_output = outputs[0]
+
+        eos_mask = input_ids.eq(self.config.eos_token_id)
+
+        if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
+            raise ValueError("All examples must have the same number of <eos> tokens.")
+        batch_size, _, hidden_size = sequence_output.shape
+        sentence_representation = sequence_output[eos_mask].view(batch_size, -1, hidden_size)[:, -1, :]
+        logits = self.classification_head(sentence_representation)
+
+        loss = None
+        if labels is not None:
+            if self.config.problem_type is None:
+                if self.config.num_labels == 1:
+                    self.config.problem_type = "regression"
+                elif self.config.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
+                    self.config.problem_type = "single_label_classification"
+                else:
+                    self.config.problem_type = "multi_label_classification"
+
+            if self.config.problem_type == "regression":
+                if self.config.num_labels == 1:
+                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                else:
+                    loss = ops.mse_loss(logits, labels)
+            elif self.config.problem_type == "single_label_classification":
+                loss = ops.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
+            elif self.config.problem_type == "multi_label_classification":
+                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+        if not return_dict:
+            output = (logits,) + outputs[1:]
+            return ((loss,) + output) if loss is not None else output
+
+        return Seq2SeqSequenceClassifierOutput(
+            loss=loss,
+            logits=logits,
+            past_key_values=outputs.past_key_values,
+            decoder_hidden_states=outputs.decoder_hidden_states,
+            decoder_attentions=outputs.decoder_attentions,
+            cross_attentions=outputs.cross_attentions,
+            encoder_last_hidden_state=outputs.encoder_last_hidden_state,
+            encoder_hidden_states=outputs.encoder_hidden_states,
+            encoder_attentions=outputs.encoder_attentions,
+        )
+
+
+class T5ForQuestionAnswering(T5PreTrainedModel):
+    _keys_to_ignore_on_load_unexpected = ["decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.embedding_table"]
+    _tied_weights_keys = ["encoder.embed_tokens.embedding_table", "decoder.embed_tokens.embedding_table"]
+
+    def __init__(self, config: T5Config):
+        super().__init__(config)
+        self.model_dim = config.d_model
+
+        self.shared = nn.Embedding(config.vocab_size, config.d_model)
+
+        encoder_config = copy.deepcopy(config)
+        encoder_config.is_decoder = False
+        encoder_config.use_cache = False
+        encoder_config.is_encoder_decoder = False
+        self.encoder = T5Stack(encoder_config)
+
+        decoder_config = copy.deepcopy(config)
+        decoder_config.is_decoder = True
+        decoder_config.is_encoder_decoder = False
+        decoder_config.num_layers = config.num_decoder_layers
+        self.decoder = T5Stack(decoder_config)
+
+        self.num_labels = config.num_labels
+        self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+
+    def get_input_embeddings(self):
+        return self.shared
+
+    def set_input_embeddings(self, new_embeddings):
+        self.shared = new_embeddings
+        # self.encoder.set_input_embeddings(new_embeddings)
+        # self.decoder.set_input_embeddings(new_embeddings)
+
+    def _tie_weights(self):
+        if self.config.tie_word_embeddings:
+            self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
+            self._tie_or_clone_weights(self.decoder.embed_tokens, self.shared)
+
+    def get_encoder(self):
+        return self.encoder
+
+    def get_decoder(self):
+        return self.decoder
+
+    def construct(
+        self,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        decoder_input_ids: Optional[mindspore.Tensor] = None,
+        decoder_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        decoder_head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        encoder_outputs: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
+        start_positions: Optional[mindspore.Tensor] = None,
+        end_positions: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        decoder_inputs_embeds: Optional[mindspore.Tensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple[mindspore.Tensor], Seq2SeqQuestionAnsweringModelOutput]:
+        r"""
+        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the start of the labelled span for computing the token classification loss.
+            Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
+            are not taken into account for computing the loss.
+        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the end of the labelled span for computing the token classification loss.
+            Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
+            are not taken into account for computing the loss.
+        Returns:
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        use_cache = use_cache if use_cache is not None else self.config.use_cache
+        if start_positions is not None and end_positions is not None:
+            use_cache = False
+
+        # Copied from models.bart.modeling_bart.BartModel.forward
+        #   different to other models, T5 automatically creates decoder_input_ids from
+        #   input_ids if no decoder_input_ids are provided
+        if decoder_input_ids is None and decoder_inputs_embeds is None:
+            if input_ids is None:
+                raise ValueError(
+                    "If no `decoder_input_ids` or `decoder_inputs_embeds` are "
+                    "passed, `input_ids` cannot be `None`. Please pass either "
+                    "`input_ids` or `decoder_input_ids` or `decoder_inputs_embeds`."
+                )
+            decoder_input_ids = self._shift_right(input_ids)
+
+        use_cache = use_cache if use_cache is not None else self.config.use_cache
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        # FutureWarning: head_mask was separated into two input args - head_mask, decoder_head_mask
+        if head_mask is not None and decoder_head_mask is None:
+            if self.config.num_layers == self.config.num_decoder_layers:
+                warnings.warn("""
+                The input argument `head_mask` was split into two arguments `head_mask` and `decoder_head_mask`. Currently,
+                `decoder_head_mask` is set to copy `head_mask`, but this feature is deprecated and will be removed in future versions.
+                If you do not want to use any `decoder_head_mask` now, please set `decoder_head_mask = ops.ones(num_layers,
+                num_heads)`.
+                """, FutureWarning)
+                decoder_head_mask = head_mask
+
+        # Encode if needed (training, first prediction pass)
+        if encoder_outputs is None:
+            encoder_outputs = self.encoder(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                inputs_embeds=inputs_embeds,
+                head_mask=head_mask,
+                output_attentions=output_attentions,
+                output_hidden_states=output_hidden_states,
+                return_dict=return_dict,
+            )
+        elif return_dict and not isinstance(encoder_outputs, BaseModelOutput):
+            encoder_outputs = BaseModelOutput(
+                last_hidden_state=encoder_outputs[0],
+                hidden_states=encoder_outputs[1] if len(encoder_outputs) > 1 else None,
+                attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
+            )
+
+        hidden_states = encoder_outputs[0]
+
+        # Decode
+        decoder_outputs = self.decoder(
+            input_ids=decoder_input_ids,
+            attention_mask=decoder_attention_mask,
+            inputs_embeds=decoder_inputs_embeds,
+            past_key_values=None,
+            encoder_hidden_states=hidden_states,
+            encoder_attention_mask=attention_mask,
+            head_mask=decoder_head_mask,
+            cross_attn_head_mask=cross_attn_head_mask,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        sequence_output = decoder_outputs[0]
+
+        logits = self.qa_outputs(sequence_output)
+        start_logits, end_logits = logits.split(1, axis=-1)
+        start_logits = start_logits.squeeze(-1)
+        end_logits = end_logits.squeeze(-1)
+
+        total_loss = None
+        if start_positions is not None and end_positions is not None:
+            # If we are on multi-GPU, split add a dimension
+            if len(start_positions.shape) > 1:
+                start_positions = start_positions.squeeze(-1)
+            if len(end_positions.shape) > 1:
+                end_positions = end_positions.squeeze(-1)
+            # sometimes the start/end positions are outside our model inputs, we ignore these terms
+            ignored_index = start_logits.shape[1]
+            start_positions = start_positions.clamp(0, ignored_index)
+            end_positions = end_positions.clamp(0, ignored_index)
+
+            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
+            total_loss = (start_loss + end_loss) / 2
+
+        if not return_dict:
+            output = (start_logits, end_logits) + decoder_outputs[1:] + encoder_outputs
+            return ((total_loss,) + output) if total_loss is not None else output
+
+        return Seq2SeqQuestionAnsweringModelOutput(
+            loss=total_loss,
+            start_logits=start_logits,
+            end_logits=end_logits,
+            past_key_values=decoder_outputs.past_key_values,
+            decoder_hidden_states=decoder_outputs.hidden_states,
+            decoder_attentions=decoder_outputs.attentions,
+            cross_attentions=decoder_outputs.cross_attentions,
+            encoder_last_hidden_state=encoder_outputs.last_hidden_state,
+            encoder_hidden_states=encoder_outputs.hidden_states,
+            encoder_attentions=encoder_outputs.attentions,
+        )
+
+__all__ = [
+    "T5_PRETRAINED_MODEL_ARCHIVE_LIST",
+    "T5EncoderModel",
+    "T5ForConditionalGeneration",
+    "T5Model",
+    "T5PreTrainedModel",
+    "T5ForQuestionAnswering",
+    "T5ForSequenceClassification",
+]
