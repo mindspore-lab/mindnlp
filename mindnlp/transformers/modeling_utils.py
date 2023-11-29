@@ -1385,7 +1385,10 @@ def convert_torch_to_mindspore(pth_file):
         if 'wpe' in key or 'wte' in key or \
             'embeddings' in key or 'embedding' in key or \
             'shared' in key or 'relative_attention_bias' in key or \
-            'embed_' in key or '_embed' in key and \
+            'embed_' in key or '_embed' in key or \
+            'encoder.weight' in key or \
+            'graph_token_virtual_distance.weight' in key or \
+            'graph_token.weight' in key and \
             'embedding_hidden_mapping_in' not in key: # for albert
             key = key.replace('weight', 'embedding_table')
 
