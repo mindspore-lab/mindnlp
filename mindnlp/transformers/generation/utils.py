@@ -3237,7 +3237,7 @@ class GenerationMixin:
 
             probs = ops.softmax(next_token_scores, axis=-1)
 
-            next_tokens = ops.multinomial(probs, num_samples=2 * num_beams, replacement=False)
+            next_tokens = ops.multinomial(probs, num_samples=2 * num_beams)
             next_token_scores = ops.gather_elements(next_token_scores, -1, next_tokens)
 
             next_token_scores, _indices = ops.sort(next_token_scores, descending=True, axis=1)
@@ -4292,7 +4292,7 @@ class GenerationMixin:
             # 3. Obtain the next tokens from the original model logits.
             if do_sample:
                 probs = ops.softmax(new_logits, axis=-1)
-                selected_tokens = ops.multinomial(probs[0, :, :], num_samples=1, replacement=False).squeeze(1)[None, :]
+                selected_tokens = ops.multinomial(probs[0, :, :], num_samples=1).squeeze(1)[None, :]
             else:
                 selected_tokens = new_logits.argmax(axis=-1)
 

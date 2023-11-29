@@ -15,14 +15,19 @@
 """
 T5 Model init
 """
-from . import modeling_t5, t5_config, t5_tokenizer, chatyuan_tokenizer
-from .t5_config import *
+from . import configuration_t5, modeling_t5, chatyuan_tokenizer, tokenization_t5, tokenization_t5_fast, \
+    tokenization_byt5
+from .configuration_t5 import *
 from .modeling_t5 import *
-from .t5_tokenizer import *
+from .tokenization_t5 import *
+from .tokenization_byt5 import *
+from .tokenization_t5_fast import *
 from .chatyuan_tokenizer import *
 
 __all__ = []
 __all__.extend(modeling_t5.__all__)
-__all__.extend(t5_config.__all__)
-__all__.extend(t5_tokenizer.__all__)
+__all__.extend(configuration_t5.__all__)
+__all__.extend(tokenization_t5.__all__)
+__all__.extend(tokenization_t5_fast.__all__)
+__all__.extend(tokenization_byt5.__all__)
 __all__.extend(chatyuan_tokenizer.__all__)

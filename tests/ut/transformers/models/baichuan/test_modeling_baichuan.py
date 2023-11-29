@@ -28,8 +28,6 @@ from mindspore import Tensor
 from mindnlp.transformers.models.baichuan import baichuan, baichuan_config
 from .....common import MindNLPTestCase
 
-mindspore.set_context(pynative_synchronize=True)
-
 class TestModelingBaiChuan(MindNLPTestCase):
     r"""
     Test BaiChuan
