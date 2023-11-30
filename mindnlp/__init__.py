@@ -18,7 +18,7 @@ MindNLP library.
 """
 import os
 if os.environ.get('HF_ENDPOINT', None) is None:
-    os.environ["HF_ENDPOINT"] = 'https://hf-mirror.com/'
+    os.environ["HF_ENDPOINT"] = 'https://hf-mirror.com'
 os.environ["MS_DEV_FORCE_ACL"] = '1'
 
 import mindspore
