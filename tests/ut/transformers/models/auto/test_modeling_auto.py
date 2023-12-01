@@ -139,7 +139,7 @@ class AutoModelTest(unittest.TestCase):
 
     @slow
     def test_model_for_causal_lm(self):
-        for model_name in GPT2_SUPPORT_LIST[:1]:
+        for model_name in GPT2_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
             config = AutoConfig.from_pretrained(model_name)
             self.assertIsNotNone(config)
             self.assertIsInstance(config, GPT2Config)

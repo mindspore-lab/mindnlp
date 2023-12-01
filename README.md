@@ -93,14 +93,15 @@ The table below represents the current support in the library for each of those 
 | Model                         | Pynative support | Graph Support |
 |-------------------------------|------------------|---------------|
 | ALBERT                        | ✅                | ✅             |
-| Autoformer                    | TODO                | ❌             |
+| Autoformer                    | TODO              | ❌             |
+| BaiChuan                      | ✅                | ❌             |
 | Bark                          | TODO                | ❌             |
 | BART                          | ✅                | ❌             |
 | BERT                          | ✅                | ✅             |
 | BLOOM                         | ✅                | ❌             |
 | CLIP                          | ✅                | ❌             |
 | CodeGen                       | ✅                | ❌             |
-| ConvBERT                      | TODO                | ❌             |
+| ConvBERT                      | TODO              | ❌             |
 | CPM                           | ✅                | ❌             |
 | CPM-Ant                       | ✅                | ❌             |
 | CPM-Bee                       | ✅                | ❌             |
