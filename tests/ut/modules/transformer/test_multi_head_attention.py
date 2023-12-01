@@ -9,9 +9,10 @@ from mindspore import Tensor
 from mindnlp import ms_jit
 from mindnlp.utils import less_min_pynative_first
 from mindnlp.modules import MultiheadAttention
+from ....common import MindNLPTestCase
 
 @ddt
-class TestMultiHeadAttention(unittest.TestCase):
+class TestMultiHeadAttention(MindNLPTestCase):
     """ut for multi head attention"""
     @unpack
     @data(

@@ -169,14 +169,12 @@ class GlmMLP(nn.Cell):
         self.dense_h_to_4h = Dense(
             in_channels=config.hidden_size,
             out_channels=config.hidden_size * 4,
-            weight_init=init_method,
         )
 
         # Project back to h.
         self.dense_4h_to_h = Dense(
             in_channels=config.hidden_size * 4,
             out_channels=config.hidden_size,
-            weight_init=init_method,
         )
 
         self.dropout = Dropout(p=config.output_dropout_prob)
@@ -225,22 +223,18 @@ class GLMSelfAttention(nn.Cell):
         self.query_key_value = Dense(
             in_channels=config.hidden_size,
             out_channels=3 * config.hidden_size,
-            weight_init=init_method,
         )
 
         if config.relative_encoding:
             config.relative_encoding = Dense(
                 in_channels=config.hidden_size,
                 out_channels=config.hidden_size,
-                weight_init=init_method,
             )
 
         self.attention_dropout = Dropout(p=config.attention_dropout_prob)
 
         # Output.
-        self.dense = Dense(
-            config.hidden_size, config.hidden_size, weight_init=init_method
-        )
+        self.dense = Dense(config.hidden_size, config.hidden_size)
 
         self.output_dropout = Dropout(p=config.output_dropout_prob)
 
@@ -392,21 +386,15 @@ class GLMCrossAttention(nn.Cell):
         )
 
         # Strided linear layer.
-        self.query = Dense(
-            config.hidden_size, config.hidden_size, weight_init=init_method
-        )
+        self.query = Dense(config.hidden_size, config.hidden_size)
 
-        self.key_value = Dense(
-            config.hidden_size, 2 * config.hidden_size, weight_init=init_method
-        )
+        self.key_value = Dense(config.hidden_size, 2 * config.hidden_size)
 
         # Dropout.
         self.attention_dropout = Dropout(p=config.attention_dropout_prob)
 
         # Output.
-        self.dense = Dense(
-            config.hidden_size, config.hidden_size, weight_init=init_method
-        )
+        self.dense = Dense(config.hidden_size, config.hidden_size)
 
         self.output_dropout = Dropout(p=config.output_dropout_prob)
 
@@ -707,18 +695,15 @@ class GLMTransformer(nn.Cell):
                 self.position_embeddings = nn.Embedding(
                     config.max_sequence_length + 1,
                     config.hidden_size,
-                    embedding_table=initializer.Normal(sigma=config.init_method_std),
                 )
                 self.block_position_embeddings = nn.Embedding(
                     config.max_sequence_length + 1,
                     config.hidden_size,
-                    embedding_table=initializer.Normal(sigma=config.init_method_std),
                 )
             else:
                 self.position_embeddings = nn.Embedding(
                     config.max_sequence_length,
                     config.hidden_size,
-                    embedding_table=initializer.Normal(sigma=config.init_method_std),
                 )
 
         def get_layer():
@@ -904,7 +889,6 @@ class GLMModel(nn.Cell):
         self.word_embedding = nn.Embedding(
             vocab_size=config.vocab_size,
             embedding_size=config.hidden_size,
-            embedding_table=initializer.Normal(sigma=0.02),
         )
 
         # Transformer

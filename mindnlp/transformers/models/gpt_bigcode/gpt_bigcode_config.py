@@ -17,14 +17,11 @@
 # ============================================================================
 """MindNLP gpt_bigcode config"""
 
-from mindnlp.configs import MS_CONFIG_URL_BASE
+
 from ...configuration_utils import PretrainedConfig
 
 GPT_BIGCODE_SUPPORT_LIST = ["gpt_bigcode-santacoder"]
 
-CONFIG_ARCHIVE_MAP = {
-    model: MS_CONFIG_URL_BASE.format(model) for model in GPT_BIGCODE_SUPPORT_LIST
-}
 
 __all__ = ['GPTBigCodeConfig']
 
@@ -41,8 +38,6 @@ class GPTBigCodeConfig(PretrainedConfig):
         "num_attention_heads": "n_head",
         "num_hidden_layers": "n_layer",
     }
-
-    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
 
     def __init__(
         self,

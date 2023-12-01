@@ -7,7 +7,7 @@ amp api.
 # pylint: disable=W0212
 from mindspore import nn
 from mindspore import ops
-from mindspore import Tensor, Parameter, context, ms_class
+from mindspore import Tensor, Parameter, context, jit_class
 import mindspore.common.dtype as mstype
 from src.bert import Matmul
 
@@ -143,7 +143,7 @@ def all_finite(inputs):
     return ops.stack(outputs).all()
 
 
-@ms_class
+@jit_class
 class LossScaler():
     """
     Basic LossScaler.

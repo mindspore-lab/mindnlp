@@ -17,13 +17,20 @@
 """
 LLAMA Model init
 """
-from .import llama, llama_config, llama_tokenizer
+from .import configuration_llama, modeling_llama, tokenization_llama, tokenization_llama_fast, \
+    tokenization_code_llama, tokenization_code_llama_fast
 
-from .llama import *
-from .llama_config import *
-from .llama_tokenizer import *
+from .modeling_llama import *
+from .configuration_llama import *
+from .tokenization_llama import *
+from .tokenization_llama_fast import *
+from .tokenization_code_llama import *
+from .tokenization_code_llama_fast import *
 
 __all__ = []
-__all__.extend(llama.__all__)
-__all__.extend(llama_config.__all__)
-__all__.extend(llama_tokenizer.__all__)
+__all__.extend(modeling_llama.__all__)
+__all__.extend(configuration_llama.__all__)
+__all__.extend(tokenization_llama.__all__)
+__all__.extend(tokenization_llama_fast.__all__)
+__all__.extend(tokenization_code_llama.__all__)
+__all__.extend(tokenization_code_llama_fast.__all__)

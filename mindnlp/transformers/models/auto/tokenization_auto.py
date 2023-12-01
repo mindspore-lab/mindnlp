@@ -23,13 +23,14 @@
 import importlib
 import json
 import os
-import warnings
 from collections import OrderedDict
 from typing import Dict, Optional, Union
 
+from mindnlp.configs import MS_URL_BASE, HF_URL_BASE
 from mindnlp.utils import cached_file, is_sentencepiece_available, is_tokenizers_available, logging
 from ...configuration_utils import PretrainedConfig, EncoderDecoderConfig
-from ...tokenization_utils import PreTrainedTokenizer
+from ...tokenization_utils import PreTrainedTokenizer # pylint: disable=cyclic-import
+from ...tokenization_utils_base import TOKENIZER_CONFIG_FILE # pylint: disable=cyclic-import
 from .auto_factory import _LazyAutoMapping
 from .configuration_auto import (
     CONFIG_MAPPING_NAMES,
@@ -240,7 +241,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
                 "MT5TokenizerFast" if is_tokenizers_available() else None,
             ),
         ),
-        ("musicgen", ("T5Tokenizer", "T5TokenizerFast" if is_tokenizers_available() else None)),
+        # ("musicgen", ("T5Tokenizer", "T5TokenizerFast" if is_tokenizers_available() else None)),
         ("mvp", ("MvpTokenizer", "MvpTokenizerFast" if is_tokenizers_available() else None)),
         ("nezha", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
         (
@@ -298,7 +299,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ),
         ),
         ("phobert", ("PhobertTokenizer", None)),
-        ("pix2struct", ("T5Tokenizer", "T5TokenizerFast" if is_tokenizers_available() else None)),
+        # ("pix2struct", ("T5Tokenizer", "T5TokenizerFast" if is_tokenizers_available() else None)),
         ("plbart", ("PLBartTokenizer" if is_sentencepiece_available() else None, None)),
         ("prophetnet", ("ProphetNetTokenizer", None)),
         ("qdqbert", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
@@ -342,13 +343,13 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             "squeezebert",
             ("SqueezeBertTokenizer", "SqueezeBertTokenizerFast" if is_tokenizers_available() else None),
         ),
-        (
-            "switch_transformers",
-            (
-                "T5Tokenizer" if is_sentencepiece_available() else None,
-                "T5TokenizerFast" if is_tokenizers_available() else None,
-            ),
-        ),
+        # (
+        #     "switch_transformers",
+        #     (
+        #         "T5Tokenizer" if is_sentencepiece_available() else None,
+        #         "T5TokenizerFast" if is_tokenizers_available() else None,
+        #     ),
+        # ),
         (
             "t5",
             (
@@ -431,7 +432,7 @@ def tokenizer_class_from_name(class_name: str):
         if class_name in tokenizers:
             module_name = model_type_to_module_name(module_name)
 
-            module = importlib.import_module(f".{module_name}", "transformers.models")
+            module = importlib.import_module(f".{module_name}", "mindnlp.transformers.models")
             try:
                 return getattr(module, class_name)
             except AttributeError:
@@ -524,20 +525,21 @@ def get_tokenizer_config(
     tokenizer.save_pretrained("tokenizer-test")
     tokenizer_config = get_tokenizer_config("tokenizer-test")
     ```"""
-    use_auth_token = kwargs.pop("use_auth_token", None)
-    if use_auth_token is not None:
-        warnings.warn(
-            "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
-            FutureWarning,
-        )
-        if token is not None:
-            raise ValueError("`token` and `use_auth_token` are both specified. Please set only the argument `token`.")
-        token = use_auth_token
 
+    from_pt = kwargs.get('from_pt', False)
+    endpoint = HF_URL_BASE if from_pt else MS_URL_BASE
     resolved_config_file = cached_file(
         pretrained_model_name_or_path,
+        TOKENIZER_CONFIG_FILE,
         cache_dir=cache_dir,
+        force_download=force_download,
+        resume_download=resume_download,
         proxies=proxies,
+        local_files_only=local_files_only,
+        subfolder=subfolder,
+        _raise_exceptions_for_missing_entries=False,
+        _raise_exceptions_for_connection_errors=False,
+        endpoint=endpoint
     )
     if resolved_config_file is None:
         logger.info("Could not locate the tokenizer configuration file, will try to use the model config instead.")
@@ -682,7 +684,7 @@ class AutoTokenizer:
 
         # If that did not work, let's try to use the config.
         if config_tokenizer_class is None:
-            if not isinstance(config, PretrainedConfig):
+            if config is None or not isinstance(config, PretrainedConfig):
                 config = AutoConfig.from_pretrained(
                     pretrained_model_name_or_path, trust_remote_code=trust_remote_code, **kwargs
                 )

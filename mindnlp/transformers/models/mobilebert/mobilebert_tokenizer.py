@@ -23,13 +23,7 @@ from mindspore.dataset.text import Vocab as msVocab
 from tokenizers import Tokenizer
 from tokenizers.implementations import BertWordPieceTokenizer
 from mindnlp.vocab import Vocab
-from mindnlp.configs import MINDNLP_TOKENIZER_CONFIG_URL_BASE
-from .mobilebert_config import MOBILEBERT_SUPPORT_LIST
 from ...tokenization_utils import PreTrainedTokenizer
-
-PRETRAINED_VOCAB_MAP = {
-    model: MINDNLP_TOKENIZER_CONFIG_URL_BASE.format('mobilebert', model) for model in MOBILEBERT_SUPPORT_LIST
-}
 
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {"mobilebert-uncased": 512}
@@ -72,7 +66,6 @@ class MobileBertTokenizer(PreTrainedTokenizer):
     """
 
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
-    pretrained_vocab_map = PRETRAINED_VOCAB_MAP
 
     def __init__(
         self,
@@ -119,16 +112,6 @@ class MobileBertTokenizer(PreTrainedTokenizer):
         self.return_token = return_token
         self.implementation = Implementation.PY
 
-    def __call__(self, text_input):
-        """
-        Call method for input conversion for eager mode with C++ implementation.
-        """
-        if isinstance(text_input, str):
-            text_input = np.array(text_input)
-        elif not isinstance(text_input, np.ndarray):
-            raise TypeError(
-                f"Input should be a text line in 1-D NumPy format, got {type(text_input)}.")
-        return super().__call__(text_input)
 
     def execute_py(self, text_input):
         """

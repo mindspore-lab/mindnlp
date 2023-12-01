@@ -31,7 +31,10 @@ logger = logging.get_logger(__name__)
 CONFIG_MAPPING_NAMES = OrderedDict(
     [
         # Add configs here
+        ("roberta", "RobertaConfig"),
         ("bert", "BertConfig"),
+        ("gpt2", "GPT2Config"),
+        ('t5', 'T5Config')
     ]
 )
 

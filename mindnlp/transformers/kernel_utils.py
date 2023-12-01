@@ -17,7 +17,9 @@
 import os
 import subprocess
 from pathlib import Path
-from mindspore import log as logger
+from mindnlp.utils import logging
+
+logger = logging.get_logger(__name__)
 
 
 def _find_cuda_home():

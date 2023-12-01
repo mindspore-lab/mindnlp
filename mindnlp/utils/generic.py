@@ -13,29 +13,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=C0103
-# pylint: disable=W0719
+# pylint: disable=invalid-name
+# pylint: disable=invalid-name
+# pylint: disable=inconsistent-return-statements
 """
 Generic utils.
 """
 from enum import Enum
-from collections import OrderedDict
+from collections import OrderedDict, UserDict
 from dataclasses import fields
 from typing import Any, Tuple
 
 import numpy as np
 import mindspore
+from .import_utils import is_mindspore_available
 
 
 def is_tensor(x):
     """
-    Tests if `x` is a `torch.Tensor`, `tf.Tensor`, `jaxlib.xla_extension.DeviceArray` or `np.ndarray`.
+    Tests if `x` is a `mindspore.Tensor` or `np.ndarray`.
     """
     if isinstance(x, mindspore.Tensor):
         return True
 
     return isinstance(x, np.ndarray)
 
+def _is_mindspore(x):
+
+    return isinstance(x, mindspore.Tensor)
+
+
+def is_mindspore_tensor(x):
+    """
+    Tests if `x` is a torch tensor or not. Safe to call even if torch is not installed.
+    """
+    return False if not is_mindspore_available() else _is_mindspore(x)
 
 class ExplicitEnum(str, Enum):
     """
@@ -48,6 +60,14 @@ class ExplicitEnum(str, Enum):
             f"{value} is not a valid {cls.__name__}, please select one of {list(cls._value2member_map_.keys())}"
         )
 
+class TensorType(ExplicitEnum):
+    """
+    Possible values for the `return_tensors` argument in [`PreTrainedTokenizerBase.__call__`]. Useful for
+    tab-completion in an IDE.
+    """
+
+    MINDSPORE = "ms"
+    NUMPY = "np"
 
 class PaddingStrategy(ExplicitEnum):
     """
@@ -127,16 +147,16 @@ class ModelOutput(OrderedDict):
                     self[field.name] = v
 
     def __delitem__(self, *args, **kwargs):
-        raise Exception(f"You cannot use ``__delitem__`` on a {self.__class__.__name__} instance.")
+        raise RuntimeError(f"You cannot use ``__delitem__`` on a {self.__class__.__name__} instance.")
 
     def setdefault(self, *args, **kwargs):
-        raise Exception(f"You cannot use ``setdefault`` on a {self.__class__.__name__} instance.")
+        raise RuntimeError(f"You cannot use ``setdefault`` on a {self.__class__.__name__} instance.")
 
     def pop(self, *args, **kwargs):
-        raise Exception(f"You cannot use ``pop`` on a {self.__class__.__name__} instance.")
+        raise RuntimeError(f"You cannot use ``pop`` on a {self.__class__.__name__} instance.")
 
     def update(self, *args, **kwargs):
-        raise Exception(f"You cannot use ``update`` on a {self.__class__.__name__} instance.")
+        raise RuntimeError(f"You cannot use ``update`` on a {self.__class__.__name__} instance.")
 
     def __getitem__(self, k):
         if isinstance(k, str):
@@ -175,3 +195,113 @@ def strtobool(val):
     if val in {"n", "no", "f", "false", "off", "0"}:
         return 0
     raise ValueError(f"invalid truth value {val!r}")
+
+class cached_property(property):
+    """
+    Descriptor that mimics @property but caches output in member variable.
+
+    From tensorflow_datasets
+
+    Built-in in functools from Python 3.8.
+    """
+
+    def __get__(self, obj, objtype=None):
+        # See docs.python.org/3/howto/descriptor.html#properties
+        if obj is None:
+            return self
+        if self.fget is None:
+            raise AttributeError("unreadable attribute")
+        attr = "__cached_" + self.fget.__name__
+        cached = getattr(obj, attr, None)
+        if cached is None:
+            cached = self.fget(obj)
+            setattr(obj, attr, cached)
+        return cached
+
+def _is_numpy(x):
+    return isinstance(x, np.ndarray)
+
+
+def is_numpy_array(x):
+    """
+    Tests if `x` is a numpy array or not.
+    """
+    return _is_numpy(x)
+
+def infer_framework_from_repr(x):
+    """
+    Tries to guess the framework of an object `x` from its repr (brittle but will help in `is_tensor` to try the
+    frameworks in a smart order, without the need to import the frameworks).
+    """
+    representation = str(type(x))
+    if representation.startswith("<class 'mindspore."):
+        return "ms"
+    if representation.startswith("<class 'numpy."):
+        return "np"
+
+def _get_frameworks_and_test_func(x):
+    """
+    Returns an (ordered since we are in Python 3.7+) dictionary framework to test function, which places the framework
+    we can guess from the repr first, then Numpy, then the others.
+    """
+    framework_to_test = {
+        "ms": is_mindspore_tensor,
+        "np": is_numpy_array,
+    }
+    preferred_framework = infer_framework_from_repr(x)
+    # We will test this one first, then numpy, then the others.
+    frameworks = [] if preferred_framework is None else [preferred_framework]
+    if preferred_framework != "np":
+        frameworks.append("np")
+    frameworks.extend([f for f in framework_to_test if f not in [preferred_framework, "np"]])
+    return {f: framework_to_test[f] for f in frameworks}
+
+
+def to_py_obj(obj):
+    """
+    Convert a TensorFlow tensor, PyTorch tensor, Numpy array or python list to a python list.
+    """
+
+    framework_to_py_obj = {
+        "ms": lambda obj: obj.asnumpy().tolist(),
+        "np": lambda obj: obj.tolist(),
+    }
+
+    if isinstance(obj, (dict, UserDict)):
+        return {k: to_py_obj(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [to_py_obj(o) for o in obj]
+
+    # This gives us a smart order to test the frameworks with the corresponding tests.
+    framework_to_test_func = _get_frameworks_and_test_func(obj)
+    for framework, test_func in framework_to_test_func.items():
+        if test_func(obj):
+            return framework_to_py_obj[framework](obj)
+
+    # tolist also works on 0d np arrays
+    if isinstance(obj, np.number):
+        return obj.tolist()
+    return obj
+
+def to_numpy(obj):
+    """
+    Convert a TensorFlow tensor, PyTorch tensor, Numpy array or python list to a Numpy array.
+    """
+
+    framework_to_numpy = {
+        "ms": lambda obj: obj.asnumpy(),
+        "np": lambda obj: obj,
+    }
+
+    if isinstance(obj, (dict, UserDict)):
+        return {k: to_numpy(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return np.array(obj)
+
+    # This gives us a smart order to test the frameworks with the corresponding tests.
+    framework_to_test_func = _get_frameworks_and_test_func(obj)
+    for framework, test_func in framework_to_test_func.items():
+        if test_func(obj):
+            return framework_to_numpy[framework](obj)
+
+    return obj

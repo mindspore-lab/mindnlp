@@ -24,14 +24,9 @@ import logging
 from typing import Union
 import mindspore
 from mindspore import nn, ops, Tensor
-from mindnlp.configs import MINDNLP_MODEL_URL_BASE
-from .tinybert_config import TinyBertConfig, TINYBERT_SUPPORT_LIST
+from .tinybert_config import TinyBertConfig
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
-
-PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MINDNLP_MODEL_URL_BASE.format('tinybert', model) for model in TINYBERT_SUPPORT_LIST
-}
 
 
 def torch_to_mindspore(pth_file, **kwargs):
@@ -418,7 +413,7 @@ class TinyBertPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization.
     """
     config_class = TinyBertConfig
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
     base_model_prefix = 'bert'
     convert_torch_to_mindspore = torch_to_mindspore
 

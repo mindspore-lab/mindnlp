@@ -25,19 +25,13 @@ from typing import List
 
 import mindspore.dataset as ds
 from mindnlp.workflow.work import Work
-from mindnlp.transformers import UIE, UIETokenizer
+from mindnlp.transformers import UIE, AutoTokenizer
 from mindnlp.workflow.utils import (
     SchemaTree,
     dbc2sbc,
     get_bool_ids_greater_than,
     get_id_and_prob,
     get_span,
-)
-from mindnlp.configs import (
-    MINDNLP_MODEL_URL_BASE,
-    MINDNLP_VOCAB_URL_BASE,
-    MINDNLP_CONFIG_URL_BASE,
-    MINDNLP_TOKENIZER_CONFIG_URL_BASE,
 )
 
 usage = r"""
@@ -115,60 +109,60 @@ class UIEWork(Work):
         "tokenizer": "tokenizer.json",
     }
     resource_files_urls = {
-        "uie-base": {
-            "vocab": [MINDNLP_VOCAB_URL_BASE.format("uie", "uie-base"), None],
-            "model_state": [MINDNLP_MODEL_URL_BASE.format("uie", "uie-base"), None],
-            "config": [MINDNLP_CONFIG_URL_BASE.format("uie", "uie-base"), None],
-            "tokenizer": [
-                MINDNLP_TOKENIZER_CONFIG_URL_BASE.format("uie", "uie-base"),
-                None,
-            ],
-        },
-        "uie-medium": {
-            "vocab": [MINDNLP_VOCAB_URL_BASE.format("uie", "uie-medium"), None],
-            "model_state": [MINDNLP_MODEL_URL_BASE.format("uie", "uie-medium"), None],
-            "config": [MINDNLP_CONFIG_URL_BASE.format("uie", "uie-medium"), None],
-            "tokenizer": [
-                MINDNLP_TOKENIZER_CONFIG_URL_BASE.format("uie", "uie-medium"),
-                None,
-            ],
-        },
-        "uie-mini": {
-            "vocab": [MINDNLP_VOCAB_URL_BASE.format("uie", "uie-mini"), None],
-            "model_state": [MINDNLP_MODEL_URL_BASE.format("uie", "uie-mini"), None],
-            "config": [MINDNLP_CONFIG_URL_BASE.format("uie", "uie-mini"), None],
-            "tokenizer": [
-                MINDNLP_TOKENIZER_CONFIG_URL_BASE.format("uie", "uie-mini"),
-                None,
-            ],
-        },
-        "uie-micro": {
-            "vocab": [MINDNLP_VOCAB_URL_BASE.format("uie", "uie-micro"), None],
-            "model_state": [MINDNLP_MODEL_URL_BASE.format("uie", "uie-micro"), None],
-            "config": [MINDNLP_CONFIG_URL_BASE.format("uie", "uie-micro"), None],
-            "tokenizer": [
-                MINDNLP_TOKENIZER_CONFIG_URL_BASE.format("uie", "uie-micro"),
-                None,
-            ],
-        },
-        "uie-nano": {
-            "vocab": [MINDNLP_VOCAB_URL_BASE.format("uie", "uie-nano"), None],
-            "model_state": [MINDNLP_MODEL_URL_BASE.format("uie", "uie-nano"), None],
-            "config": [MINDNLP_CONFIG_URL_BASE.format("uie", "uie-nano"), None],
-            "tokenizer": [
-                MINDNLP_TOKENIZER_CONFIG_URL_BASE.format("uie", "uie-nano"),
-                None,
-            ],
-        },
-        "uie-base-en": {
-            "vocab": [MINDNLP_VOCAB_URL_BASE.format("uie", "uie-base-en"), None],
-            "model_state": [MINDNLP_MODEL_URL_BASE.format("uie", "uie-base-en"), None],
-            "config": [MINDNLP_CONFIG_URL_BASE.format("uie", "uie-base-en"), None],
-            "tokenizer": [
-                MINDNLP_TOKENIZER_CONFIG_URL_BASE.format("uie", "uie-base-en"),
-                None,
-            ],
-        },
+        # "uie-base": {
+        #     # "vocab": [MINDNLP_VOCAB_URL_BASE.format("uie", "uie-base"), None],
+        #     "model_state": [MS_MODEL_URL_BASE.format("uie", "uie-base"), None],
+        #     "config": [MS_CONFIG_URL_BASE.format("uie", "uie-base"), None],
+        #     "tokenizer": [
+        #         MS_TOKENIZER_CONFIG_URL_BASE.format("uie", "uie-base"),
+        #         None,
+        #     ],
+        # },
+        # "uie-medium": {
+        #     # "vocab": [MINDNLP_VOCAB_URL_BASE.format("uie", "uie-medium"), None],
+        #     "model_state": [MS_MODEL_URL_BASE.format("uie", "uie-medium"), None],
+        #     "config": [MS_CONFIG_URL_BASE.format("uie", "uie-medium"), None],
+        #     "tokenizer": [
+        #         MS_TOKENIZER_CONFIG_URL_BASE.format("uie", "uie-medium"),
+        #         None,
+        #     ],
+        # },
+        # "uie-mini": {
+        #     # "vocab": [MINDNLP_VOCAB_URL_BASE.format("uie", "uie-mini"), None],
+        #     "model_state": [MS_MODEL_URL_BASE.format("uie", "uie-mini"), None],
+        #     "config": [MS_CONFIG_URL_BASE.format("uie", "uie-mini"), None],
+        #     "tokenizer": [
+        #         MS_TOKENIZER_CONFIG_URL_BASE.format("uie", "uie-mini"),
+        #         None,
+        #     ],
+        # },
+        # "uie-micro": {
+        #     # "vocab": [MINDNLP_VOCAB_URL_BASE.format("uie", "uie-micro"), None],
+        #     "model_state": [MS_MODEL_URL_BASE.format("uie", "uie-micro"), None],
+        #     "config": [MS_CONFIG_URL_BASE.format("uie", "uie-micro"), None],
+        #     "tokenizer": [
+        #         MS_TOKENIZER_CONFIG_URL_BASE.format("uie", "uie-micro"),
+        #         None,
+        #     ],
+        # },
+        # "uie-nano": {
+        #     # "vocab": [MINDNLP_VOCAB_URL_BASE.format("uie", "uie-nano"), None],
+        #     "model_state": [MS_MODEL_URL_BASE.format("uie", "uie-nano"), None],
+        #     "config": [MS_CONFIG_URL_BASE.format("uie", "uie-nano"), None],
+        #     "tokenizer": [
+        #         MS_TOKENIZER_CONFIG_URL_BASE.format("uie", "uie-nano"),
+        #         None,
+        #     ],
+        # },
+        # "uie-base-en": {
+        #     # "vocab": [MINDNLP_VOCAB_URL_BASE.format("uie", "uie-base-en"), None],
+        #     "model_state": [MS_MODEL_URL_BASE.format("uie", "uie-base-en"), None],
+        #     "config": [MS_CONFIG_URL_BASE.format("uie", "uie-base-en"), None],
+        #     "tokenizer": [
+        #         MS_TOKENIZER_CONFIG_URL_BASE.format("uie", "uie-base-en"),
+        #         None,
+        #     ],
+        # },
     }
 
     def __init__(self, work, model, schema=None, **kwargs):
@@ -251,7 +245,7 @@ class UIEWork(Work):
         """
         Construct the tokenizer.
         """
-        self._tokenizer = UIETokenizer.from_pretrained(model)
+        self._tokenizer = AutoTokenizer.from_pretrained(model)
 
     def _preprocess(self, inputs):
         """

@@ -23,12 +23,14 @@ import numpy as np
 import mindspore
 from mindspore import ops, nn, Parameter, Tensor, dtype_to_nptype
 from mindspore.common.initializer import initializer, Normal
-from mindspore import log as logger
+from mindnlp.utils import logging
 
 from ...modeling_utils import PreTrainedModel
 from .gpt_neo_config import GPTNeoConfig
 from ...activations import ACT2FN
 
+
+logger = logging.get_logger(__name__)
 
 class GPTNeoSelfAttention(nn.Cell):
     """

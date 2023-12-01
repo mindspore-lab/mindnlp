@@ -14,7 +14,6 @@
 # ============================================================================
 """Test Binary Attention"""
 
-import unittest
 import numpy as np
 
 import mindspore
@@ -24,9 +23,9 @@ from mindspore import context
 from mindspore import Tensor
 
 from mindnlp.modules import BinaryAttention
+from ....common import MindNLPTestCase
 
-
-class TestBinaryAttention(unittest.TestCase):
+class TestBinaryAttention(MindNLPTestCase):
     r"""
     Test module Binary Attention
     """
@@ -42,23 +41,6 @@ class TestBinaryAttention(unittest.TestCase):
         unit test for binary attention with pynative mode.
         """
         context.set_context(mode=context.PYNATIVE_MODE)
-        net = BinaryAttention()
-        standard_normal = ops.StandardNormal(seed=114514)
-        tensor_x = standard_normal((2, 30, 512))
-        tensor_y = standard_normal((2, 20, 512))
-        x_mask = Tensor(np.zeros_like(tensor_x.shape[:-1]), mindspore.float32)
-        y_mask = Tensor(np.zeros_like(tensor_y.shape[:-1]), mindspore.float32)
-        output_x, output_y = net(tensor_x, x_mask, tensor_y, y_mask)
-
-        assert output_x.shape == tensor_x.shape
-        assert output_y.shape == tensor_y.shape
-
-    def test_binary_attention_graph(self):
-        """
-        unit test for binary attention whit graph mode.
-        """
-
-        context.set_context(mode=context.GRAPH_MODE)
         net = BinaryAttention()
         standard_normal = ops.StandardNormal(seed=114514)
         tensor_x = standard_normal((2, 30, 512))

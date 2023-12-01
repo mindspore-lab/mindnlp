@@ -27,11 +27,6 @@ from ...modeling_utils import PreTrainedModel
 from .codegen_config import CodeGenConfig
 from ...activations import ACT2FN
 
-
-_CHECKPOINT_FOR_DOC = "Salesforce/codegen-2B-mono"
-_CONFIG_FOR_DOC = "CodeGenConfig"
-
-
 #
 def fixed_pos_embedding(tensor, seq_dim=1, seq_len=None):
     """
@@ -604,8 +599,8 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
         loss = None
         if labels is not None:
             # Shift so that tokens < n predict n
-            shift_logits = lm_logits[..., :-1, :].contiguous()
-            shift_labels = labels[..., 1:].contiguous()
+            shift_logits = lm_logits[..., :-1, :]
+            shift_labels = labels[..., 1:]
             # Flatten the tokens
             loss_fct = nn.CrossEntropyLoss()
             loss = loss_fct(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1))

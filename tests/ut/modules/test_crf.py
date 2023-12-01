@@ -19,7 +19,6 @@ Test CRF
 # pylint: disable=W0212
 
 import itertools
-import unittest
 import math
 import random
 import pytest
@@ -30,6 +29,7 @@ from mindspore import ops, Tensor
 from mindnlp import ms_jit
 from mindnlp.modules import CRF
 from mindnlp.modules.crf import sequence_mask
+from ...common import MindNLPTestCase
 
 RANDOM_SEED = 0
 
@@ -126,7 +126,7 @@ class TestInit:
         assert 'invalid number of tags: 0' in str(excinfo.value)
 
 @ddt
-class TestForward(unittest.TestCase):
+class TestForward(MindNLPTestCase):
     """
     Test forward
     """
@@ -282,7 +282,7 @@ class TestForward(unittest.TestCase):
         assert np.allclose(llh.asnumpy(), llh_bf.asnumpy(), rtol=1e-3, atol=1e-3)
 
 @ddt
-class TestDecode(unittest.TestCase):
+class TestDecode(MindNLPTestCase):
     """test crf decoding."""
     @data(True, False)
     def test_works_with_mask(self, jit):

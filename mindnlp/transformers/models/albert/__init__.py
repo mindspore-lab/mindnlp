@@ -12,3 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+"""Albert model."""
+from . import tokenization_albert, tokenization_albert_fast, configuration_albert, modeling_albert
+from .tokenization_albert import *
+from .tokenization_albert_fast import *
+from .configuration_albert import *
+from .modeling_albert import *
+
+__all__ = []
+__all__.extend(modeling_albert.__all__)
+__all__.extend(configuration_albert.__all__)
+__all__.extend(tokenization_albert.__all__)
+__all__.extend(tokenization_albert_fast.__all__)

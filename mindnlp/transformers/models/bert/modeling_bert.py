@@ -24,19 +24,17 @@
 # pylint: disable=W0613
 
 """MindNLP bert model"""
-import os
 import math
-import logging
 from dataclasses import dataclass
 from typing import Optional, Tuple, List, Union
+import numpy as np
 import mindspore
-from mindspore import nn, ops
-from mindspore import Parameter, Tensor
-from mindspore import log as logger
+from mindspore import nn, ops, Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.configs import MS_MODEL_URL_BASE
+
+from mindnlp.utils import logging
 from mindnlp.utils import ModelOutput
-from .configuration_bert import BertConfig, BERT_SUPPORT_LIST
+from .configuration_bert import BertConfig
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -53,46 +51,20 @@ from ...modeling_outputs import (
 
 from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
 
-PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MS_MODEL_URL_BASE.format(model) for model in BERT_SUPPORT_LIST
-}
+logger = logging.get_logger(__name__)
 
-
-def torch_to_mindspore(pth_file):
-    """convert torch checkpoint to mindspore"""
-    try:
-        import torch
-    except Exception as exc:
-        raise ImportError("'import torch' failed, please install torch by "
-                          "`pip install torch` or instructions from 'https://pytorch.org'") \
-                          from exc
-
-    from mindspore.train.serialization import save_checkpoint
-
-    logging.info('Starting checkpoint conversion.')
-    ms_ckpt = []
-    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
-
-    for key, value in state_dict.items():
-        if 'LayerNorm' in key:
-            if '.weight' in key:
-                key = key.replace('.weight', '.gamma')
-            if '.bias' in key:
-                key = key.replace('.bias', '.beta')
-        if 'embeddings' in key or 'embedding' in key:
-            key = key.replace('weight', 'embedding_table')
-        ms_ckpt.append({'name': key, 'data': Tensor(value.numpy())})
-
-    ms_ckpt_path = pth_file.replace('pytorch_model.bin','mindspore.ckpt')
-    if not os.path.exists(ms_ckpt_path):
-        try:
-            save_checkpoint(ms_ckpt, ms_ckpt_path)
-        except Exception as exc:
-            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, '
-                               f'please checkout the path.') from exc
-
-    return ms_ckpt_path
-
+BERT_SUPPORT_LIST = [
+    "bert-base-uncased",
+    "bert-large-uncased",
+    "bert-base-cased",
+    "bert-large-cased",
+    "bert-base-multilingual-uncased",
+    "bert-base-multilingual-cased",
+    "bert-base-chinese",
+    "bert-base-german-cased",
+    "bert-large-uncased-whole-word-masking",
+    "bert-large-cased-whole-word-masking"
+]
 
 @dataclass
 class BertForPreTrainingOutput(ModelOutput):
@@ -596,13 +568,15 @@ class BertPooler(nn.Cell):
     """
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size, activation='tanh')
+        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        self.activation = nn.Tanh()
 
     def construct(self, hidden_states):
         # We "pool" the model by simply taking the hidden state corresponding.
         # to the first token
         first_token_tensor = hidden_states[:, 0]
         pooled_output = self.dense(first_token_tensor)
+        pooled_output = self.activation(pooled_output)
         return pooled_output
 
 
@@ -635,14 +609,21 @@ class BertLMPredictionHead(nn.Cell):
         # an output-only bias for each token.
         self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
 
-        self.bias = Parameter(initializer('zeros', config.vocab_size), 'decoder.bias')
+        self.bias = Parameter(initializer('zeros', config.vocab_size), 'bias')
 
         self.decoder.bias = self.bias
+        # for mindspore.nn.Dense
+        self.decoder.has_bias = True
+        self.decoder.bias_add = ops.add
+
 
     def construct(self, hidden_states):
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states)
         return hidden_states
+
+    def _tie_weights(self):
+        self.bias = self.decoder.bias
 
 
 class BertOnlyMLMHead(nn.Cell):
@@ -683,8 +664,7 @@ class BertPreTrainingHeads(nn.Cell):
 
 class BertPreTrainedModel(PreTrainedModel):
     """BertPretrainedModel"""
-    convert_torch_to_mindspore = torch_to_mindspore
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
     config_class = BertConfig
     base_model_prefix = 'bert'
 
@@ -698,12 +678,11 @@ class BertPreTrainedModel(PreTrainedModel):
             if cell.has_bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            embedding_table = initializer(Normal(self.config.initializer_range),
-                                                 cell.embedding_table.shape,
-                                                 cell.embedding_table.dtype)
+            embedding_table = np.random.normal(0.0, self.config.initializer_range, cell.embedding_table.shape)
             if cell.padding_idx:
                 embedding_table[cell.padding_idx] = 0
-            cell.embedding_table.set_data(embedding_table)
+
+            cell.embedding_table.set_data(Tensor(embedding_table, cell.embedding_table.dtype))
         elif isinstance(cell, nn.LayerNorm):
             cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
             cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))

@@ -15,13 +15,11 @@
 """
 TinyBert Models init
 """
-from . import tinybert, tinybert_config, tinybert_tokenizer
+from . import tinybert, tinybert_config
 
 from .tinybert_config import *
 from .tinybert import *
-from .tinybert_tokenizer import *
 
 __all__ = []
 __all__.extend(tinybert.__all__)
 __all__.extend(tinybert_config.__all__)
-__all__.extend(tinybert_tokenizer.__all__)

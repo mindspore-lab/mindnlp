@@ -22,9 +22,11 @@ import warnings
 import numpy as np
 
 from mindnlp.utils import is_mindspore_available, require_mindspore
+from mindnlp.utils.testing_utils import slow
+from mindnlp.engine.utils import set_seed
 from ..test_modeling_common import floats_tensor, ids_tensor
 from .test_framework_agnostic import GenerationIntegrationTestsMixin
-
+from ....common import MindNLPTestCase
 
 if is_mindspore_available():
     import mindspore
@@ -231,7 +233,7 @@ class GenerationTesterMixin:
             output_hidden_states=output_hidden_states,
         )
         encoder_outputs["last_hidden_state"] = encoder_outputs.last_hidden_state.repeat_interleave(
-            num_interleave, axis=0
+            num_interleave, dim=0
         )
         input_ids = ops.zeros_like(input_ids[:, :1]) + model._get_decoder_start_token_id()
         attention_mask = None
@@ -314,7 +316,7 @@ class GenerationTesterMixin:
         output_hidden_states=False,
         return_dict_in_generate=False,
     ):
-        mindspore.set_seed(0)
+        set_seed(1234)
         model_kwargs = {"attention_mask": attention_mask} if attention_mask is not None else {}
         output_generate = model.generate(
             input_ids,
@@ -331,8 +333,7 @@ class GenerationTesterMixin:
             **process_kwargs,
             **model_kwargs,
         )
-
-        mindspore.set_seed(0)
+        set_seed(1234)
         kwargs = {}
         if model.config.is_encoder_decoder:
             encoder_outputs, input_ids, attention_mask = self._get_encoder_outputs(
@@ -351,6 +352,7 @@ class GenerationTesterMixin:
         logits_processor.append(InfNanRemoveLogitsProcessor())
 
         model_kwargs = {"attention_mask": attention_mask} if attention_mask is not None else {}
+
         output_sample = model.sample(
             input_ids.repeat_interleave(num_return_sequences, dim=0),
             max_length=max_length,
@@ -441,7 +443,7 @@ class GenerationTesterMixin:
         output_hidden_states=False,
         return_dict_in_generate=False,
     ):
-        mindspore.set_seed(0)
+        set_seed(1234)
         model_kwargs = {"attention_mask": attention_mask} if attention_mask is not None else {}
         output_generate = model.generate(
             input_ids,
@@ -457,7 +459,7 @@ class GenerationTesterMixin:
             **model_kwargs,
         )
         # beam_search does not automatically interleave `batch_size` dim for `num_beams`
-        mindspore.set_seed(0)
+        set_seed(1234)
         kwargs = {}
         if model.config.is_encoder_decoder:
             encoder_outputs, input_ids, attention_mask = self._get_encoder_outputs(
@@ -1289,7 +1291,6 @@ class GenerationTesterMixin:
             beam_kwargs, beam_scorer = self._get_constrained_beam_scorer_and_kwargs(
                 input_ids.shape[0], max_length, constraints, num_return_sequences=num_return_sequences
             )
-
             output_generate, output_beam_search = self._constrained_beam_search_generate(
                 model=model,
                 input_ids=input_ids,
@@ -1473,6 +1474,7 @@ class GenerationTesterMixin:
         return
 
 
+    @slow
     def test_assisted_decoding_matches_greedy_search(self):
         # This test ensures that the assisted generation does not introduce output changes over greedy search.
         # It breaks the pattern in the tests above, for multiple reasons:
@@ -1774,7 +1776,7 @@ class GenerationTesterMixin:
             self.assertListEqual(outputs_from_ids.tolist(), outputs_from_embeds.tolist())
 
             # But if we pass different inputs_embeds, we should get different outputs
-            mindspore.set_seed(0)
+            set_seed(1234)
             random_embeds = ops.rand_like(inputs_embeds)
             outputs_from_rand_embeds = model.generate(input_ids, inputs_embeds=random_embeds)
             with self.assertRaises(AssertionError):
@@ -1944,7 +1946,7 @@ class GenerationTesterMixin:
 
 
 @require_mindspore
-class GenerationIntegrationTests(unittest.TestCase, GenerationIntegrationTestsMixin):
+class GenerationIntegrationTests(MindNLPTestCase, GenerationIntegrationTestsMixin):
     # setting framework_dependent_parameters needs to be gated, just like its contents' imports
     if is_mindspore_available():
         framework_dependent_parameters = {
@@ -1959,6 +1961,7 @@ class GenerationIntegrationTests(unittest.TestCase, GenerationIntegrationTestsMi
             "return_tensors": "pt",
         }
 
+    @slow
     def test_diverse_beam_search(self):
         # PT-only test: TF doesn't have a diverse beam search implementation
         article = """Justin Timberlake and Jessica Biel, welcome to parenthood.
@@ -2261,6 +2264,7 @@ class GenerationIntegrationTests(unittest.TestCase, GenerationIntegrationTestsMi
 
         self.assertTrue(np.allclose(transition_scores_sum, outputs.sequences_scores, atol=1e-3))
 
+    @slow
     def test_beam_search_example_integration(self):
         # PT-only test: TF doesn't have a BeamSearchScorer
         # exactly the example provided in the docstrings of beam search, which previously
@@ -2280,7 +2284,7 @@ class GenerationIntegrationTests(unittest.TestCase, GenerationIntegrationTestsMi
         # add encoder_outputs to model keyword arguments
         model_kwargs = {
             "encoder_outputs": model.get_encoder()(
-                encoder_input_ids.repeat_interleave(num_beams, axis=0), return_dict=True
+                encoder_input_ids.repeat_interleave(num_beams, dim=0), return_dict=True
             )
         }
 
@@ -2340,6 +2344,7 @@ class GenerationIntegrationTests(unittest.TestCase, GenerationIntegrationTestsMi
             ],
         )
 
+    @slow
     def test_constrained_beam_search_mixed(self):
         # PT-only test: TF doesn't have constrained beam search
         model = GPT2LMHeadModel.from_pretrained("gpt2")
@@ -2380,6 +2385,7 @@ class GenerationIntegrationTests(unittest.TestCase, GenerationIntegrationTestsMi
             ],
         )
 
+    @slow
     def test_constrained_beam_search_mixed_mixin(self):
         # PT-only test: TF doesn't have constrained beam search
         model = GPT2LMHeadModel.from_pretrained("gpt2")
@@ -2417,6 +2423,7 @@ class GenerationIntegrationTests(unittest.TestCase, GenerationIntegrationTestsMi
             ],
         )
 
+    @slow
     def test_cfg_mixin(self):
         model = GPT2LMHeadModel.from_pretrained("gpt2")
         tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
@@ -2456,6 +2463,7 @@ class GenerationIntegrationTests(unittest.TestCase, GenerationIntegrationTestsMi
             ],
         )
 
+    @slow
     def test_constrained_beam_search_example_translation_mixin(self):
         # PT-only test: TF doesn't have constrained beam search
         tokenizer = AutoTokenizer.from_pretrained("t5-base")
@@ -2480,6 +2488,7 @@ class GenerationIntegrationTests(unittest.TestCase, GenerationIntegrationTestsMi
 
         self.assertListEqual(outputs, ["Wie alt sind Sie?"])
 
+    @slow
     def test_constrained_beam_search_example_integration(self):
         # PT-only test: TF doesn't have constrained beam search
         tokenizer = AutoTokenizer.from_pretrained("t5-base")
@@ -2497,7 +2506,7 @@ class GenerationIntegrationTests(unittest.TestCase, GenerationIntegrationTestsMi
         # add encoder_outputs to model keyword arguments
         model_kwargs = {
             "encoder_outputs": model.get_encoder()(
-                encoder_input_ids.repeat_interleave(num_beams, axis=0), return_dict=True
+                encoder_input_ids.repeat_interleave(num_beams, dim=0), return_dict=True
             )
         }
 
@@ -2609,12 +2618,12 @@ class GenerationIntegrationTests(unittest.TestCase, GenerationIntegrationTestsMi
 
         # Only some seeds will work both on CPU/GPU for a fixed `expectation` value.
         # The selected seed is not guaranteed to work on all torch versions.
-        mindspore.set_seed(1)
+        set_seed(1)
         eos_token_id = 846
         generated_tokens = model.generate(**tokens, eos_token_id=eos_token_id, **generation_kwargs)
         self.assertTrue(expectation == len(generated_tokens[0]))
 
-        mindspore.set_seed(1)
+        set_seed(1)
         eos_token_id = [846, 198]
         generated_tokens = model.generate(**tokens, eos_token_id=eos_token_id, **generation_kwargs)
         self.assertTrue(expectation == len(generated_tokens[0]))

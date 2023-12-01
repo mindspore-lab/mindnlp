@@ -1,214 +1,418 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2021, The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
-# pylint: disable=C0103
-"""Test OPT"""
+""" Testing suite for the MindSpore OPT model. """
+
+
+import copy
+import tempfile
 import unittest
 import numpy as np
-import mindspore
-import pytest
-from mindspore.ops import functional
-from mindspore import Tensor
-from mindnlp.transformers.models.opt import opt, opt_config
-from mindnlp.transformers import OPTModel, OPTForCausalLM, OPTTokenizer
+
+from mindnlp.transformers import OPTConfig
+from mindnlp.utils import is_mindspore_available
+from mindnlp.utils.testing_utils import require_mindspore, slow
+
+from ...generation.test_utils import GenerationTesterMixin
+from ...test_configuration_common import ConfigTester
+from ...test_modeling_common import ModelTesterMixin, ids_tensor
 
 
-class OPTModelTest(unittest.TestCase):
-    r"""
-    OPT Model Test
-    """
+if is_mindspore_available():
+    import mindspore
+    from mindspore import ops
+
+    from mindnlp.transformers import (
+        GPT2Tokenizer,
+        OPTForCausalLM,
+        OPTForQuestionAnswering,
+        OPTForSequenceClassification,
+        OPTModel,
+    )
+
+
+def prepare_opt_inputs_dict(
+    config,
+    input_ids,
+    decoder_input_ids=None,
+    attention_mask=None,
+    decoder_attention_mask=None,
+    head_mask=None,
+    decoder_head_mask=None,
+):
+    if attention_mask is None:
+        attention_mask = input_ids.ne(config.pad_token_id)
+    return {
+        "input_ids": input_ids,
+        "attention_mask": attention_mask,
+        "head_mask": head_mask,
+    }
+
+
+class OPTModelTester:
+    def __init__(
+        self,
+        parent,
+        batch_size=13,
+        seq_length=7,
+        is_training=True,
+        use_labels=False,
+        vocab_size=99,
+        hidden_size=16,
+        num_hidden_layers=2,
+        num_attention_heads=4,
+        intermediate_size=4,
+        hidden_act="gelu",
+        hidden_dropout_prob=0.1,
+        attention_probs_dropout_prob=0.1,
+        max_position_embeddings=20,
+        eos_token_id=2,
+        pad_token_id=1,
+        bos_token_id=0,
+        embed_dim=16,
+        num_labels=3,
+        word_embed_proj_dim=16,
+        type_sequence_label_size=2,
+    ):
+        self.parent = parent
+        self.batch_size = batch_size
+        self.seq_length = seq_length
+        self.is_training = is_training
+        self.use_labels = use_labels
+        self.vocab_size = vocab_size
+        self.hidden_size = hidden_size
+        self.num_hidden_layers = num_hidden_layers
+        self.num_attention_heads = num_attention_heads
+        self.intermediate_size = intermediate_size
+        self.hidden_act = hidden_act
+        self.hidden_dropout_prob = hidden_dropout_prob
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob
+        self.max_position_embeddings = max_position_embeddings
+        self.eos_token_id = eos_token_id
+        self.pad_token_id = pad_token_id
+        self.bos_token_id = bos_token_id
+        self.embed_dim = embed_dim
+        self.num_labels = num_labels
+        self.type_sequence_label_size = type_sequence_label_size
+        self.word_embed_proj_dim = word_embed_proj_dim
+        self.is_encoder_decoder = False
+
+    def prepare_config_and_inputs(self):
+        input_ids = ids_tensor([self.batch_size, self.seq_length], self.vocab_size).clamp(
+            3,
+        )
+        input_ids[:, -1] = self.eos_token_id  # Eos Token
+
+        decoder_input_ids = ids_tensor([self.batch_size, self.seq_length], self.vocab_size)
+
+        config = self.get_config()
+        inputs_dict = prepare_opt_inputs_dict(config, input_ids, decoder_input_ids)
+        return config, inputs_dict
+
+    def get_config(self):
+        return OPTConfig(
+            vocab_size=self.vocab_size,
+            hidden_size=self.hidden_size,
+            num_hidden_layers=self.num_hidden_layers,
+            num_attention_heads=self.num_attention_heads,
+            ffn_dim=self.intermediate_size,
+            dropout=self.hidden_dropout_prob,
+            attention_dropout=self.attention_probs_dropout_prob,
+            max_position_embeddings=self.max_position_embeddings,
+            eos_token_id=self.eos_token_id,
+            bos_token_id=self.bos_token_id,
+            pad_token_id=self.pad_token_id,
+            embed_dim=self.embed_dim,
+            is_encoder_decoder=False,
+            word_embed_proj_dim=self.word_embed_proj_dim,
+        )
+
+    def get_pipeline_config(self):
+        config = self.get_config()
+        config.max_position_embeddings = 100
+        return config
+
+    def prepare_config_and_inputs_for_common(self):
+        config, inputs_dict = self.prepare_config_and_inputs()
+        return config, inputs_dict
+
+    def create_and_check_decoder_model_past_large_inputs(self, config, inputs_dict):
+        model = OPTModel(config=config).set_train(False)
+
+        input_ids = inputs_dict["input_ids"]
+        attention_mask = inputs_dict["attention_mask"]
+        head_mask = inputs_dict["head_mask"]
+
+        # first forward pass
+        outputs = model(input_ids, attention_mask=attention_mask, head_mask=head_mask, use_cache=True)
+
+        output, past_key_values = outputs.to_tuple()
+
+        # create hypothetical multiple next token and extent to next_input_ids
+        next_tokens = ids_tensor((self.batch_size, 3), config.vocab_size)
+        next_attn_mask = ids_tensor((self.batch_size, 3), 2)
+
+        # append to next input_ids and
+        next_input_ids = ops.cat([input_ids, next_tokens], axis=-1)
+        next_attention_mask = ops.cat([attention_mask.astype(next_attn_mask.dtype), next_attn_mask], axis=-1)
+
+        output_from_no_past = model(next_input_ids, attention_mask=next_attention_mask)["last_hidden_state"]
+        output_from_past = model(next_tokens, attention_mask=next_attention_mask, past_key_values=past_key_values)[
+            "last_hidden_state"
+        ]
+
+        # select random slice
+        random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
+        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx]
+        output_from_past_slice = output_from_past[:, :, random_slice_idx]
+
+        self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
+
+        # test that outputs are equal for slice
+        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+
+        # test no attention_mask works
+        outputs = model(input_ids, attention_mask=attention_mask, head_mask=head_mask, use_cache=True)
+        _, past_key_values = outputs.to_tuple()
+        output_from_no_past = model(next_input_ids)["last_hidden_state"]
+
+        output_from_past = model(next_tokens, past_key_values=past_key_values)["last_hidden_state"]
+
+        random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
+        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx]
+        output_from_past_slice = output_from_past[:, :, random_slice_idx]
+        # test that outputs are equal for slice
+        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
+
+
+@require_mindspore
+class OPTModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
+    all_model_classes = (
+        (OPTForCausalLM, OPTForSequenceClassification, OPTForQuestionAnswering)
+        if is_mindspore_available()
+        else ()
+    )
+    all_generative_model_classes = (OPTForCausalLM,) if is_mindspore_available() else ()
+    pipeline_model_mapping = (
+        {
+            "feature-extraction": OPTModel,
+            "question-answering": OPTForQuestionAnswering,
+            "text-classification": OPTForSequenceClassification,
+            "text-generation": OPTForCausalLM,
+            "zero-shot": OPTForSequenceClassification,
+        }
+        if is_mindspore_available()
+        else {}
+    )
+    is_encoder_decoder = False
+    fx_compatible = True
+    test_pruning = False
+    test_missing_keys = False
+
+    # TODO: Fix the failed tests
+    def is_pipeline_test_to_skip(
+        self, pipeline_test_casse_name, config_class, model_architecture, tokenizer_name, processor_name
+    ):
+        if (
+            pipeline_test_casse_name == "QAPipelineTests"
+            and tokenizer_name is not None
+            and not tokenizer_name.endswith("Fast")
+        ):
+            # `QAPipelineTests` fails for a few models when the slower tokenizer are used.
+            # (The slower tokenizers were never used for pipeline tests before the pipeline testing rework)
+            # TODO: check (and possibly fix) the `QAPipelineTests` with slower tokenizer
+            return True
+
+        return False
 
     def setUp(self):
-        r"""
-        Set up.
-        """
-        self.config = opt_config.OPTConfig(vocab_size=10, hidden_size=10, num_attention_heads=1, num_hidden_layers=1, ffn_dim=10)
+        self.model_tester = OPTModelTester(self)
+        self.config_tester = ConfigTester(self, config_class=OPTConfig)
 
-    def test_opt_attention(self):
-        r"""
-        Test opt attention
-        """
-        model = opt.OPTAttention(embed_dim=1, num_heads=1)
+    def test_config(self):
+        self.config_tester.run_common_tests()
 
-        hidden_states = Tensor(np.random.rand(1, 1, 1), dtype=mindspore.float32)
+    def test_save_load_strict(self):
+        config, inputs_dict = self.model_tester.prepare_config_and_inputs()
+        for model_class in self.all_model_classes:
+            model = model_class(config)
 
-        attn_output, _, _ = model(hidden_states)
-        assert attn_output.shape == (1, 1, 1)
+            with tempfile.TemporaryDirectory() as tmpdirname:
+                model.save_pretrained(tmpdirname)
+                model2, info = model_class.from_pretrained(tmpdirname, output_loading_info=True)
+            self.assertEqual(info["missing_keys"], [])
 
-    def test_opt_decoder(self):
-        r"""
-        Test opt decoder
-        """
-        model = opt.OPTDecoder(self.config)
+    def test_decoder_model_past_with_large_inputs(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_decoder_model_past_large_inputs(*config_and_inputs)
 
-        hidden_states = Tensor(np.random.randint(0, self.config.vocab_size, (1, 10)), dtype=mindspore.int64)
+    def test_inputs_embeds(self):
+        config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
 
-        outputs = model(hidden_states)
-        assert outputs.last_hidden_state.shape == (1, 10, 10)
+        for model_class in (OPTModel,):
+            model = model_class(config)
+            model
+            model.set_train(False)
 
-    def test_opt_model(self):
-        r"""
-        Test opt model
-        """
-        model = opt.OPTModel(self.config)
+            inputs = copy.deepcopy(self._prepare_for_class(inputs_dict, model_class))
 
-        hidden_states = Tensor(np.random.randint(0, self.config.vocab_size, (1, 10)), dtype=mindspore.int64)
+            if not self.is_encoder_decoder:
+                input_ids = inputs["input_ids"]
+                del inputs["input_ids"]
+            else:
+                encoder_input_ids = inputs["input_ids"]
+                decoder_input_ids = inputs.get("decoder_input_ids", encoder_input_ids)
+                del inputs["input_ids"]
+                inputs.pop("decoder_input_ids", None)
 
-        outputs = model(hidden_states)
-        assert outputs.last_hidden_state.shape == (1, 10, 10)
+            wte = model.get_input_embeddings()
+            if not self.is_encoder_decoder:
+                inputs["inputs_embeds"] = wte(input_ids)
+            else:
+                inputs["inputs_embeds"] = wte(encoder_input_ids)
+                inputs["decoder_inputs_embeds"] = wte(decoder_input_ids)
+
+            model(**inputs)[0]
+
+    @require_mindspore
+    def test_generate_fp16(self):
+        config, input_dict = self.model_tester.prepare_config_and_inputs()
+        input_ids = input_dict["input_ids"]
+        attention_mask = input_ids.ne(1)
+        model = OPTForCausalLM(config).set_train(False)
+        model.half()
+        model.generate(input_ids, attention_mask=attention_mask)
+        model.generate(num_beams=4, do_sample=True, early_stopping=False, num_return_sequences=3)
+
+    def test_opt_sequence_classification_model(self):
+        config, input_dict = self.model_tester.prepare_config_and_inputs()
+        config.num_labels = 3
+        input_ids = input_dict["input_ids"]
+        attention_mask = input_ids.ne(1)
+        sequence_labels = ids_tensor([self.model_tester.batch_size], self.model_tester.type_sequence_label_size)
+        model = OPTForSequenceClassification(config)
+        model.set_train(False)
+        result = model(input_ids, attention_mask=attention_mask, labels=sequence_labels)
+        self.assertEqual(result.logits.shape, (self.model_tester.batch_size, self.model_tester.num_labels))
+
+    def test_opt_sequence_classification_model_for_multi_label(self):
+        config, input_dict = self.model_tester.prepare_config_and_inputs()
+        config.num_labels = 3
+        config.problem_type = "multi_label_classification"
+        input_ids = input_dict["input_ids"]
+        attention_mask = input_ids.ne(1)
+        sequence_labels = ids_tensor(
+            [self.model_tester.batch_size, config.num_labels], self.model_tester.type_sequence_label_size
+        ).to(mindspore.float32)
+        model = OPTForSequenceClassification(config)
+        model.set_train(False)
+        result = model(input_ids, attention_mask=attention_mask, labels=sequence_labels)
+        self.assertEqual(result.logits.shape, (self.model_tester.batch_size, self.model_tester.num_labels))
+
+    @unittest.skip("Does not work on the tiny model as we keep hitting edge cases.")
+    def test_model_parallelism(self):
+        super().test_model_parallelism()
 
 
+def assert_tensors_close(a, b, atol=1e-12, prefix=""):
+    """If tensors have different shapes, different values or a and b are not both tensors, raise a nice Assertion error."""
+    if a is None and b is None:
+        return True
+    try:
+        if np.allclose(a.asnumpy(), b.asnumpy(), atol=atol):
+            return True
+        raise
+    except Exception:
+        pct_different = (ops.gt((a - b).abs(), atol)).float().mean().item()
+        if a.size > 100:
+            msg = f"tensor values are {pct_different:.1%} percent different."
+        else:
+            msg = f"{a} != {b}"
+        if prefix:
+            msg = prefix + ": " + msg
+        raise AssertionError(msg)
 
+
+def _long_tensor(tok_lst):
+    return mindspore.tensor(tok_lst, dtype=mindspore.int64)
+
+
+@require_mindspore
 class OPTModelIntegrationTests(unittest.TestCase):
-    r"""
-    Test OPT Model Integration
-    """
-
-    @pytest.mark.download
+    @slow
     def test_inference_no_head(self):
-        r"""
-        Test inference
-        """
-        model = OPTModel.from_pretrained(
-            "opt-350m", from_pt=False, return_dict=True
-        )
-        input_ids = Tensor(
-            [[0, 31414, 232, 328, 740, 1140, 12695, 69, 46078, 1588, 2]],
-            dtype=mindspore.int64,
-        )
-
-        mindspore.set_context(device_target="GPU")
-
-        functional.stop_gradient(model)
+        model = OPTModel.from_pretrained("facebook/opt-350m", from_pt=True)
+        input_ids = _long_tensor([[0, 31414, 232, 328, 740, 1140, 12695, 69, 46078, 1588, 2]])
         output = model(input_ids=input_ids).last_hidden_state
+        print(output.dtype)
 
         expected_shape = (1, 11, 512)
-        assert (np.asarray(output.shape) == np.asarray(expected_shape)).all()
+        self.assertEqual(output.shape, expected_shape)
         # expected value works for CPU, as well as GPU (with TF32 disabled)
-        expected_slice = Tensor(
+        expected_slice = mindspore.tensor(
             [
                 [-0.28726277, -1.9241608, -0.3058734],
                 [-1.2737825, -0.13332152, -0.18766522],
                 [0.41159445, 0.1191957, -1.3107123],
-            ]
+            ],
         )
-        assert np.allclose(output[0, :3, :3].numpy(), expected_slice.numpy(), atol=5e-4)
+        assert_tensors_close(output[0, :3, :3], expected_slice, atol=1e-3)
 
 
+@require_mindspore
+@slow
 class OPTEmbeddingsTest(unittest.TestCase):
-    r"""
-    Test OPT Embeddings
-    """
     def setUp(self):
-        r"""
-        Set up.
-        """
         super().setUp()
-        self.path_model = "opt-350m"
+        self.path_model = "facebook/opt-350m"
 
-    @pytest.mark.download
     def test_load_model(self):
-        r"""
-        Test load model
-        """
-        _ = OPTForCausalLM.from_pretrained(self.path_model, from_pt=False)
+        try:
+            _ = OPTForCausalLM.from_pretrained(self.path_model, from_pt=True)
+        except BaseException:
+            self.fail("Failed loading model")
 
-    @pytest.mark.download
     def test_logits(self):
-        r"""
-        Test logits
-        """
-        model = OPTForCausalLM.from_pretrained(self.path_model, from_pt=False)
+        model = OPTForCausalLM.from_pretrained(self.path_model, from_pt=True)
         model = model.set_train(False)
-        tokenizer = OPTTokenizer.from_pretrained(self.path_model)
+        tokenizer = GPT2Tokenizer.from_pretrained(self.path_model, from_pt=True)
 
-        prompts = np.asarray(
+        prompts = [
+            "Today is a beautiful day and I want to",
+            "In the city of",
+            "Paris is the capital of France and",
+            "Computers and mobile phones have taken",
+        ]
+        # verify that prompt without BOS token is identical to Metaseq -> add_special_tokens=False
+        inputs = tokenizer(prompts, return_tensors="ms", padding=True, add_special_tokens=False)
+        logits = model(inputs.input_ids, attention_mask=inputs.attention_mask)[0].mean(axis=-1)
+
+        logits_meta = mindspore.Tensor(
             [
-                "Today is a beautiful day and I want to",
-                "In the city of",
-                "Paris is the capital of France and",
-                "Computers and mobile phones have taken",
+                [1.3851, -13.8923, -10.5229, -10.7533, -0.2309, -10.2384, -0.5365, -9.0947, -5.1670],
+                [-4.7073, -10.6276, -3.9415, -21.5242, -0.2822, -0.2822, -0.2822, -0.2822, -0.2822],
+                [0.6247, -3.4229, -8.9179, -1.4297, -14.1650, 1.4146, -9.0218, -0.2703, -0.2703],
+                [6.4783, -1.9913, -10.7926, -2.3336, 1.5092, -0.9974, -6.8213, 1.3477, 1.3477],
             ]
         )
-
-        inputs = tokenizer(prompts)
-
-        logits = model(
-            Tensor(inputs["input_ids"]), attention_mask=Tensor(inputs["attention_mask"])
-        )[0].mean(axis=-1)
-        logits_meta = np.array(
-            [
-                [
-                    1.3851,
-                    -13.8923,
-                    -10.5229,
-                    -10.7533,
-                    -0.2309,
-                    -10.2384,
-                    -0.5365,
-                    -9.0947,
-                    -5.1670,
-                ],
-                [
-                    -4.7073,
-                    -10.6276,
-                    -3.9415,
-                    -21.5242,
-                    -0.2822,
-                    -0.2822,
-                    -0.2822,
-                    -0.2822,
-                    -0.2822,
-                ],
-                [
-                    0.6247,
-                    -3.4229,
-                    -8.9179,
-                    -1.4297,
-                    -14.1650,
-                    1.4146,
-                    -9.0218,
-                    -0.2703,
-                    -0.2703,
-                ],
-                [
-                    6.4783,
-                    -1.9913,
-                    -10.7926,
-                    -2.3336,
-                    1.5092,
-                    -0.9974,
-                    -6.8213,
-                    1.3477,
-                    1.3477,
-                ],
-            ]
-        )
-        assert np.allclose(logits.numpy(), logits_meta, atol=1e-4)
+        assert np.allclose(logits.asnumpy(), logits_meta.asnumpy(), atol=1e-3)
 
 
-# TODO: Do generation test
-@pytest.mark.skip
+@slow
 class OPTGenerationTest(unittest.TestCase):
-    r"""
-    Test GPT2 Generation
-    """
     @property
     def prompts(self):
-        r"""
-        Prompts
-        """
         return [
             "Today is a beautiful day and I want",
             "In the city of",
@@ -217,43 +421,35 @@ class OPTGenerationTest(unittest.TestCase):
         ]
 
     def test_generation_pre_attn_layer_norm(self):
-        r"""
-        Test Generation
-        """
-        model_id = "opt-350m"
+        model_id = "facebook/opt-125m"
 
         EXPECTED_OUTPUTS = [
             "Today is a beautiful day and I want to",
-            "In the city of San Francisco, the city",
+            "In the city of New York, the city",
             "Paris is the capital of France and the capital",
             "Computers and mobile phones have taken over the",
         ]
 
         predicted_outputs = []
-        tokenizer = OPTTokenizer.from_pretrained(model_id)
+        tokenizer = GPT2Tokenizer.from_pretrained(model_id, from_pt=True)
         model = OPTForCausalLM.from_pretrained(model_id, from_pt=True)
 
         for prompt in self.prompts:
-            input_ids = tokenizer(prompt)["input_ids"]
+            input_ids = tokenizer(prompt, return_tensors="ms").input_ids
 
-            generated_ids = model.generate(
-                inputs=np.asarray([input_ids], dtype=int), max_length=9
-            )
+            generated_ids = model.generate(input_ids, max_length=10)
 
-            generated_string = tokenizer.batch_decode(
-                [generated_ids], skip_special_tokens=True
-            )
+            generated_string = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
             predicted_outputs += generated_string
+
         self.assertListEqual(predicted_outputs, EXPECTED_OUTPUTS)
 
     def test_batch_generation(self):
-        r"""
-        Test batch generation
-        """
-        model_id = "opt-350m"
+        model_id = "facebook/opt-350m"
 
-        tokenizer = OPTTokenizer.from_pretrained(model_id)
-        model = OPTForCausalLM.from_pretrained(model_id)
+        tokenizer = GPT2Tokenizer.from_pretrained(model_id, from_pt=True)
+        model = OPTForCausalLM.from_pretrained(model_id, from_pt=True)
+        model
 
         tokenizer.padding_side = "left"
 
@@ -263,7 +459,7 @@ class OPTGenerationTest(unittest.TestCase):
             "Today, I",
         ]
 
-        inputs = tokenizer(sentences, return_tensors="pt", padding=True)
+        inputs = tokenizer(sentences, return_tensors="ms", padding=True)
         input_ids = inputs["input_ids"]
 
         outputs = model.generate(
@@ -271,22 +467,15 @@ class OPTGenerationTest(unittest.TestCase):
             attention_mask=inputs["attention_mask"],
         )
 
-        inputs_non_padded = tokenizer(sentences[0], return_tensors="pt").input_ids
+        inputs_non_padded = tokenizer(sentences[0], return_tensors="ms").input_ids
         output_non_padded = model.generate(input_ids=inputs_non_padded)
 
-        num_paddings = (
-            inputs_non_padded.shape[-1]
-            - inputs["attention_mask"][-1].long().sum().cpu().item()
-        )
-        inputs_padded = tokenizer(sentences[1], return_tensors="pt").input_ids
-        output_padded = model.generate(
-            input_ids=inputs_padded, max_length=model.config.max_length - num_paddings
-        )
+        num_paddings = inputs_non_padded.shape[-1] - inputs["attention_mask"][-1].long().sum().item()
+        inputs_padded = tokenizer(sentences[1], return_tensors="ms").input_ids
+        output_padded = model.generate(input_ids=inputs_padded, max_length=model.config.max_length - num_paddings)
 
         batch_out_sentence = tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        non_padded_sentence = tokenizer.decode(
-            output_non_padded[0], skip_special_tokens=True
-        )
+        non_padded_sentence = tokenizer.decode(output_non_padded[0], skip_special_tokens=True)
         padded_sentence = tokenizer.decode(output_padded[0], skip_special_tokens=True)
 
         expected_output_sentence = [
@@ -297,10 +486,7 @@ class OPTGenerationTest(unittest.TestCase):
         self.assertListEqual(batch_out_sentence, [non_padded_sentence, padded_sentence])
 
     def test_generation_post_attn_layer_norm(self):
-        r"""
-        Test generation
-        """
-        model_id = "opt-350m"
+        model_id = "facebook/opt-350m"
 
         EXPECTED_OUTPUTS = [
             "Today is a beautiful day and I want to",
@@ -310,17 +496,67 @@ class OPTGenerationTest(unittest.TestCase):
         ]
 
         predicted_outputs = []
-        tokenizer = OPTTokenizer.from_pretrained(model_id)
-        model = OPTForCausalLM.from_pretrained(model_id)
+        tokenizer = GPT2Tokenizer.from_pretrained(model_id, from_pt=True)
+        model = OPTForCausalLM.from_pretrained(model_id, from_pt=True)
 
         for prompt in self.prompts:
-            input_ids = tokenizer(prompt, return_tensors="pt").input_ids
+            input_ids = tokenizer(prompt, return_tensors="ms").input_ids
 
             generated_ids = model.generate(input_ids, max_length=10)
 
-            generated_string = tokenizer.batch_decode(
-                generated_ids, skip_special_tokens=True
-            )
+            generated_string = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
             predicted_outputs += generated_string
 
         self.assertListEqual(predicted_outputs, EXPECTED_OUTPUTS)
+
+    @require_mindspore
+    def test_batched_nan_fp16(self):
+        # a bug manifested starting at models facebook/opt-1.3 and larger when running batched generations,
+        # therefore not using a tiny model, but the smallest model the problem was seen with which is opt-1.3b.
+        # please refer to this github thread: https://github.com/huggingface/transformers/pull/17437 for more details
+        model_name = "facebook/opt-1.3b"
+        tokenizer = GPT2Tokenizer.from_pretrained(model_name, use_fast=False, padding_side="left", from_pt=True)
+
+        model = OPTForCausalLM.from_pretrained(model_name, ms_dtype=mindspore.float16, use_cache=True, from_pt=True)
+        model = model.set_train(False)
+
+        batch = tokenizer(["Who are you?", "Joe Biden is the president of"], padding=True, return_tensors="ms")
+
+        input_ids = batch["input_ids"]
+        attention_mask = batch["attention_mask"]
+
+        outputs = model(input_ids, attention_mask=attention_mask)
+        self.assertFalse(
+            ops.isnan(outputs.logits[0]).any().item()
+        )  # the first logits could contain NaNs if it fails
+
+    @slow
+    def test_contrastive_search_opt(self):
+        article = (
+            "A chat between a curious human and the Statue of Liberty.\n\nHuman: What is your name?\nStatue: I am the "
+            "Statue of Liberty.\nHuman: Where do you live?\nStatue: New York City.\nHuman: How long have you lived "
+            "there?"
+        )
+
+        opt_tokenizer = GPT2Tokenizer.from_pretrained("facebook/opt-1.3b", from_pt=True)
+        opt_model = OPTForCausalLM.from_pretrained("facebook/opt-1.3b", from_pt=True)
+        input_ids = opt_tokenizer(article, return_tensors="ms").input_ids
+
+        outputs = opt_model.generate(input_ids, penalty_alpha=0.6, top_k=5, max_length=256)
+        generated_text = opt_tokenizer.batch_decode(outputs, skip_special_tokens=True)
+
+        self.assertListEqual(
+            generated_text,
+            [
+                "A chat between a curious human and the Statue of Liberty.\n\nHuman: What is your name?\nStatue: I "
+                "am the Statue of Liberty.\nHuman: Where do you live?\nStatue: New York City.\nHuman: How long have "
+                "you lived there?\nStatue: A hundred years.\nHuman: And you’re from what country?\nStatue: The United "
+                "States of America.\nHuman: Why did you come to America?\nStatue: I came to escape the tyranny of my "
+                "country.\nHuman: What tyranny?\nStatue: They didn’t let me speak my mind.\nHuman: What was your "
+                "country?\nStatue: It was a country of immigrants.\nHuman: Who were the immigrants?\nStatue: They "
+                "were from all over the world.\nHuman: What language did they speak?\nStatue: French, Spanish, "
+                "Italian, German, English—you name it.\nHuman: And where did they come from?\nStatue: They came from "
+                "every country in the world.\nHuman: And you were born in what country?\nStatue: I was born in "
+                "France.\nHuman: And your parents were French?\nStatue"
+            ],
+        )

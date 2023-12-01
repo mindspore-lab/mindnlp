@@ -16,6 +16,7 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=logging-fstring-interpolation
 # pylint: disable=inconsistent-return-statements
+# pylint: disable=wrong-import-position
 """
 Import utilities: Utilities related to imports and our lazy inits.
 """
@@ -23,11 +24,17 @@ Import utilities: Utilities related to imports and our lazy inits.
 import os
 import sys
 import warnings
+from types import ModuleType
 from collections import OrderedDict
 from functools import wraps
 from typing import Tuple, Union
 import importlib.util
-import importlib_metadata
+if sys.version_info >= (3, 8):
+    # For Python 3.8 and later
+    from importlib import metadata as importlib_metadata
+else:
+    # For Python versions earlier than 3.8
+    import importlib_metadata
 
 from . import logging
 
@@ -55,6 +62,7 @@ _pytest_available = _is_package_available("pytest")
 _datasets_available = _is_package_available("datasets")
 _sentencepiece_available = _is_package_available("sentencepiece")
 _tokenizers_available = _is_package_available("tokenizers")
+_modelscope_available = _is_package_available('modelscope')
 _mindspore_version, _mindspore_available = _is_package_available("mindspore", return_version=True)
 
 def is_mindspore_available():
@@ -71,6 +79,9 @@ def is_sentencepiece_available():
 
 def is_tokenizers_available():
     return _tokenizers_available
+
+def is_modelscope_available():
+    return _modelscope_available
 
 def is_protobuf_available():
     if importlib.util.find_spec("google") is None:
@@ -206,3 +217,21 @@ def mindspore_required(func):
 
 class OptionalDependencyNotAvailable(BaseException):
     """Internally used error class for signalling an optional dependency was not found."""
+
+def direct_transformers_import(path: str, file="__init__.py") -> ModuleType:
+    """Imports transformers directly
+
+    Args:
+        path (`str`): The path to the source file
+        file (`str`, optional): The file to join with the path. Defaults to "__init__.py".
+
+    Returns:
+        `ModuleType`: The resulting imported module
+    """
+    name = "transformers"
+    location = os.path.join(path, file)
+    spec = importlib.util.spec_from_file_location(name, location, submodule_search_locations=[path])
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    module = sys.modules[name]
+    return module

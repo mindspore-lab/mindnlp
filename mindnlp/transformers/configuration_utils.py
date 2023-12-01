@@ -23,11 +23,12 @@ Pretrained config.
 import copy
 import json
 import os
-from typing import Optional, Tuple, Dict, Union, Any
+import re
+from typing import Optional, Tuple, Dict, Union, Any, List
 from mindnlp.utils import logging, is_mindspore_available
 
-from mindnlp.configs import HF_CONFIG_URL_BASE, DEFAULT_ROOT, CONFIG_NAME
-from mindnlp.utils.download import cached_path
+from mindnlp.configs import HF_URL_BASE, MS_URL_BASE, CONFIG_NAME
+from mindnlp.utils.download import is_remote_url, download_url, cached_file
 
 logger = logging.get_logger(__name__)
 
@@ -36,7 +37,6 @@ class PretrainedConfig:
     Abstract class for Pretrained models config.
     """
     is_composition = False
-    pretrained_config_archive_map: Dict[str, str] = {}
     # Add for handle attribute_map
     attribute_map: Dict[str, str] = {}
 
@@ -97,6 +97,7 @@ class PretrainedConfig:
             if not isinstance(self.id2label, dict):
                 raise ValueError("Argument id2label should be a dictionary.")
             num_labels = kwargs.pop("num_labels", None)
+
             if num_labels is not None and len(self.id2label) != num_labels:
                 logger.warning(
                     f"You passed along `num_labels={num_labels}` with an incompatible id to label map: "
@@ -344,8 +345,37 @@ class PretrainedConfig:
 
     @classmethod
     def get_config_dict(
-        cls, pretrained_model_name_or_path: str, pretrained_config_archive_map: Optional[Dict] = None, **kwargs
-    ) -> Tuple[Dict, Dict]:
+        cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """
+        From a `pretrained_model_name_or_path`, resolve to a dictionary of parameters, to be used for instantiating a
+        [`PretrainedConfig`] using `from_dict`.
+
+        Parameters:
+            pretrained_model_name_or_path (`str` or `os.PathLike`):
+                The identifier of the pre-trained checkpoint from which we want the dictionary of parameters.
+
+        Returns:
+            `Tuple[Dict, Dict]`: The dictionary(ies) that will be used to instantiate the configuration object.
+
+        """
+        original_kwargs = copy.deepcopy(kwargs)
+        # Get config dict associated with the base config file
+        config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)
+
+        # That config file may point us toward another config file to use.
+        if "configuration_files" in config_dict:
+            configuration_file = get_configuration_file(config_dict["configuration_files"])
+            config_dict, kwargs = cls._get_config_dict(
+                pretrained_model_name_or_path, _configuration_file=configuration_file, **original_kwargs
+            )
+
+        return config_dict, kwargs
+
+    @classmethod
+    def _get_config_dict(
+        cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
         From a `pretrained_model_name_or_path`, resolve to a dictionary of parameters, to be used
         for instantiating a Config using `from_dict`.
@@ -353,78 +383,73 @@ class PretrainedConfig:
         Parameters:
             pretrained_model_name_or_path (:obj:`string`):
                 The identifier of the pre-trained checkpoint from which we want the dictionary of parameters.
-            pretrained_config_archive_map: (:obj:`Dict[str, str]`, `optional`) Dict:
-                A map of `shortcut names` to `url`. By default, will use the current class attribute.
 
         Returns:
             :obj:`Tuple[Dict, Dict]`: The dictionary that will be used to instantiate the configuration object.
 
         """
-        cache_dir = kwargs.pop("cache_dir", os.path.join(DEFAULT_ROOT, 'models'))
-        _ = kwargs.pop("force_download", False)
-        _ = kwargs.pop("resume_download", False)
+        cache_dir = kwargs.pop("cache_dir", None)
+        force_download = kwargs.pop("force_download", False)
+        resume_download = kwargs.pop("resume_download", False)
         proxies = kwargs.pop("proxies", None)
-        _ = kwargs.pop("local_files_only", False)
-        from_pt = kwargs.pop("from_pt", False)
+        local_files_only = kwargs.pop("local_files_only", False)
+        from_pt = kwargs.pop("from_pt", False) # reuse
         subfolder = kwargs.pop("subfolder", "")
 
-        if pretrained_config_archive_map is None:
-            pretrained_config_archive_map = cls.pretrained_config_archive_map
+        pretrained_model_name_or_path = str(pretrained_model_name_or_path)
 
-        if pretrained_model_name_or_path in pretrained_config_archive_map:
-            config_file = pretrained_config_archive_map[pretrained_model_name_or_path]
-            cache_dir = os.path.join(cache_dir, pretrained_model_name_or_path)
-        elif os.path.isdir(pretrained_model_name_or_path):
-            config_file = "config.json"
-            cache_dir = pretrained_model_name_or_path
-            if subfolder:
-                cache_dir = os.path.join(cache_dir, subfolder)
-        elif os.path.isfile(pretrained_model_name_or_path):
-            config_file = pretrained_model_name_or_path
-            cache_dir = None
-        elif from_pt:
-            config_file = HF_CONFIG_URL_BASE.format(pretrained_model_name_or_path)
-            cache_dir = os.path.join(cache_dir, pretrained_model_name_or_path)
+        is_local = os.path.isdir(pretrained_model_name_or_path)
+        if os.path.isfile(os.path.join(subfolder, pretrained_model_name_or_path)):
+            # Special case when pretrained_model_name_or_path is a local file
+            resolved_config_file = pretrained_model_name_or_path
+            is_local = True
+
+        elif is_remote_url(pretrained_model_name_or_path):
+            configuration_file = pretrained_model_name_or_path
+            resolved_config_file = download_url(pretrained_model_name_or_path)
+
         else:
-            raise ValueError(f'not found config of {pretrained_model_name_or_path}')
+            configuration_file = kwargs.pop("_configuration_file", CONFIG_NAME)
+            endpoint = HF_URL_BASE if from_pt else MS_URL_BASE
+
+            try:
+                # Load from local folder or from cache or download from model Hub and cache
+                resolved_config_file = cached_file(
+                    pretrained_model_name_or_path,
+                    configuration_file,
+                    cache_dir=cache_dir,
+                    force_download=force_download,
+                    proxies=proxies,
+                    resume_download=resume_download,
+                    local_files_only=local_files_only,
+                    subfolder=subfolder,
+                    endpoint=endpoint
+                )
+            except EnvironmentError:
+                # Raise any environment error raise by `cached_file`. It will have a helpful error message adapted to
+                # the original exception.
+                raise
+            except Exception as exc:
+                # For any other exception, we throw a generic error.
+                raise EnvironmentError(
+                    f"Can't load the configuration of '{pretrained_model_name_or_path}'. If you were trying to load it"
+                    ", make sure you don't have a local directory with the same"
+                    f" name. Otherwise, make sure '{pretrained_model_name_or_path}' is the correct path to a directory"
+                    f" containing a {configuration_file} file"
+                ) from exc
 
         try:
-            # Load from URL or cache if already cached
-            resolved_config_file = cached_path(
-                config_file,
-                cache_dir=cache_dir,
-                proxies=proxies)
-
             # Load config dict
-            if resolved_config_file is None:
-                raise EnvironmentError
             config_dict = cls._dict_from_json_file(resolved_config_file)
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise EnvironmentError(
+                f"It looks like the config file at '{resolved_config_file}' is not a valid JSON file."
+            ) from exc
 
-        except EnvironmentError as exc:
-            if pretrained_model_name_or_path in pretrained_config_archive_map:
-                msg = f"Couldn't reach server at '{config_file}' to download pretrained model configuration file."
-            else:
-                msg = (
-                    f"Can't load '{pretrained_model_name_or_path}'. Make sure that:\n\n"
-                    f"- '{pretrained_model_name_or_path}' "
-                    f"is a correct model identifier listed on 'https://download.mindspore.cn/toolkits/mindnlp/models'\n\n"
-                    f"- or '{pretrained_model_name_or_path}' "
-                    f"is the correct path to a directory containing a config.json file\n\n"
-                )
-            raise EnvironmentError(msg) from exc
-
-        except json.JSONDecodeError as exc:
-            msg = (
-                f"Couldn't reach server at '{config_file}' to download configuration file or "
-                f"configuration file is not a valid JSON file. "
-                f"Please check network or file content here: {resolved_config_file}."
-            )
-            raise EnvironmentError(msg) from exc
-
-        if resolved_config_file == config_file:
-            logger.info("loading configuration file %s", config_file)
+        if is_local:
+            logger.info(f"loading configuration file {resolved_config_file}")
         else:
-            logger.info("loading configuration file %s from cache at %s", config_file, resolved_config_file)
+            logger.info(f"loading configuration file {configuration_file} from cache at {resolved_config_file}")
 
         return config_dict, kwargs
 
@@ -506,6 +531,16 @@ class PretrainedConfig:
         output_dict = self.to_dict()
         with open(os.path.join(save_path, 'config.json'), encoding='utf-8') as f:
             json.dump(output_dict, f, sort_keys=True, indent=2)
+
+    def update(self, config_dict: Dict[str, Any]):
+        """
+        Updates attributes of this class with attributes from `config_dict`.
+
+        Args:
+            config_dict (`Dict[str, Any]`): Dictionary of attributes that should be updated for this class.
+        """
+        for key, value in config_dict.items():
+            setattr(self, key, value)
 
     def save_pretrained(self, save_directory: Union[str, os.PathLike], **kwargs):
         """
@@ -643,6 +678,29 @@ class EncoderDecoderConfig(PretrainedConfig):
         decoder_config.add_cross_attention = True
 
         return cls(encoder=encoder_config.to_dict(), decoder=decoder_config.to_dict(), **kwargs)
+
+def get_configuration_file(configuration_files: List[str]) -> str:
+    """
+    Get the configuration file to use for this version of transformers.
+
+    Args:
+        configuration_files (`List[str]`): The list of available configuration files.
+
+    Returns:
+        `str`: The configuration file to use.
+    """
+    configuration_files_map = {}
+    for file_name in configuration_files:
+        search = re.compile(r"config\.(.*)\.json").search(file_name)
+        if search is not None:
+            v = search.groups()[0]
+            configuration_files_map[v] = file_name
+
+    # Defaults to FULL_CONFIGURATION_FILE and then try to look at some newer versions.
+    configuration_file = CONFIG_NAME
+
+    return configuration_file
+
 
 def recursive_diff_dict(dict_a, dict_b, config_obj=None):
     """

@@ -19,14 +19,14 @@
 """
 GenerationConfig
 """
-import os
 import copy
-import warnings
 import json
-from typing import Dict, Any, Union, Optional
+import os
+import warnings
+from typing import Any, Dict, Optional, Union
 
-from mindnlp.configs import GENERATION_CONFIG_NAME
-from mindnlp.utils import logging
+from mindnlp.configs import GENERATION_CONFIG_NAME, HF_URL_BASE, MS_URL_BASE
+from mindnlp.utils import logging, cached_file, download_url, is_remote_url
 
 logger = logging.get_logger(__name__)
 
@@ -38,6 +38,7 @@ class GenerationConfig:
     """
     def __init__(self, **kwargs):
         # Parameters that control the length of the output
+        # if the default `max_length` is updated here, make sure to update the `generate` tests following https://github.com/huggingface/transformers/pull/25030
         self.max_length = kwargs.pop("max_length", 20)
         self.max_new_tokens = kwargs.pop("max_new_tokens", None)
         self.min_length = kwargs.pop("min_length", 0)
@@ -75,6 +76,9 @@ class GenerationConfig:
         self.suppress_tokens = kwargs.pop("suppress_tokens", None)
         self.begin_suppress_tokens = kwargs.pop("begin_suppress_tokens", None)
         self.forced_decoder_ids = kwargs.pop("forced_decoder_ids", None)
+        self.sequence_bias = kwargs.pop("sequence_bias", None)
+        self.guidance_scale = kwargs.pop("guidance_scale", None)
+        self.low_memory = kwargs.pop("low_memory", None)
 
         # Parameters that define the output variables of `generate`
         self.num_return_sequences = kwargs.pop("num_return_sequences", 1)
@@ -99,14 +103,24 @@ class GenerationConfig:
         # Wild card
         self.generation_kwargs = kwargs.pop("generation_kwargs", {})
 
-        # From model config
-        self._from_model_config = kwargs.pop("from_model_config", False)
+        # The remaining attributes do not parametrize `.generate()`, but are informative and/or used by the hub
+        # interface.
+        self._from_model_config = kwargs.pop("_from_model_config", False)
+        self._commit_hash = kwargs.pop("_commit_hash", None)
 
-        self.sequence_bias = kwargs.pop("sequence_bias", None)
-        self.guidance_scale = kwargs.pop("guidance_scale", None)
+        # Additional attributes without default values
+        if not self._from_model_config:
+            # we don't want to copy values from the model config if we're initializing a `GenerationConfig` from a
+            # model's default configuration file
+            for key, value in kwargs.items():
+                try:
+                    setattr(self, key, value)
+                except AttributeError as err:
+                    logger.error(f"Can't set {key} with value {value} for {self}")
+                    raise err
 
-        self.low_memory = kwargs.pop("low_memory", None)
-
+        # Validate the values of the attributes
+        self.validate(is_init=True)
 
     def set_from_model_config(self, value:bool):
         """set _from_model_config"""
@@ -339,6 +353,163 @@ class GenerationConfig:
                     f"({self.num_beams})."
                 )
 
+    @classmethod
+    def from_pretrained(
+        cls,
+        pretrained_model_name: Union[str, os.PathLike],
+        config_file_name: Optional[Union[str, os.PathLike]] = None,
+        cache_dir: Optional[Union[str, os.PathLike]] = None,
+        force_download: bool = False,
+        local_files_only: bool = False,
+        **kwargs,
+    ) -> "GenerationConfig":
+        r"""
+        Instantiate a [`GenerationConfig`] from a generation configuration file.
+
+        Args:
+            pretrained_model_name (`str` or `os.PathLike`):
+                This can be either:
+
+                - a string, the *model id* of a pretrained model configuration hosted inside a model repo on
+                  huggingface.co. Valid model ids can be located at the root-level, like `bert-base-uncased`, or
+                  namespaced under a user or organization name, like `dbmdz/bert-base-german-cased`.
+                - a path to a *directory* containing a configuration file saved using the
+                  [`~GenerationConfig.save_pretrained`] method, e.g., `./my_model_directory/`.
+            config_file_name (`str` or `os.PathLike`, *optional*, defaults to `"generation_config.json"`):
+                Name of the generation configuration JSON file to be loaded from `pretrained_model_name`.
+            cache_dir (`str` or `os.PathLike`, *optional*):
+                Path to a directory in which a downloaded pretrained model configuration should be cached if the
+                standard cache should not be used.
+            force_download (`bool`, *optional*, defaults to `False`):
+                Whether or not to force to (re-)download the configuration files and override the cached versions if
+                they exist.
+            resume_download (`bool`, *optional*, defaults to `False`):
+                Whether or not to delete incompletely received file. Attempts to resume the download if such a file
+                exists.
+            proxies (`Dict[str, str]`, *optional*):
+                A dictionary of proxy servers to use by protocol or endpoint, e.g., `{'http': 'foo.bar:3128',
+                'http://hostname': 'foo.bar:4012'}.` The proxies are used on each request.
+            token (`str` or `bool`, *optional*):
+                The token to use as HTTP bearer authorization for remote files. If `True`, or not specified, will use
+                the token generated when running `huggingface-cli login` (stored in `~/.huggingface`).
+            revision (`str`, *optional*, defaults to `"main"`):
+                The specific model version to use. It can be a branch name, a tag name, or a commit id, since we use a
+                git-based system for storing models and other artifacts on huggingface.co, so `revision` can be any
+                identifier allowed by git.
+
+                <Tip>
+
+                To test a pull request you made on the Hub, you can pass `revision="refs/pr/<pr_number>".
+
+                </Tip>
+
+            return_unused_kwargs (`bool`, *optional*, defaults to `False`):
+                If `False`, then this function returns just the final configuration object.
+
+                If `True`, then this functions returns a `Tuple(config, unused_kwargs)` where *unused_kwargs* is a
+                dictionary consisting of the key/value pairs whose keys are not configuration attributes: i.e., the
+                part of `kwargs` which has not been used to update `config` and is otherwise ignored.
+            subfolder (`str`, *optional*, defaults to `""`):
+                In case the relevant files are located inside a subfolder of the model repo on huggingface.co, you can
+                specify the folder name here.
+            kwargs (`Dict[str, Any]`, *optional*):
+                The values in kwargs of any keys which are configuration attributes will be used to override the loaded
+                values. Behavior concerning key/value pairs whose keys are *not* configuration attributes is controlled
+                by the `return_unused_kwargs` keyword parameter.
+
+        Returns:
+            [`GenerationConfig`]: The configuration object instantiated from this pretrained model.
+
+        Examples:
+
+        ```python
+        >>> from transformers import GenerationConfig
+
+        >>> # Download configuration from huggingface.co and cache.
+        >>> generation_config = GenerationConfig.from_pretrained("gpt2")
+
+        >>> # E.g. config was saved using *save_pretrained('./test/saved_model/')*
+        >>> generation_config.save_pretrained("./test/saved_model/")
+        >>> generation_config = GenerationConfig.from_pretrained("./test/saved_model/")
+
+        >>> # You can also specify configuration names to your generation configuration file
+        >>> generation_config.save_pretrained("./test/saved_model/", config_file_name="my_configuration.json")
+        >>> generation_config = GenerationConfig.from_pretrained("./test/saved_model/", "my_configuration.json")
+
+        >>> # If you'd like to try a minor variation to an existing configuration, you can also pass generation
+        >>> # arguments to `.from_pretrained()`. Be mindful that typos and unused arguments will be ignored
+        >>> generation_config, unused_kwargs = GenerationConfig.from_pretrained(
+        ...     "gpt2", top_k=1, foo=False, do_sample=True, return_unused_kwargs=True
+        ... )
+        >>> generation_config.top_k
+        1
+
+        >>> unused_kwargs
+        {'foo': False}
+        ```"""
+        config_file_name = config_file_name if config_file_name is not None else GENERATION_CONFIG_NAME
+
+        resume_download = kwargs.pop("resume_download", False)
+        proxies = kwargs.pop("proxies", None)
+        subfolder = kwargs.pop("subfolder", "")
+        from_pt = kwargs.pop("from_pt", False)
+
+        config_path = os.path.join(pretrained_model_name, config_file_name)
+        config_path = str(config_path)
+        endpoint = HF_URL_BASE if from_pt else MS_URL_BASE
+        is_local = os.path.exists(config_path)
+        if os.path.isfile(os.path.join(subfolder, config_path)):
+            # Special case when config_path is a local file
+            resolved_config_file = config_path
+            is_local = True
+        elif is_remote_url(config_path):
+            configuration_file = config_path
+            resolved_config_file = download_url(config_path)
+        else:
+            configuration_file = config_file_name
+            try:
+                # Load from local folder or from cache or download from model Hub and cache
+                resolved_config_file = cached_file(
+                    pretrained_model_name,
+                    configuration_file,
+                    cache_dir=cache_dir,
+                    force_download=force_download,
+                    proxies=proxies,
+                    resume_download=resume_download,
+                    local_files_only=local_files_only,
+                    subfolder=subfolder,
+                    endpoint=endpoint
+                )
+            except EnvironmentError:
+                # Raise any environment error raise by `cached_file`. It will have a helpful error message adapted to
+                # the original exception.
+                raise
+            except Exception as exc:
+                # For any other exception, we throw a generic error.
+                raise EnvironmentError(
+                    f"Can't load the configuration of '{pretrained_model_name}'. If you were trying to load it"
+                    " from 'https://huggingface.co/models', make sure you don't have a local directory with the same"
+                    f" name. Otherwise, make sure '{pretrained_model_name}' is the correct path to a directory"
+                    f" containing a {configuration_file} file"
+                ) from exc
+
+        try:
+            # Load config dict
+            config_dict = cls._dict_from_json_file(resolved_config_file)
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise EnvironmentError(
+                f"It looks like the config file at '{resolved_config_file}' is not a valid JSON file."
+            ) from exc
+
+        if is_local:
+            logger.info(f"loading configuration file {resolved_config_file}")
+        else:
+            logger.info(f"loading configuration file {configuration_file} from cache at {resolved_config_file}")
+
+        config = cls.from_dict(config_dict, **kwargs)
+        return config
+
+
     def save_pretrained(
         self,
         save_directory: Union[str, os.PathLike],
@@ -481,5 +652,11 @@ class GenerationConfig:
         for value in d.values():
             if isinstance(value, dict):
                 self.dict_ms_dtype_to_str(value)
+
+    @classmethod
+    def _dict_from_json_file(cls, json_file: Union[str, os.PathLike]):
+        with open(json_file, "r", encoding="utf-8") as reader:
+            text = reader.read()
+        return json.loads(text)
 
 __all__ = ['GenerationConfig']

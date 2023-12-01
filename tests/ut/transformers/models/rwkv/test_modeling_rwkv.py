@@ -15,7 +15,6 @@
 """Test RWKV"""
 import gc
 import os
-import unittest
 import pytest
 import numpy as np
 
@@ -23,9 +22,9 @@ import mindspore
 from mindspore import Tensor
 from mindnlp.transformers.models.rwkv.rwkv_config import RwkvConfig
 from mindnlp.transformers.models.rwkv.rwkv import RwkvModel
+from .....common import MindNLPTestCase
 
-
-class TestModelingRWKV(unittest.TestCase):
+class TestModelingRWKV(MindNLPTestCase):
     r"""
     Test model bert
     """

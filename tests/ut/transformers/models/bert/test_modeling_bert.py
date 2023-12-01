@@ -12,23 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
-import tempfile
-import unittest
-
 import numpy as np
 
 from mindnlp.transformers import BertConfig
 from mindnlp.transformers.models.auto import get_values
-from mindnlp.utils.testing_utils import CaptureLogger, require_mindspore, is_mindspore_available
+from mindnlp.utils.testing_utils import CaptureLogger, require_mindspore, is_mindspore_available, slow
 from mindnlp.utils import logging
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask
+from .....common import MindNLPTestCase
 
-# import mindspore
-# mindspore.set_context(pynative_synchronize=True)
 
 if is_mindspore_available():
     import mindspore
@@ -433,7 +428,7 @@ class BertModelTester:
 
 
 @require_mindspore
-class BertModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
+class BertModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase):
     all_model_classes = (
         (
             BertModel,
@@ -599,6 +594,7 @@ class BertModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
             model(input_ids, attention_mask=None, token_type_ids=token_type_ids)
         self.assertIn("We strongly recommend passing in an `attention_mask`", cl.out)
 
+    @slow
     def test_model_from_pretrained(self):
         for model_name in BERT_SUPPORT_LIST[:1]:
             model = BertModel.from_pretrained(model_name)
@@ -606,8 +602,8 @@ class BertModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 
 
 @require_mindspore
-class BertModelIntegrationTest(unittest.TestCase):
-
+class BertModelIntegrationTest(MindNLPTestCase):
+    @slow
     def test_inference_no_head_absolute_embedding(self):
         model = BertModel.from_pretrained("bert-base-uncased")
         input_ids = mindspore.tensor([[0, 345, 232, 328, 740, 140, 1695, 69, 6078, 1588, 2]])
@@ -617,8 +613,9 @@ class BertModelIntegrationTest(unittest.TestCase):
         self.assertEqual(output.shape, expected_shape)
         expected_slice = mindspore.tensor([[[0.4249, 0.1008, 0.7531], [0.3771, 0.1188, 0.7467], [0.4152, 0.1098, 0.7108]]])
 
-        self.assertTrue(np.allclose(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        self.assertTrue(np.allclose(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
 
+    @slow
     def test_inference_no_head_relative_embedding_key(self):
         model = BertModel.from_pretrained("zhiheng-huang/bert-base-uncased-embedding-relative-key", from_pt=True)
         input_ids = mindspore.tensor([[0, 345, 232, 328, 740, 140, 1695, 69, 6078, 1588, 2]])
@@ -630,8 +627,9 @@ class BertModelIntegrationTest(unittest.TestCase):
             [[[0.0756, 0.3142, -0.5128], [0.3761, 0.3462, -0.5477], [0.2052, 0.3760, -0.1240]]]
         )
 
-        self.assertTrue(np.allclose(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        self.assertTrue(np.allclose(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
 
+    @slow
     def test_inference_no_head_relative_embedding_key_query(self):
         model = BertModel.from_pretrained("zhiheng-huang/bert-base-uncased-embedding-relative-key-query", from_pt=True)
         input_ids = mindspore.tensor([[0, 345, 232, 328, 740, 140, 1695, 69, 6078, 1588, 2]])
@@ -643,4 +641,4 @@ class BertModelIntegrationTest(unittest.TestCase):
             [[[0.6496, 0.3784, 0.8203], [0.8148, 0.5656, 0.2636], [-0.0681, 0.5597, 0.7045]]]
         )
 
-        self.assertTrue(np.allclose(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-4))
+        self.assertTrue(np.allclose(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-3))

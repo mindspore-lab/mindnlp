@@ -23,18 +23,12 @@ import logging
 import mindspore.common.dtype as mstype
 from mindspore import nn, ops
 from mindspore import Parameter, Tensor
-from mindspore.common.initializer import initializer, TruncatedNormal, Normal
+from mindspore.common.initializer import initializer, Normal
 from mindnlp._legacy.nn import Dropout, Matmul
-from mindnlp.configs import MS_MODEL_URL_BASE
 from mindnlp.modules.functional import make_causal_mask, finfo
-from .configuration_bert import BertConfig, BERT_SUPPORT_LIST
+from .configuration_bert import BertConfig
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
-
-
-PRETRAINED_MODEL_ARCHIVE_MAP = {
-    model: MS_MODEL_URL_BASE.format("bert", model) for model in BERT_SUPPORT_LIST
-}
 
 
 def torch_to_mindspore(pth_file, **kwargs):
@@ -92,17 +86,14 @@ class MSBertEmbeddings(nn.Cell):
         self.word_embeddings = nn.Embedding(
             config.vocab_size,
             config.hidden_size,
-            embedding_table=TruncatedNormal(config.initializer_range),
         )
         self.position_embeddings = nn.Embedding(
             config.max_position_embeddings,
             config.hidden_size,
-            embedding_table=TruncatedNormal(config.initializer_range),
         )
         self.token_type_embeddings = nn.Embedding(
             config.type_vocab_size,
             config.hidden_size,
-            embedding_table=TruncatedNormal(config.initializer_range),
         )
         self.LayerNorm = nn.LayerNorm(
             (config.hidden_size,), epsilon=config.layer_norm_eps
@@ -140,17 +131,14 @@ class MSBertSelfAttention(nn.Cell):
         self.query = nn.Dense(
             config.hidden_size,
             self.all_head_size,
-            weight_init=TruncatedNormal(config.initializer_range),
         )
         self.key = nn.Dense(
             config.hidden_size,
             self.all_head_size,
-            weight_init=TruncatedNormal(config.initializer_range),
         )
         self.value = nn.Dense(
             config.hidden_size,
             self.all_head_size,
-            weight_init=TruncatedNormal(config.initializer_range),
         )
 
         self.dropout = Dropout(config.attention_probs_dropout_prob)
@@ -323,7 +311,6 @@ class MSBertSelfOutput(nn.Cell):
         self.dense = nn.Dense(
             config.hidden_size,
             config.hidden_size,
-            weight_init=TruncatedNormal(config.initializer_range),
         )
         self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=1e-12)
         self.dropout = Dropout(config.hidden_dropout_prob)
@@ -362,7 +349,6 @@ class MSBertIntermediate(nn.Cell):
         self.dense = nn.Dense(
             config.hidden_size,
             config.intermediate_size,
-            weight_init=TruncatedNormal(config.initializer_range),
         )
         self.intermediate_act_fn = ACT2FN[config.hidden_act]
 
@@ -382,7 +368,6 @@ class MSBertOutput(nn.Cell):
         self.dense = nn.Dense(
             config.intermediate_size,
             config.hidden_size,
-            weight_init=TruncatedNormal(config.initializer_range),
         )
         self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=1e-12)
         self.dropout = Dropout(config.hidden_dropout_prob)
@@ -483,15 +468,15 @@ class MSBertPooler(nn.Cell):
         self.dense = nn.Dense(
             config.hidden_size,
             config.hidden_size,
-            activation="tanh",
-            weight_init=TruncatedNormal(config.initializer_range),
         )
+        self.activation = nn.Tanh()
 
     def construct(self, hidden_states):
         # We "pool" the model by simply taking the hidden state corresponding.
         # to the first token
         first_token_tensor = hidden_states[:, 0]
         pooled_output = self.dense(first_token_tensor)
+        pooled_output = self.activation(pooled_output)
         return pooled_output
 
 
@@ -505,7 +490,6 @@ class MSBertPredictionHeadTransform(nn.Cell):
         self.dense = nn.Dense(
             config.hidden_size,
             config.hidden_size,
-            weight_init=TruncatedNormal(config.initializer_range),
         )
         self.transform_act_fn = ACT2FN[config.hidden_act]
         self.LayerNorm = nn.LayerNorm(
@@ -534,7 +518,6 @@ class MSBertLMPredictionHead(nn.Cell):
             config.hidden_size,
             config.vocab_size,
             has_bias=False,
-            weight_init=TruncatedNormal(config.initializer_range),
         )
 
         self.bias = Parameter(initializer("zeros", config.vocab_size), "bias")
@@ -561,9 +544,7 @@ class MSBertPreTrainingHeads(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.predictions = MSBertLMPredictionHead(config)
-        self.seq_relationship = nn.Dense(
-            config.hidden_size, 2, weight_init=TruncatedNormal(config.initializer_range)
-        )
+        self.seq_relationship = nn.Dense(config.hidden_size, 2)
 
     def construct(self, sequence_output, pooled_output, masked_lm_positions):
         prediction_scores = self.predictions(sequence_output, masked_lm_positions)
@@ -575,7 +556,7 @@ class MSBertPreTrainedModel(PreTrainedModel):
     """BertPretrainedModel"""
 
     convert_torch_to_mindspore = torch_to_mindspore
-    pretrained_model_archive_map = PRETRAINED_MODEL_ARCHIVE_MAP
+
     config_class = BertConfig
     base_model_prefix = "bert"
 

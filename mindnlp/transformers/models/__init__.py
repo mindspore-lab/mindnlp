@@ -15,9 +15,11 @@
 """
 Models init
 """
-from . import auto, bart, bert, bloom, clip, codegen, cpm, ernie, glm, gpt, gpt_neo, gpt2, \
+from . import albert, auto, bart, bert, bloom, clip, codegen, cpm, ernie, glm, gpt, gpt_neo, gpt2, \
     llama, longformer, luke, megatron_bert, mobilebert, nezha, opt, pangu, roberta, rwkv, \
-    t5, tinybert, xlm, xlm_roberta, gpt_bigcode
+    t5, tinybert, xlm, xlm_roberta, gpt_bigcode, whisper
+from .albert import *
+from .auto import *
 from .bart import *
 from .bert import *
 from .bloom import *
@@ -44,9 +46,10 @@ from .tinybert import *
 from .xlm import *
 from .xlm_roberta import *
 from .gpt_bigcode import *
-from .auto import *
+from .whisper import *
 
 __all__ = []
+__all__.extend(albert.__all__)
 __all__.extend(auto.__all__)
 __all__.extend(bart.__all__)
 __all__.extend(bert.__all__)
@@ -74,3 +77,4 @@ __all__.extend(tinybert.__all__)
 __all__.extend(xlm.__all__)
 __all__.extend(xlm_roberta.__all__)
 __all__.extend(gpt_bigcode.__all__)
+__all__.extend(whisper.__all__)

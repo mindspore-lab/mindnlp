@@ -15,7 +15,6 @@
 # pylint: disable=ungrouped-imports
 """Test RDropLoss"""
 
-import unittest
 import pytest
 import numpy as np
 import mindspore
@@ -23,9 +22,10 @@ from ddt import ddt, data
 from mindspore import Tensor
 from mindnlp.modules import RDropLoss
 from mindnlp import ms_jit
+from ....common import MindNLPTestCase
 
 @ddt
-class TestRDropLoss(unittest.TestCase):
+class TestRDropLoss(MindNLPTestCase):
     r"""
     Test RDropLoss
     """
