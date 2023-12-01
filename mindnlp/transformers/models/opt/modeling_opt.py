@@ -245,6 +245,7 @@ class OPTDecoderLayer(nn.Cell):
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
 
+        print(config.layer_norm_elementwise_affine)
         self.self_attn_layer_norm = nn.LayerNorm(
             [self.embed_dim], elementwise_affine=config.layer_norm_elementwise_affine
         )

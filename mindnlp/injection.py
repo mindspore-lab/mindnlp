@@ -18,8 +18,9 @@
 """
 Injection mindspore.nn for MindNLP
 """
+import operator
+from functools import reduce, partial
 import math
-from functools import partial
 from packaging import version
 import mindspore
 import mindspore.common.dtype as mstype
@@ -84,6 +85,34 @@ def bool_patch_decorator(func):
 
     return wrapper
 
+def _get_unflatten_size(input_shape, dim, sizes):
+    input_rank = len(input_shape)
+    if not isinstance(sizes, (tuple, list)):
+        raise TypeError(f"Type of `sizes` should be `Tuple` or `List`, but got {type(sizes)}")
+
+    if len(sizes) == 0:
+        raise ValueError("`sizes` must be non-empty")
+
+    if isinstance(dim, str):
+        raise TypeError("Until Now, `dim` not support type of str in `unflatten`")
+
+    _dim = dim
+    if _dim < 0:
+        _dim += input_rank
+
+    if _dim < 0 or _dim >= input_rank:
+        raise ValueError(f"`dim` should be in range [{-input_rank}, {input_rank}), but got {input_rank, dim}")
+
+    _sizes_mul = reduce(operator.mul, list(sizes))
+    if -1 not in sizes and _sizes_mul != input_shape[_dim]:
+        raise ValueError(f"unflatten: Provided `sizes` {sizes} don't multiply up to the"
+            f"size of dim {dim} ({input_shape[_dim]}) in the input tensor")
+
+    out_shape = input_shape[:_dim] + tuple(sizes) + input_shape[_dim + 1:]
+    return out_shape
+
+# For all backend
+# For functional api
 # matmul
 origin_matmul = ops.matmul
 ops.matmul = fp16_patch_decorator(origin_matmul)
@@ -119,6 +148,7 @@ ops.einsum = einsum
 # conv1d
 ops.conv1d = fp16_patch_decorator(ops.conv1d)
 
+# for Tensor
 # unfold
 def _get_unfold_indices(input_shape, dimension, size, step):
     if dimension < 0:
@@ -219,6 +249,38 @@ def _contains(self, key):
 Tensor.__contains__ = _contains
 StubTensor.__contains__ = _contains
 
+def unflatten(self, dim, sizes):
+    """Tensor.unflatten"""
+    out_shape = _get_unflatten_size(self.shape, dim, sizes)
+    return self.reshape(out_shape)
+
+Tensor.unflatten = unflatten
+StubTensor.unflatten = unflatten
+
+if version.parse(mindspore.__version__) < version.parse('2.2.0'):
+    def eq(self, other):
+        """patched eq"""
+        return ops.equal(self, other)
+    Tensor.eq = eq
+    StubTensor.eq = eq
+
+
+def _eq(self, other):
+    if not isinstance(other, (int, float, Tensor)):
+        return False
+    if isinstance(other, Tensor) and self.shape != other.shape:
+        return False
+    if id(self) == id(other):
+        return True
+    # bool type is not supported for `Equal` operator in backend.
+    if self.dtype == mstype.bool_ or (isinstance(other, Tensor) and other.dtype == mstype.bool_):
+        self = self.to(mstype.int32)
+        other = other.to(mstype.int32)
+    return ops.eq(self, other)
+
+Parameter.__eq__ = _eq
+
+# Ascend only
 if DEVICE_TARGET == 'Ascend':
     # cumsum
     ops.cumsum = int32_patch_decorator(ops.cumsum)
@@ -266,6 +328,7 @@ if DEVICE_TARGET == 'Ascend':
     ops.cat = bool_patch_decorator(ops.cat)
     ops.concat = bool_patch_decorator(ops.concat)
 
+# GPU only
 def custom_multinomial(probabilities, num_samples, replacement=True):
     """custom multinomial"""
     if replacement:
@@ -290,29 +353,8 @@ def custom_multinomial(probabilities, num_samples, replacement=True):
 if DEVICE_TARGET == 'GPU':
     ops.multinomial = custom_multinomial
 
-if version.parse(mindspore.__version__) < version.parse('2.2.0'):
-    def eq(self, other):
-        """patched eq"""
-        return ops.equal(self, other)
-    Tensor.eq = eq
-    StubTensor.eq = eq
 
-
-def _eq(self, other):
-    if not isinstance(other, (int, float, Tensor)):
-        return False
-    if isinstance(other, Tensor) and self.shape != other.shape:
-        return False
-    if id(self) == id(other):
-        return True
-    # bool type is not supported for `Equal` operator in backend.
-    if self.dtype == mstype.bool_ or (isinstance(other, Tensor) and other.dtype == mstype.bool_):
-        self = self.to(mstype.int32)
-        other = other.to(mstype.int32)
-    return ops.eq(self, other)
-
-Parameter.__eq__ = _eq
-
+# For Cells
 class Dense(nn.Cell):
     """patched Dense"""
     def __init__(self,
