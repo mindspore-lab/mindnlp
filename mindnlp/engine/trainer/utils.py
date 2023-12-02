@@ -25,9 +25,8 @@ from mindnlp.utils import ModelOutput
 def get_default_forward_fn_with_loss_fn(network, loss_fn, loss_scaler):
     """get default forward function with loss function"""
     # forward function
-    def forward_fn(*args, **kwargs):
+    def forward_fn(labels, *args, **kwargs):
         logits_list = ()
-        labels = kwargs.pop('processed_labels')
         logits = network(*args, **kwargs)
         if isinstance(logits, tuple):
             logits_list += logits
@@ -64,10 +63,10 @@ def get_default_train_step_fn(forward_fn, optimizer, loss_scaler, check_gradient
     """get default train function"""
     grad_fn = value_and_grad(forward_fn, None, optimizer.parameters, has_aux=False)
 
-    def default_run_step(*args, **kwargs):
+    def default_run_step(labels, *args, **kwargs):
         """Core process of each step, including the forward propagation process and back propagation of data."""
         status = init_status()
-        loss, grads = grad_fn(*args, **kwargs)
+        loss, grads = grad_fn(labels, *args, **kwargs)
         loss = loss_scaler.unscale(loss)
         if check_gradients:
             is_finite = all_finite(grads, status)

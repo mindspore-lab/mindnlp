@@ -169,7 +169,7 @@ class Evaluator:
         inputs = {}
         used_col = set()
         for arg in net_args:
-            if arg == 'self':
+            if arg in ('self', 'kwargs'):
                 continue
             if arg not in data.keys():
                 if str(net_args[arg])[-4:] != 'None':

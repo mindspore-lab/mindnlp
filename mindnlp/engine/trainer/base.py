@@ -21,10 +21,11 @@ import os
 from typing import Optional, List, Union
 from inspect import signature
 from tqdm.autonotebook import tqdm
-from mindspore import nn, Tensor, context
+from mindspore import nn, Tensor, context, mutable
 from mindspore import save_checkpoint
 from mindspore.dataset.engine import Dataset, TakeDataset
 
+from mindnlp.injection import set_global_fp16
 from mindnlp.abc import Callback, Metric
 from mindnlp.transformers.configuration_utils import PretrainedConfig
 from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContext
@@ -223,11 +224,14 @@ class Trainer:
                 loss_total = 0
                 # step begin
                 for data in self.train_dataset.create_dict_iterator():
-                    data = self._data_process(data, tgt_columns)
+                    data, tgts = self._data_process(data, tgt_columns)
                     run_context.cur_step_nums += 1
                     self.cur_step_nums += 1
                     self.callback_manager.train_step_begin(run_context)
-                    loss = self.train_fn(**data)
+                    if self.obj_network:
+                        loss = self.train_fn(**data)
+                    else:
+                        loss = self.train_fn(tgts, **data)
                     loss_total += loss
                     run_context.loss = loss_total/self.cur_step_nums
                     progress.set_postfix(loss=loss_total/self.cur_step_nums)
@@ -277,7 +281,7 @@ class Trainer:
         inputs = {}
         used_col = set()
         for arg in net_args:
-            if arg == 'self':
+            if arg in ('self', 'kwargs'):
                 continue
             if arg not in data.keys():
                 if str(net_args[arg])[-4:] != 'None':
@@ -287,7 +291,7 @@ class Trainer:
                 used_col.add(arg)
 
         if self.obj_network:
-            return inputs
+            return inputs, None
 
         # process target dataset.
         tgts = ()
@@ -298,14 +302,13 @@ class Trainer:
                 used_col.add(tgt_column)
             else:
                 raise ValueError(f'Not found `{tgt_column}` in dataset, please check dataset column names.')
-        inputs['processed_labels'] = tgts
 
         remain_data_keys = set(data.keys()) - used_col
 
         if remain_data_keys:
             logger.warning(f'{remain_data_keys} is not match inputs arguments of network or function.')
 
-        return inputs
+        return inputs, mutable(tgts)
 
     def _prepare_tgt_columns(self, tgt_columns):
         """Check and prepare target columns for training."""
@@ -345,6 +348,7 @@ class Trainer:
         """set amp"""
         self.amp_level = level
         self.network = auto_mixed_precision(self.network, level)
+        set_global_fp16(True)
         if loss_scaler is None:
             logger.warning("Trainer will use 'StaticLossScaler' with `scale_value=2 ** 10` when `loss_scaler` is None.")
             self.loss_scaler = StaticLossScaler(2 ** 10)
