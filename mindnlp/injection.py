@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=global-variable-not-assigned
+# pylint: disable=global-statement
 # pylint: disable=redefined-builtin
 # pylint: disable=invalid-name
+# pylint: disable=unused-argument
 """
 Injection mindspore.nn for MindNLP
 """
@@ -38,10 +39,14 @@ GLOBAL_FP16_PATCH = False
 if DEVICE_TARGET == 'Ascend':
     GLOBAL_FP16_PATCH = True
 
+def set_global_fp16(mode: bool):
+    """set global fp16"""
+    global GLOBAL_FP16_PATCH
+    GLOBAL_FP16_PATCH = mode
+
 def fp16_patch_decorator(func):
     """fp16 patch on ascend"""
     def wrapper(*args, **kwargs):
-        global GLOBAL_FP16_PATCH
         if GLOBAL_FP16_PATCH:
             args = [arg.astype(mstype.float16) if arg is not None and isinstance(arg, Tensor) \
                     else arg for arg in args]
@@ -551,6 +556,11 @@ def half(self):
     return self
 
 nn.Cell.half = half
+
+def _check_cell_flags_in_pynative(self):
+    pass
+
+nn.Cell._check_cell_flags_in_pynative = _check_cell_flags_in_pynative
 
 nn.LayerNorm = LayerNorm
 nn.Conv1d = Conv1d

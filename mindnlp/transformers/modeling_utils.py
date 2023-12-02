@@ -240,6 +240,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
     _keep_in_fp32_modules = None
 
+    supports_recompute = False
+
     def __init__(self, config):
         super().__init__(config)
         # Save config in model
@@ -1234,6 +1236,15 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 f"split in {len(shards)} checkpoint shards. You can find where each parameters has been saved in the "
                 f"index located at {save_index_file}."
             )
+
+    def enable_recompute(self):
+        """Activates recompute (aka gradient checkpointing) for the current model."""
+        if not self.supports_recompute:
+            raise ValueError(f"{self.__class__.__name__} does not support gradient checkpointing.")
+
+        for _, cell in self.cells_and_names():
+            if hasattr(cell, "_set_recompute"):
+                cell._set_recompute()
 
 
 def get_parameter_dtype(parameter: Union[nn.Cell, GenerationMixin, "ModuleUtilsMixin"]):
