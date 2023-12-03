@@ -22,7 +22,8 @@ AUTOFORMER_SUPPORT_LIST = [
 ]
 
 CONFIG_ARCHIVE_MAP = {
-    model: MS_URL_BASE.format(model) for model in AUTOFORMER_SUPPORT_LIST # todo
+    # model: MS_URL_BASE.format(model) for model in AUTOFORMER_SUPPORT_LIST # todo
+    #"huggingface/autoformer-tourism-monthly": MS_URL_BASE.format("autoformer-tourism-monthly"),
 }
 
 

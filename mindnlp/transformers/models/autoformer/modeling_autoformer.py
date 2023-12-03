@@ -344,7 +344,7 @@ class AutoformerSinusoidalPositionalEmbedding(nn.Embedding):
 
     def __init__(self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None) -> None:
         super().__init__(num_positions, embedding_dim)
-        self.weight = self._init_weight(self.weight)
+        self.embedding_table = self._init_weight(self.embedding_table)
 
     @staticmethod
     def _init_weight(out: mindspore.Parameter) -> mindspore.Parameter:
@@ -360,7 +360,7 @@ class AutoformerSinusoidalPositionalEmbedding(nn.Embedding):
         sentinel = dim // 2 if dim % 2 == 0 else (dim // 2) + 1
         out[:, 0:sentinel] = mindspore.Tensor(np.sin(position_enc[:, 0::2]))
         out[:, sentinel:] = mindspore.Tensor(np.cos(position_enc[:, 1::2]))
-        out.detach_()
+        #out.detach_() #todo
         return out
 
     def construct(self, input_ids_shape: mindspore.Tensor.shape, past_key_values_length: int = 0) -> mindspore.Tensor:  # pylint:disable=arguments-renamed
@@ -427,7 +427,7 @@ class AutoformerLayernorm(nn.Cell):
 
     def __init__(self, config: AutoformerConfig):
         super().__init__()
-        self.layernorm = nn.LayerNorm(config.d_model)
+        self.layernorm = nn.LayerNorm([config.d_model])
 
     def construct(self, x):
         x_hat = self.layernorm(x)
@@ -675,7 +675,7 @@ class AutoformerEncoderLayer(nn.Cell):
             dropout=config.attention_dropout,
             autocorrelation_factor=config.autocorrelation_factor,
         )
-        self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
+        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim])
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
@@ -758,7 +758,7 @@ class AutoformerDecoderLayer(nn.Cell):
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
 
-        self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
+        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim])
         self.encoder_attn = AutoformerAttention(
             self.embed_dim,
             config.decoder_attention_heads,
@@ -766,7 +766,7 @@ class AutoformerDecoderLayer(nn.Cell):
             is_decoder=True,
             autocorrelation_factor=config.autocorrelation_factor,
         )
-        self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
+        self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim])
         self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
         self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = AutoformerLayernorm(config)
@@ -941,7 +941,7 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
             config.context_length + config.prediction_length, config.d_model
         )
         self.layers = nn.CellList([AutoformerEncoderLayer(config) for _ in range(config.encoder_layers)])
-        self.layernorm_embedding = nn.LayerNorm(config.d_model)
+        self.layernorm_embedding = nn.LayerNorm([config.d_model])
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
@@ -1072,7 +1072,7 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
             config.context_length + config.prediction_length, config.d_model
         )
         self.layers = nn.CellList([AutoformerDecoderLayer(config) for _ in range(config.decoder_layers)])
-        self.layernorm_embedding = nn.LayerNorm(config.d_model)
+        self.layernorm_embedding = nn.LayerNorm([config.d_model])
 
         # https://github.com/thuml/Autoformer/blob/e6371e24f2ae2dd53e472edefdd5814c5176f864/models/Autoformer.py#L74
         self.seasonality_projection = nn.Dense(config.d_model, config.feature_size)
@@ -1648,7 +1648,7 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         future_values: Optional[mindspore.Tensor] = None,
         future_time_features: Optional[mindspore.Tensor] = None,
         future_observed_mask: Optional[mindspore.Tensor] = None,
-        decoder_attention_mask: Optional[mindspore.LongTensor] = None,
+        decoder_attention_mask: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
         decoder_head_mask: Optional[mindspore.Tensor] = None,
         cross_attn_head_mask: Optional[mindspore.Tensor] = None,
