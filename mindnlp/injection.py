@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=global-variable-not-assigned
+# pylint: disable=global-statement
 # pylint: disable=redefined-builtin
 # pylint: disable=invalid-name
+# pylint: disable=unused-argument
 """
 Injection mindspore.nn for MindNLP
 """
+import operator
+from functools import reduce, partial
 import math
-from functools import partial
 from packaging import version
 import mindspore
 import mindspore.common.dtype as mstype
@@ -37,10 +39,14 @@ GLOBAL_FP16_PATCH = False
 if DEVICE_TARGET == 'Ascend':
     GLOBAL_FP16_PATCH = True
 
+def set_global_fp16(mode: bool):
+    """set global fp16"""
+    global GLOBAL_FP16_PATCH
+    GLOBAL_FP16_PATCH = mode
+
 def fp16_patch_decorator(func):
     """fp16 patch on ascend"""
     def wrapper(*args, **kwargs):
-        global GLOBAL_FP16_PATCH
         if GLOBAL_FP16_PATCH:
             args = [arg.astype(mstype.float16) if arg is not None and isinstance(arg, Tensor) \
                     else arg for arg in args]
@@ -84,6 +90,34 @@ def bool_patch_decorator(func):
 
     return wrapper
 
+def _get_unflatten_size(input_shape, dim, sizes):
+    input_rank = len(input_shape)
+    if not isinstance(sizes, (tuple, list)):
+        raise TypeError(f"Type of `sizes` should be `Tuple` or `List`, but got {type(sizes)}")
+
+    if len(sizes) == 0:
+        raise ValueError("`sizes` must be non-empty")
+
+    if isinstance(dim, str):
+        raise TypeError("Until Now, `dim` not support type of str in `unflatten`")
+
+    _dim = dim
+    if _dim < 0:
+        _dim += input_rank
+
+    if _dim < 0 or _dim >= input_rank:
+        raise ValueError(f"`dim` should be in range [{-input_rank}, {input_rank}), but got {input_rank, dim}")
+
+    _sizes_mul = reduce(operator.mul, list(sizes))
+    if -1 not in sizes and _sizes_mul != input_shape[_dim]:
+        raise ValueError(f"unflatten: Provided `sizes` {sizes} don't multiply up to the"
+            f"size of dim {dim} ({input_shape[_dim]}) in the input tensor")
+
+    out_shape = input_shape[:_dim] + tuple(sizes) + input_shape[_dim + 1:]
+    return out_shape
+
+# For all backend
+# For functional api
 # matmul
 origin_matmul = ops.matmul
 ops.matmul = fp16_patch_decorator(origin_matmul)
@@ -119,6 +153,7 @@ ops.einsum = einsum
 # conv1d
 ops.conv1d = fp16_patch_decorator(ops.conv1d)
 
+# for Tensor
 # unfold
 def _get_unfold_indices(input_shape, dimension, size, step):
     if dimension < 0:
@@ -219,6 +254,38 @@ def _contains(self, key):
 Tensor.__contains__ = _contains
 StubTensor.__contains__ = _contains
 
+def unflatten(self, dim, sizes):
+    """Tensor.unflatten"""
+    out_shape = _get_unflatten_size(self.shape, dim, sizes)
+    return self.reshape(out_shape)
+
+Tensor.unflatten = unflatten
+StubTensor.unflatten = unflatten
+
+if version.parse(mindspore.__version__) < version.parse('2.2.0'):
+    def eq(self, other):
+        """patched eq"""
+        return ops.equal(self, other)
+    Tensor.eq = eq
+    StubTensor.eq = eq
+
+
+def _eq(self, other):
+    if not isinstance(other, (int, float, Tensor)):
+        return False
+    if isinstance(other, Tensor) and self.shape != other.shape:
+        return False
+    if id(self) == id(other):
+        return True
+    # bool type is not supported for `Equal` operator in backend.
+    if self.dtype == mstype.bool_ or (isinstance(other, Tensor) and other.dtype == mstype.bool_):
+        self = self.to(mstype.int32)
+        other = other.to(mstype.int32)
+    return ops.eq(self, other)
+
+Parameter.__eq__ = _eq
+
+# Ascend only
 if DEVICE_TARGET == 'Ascend':
     # cumsum
     ops.cumsum = int32_patch_decorator(ops.cumsum)
@@ -266,6 +333,7 @@ if DEVICE_TARGET == 'Ascend':
     ops.cat = bool_patch_decorator(ops.cat)
     ops.concat = bool_patch_decorator(ops.concat)
 
+# GPU only
 def custom_multinomial(probabilities, num_samples, replacement=True):
     """custom multinomial"""
     if replacement:
@@ -275,22 +343,23 @@ def custom_multinomial(probabilities, num_samples, replacement=True):
         samples = ops.searchsorted(cumulative_probs, uniform_samples, right=True)
     else:
         # without replacement
-        indices = ops.arange(probabilities.shape[-1])
-        shuffled_indices = ops.randperm(probabilities.shape[-1]).unsqueeze(0).broadcast_to((probabilities.shape[:-1], -1))
-        selected_indices = shuffled_indices[:, :num_samples]
-        samples = indices[selected_indices]
+        n_dist = 1
+        if probabilities.ndim > 1:
+            n_dist = probabilities.shape[-2]
+        random_uniform = ops.rand((n_dist * probabilities.shape[-1],))
+        if n_dist != 1:
+            random_uniform = random_uniform.reshape(n_dist, probabilities.shape[-1])
+
+        vals = ops.div(ops.log(random_uniform), probabilities + 1e-6)
+        _, samples = ops.top_k(vals, num_samples)
+
     return samples
 
 if DEVICE_TARGET == 'GPU':
     ops.multinomial = custom_multinomial
 
-if version.parse(mindspore.__version__) < version.parse('2.2.0'):
-    def eq(self, other):
-        """patched eq"""
-        return ops.equal(self, other)
-    Tensor.eq = eq
-    StubTensor.eq = eq
 
+# For Cells
 class Dense(nn.Cell):
     """patched Dense"""
     def __init__(self,
@@ -481,14 +550,17 @@ class LayerNorm(nn.Cell):
         return f'normalized_shape={self.normalized_shape}, begin_norm_axis={self.begin_norm_axis}, ' \
                f'begin_params_axis={self.begin_params_axis}, gamma={self.gamma}, beta={self.beta}'
 
-
 def half(self):
     """patched nn.Cell.half"""
-    for param in self.get_parameters():
-        if param.dtype in (mindspore.float32, mindspore.float16):
-            param.set_dtype(mindspore.float16)
+    self.to_float(mindspore.float16)
+    return self
 
 nn.Cell.half = half
+
+def _check_cell_flags_in_pynative(self):
+    pass
+
+nn.Cell._check_cell_flags_in_pynative = _check_cell_flags_in_pynative
 
 nn.LayerNorm = LayerNorm
 nn.Conv1d = Conv1d

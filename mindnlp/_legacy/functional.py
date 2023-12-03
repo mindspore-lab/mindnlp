@@ -1463,8 +1463,6 @@ def sumproduct_pair(left_, right_, sum_dims_, keep_dim_):
 ELLIPSIS = 52
 
 def einsum(equation, *operands):
-    if mindspore.get_context('device_target') == 'GPU':
-        return _get_cache_prim(ops.Einsum)(equation)(operands)
     assert operands, "einsum(): must provide at least one operand"
 
     arrow_pos = equation.find("->")

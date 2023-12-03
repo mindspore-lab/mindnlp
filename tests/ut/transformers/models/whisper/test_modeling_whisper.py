@@ -951,7 +951,6 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
                 -11.1146, -8.1918
             ]
         )
-        print(logits[0, 0, :30].asnumpy() - EXPECTED_LOGITS.asnumpy())
         # fmt: on
         self.assertTrue(np.allclose(logits[0, 0, :30].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=1e-4))
 
@@ -1245,7 +1244,6 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
             [ 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.7600, 1.0000, 1.4200, 1.8000, 1.9400, 2.1800, 2.5200, 3.0200, 3.3200, 3.5400, 3.9400, 4.5600, 4.9200, 5.2800, 5.5600, 5.9000, 6.1600, 6.3000, 6.4800, 6.4800, 6.6400, 7.8200, 7.9600, 8.2200, 8.6000, 8.9200, 9.2200, 9.5200, 9.7200, 10.0600, 10.5400, 10.8800, 11.2600, 11.5400, 11.7400, 12.0800, 15.6800, 15.6800],
             [ 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.7400, 1.0400, 1.3200, 1.6800, 2.1400, 2.4800, 2.7800, 3.0800, 3.1600, 3.4000, 3.6000, 4.0200, 4.2200, 4.8600, 5.2400, 5.7400, 6.3400, 6.6200, 6.7600, 6.7600, 6.8600, 7.2400, 7.4200, 7.6800, 7.9200, 8.4800, 8.7600, 9.2000, 9.2000, 9.4200, 15.8200, 15.8200, 29.6400, 29.6600, 29.6600, 29.6600, 29.6600, 29.7600]
         ])
-        print(generate_outputs.token_timestamps.asnumpy() - EXPECTED_OUTPUT.asnumpy())
         # fmt: on
         self.assertTrue(np.allclose(generate_outputs.token_timestamps.asnumpy(), EXPECTED_OUTPUT.asnumpy(), 1e-3))
 
@@ -1279,7 +1277,6 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
                 1.1200, 3.9030, 4.4655, -4.4919, -1.1703, 9.6241
             ]
         )
-        print(logits[0][0, 0, :30].asnumpy() - EXPECTED_LOGITS.asnumpy())
         # fmt: on
         self.assertTrue(np.allclose(logits[0][0, 0, :30].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=1e-4))
 

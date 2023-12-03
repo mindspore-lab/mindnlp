@@ -484,7 +484,7 @@ def download(
     # check model whether exist
     model_url = url[: url.rfind('/')].replace('resolve/main', '')
 
-    req = requests.get(model_url, timeout=3, proxies=proxies, verify=False)
+    req = requests.get(model_url, timeout=3, proxies=proxies)
     status = req.status_code
     if status == 404:
         raise RepositoryNotFoundError(f"Can not found model: {repo_id}")

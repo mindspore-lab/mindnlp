@@ -612,7 +612,7 @@ class BertModelIntegrationTest(MindNLPTestCase):
         expected_shape = (1, 11, 768)
         self.assertEqual(output.shape, expected_shape)
         expected_slice = mindspore.tensor([[[0.4249, 0.1008, 0.7531], [0.3771, 0.1188, 0.7467], [0.4152, 0.1098, 0.7108]]])
-        print(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy())
+
         self.assertTrue(np.allclose(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
 
     @slow
@@ -626,7 +626,7 @@ class BertModelIntegrationTest(MindNLPTestCase):
         expected_slice = mindspore.tensor(
             [[[0.0756, 0.3142, -0.5128], [0.3761, 0.3462, -0.5477], [0.2052, 0.3760, -0.1240]]]
         )
-        print(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy())
+
         self.assertTrue(np.allclose(output[:, 1:4, 1:4].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
 
     @slow

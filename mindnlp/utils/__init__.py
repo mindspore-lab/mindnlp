@@ -24,3 +24,6 @@ from .import_utils import requires_backends, is_mindspore_available, OptionalDep
 is_tokenizers_available, direct_transformers_import, is_protobuf_available
 from .testing_utils import require_mindspore
 from .save import convert_file_size_to_int
+
+DUMMY_INPUTS = [[7, 6, 0, 0, 1], [1, 2, 3, 0, 0], [0, 0, 0, 4, 5]]
+DUMMY_MASK = [[1, 1, 1, 1, 1], [1, 1, 1, 0, 0], [0, 0, 0, 1, 1]]

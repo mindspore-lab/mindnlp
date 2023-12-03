@@ -384,7 +384,6 @@ class GPTBigCodeModelTester:
             math.sqrt(2 * model.config.n_layer)
         for key in model.parameters_dict().keys():
             if "c_proj" in key and "weight" in key:
-                print(ops.std(model.parameters_dict()[key]))
                 self.parent.assertLessEqual(
                     abs(ops.std(model.parameters_dict()[key]) - model_std), 0.001)
                 self.parent.assertLessEqual(

@@ -48,7 +48,6 @@ if is_mindspore_available():
 
 ROBERTA_TINY = "sshleifer/tiny-distilroberta-base"
 
-
 class RobertaModelTester:
     def __init__(
         self,
@@ -280,6 +279,7 @@ class RobertaModelTester:
             encoder_attention_mask=encoder_attention_mask,
             output_hidden_states=True,
         )["hidden_states"][0]
+
         output_from_past = model(
             next_tokens,
             attention_mask=next_attention_mask,

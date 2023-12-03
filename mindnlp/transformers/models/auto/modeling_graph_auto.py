@@ -20,7 +20,7 @@
 from collections import OrderedDict
 
 from mindnlp.utils import logging
-from .auto_factory import _BaseAutoModelClass, _LazyAutoMapping, auto_class_update
+from .auto_factory import _BaseAutoModelClass, _LazyAutoMapping
 from .configuration_auto import CONFIG_MAPPING_NAMES
 
 
@@ -277,100 +277,49 @@ class MSAutoModel(_BaseAutoModelClass):
     _model_mapping = FLAX_MODEL_MAPPING
 
 
-MSAutoModel = auto_class_update(MSAutoModel)
-
-
 class MSAutoModelForPreTraining(_BaseAutoModelClass):
     _model_mapping = FLAX_MODEL_FOR_PRETRAINING_MAPPING
-
-
-MSAutoModelForPreTraining = auto_class_update(MSAutoModelForPreTraining, head_doc="pretraining")
 
 
 class MSAutoModelForCausalLM(_BaseAutoModelClass):
     _model_mapping = FLAX_MODEL_FOR_CAUSAL_LM_MAPPING
 
 
-MSAutoModelForCausalLM = auto_class_update(MSAutoModelForCausalLM, head_doc="causal language modeling")
-
-
 class MSAutoModelForMaskedLM(_BaseAutoModelClass):
     _model_mapping = FLAX_MODEL_FOR_MASKED_LM_MAPPING
-
-
-MSAutoModelForMaskedLM = auto_class_update(MSAutoModelForMaskedLM, head_doc="masked language modeling")
 
 
 class MSAutoModelForSeq2SeqLM(_BaseAutoModelClass):
     _model_mapping = FLAX_MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING
 
 
-MSAutoModelForSeq2SeqLM = auto_class_update(
-    MSAutoModelForSeq2SeqLM, head_doc="sequence-to-sequence language modeling", checkpoint_for_example="t5-base"
-)
-
-
 class MSAutoModelForSequenceClassification(_BaseAutoModelClass):
     _model_mapping = FLAX_MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING
-
-
-MSAutoModelForSequenceClassification = auto_class_update(
-    MSAutoModelForSequenceClassification, head_doc="sequence classification"
-)
 
 
 class MSAutoModelForQuestionAnswering(_BaseAutoModelClass):
     _model_mapping = FLAX_MODEL_FOR_QUESTION_ANSWERING_MAPPING
 
 
-MSAutoModelForQuestionAnswering = auto_class_update(MSAutoModelForQuestionAnswering, head_doc="question answering")
-
-
 class MSAutoModelForTokenClassification(_BaseAutoModelClass):
     _model_mapping = FLAX_MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING
-
-
-MSAutoModelForTokenClassification = auto_class_update(
-    MSAutoModelForTokenClassification, head_doc="token classification"
-)
 
 
 class MSAutoModelForMultipleChoice(_BaseAutoModelClass):
     _model_mapping = FLAX_MODEL_FOR_MULTIPLE_CHOICE_MAPPING
 
 
-MSAutoModelForMultipleChoice = auto_class_update(MSAutoModelForMultipleChoice, head_doc="multiple choice")
-
-
 class MSAutoModelForNextSentencePrediction(_BaseAutoModelClass):
     _model_mapping = FLAX_MODEL_FOR_NEXT_SENTENCE_PREDICTION_MAPPING
-
-
-MSAutoModelForNextSentencePrediction = auto_class_update(
-    MSAutoModelForNextSentencePrediction, head_doc="next sentence prediction"
-)
 
 
 class MSAutoModelForImageClassification(_BaseAutoModelClass):
     _model_mapping = FLAX_MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING
 
 
-MSAutoModelForImageClassification = auto_class_update(
-    MSAutoModelForImageClassification, head_doc="image classification"
-)
-
-
 class MSAutoModelForVision2Seq(_BaseAutoModelClass):
     _model_mapping = FLAX_MODEL_FOR_VISION_2_SEQ_MAPPING
 
 
-MSAutoModelForVision2Seq = auto_class_update(MSAutoModelForVision2Seq, head_doc="vision-to-text modeling")
-
-
 class MSAutoModelForSpeechSeq2Seq(_BaseAutoModelClass):
     _model_mapping = FLAX_MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING
-
-
-MSAutoModelForSpeechSeq2Seq = auto_class_update(
-    MSAutoModelForSpeechSeq2Seq, head_doc="sequence-to-sequence speech-to-text modeling"
-)

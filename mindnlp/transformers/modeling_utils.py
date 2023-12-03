@@ -23,6 +23,7 @@
 # pylint: disable=unused-argument
 # pylint: disable=attribute-defined-outside-init
 # pylint: disable=self-cls-assignment
+# pylint: disable=no-name-in-module
 """
 Abstract class for Pretrained models.
 """
@@ -38,6 +39,7 @@ import numpy as np
 import mindspore
 from mindspore import load_checkpoint, save_checkpoint
 from mindspore import nn, ops, Tensor, Parameter
+from mindspore._c_expression import MixedPrecisionType
 
 from mindnlp.configs import MS_URL_BASE, HF_URL_BASE, PT_WEIGHTS_NAME, WEIGHTS_NAME, WEIGHTS_INDEX_NAME, PT_WEIGHTS_INDEX_NAME
 from mindnlp.utils.download import is_remote_url, download_url, cached_file, get_checkpoint_shard_files
@@ -59,11 +61,20 @@ class CellUtilMixin:
     """
 
     @property
-    def dtype(self) -> mindspore.dtype:
+    def dtype(self) -> mindspore.TensorType:
         """
         `mindspore.dtype`: The dtype of the module (assuming that all the module parameters have the same dtype).
         """
-        return mindspore.float32
+        if not hasattr(self, 'get_mixed_precision_type'):
+            return mindspore.float32
+        mixed_type = self.get_mixed_precision_type()
+        if mixed_type == MixedPrecisionType.FP16:
+            cast_type = mindspore.float16
+        elif mixed_type == MixedPrecisionType.BF16:
+            cast_type = mindspore.bfloat16
+        else:
+            cast_type = mindspore.float32
+        return cast_type
 
     @staticmethod
     def create_extended_attention_mask_for_decoder(input_shape, attention_mask):
@@ -229,6 +240,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
     _keep_in_fp32_modules = None
 
+    supports_recompute = False
+
     def __init__(self, config):
         super().__init__(config)
         # Save config in model
@@ -387,7 +400,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             self._tie_encoder_decoder_weights(
                 self.encoder, self.decoder, self.base_model_prefix)
 
-        for cell in self.cells():
+        for _, cell in self.cells_and_names():
             if hasattr(cell, "_tie_weights"):
                 cell._tie_weights()
 
@@ -398,20 +411,27 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
     def _tie_or_clone_weights(self, output_embeddings, input_embeddings):
         """ Tie or clone module weights depending of weither we are using or not
         """
-        output_embeddings.weight = input_embeddings.embedding_table
-        output_embeddings._params['weight'] = input_embeddings.embedding_table
+        if hasattr(output_embeddings, 'weight'):
+            output_embeddings.weight = input_embeddings.embedding_table
+            output_embeddings._params['weight'] = input_embeddings.embedding_table
+
+        if hasattr(output_embeddings, 'embedding_table'):
+            output_embeddings.embedding_table = input_embeddings.embedding_table
+            output_embeddings._params['embedding_table'] = input_embeddings.embedding_table
+
         if getattr(output_embeddings, "bias", None) is not None:
             if output_embeddings.weight.shape[0] == output_embeddings.bias.shape[0]:
                 pass
             else:
                 # instantial a new Parameter since mindspore.Parameter do not support assign_value with different shape
-                output_embeddings.bias = Parameter(ops.pad(
+                replace_references(output_embeddings.bias, Parameter(ops.pad(
                     output_embeddings.bias.data,
                     (0, output_embeddings.weight.shape[0] -
                     output_embeddings.bias.shape[0]),
                     "constant",
                     0,
-                ))
+                ), name=output_embeddings.bias.name, requires_grad=output_embeddings.bias.requires_grad))
+
         if hasattr(output_embeddings, "out_channels") and hasattr(input_embeddings, "vocab_size"):
             output_embeddings.out_channels = input_embeddings.vocab_size
 
@@ -435,7 +455,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         model_embeds = self._resize_token_embeddings(new_num_tokens, pad_to_multiple_of)
         if new_num_tokens is None and pad_to_multiple_of is None:
             return model_embeds
-
         # Update base model and current model config
         self.config.vocab_size = model_embeds.embedding_table.shape[0]
         self.vocab_size = model_embeds.embedding_table.shape[0]
@@ -641,6 +660,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         output_loading_info = kwargs.pop("output_loading_info", False)
         subfolder = kwargs.pop("subfolder", "")
         variant = kwargs.pop("variant", None)
+        ms_dtype = kwargs.pop("ms_dtype", None)
+        _ = kwargs.pop('low_cpu_mem_usage', None)
 
         is_sharded = False
         # Load config if we don't provide a configuration
@@ -800,6 +821,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
         # Instantiate model.
         model = cls(config, *model_args, **model_kwargs)
+        if ms_dtype:
+            model = model.to_float(ms_dtype)
 
         if from_pt:
             if is_sharded:
@@ -827,8 +850,12 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         keys_missing = list(model.parameters_dict().keys())
         param_id_set = set()
 
+        use_keep_in_fp32_modules = False
+        if model._keep_in_fp32_modules:
+            use_keep_in_fp32_modules = True
 
         def load_param_into_net(model: nn.Cell, param_dict: dict, prefix: str):
+            keep_in_fp32_modules = model._keep_in_fp32_modules
             keys_unexpected = list(param_dict.keys())
 
             has_prefix_module = any(s.startswith(prefix) for s in keys_unexpected)
@@ -836,22 +863,27 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
             for pname_in_net, param in model.parameters_and_names():
                 if has_prefix_module and not expects_prefix_module:
-                    param_name = prefix + '.' + param.name
+                    param_name = prefix + '.' + pname_in_net
                 elif not has_prefix_module and expects_prefix_module:
-                    param_name = param.name.replace(f'{prefix}.', '')
+                    param_name = pname_in_net.replace(f'{prefix}.', '')
                 else:
-                    param_name = param.name
+                    param_name = pname_in_net
 
                 if id(param) in param_id_set:
                     # for tied params
                     if pname_in_net in keys_missing:
                         keys_missing.remove(pname_in_net)
 
-                    if pname_in_net in keys_unexpected:
-                        keys_unexpected.remove(pname_in_net)
+                    if param_name in keys_missing:
+                        keys_missing.remove(param_name)
+
+                    if param_name in keys_unexpected:
+                        keys_unexpected.remove(param_name)
                     continue
                 new_param = param_dict.pop(param_name, None)
+
                 if new_param is not None:
+                    use_replace = False
                     if new_param.shape != param.shape:
                         if not ignore_mismatched_sizes:
                             raise RuntimeError(f'The shape of parameter `{param.name} is {param.shape}, but got mismatch parameter'
@@ -859,11 +891,25 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                                             f'\n\tYou may consider adding `ignore_mismatched_sizes=True` in the model `from_pretrained` method.')
                         logger.warning(f'The shape of parameter `{param.name} is {param.shape}, but got mismatch parameter'
                                         f' `{param_name} with shape {new_param.shape} in checkpoint, ')
-                        param = Parameter(new_param.data, param.name)
+                        continue
+
+                    if new_param.dtype != param.dtype:
+                        use_replace = True
+
+                    if ms_dtype:
+                        use_replace = True
+                        new_param = new_param.astype(ms_dtype)
+
+                    if use_keep_in_fp32_modules and \
+                        any(module_to_keep_in_fp32 in pname_in_net.split(".") for module_to_keep_in_fp32 in keep_in_fp32_modules):
+                        new_param = new_param.astype(mindspore.float32)
+
+                    if use_replace:
+                        replace_references(param, Parameter(new_param, name=param.name, requires_grad=param.requires_grad))
                     else:
                         param.set_data(new_param)
                     keys_unexpected.remove(param_name)
-                    keys_missing.remove(param.name)
+                    keys_missing.remove(pname_in_net)
                     param_id_set.add(id(param))
 
             return keys_unexpected, keys_missing
@@ -1191,6 +1237,15 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 f"index located at {save_index_file}."
             )
 
+    def enable_recompute(self):
+        """Activates recompute (aka gradient checkpointing) for the current model."""
+        if not self.supports_recompute:
+            raise ValueError(f"{self.__class__.__name__} does not support gradient checkpointing.")
+
+        for _, cell in self.cells_and_names():
+            if hasattr(cell, "_set_recompute"):
+                cell._set_recompute()
+
 
 def get_parameter_dtype(parameter: Union[nn.Cell, GenerationMixin, "ModuleUtilsMixin"]):
     """
@@ -1340,6 +1395,7 @@ def convert_torch_to_mindspore(pth_file):
                 key = key.replace('.bias', '.beta')
         if 'wpe' in key or 'wte' in key or \
             'embeddings' in key or 'embedding' in key or \
+            'shared' in key or 'relative_attention_bias' in key or \
             'embed_' in key or '_embed' in key and \
             'embedding_hidden_mapping_in' not in key: # for albert
             key = key.replace('weight', 'embedding_table')
@@ -1734,3 +1790,27 @@ class SequenceSummary(nn.Cell):
         output = self.activation(output)
         output = self.last_dropout(output)
         return output
+
+def replace_references(old_obj, new_obj):
+    """use replace_references instead of Tensor.set_data due to mindspore errors."""
+    # Get all objects referring to old_obj
+    referrers = gc.get_referrers(old_obj)
+
+    # Replace references
+    for referrer in referrers:
+        if isinstance(referrer, dict):
+            # If the reference is in a dictionary
+            for key, value in referrer.items():
+                if value is old_obj:
+                    referrer[key] = new_obj
+        elif isinstance(referrer, list):
+            # If the reference is in a list or tuple
+            index = referrer.index(old_obj)
+            referrer[index] = new_obj
+        elif isinstance(referrer, tuple):
+            pass
+        elif hasattr(referrer, '__dict__'):
+            # If the reference is in the __dict__ of an object
+            for key, value in referrer.__dict__.items():
+                if value is old_obj:
+                    setattr(referrer, key, new_obj)

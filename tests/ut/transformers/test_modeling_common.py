@@ -227,7 +227,6 @@ class ModelTesterMixin:
             model.set_train(False)
 
             first = model(**self._prepare_for_class(inputs_dict, model_class))[0]
-
             with tempfile.TemporaryDirectory() as tmpdirname:
                 model.save_pretrained(tmpdirname)
 
@@ -237,8 +236,8 @@ class ModelTesterMixin:
                     model.can_generate(), os.path.exists(os.path.join(tmpdirname, GENERATION_CONFIG_NAME))
                 )
 
-                model = model_class.from_pretrained(tmpdirname)
-                second = model(**self._prepare_for_class(inputs_dict, model_class))[0]
+                model2 = model_class.from_pretrained(tmpdirname)
+                second = model2(**self._prepare_for_class(inputs_dict, model_class))[0]
 
             if isinstance(first, tuple) and isinstance(second, tuple):
                 for tensor1, tensor2 in zip(first, second):
@@ -267,9 +266,9 @@ class ModelTesterMixin:
             with tempfile.TemporaryDirectory() as tmpdirname:
                 model.save_pretrained(tmpdirname)
 
-                model = model_class.from_pretrained(tmpdirname, torch_dtype=mindspore.float16)
+                model = model_class.from_pretrained(tmpdirname, ms_dtype=mindspore.float16)
 
-                for name, param in model.named_parameters():
+                for name, param in model.parameters_and_names():
                     if any(n in model_class._keep_in_fp32_modules for n in name.split(".")):
                         self.assertTrue(param.dtype == mindspore.float32)
                     else:
@@ -336,9 +335,9 @@ class ModelTesterMixin:
 
             # check that certain keys didn't get saved with the model
             with tempfile.TemporaryDirectory() as tmpdirname:
+                # print(tmpdirname)
                 model.save_pretrained(tmpdirname)
-                mindspore.save_checkpoint(model, os.path.join(tmpdirname, "mindspore.ckpt"))
-
+                # mindspore.save_checkpoint(model, os.path.join(tmpdirname, "mindspore.ckpt"))
                 model_fast_init = model_class_copy.from_pretrained(tmpdirname)
                 model_slow_init = model_class_copy.from_pretrained(tmpdirname, _fast_init=False)
                 # Before we test anything
@@ -355,7 +354,6 @@ class ModelTesterMixin:
         if config.__class__ not in MODEL_MAPPING:
             return
         base_class = MODEL_MAPPING[config.__class__]
-
         if isinstance(base_class, tuple):
             base_class = base_class[0]
 
@@ -1131,13 +1129,11 @@ class ModelTesterMixin:
             return equal
 
         for model_class in self.all_model_classes:
-            config.torchscript = True
             model_not_tied = model_class(config)
             if model_not_tied.get_output_embeddings() is None:
                 continue
 
             config_tied = copy.deepcopy(config)
-            config_tied.torchscript = False
             model_tied = model_class(config_tied)
             params_tied = list(model_tied.get_parameters())
             # Check that the embedding layer and decoding layer are the same in size and in value
@@ -1191,7 +1187,6 @@ class ModelTesterMixin:
             ptrs = collections.defaultdict(list)
             for name, tensor in model_tied.parameters_dict().items():
                 ptrs[id(tensor)].append(name)
-
             # These are all the pointers of shared tensors.
             tied_params = [names for _, names in ptrs.items() if len(names) > 1]
             tied_weight_keys = model_tied._tied_weights_keys if model_tied._tied_weights_keys is not None else []

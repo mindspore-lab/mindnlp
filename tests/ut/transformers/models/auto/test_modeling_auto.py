@@ -82,7 +82,7 @@ if is_mindspore_available():
     )
     from mindnlp.transformers.models.bert.modeling_bert import BERT_SUPPORT_LIST
     from mindnlp.transformers.models.gpt2.modeling_gpt2 import GPT2_PRETRAINED_MODEL_ARCHIVE_LIST
-    from mindnlp.transformers.models.t5.modeling_t5 import T5_SUPPORT_LIST
+    from mindnlp.transformers.models.t5.modeling_t5 import T5_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
 @require_mindspore
@@ -139,7 +139,7 @@ class AutoModelTest(unittest.TestCase):
 
     @slow
     def test_model_for_causal_lm(self):
-        for model_name in GPT2_SUPPORT_LIST[:1]:
+        for model_name in GPT2_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
             config = AutoConfig.from_pretrained(model_name)
             self.assertIsNotNone(config)
             self.assertIsInstance(config, GPT2Config)
@@ -162,10 +162,9 @@ class AutoModelTest(unittest.TestCase):
             self.assertIsNotNone(model)
             self.assertIsInstance(model, BertForMaskedLM)
 
-    @unittest.skip('not support yet')
     @slow
     def test_model_for_encoder_decoder_lm(self):
-        for model_name in T5_SUPPORT_LIST[:1]:
+        for model_name in T5_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
             config = AutoConfig.from_pretrained(model_name)
             self.assertIsNotNone(config)
             self.assertIsInstance(config, T5Config)
