@@ -530,17 +530,17 @@ class MSBertPreTrainedModel(PreTrainedModel):
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
         elif isinstance(cell, nn.Embedding):
-            embedding_table = initializer(
+            weight = initializer(
                 Normal(self.config.initializer_range),
-                cell.embedding_table.shape,
-                cell.embedding_table.dtype,
+                cell.weight.shape,
+                cell.weight.dtype,
             )
             if cell.padding_idx is not None:
-                embedding_table[cell.padding_idx] = 0
-            cell.embedding_table.set_data(embedding_table)
+                weight[cell.padding_idx] = 0
+            cell.weight.set_data(weight)
         elif isinstance(cell, nn.LayerNorm):
-            cell.gamma.set_data(initializer("ones", cell.gamma.shape, cell.gamma.dtype))
-            cell.beta.set_data(initializer("zeros", cell.beta.shape, cell.beta.dtype))
+            cell.weight.set_data(initializer("ones", cell.weight.shape, cell.weight.dtype))
+            cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
 
 
 class MSBertModel(MSBertPreTrainedModel):
@@ -629,7 +629,7 @@ class MSBertForPretraining(MSBertPreTrainedModel):
         self.vocab_size = config.vocab_size
 
         self.cls.predictions.decoder.weight = (
-            self.bert.embeddings.word_embeddings.embedding_table
+            self.bert.embeddings.word_embeddings.weight
         )
 
     def construct(

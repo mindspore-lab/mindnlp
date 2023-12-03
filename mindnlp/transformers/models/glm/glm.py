@@ -116,10 +116,10 @@ class PromptSpell(nn.Cell):
                 task_embedding = word_embeddings[task_token]
                 ratio = random.random()
                 target_embedding = word_embedding * ratio + task_embedding * (1 - ratio)
-            self.spell_embeddings.embedding_table[i] = target_embedding
+            self.spell_embeddings.weight[i] = target_embedding
 
     def construct(self):
-        prompt_embeds = self.spell_embeddings.embedding_table.unsqueeze(0)
+        prompt_embeds = self.spell_embeddings.weight.unsqueeze(0)
         if self.spell_func == "lstm":
             prompt_embeds = self.lstm_head(prompt_embeds)[0]
         if self.spell_func in ("lstm", "mlp"):

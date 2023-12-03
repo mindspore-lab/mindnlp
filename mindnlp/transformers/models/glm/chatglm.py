@@ -21,7 +21,6 @@
 """ MindSpore ChatGLM model. """
 
 import copy
-import os
 import warnings
 import re
 
@@ -40,46 +39,6 @@ from ...generation.logits_process import LogitsProcessor, LogitsProcessorList
 from ...generation.stopping_criteria import StoppingCriteriaList
 
 logger = logging.get_logger(__name__)
-
-
-def torch_to_mindspore(pth_file, **kwargs):
-    """convert torch checkpoint to mindspore"""
-    _ = kwargs.get('prefix', '')
-
-    ms_ckpt_path = re.sub(r'pytorch_model(.*).bin', r'mindspore\1.ckpt', pth_file)
-    if os.path.exists(ms_ckpt_path):
-        return ms_ckpt_path
-
-    try:
-        import torch
-    except Exception as exc:
-        raise ImportError("'import torch' failed, please install torch by "
-                          "`pip install torch` or instructions from 'https://pytorch.org'") \
-                          from exc
-
-    from mindspore.train.serialization import save_checkpoint
-
-    logger.info('Starting checkpoint conversion.')
-    ms_ckpt = []
-    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
-
-    for key, value in state_dict.items():
-        if 'layernorm' in key:
-            if '.weight' in key:
-                key = key.replace('.weight', '.gamma')
-            if '.bias' in key:
-                key = key.replace('.bias', '.beta')
-        if 'embeddings' in key:
-            key = key.replace('weight', 'embedding_table')
-        ms_ckpt.append({'name': key, 'data': Tensor(value.numpy())})
-
-    try:
-        save_checkpoint(ms_ckpt, ms_ckpt_path)
-    except Exception as exc:
-        raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, '
-                           f'please checkout the path.') from exc
-
-    return ms_ckpt_path
 
 class InvalidScoreLogitsProcessor(LogitsProcessor):
     """Invalid Score Processer."""
@@ -552,7 +511,6 @@ class ChatGLMPreTrainedModel(PreTrainedModel):
     base_model_prefix = "transformer"
     _no_split_modules = ["GLMBlock"]
 
-    convert_torch_to_mindspore = torch_to_mindspore
     _keys_to_ignore_on_load_unexpected = [r'inv_freq']
 
     def _init_weights(self, cell: nn.Cell):

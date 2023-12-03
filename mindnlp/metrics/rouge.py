@@ -297,7 +297,7 @@ class RougeL(Metric):
     def __init__(self, beta=1.2, name='RougeL'):
         super().__init__()
         self._name = name
-        self.beta = _check_value_type("beta", beta, [float])
+        self.bias = _check_value_type("beta", beta, [float])
         self.inst_scores = []
 
     def clear(self):
@@ -339,8 +339,8 @@ class RougeL(Metric):
         rec_max = max(recalls)
 
         if prec_max != 0 and rec_max != 0:
-            score = ((1 + self.beta**2) * prec_max * rec_max) / \
-                    float(rec_max + self.beta**2 * prec_max)
+            score = ((1 + self.bias**2) * prec_max * rec_max) / \
+                    float(rec_max + self.bias**2 * prec_max)
         else:
             score = 0.0
         self.inst_scores.append(score)

@@ -418,18 +418,18 @@ class Embedding(nn.Cell):
         self.use_one_hot = use_one_hot
         self.dtype = dtype
         self.padding_idx = padding_idx
-        self.embedding_table = Parameter(initializer('zeros', [vocab_size, embedding_size]), name='embedding_table')
+        self.weight = Parameter(initializer('zeros', [vocab_size, embedding_size]), name='weight')
         self.reset_parameters()
 
     def reset_parameters(self):
         """reset_embedding_params"""
-        init_tensor = initializer(Normal(1.0), self.embedding_table.shape)
+        init_tensor = initializer(Normal(1.0), self.weight.shape)
         init_tensor = init_tensor.init_data()
         if self.padding_idx:
             init_tensor = init_tensor.asnumpy()
             init_tensor[self.padding_idx] = 0
             init_tensor = Tensor(init_tensor)
-        self.embedding_table.assign_value(init_tensor)
+        self.weight.assign_value(init_tensor)
 
     def construct(self, ids):
         out_shape = ids.shape + (self.embedding_size,)
@@ -437,16 +437,16 @@ class Embedding(nn.Cell):
 
         if self.use_one_hot:
             one_hot_ids = ops.one_hot(flat_ids, self.vocab_size)
-            output_for_reshape = ops.matmul(one_hot_ids, self.embedding_table)
+            output_for_reshape = ops.matmul(one_hot_ids, self.weight)
         else:
-            output_for_reshape = ops.gather(self.embedding_table, flat_ids, 0)
+            output_for_reshape = ops.gather(self.weight, flat_ids, 0)
 
         output = output_for_reshape.reshape(out_shape)
         return output
 
     def extend_repr(self):
         return f'vocab_size={self.vocab_size}, embedding_size={self.embedding_size}, use_one_hot={self.use_one_hot}, ' \
-            f'embedding_table={self.embedding_table}, dtype={self.dtype}, padding_idx={self.padding_idx}'
+            f'weight={self.weight}, dtype={self.dtype}, padding_idx={self.padding_idx}'
 
 class Conv1d(_Conv):
     """patched Conv1d"""
@@ -529,10 +529,10 @@ class LayerNorm(nn.Cell):
         self.begin_norm_axis = begin_norm_axis
         self.begin_params_axis = begin_params_axis
         self.epsilon = epsilon
-        self.gamma = Parameter(initializer(
-            gamma_init, normalized_shape, dtype=dtype), name="gamma")
-        self.beta = Parameter(initializer(
-            beta_init, normalized_shape, dtype=dtype), name="beta")
+        self.weight = Parameter(initializer(
+            gamma_init, normalized_shape, dtype=dtype), name="weight")
+        self.bias = Parameter(initializer(
+            beta_init, normalized_shape, dtype=dtype), name="bias")
         self.layer_norm = ops.LayerNorm(begin_norm_axis=self.begin_norm_axis,
                                       begin_params_axis=self.begin_params_axis,
                                       epsilon=self.epsilon)
@@ -540,7 +540,7 @@ class LayerNorm(nn.Cell):
 
     def construct(self, input_x):
         if self.elementwise_affine:
-            y, _, _ = self.layer_norm(input_x, self.gamma.astype(input_x.dtype), self.beta.astype(input_x.dtype))
+            y, _, _ = self.layer_norm(input_x, self.weight.astype(input_x.dtype), self.bias.astype(input_x.dtype))
         else:
             y, _, _ = self.layer_norm(input_x, ops.ones(self.normalized_shape, input_x.dtype),
                                       ops.zeros(self.normalized_shape, input_x.dtype),)
@@ -548,7 +548,7 @@ class LayerNorm(nn.Cell):
 
     def extend_repr(self):
         return f'normalized_shape={self.normalized_shape}, begin_norm_axis={self.begin_norm_axis}, ' \
-               f'begin_params_axis={self.begin_params_axis}, gamma={self.gamma}, beta={self.beta}'
+               f'begin_params_axis={self.begin_params_axis}, weight={self.weight}, bias={self.bias}'
 
 def half(self):
     """patched nn.Cell.half"""

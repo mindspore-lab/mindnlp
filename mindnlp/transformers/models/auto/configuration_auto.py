@@ -34,7 +34,8 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("roberta", "RobertaConfig"),
         ("bert", "BertConfig"),
         ("gpt2", "GPT2Config"),
-        ('t5', 'T5Config')
+        ('mt5', 'MT5Config'),
+        ('t5', 'T5Config'),
     ]
 )
 

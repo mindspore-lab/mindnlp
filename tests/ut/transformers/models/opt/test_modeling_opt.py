@@ -355,7 +355,6 @@ class OPTModelIntegrationTests(unittest.TestCase):
         model = OPTModel.from_pretrained("facebook/opt-350m", from_pt=True)
         input_ids = _long_tensor([[0, 31414, 232, 328, 740, 1140, 12695, 69, 46078, 1588, 2]])
         output = model(input_ids=input_ids).last_hidden_state
-        print(output.dtype)
 
         expected_shape = (1, 11, 512)
         self.assertEqual(output.shape, expected_shape)

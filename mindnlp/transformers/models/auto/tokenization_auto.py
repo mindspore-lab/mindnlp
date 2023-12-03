@@ -645,7 +645,7 @@ class AutoTokenizer:
         ```"""
         use_fast = kwargs.pop("use_fast", True)
         tokenizer_type = kwargs.pop("tokenizer_type", None)
-        trust_remote_code = kwargs.pop("trust_remote_code", None)
+        config = kwargs.pop("config", None)
 
         # First, let's see whether the tokenizer_type is passed so that we can leverage it
         if tokenizer_type is not None:
@@ -686,11 +686,9 @@ class AutoTokenizer:
         if config_tokenizer_class is None:
             if config is None or not isinstance(config, PretrainedConfig):
                 config = AutoConfig.from_pretrained(
-                    pretrained_model_name_or_path, trust_remote_code=trust_remote_code, **kwargs
+                    pretrained_model_name_or_path, **kwargs
                 )
             config_tokenizer_class = config.tokenizer_class
-            if hasattr(config, "auto_map") and "AutoTokenizer" in config.auto_map:
-                tokenizer_auto_map = config.auto_map["AutoTokenizer"]
 
         if config_tokenizer_class is not None:
             tokenizer_class = None

@@ -347,12 +347,12 @@ class MossPreTrainedModel(PreTrainedModel):
     #     super().__init__(*inputs, **kwargs)
 
     def _init_weights(self, cell):
-        """Initialize the embedding_table."""
+        """Initialize the weight."""
         if isinstance(cell, (nn.Dense,)):
             # Slightly different from Mesh Transformer JAX which uses truncated_normal for initialization
             # cf https://github.com/MindSpore/MindSpore/pull/5617
-            # cell.embedding_table.data.normal_(mean=0.0, std=self.config.initializer_range)
-            # cell = ops.normal(cell.embedding_table.data.shape,mean=0.0,stddev=self.config.initializer_range)
+            # cell.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            # cell = ops.normal(cell.weight.data.shape,mean=0.0,stddev=self.config.initializer_range)
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                              cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
@@ -360,16 +360,16 @@ class MossPreTrainedModel(PreTrainedModel):
                     Zero(), cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
 
-            cell.embedding_table.set_data(initializer(Normal(self.config.initializer_range),
-                                                      cell.embedding_table.shape, cell.embedding_table.dtype))
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+                                                      cell.weight.shape, cell.weight.dtype))
             if cell.padding_idx is not None:
-                cell.embedding_table.data[cell.padding_idx].zero_()
+                cell.weight.data[cell.padding_idx].zero_()
         elif isinstance(cell, nn.LayerNorm):
 
-            cell.beta.set_data(initializer(
-                Zero(), cell.beta.shape, cell.beta.dtype))
-            cell.gamma.set_data(initializer(
-                One(), cell.gamma.shape, cell.gamma.dtype))
+            cell.bias.set_data(initializer(
+                Zero(), cell.bias.shape, cell.bias.dtype))
+            cell.weight.set_data(initializer(
+                One(), cell.weight.shape, cell.weight.dtype))
 
     def _set_gradient_checkpointing(self, cell, value=False):
         if isinstance(cell, MossModel):
