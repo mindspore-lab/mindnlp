@@ -801,7 +801,7 @@ class Embedding(nn.Embedding, LoraLayer):
         nn.Embedding.__init__(self, num_embeddings, embedding_dim, **kwargs)
         LoraLayer.__init__(self, in_features=num_embeddings, out_features=embedding_dim)
 
-        self.embedding_table.requires_grad = False
+        self.weight.requires_grad = False
 
         # TODO: check nesissary
         # check the api of mindspore.nn.Embedding initialization

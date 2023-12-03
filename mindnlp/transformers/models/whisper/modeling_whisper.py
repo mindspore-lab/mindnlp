@@ -297,7 +297,7 @@ class WhisperPositionalEmbedding(nn.Embedding):
         super().__init__(num_positions, embedding_dim)
 
     def construct(self, input_ids, past_key_values_length=0):
-        return self.embedding_table[past_key_values_length : past_key_values_length + input_ids.shape[1]]
+        return self.weight[past_key_values_length : past_key_values_length + input_ids.shape[1]]
 
 
 class WhisperAttention(nn.Cell):
@@ -673,13 +673,13 @@ class WhisperPreTrainedModel(PreTrainedModel):
             if cell.has_bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            embedding_table = np.random.normal(0.0, std, cell.embedding_table.shape)
+            weight = np.random.normal(0.0, std, cell.weight.shape)
             if cell.padding_idx:
-                embedding_table[cell.padding_idx] = 0
+                weight[cell.padding_idx] = 0
 
-            cell.embedding_table.set_data(Tensor(embedding_table, cell.embedding_table.dtype))
+            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
         elif isinstance(cell, WhisperEncoder):
-            embed_positions = cell.embed_positions.embedding_table
+            embed_positions = cell.embed_positions.weight
             embed_positions.set_data(sinusoids(*embed_positions.shape))
 
     def _get_feat_extract_output_lengths(self, input_lengths: mindspore.Tensor):
@@ -715,7 +715,7 @@ class WhisperEncoder(WhisperPreTrainedModel):
         self.conv2 = nn.Conv1d(embed_dim, embed_dim, kernel_size=3, stride=2, padding=1, pad_mode='pad', has_bias=True)
 
         self.embed_positions = nn.Embedding(self.max_source_positions, embed_dim)
-        self.embed_positions.embedding_table.requires_grad = False
+        self.embed_positions.weight.requires_grad = False
 
         self.layers = nn.CellList([WhisperEncoderLayer(config) for _ in range(config.encoder_layers)])
         self.layer_norm = nn.LayerNorm([config.d_model])
@@ -777,7 +777,7 @@ class WhisperEncoder(WhisperPreTrainedModel):
         inputs_embeds = ops.gelu(self.conv2(inputs_embeds))
 
         inputs_embeds = inputs_embeds.permute(0, 2, 1)
-        embed_pos = self.embed_positions.embedding_table
+        embed_pos = self.embed_positions.weight
 
         hidden_states = inputs_embeds + embed_pos
         hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)

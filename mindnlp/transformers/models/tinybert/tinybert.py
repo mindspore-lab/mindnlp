@@ -49,11 +49,11 @@ def torch_to_mindspore(pth_file, **kwargs):
     for key, value in state_dict.items():
         if 'LayerNorm' in key:
             if '.weight' in key:
-                key = key.replace('.weight', '.gamma')
+                key = key.replace('.weight', '.weight')
             if '.bias' in key:
-                key = key.replace('.bias', '.beta')
+                key = key.replace('.bias', '.bias')
         if 'embeddings' in key:
-            key = key.replace('weight', 'embedding_table')
+            key = key.replace('weight', 'weight')
         if 'self' in key:
             key = key.replace('self', 'self_')
         ms_ckpt.append({'name': key, 'data': Tensor(value.numpy())})
@@ -433,16 +433,16 @@ class TinyBertPreTrainedModel(PreTrainedModel):
         if isinstance(module, nn.Embedding):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            module.embedding_table = ops.normal(
-                shape=module.embedding_table.shape,
+            module.weight = ops.normal(
+                shape=module.weight.shape,
                 mean=0.0,
                 stddev=self.config.initializer_range
             )
         elif isinstance(module, nn.LayerNorm):
-            module.beta = ops.fill(
-                type=module.beta.dtype, shape=module.beta.shape, value=0)
-            module.gamma = ops.fill(
-                type=module.gamma.dtype, shape=module.gamma.shape, value=1.0)
+            module.bias = ops.fill(
+                type=module.bias.dtype, shape=module.bias.shape, value=0)
+            module.weight = ops.fill(
+                type=module.weight.dtype, shape=module.weight.shape, value=1.0)
         if isinstance(module, nn.Dense):
             module.weight = ops.normal(
                 shape=module.weight.shape, mean=0.0, stddev=self.config.initializer_range)
@@ -548,7 +548,7 @@ class TinyBertForPreTraining(TinyBertPreTrainedModel):
         super().__init__(config)
         self.bert = TinyBertModel(config)
         self.cls = TinyBertPreTrainingHeads(
-            config, self.bert.embeddings.word_embeddings.embedding_table)
+            config, self.bert.embeddings.word_embeddings.weight)
         self.apply(self.init_model_weights)
 
     def construct(self, input_ids, token_type_ids=None, attention_mask=None,
@@ -585,7 +585,7 @@ class TinyBertFitForPreTraining(TinyBertPreTrainedModel):
         super().__init__(config)
         self.bert = TinyBertModel(config)
         self.cls = TinyBertPreTrainingHeads(
-            config, self.bert.embeddings.word_embeddings.embedding_table)
+            config, self.bert.embeddings.word_embeddings.weight)
         self.fit_dense = nn.Dense(config.hidden_size, fit_size)
         self.apply(self.init_model_weights)
 
@@ -611,7 +611,7 @@ class TinyBertForMaskedLM(TinyBertPreTrainedModel):
         super().__init__(config)
         self.bert = TinyBertModel(config)
         self.cls = TinyBertOnlyMLMHead(
-            config, self.bert.embeddings.word_embeddings.embedding_table)
+            config, self.bert.embeddings.word_embeddings.weight)
         self.apply(self.init_model_weights)
 
     def construct(self, input_ids, token_type_ids=None, attention_mask=None, masked_lm_labels=None,

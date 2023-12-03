@@ -350,13 +350,13 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
         for model_class in self.all_model_classes:
             model = model_class(config)
             encoder = model.get_encoder()
-            self.assertFalse(encoder.embed_positions.embedding_table.requires_grad)
+            self.assertFalse(encoder.embed_positions.weight.requires_grad)
 
     def test_encoder_sinusoidal_embed_positions(self):
         config = self.model_tester.get_config()
         for model_class in self.all_model_classes:
             model = model_class(config)
-            embeds = model.get_encoder().embed_positions.embedding_table
+            embeds = model.get_encoder().embed_positions.weight
             self.assertTrue(np.allclose(embeds.asnumpy(), sinusoids(*embeds.shape).asnumpy()))
 
     def test_decoder_model_past_with_large_inputs(self):
@@ -628,13 +628,13 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
             model_vocab_size = config.vocab_size
             # Retrieve the embeddings and clone theme
             model_embed = model.resize_token_embeddings(model_vocab_size)
-            cloned_embeddings = model_embed.embedding_table.clone()
+            cloned_embeddings = model_embed.weight.clone()
 
             # Check that resizing the token embeddings with a larger vocab size increases the model's vocab size
             model_embed = model.resize_token_embeddings(model_vocab_size + 10)
             self.assertEqual(model.config.vocab_size, model_vocab_size + 10)
             # Check that it actually resizes the embeddings matrix
-            self.assertEqual(model_embed.embedding_table.shape[0], cloned_embeddings.shape[0] + 10)
+            self.assertEqual(model_embed.weight.shape[0], cloned_embeddings.shape[0] + 10)
             # Check that the model can still do a forward pass successfully (every parameter should be resized)
             model(**self._prepare_for_class(inputs_dict, model_class))
 
@@ -642,7 +642,7 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
             model_embed = model.resize_token_embeddings(model_vocab_size - 15)
             self.assertEqual(model.config.vocab_size, model_vocab_size - 15)
             # Check that it actually resizes the embeddings matrix
-            self.assertEqual(model_embed.embedding_table.shape[0], cloned_embeddings.shape[0] - 15)
+            self.assertEqual(model_embed.weight.shape[0], cloned_embeddings.shape[0] - 15)
 
             # make sure that decoder_input_ids are resized
             if "decoder_input_ids" in inputs_dict:
@@ -651,7 +651,7 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
 
             # Check that adding and removing tokens has not modified the first part of the embedding matrix.
             models_equal = True
-            for p1, p2 in zip(cloned_embeddings, model_embed.embedding_table):
+            for p1, p2 in zip(cloned_embeddings, model_embed.weight):
                 if p1.ne(p2).sum() > 0:
                     models_equal = False
 
@@ -939,7 +939,7 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
             use_cache=False,
         )
 
-        logits = logits.last_hidden_state @ model.decoder.embed_tokens.embedding_table.T
+        logits = logits.last_hidden_state @ model.decoder.embed_tokens.weight.T
 
         # fmt: off
         EXPECTED_LOGITS = mindspore.tensor(
@@ -978,7 +978,7 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
             use_cache=False,
         )
 
-        logits = logits.last_hidden_state @ model.decoder.embed_tokens.embedding_table.T
+        logits = logits.last_hidden_state @ model.decoder.embed_tokens.weight.T
 
         # fmt: off
         EXPECTED_LOGITS = mindspore.tensor(
