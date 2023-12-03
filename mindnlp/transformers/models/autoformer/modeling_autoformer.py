@@ -19,7 +19,7 @@ from ...modeling_outputs import (
     Seq2SeqTSPredictionOutput,
 )
 from ...modeling_utils import PreTrainedModel
-from ...time_series_utils import NegativeBinomialOutput, NormalOutput, StudentTOutput
+from ...time_series_utils import NormalOutput, StudentTOutput
 
 from .configuration_autoformer import AutoformerConfig
 
@@ -1595,8 +1595,8 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
             self.distribution_output = StudentTOutput(dim=config.input_size)
         elif config.distribution_output == "normal":
             self.distribution_output = NormalOutput(dim=config.input_size)
-        elif config.distribution_output == "negative_binomial":
-            self.distribution_output = NegativeBinomialOutput(dim=config.input_size)
+        #elif config.distribution_output == "negative_binomial":
+        #    self.distribution_output = NegativeBinomialOutput(dim=config.input_size)
         else:
             raise ValueError(f"Unknown distribution output {config.distribution_output}")
 
@@ -1935,3 +1935,15 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
                 (-1, num_parallel_samples, self.config.prediction_length) + self.target_shape,
             )
         )
+
+__all__ = [
+    "AutoFormerDecoderOutput", "AutoformerModelOutput",
+    "AutoformerFeatureEmbedder","AutoformerStdScaler",
+    "AutoformerMeanScaler","AutoformerNOPScaler",
+    "AutoformerSinusoidalPositionalEmbedding","AutoformerValueEmbedding",
+    "AutoformerSeriesDecompositionLayer","AutoformerLayernorm",
+    "AutoformerAttention","AutoformerEncoderLayer",
+    "AutoformerDecoderLayer","AutoformerPreTrainedModel",
+    "AutoformerEncoder","AutoformerDecoder",
+    "AutoformerModel","AutoformerForPrediction",
+]

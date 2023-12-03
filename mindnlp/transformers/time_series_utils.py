@@ -22,15 +22,15 @@ from mindspore import nn
 from mindspore import ops
 import numpy as np
 from mindspore.nn.probability.distribution import (
-    AffineTransform,
+    # AffineTransform,
     Distribution,
-    Independent,
-    NegativeBinomial,
+    #Independent,
+    #NegativeBinomial,
     Normal,
     StudentT,
     TransformedDistribution,
 )
-
+from mindspore.nn.probability.bijector import ScalarAffine as AffineTransform
 
 class AffineTransformed(TransformedDistribution):
     '''
@@ -40,7 +40,7 @@ class AffineTransformed(TransformedDistribution):
         self.scale = 1.0 if scale is None else scale
         self.loc = 0.0 if loc is None else loc
 
-        super().__init__(base_distribution, [AffineTransform(loc=self.loc, scale=self.scale, event_dim=event_dim)])
+        super().__init__(base_distribution, [AffineTransform(shift=self.loc, scale=self.scale)])
 
     def mean(self):
         """
@@ -104,9 +104,9 @@ class DistributionOutput:
         self.args_dim = {k: dim * self.args_dim[k] for k in self.args_dim}
 
     def _base_distribution(self, distr_args):
-        if self.dim == 1:
-            return self.distribution_class(*distr_args)
-        return Independent(self.distribution_class(*distr_args), 1)
+        #if self.dim == 1:
+        return self.distribution_class(*distr_args)
+        #return Independent(self.distribution_class(*distr_args), 1)
 
     def distribution(
         self,
@@ -201,11 +201,11 @@ class NormalOutput(DistributionOutput):
         scale = cls.squareplus(scale).clamp_min(np.finfo(mindspore.dtype_to_nptype(scale.dtype)).eps)
         return loc.squeeze(-1), scale.squeeze(-1)
 
-
+"""
 class NegativeBinomialOutput(DistributionOutput):
-    """
-    Negative Binomial distribution output class.
-    """
+    
+    #Negative Binomial distribution output class.
+    
 
     args_dim: Dict[str, int] = {"total_count": 1, "logits": 1}
     distribution_class: type = NegativeBinomial
@@ -217,9 +217,9 @@ class NegativeBinomialOutput(DistributionOutput):
 
     def _base_distribution(self, distr_args) -> Distribution:
         total_count, logits = distr_args
-        if self.dim == 1:
-            return self.distribution_class(total_count=total_count, logits=logits)
-        return Independent(self.distribution_class(total_count=total_count, logits=logits), 1)
+        #if self.dim == 1:
+        return self.distribution_class(total_count=total_count, logits=logits)
+        #return Independent(self.distribution_class(total_count=total_count, logits=logits), 1)
 
     # Overwrites the parent class method. We cannot scale using the affine
     # transformation since negative binomial should return integers. Instead
@@ -234,3 +234,4 @@ class NegativeBinomialOutput(DistributionOutput):
             logits += scale.log()
 
         return self._base_distribution((total_count, logits))
+"""
