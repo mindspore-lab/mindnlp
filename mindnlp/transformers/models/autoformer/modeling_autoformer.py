@@ -406,8 +406,8 @@ class AutoformerSeriesDecompositionLayer(nn.Cell):
         """Input shape: Batch x Time x EMBED_DIM"""
         # padding on the both ends of time series
         num_of_pads = (self.kernel_size - 1) // 2
-        front = x[:, 0:1, :].repeat((1, num_of_pads, 1))
-        end = x[:, -1:, :].repeat((1, num_of_pads, 1))
+        front = x[:, 0:1, :].tile((1, num_of_pads, 1))
+        end = x[:, -1:, :].tile((1, num_of_pads, 1))
         x_padded = ops.cat([front, x, end], axis=1)
 
         # calculate the trend and seasonal part of the series
@@ -431,7 +431,7 @@ class AutoformerLayernorm(nn.Cell):
 
     def construct(self, x):
         x_hat = self.layernorm(x)
-        bias = ops.mean(x_hat, axis=1).unsqueeze(1).repeat((1, x.shape[1], 1))
+        bias = ops.mean(x_hat, axis=1).unsqueeze(1).tile((1, x.shape[1], 1))
         return x_hat - bias
 
 
@@ -549,11 +549,28 @@ class AutoformerAttention(nn.Cell):
             value_states = value_states[:, :queries_time_length, :]
             key_states = key_states[:, :queries_time_length, :]
 
-        query_states_fft = ops.fft.rfft(query_states, n=tgt_len, axis=1)
-        key_states_fft = ops.fft.rfft(key_states, n=tgt_len, axis=1)
+        #query_states_fft = ops.fft.rfft(query_states, n=tgt_len, axis=1) #todo
+        #key_states_fft = ops.fft.rfft(key_states, n=tgt_len, axis=1)
+        #attn_weights = query_states_fft * ops.conj(key_states_fft)
+        #attn_weights = ops.fft.irfft(attn_weights, n=tgt_len, axis=1)  # Autocorrelation(Q,K)
+        rfft_net = ops.FFTWithSize(signal_ndim=3, inverse=False, real=True)
+        if query_states.shape[1] < tgt_len:
+            query_states = ops.pad(query_states, ((0, 0), (0, tgt_len - query_states.shape[1]), (0, 0)))
+        else:
+            query_states = query_states[:,:tgt_len,:]
+        query_states_fft = rfft_net(query_states)
+        if key_states.shape[1] < tgt_len:
+            key_states = ops.pad(key_states, ((0, 0), (0, tgt_len - key_states.shape[1]), (0, 0)))
+        else:
+            key_states = key_states[:,:tgt_len,:]
+        key_states_fft = rfft_net(key_states)
         attn_weights = query_states_fft * ops.conj(key_states_fft)
-        attn_weights = ops.fft.irfft(
-            attn_weights, n=tgt_len, axis=1)  # Autocorrelation(Q,K)
+        irfft_net = ops.FFTWithSize(signal_ndim=3, inverse=True, real=True)
+        if attn_weights.shape[1] < tgt_len:
+            attn_weights = ops.pad(attn_weights, ((0, 0), (0, tgt_len - attn_weights.shape[1]), (0, 0)))
+        else:
+            attn_weights = attn_weights[:, :tgt_len, :]
+        attn_weights = irfft_net(attn_weights)
 
         src_len = key_states.shape[1]
         channel = key_states.shape[2]
@@ -617,18 +634,18 @@ class AutoformerAttention(nn.Cell):
         # compute aggregation: value_states.roll(delay) * top_k_autocorrelations(delay)
         if not self.training:
             # used for compute values_states.roll(delay) in inference
-            tmp_values = value_states.repeat((1, 2, 1))
+            tmp_values = value_states.tile((1, 2, 1))
             init_index = (
                 ops.arange(time_length)
                 .view(1, -1, 1)
-                .repeat((bsz * self.num_heads, 1, channel))
+                .tile((bsz * self.num_heads, 1, channel))
             )
 
         delays_agg = ops.zeros_like(value_states).float()  # bsz x time_length x channel
         for i in range(top_k):
             # compute value_states roll delay
             if not self.training:
-                tmp_delay = init_index + top_k_delays_index[:, i].view(-1, 1, 1).repeat(
+                tmp_delay = init_index + top_k_delays_index[:, i].view(-1, 1, 1).tile(
                     (self.num_heads, tgt_len, channel)
                 )
                 value_states_roll_delay = ops.gather_elements(
@@ -638,7 +655,7 @@ class AutoformerAttention(nn.Cell):
 
             # aggregation
             top_k_autocorrelations_at_delay = (
-                top_k_autocorrelations[:, i].view(-1, 1, 1).repeat((self.num_heads, tgt_len, channel))
+                top_k_autocorrelations[:, i].view(-1, 1, 1).tile((self.num_heads, tgt_len, channel))
             )
             delays_agg += value_states_roll_delay * top_k_autocorrelations_at_delay
 
@@ -1420,7 +1437,7 @@ class AutoformerModel(AutoformerPreTrainedModel):
             embedded_cat = self.embedder(static_categorical_features)
             static_feat = ops.cat((embedded_cat, static_feat), axis=1)
         expanded_static_feat = static_feat.unsqueeze(
-            1).broadcast_to(-1, time_feat.shape[1], -1)
+            1).broadcast_to((-1, time_feat.shape[1], -1))
 
         # all features
         features = ops.cat((expanded_static_feat, time_feat), axis=-1)
@@ -1543,7 +1560,7 @@ class AutoformerModel(AutoformerPreTrainedModel):
                 ops.mean(
                     transformer_inputs[:, : self.config.context_length, ...], axis=1)
                 .unsqueeze(1)
-                .repeat((1, self.config.prediction_length, 1))
+                .tile((1, self.config.prediction_length, 1))
             )
             zeros = ops.zeros(
                 [transformer_inputs.shape[0], self.config.prediction_length, transformer_inputs.shape[2]],
@@ -1884,7 +1901,7 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         time_features = ops.cat((past_time_features, future_time_features), axis=1)
 
         expanded_static_feat = static_feat.unsqueeze(
-            1).broadcast_to(-1, time_features.shape[1], -1)
+            1).broadcast_to((-1, time_features.shape[1], -1))
         features = ops.cat((expanded_static_feat, time_features), axis=-1)
         repeated_features = features.repeat_interleave(
             repeats=num_parallel_samples, axis=0)
@@ -1900,7 +1917,7 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         seasonal_input, trend_input = self.model.decomposition_layer(reshaped_lagged_sequence)
 
         mean = ops.mean(reshaped_lagged_sequence, axis=1).unsqueeze(
-            1).repeat((1, self.config.prediction_length, 1))
+            1).tile((1, self.config.prediction_length, 1))
         zeros = ops.zeros(
             [reshaped_lagged_sequence.shape[0], self.config.prediction_length, reshaped_lagged_sequence.shape[2]],
         )
