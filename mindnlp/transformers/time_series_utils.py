@@ -20,23 +20,24 @@ from typing import Callable, Dict, Optional, Tuple
 import mindspore
 from mindspore import nn
 from mindspore import ops
-import numpy as np
 from mindspore.nn.probability.distribution import (
-    # AffineTransform,
     Distribution,
-    #Independent,
-    #NegativeBinomial,
     Normal,
     StudentT,
     TransformedDistribution,
+    # AffineTransform,
+    # Independent,
+    # NegativeBinomial,
 )
 from mindspore.nn.probability.bijector import ScalarAffine as AffineTransform
+import numpy as np
 
 class AffineTransformed(TransformedDistribution):
     '''
     # todo 
     '''
-    def __init__(self, base_distribution: Distribution, loc=None, scale=None, event_dim=0):
+
+    def __init__(self, base_distribution: Distribution, loc=None, scale=None, event_dim=0):  # pylint: disable=unused-argument
         self.scale = 1.0 if scale is None else scale
         self.loc = 0.0 if loc is None else loc
 
@@ -201,6 +202,7 @@ class NormalOutput(DistributionOutput):
         scale = cls.squareplus(scale).clamp_min(np.finfo(mindspore.dtype_to_nptype(scale.dtype)).eps)
         return loc.squeeze(-1), scale.squeeze(-1)
 
+# pylint: disable=pointless-string-statement
 """
 class NegativeBinomialOutput(DistributionOutput):
     

@@ -14,7 +14,7 @@
 # ============================================================================
 """ Autoformer model configuration"""
 from typing import List, Optional
-from mindnlp.configs import MS_URL_BASE
+#from mindnlp.configs import MS_URL_BASE
 from ...configuration_utils import PretrainedConfig
 
 AUTOFORMER_SUPPORT_LIST = [
