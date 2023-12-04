@@ -603,17 +603,17 @@ class CpmAntPreTrainedModel(PreTrainedModel):
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
         elif isinstance(cell, nn.Embedding):
-            embedding_table = initializer(
+            weight = initializer(
                 Normal(self.config.init_std),
-                cell.embedding_table.shape,
-                cell.embedding_table.dtype,
+                cell.weight.shape,
+                cell.weight.dtype,
             )
             if cell.padding_idx is not None:
-                embedding_table[cell.padding_idx] = 0
-            cell.embedding_table.set_data(embedding_table)
+                weight[cell.padding_idx] = 0
+            cell.weight.set_data(weight)
         elif isinstance(cell, nn.LayerNorm):
-            cell.gamma.set_data(initializer("ones", cell.gamma.shape, cell.gamma.dtype))
-            cell.beta.set_data(initializer("zeros", cell.beta.shape, cell.beta.dtype))
+            cell.weight.set_data(initializer("ones", cell.weight.shape, cell.weight.dtype))
+            cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, CpmAntLayerNorm):
             cell.weight.set_data(
                 initializer("ones", cell.weight.shape, cell.weight.dtype)

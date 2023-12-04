@@ -545,16 +545,16 @@ class BartPretrainedModel(PreTrainedModel):
             if module.bias is not None:
                 module.bias.set_data(ops.zeros_like(module.bias))
         elif isinstance(module, nn.Embedding):
-            module.embedding_table.set_data(
+            module.weight.set_data(
                 initializer(
                     Normal(sigma=std, mean=0.0),
-                    module.embedding_table.shape,
-                    module.embedding_table.dtype,
+                    module.weight.shape,
+                    module.weight.dtype,
                 )
             )
             if module.padding_idx is not None:
-                module.embedding_table.data[module.padding_idx] = ops.zeros_like(
-                    module.embedding_table.data[module.padding_idx]
+                module.weight.data[module.padding_idx] = ops.zeros_like(
+                    module.weight.data[module.padding_idx]
                 )
 
     def _set_gradient_checkpointing(self, module, value=False):
@@ -599,7 +599,7 @@ class BartEncoder(BartPretrainedModel):
         )
 
         if embed_tokens is not None:
-            self.embed_tokens.embedding_table = embed_tokens.embedding_table
+            self.embed_tokens.weight = embed_tokens.weight
 
         self.embed_positions = BartLearnedPositionalEmbedding(
             config.max_position_embeddings,
@@ -759,7 +759,7 @@ class BartDecoder(BartPretrainedModel):
         )
 
         if embed_tokens is not None:
-            self.embed_tokens.embedding_table = embed_tokens.embedding_table
+            self.embed_tokens.weight = embed_tokens.weight
 
         self.embed_positions = BartLearnedPositionalEmbedding(
             config.max_position_embeddings,
@@ -996,8 +996,8 @@ class BartDecoder(BartPretrainedModel):
 class BartModel(BartPretrainedModel):
     "BartModel"
     _keys_to_ignore_on_load_missing = [
-        "encoder.embed_tokens.embedding_table",
-        "decoder.embed_tokens.embedding_table",
+        "encoder.embed_tokens.weight",
+        "decoder.embed_tokens.weight",
     ]
 
     def __init__(self, config: BartConfig):
@@ -1130,8 +1130,8 @@ class BartForConditionalGeneration(BartPretrainedModel):
     _keys_to_ignore_on_load_missing = [
         r"final_logits_bias",
         r"lm_head.weight",
-        "encoder.embed_tokens.embedding_table",
-        "decoder.embed_tokens.embedding_table",
+        "encoder.embed_tokens.weight",
+        "decoder.embed_tokens.weight",
     ]
 
     def __init__(self, config: BartConfig):
@@ -1313,8 +1313,8 @@ class BartForConditionalGeneration(BartPretrainedModel):
 class BartForSequenceClassification(BartPretrainedModel):
     "BartForSequenceClassification"
     _keys_to_ignore_on_load_missing = [
-        "encoder.embed_tokens.embedding_table",
-        "decoder.embed_tokens.embedding_table",
+        "encoder.embed_tokens.weight",
+        "decoder.embed_tokens.weight",
     ]
 
     def __init__(self, config: BartConfig, **kwargs):
@@ -1437,8 +1437,8 @@ class BartForSequenceClassification(BartPretrainedModel):
 class BartForQuestionAnswering(BartPretrainedModel):
     "BartForQuestionAnswering"
     _keys_to_ignore_on_load_missing = [
-        "encoder.embed_tokens.embedding_table",
-        "decoder.embed_tokens.embedding_table",
+        "encoder.embed_tokens.weight",
+        "decoder.embed_tokens.weight",
     ]
 
     def __init__(self, config):

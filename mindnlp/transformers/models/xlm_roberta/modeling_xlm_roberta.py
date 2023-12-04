@@ -20,8 +20,7 @@
 # pylint: disable=W0237
 # pylint: disable=W0613
 
-"""PyTorch XLM-RoBERTa model."""
-import os
+"""MindSpore XLM-RoBERTa model."""
 import math
 import logging
 from typing import List, Optional, Tuple, Union
@@ -49,42 +48,6 @@ from ...modeling_outputs import (
 
 
 logger = logging.get_logger(__name__)
-
-def torch_to_mindspore(pth_file):
-    """convert torch checkpoint to mindspore"""
-    try:
-        import torch
-    except Exception as exc:
-        raise ImportError("'import torch' failed, please install torch by "
-                          "`pip install torch` or instructions from 'https://pytorch.org'") \
-                          from exc
-
-    from mindspore.train.serialization import save_checkpoint
-
-    logging.info('Starting checkpoint conversion.')
-    ms_ckpt = []
-    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
-
-    for key, value in state_dict.items():
-        if 'LayerNorm' in key:
-            if '.weight' in key:
-                key = key.replace('.weight', '.gamma')
-            if '.bias' in key:
-                key = key.replace('.bias', '.beta')
-        if 'embeddings' in key:
-            key = key.replace('weight', 'embedding_table')
-        ms_ckpt.append({'name': key, 'data': Tensor(value.numpy())})
-
-    ms_ckpt_path = pth_file.replace('pytorch_model.bin','mindspore.ckpt')
-    if not os.path.exists(ms_ckpt_path):
-        try:
-            save_checkpoint(ms_ckpt, ms_ckpt_path)
-        except Exception as exc:
-            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, '
-                               f'please checkout the path.') from exc
-
-    return ms_ckpt_path
-
 
 # Copied from transformers.models.roberta.modeling_roberta.RobertaEmbeddings with Roberta->XLMRoberta
 class XLMRobertaEmbeddings(nn.Cell):
@@ -594,8 +557,6 @@ class XLMRobertaPreTrainedModel(PreTrainedModel):
     models.
     """
 
-    convert_torch_to_mindspore = torch_to_mindspore
-
     config_class = XLMRobertaConfig
     base_model_prefix = "roberta"
     supports_gradient_checkpointing = False
@@ -612,14 +573,14 @@ class XLMRobertaPreTrainedModel(PreTrainedModel):
             if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            embedding_table = np.random.normal(0.0, self.config.initializer_range, cell.embedding_table.shape)
+            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
             if cell.padding_idx:
-                embedding_table[cell.padding_idx] = 0
+                weight[cell.padding_idx] = 0
 
-            cell.embedding_table.set_data(Tensor(embedding_table, cell.embedding_table.dtype))
+            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
         elif isinstance(cell, nn.LayerNorm):
-            cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
-            cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
+            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
     def _set_gradient_checkpointing(self, module, value=False):
         if isinstance(module, XLMRobertaEncoder):

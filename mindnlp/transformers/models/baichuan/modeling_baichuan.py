@@ -531,11 +531,11 @@ class BaiChuanPreTrainedModel(PreTrainedModel):
             if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            embedding_table = np.random.normal(0.0, std, cell.embedding_table.shape)
+            weight = np.random.normal(0.0, std, cell.weight.shape)
             if cell.padding_idx:
-                embedding_table[cell.padding_idx] = 0
+                weight[cell.padding_idx] = 0
 
-            cell.embedding_table.set_data(Tensor(embedding_table, cell.embedding_table.dtype))
+            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
 
 
 class BaiChuan7bModel(BaiChuanPreTrainedModel):
