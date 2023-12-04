@@ -344,7 +344,7 @@ class AutoformerSinusoidalPositionalEmbedding(nn.Embedding):
 
     def __init__(self, num_positions: int, embedding_dim: int, padding_idx: Optional[int] = None) -> None:
         super().__init__(num_positions, embedding_dim)
-        self.embedding_table = self._init_weight(self.embedding_table)
+        self.weight = self._init_weight(self.weight)
 
     @staticmethod
     def _init_weight(out: mindspore.Parameter) -> mindspore.Parameter:
@@ -928,12 +928,12 @@ class AutoformerPreTrainedModel(PreTrainedModel):
         elif isinstance(cell, AutoformerSinusoidalPositionalEmbedding):
             pass
         elif isinstance(cell, nn.Embedding):
-            cell.embedding_table.set_data(initializer(Normal(std),
-                                                      cell.embedding_table.shape,
-                                                      cell.embedding_table.dtype))
+            cell.weight.set_data(initializer(Normal(std),
+                                                      cell.weight.shape,
+                                                      cell.weight.dtype))
             if cell.padding_idx is not None:
-                cell.embedding_table[cell.padding_idx].set_data(initializer(
-                    'zeros', cell.embedding_table[cell.padding_idx].shape, cell.embedding_table[cell.padding_idx].dtype))
+                cell.weight[cell.padding_idx].set_data(initializer(
+                    'zeros', cell.weight[cell.padding_idx].shape, cell.weight[cell.padding_idx].dtype))
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.TimeSeriesTransformerEncoder with TimeSeriesTransformer->Autoformer,TimeSeries->Autoformer
 class AutoformerEncoder(AutoformerPreTrainedModel):
