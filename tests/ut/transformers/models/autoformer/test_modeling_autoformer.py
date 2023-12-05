@@ -20,11 +20,10 @@ import unittest
 
 from huggingface_hub import hf_hub_download
 
-from mindnlp.utils.testing_utils import is_flaky, is_mindspore_available
+from mindnlp.utils.testing_utils import is_mindspore_available
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
-
 
 TOLERANCE = 1e-4
 
@@ -174,7 +173,7 @@ class AutoformerModelTester:
             ops.mean(
                 transformer_inputs[:, : config.context_length, ...], axis=1)
             .unsqueeze(1)
-            .repeat(1, config.prediction_length, 1)
+            .tile((1, config.prediction_length, 1))
         )
         zeros = ops.zeros([transformer_inputs.shape[0], config.prediction_length,
                            transformer_inputs.shape[2]])
@@ -255,28 +254,14 @@ class AutoformerModelTest(ModelTesterMixin, unittest.TestCase):
     def test_resize_tokens_embeddings(self):
         pass
 
-    @unittest.skip(
-        reason="This architecure seem to not compute gradients properly when using GC, check: https://github.com/huggingface/transformers/pull/27124"
-    )
-    def test_training_gradient_checkpointing(self):
-        pass
-
-    @unittest.skip(
-        reason="This architecure seem to not compute gradients properly when using GC, check: https://github.com/huggingface/transformers/pull/27124"
-    )
-    def test_training_gradient_checkpointing_use_reentrant_false(self):
-        pass
-
-    @unittest.skip(
-        reason="This architecure seem to not compute gradients properly when using GC, check: https://github.com/huggingface/transformers/pull/27124"
-    )
-    def test_training_gradient_checkpointing_use_reentrant(self):
+    @unittest.skip('complex do not support gradient.')
+    def test_training(self):
         pass
 
     # # Input is 'static_categorical_features' not 'input_ids'
     def test_model_main_input_name(self):
         model_signature = inspect.signature(
-            getattr(AutoformerModel, "forward"))
+            getattr(AutoformerModel, "construct"))
         # The main input is the name of the argument after `self`
         observed_main_input_name = list(model_signature.parameters.keys())[1]
         self.assertEqual(AutoformerModel.main_input_name,
@@ -421,10 +406,6 @@ class AutoformerModelTest(ModelTesterMixin, unittest.TestCase):
             list(self_attentions[0].shape[-3:]),
             [self.model_tester.num_attention_heads, encoder_seq_length, dim],
         )
-
-    @is_flaky()
-    def test_retain_grad_hidden_states_attentions(self):
-        super().test_retain_grad_hidden_states_attentions()
 
 
 def prepare_batch(filename="train-batch.pt"):

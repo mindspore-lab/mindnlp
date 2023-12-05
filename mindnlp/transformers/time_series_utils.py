@@ -40,8 +40,10 @@ class AffineTransformed(TransformedDistribution):
     def __init__(self, base_distribution: Distribution, loc=None, scale=None, event_dim=0):  # pylint: disable=unused-argument
         self.scale = 1.0 if scale is None else scale
         self.loc = 0.0 if loc is None else loc
+        super().__init__(AffineTransform(shift=self.loc, scale=self.scale), base_distribution)
 
-        super().__init__(base_distribution, [AffineTransform(shift=self.loc, scale=self.scale)])
+    def _set_attr_for_tensor(self, name, value):
+        object.__setattr__(self, name, value)
 
     def mean(self):
         """
@@ -183,8 +185,8 @@ class StudentTOutput(DistributionOutput):
 
     @classmethod
     def domain_map(cls, df: mindspore.Tensor, loc: mindspore.Tensor, scale: mindspore.Tensor):
-        scale = cls.squareplus(scale).clamp_min(
-            np.finfo(mindspore.dtype_to_nptype(scale.dtype)).eps)
+        scale = cls.squareplus(scale).clamp(
+            mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(scale.dtype)).eps))
         df = 2.0 + cls.squareplus(df)
         return df.squeeze(-1), loc.squeeze(-1), scale.squeeze(-1)
 
