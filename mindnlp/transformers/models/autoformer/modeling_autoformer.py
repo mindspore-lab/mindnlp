@@ -1,3 +1,20 @@
+# coding=utf-8
+# Copyright (c) 2021 THUML @ Tsinghua University
+# Copyright 2023 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# Copyright 2023 The HuggingFace Inc. team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# pylint: disable=redefined-builtin
 """MindNLP Autoformer model."""
 
 import math
@@ -9,7 +26,6 @@ import mindspore
 from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
 
-from mindspore import log as logger
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
 from ...modeling_outputs import (
@@ -204,20 +220,18 @@ class AutoformerStdScaler(nn.Cell):
             Default scale that is used for elements that are constantly zero along dimension `dim`.
     """
 
-    def __init__(self, dim: int, keepdim: bool = False, minimum_scale: float = 1e-5):
+    def __init__(self, config: AutoformerConfig):
         super().__init__()
-        if not dim > 0:
-            raise ValueError("Cannot compute scale along dim = 0 (batch dimension), please provide dim > 0")
-        self.dim = dim
-        self.keepdim = keepdim
-        self.minimum_scale = minimum_scale
+        self.dim = config.scaling_dim if hasattr(config, "scaling_dim") else 1
+        self.keepdim = config.keepdim if hasattr(config, "keepdim") else True
+        self.minimum_scale = config.minimum_scale if hasattr(config, "minimum_scale") else 1e-5
 
-    def construct(self, data: mindspore.Tensor, weights: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
-        denominator = weights.sum(self.dim, keepdims=self.keepdim)
+    def construct(self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
+        denominator = observed_indicator.sum(self.dim, keepdims=self.keepdim)
         denominator = denominator.clamp(min=1.0)
-        loc = (data * weights).sum(self.dim, keepdims=self.keepdim) / denominator
+        loc = (data * observed_indicator).sum(self.dim, keepdims=self.keepdim) / denominator
 
-        variance = (((data - loc) * weights) ** 2).sum(self.dim, keepdims=self.keepdim) / denominator
+        variance = (((data - loc) * observed_indicator) ** 2).sum(self.dim, keepdims=self.keepdim) / denominator
         scale = ops.sqrt(variance + self.minimum_scale)
         return (data - loc) / scale, loc, scale
 
@@ -239,14 +253,12 @@ class AutoformerMeanScaler(nn.Cell):
             Default minimum possible scale that is used for any item.
     """
 
-    def __init__(
-        self, dim: int = -1, keepdim: bool = True, default_scale: Optional[float] = None, minimum_scale: float = 1e-10
-    ):
+    def __init__(self, config: AutoformerConfig):
         super().__init__()
-        self.dim = dim
-        self.keepdim = keepdim
-        self.minimum_scale = minimum_scale
-        self.default_scale = default_scale
+        self.dim = config.scaling_dim if hasattr(config, "scaling_dim") else 1
+        self.keepdim = config.keepdim if hasattr(config, "keepdim") else True
+        self.minimum_scale = config.minimum_scale if hasattr(config, "minimum_scale") else 1e-10
+        self.default_scale = config.default_scale if hasattr(config, "default_scale") else None
 
     def construct(
         self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor
@@ -291,16 +303,16 @@ class AutoformerNOPScaler(nn.Cell):
             Controls whether to retain dimension `dim` (of length 1) in the scale tensor, or suppress it.
     """
 
-    def __init__(self, dim: int, keepdim: bool = False):
+    def __init__(self, config: AutoformerConfig):
         super().__init__()
-        self.dim = dim
-        self.keepdim = keepdim
+        self.dim = config.scaling_dim if hasattr(config, "scaling_dim") else 1
+        self.keepdim = config.keepdim if hasattr(config, "keepdim") else True
 
     def construct(
         self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor  # pylint: disable=unused-argument
     ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
-        scale = ops.ones_like(data, requires_grad=False).mean(axis=self.dim, keepdims=self.keepdim)
-        loc = ops.zeros_like(data, requires_grad=False).mean(
+        scale = ops.ones_like(data).mean(axis=self.dim, keepdims=self.keepdim)
+        loc = ops.zeros_like(data).mean(
             axis=self.dim, keepdims=self.keepdim)
         return data, loc, scale
 
@@ -323,7 +335,7 @@ def weighted_average(input_tensor: mindspore.Tensor, weights: Optional[mindspore
         `torch.FloatTensor`: The tensor with values averaged along the specified `dim`.
     """
     if weights is not None:
-        weighted_tensor = mindspore.Tensor.where(weights != 0, input_tensor * weights, ops.zeros_like(input_tensor))
+        weighted_tensor = ops.where(weights != 0, input_tensor * weights, ops.zeros_like(input_tensor))
         sum_weights = ops.clamp(weights.sum(
             axis=dim) if dim else weights.sum(), min=1.0)
         return (weighted_tensor.sum(axis=dim) if dim else weighted_tensor.sum()) / sum_weights
@@ -331,11 +343,11 @@ def weighted_average(input_tensor: mindspore.Tensor, weights: Optional[mindspore
 
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.nll
-def nll(input_distribution: nn.probability.distribution.distribution, target: mindspore.Tensor) -> mindspore.Tensor:
+def nll(input: nn.probability.distribution.distribution, target: mindspore.Tensor) -> mindspore.Tensor:
     """
     Computes the negative log likelihood loss from input distribution with respect to target.
     """
-    return -input_distribution.log_prob(target)
+    return -input.log_prob(target)
 
 
 # Copied from transformers.models.marian.modeling_marian.MarianSinusoidalPositionalEmbedding with Marian->Autoformer
@@ -363,7 +375,7 @@ class AutoformerSinusoidalPositionalEmbedding(nn.Embedding):
         #out.detach_() #todo
         return out
 
-    def construct(self, input_ids_shape: mindspore.Tensor.shape, past_key_values_length: int = 0) -> mindspore.Tensor:  # pylint:disable=arguments-renamed
+    def construct(self, input_ids_shape, past_key_values_length: int = 0) -> mindspore.Tensor:  # pylint:disable=arguments-renamed
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
         #bsz, seq_len = input_ids_shape[:2]
         seq_len = input_ids_shape[1]
@@ -917,7 +929,6 @@ class AutoformerPreTrainedModel(PreTrainedModel):
     config_class = AutoformerConfig
     base_model_prefix = "model"
     main_input_name = "past_values"
-    supports_gradient_checkpointing = True
 
     def _init_weights(self, cell):
         std = self.config.init_std
@@ -934,9 +945,6 @@ class AutoformerPreTrainedModel(PreTrainedModel):
             cell.weight.set_data(initializer(Normal(std),
                                                       cell.weight.shape,
                                                       cell.weight.dtype))
-            if cell.padding_idx is not None:
-                cell.weight[cell.padding_idx].set_data(initializer(
-                    'zeros', cell.weight[cell.padding_idx].shape, cell.weight[cell.padding_idx].dtype))
 
 # Copied from transformers.models.time_series_transformer.modeling_time_series_transformer.TimeSeriesTransformerEncoder with TimeSeriesTransformer->Autoformer,TimeSeries->Autoformer
 class AutoformerEncoder(AutoformerPreTrainedModel):
@@ -963,7 +971,6 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
         self.layers = nn.CellList([AutoformerEncoderLayer(config) for _ in range(config.encoder_layers)])
         self.layernorm_embedding = nn.LayerNorm([config.d_model])
 
-        self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -974,6 +981,7 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
         inputs_embeds: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutput]:
         r"""
         Args:
@@ -1007,6 +1015,7 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         hidden_states = self.value_embedding(inputs_embeds)
         embed_pos = self.embed_positions(inputs_embeds.shape)
@@ -1043,21 +1052,12 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
             if to_drop:
                 layer_outputs = (None, None)
             else:
-                if self.gradient_checkpointing and self.training:
-                    layer_outputs = self._gradient_checkpointing_func(
-                        encoder_layer.__call__,
-                        hidden_states,
-                        attention_mask,
-                        (head_mask[idx] if head_mask is not None else None),
-                        output_attentions,
-                    )
-                else:
-                    layer_outputs = encoder_layer(
-                        hidden_states,
-                        attention_mask,
-                        layer_head_mask=(head_mask[idx] if head_mask is not None else None),
-                        output_attentions=output_attentions,
-                    )
+                layer_outputs = encoder_layer(
+                    hidden_states,
+                    attention_mask,
+                    layer_head_mask=(head_mask[idx] if head_mask is not None else None),
+                    output_attentions=output_attentions,
+                )
 
                 hidden_states = layer_outputs[0]
 
@@ -1067,6 +1067,8 @@ class AutoformerEncoder(AutoformerPreTrainedModel):
         if output_hidden_states:
             encoder_states = encoder_states + (hidden_states,)
 
+        if not return_dict:
+            return tuple(v for v in [hidden_states, encoder_states, all_attentions] if v is not None)
         return BaseModelOutput(
             last_hidden_state=hidden_states, hidden_states=encoder_states, attentions=all_attentions
         )
@@ -1097,7 +1099,6 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
         # https://github.com/thuml/Autoformer/blob/e6371e24f2ae2dd53e472edefdd5814c5176f864/models/Autoformer.py#L74
         self.seasonality_projection = nn.Dense(config.d_model, config.feature_size)
 
-        self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -1114,6 +1115,7 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
     ) -> Union[Tuple, AutoFormerDecoderOutput]:
         r"""
         Args:
@@ -1182,6 +1184,7 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
         use_cache = use_cache if use_cache is not None else self.config.use_cache
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         input_shape = inputs_embeds.shape[:-1]
 
@@ -1225,38 +1228,19 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
 
             past_key_value = past_key_values[idx] if past_key_values is not None else None
 
-            if self.gradient_checkpointing and self.training:
-                if use_cache:
-                    logger.warning(
-                        "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
-                    )
-                    use_cache = False
-                layer_outputs = self._gradient_checkpointing_func(
-                    decoder_layer.__call__,
-                    hidden_states,
-                    attention_mask,
-                    encoder_hidden_states,
-                    encoder_attention_mask,
-                    head_mask[idx] if head_mask is not None else None,
-                    cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None,
-                    None,
-                    output_attentions,
-                    use_cache,
-                )
-            else:
-                layer_outputs = decoder_layer(
-                    hidden_states,
-                    attention_mask=attention_mask,
-                    encoder_hidden_states=encoder_hidden_states,
-                    encoder_attention_mask=encoder_attention_mask,
-                    layer_head_mask=(head_mask[idx] if head_mask is not None else None),
-                    cross_attn_layer_head_mask=(
-                        cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None
-                    ),
-                    past_key_value=past_key_value,
-                    output_attentions=output_attentions,
-                    use_cache=use_cache,
-                )
+            layer_outputs = decoder_layer(
+                hidden_states,
+                attention_mask=attention_mask,
+                encoder_hidden_states=encoder_hidden_states,
+                encoder_attention_mask=encoder_attention_mask,
+                layer_head_mask=(head_mask[idx] if head_mask is not None else None),
+                cross_attn_layer_head_mask=(
+                    cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None
+                ),
+                past_key_value=past_key_value,
+                output_attentions=output_attentions,
+                use_cache=use_cache,
+            )
             (hidden_states, residual_trend) = layer_outputs[0]
             trend = trend + residual_trend
 
@@ -1278,6 +1262,12 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
 
         next_cache = next_decoder_cache if use_cache else None
 
+        if not return_dict:
+            return tuple(
+                v
+                for v in [hidden_states, trend, next_cache, all_hidden_states, all_self_attns, all_cross_attentions]
+                if v is not None
+            )
         return AutoFormerDecoderOutput(
             last_hidden_state=hidden_states,
             trend=trend,
@@ -1288,7 +1278,6 @@ class AutoformerDecoder(AutoformerPreTrainedModel):
         )
 
 
-
 class AutoformerModel(AutoformerPreTrainedModel):
     r"""
     # todo add docstring
@@ -1297,11 +1286,11 @@ class AutoformerModel(AutoformerPreTrainedModel):
         super().__init__(config)
 
         if config.scaling == "mean" or config.scaling is True:
-            self.scaler = AutoformerMeanScaler(dim=1, keepdim=True)
+            self.scaler = AutoformerMeanScaler(config)
         elif config.scaling == "std":
-            self.scaler = AutoformerStdScaler(dim=1, keepdim=True)
+            self.scaler = AutoformerStdScaler(config)
         else:
-            self.scaler = AutoformerNOPScaler(dim=1, keepdim=True)
+            self.scaler = AutoformerNOPScaler(config)
 
         if config.num_static_categorical_features > 0:
             self.embedder = AutoformerFeatureEmbedder(
@@ -1491,6 +1480,7 @@ class AutoformerModel(AutoformerPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         use_cache: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
     ) -> Union[AutoformerModelOutput, Tuple]:
         r"""
         Returns:
@@ -1527,6 +1517,7 @@ class AutoformerModel(AutoformerPreTrainedModel):
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
         use_cache = use_cache if use_cache is not None else self.config.use_cache
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_inputs, temporal_features, loc, scale, static_feat = self.create_network_inputs(
             past_values=past_values,
@@ -1551,6 +1542,15 @@ class AutoformerModel(AutoformerPreTrainedModel):
                 head_mask=head_mask,
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
+                return_dict=return_dict,
+            )
+
+        # If the user passed a tuple for encoder_outputs, we wrap it in a BaseModelOutput when return_dict=True
+        elif return_dict and not isinstance(encoder_outputs, BaseModelOutput):
+            encoder_outputs = BaseModelOutput(
+                last_hidden_state=encoder_outputs[0],
+                hidden_states=encoder_outputs[1] if len(encoder_outputs) > 1 else None,
+                attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
             )
 
         if future_values is not None:
@@ -1597,11 +1597,28 @@ class AutoformerModel(AutoformerPreTrainedModel):
                 use_cache=use_cache,
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
+                return_dict=return_dict,
             )
         else:
             decoder_outputs = AutoFormerDecoderOutput()
 
-        return decoder_outputs + encoder_outputs + (loc, scale, static_feat)
+        if not return_dict:
+            return decoder_outputs + encoder_outputs + (loc, scale, static_feat)
+
+        return AutoformerModelOutput(
+            last_hidden_state=decoder_outputs.last_hidden_state,
+            trend=decoder_outputs.trend,
+            past_key_values=decoder_outputs.past_key_values,
+            decoder_hidden_states=decoder_outputs.hidden_states,
+            decoder_attentions=decoder_outputs.attentions,
+            cross_attentions=decoder_outputs.cross_attentions,
+            encoder_last_hidden_state=encoder_outputs.last_hidden_state,
+            encoder_hidden_states=encoder_outputs.hidden_states,
+            encoder_attentions=encoder_outputs.attentions,
+            loc=loc,
+            scale=scale,
+            static_features=static_feat,
+        )
 
 
 class AutoformerForPrediction(AutoformerPreTrainedModel):
@@ -1677,6 +1694,7 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         use_cache: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
     ) -> Union[Seq2SeqTSPredictionOutput, Tuple]:
         r"""
         Returns:
@@ -1725,6 +1743,7 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         >>> mean_prediction = outputs.sequences.mean(dim=1)
         ```"""
 
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if future_values is not None:
             use_cache = False
 
@@ -1768,10 +1787,24 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
 
             prediction_loss = weighted_average(loss, weights=loss_weights)
 
+        if not return_dict:
+            outputs = ((params,) + outputs[2:]) if params is not None else outputs[2:]
+            return ((prediction_loss,) + outputs) if prediction_loss is not None else outputs
 
-        outputs = ((params,) + outputs[2:]) if params is not None else outputs[2:]
-        return ((prediction_loss,) + outputs) if prediction_loss is not None else outputs
-
+        return Seq2SeqTSPredictionOutput(
+            loss=prediction_loss,
+            params=params,
+            past_key_values=outputs.past_key_values,
+            decoder_hidden_states=outputs.decoder_hidden_states,
+            decoder_attentions=outputs.decoder_attentions,
+            cross_attentions=outputs.cross_attentions,
+            encoder_last_hidden_state=outputs.encoder_last_hidden_state,
+            encoder_hidden_states=outputs.encoder_hidden_states,
+            encoder_attentions=outputs.encoder_attentions,
+            loc=outputs.loc,
+            scale=outputs.scale,
+            static_features=outputs.static_features,
+        )
 
 
     def generate(
@@ -1957,13 +1990,8 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
         )
 
 __all__ = [
-    "AutoFormerDecoderOutput", "AutoformerModelOutput",
-    "AutoformerFeatureEmbedder","AutoformerStdScaler",
-    "AutoformerMeanScaler","AutoformerNOPScaler",
-    "AutoformerSinusoidalPositionalEmbedding","AutoformerValueEmbedding",
-    "AutoformerSeriesDecompositionLayer","AutoformerLayernorm",
-    "AutoformerAttention","AutoformerEncoderLayer",
-    "AutoformerDecoderLayer","AutoformerPreTrainedModel",
-    "AutoformerEncoder","AutoformerDecoder",
-    "AutoformerModel","AutoformerForPrediction",
+    "AUTOFORMER_PRETRAINED_MODEL_ARCHIVE_LIST",
+    "AutoformerForPrediction",
+    "AutoformerModel",
+    "AutoformerPreTrainedModel",
 ]
