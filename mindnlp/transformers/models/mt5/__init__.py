@@ -13,12 +13,12 @@
 # limitations under the License.
 # ============================================================================
 """
-autoformer Model.
+T5 Model init
 """
-from . import configuration_autoformer, modeling_autoformer
-from .modeling_autoformer import *
-from .configuration_autoformer import *
+from . import configuration_mt5, modeling_mt5
+from .configuration_mt5 import *
+from .modeling_mt5 import *
 
 __all__ = []
-__all__.extend(modeling_autoformer.__all__)
-__all__.extend(configuration_autoformer.__all__)
+__all__.extend(modeling_mt5.__all__)
+__all__.extend(configuration_mt5.__all__)

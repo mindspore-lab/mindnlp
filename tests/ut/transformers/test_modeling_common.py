@@ -960,13 +960,13 @@ class ModelTesterMixin:
             model_vocab_size = config.vocab_size
             # Retrieve the embeddings and clone theme
             model_embed = model.resize_token_embeddings(model_vocab_size)
-            cloned_embeddings = model_embed.embedding_table.copy()
+            cloned_embeddings = model_embed.weight.copy()
 
             # Check that resizing the token embeddings with a larger vocab size increases the model's vocab size
             model_embed = model.resize_token_embeddings(model_vocab_size + 10)
             self.assertEqual(model.config.vocab_size, model_vocab_size + 10)
             # Check that it actually resizes the embeddings matrix
-            self.assertEqual(model_embed.embedding_table.shape[0], cloned_embeddings.shape[0] + 10)
+            self.assertEqual(model_embed.weight.shape[0], cloned_embeddings.shape[0] + 10)
              # Check that the model can still do a forward pass successfully (every parameter should be resized)
             model(**self._prepare_for_class(inputs_dict, model_class))
 
@@ -974,7 +974,7 @@ class ModelTesterMixin:
             model_embed = model.resize_token_embeddings(model_vocab_size - 15)
             self.assertEqual(model.config.vocab_size, model_vocab_size - 15)
             # Check that it actually resizes the embeddings matrix
-            self.assertEqual(model_embed.embedding_table.shape[0], cloned_embeddings.shape[0] - 15)
+            self.assertEqual(model_embed.weight.shape[0], cloned_embeddings.shape[0] - 15)
 
             # Check that the model can still do a forward pass successfully (every parameter should be resized)
             # Input ids should be clamped to the maximum size of the vocabulary
@@ -987,7 +987,7 @@ class ModelTesterMixin:
 
             # Check that adding and removing tokens has not modified the first part of the embedding matrix.
             models_equal = True
-            for p1, p2 in zip(cloned_embeddings, model_embed.embedding_table):
+            for p1, p2 in zip(cloned_embeddings, model_embed.weight):
                 if p1.ne(p2).sum() > 0:
                     models_equal = False
 
@@ -1001,18 +1001,18 @@ class ModelTesterMixin:
             self.assertTrue(model.config.vocab_size + 10, model_vocab_size)
 
             model_embed = model.resize_token_embeddings(model_vocab_size, pad_to_multiple_of=64)
-            self.assertTrue(model_embed.embedding_table.shape[0] // 64, 0)
+            self.assertTrue(model_embed.weight.shape[0] // 64, 0)
 
-            self.assertTrue(model_embed.embedding_table.shape[0], model.config.vocab_size)
+            self.assertTrue(model_embed.weight.shape[0], model.config.vocab_size)
             self.assertTrue(model.config.vocab_size, model.vocab_size)
 
             model_embed = model.resize_token_embeddings(model_vocab_size + 13, pad_to_multiple_of=64)
-            self.assertTrue(model_embed.embedding_table.shape[0] // 64, 0)
+            self.assertTrue(model_embed.weight.shape[0] // 64, 0)
 
             # Check that resizing a model to a multiple of pad_to_multiple leads to a model of exactly that size
             target_dimension = 128
             model_embed = model.resize_token_embeddings(target_dimension, pad_to_multiple_of=64)
-            self.assertTrue(model_embed.embedding_table.shape[0], target_dimension)
+            self.assertTrue(model_embed.weight.shape[0], target_dimension)
 
             with self.assertRaisesRegex(
                 ValueError,

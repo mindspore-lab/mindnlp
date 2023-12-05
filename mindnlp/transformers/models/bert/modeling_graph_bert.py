@@ -18,62 +18,14 @@
 # pylint: disable=C0103
 
 """MindNLP bert model"""
-import os
-import logging
 import mindspore.common.dtype as mstype
 from mindspore import nn, ops
 from mindspore import Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
-from mindnlp._legacy.nn import Dropout, Matmul
 from mindnlp.modules.functional import make_causal_mask, finfo
 from .configuration_bert import BertConfig
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
-
-
-def torch_to_mindspore(pth_file, **kwargs):
-    """convert torch checkpoint to mindspore"""
-    _ = kwargs.get("prefix", "")
-
-    try:
-        import torch
-    except Exception as exc:
-        raise ImportError(
-            "'import torch' failed, please install torch by "
-            "`pip install torch` or instructions from 'https://pytorch.org'"
-        ) from exc
-
-    from mindspore.train.serialization import save_checkpoint
-
-    logging.info("Starting checkpoint conversion.")
-    ms_ckpt = []
-    state_dict = torch.load(pth_file, map_location=torch.device("cpu"))
-
-    for key, value in state_dict.items():
-        if "LayerNorm" in key:
-            key = key.replace("LayerNorm", "layer_norm")
-        if "layer_norm" in key:
-            if ".weight" in key:
-                key = key.replace(".weight", ".gamma")
-            if ".bias" in key:
-                key = key.replace(".bias", ".beta")
-        if "embeddings" in key:
-            key = key.replace("weight", "embedding_table")
-        if "self" in key:
-            key = key.replace("self", "self_attn")
-        ms_ckpt.append({"name": key, "data": Tensor(value.numpy())})
-
-    ms_ckpt_path = pth_file.replace("pytorch_model.bin", "mindspore.ckpt")
-    if not os.path.exists(ms_ckpt_path):
-        try:
-            save_checkpoint(ms_ckpt, ms_ckpt_path)
-        except Exception as exc:
-            raise RuntimeError(
-                f"Save checkpoint to {ms_ckpt_path} failed, "
-                f"please checkout the path."
-            ) from exc
-
-    return ms_ckpt_path
 
 
 class MSBertEmbeddings(nn.Cell):
@@ -98,7 +50,7 @@ class MSBertEmbeddings(nn.Cell):
         self.LayerNorm = nn.LayerNorm(
             (config.hidden_size,), epsilon=config.layer_norm_eps
         )
-        self.dropout = Dropout(config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, input_ids, token_type_ids, position_ids):
         words_embeddings = self.word_embeddings(input_ids)
@@ -141,9 +93,8 @@ class MSBertSelfAttention(nn.Cell):
             self.all_head_size,
         )
 
-        self.dropout = Dropout(config.attention_probs_dropout_prob)
+        self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
         self.softmax = nn.Softmax(-1)
-        self.matmul = Matmul()
 
         self.causal = causal
         self.init_cache = init_cache
@@ -244,13 +195,13 @@ class MSBertSelfAttention(nn.Cell):
 
         if attention_mask is not None and self.causal:
             attention_mask = ops.broadcast_to(
-                attention_mask.expand_dims(-3).expand_dims(-2), causal_mask.shape
+                attention_mask.expand_dims(-2).expand_dims(-3), causal_mask.shape
             )
             attention_mask = ops.logical_and(attention_mask, causal_mask)
         elif self.causal:
             attention_mask = causal_mask
         elif attention_mask is not None:
-            attention_mask = attention_mask.expand_dims(-3).expand_dims(-2)
+            attention_mask = attention_mask.expand_dims(-2).expand_dims(-3)
 
         if self.causal and self.init_cache:
             key_states, value_states, attention_mask = self._concatenate_to_cache(
@@ -271,7 +222,7 @@ class MSBertSelfAttention(nn.Cell):
             attention_bias = None
 
         # Take the dot product between "query" snd "key" to get the raw attention scores.
-        attention_scores = self.matmul(query_states, key_states.swapaxes(-1, -2))
+        attention_scores = ops.matmul(query_states, key_states.swapaxes(-1, -2))
         attention_scores = attention_scores / ops.sqrt(
             Tensor(self.attention_head_size, mstype.float32)
         )
@@ -288,7 +239,7 @@ class MSBertSelfAttention(nn.Cell):
         if head_mask is not None:
             attention_probs = attention_probs * head_mask
 
-        context_layer = self.matmul(attention_probs, value_states)
+        context_layer = ops.matmul(attention_probs, value_states)
         context_layer = context_layer.transpose(0, 2, 1, 3)
         new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
@@ -313,7 +264,7 @@ class MSBertSelfOutput(nn.Cell):
             config.hidden_size,
         )
         self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=1e-12)
-        self.dropout = Dropout(config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
@@ -370,7 +321,7 @@ class MSBertOutput(nn.Cell):
             config.hidden_size,
         )
         self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=1e-12)
-        self.dropout = Dropout(config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
@@ -425,6 +376,10 @@ class MSBertEncoder(nn.Cell):
         self.layer = nn.CellList(
             [MSBertLayer(config) for _ in range(config.num_hidden_layers)]
         )
+
+    def _set_recompute(self):
+        for layer in self.layer:
+            layer.recompute()
 
     def construct(self, hidden_states, attention_mask=None, head_mask=None,
                 encoder_hidden_states = None,
@@ -554,11 +509,9 @@ class MSBertPreTrainingHeads(nn.Cell):
 
 class MSBertPreTrainedModel(PreTrainedModel):
     """BertPretrainedModel"""
-
-    convert_torch_to_mindspore = torch_to_mindspore
-
     config_class = BertConfig
     base_model_prefix = "bert"
+    supports_recompute = True
 
     def _init_weights(self, cell):
         """Initialize the weights"""
@@ -577,17 +530,17 @@ class MSBertPreTrainedModel(PreTrainedModel):
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
         elif isinstance(cell, nn.Embedding):
-            embedding_table = initializer(
+            weight = initializer(
                 Normal(self.config.initializer_range),
-                cell.embedding_table.shape,
-                cell.embedding_table.dtype,
+                cell.weight.shape,
+                cell.weight.dtype,
             )
             if cell.padding_idx is not None:
-                embedding_table[cell.padding_idx] = 0
-            cell.embedding_table.set_data(embedding_table)
+                weight[cell.padding_idx] = 0
+            cell.weight.set_data(weight)
         elif isinstance(cell, nn.LayerNorm):
-            cell.gamma.set_data(initializer("ones", cell.gamma.shape, cell.gamma.dtype))
-            cell.beta.set_data(initializer("zeros", cell.beta.shape, cell.beta.dtype))
+            cell.weight.set_data(initializer("ones", cell.weight.shape, cell.weight.dtype))
+            cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
 
 
 class MSBertModel(MSBertPreTrainedModel):
@@ -676,7 +629,7 @@ class MSBertForPretraining(MSBertPreTrainedModel):
         self.vocab_size = config.vocab_size
 
         self.cls.predictions.decoder.weight = (
-            self.bert.embeddings.word_embeddings.embedding_table
+            self.bert.embeddings.word_embeddings.weight
         )
 
     def construct(
@@ -726,21 +679,7 @@ class MSBertForSequenceClassification(MSBertPreTrainedModel):
             else config.hidden_dropout_prob
         )
         self.classifier = nn.Dense(config.hidden_size, self.num_labels)
-        self.dropout = Dropout(classifier_dropout)
-
-        problem_type = config.problem_type
-        if problem_type is None:
-            self.loss = None
-        else:
-            if self.num_labels == 1:
-                self.problem_type = "regression"
-                self.loss = nn.MSELoss()
-            elif self.num_labels > 1:
-                self.problem_type = "single_label_classification"
-                self.loss = nn.CrossEntropyLoss()
-            else:
-                self.problem_type = "multi_label_classification"
-                self.loss = nn.BCEWithLogitsLoss()
+        self.dropout = nn.Dropout(p=classifier_dropout)
 
     def construct(
         self,
@@ -749,7 +688,7 @@ class MSBertForSequenceClassification(MSBertPreTrainedModel):
         token_type_ids=None,
         position_ids=None,
         head_mask=None,
-        labels=None,
+        **kwargs
     ):
         outputs = self.bert(
             input_ids,
@@ -764,16 +703,6 @@ class MSBertForSequenceClassification(MSBertPreTrainedModel):
         logits = self.classifier(pooled_output)
 
         output = (logits,) + outputs[2:]
-
-        if labels is not None:
-            if self.num_labels == 1:
-                loss = self.loss(logits.squeeze(), labels.squeeze())
-            elif self.num_labels > 1:
-                loss = self.loss(logits.view(-1, self.num_labels), labels.view(-1))
-            else:
-                loss = self.loss(logits, labels)
-
-            return (loss,) + output
 
         return output
 

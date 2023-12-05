@@ -169,7 +169,7 @@ class MSRobertaForMaskedLM(MSRobertaPreTrainedModel):
         super().__init__(config, *args, **kwargs)
         self.roberta = MSRobertaModel(config)
         self.lm_head = MSRobertaLMHead(config)
-        self.lm_head.decoder.weight = self.roberta.embeddings.word_embeddings.embedding_table
+        self.lm_head.decoder.weight = self.roberta.embeddings.word_embeddings.weight
         self.vocab_size = self.config.vocab_size
 
     def get_output_embeddings(self):

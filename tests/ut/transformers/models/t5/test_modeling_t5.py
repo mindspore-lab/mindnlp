@@ -518,7 +518,7 @@ class T5ModelTester:
         model = T5ForConditionalGeneration(config=config).set_train(False)
         model.resize_token_embeddings(prev_vocab_size - 10)
 
-        self.parent.assertEqual(model.get_input_embeddings().embedding_table.shape[0], prev_vocab_size - 10)
+        self.parent.assertEqual(model.get_input_embeddings().weight.shape[0], prev_vocab_size - 10)
         self.parent.assertEqual(model.get_output_embeddings().weight.shape[0], prev_vocab_size - 10)
         self.parent.assertEqual(model.config.vocab_size, prev_vocab_size - 10)
 
