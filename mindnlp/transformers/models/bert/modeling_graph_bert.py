@@ -211,10 +211,17 @@ class MSBertSelfAttention(nn.Cell):
         # Convert the boolean attention mask to an attention bias.
         if attention_mask is not None:
             # attention mask in the form of attention bias
+            # attention_bias = ops.select(
+            #     attention_mask > 0,
+            #     ops.full(attention_mask.shape, 0.0).astype(hidden_states.dtype),
+            #     ops.full(attention_mask.shape, finfo(hidden_states.dtype, "min")).astype(
+            #         hidden_states.dtype
+            #     ),
+            # )
             attention_bias = ops.select(
                 attention_mask > 0,
-                ops.full(attention_mask.shape, 0.0).astype(hidden_states.dtype),
-                ops.full(attention_mask.shape, finfo(hidden_states.dtype, "min")).astype(
+                ops.zeros_like(attention_mask).astype(hidden_states.dtype),
+                (ops.ones_like(attention_mask) * finfo(hidden_states.dtype, "min")).astype(
                     hidden_states.dtype
                 ),
             )
