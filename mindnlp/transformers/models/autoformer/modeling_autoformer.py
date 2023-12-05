@@ -555,19 +555,22 @@ class AutoformerAttention(nn.Cell):
         #attn_weights = ops.fft.irfft(attn_weights, n=tgt_len, axis=1)  # Autocorrelation(Q,K)
         rfft_net = ops.FFTWithSize(signal_ndim=3, inverse=False, real=True)
         if query_states.shape[1] < tgt_len:
-            query_states = ops.pad(query_states, ((0, 0), (0, tgt_len - query_states.shape[1]), (0, 0)))
+            pad2d = nn.ConstantPad2d((0, 0, 0, tgt_len - query_states.shape[1]), 0)
+            query_states = pad2d(query_states)
         else:
             query_states = query_states[:,:tgt_len,:]
         query_states_fft = rfft_net(query_states)
         if key_states.shape[1] < tgt_len:
-            key_states = ops.pad(key_states, ((0, 0), (0, tgt_len - key_states.shape[1]), (0, 0)))
+            pad2d = nn.ConstantPad2d((0, 0, 0, tgt_len - key_states.shape[1]), 0)
+            key_states = pad2d(key_states)
         else:
             key_states = key_states[:,:tgt_len,:]
         key_states_fft = rfft_net(key_states)
         attn_weights = query_states_fft * ops.conj(key_states_fft)
         irfft_net = ops.FFTWithSize(signal_ndim=3, inverse=True, real=True)
         if attn_weights.shape[1] < tgt_len:
-            attn_weights = ops.pad(attn_weights, ((0, 0), (0, tgt_len - attn_weights.shape[1]), (0, 0)))
+            pad2d = nn.ConstantPad2d((0, 0, 0, tgt_len - attn_weights.shape[1]), 0)
+            attn_weights = pad2d(attn_weights)
         else:
             attn_weights = attn_weights[:, :tgt_len, :]
         attn_weights = irfft_net(attn_weights)
