@@ -92,6 +92,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ),
         ("canine", ("CanineTokenizer", None)),
         ("chinese_clip", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
+        ("chatglm", ("ChatGLMTokenizer", None)),
         (
             "clap",
             (

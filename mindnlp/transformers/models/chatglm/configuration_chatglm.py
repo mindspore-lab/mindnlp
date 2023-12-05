@@ -14,7 +14,10 @@
 # ============================================================================
 """ ChatGLM model configuration """
 
+from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
+
+logger = logging.get_logger(__name__)
 
 
 class ChatGLMConfig(PretrainedConfig):
