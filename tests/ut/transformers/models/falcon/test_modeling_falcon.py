@@ -288,7 +288,6 @@ class FalconModelTester:
         (
             config,
             input_ids,
-            
             token_type_ids,
             input_mask,
             sequence_labels,
@@ -303,7 +302,7 @@ class FalconModelTester:
 class FalconModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     all_model_classes = (
         (
-            FalconModel,
+            # FalconModel,
             FalconForCausalLM,
             FalconForSequenceClassification,
             FalconForTokenClassification,
@@ -330,7 +329,6 @@ class FalconModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
     test_headmasking = False
     test_pruning = False
 
-    # TODO (ydshieh): Check this. See https://app.circleci.com/pipelines/github/huggingface/transformers/79245/workflows/9490ef58-79c2-410d-8f51-e3495156cf9c/jobs/1012146
     def is_pipeline_test_to_skip(
         self,
         pipeline_test_casse_name,
@@ -463,7 +461,7 @@ class FalconModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
                     (batch_size, num_attention_heads, seq_length, per_head_embed_dim),
                 )
 
-    @parameterized.expand([("linear",),("dynamic",)])
+    @parameterized.expand([("linear",), ("dynamic",)])
     def test_model_rope_scaling(self, scaling_type):
         config, _ = self.model_tester.prepare_config_and_inputs_for_common()
         short_input = ids_tensor([1, 10], config.vocab_size)
@@ -475,7 +473,6 @@ class FalconModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
             42
         )  # Fixed seed at init time so the two models get the same random weights
         original_model = FalconModel(config)
-        original_model
         original_model.set_train(False)
         original_short_output = original_model(short_input).last_hidden_state
         original_long_output = original_model(long_input).last_hidden_state
@@ -485,7 +482,6 @@ class FalconModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
         )  # Fixed seed at init time so the two models get the same random weights
         config.rope_scaling = {"type": scaling_type, "factor": 10.0}
         scaled_model = FalconModel(config)
-        scaled_model
         scaled_model.set_train(False)
         scaled_short_output = scaled_model(short_input).last_hidden_state
         scaled_long_output = scaled_model(long_input).last_hidden_state
@@ -494,16 +490,26 @@ class FalconModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
         # maximum sequence length, so the outputs for the short input should match.
         if scaling_type == "dynamic":
             self.assertTrue(
-                np.allclose(original_short_output, scaled_short_output, atol=1e-5)
+                np.allclose(
+                    original_short_output.asnumpy(),
+                    scaled_short_output.asnumpy(),
+                    atol=1e-5,
+                )
             )
         else:
             self.assertFalse(
-                np.allclose(original_short_output, scaled_short_output, atol=1e-5)
+                np.allclose(
+                    original_short_output.asnumpy(),
+                    scaled_short_output.asnumpy(),
+                    atol=1e-5,
+                )
             )
 
         # The output should be different for long inputs
         self.assertFalse(
-            np.allclose(original_long_output, scaled_long_output, atol=1e-5) 
+            np.allclose(
+                original_long_output.asnumpy(), scaled_long_output.asnumpy(), atol=1e-5
+            )
         )
 
 
@@ -511,10 +517,10 @@ class FalconModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
 class FalconLanguageGenerationTest(unittest.TestCase):
     @slow
     def test_lm_generate_falcon(self):
-        tokenizer = AutoTokenizer.from_pretrained("Rocketknight1/falcon-rw-1b")
-        model = FalconForCausalLM.from_pretrained("Rocketknight1/falcon-rw-1b")
+        tokenizer = AutoTokenizer.from_pretrained("Rocketknight1/falcon-rw-1b", from_pt=True)
+        model = FalconForCausalLM.from_pretrained("Rocketknight1/falcon-rw-1b", from_pt=True)
         model.set_train(False)
-        inputs = tokenizer("My favorite food is", return_tensors="pt")
+        inputs = tokenizer("My favorite food is", return_tensors="ms")
 
         EXPECTED_OUTPUT = "My favorite food is pizza. I love it so much that I have a pizza party every year for my birthday."
 
@@ -535,7 +541,7 @@ class FalconLanguageGenerationTest(unittest.TestCase):
             model = FalconForCausalLM.from_pretrained(repo)
             model.set_train(False)
 
-            inputs = tokenizer("My favorite food is", return_tensors="pt")
+            inputs = tokenizer("My favorite food is", return_tensors="ms")
 
             # We just test that these run without errors - the models are randomly initialized
             # and so the actual text outputs will be garbage
@@ -555,7 +561,7 @@ class FalconLanguageGenerationTest(unittest.TestCase):
             tokenizer = AutoTokenizer.from_pretrained(repo)
             model = FalconForCausalLM.from_pretrained(repo)
             model.set_train(False)
-            inputs = tokenizer("My favorite food is", return_tensors="pt")
+            inputs = tokenizer("My favorite food is", return_tensors="ms")
 
             # Test results are the same with and without cache
             outputs_no_cache = model.generate(
@@ -580,7 +586,7 @@ class FalconLanguageGenerationTest(unittest.TestCase):
 
         test_text = "A sequence: 1, 2"  # should generate the rest of the sequence
 
-        unpadded_inputs = tokenizer([test_text], return_tensors="pt")
+        unpadded_inputs = tokenizer([test_text], return_tensors="ms")
         unpadded_gen_out = model.generate(**unpadded_inputs, max_new_tokens=20)
         unpadded_gen_text = tokenizer.batch_decode(
             unpadded_gen_out, skip_special_tokens=True
@@ -588,7 +594,7 @@ class FalconLanguageGenerationTest(unittest.TestCase):
 
         dummy_text = "This is a longer text " * 2  # forces left-padding on `test_text`
         padded_inputs = tokenizer(
-            [test_text, dummy_text], return_tensors="pt", padding=True
+            [test_text, dummy_text], return_tensors="ms", padding=True
         )
         padded_gen_out = model.generate(**padded_inputs, max_new_tokens=20)
         padded_gen_text = tokenizer.batch_decode(

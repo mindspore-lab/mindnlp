@@ -73,56 +73,12 @@ _CHECKPOINT_FOR_DOC = "Rocketknight1/falcon-rw-1b"
 _CONFIG_FOR_DOC = "FalconConfig"
 
 
-def torch_to_mindspore(pth_file, **kwargs):
-    """torch to mindspore."""
-    prefix = kwargs.get("prefix", "")
-
-    try:
-        import torch
-    except Exception as exc:
-        raise ImportError(
-            "'import torch' failed, please install torch by "
-            "`pip install torch` or instructions from 'https://pytorch.org'"
-        ) from exc
-
-    from mindspore.train.serialization import save_checkpoint
-
-    logger.info("Starting checkpoint conversion.")
-    ms_ckpt = []
-    state_dict = torch.load(pth_file, map_location=torch.device("cpu"))
-
-    for k, v in state_dict.items():
-        if "layernorm" in k or "ln" in k:
-            if ".weight" in k:
-                k = k.replace(".weight", ".gamma")
-            if ".bias" in k:
-                k = k.replace(".bias", ".beta")
-        if "embed" in k:
-            k = k.replace("weight", "embedding_table")
-        if prefix:
-            k = prefix + "." + k
-        ms_ckpt.append({"name": k, "data": mindspore.Tensor(v.numpy())})
-
-    ms_ckpt_path = pth_file.replace("pytorch_model.bin", "mindspore.ckpt")
-    if not os.path.exists(ms_ckpt_path):
-        try:
-            save_checkpoint(ms_ckpt, ms_ckpt_path)
-        except Exception as exc:
-            raise RuntimeError(
-                f"Save checkpoint to {ms_ckpt_path} failed, please checkout the path."
-            ) from exc
-
-    return ms_ckpt_path
-
-
-# NOTE(Hesslow): Unfortunately we did not fuse matmul and bias during training, this means that there's one additional quantization to bfloat16 between the operations.
-# In order not to degrade the quality of our HF-port, we keep these characteristics in the final model.
 class FalconLinear(nn.Dense):
     def __init__(self, in_channels, out_channels, has_bias=True):
         super(FalconLinear, self).__init__(in_channels, out_channels, has_bias=has_bias)
 
-    def construct(self, input):
-        hidden_states = ops.matmul(input, self.weight.T)
+    def construct(self, x):
+        hidden_states = ops.matmul(x, self.weight.T)
         if self.has_bias:
             hidden_states = hidden_states + self.bias
         return hidden_states
@@ -177,7 +133,6 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
     return q_embed, k_embed
 
 
-# TODO (joao): Is this the same implementation as in Llama? If so, let's make them the same and add the copy facilities
 class FalconRotaryEmbedding(nn.Cell):
     """Implementation of RotaryEmbedding from GPT-NeoX.
     This implementation is designed to operate on queries and keys that are compatible with `[batch_size,
@@ -255,9 +210,9 @@ class FalconDynamicNTKScalingRotaryEmbedding(FalconRotaryEmbedding):
             base = self.base * (
                 (self.scaling_factor * seq_len / self.max_position_embeddings)
                 - (self.scaling_factor - 1)
-            ) ** (self.head_dim / (self.head_dim - 2))
+            ) ** (self.dim / (self.dim - 2))
             self.inv_freq = 1.0 / (
-                base ** (ops.arange(0, self.head_dim, 2).float() / self.head_dim)
+                base ** (ops.arange(0, self.dim, 2).float() / self.dim)
             )
 
         t = ops.arange(seq_len)
@@ -307,7 +262,7 @@ def build_alibi_tensor(
     # https://github.com/huggingface/transformers/blob/f681437203baa7671de3174b0fa583c349d9d5e1/src/transformers/models/t5/modeling_t5.py#L527
     arange_tensor = ((attention_mask.cumsum(axis=-1) - 1) * attention_mask)[:, None, :]
     alibi = slopes[..., None]
-    alibi.astype(mindspore.bfloat16)
+    alibi.astype(mindspore.float32)  # from bfloat16 change to float32
     alibi = alibi * arange_tensor
     return ops.reshape(alibi, (batch_size * num_heads, 1, seq_length)).astype(dtype)
 
@@ -594,7 +549,7 @@ class FalconAttention(nn.Cell):
             # cast attention scores to fp32, compute scaled softmax and cast back to initial dtype - [batch_size, num_heads, q_length, kv_length]
             input_dtype = attention_scores.dtype
             # `float16` has a minimum value of -65504.0, whereas `bfloat16` and `float32` have a minimum value of `-3.4e+38`
-            if input_dtype in [mindspore.float16, mindspore.bfloat16]:
+            if input_dtype in [mindspore.float16, mindspore.float32]:  # from bfloat32 change to float32
                 attention_scores = attention_scores.astype(mindspore.float32)
             # Matt (HF) note: We could possibly use F.scaled_dot_product_attention here too, by
             # adding (alibi * self.inv_norm_factor) to attention_mask_float. I think this would be mathematically
@@ -620,7 +575,7 @@ class FalconAttention(nn.Cell):
 
             # matmul: [batch_size * num_heads, q_length, head_dim]
             context_layer = ops.matmul(attention_probs_reshaped, value_layer)
-            context_layer = ops.flatten(context_layer, 0, 1)
+            context_layer = context_layer.flatten(start_dim=0, end_dim=1)
             # change view [batch_size, q_length, num_heads * head_dim]
             context_layer = self._merge_heads(context_layer)
 
@@ -751,7 +706,7 @@ class FalconPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
-    convert_torch_to_mindspore = torch_to_mindspore
+    # convert_torch_to_mindspore = torch_to_mindspore
     config_class = FalconConfig
     base_model_prefix = "transformer"
     supports_gradient_checkpointing = True
@@ -777,18 +732,18 @@ class FalconPreTrainedModel(PreTrainedModel):
                     initializer("zeros", cell.bias.shape, cell.bias.dtype)
                 )
         elif isinstance(cell, nn.Embedding):
-            embedding_table = np.random.normal(
-                0.0, self.config.initializer_range, cell.embedding_table.shape
+            weight = np.random.normal(
+                0.0, self.config.initializer_range, cell.weight.shape
             )
             if cell.padding_idx:
-                embedding_table[cell.padding_idx] = 0.0
+                weight[cell.padding_idx] = 0.0
 
-            cell.embedding_table.set_data(
-                mindspore.Tensor(embedding_table, cell.embedding_table.dtype)
+            cell.weight.set_data(
+                mindspore.Tensor(weight, cell.weight.dtype)
             )
         elif isinstance(cell, nn.LayerNorm):
-            cell.beta.set_data(initializer("zeros", cell.beta.shape, cell.beta.dtype))
-            cell.gamma.set_data(initializer("ones", cell.gamma.shape, cell.gamma.dtype))
+            cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
+            cell.weight.set_data(initializer("ones", cell.weight.shape, cell.weight.dtype))
 
 
 class FalconModel(FalconPreTrainedModel):
