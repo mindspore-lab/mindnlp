@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-""" MindNLP Graphormer model."""
+"""
+MindNLP Graphormer model
+"""
 
 import math
 from typing import Iterable, Iterator, List, Optional, Tuple, Union
@@ -211,7 +213,7 @@ class GraphormerGraphNodeFeature(nn.Cell):
             + self.out_degree_encoder(out_degree)
         )
 
-        graph_token_feature = self.graph_token.embedding_table.unsqueeze(0).tile((n_graph, 1, 1))
+        graph_token_feature = self.graph_token.weight.unsqueeze(0).tile((n_graph, 1, 1))
 
         graph_node_feature = ops.cat([graph_token_feature, node_feature], axis=1)
 
@@ -263,7 +265,7 @@ class GraphormerGraphAttnBias(nn.Cell):
         graph_attn_bias[:, :, 1:, 1:] = graph_attn_bias[:, :, 1:, 1:] + spatial_pos_bias
 
         # reset spatial pos here
-        t = self.graph_token_virtual_distance.embedding_table.view(1, self.num_heads, 1)
+        t = self.graph_token_virtual_distance.weight.view(1, self.num_heads, 1)
         graph_attn_bias[:, :, 1:, 0] = graph_attn_bias[:, :, 1:, 0] + t
         graph_attn_bias[:, :, 0, :] = graph_attn_bias[:, :, 0, :] + t
 
@@ -284,7 +286,7 @@ class GraphormerGraphAttnBias(nn.Cell):
             edge_input_flat = input_edges.permute(3, 0, 1, 2, 4).reshape(max_dist, -1, self.num_heads)
             edge_input_flat = ops.bmm(
                 edge_input_flat,
-                self.edge_dis_encoder.embedding_table.reshape(-1, self.num_heads, self.num_heads)[:max_dist, :, :],
+                self.edge_dis_encoder.weight.reshape(-1, self.num_heads, self.num_heads)[:max_dist, :, :],
             )
             input_edges = edge_input_flat.reshape(max_dist, n_graph, n_node, n_node, self.num_heads).permute(
                 1, 2, 3, 0, 4
@@ -727,11 +729,11 @@ class GraphormerPreTrainedModel(PreTrainedModel):
             if module.has_bias:
                 module.bias.set_data(init_zero(module.bias))
         if isinstance(module, nn.Embedding):
-            embedding_table = np.random.normal(loc=0.0, scale=0.02, size=module.embedding_table.shape)
+            weight = np.random.normal(loc=0.0, scale=0.02, size=module.weight.shape)
             if module.padding_idx:
-                embedding_table[cell.padding_idx] = 0
+                weight[cell.padding_idx] = 0
 
-            module.embedding_table.set_data(Tensor(embedding_table, module.embedding_table.dtype))
+            module.weight.set_data(Tensor(weight, module.weight.dtype))
         if isinstance(module, GraphormerMultiheadAttention):
             module.q_proj.weight.set_data(init_normal(module.q_proj.weight,
                                                       sigma=0.02, mean=0.0))
@@ -755,11 +757,11 @@ class GraphormerPreTrainedModel(PreTrainedModel):
             if module.has_bias:
                 module.bias.set_data(init_zero(module.bias))
         elif isinstance(module, nn.Embedding):
-            embedding_table = np.random.normal(loc=0.0, scale=0.02, size=module.embedding_table.shape)
+            weight = np.random.normal(loc=0.0, scale=0.02, size=module.weight.shape)
             if module.padding_idx:
-                embedding_table[cell.padding_idx] = 0
+                weight[cell.padding_idx] = 0
 
-            module.embedding_table.set_data(Tensor(embedding_table, module.embedding_table.dtype))
+            module.weight.set_data(Tensor(weight, module.weight.dtype))
         elif isinstance(module, GraphormerMultiheadAttention):
             module.q_proj.weight.set_data(init_normal(module.q_proj.weight,
                                                       sigma=0.02, mean=0.0))

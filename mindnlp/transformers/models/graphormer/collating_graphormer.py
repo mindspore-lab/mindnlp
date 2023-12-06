@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+"""
+Graphormer collating
+""" 
 from typing import Any, Dict, List, Mapping
 
 import numpy as np

@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Graphormer"""
+"""
+Test Graphormer
+"""
 import unittest
 import copy
 import inspect
