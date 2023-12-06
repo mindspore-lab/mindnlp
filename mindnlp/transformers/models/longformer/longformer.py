@@ -468,8 +468,7 @@ class LongformerSelfAttention(nn.Cell):
             attn_probs = layer_head_mask.view(1, 1, -1, 1) * attn_probs
         # softmax sometimes inserts NaN if all positions are masked, replace them with 0
 
-        attn_probs = mindspore.Tensor.masked_fill(attn_probs, is_index_masked[:, :, None, None], 0.0)
-        attn_probs = mindspore.Tensor(attn_probs)
+        attn_probs = ops.masked_fill(attn_probs, is_index_masked[:, :, None, None], 0.0)
         attn_probs = attn_probs.astype(attn_scores.dtype)
 
         # free memory
@@ -688,10 +687,8 @@ class LongformerSelfAttention(nn.Cell):
         # bcxy: batch_size * num_heads x chunks x 2window_overlap x 2window_overlap
         # diagonal_chunked_attention_scores = ops.einsum("bcxd,bcyd->bcxy", query, key)  # multiply
 
-        diagonal_chunked_attention_scores = mindspore.Tensor(np.einsum(
-            "bcxd,bcyd->bcxy",
-            mindspore.Tensor.asnumpy(query),
-            mindspore.Tensor.asnumpy(key))
+        diagonal_chunked_attention_scores = ops.einsum(
+            "bcxd,bcyd->bcxy", query, key
         )
         # convert diagonals into columns
         diagonal_chunked_attention_scores = self._pad_and_transpose_last_two_dims(
@@ -841,10 +838,8 @@ class LongformerSelfAttention(nn.Cell):
         key_vectors_only_global = Tensor(key_vectors_only_global)
         # (batch_size, seq_len, num_heads, max_num_global_attn_indices)
         # attn_probs_from_global_key = ops.einsum("blhd,bshd->blhs", query_vectors, key_vectors_only_global)
-        attn_probs_from_global_key = mindspore.Tensor(np.einsum(
-            "blhd,bshd->blhs",
-            mindspore.Tensor.asnumpy(query_vectors),
-            mindspore.Tensor.asnumpy(key_vectors_only_global))
+        attn_probs_from_global_key = ops.einsum(
+            "blhd,bshd->blhs", query_vectors, key_vectors_only_global
         )
 
         attn_probs_from_global_key = attn_probs_from_global_key.swapaxes(1, 3)
