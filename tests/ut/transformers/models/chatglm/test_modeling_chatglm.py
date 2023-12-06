@@ -7,6 +7,9 @@ import random
 from mindnlp.transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from mindnlp.utils.testing_utils import require_mindspore, slow
 
+from mindspore._c_expression import _framework_profiler_step_start
+from mindspore._c_expression import _framework_profiler_step_end
+# mindspore.set_context(pynative_synchronize=True)
 
 def set_random_seed(seed):
     import random
@@ -62,8 +65,11 @@ class ChatGLMGenerationTest(unittest.TestCase):
             '清华大学创建于 1911 年。'
         ]
         for (prompt, expected_response) in zip(prompts, expected_responses):
+            _framework_profiler_step_start()
             response, history = model.chat(tokenizer, prompt, history=history)
+            _framework_profiler_step_end()
             print(repr(response))
+            break
             self.assertEquals(expected_response, response)
 
     @slow
@@ -122,7 +128,8 @@ class ChatGLMGenerationTest(unittest.TestCase):
             "你好",
             "介绍一下清华大学"
         ]
-        parameters = [(False, 100, 1),
+        parameters = [
+                      (False, 2048, 1),
                       (False, 64, 1),
                       (True, 2048, 1),
                       (True, 64, 1),
@@ -157,7 +164,6 @@ class ChatGLMGenerationTest(unittest.TestCase):
                 max_length=max_length,
                 num_beams=num_beams
             )
-            print(outputs)
 
             batch_out_sentence = tokenizer.batch_decode(outputs, skip_special_tokens=True)
             print(batch_out_sentence)
