@@ -388,7 +388,6 @@ class LlamaModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
         """
         Overwritting the common test as the test is flaky on tiny models
         """
-        mindspore.set_context(device_target='CPU')
         model = LlamaForCausalLM.from_pretrained("meta-llama/Llama-2-7b-hf", from_pt=True)
 
         tokenizer = LlamaTokenizer.from_pretrained("meta-llama/Llama-2-7b-hf", from_pt=True)

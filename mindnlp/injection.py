@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=global-variable-not-assigned
+# pylint: disable=global-statement
 # pylint: disable=redefined-builtin
 # pylint: disable=invalid-name
+# pylint: disable=unused-argument
 """
 Injection mindspore.nn for MindNLP
 """
+import operator
+from functools import reduce, partial
 import math
-from functools import partial
 from packaging import version
 import mindspore
 import mindspore.common.dtype as mstype
@@ -37,10 +39,14 @@ GLOBAL_FP16_PATCH = False
 if DEVICE_TARGET == 'Ascend':
     GLOBAL_FP16_PATCH = True
 
+def set_global_fp16(mode: bool):
+    """set global fp16"""
+    global GLOBAL_FP16_PATCH
+    GLOBAL_FP16_PATCH = mode
+
 def fp16_patch_decorator(func):
     """fp16 patch on ascend"""
     def wrapper(*args, **kwargs):
-        global GLOBAL_FP16_PATCH
         if GLOBAL_FP16_PATCH:
             args = [arg.astype(mstype.float16) if arg is not None and isinstance(arg, Tensor) \
                     else arg for arg in args]
@@ -84,6 +90,53 @@ def bool_patch_decorator(func):
 
     return wrapper
 
+def bool_io_patch_decorator(func):
+    """bool patch on ascend"""
+    def wrapper(*args, **kwargs):
+        args = [arg.astype(mstype.int32) if isinstance(arg, Tensor) and arg.dtype == mstype.bool_ \
+                else arg for arg in args]
+        has_bool = any(bool(isinstance(arg, Tensor) and arg.dtype == mstype.bool_) for arg in args)
+        if isinstance(args[0], (list, tuple)):
+            # for concat
+            args[0] = [arg.astype(mstype.int32) if isinstance(arg, Tensor) and arg.dtype == mstype.bool_ \
+                else arg for arg in args[0]]
+        kwargs = {k: (v.astype(mstype.int32) if isinstance(v, Tensor) and v.dtype == mstype.bool_ else v) \
+                  for k, v in kwargs.items()}
+        result = func(*args, **kwargs)
+        if has_bool:
+            result = result.astype(mstype.bool_)
+        return result
+
+    return wrapper
+
+def _get_unflatten_size(input_shape, dim, sizes):
+    input_rank = len(input_shape)
+    if not isinstance(sizes, (tuple, list)):
+        raise TypeError(f"Type of `sizes` should be `Tuple` or `List`, but got {type(sizes)}")
+
+    if len(sizes) == 0:
+        raise ValueError("`sizes` must be non-empty")
+
+    if isinstance(dim, str):
+        raise TypeError("Until Now, `dim` not support type of str in `unflatten`")
+
+    _dim = dim
+    if _dim < 0:
+        _dim += input_rank
+
+    if _dim < 0 or _dim >= input_rank:
+        raise ValueError(f"`dim` should be in range [{-input_rank}, {input_rank}), but got {input_rank, dim}")
+
+    _sizes_mul = reduce(operator.mul, list(sizes))
+    if -1 not in sizes and _sizes_mul != input_shape[_dim]:
+        raise ValueError(f"unflatten: Provided `sizes` {sizes} don't multiply up to the"
+            f"size of dim {dim} ({input_shape[_dim]}) in the input tensor")
+
+    out_shape = input_shape[:_dim] + tuple(sizes) + input_shape[_dim + 1:]
+    return out_shape
+
+# For all backend
+# For functional api
 # matmul
 origin_matmul = ops.matmul
 ops.matmul = fp16_patch_decorator(origin_matmul)
@@ -119,6 +172,7 @@ ops.einsum = einsum
 # conv1d
 ops.conv1d = fp16_patch_decorator(ops.conv1d)
 
+# for Tensor
 # unfold
 def _get_unfold_indices(input_shape, dimension, size, step):
     if dimension < 0:
@@ -219,6 +273,44 @@ def _contains(self, key):
 Tensor.__contains__ = _contains
 StubTensor.__contains__ = _contains
 
+def unflatten(self, dim, sizes):
+    """Tensor.unflatten"""
+    out_shape = _get_unflatten_size(self.shape, dim, sizes)
+    return self.reshape(out_shape)
+
+Tensor.unflatten = unflatten
+StubTensor.unflatten = unflatten
+
+if version.parse(mindspore.__version__) < version.parse('2.2.0'):
+    def eq(self, other):
+        """patched eq"""
+        return ops.equal(self, other)
+    Tensor.eq = eq
+    StubTensor.eq = eq
+
+
+def _eq(self, other):
+    if not isinstance(other, (int, float, Tensor)):
+        return False
+    if isinstance(other, Tensor) and self.shape != other.shape:
+        return False
+    if id(self) == id(other):
+        return True
+    # bool type is not supported for `Equal` operator in backend.
+    if self.dtype == mstype.bool_ or (isinstance(other, Tensor) and other.dtype == mstype.bool_):
+        self = self.to(mstype.int32)
+        other = other.to(mstype.int32)
+    return ops.eq(self, other)
+
+Parameter.__eq__ = _eq
+
+ops.repeat_interleave = bool_io_patch_decorator(ops.repeat_interleave)
+def _repeat_interleave(self, repeats, dim):
+    return ops.repeat_interleave(self, repeats, axis=dim)
+Tensor.repeat_interleave = _repeat_interleave
+StubTensor.repeat_interleave = _repeat_interleave
+
+# Ascend only
 if DEVICE_TARGET == 'Ascend':
     # cumsum
     ops.cumsum = int32_patch_decorator(ops.cumsum)
@@ -266,12 +358,15 @@ if DEVICE_TARGET == 'Ascend':
     ops.cat = bool_patch_decorator(ops.cat)
     ops.concat = bool_patch_decorator(ops.concat)
 
+# GPU only
 def custom_multinomial(probabilities, num_samples, replacement=True):
     """custom multinomial"""
     if replacement:
         # with replacement
         cumulative_probs = ops.cumsum(probabilities, axis=-1)
         uniform_samples = ops.rand(probabilities.shape[:-1] + (num_samples,))
+        if cumulative_probs.dtype == mindspore.float16:
+            cumulative_probs = cumulative_probs.astype(mindspore.float32)
         samples = ops.searchsorted(cumulative_probs, uniform_samples, right=True)
     else:
         # without replacement
@@ -287,32 +382,11 @@ def custom_multinomial(probabilities, num_samples, replacement=True):
 
     return samples
 
-if DEVICE_TARGET == 'GPU':
+if DEVICE_TARGET != 'CPU':
     ops.multinomial = custom_multinomial
 
-if version.parse(mindspore.__version__) < version.parse('2.2.0'):
-    def eq(self, other):
-        """patched eq"""
-        return ops.equal(self, other)
-    Tensor.eq = eq
-    StubTensor.eq = eq
 
-
-def _eq(self, other):
-    if not isinstance(other, (int, float, Tensor)):
-        return False
-    if isinstance(other, Tensor) and self.shape != other.shape:
-        return False
-    if id(self) == id(other):
-        return True
-    # bool type is not supported for `Equal` operator in backend.
-    if self.dtype == mstype.bool_ or (isinstance(other, Tensor) and other.dtype == mstype.bool_):
-        self = self.to(mstype.int32)
-        other = other.to(mstype.int32)
-    return ops.eq(self, other)
-
-Parameter.__eq__ = _eq
-
+# For Cells
 class Dense(nn.Cell):
     """patched Dense"""
     def __init__(self,
@@ -340,11 +414,11 @@ class Dense(nn.Cell):
 
     def reset_parameters(self):
         """reset_embedding_params"""
-        self.weight.set_data(initializer(HeUniform(math.sqrt(5)), self.weight.shape))
+        self.weight.set_data(initializer(HeUniform(math.sqrt(5)), self.weight.shape, self.weight.dtype))
         if self.has_bias:
             fan_in, _ = _calculate_fan_in_and_fan_out(self.weight.shape)
             bound = 1 / math.sqrt(fan_in)
-            self.bias.set_data(initializer(Uniform(bound), [self.out_channels]))
+            self.bias.set_data(initializer(Uniform(bound), self.bias.shape, self.bias.dtype))
 
     def construct(self, x):
         x_shape = x.shape
@@ -371,18 +445,18 @@ class Embedding(nn.Cell):
         self.use_one_hot = use_one_hot
         self.dtype = dtype
         self.padding_idx = padding_idx
-        self.embedding_table = Parameter(initializer('zeros', [vocab_size, embedding_size]), name='embedding_table')
+        self.weight = Parameter(initializer('zeros', [vocab_size, embedding_size]), name='weight')
         self.reset_parameters()
 
     def reset_parameters(self):
         """reset_embedding_params"""
-        init_tensor = initializer(Normal(1.0), self.embedding_table.shape)
+        init_tensor = initializer(Normal(1.0), self.weight.shape, self.weight.dtype)
         init_tensor = init_tensor.init_data()
         if self.padding_idx:
             init_tensor = init_tensor.asnumpy()
             init_tensor[self.padding_idx] = 0
             init_tensor = Tensor(init_tensor)
-        self.embedding_table.assign_value(init_tensor)
+        self.weight.assign_value(init_tensor)
 
     def construct(self, ids):
         out_shape = ids.shape + (self.embedding_size,)
@@ -390,16 +464,16 @@ class Embedding(nn.Cell):
 
         if self.use_one_hot:
             one_hot_ids = ops.one_hot(flat_ids, self.vocab_size)
-            output_for_reshape = ops.matmul(one_hot_ids, self.embedding_table)
+            output_for_reshape = ops.matmul(one_hot_ids, self.weight)
         else:
-            output_for_reshape = ops.gather(self.embedding_table, flat_ids, 0)
+            output_for_reshape = ops.gather(self.weight, flat_ids, 0)
 
         output = output_for_reshape.reshape(out_shape)
         return output
 
     def extend_repr(self):
         return f'vocab_size={self.vocab_size}, embedding_size={self.embedding_size}, use_one_hot={self.use_one_hot}, ' \
-            f'embedding_table={self.embedding_table}, dtype={self.dtype}, padding_idx={self.padding_idx}'
+            f'weight={self.weight}, dtype={self.dtype}, padding_idx={self.padding_idx}'
 
 class Conv1d(_Conv):
     """patched Conv1d"""
@@ -482,10 +556,10 @@ class LayerNorm(nn.Cell):
         self.begin_norm_axis = begin_norm_axis
         self.begin_params_axis = begin_params_axis
         self.epsilon = epsilon
-        self.gamma = Parameter(initializer(
-            gamma_init, normalized_shape, dtype=dtype), name="gamma")
-        self.beta = Parameter(initializer(
-            beta_init, normalized_shape, dtype=dtype), name="beta")
+        self.weight = Parameter(initializer(
+            gamma_init, normalized_shape, dtype=dtype), name="weight")
+        self.bias = Parameter(initializer(
+            beta_init, normalized_shape, dtype=dtype), name="bias")
         self.layer_norm = ops.LayerNorm(begin_norm_axis=self.begin_norm_axis,
                                       begin_params_axis=self.begin_params_axis,
                                       epsilon=self.epsilon)
@@ -493,7 +567,7 @@ class LayerNorm(nn.Cell):
 
     def construct(self, input_x):
         if self.elementwise_affine:
-            y, _, _ = self.layer_norm(input_x, self.gamma.astype(input_x.dtype), self.beta.astype(input_x.dtype))
+            y, _, _ = self.layer_norm(input_x, self.weight.astype(input_x.dtype), self.bias.astype(input_x.dtype))
         else:
             y, _, _ = self.layer_norm(input_x, ops.ones(self.normalized_shape, input_x.dtype),
                                       ops.zeros(self.normalized_shape, input_x.dtype),)
@@ -501,7 +575,7 @@ class LayerNorm(nn.Cell):
 
     def extend_repr(self):
         return f'normalized_shape={self.normalized_shape}, begin_norm_axis={self.begin_norm_axis}, ' \
-               f'begin_params_axis={self.begin_params_axis}, gamma={self.gamma}, beta={self.beta}'
+               f'begin_params_axis={self.begin_params_axis}, weight={self.weight}, bias={self.bias}'
 
 def half(self):
     """patched nn.Cell.half"""
@@ -509,6 +583,11 @@ def half(self):
     return self
 
 nn.Cell.half = half
+
+def _check_cell_flags_in_pynative(self):
+    pass
+
+nn.Cell._check_cell_flags_in_pynative = _check_cell_flags_in_pynative
 
 nn.LayerNorm = LayerNorm
 nn.Conv1d = Conv1d

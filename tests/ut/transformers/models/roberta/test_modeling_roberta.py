@@ -48,8 +48,6 @@ if is_mindspore_available():
 
 ROBERTA_TINY = "sshleifer/tiny-distilroberta-base"
 
-mindspore.set_context(pynative_synchronize=True)
-
 class RobertaModelTester:
     def __init__(
         self,

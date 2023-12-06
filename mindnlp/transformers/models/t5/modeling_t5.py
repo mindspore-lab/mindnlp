@@ -72,16 +72,16 @@ class T5LayerNorm(nn.Cell):
         Construct a layernorm module in the T5 style. No bias and no subtraction of mean.
         """
         super().__init__()
-        self.gamma = Parameter(ops.ones(hidden_size, mindspore.float32), 'gamma')
+        self.weight = Parameter(ops.ones(hidden_size, mindspore.float32), 'gamma')
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
         variance = hidden_states.astype(mindspore.float32).pow(2).mean(-1, keep_dims=True)
         hidden_states = hidden_states / ops.sqrt(variance + self.variance_epsilon)
         # convert into half-precision if necessary
-        if self.gamma.dtype in [mindspore.float16, mindspore.bfloat16]:
-            hidden_states = hidden_states.astype(self.gamma.dtype)
-        return self.gamma * hidden_states
+        if self.weight.dtype in [mindspore.float16, mindspore.bfloat16]:
+            hidden_states = hidden_states.astype(self.weight.dtype)
+        return self.weight * hidden_states
 
 ALL_LAYERNORM_LAYERS.append(T5LayerNorm)
 
@@ -605,15 +605,15 @@ class T5PreTrainedModel(PreTrainedModel):
         """Initialize the weights"""
         factor = self.config.initializer_factor  # Used for testing weights initialization
         if isinstance(cell, T5LayerNorm):
-            cell.gamma.set_data(initializer(Constant(factor * 1.0), cell.gamma.shape, cell.gamma.dtype))
+            cell.weight.set_data(initializer(Constant(factor * 1.0), cell.weight.shape, cell.weight.dtype))
         elif isinstance(
             cell,
             (T5Model, T5ForConditionalGeneration, T5EncoderModel, T5ForQuestionAnswering),
         ):
             # Mesh TensorFlow embeddings initialization
             # See https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L1624
-            cell.shared.embedding_table.set_data(initializer(Normal(factor * 1.0),
-                                                cell.shared.embedding_table.shape, cell.shared.embedding_table.dtype))
+            cell.shared.weight.set_data(initializer(Normal(factor * 1.0),
+                                                cell.shared.weight.shape, cell.shared.weight.dtype))
             if hasattr(cell, "lm_head") and not self.config.tie_word_embeddings:
                 cell.lm_head.weight.set_data(initializer(Normal(factor * 1.0), cell.lm_head.weight.shape, cell.lm_head.weight.dtype))
             if hasattr(cell, "qa_outputs"):
@@ -677,8 +677,8 @@ class T5PreTrainedModel(PreTrainedModel):
             cell.o.weight.set_data(initializer(Normal(factor * ((n_heads * key_value_proj_dim) ** -0.5)),
                                                 cell.o.weight.shape, cell.o.weight.dtype))
             if cell.has_relative_attention_bias:
-                cell.relative_attention_bias.embedding_table.set_data(initializer(Normal(factor * (d_model**-0.5)),
-                                                    cell.relative_attention_bias.embedding_table.shape, cell.relative_attention_bias.embedding_table.dtype))
+                cell.relative_attention_bias.weight.set_data(initializer(Normal(factor * (d_model**-0.5)),
+                                                    cell.relative_attention_bias.weight.shape, cell.relative_attention_bias.weight.dtype))
 
     def _shift_right(self, input_ids):
         decoder_start_token_id = self.config.decoder_start_token_id
@@ -886,9 +886,9 @@ class T5Stack(T5PreTrainedModel):
 class T5Model(T5PreTrainedModel):
     """T5Model"""
     _keys_to_ignore_on_load_unexpected = [
-        "decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.embedding_table",
+        "decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight",
     ]
-    _tied_weights_keys = ["encoder.embed_tokens.embedding_table", "decoder.embed_tokens.embedding_table"]
+    _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
 
     def __init__(self, config: T5Config):
@@ -1011,9 +1011,9 @@ class T5Model(T5PreTrainedModel):
 class T5ForConditionalGeneration(T5PreTrainedModel):
     """T5ForConditionalGeneration"""
     _keys_to_ignore_on_load_unexpected = [
-        "decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.embedding_table",
+        "decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight",
     ]
-    _tied_weights_keys = ["encoder.embed_tokens.embedding_table", "decoder.embed_tokens.embedding_table", "lm_head.weight"]
+    _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight", "lm_head.weight"]
 
     def __init__(self, config: T5Config):
         super().__init__(config)
@@ -1226,7 +1226,7 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
 
 class T5EncoderModel(T5PreTrainedModel):
     """T5EncoderModel"""
-    _tied_weights_keys = ["encoder.embed_tokens.embedding_table"]
+    _tied_weights_keys = ["encoder.embed_tokens.weight"]
     _keys_to_ignore_on_load_unexpected = [r"decoder"]
 
     def __init__(self, config: T5Config):
@@ -1287,8 +1287,8 @@ class T5EncoderModel(T5PreTrainedModel):
         return encoder_outputs
 
 class T5ForSequenceClassification(T5PreTrainedModel):
-    _keys_to_ignore_on_load_unexpected = ["decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.embedding_table"]
-    _tied_weights_keys = ["encoder.embed_tokens.embedding_table", "decoder.embed_tokens.embedding_table"]
+    _keys_to_ignore_on_load_unexpected = ["decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight"]
+    _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config: T5Config):
         super().__init__(config)
@@ -1406,8 +1406,8 @@ class T5ForSequenceClassification(T5PreTrainedModel):
 
 
 class T5ForQuestionAnswering(T5PreTrainedModel):
-    _keys_to_ignore_on_load_unexpected = ["decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.embedding_table"]
-    _tied_weights_keys = ["encoder.embed_tokens.embedding_table", "decoder.embed_tokens.embedding_table"]
+    _keys_to_ignore_on_load_unexpected = ["decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight"]
+    _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config: T5Config):
         super().__init__(config)

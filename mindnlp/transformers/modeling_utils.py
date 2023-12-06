@@ -240,12 +240,19 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
     _keep_in_fp32_modules = None
 
+    supports_recompute = False
+
     def __init__(self, config):
         super().__init__(config)
+        self._check_and_unset_acl()
         # Save config in model
         self.config = config
         self.name_or_path = config.name_or_path
         self.generation_config = GenerationConfig.from_model_config(config) if self.can_generate() else None
+
+    def _check_and_unset_acl(self):
+        if "MS" in str(self.__class__.__name__):
+            del os.environ['MS_DEV_FORCE_ACL']
 
     def post_init(self):
         """
@@ -410,12 +417,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         """ Tie or clone module weights depending of weither we are using or not
         """
         if hasattr(output_embeddings, 'weight'):
-            output_embeddings.weight = input_embeddings.embedding_table
-            output_embeddings._params['weight'] = input_embeddings.embedding_table
-
-        if hasattr(output_embeddings, 'embedding_table'):
-            output_embeddings.embedding_table = input_embeddings.embedding_table
-            output_embeddings._params['embedding_table'] = input_embeddings.embedding_table
+            output_embeddings.weight = input_embeddings.weight
+            output_embeddings._params['weight'] = input_embeddings.weight
 
         if getattr(output_embeddings, "bias", None) is not None:
             if output_embeddings.weight.shape[0] == output_embeddings.bias.shape[0]:
@@ -454,8 +457,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         if new_num_tokens is None and pad_to_multiple_of is None:
             return model_embeds
         # Update base model and current model config
-        self.config.vocab_size = model_embeds.embedding_table.shape[0]
-        self.vocab_size = model_embeds.embedding_table.shape[0]
+        self.config.vocab_size = model_embeds.weight.shape[0]
+        self.vocab_size = model_embeds.weight.shape[0]
 
         # Tie weights again if needed
         self.tie_weights()
@@ -469,7 +472,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
         # Update new_num_tokens with the actual size of new_embeddings
         if pad_to_multiple_of is not None:
-            new_num_tokens = new_embeddings.embedding_table.shape[0]
+            new_num_tokens = new_embeddings.weight.shape[0]
         # if word embeddings are not tied, make sure that lm head is resized as well
         if self.get_output_embeddings() is not None and not self.config.tie_word_embeddings:
             old_lm_head = self.get_output_embeddings()
@@ -527,7 +530,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         if new_num_tokens is None:
             return old_embeddings
 
-        old_num_tokens, old_embedding_dim = old_embeddings.embedding_table.shape
+        old_num_tokens, old_embedding_dim = old_embeddings.weight.shape
         if old_num_tokens == new_num_tokens:
             return old_embeddings
 
@@ -539,7 +542,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
         # Copy word embeddings from the previous weights
         num_tokens_to_copy = min(old_num_tokens, new_num_tokens)
-        new_embeddings.embedding_table.data[:num_tokens_to_copy, :] = old_embeddings.embedding_table.data[
+        new_embeddings.weight.data[:num_tokens_to_copy, :] = old_embeddings.weight.data[
                                                                       :num_tokens_to_copy, :]
 
         return new_embeddings
@@ -843,7 +846,11 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 raise OSError(
                     f"Unable to load weights from mindspore checkpoint file '{resolved_archive_file}'. "
                 ) from exc
-            return state_dict
+
+            new_state_dict = {key.replace('gamma', 'weight').replace('beta', 'bias')\
+                                 .replace('embedding_table', 'weight'): \
+                value for key, value in state_dict.items()}
+            return new_state_dict
 
         keys_missing = list(model.parameters_dict().keys())
         param_id_set = set()
@@ -1235,6 +1242,15 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 f"index located at {save_index_file}."
             )
 
+    def enable_recompute(self):
+        """Activates recompute (aka gradient checkpointing) for the current model."""
+        if not self.supports_recompute:
+            raise ValueError(f"{self.__class__.__name__} does not support gradient checkpointing.")
+
+        for _, cell in self.cells_and_names():
+            if hasattr(cell, "_set_recompute"):
+                cell._set_recompute()
+
 
 def get_parameter_dtype(parameter: Union[nn.Cell, GenerationMixin, "ModuleUtilsMixin"]):
     """
@@ -1377,21 +1393,6 @@ def convert_torch_to_mindspore(pth_file):
 
     has_bf16 = False
     for key, value in state_dict.items():
-        if 'LayerNorm' in key or 'layer_norm' in key or 'ln' in key:
-            if '.weight' in key:
-                key = key.replace('.weight', '.gamma')
-            if '.bias' in key:
-                key = key.replace('.bias', '.beta')
-        if 'wpe' in key or 'wte' in key or \
-            'embeddings' in key or 'embedding' in key or \
-            'shared' in key or 'relative_attention_bias' in key or \
-            'embed_' in key or '_embed' in key or \
-            'encoder.weight' in key or \
-            'graph_token_virtual_distance.weight' in key or \
-            'graph_token.weight' in key and \
-            'embedding_hidden_mapping_in' not in key: # for albert
-            key = key.replace('weight', 'embedding_table')
-
         if value.dtype == torch.bfloat16:
             data = Tensor(value.to(torch.float).numpy())
             if not has_bf16:

@@ -24,8 +24,9 @@ import unittest
 import mindspore
 import numpy as np
 from mindspore import Tensor
-
-from mindnlp.transformers.models.baichuan import baichuan, baichuan_config
+from mindnlp.transformers.models.baichuan import BaiChuanConfig, BaiChuan7bModel, BaiChuan13bModel, \
+    BaiChuanForCausalLM
+from mindnlp.utils.testing_utils import slow
 from .....common import MindNLPTestCase
 
 class TestModelingBaiChuan(MindNLPTestCase):
@@ -37,48 +38,45 @@ class TestModelingBaiChuan(MindNLPTestCase):
         """
         Set up.
         """
-        self.config = baichuan_config.BaiChuanConfig(vocab_size=1000, hidden_size=128, num_hidden_layers=2)
+        self.config_7b = BaiChuanConfig(vocab_size=1000, num_hidden_layers=2)
+        self.config_13b = BaiChuanConfig(vocab_size=1000, hidden_size=5120, num_hidden_layers=2)
 
-    def test_attention(self):
-        r"""
-        Test Attention
-        """
-        model = baichuan.Attention(self.config)
-        hidden_states = Tensor(np.random.randint(0, self.config.vocab_size, (1, 128, 128)), mindspore.float32)
-        outputs = model(hidden_states)
-        assert outputs[0].shape == (1, 128, 128)
-
-    def test_decoder_layer(self):
-        r"""
-        Test DecoderLayer
-        """
-        model = baichuan.DecoderLayer(self.config)
-        hidden_states = Tensor(np.random.randint(0, self.config.vocab_size, (1, 128, 128)), mindspore.int32)
-        outputs = model(hidden_states)
-        assert outputs[0].shape == (1, 128, 128)
-
-    def test_model(self):
+    @slow
+    def test_7b_model(self):
         r"""
         Test Model
         """
-        model = baichuan.Model(self.config)
+        model = BaiChuan7bModel(self.config_7b)
         input_ids = Tensor(np.random.randint(0, 100, (1, 128)), mindspore.int32)
         outputs = model(input_ids=input_ids)
-        assert outputs[0].shape == (1, 128, 128)
+        assert outputs[0].shape == (1, 128, 4096)
 
-    def test_baichuan_for_causal_lm(self):
+    @slow
+    def test_13b_model(self):
+        r"""
+        Test Model
+        """
+        model = BaiChuan13bModel(self.config_13b)
+        input_ids = Tensor(np.random.randint(0, 100, (1, 128)), mindspore.int32)
+        outputs = model(input_ids=input_ids)
+        assert outputs[0].shape == (1, 128, 5120)
+
+    @slow
+    def test_baichuan_for_causal_lm_7b(self):
         r"""
         Test BaiChuanForCausalLM
         """
-        model = baichuan.BaiChuanForCausalLM(self.config)
+        model = BaiChuanForCausalLM(self.config_7b, size='7b')
         input_ids = Tensor(np.random.randint(0, 100, (1, 128)), mindspore.int32)
         outputs = model(input_ids=input_ids)
         assert outputs[0].shape == (1, 128, 1000)
 
-    def tearDown(self) -> None:
-        gc.collect()
-
-    @classmethod
-    def tearDownClass(cls):
-        if os.path.exists("~/.mindnlp"):
-            os.removedirs("~/.mindnlp")
+    @slow
+    def test_baichuan_for_causal_lm_13b(self):
+        r"""
+        Test BaiChuanForCausalLM
+        """
+        model = BaiChuanForCausalLM(self.config_13b, size='13b')
+        input_ids = Tensor(np.random.randint(0, 100, (1, 128)), mindspore.int32)
+        outputs = model(input_ids=input_ids)
+        assert outputs[0].shape == (1, 128, 1000)

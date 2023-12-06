@@ -2386,9 +2386,9 @@ class TokenizerTesterMixin:
                 model = model_class(config)
 
                 # Make sure the model contains at least the full vocabulary size in its embedding matrix
-                is_using_common_embeddings = hasattr(model.get_input_embeddings(), "embedding_table")
+                is_using_common_embeddings = hasattr(model.get_input_embeddings(), "weight")
                 if is_using_common_embeddings:
-                    self.assertGreaterEqual(model.get_input_embeddings().embedding_table.shape[0], len(tokenizer))
+                    self.assertGreaterEqual(model.get_input_embeddings().weight.shape[0], len(tokenizer))
 
                 # Build sequence
                 first_ten_tokens = list(tokenizer.get_vocab().keys())[:10]

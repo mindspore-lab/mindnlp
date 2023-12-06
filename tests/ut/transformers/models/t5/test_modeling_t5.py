@@ -518,7 +518,7 @@ class T5ModelTester:
         model = T5ForConditionalGeneration(config=config).set_train(False)
         model.resize_token_embeddings(prev_vocab_size - 10)
 
-        self.parent.assertEqual(model.get_input_embeddings().embedding_table.shape[0], prev_vocab_size - 10)
+        self.parent.assertEqual(model.get_input_embeddings().weight.shape[0], prev_vocab_size - 10)
         self.parent.assertEqual(model.get_output_embeddings().weight.shape[0], prev_vocab_size - 10)
         self.parent.assertEqual(model.config.vocab_size, prev_vocab_size - 10)
 
@@ -707,12 +707,11 @@ class T5ModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         config = self.model_tester.prepare_config_and_inputs()[0]
         self.model_tester.check_resize_embeddings_t5_v1_1(config)
 
-    # @slow
-    # def test_model_from_pretrained(self):
-    #     # for model_name in T5_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-    #     # for model_name in T5_PRETRAINED_MODEL_ARCHIVE_LIST:
-    #     model = T5Model.from_pretrained('t5-11b', from_pt=True)
-    #     self.assertIsNotNone(model)
+    @slow
+    def test_model_from_pretrained(self):
+        for model_name in T5_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
+            model = T5Model.from_pretrained(model_name)
+            self.assertIsNotNone(model)
 
     def test_generate_with_head_masking(self):
         attention_names = ["encoder_attentions", "decoder_attentions", "cross_attentions"]

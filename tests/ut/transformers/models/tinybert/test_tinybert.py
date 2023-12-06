@@ -178,7 +178,7 @@ class TestTinyBert(MindNLPTestCase):
 
         bert_embeddings = TinyBertEmbeddings(self.bert_config)
         bert_lm_prediction_head = TinyBertLMPredictionHead(
-            self.bert_config, bert_embeddings.word_embeddings.embedding_table)
+            self.bert_config, bert_embeddings.word_embeddings.weight)
         input_tensor = mindspore.Tensor(
             np.random.rand(2, 3, 128), dtype=mindspore.float32)
         prediction_scores = bert_lm_prediction_head(input_tensor)
@@ -191,7 +191,7 @@ class TestTinyBert(MindNLPTestCase):
 
         bert_embeddings = TinyBertEmbeddings(self.bert_config)
         bert_only_mlm_head = TinyBertOnlyMLMHead(
-            self.bert_config, bert_embeddings.word_embeddings.embedding_table)
+            self.bert_config, bert_embeddings.word_embeddings.weight)
         input_tensor = mindspore.Tensor(
             np.random.rand(2, 3, 128), dtype=mindspore.float32)
         prediction_scores = bert_only_mlm_head(input_tensor)
@@ -215,7 +215,7 @@ class TestTinyBert(MindNLPTestCase):
 
         bert_embeddings = TinyBertEmbeddings(self.bert_config)
         bert_pretraining_heads = TinyBertPreTrainingHeads(
-            self.bert_config, bert_embeddings.word_embeddings.embedding_table)
+            self.bert_config, bert_embeddings.word_embeddings.weight)
         input_tensor = mindspore.Tensor(
             np.random.rand(2, 3, 128), dtype=mindspore.float32)
         pooled_output = mindspore.Tensor(

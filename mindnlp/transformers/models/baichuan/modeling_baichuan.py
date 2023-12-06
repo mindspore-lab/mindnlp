@@ -12,11 +12,15 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License.\
+# limitations under the License.
 # ============================================================================
-# pylint: disable=C0103
+# pylint: disable=invalid-name
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+# pylint: disable=arguments-renamed
+# pylint: disable=attribute-defined-outside-init
 """
-MindNlp BaiChuan model
+MindSpore BaiChuan Model
 """
 
 import math
@@ -29,7 +33,7 @@ from mindspore.common.initializer import initializer, Normal
 from mindspore import dtype as mstype
 from mindnlp.utils import logging
 
-from .baichuan_config import BaiChuanConfig
+from .configuration_baichuan import BaiChuanConfig
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -83,19 +87,56 @@ def _expand_mask(mask: Tensor, dtype: mstype, tgt_len: Optional[int] = None):
         mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min),
     )
 
+def _get_interleave(n):
+    def _get_interleave_power_of_2(n):
+        start = (2 ** (-2 ** -(math.log2(n) - 3)))
+        ratio = start
+        return [start * ratio ** i for i in range(n)]
+
+    if math.log2(n).is_integer():
+        return _get_interleave_power_of_2(n)
+    closest_power_of_2 = 2 ** math.floor(math.log2(n))
+    return _get_interleave_power_of_2(closest_power_of_2) + \
+            _get_interleave(2 * closest_power_of_2)[0::2][:n - closest_power_of_2]
+
+def _fill_with_neg_inf(t):
+    """FP16-compatible function that fills a tensor with -inf."""
+    return t.float().fill(float("-inf")).astype(t.dtype)
+
+def _gen_alibi_mask(n_head, max_pos):
+    """used in inference only"""
+    slopes = mindspore.Tensor(_get_interleave(n_head))
+    alibi = slopes.unsqueeze(1).unsqueeze(1) * ops.arange(max_pos).unsqueeze(0).unsqueeze(0).broadcast_to(
+        (n_head, -1, -1))
+    alibi = alibi.view(n_head, 1, max_pos)
+    alibi_mask = ops.triu(
+        _fill_with_neg_inf(ops.zeros([max_pos, max_pos])), 1
+    )
+    alibi_mask = alibi_mask.unsqueeze(0) + alibi
+    return alibi_mask
+
+def _buffered_future_mask(tensor, maxpos, alibi, attn_heads):
+    """used in training only"""
+    _future_mask = ops.triu(
+        _fill_with_neg_inf(ops.zeros([maxpos, maxpos])), 1
+    )
+    _future_mask = _future_mask.unsqueeze(0) + alibi
+    _future_mask = _future_mask.to(tensor)
+    return _future_mask[:tensor.shape[0] * attn_heads, :maxpos, :maxpos]
+
 
 class RMSNorm(nn.Cell):
     """
     RMSNorm
     """
 
-    def __init__(self, hidden_size, eps=1e-6):
+    def __init__(self, hidden_size, epsilon=1e-6):
         """
         RMSNorm is equivalent to T5LayerNorm
         """
         super().__init__()
-        self.weight = Parameter(ops.ones(hidden_size))
-        self.variance_epsilon = eps
+        self.weight = Parameter(ops.ones(hidden_size), 'weight')
+        self.variance_epsilon = epsilon
 
     def construct(self, hidden_states):
         variance = hidden_states.to(mindspore.float32).pow(2).mean(-1, keep_dims=True)
@@ -134,8 +175,8 @@ class RotaryEmbedding(nn.Cell):
             freqs = ops.einsum("i,j->ij", t, self.inv_freq)
             # Different from paper, but it uses a different permutation in order to obtain the same calculation
             emb = ops.cat((freqs, freqs), axis=-1)
-            self.register_buffer("cos_cached", emb.cos()[None, None, :, :], persistent=False)
-            self.register_buffer("sin_cached", emb.sin()[None, None, :, :], persistent=False)
+            self.cos_cached = emb.cos()[None, None, :, :]
+            self.sin_cached = emb.sin()[None, None, :, :]
         return (
             self.cos_cached[:, :, :seq_len, ...].to(dtype=x.dtype),
             self.sin_cached[:, :, :seq_len, ...].to(dtype=x.dtype),
@@ -205,7 +246,7 @@ class Attention(nn.Cell):
         self.rotary_emb = RotaryEmbedding(self.head_dim, max_position_embeddings=self.max_position_embeddings)
 
     def _shape(self, tensor: Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2).contiguous()
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
     def construct(
             self,
@@ -280,6 +321,78 @@ class Attention(nn.Cell):
         return attn_output, attn_weights, past_key_value
 
 
+class BaiChuanAttention(nn.Cell):
+    def __init__(self, config: BaiChuanConfig):
+        super().__init__()
+        self.config = config
+        self.hidden_size = config.hidden_size
+        self.num_heads = config.num_attention_heads
+        self.head_dim = self.hidden_size // self.num_heads
+        self.max_position_embeddings = config.model_max_length
+
+        if (self.head_dim * self.num_heads) != self.hidden_size:
+            raise ValueError(
+                f"hidden_size {self.hidden_size} is not divisible by num_heads {self.num_heads}"
+            )
+        self.W_pack = nn.Dense(self.hidden_size, 3 * self.hidden_size, has_bias=False)
+        self.o_proj = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=False)
+
+    def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
+
+    def construct(
+            self,
+            hidden_states: mindspore.Tensor,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+            output_attentions: bool = False,
+            use_cache: bool = False,
+    ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
+
+        bsz, q_len, _ = hidden_states.shape
+
+        proj = self.W_pack(hidden_states)
+        proj = proj.unflatten(-1, (3, self.hidden_size)).unsqueeze(0).swapaxes(0, -2).squeeze(-2)
+        query_states = proj[0].view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
+        key_states = proj[1].view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
+        value_states = proj[2].view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
+
+        kv_seq_len = key_states.shape[-2]
+        if past_key_value is not None:
+            kv_seq_len += past_key_value[0].shape[-2]
+
+        if past_key_value is not None:
+            # reuse k, v, self_attention
+            key_states = ops.cat([past_key_value[0], key_states], axis=2)
+            value_states = ops.cat([past_key_value[1], value_states], axis=2)
+
+        past_key_value = (key_states, value_states) if use_cache else None
+
+        attn_weights = ops.matmul(query_states, key_states.swapaxes(2, 3)) / math.sqrt(self.head_dim)
+
+        if attention_mask is not None:
+            if q_len == 1: # inference with cache
+                if len(attention_mask.shape) == 4:
+                    attention_mask = attention_mask[:, :, -1:, :]
+                else:
+                    attention_mask = attention_mask[:, -1:, :]
+            attn_weights = attn_weights + attention_mask
+            attn_weights = ops.maximum(attn_weights, mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min))
+
+        attn_weights = ops.softmax(attn_weights, axis=-1)
+
+        attn_output = ops.matmul(attn_weights, value_states)
+
+        attn_output = attn_output.swapaxes(1, 2)
+        attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
+        attn_output = self.o_proj(attn_output)
+
+        if not output_attentions:
+            attn_weights = None
+
+        return attn_output, attn_weights, past_key_value
+
+
 class DecoderLayer(nn.Cell):
     """
     DecoderLayer
@@ -294,8 +407,8 @@ class DecoderLayer(nn.Cell):
             intermediate_size=config.intermediate_size,
             hidden_act=config.hidden_act,
         )
-        self.input_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.input_layernorm = RMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
+        self.post_attention_layernorm = RMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
 
     def construct(
             self,
@@ -351,6 +464,55 @@ class DecoderLayer(nn.Cell):
 
         return outputs
 
+class BaiChuanLayer(nn.Cell):
+    def __init__(self, config: BaiChuanConfig):
+        super().__init__()
+        self.hidden_size = config.hidden_size
+        self.self_attn = BaiChuanAttention(config=config)
+        self.mlp = MLP(
+            hidden_size=self.hidden_size,
+            intermediate_size=config.intermediate_size,
+            hidden_act=config.hidden_act,
+        )
+        self.input_layernorm = RMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
+        self.post_attention_layernorm = RMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
+
+    def construct(
+            self,
+            hidden_states: mindspore.Tensor,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+            output_attentions: Optional[bool] = False,
+            use_cache: Optional[bool] = False,
+    ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
+
+        residual = hidden_states
+
+        hidden_states = self.input_layernorm(hidden_states)
+
+        # Self Attention
+        hidden_states, _, present_key_value = self.self_attn(
+            hidden_states=hidden_states,
+            attention_mask=attention_mask,
+            past_key_value=past_key_value,
+            output_attentions=output_attentions,
+            use_cache=use_cache,
+        )
+        hidden_states = residual + hidden_states
+
+        # Fully Connected
+        residual = hidden_states
+        hidden_states = self.post_attention_layernorm(hidden_states)
+        hidden_states = self.mlp(hidden_states)
+        hidden_states = residual + hidden_states
+
+        outputs = (hidden_states,)
+
+        if use_cache:
+            outputs += (present_key_value,)
+
+        return outputs
+
 
 class BaiChuanPreTrainedModel(PreTrainedModel):
     """
@@ -358,31 +520,25 @@ class BaiChuanPreTrainedModel(PreTrainedModel):
     """
     config_class = BaiChuanConfig
     base_model_prefix = "model"
-    supports_gradient_checkpointing = True
-    _no_split_modules = ["DecoderLayer"]
+    _no_split_modules = ["DecoderLayer", "BaiChuanLayer"]
     _keys_to_ignore_on_load_unexpected = [r"decoder\.version"]
 
-    def _init_weights(self, module):
+    def _init_weights(self, cell):
         std = self.config.initializer_range
-        if isinstance(module, nn.Dense):
-            # module.weight.data.normal_(mean=0.0, std=std)
-            module.weight.set_data(initializer(Normal(
-                sigma=std, mean=0.0)), module.weight.shape, module.weight.dtype)
-            if module.bias is not None:
-                module.bias.data.zero_()
-        elif isinstance(module, nn.Embedding):
-            # module.weight.data.normal_(mean=0.0, std=std)
-            module.weight.set_data(initializer(Normal(
-                sigma=std, mean=0.0)), module.weight.shape, module.weight.dtype)
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
+        if isinstance(cell, nn.Dense):
+            cell.weight.set_data(initializer(Normal(
+                sigma=std, mean=0.0), cell.weight.shape, cell.weight.dtype))
+            if cell.bias is not None:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        elif isinstance(cell, nn.Embedding):
+            weight = np.random.normal(0.0, std, cell.weight.shape)
+            if cell.padding_idx:
+                weight[cell.padding_idx] = 0
 
-    def _set_gradient_checkpointing(self, module, value=False):
-        if isinstance(module, Model):
-            module.gradient_checkpointing = value
+            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
 
 
-class Model(BaiChuanPreTrainedModel):
+class BaiChuan7bModel(BaiChuanPreTrainedModel):
     """
     Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`DecoderLayer`]
     Args:
@@ -396,11 +552,10 @@ class Model(BaiChuanPreTrainedModel):
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=self.padding_idx)
         self.layers = nn.CellList([DecoderLayer(config) for _ in range(config.num_hidden_layers)])
-        self.norm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.norm = RMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
 
-        self.gradient_checkpointing = False
         # Initialize weights and apply final processing
-        # self.post_init()
+        self.post_init()
 
     def get_input_embeddings(self):
         return self.embed_tokens
@@ -487,13 +642,6 @@ class Model(BaiChuanPreTrainedModel):
 
         hidden_states = inputs_embeds
 
-        if self.gradient_checkpointing and self.training:
-            if use_cache:
-                logger.warning_once(
-                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
-                )
-                use_cache = False
-
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
@@ -540,19 +688,164 @@ class Model(BaiChuanPreTrainedModel):
         )
 
 
+class BaiChuan13bModel(BaiChuanPreTrainedModel):
+    def __init__(self, config: BaiChuanConfig):
+        super().__init__(config)
+        self.padding_idx = config.pad_token_id
+        self.vocab_size = config.vocab_size
+        self.n_head = config.num_attention_heads
+        self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=self.padding_idx)
+        self.layers = nn.CellList([BaiChuanLayer(config) for _ in range(config.num_hidden_layers)])
+        self.norm = RMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
+
+        self.post_init()
+        self.max_cache_pos = config.model_max_length
+        self.first_run = True
+        self.alibi_mask = None
+
+    def get_input_embeddings(self):
+        return self.embed_tokens
+
+    def set_input_embeddings(self, value):
+        self.embed_tokens = value
+
+    def get_alibi_mask(self, tensor, seq_length_with_past):
+        if self.training:
+            slopes = mindspore.Tensor(_get_interleave(self.n_head))
+            alibi = slopes.unsqueeze(1).unsqueeze(1) * ops.arange(seq_length_with_past).unsqueeze(0).unsqueeze(0).broadcast_to(
+                (self.n_head, -1, -1))
+            alibi = alibi.view(self.n_head, 1, seq_length_with_past)
+            mask = _buffered_future_mask(tensor, seq_length_with_past, alibi, self.n_head)
+        else:
+            if self.first_run:
+                self.first_run = False
+                self.future_mask = _gen_alibi_mask(self.n_head, self.max_cache_pos)
+            if seq_length_with_past > self.max_cache_pos:
+                self.max_cache_pos = seq_length_with_past
+                self.future_mask = _gen_alibi_mask(self.n_head, self.max_cache_pos)
+            mask = self.future_mask[:self.n_head, :seq_length_with_past, :seq_length_with_past]
+        return mask
+
+    def construct(
+            self,
+            input_ids: mindspore.Tensor = None,
+            attention_mask: Optional[mindspore.Tensor] = None,
+            past_key_values: Optional[List[mindspore.Tensor]] = None,
+            inputs_embeds: Optional[mindspore.Tensor] = None,
+            use_cache: Optional[bool] = False,
+            output_attentions: Optional[bool] = False,
+            output_hidden_states: Optional[bool] = False,
+            return_dict: Optional[bool] = True,
+    ) -> Union[Tuple, BaseModelOutputWithPast]:
+
+        if input_ids is not None and inputs_embeds is not None:
+            raise ValueError("You cannot provide both input_ids and inputs_embeds simultaneously")
+        if input_ids is not None:
+            _, seq_length = input_ids.shape
+        elif inputs_embeds is not None:
+            _, seq_length, _ = inputs_embeds.shape
+        else:
+            raise ValueError("You need to provide input_ids or inputs_embeds")
+
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        seq_length_with_past = seq_length
+
+        if past_key_values is not None:
+            past_key_values_length = past_key_values[0][0].shape[2]
+            seq_length_with_past = seq_length_with_past + past_key_values_length
+
+        if inputs_embeds is None:
+            inputs_embeds = self.embed_tokens(input_ids)
+
+        if self.training:
+            if self.alibi_mask is None or self.alibi_mask.shape[-1] != seq_length_with_past:
+                self.alibi_mask = self.get_alibi_mask(inputs_embeds, seq_length_with_past)
+            alibi_mask = self.alibi_mask
+        else:
+            alibi_mask = self.get_alibi_mask(inputs_embeds, seq_length_with_past)
+
+        if attention_mask is not None:
+            if len(attention_mask.shape) == 2:
+                expanded_mask = attention_mask.to(alibi_mask.dtype)
+                expanded_mask = ops.tril(ops.gt(expanded_mask[:, :, None] * expanded_mask[:, None, :], 0)
+                                ) * ops.eq(expanded_mask[:, :, None] - expanded_mask[:, None, :], 0)
+            else:
+                expanded_mask = attention_mask
+            bsz = inputs_embeds.size(0)
+            src_len, tgt_len = alibi_mask.shape[-2:]
+            expanded_mask = expanded_mask.unsqueeze(1).broadcast_to((bsz, 1, src_len, tgt_len)).to(alibi_mask.dtype)
+            inverted_mask = 1.0 - expanded_mask
+            inverted_mask = inverted_mask.masked_fill(inverted_mask.to(mindspore.bool_), np.finfo(mindspore.dtype_to_nptype(alibi_mask.dtype)).min)
+            attention_mask = inverted_mask + alibi_mask.unsqueeze(0)
+        else:
+            attention_mask = alibi_mask
+
+        hidden_states = inputs_embeds
+
+        # decoder layers
+        all_hidden_states = () if output_hidden_states else None
+        all_self_attns = () if output_attentions else None
+        next_decoder_cache = () if use_cache else None
+
+        for idx, decoder_layer in enumerate(self.layers):
+            if output_hidden_states:
+                all_hidden_states += (hidden_states,)
+
+            past_key_value = past_key_values[idx] if past_key_values is not None else None
+
+            layer_outputs = decoder_layer(
+                hidden_states,
+                attention_mask=attention_mask,
+                past_key_value=past_key_value,
+                output_attentions=output_attentions,
+                use_cache=use_cache,
+            )
+
+            hidden_states = layer_outputs[0]
+
+            if use_cache:
+                next_decoder_cache += (layer_outputs[2 if output_attentions else 1],)
+
+            if output_attentions:
+                all_self_attns += (layer_outputs[1],)
+
+        hidden_states = self.norm(hidden_states)
+
+        # add hidden states from the last decoder layer
+        if output_hidden_states:
+            all_hidden_states += (hidden_states,)
+
+        next_cache = next_decoder_cache if use_cache else None
+        if not return_dict:
+            return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
+        return BaseModelOutputWithPast(
+            last_hidden_state=hidden_states,
+            past_key_values=next_cache,
+            hidden_states=all_hidden_states,
+            attentions=all_self_attns,
+        )
+
+
 class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
     """
     BaiChuanForCausalLM
     """
 
-    def __init__(self, config):
+    def __init__(self, config, size=None):
         super().__init__(config)
-        self.model = Model(config)
+        if size == '7b':
+            self.model = BaiChuan7bModel(config)
+        elif size == '13b':
+            self.model = BaiChuan13bModel(config)
+        else:
+            self.model = BaiChuan7bModel(config)
+            raise ValueError('BaiChuan model only support 7b and 13b, please check your config.')
 
         self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
-        # self.post_init()
+        self.post_init()
 
     def get_input_embeddings(self):
         return self.model.embed_tokens
@@ -598,17 +891,31 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
-        outputs = self.model(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            position_ids=position_ids,
-            past_key_values=past_key_values,
-            inputs_embeds=inputs_embeds,
-            use_cache=use_cache,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-        )
+        if isinstance(self.model, BaiChuan7bModel):
+            outputs = self.model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                position_ids=position_ids,
+                past_key_values=past_key_values,
+                inputs_embeds=inputs_embeds,
+                use_cache=use_cache,
+                output_attentions=output_attentions,
+                output_hidden_states=output_hidden_states,
+                return_dict=return_dict,
+            )
+        elif isinstance(self.model, BaiChuan13bModel):
+            outputs = self.model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                past_key_values=past_key_values,
+                inputs_embeds=inputs_embeds,
+                use_cache=use_cache,
+                output_attentions=output_attentions,
+                output_hidden_states=output_hidden_states,
+                return_dict=return_dict,
+            )
+        else:
+            raise ValueError('BaiChuan model only support 7b and 13b, please check your config.')
 
         hidden_states = outputs[0]
         logits = self.lm_head(hidden_states)
@@ -616,14 +923,13 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
         loss = None
         if labels is not None:
             # Shift so that tokens < n predict n
-            shift_logits = logits[..., :-1, :].contiguous()
-            shift_labels = labels[..., 1:].contiguous()
+            shift_logits = logits[..., :-1, :]
+            shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss_fct = nn.CrossEntropyLoss()
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
             # Enable model parallelism
-            loss = loss_fct(shift_logits, shift_labels)
+            loss = ops.cross_entropy(shift_logits, shift_labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -647,7 +953,7 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
             position_ids = attention_mask.long().cumsum(-1) - 1
-            position_ids.masked_fill_(attention_mask == 0, 1)
+            position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -1].unsqueeze(-1)
 
@@ -676,12 +982,9 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
 
 
 __all__ = [
-    "RMSNorm",
-    "RotaryEmbedding",
-    "MLP",
-    "Attention",
-    "DecoderLayer",
     "BaiChuanPreTrainedModel",
-    "Model",
+    "BaiChuan7bModel",
+    "BaiChuan13bModel",
     "BaiChuanForCausalLM"
 ]
+ 

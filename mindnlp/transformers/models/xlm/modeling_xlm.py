@@ -49,8 +49,6 @@ from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indi
 
 logger = logging.get_logger(__name__)
 
-_CHECKPOINT_FOR_DOC = "xlm-mlm-en-2048"
-_CONFIG_FOR_DOC = "XLMConfig"
 
 XLM_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "xlm-mlm-en-2048",
@@ -239,11 +237,11 @@ class XLMPreTrainedModel(PreTrainedModel):
         """Initialize the weights."""
         if isinstance(cell, nn.Embedding):
             if self.config is not None and self.config.embed_init_std is not None:
-                embedding_table = np.random.normal(0.0, self.config.embed_init_std, cell.embedding_table.shape)
+                weight = np.random.normal(0.0, self.config.embed_init_std, cell.weight.shape)
                 if cell.padding_idx:
-                    embedding_table[cell.padding_idx] = 0
+                    weight[cell.padding_idx] = 0
 
-                cell.embedding_table.set_data(Tensor(embedding_table, cell.embedding_table.dtype))
+                cell.weight.set_data(Tensor(weight, cell.weight.dtype))
         elif isinstance(cell, nn.Dense):
             if self.config is not None and self.config.init_std is not None:
                 cell.weight.set_data(initializer(Normal(self.config.init_std),
@@ -252,8 +250,8 @@ class XLMPreTrainedModel(PreTrainedModel):
                     cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
         if isinstance(cell, nn.LayerNorm):
-            cell.gamma.set_data(initializer('ones', cell.gamma.shape, cell.gamma.dtype))
-            cell.beta.set_data(initializer('zeros', cell.beta.shape, cell.beta.dtype))
+            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 @dataclass
 class XLMForQuestionAnsweringOutput(ModelOutput):
