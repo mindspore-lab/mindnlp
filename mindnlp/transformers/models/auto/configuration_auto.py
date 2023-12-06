@@ -36,6 +36,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("gpt2", "GPT2Config"),
         ('mt5', 'MT5Config'),
         ('t5', 'T5Config'),
+        ('chatglm', 'ChatGLMConfig')
     ]
 )
 
@@ -65,6 +66,7 @@ CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
         ("camembert", "CAMEMBERT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("canine", "CANINE_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("chinese_clip", "CHINESE_CLIP_PRETRAINED_CONFIG_ARCHIVE_MAP"),
+        ("chatglm", "CHATGLM_6B_PRETRAINED_MODEL_ARCHIVE_LIST"),
         ("clap", "CLAP_PRETRAINED_MODEL_ARCHIVE_LIST"),
         ("clip", "CLIP_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("clipseg", "CLIPSEG_PRETRAINED_CONFIG_ARCHIVE_MAP"),
@@ -270,6 +272,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("camembert", "CamemBERT"),
         ("canine", "CANINE"),
         ("chinese_clip", "Chinese-CLIP"),
+        ("chatglm", "ChatGLM"),
         ("clap", "CLAP"),
         ("clip", "CLIP"),
         ("clipseg", "CLIPSeg"),

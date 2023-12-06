@@ -244,10 +244,15 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
     def __init__(self, config):
         super().__init__(config)
+        self._check_and_unset_acl()
         # Save config in model
         self.config = config
         self.name_or_path = config.name_or_path
         self.generation_config = GenerationConfig.from_model_config(config) if self.can_generate() else None
+
+    def _check_and_unset_acl(self):
+        if "MS" in str(self.__class__.__name__):
+            del os.environ['MS_DEV_FORCE_ACL']
 
     def post_init(self):
         """

@@ -23,6 +23,7 @@ from inspect import signature
 from tqdm.autonotebook import tqdm
 from mindspore import nn, Tensor, context, mutable
 from mindspore import save_checkpoint
+from mindspore.context import K_CONTEXT
 from mindspore.dataset.engine import Dataset, TakeDataset
 
 from mindnlp.injection import set_global_fp16
@@ -86,6 +87,9 @@ class Trainer:
         jit = kwargs.pop('jit', False)
         check_gradients = kwargs.pop('check_gradients', False)
 
+        if jit and 'MS' not in str(network.__class__.__name__):
+            raise ValueError(f'{network.__class__.__name__} do not support static graph via jit compile, '
+                             f'please check the supported model list and use MS{network.__class__.__name__} instead.')
         # deprecated args
         self.jit = jit
         self.check_gradients = check_gradients
@@ -207,6 +211,10 @@ class Trainer:
         # control flow will slow down the training speed.
         if self.jit:
             context.set_context(mode=context.GRAPH_MODE)
+        else:
+            os.environ['MS_DEV_FORCE_ACL'] = '1'
+            K_CONTEXT.set_backend_policy('ge')
+            K_CONTEXT.set_backend_policy('ms')
 
         total = self.train_dataset.get_dataset_size()
         # train epoch begin
@@ -246,7 +254,11 @@ class Trainer:
                 self._do_eval_epoch(run_context, tgt_columns)
 
         # restore PYNATIVE_MODE after training.
-        context.set_context(mode=context.PYNATIVE_MODE)
+        if self.jit:
+            context.set_context(mode=context.PYNATIVE_MODE)
+            os.environ['MS_DEV_FORCE_ACL'] = '1'
+            K_CONTEXT.set_backend_policy('ge')
+            K_CONTEXT.set_backend_policy('ms')
 
     def _run_ds_sink(self, train_dataset, eval_dataset, list_callback,
                      cb_params, print_steps, eval_steps):

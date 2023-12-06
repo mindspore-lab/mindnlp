@@ -340,6 +340,8 @@ def custom_multinomial(probabilities, num_samples, replacement=True):
         # with replacement
         cumulative_probs = ops.cumsum(probabilities, axis=-1)
         uniform_samples = ops.rand(probabilities.shape[:-1] + (num_samples,))
+        if cumulative_probs.dtype == mindspore.float16:
+            cumulative_probs = cumulative_probs.astype(mindspore.float32)
         samples = ops.searchsorted(cumulative_probs, uniform_samples, right=True)
     else:
         # without replacement
@@ -355,7 +357,7 @@ def custom_multinomial(probabilities, num_samples, replacement=True):
 
     return samples
 
-if DEVICE_TARGET == 'GPU':
+if DEVICE_TARGET != 'CPU':
     ops.multinomial = custom_multinomial
 
 
@@ -387,11 +389,11 @@ class Dense(nn.Cell):
 
     def reset_parameters(self):
         """reset_embedding_params"""
-        self.weight.set_data(initializer(HeUniform(math.sqrt(5)), self.weight.shape))
+        self.weight.set_data(initializer(HeUniform(math.sqrt(5)), self.weight.shape, self.weight.dtype))
         if self.has_bias:
             fan_in, _ = _calculate_fan_in_and_fan_out(self.weight.shape)
             bound = 1 / math.sqrt(fan_in)
-            self.bias.set_data(initializer(Uniform(bound), [self.out_channels]))
+            self.bias.set_data(initializer(Uniform(bound), self.bias.shape, self.bias.dtype))
 
     def construct(self, x):
         x_shape = x.shape
@@ -423,7 +425,7 @@ class Embedding(nn.Cell):
 
     def reset_parameters(self):
         """reset_embedding_params"""
-        init_tensor = initializer(Normal(1.0), self.weight.shape)
+        init_tensor = initializer(Normal(1.0), self.weight.shape, self.weight.dtype)
         init_tensor = init_tensor.init_data()
         if self.padding_idx:
             init_tensor = init_tensor.asnumpy()

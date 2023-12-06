@@ -100,6 +100,7 @@ The table below represents the current support in the library for each of those 
 | BERT                          | ✅                | ✅             |
 | BLOOM                         | ✅                | ❌             |
 | CLIP                          | ✅                | ❌             |
+| ChatGLM                       | ✅                | ❌             |
 | CodeGen                       | ✅                | ❌             |
 | ConvBERT                      | TODO              | ❌             |
 | CPM                           | ✅                | ❌             |
