@@ -16,9 +16,8 @@
 Graphormer model configuration
 """
 
-from ...configuration_utils import PretrainedConfig
 import logging
-
+from ...configuration_utils import PretrainedConfig
 
 logger = logging.getLogger(__name__)
 

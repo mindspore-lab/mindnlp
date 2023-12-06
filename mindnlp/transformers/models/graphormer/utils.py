@@ -15,14 +15,22 @@
 """
 Graphormer utils
 """
-from typing import Optional
-
 from mindspore import Parameter
 from mindspore.common.initializer import (
-    initializer, Zero, Normal, Constant, XavierUniform)
+    initializer, Initializer, Zero, Normal, Constant, XavierUniform)
 
 
-def initializer_decorator(generator):
+def initializer_decorator(generator: Initializer):
+    """
+    A decorator function that uses a given generator to initialize a tensor
+
+    Args:
+        generator (Initializer): The initializer for generating the tensor
+
+    Returns:
+        A function `func(param: Parameter, *args, **kwargs)` that initializes
+        a tensor matching the shape and dtype of `param`
+    """
     def func(param: Parameter, *args, **kwargs):
         return initializer(generator(*args, **kwargs), param.shape, param.dtype)
     return func

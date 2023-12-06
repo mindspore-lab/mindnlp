@@ -17,14 +17,16 @@ MindNLP Graphormer model
 """
 
 import math
+import logging
 from typing import Iterable, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore as ms
+
 from mindspore import nn, ops
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindspore import Parameter, Tensor
-from mindspore.common.initializer import initializer, Normal, Uniform
+from mindspore.common.initializer import Uniform
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -32,9 +34,8 @@ from ...modeling_outputs import (
     SequenceClassifierOutput,
 )
 from ...modeling_utils import PreTrainedModel
-import logging
 from .configuration_graphormer import GraphormerConfig
-from .utils import init_zero, init_normal, init_constant, init_xavier_uniform
+from .utils import init_zero, init_normal, init_xavier_uniform
 
 
 logger = logging.getLogger(__name__)
@@ -50,7 +51,7 @@ GRAPHORMER_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 
 
-def quant_noise(module: nn.Cell, p: float, block_size: int):
+def quant_noise(module: nn.Cell, q_noise: float, block_size: int):
     """
     From:
     https://github.com/facebookresearch/fairseq/blob/dd0079bde7f678b0cd0715cbd0ae68d661b7226d/fairseq/modules/quant_noise.py
@@ -60,7 +61,7 @@ def quant_noise(module: nn.Cell, p: float, block_size: int):
 
     Args:
         - module: nn.Cell
-        - p: amount of Quantization Noise
+        - q_noise: amount of Quantization Noise
         - block_size: size of the blocks for subsequent quantization with iPQ
 
     Remarks:
@@ -73,7 +74,7 @@ def quant_noise(module: nn.Cell, p: float, block_size: int):
     """
 
     # if no quantization noise, don't register hook
-    if p <= 0:
+    if q_noise <= 0:
         return module
 
     # supported modules
@@ -100,7 +101,8 @@ def quant_noise(module: nn.Cell, p: float, block_size: int):
             if k % block_size != 0:
                 raise AssertionError("Kernel size must be a multiple of block size")
 
-    def _forward_pre_hook(mod, input):
+    def _forward_pre_hook(mod, input_var):
+        # pylint: disable=unused-argument
         # no noise for evaluation
         if mod.training:
             if not is_conv:
@@ -110,8 +112,8 @@ def quant_noise(module: nn.Cell, p: float, block_size: int):
                 out_features = weight.shape[0]
 
                 # split weight matrix into blocks and randomly drop selected blocks
-                mask = ops.zeros(in_features // block_size * out_features, device=weight.device)
-                mask.bernoulli_(p)
+                mask = ops.zeros(in_features // block_size * out_features)
+                mask.bernoulli_(q_noise)
                 mask = mask.repeat_interleave(block_size, -1).view(-1, in_features)
 
             else:
@@ -123,20 +125,17 @@ def quant_noise(module: nn.Cell, p: float, block_size: int):
                 # split weight matrix into blocks and randomly drop selected blocks
                 if mod.kernel_size == (1, 1):
                     mask = ops.zeros(
-                        int(in_channels // block_size * out_channels),
-                        device=weight.device,
-                    )
-                    mask.bernoulli_(p)
+                        int(in_channels // block_size * out_channels))
+                    mask.bernoulli_(q_noise)
                     mask = mask.repeat_interleave(block_size, -1).view(-1, in_channels)
                 else:
-                    mask = ops.zeros(weight.shape[0], weight.shape[1], device=weight.device)
-                    mask.bernoulli_(p)
+                    mask = ops.zeros(weight.shape[0], weight.shape[1])
+                    mask.bernoulli_(q_noise)
                     mask = mask.unsqueeze(2).unsqueeze(3).repeat(1, 1, mod.kernel_size[0], mod.kernel_size[1])
 
             # scale weights and apply mask
             mask = mask.bool()
-            s = 1 / (1 - p)
-            mod.weight.data = s * weight.masked_fill(mask, 0)
+            mod.weight.data = 1 / (1 - q_noise) * weight.masked_fill(mask, 0)
 
     module.register_forward_pre_hook(_forward_pre_hook)
     return module
@@ -154,7 +153,7 @@ class LayerDropModuleList(nn.CellList):
     Usage:
 
     ```python
-    layers = LayerDropList(p=0.5, modules=[layer1, layer2, layer3])
+    layers = LayerDropList(p_drop=0.5, modules=[layer1, layer2, layer3])
     for layer in layers:  # this might iterate over layers 1 and 3
         x = layer(x
     for layer in layers:  # this might iterate over all layers
@@ -164,19 +163,19 @@ class LayerDropModuleList(nn.CellList):
     ```
 
     Args:
-        p (float): probability of dropping out each layer
+        p_drop (float): probability of dropping out each layer
         modules (iterable, optional): an iterable of modules to add
     """
 
-    def __init__(self, p: float, modules: Optional[Iterable[nn.Cell]] = None):
+    def __init__(self, p_drop: float, modules: Optional[Iterable[nn.Cell]] = None):
         super().__init__(modules)
-        self.p = p
+        self.p_drop = p_drop
 
     def __iter__(self) -> Iterator[nn.Cell]:
         dropout_probs = Tensor(shape=(len(self)), dtype=ms.float32, init=Uniform())
-        for i, m in enumerate(super().__iter__()):
-            if not self.training or (dropout_probs[i] > self.p):
-                yield m
+        for i, cell in enumerate(super().__iter__()):
+            if not self.training or (dropout_probs[i] > self.p_drop):
+                yield cell
 
 
 class GraphormerGraphNodeFeature(nn.Cell):
@@ -205,7 +204,7 @@ class GraphormerGraphNodeFeature(nn.Cell):
         in_degree: Tensor,
         out_degree: Tensor,
     ) -> Tensor:
-        n_graph, n_node = input_nodes.shape[:2]
+        n_graph, _ = input_nodes.shape[:2]
 
         node_feature = (  # node feature + graph token
             self.atom_encoder(input_nodes).sum(axis=-2)  # [n_graph, n_node, n_hidden]
@@ -265,9 +264,9 @@ class GraphormerGraphAttnBias(nn.Cell):
         graph_attn_bias[:, :, 1:, 1:] = graph_attn_bias[:, :, 1:, 1:] + spatial_pos_bias
 
         # reset spatial pos here
-        t = self.graph_token_virtual_distance.weight.view(1, self.num_heads, 1)
-        graph_attn_bias[:, :, 1:, 0] = graph_attn_bias[:, :, 1:, 0] + t
-        graph_attn_bias[:, :, 0, :] = graph_attn_bias[:, :, 0, :] + t
+        tvd = self.graph_token_virtual_distance.weight.view(1, self.num_heads, 1)
+        graph_attn_bias[:, :, 1:, 0] = graph_attn_bias[:, :, 1:, 0] + tvd
+        graph_attn_bias[:, :, 0, :] = graph_attn_bias[:, :, 0, :] + tvd
 
         # edge feature
         if self.edge_type == "multi_hop":
@@ -319,12 +318,12 @@ class GraphormerMultiheadAttention(nn.Cell):
         self.attention_dropout_module = nn.Dropout(p=config.attention_dropout)
 
         self.head_dim = config.embedding_dim // config.num_attention_heads
-        if not (self.head_dim * config.num_attention_heads == self.embedding_dim):
+        if not self.head_dim * config.num_attention_heads == self.embedding_dim:
             raise AssertionError("The embedding_dim must be divisible by num_heads.")
         self.scaling = self.head_dim**-0.5
 
         self.self_attention = True  # config.self_attention
-        if not (self.self_attention):
+        if not self.self_attention:
             raise NotImplementedError("The Graphormer model only supports self attention for now.")
         if self.self_attention and not self.qkv_same_dim:
             raise AssertionError("Self-attention requires query, key and value to be of the same size.")
@@ -354,6 +353,9 @@ class GraphormerMultiheadAttention(nn.Cell):
         self.onnx_trace = False
 
     def reset_parameters(self):
+        """
+        Reset parameters
+        """
         if self.qkv_same_dim:
             # Empirically observed the convergence to be much better with
             # the scaled initialization
@@ -401,12 +403,12 @@ class GraphormerMultiheadAttention(nn.Cell):
 
         tgt_len, bsz, embedding_dim = query.shape
         src_len = tgt_len
-        if not (embedding_dim == self.embedding_dim):
+        if not embedding_dim == self.embedding_dim:
             raise AssertionError(
                 f"The query embedding dimension {embedding_dim} is not equal to the expected embedding_dim"
                 f" {self.embedding_dim}."
             )
-        if not (list(query.shape) == [tgt_len, bsz, embedding_dim]):
+        if list(query.shape) != [tgt_len, bsz, embedding_dim]:
             raise AssertionError("Query size incorrect in Graphormer, compared to model dimensions.")
 
         if key is not None:
@@ -417,19 +419,19 @@ class GraphormerMultiheadAttention(nn.Cell):
                     "The batch shape does not match the key or value shapes provided to the attention."
                 )
 
-        q = self.q_proj(query)
-        k = self.k_proj(query)
-        v = self.v_proj(query)
+        qproj = self.q_proj(query)
+        kproj = self.k_proj(query)
+        vproj = self.v_proj(query)
 
-        q *= self.scaling
+        qproj *= self.scaling
 
-        q = q.view(tgt_len, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
-        if k is not None:
-            k = k.view(-1, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
-        if v is not None:
-            v = v.view(-1, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
+        qproj = qproj.view(tgt_len, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
+        if kproj is not None:
+            kproj = kproj.view(-1, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
+        if vproj is not None:
+            vproj = vproj.view(-1, bsz * self.num_heads, self.head_dim).swapaxes(0, 1)
 
-        if (k is None) or not (k.shape[1] == src_len):
+        if (kproj is None) or not kproj.shape[1] == src_len:
             raise AssertionError("The shape of the key generated in the attention is incorrect")
 
         # This is part of a workaround to get around fork/join parallelism
@@ -442,8 +444,8 @@ class GraphormerMultiheadAttention(nn.Cell):
                 raise AssertionError(
                     "The shape of the generated padding mask for the key does not match expected dimensions."
                 )
-        attn_weights = ops.bmm(q, k.swapaxes(1, 2))
-        attn_weights = self.apply_sparse_mask(attn_weights, tgt_len, src_len, bsz)
+        attn_weights = ops.bmm(qproj, kproj.swapaxes(1, 2))
+        attn_weights = self.apply_sparse_mask(attn_weights)
 
         if list(attn_weights.shape) != [bsz * self.num_heads, tgt_len, src_len]:
             raise AssertionError("The attention weights generated do not match the expected dimensions.")
@@ -464,15 +466,15 @@ class GraphormerMultiheadAttention(nn.Cell):
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         if before_softmax:
-            return attn_weights, v
+            return attn_weights, vproj
 
         attn_weights_float = ops.softmax(attn_weights, axis=-1)
         attn_weights = attn_weights_float.type_as(attn_weights)
         attn_probs = self.attention_dropout_module(attn_weights)
 
-        if v is None:
+        if vproj is None:
             raise AssertionError("No value generated")
-        attn = ops.bmm(attn_probs, v)
+        attn = ops.bmm(attn_probs, vproj)
         if list(attn.shape) != [bsz * self.num_heads, tgt_len, self.head_dim]:
             raise AssertionError("The attention generated do not match the expected dimensions.")
 
@@ -488,11 +490,17 @@ class GraphormerMultiheadAttention(nn.Cell):
 
         return attn, attn_weights
 
-    def apply_sparse_mask(self, attn_weights: Tensor, tgt_len: int, src_len: int, bsz: int) -> Tensor:
+    def apply_sparse_mask(self, attn_weights: Tensor) -> Tensor:
+        """
+        Apply sparse mask (seems did not do anythin)
+        """
         return attn_weights
 
 
 class GraphormerGraphEncoderLayer(nn.Cell):
+    """
+    Graphormer Graph Encoder Layer
+    """
     def __init__(self, config: GraphormerConfig) -> None:
         super().__init__()
 
@@ -533,6 +541,9 @@ class GraphormerGraphEncoderLayer(nn.Cell):
     def build_fc(
         self, input_dim: int, output_dim: int, q_noise: float, qn_block_size: int
     ) -> Union[nn.Cell, nn.Dense, nn.Embedding, nn.Conv2d]:
+        """
+        Build function
+        """
         return quant_noise(nn.Dense(input_dim, output_dim), q_noise, qn_block_size)
 
     def construct(
@@ -579,6 +590,9 @@ class GraphormerGraphEncoderLayer(nn.Cell):
 
 
 class GraphormerGraphEncoder(nn.Cell):
+    """
+    Graphormer Graph Encoder
+    """
     def __init__(self, config: GraphormerConfig):
         super().__init__()
 
@@ -611,7 +625,7 @@ class GraphormerGraphEncoder(nn.Cell):
             self.final_layer_norm = nn.LayerNorm([self.embedding_dim])
 
         if self.layerdrop > 0.0:
-            self.layers = LayerDropModuleList(p=self.layerdrop)
+            self.layers = LayerDropModuleList(p_drop=self.layerdrop)
         else:
             self.layers = nn.CellList([])
         self.layers.extend([GraphormerGraphEncoderLayer(config) for _ in range(config.num_hidden_layers)])
@@ -621,10 +635,10 @@ class GraphormerGraphEncoder(nn.Cell):
             raise NotImplementedError("Freezing embeddings is not implemented yet.")
 
         for layer in range(config.num_trans_layers_to_freeze):
-            m = self.layers[layer]
-            if m is not None:
-                for p in m.parameters():
-                    p.requires_grad = False
+            mod = self.layers[layer]
+            if mod is not None:
+                for par in mod.parameters():
+                    par.requires_grad = False
 
     def construct(
         self,
@@ -642,7 +656,7 @@ class GraphormerGraphEncoder(nn.Cell):
     ) -> Tuple[Union[Tensor, List[Tensor]], Tensor]:
         # compute padding mask. This is needed for multi-head attention
         data_x = input_nodes
-        n_graph, n_node = data_x.shape[:2]
+        n_graph, _ = data_x.shape[:2]
         padding_mask = (data_x[:, :, 0]).eq(0)
         padding_mask_cls = ops.zeros((n_graph, 1), dtype=padding_mask.dtype)
         padding_mask = ops.cat((padding_mask_cls, padding_mask), axis=1)
@@ -690,19 +704,21 @@ class GraphormerGraphEncoder(nn.Cell):
 
         if self.traceable:
             return ops.stack(inner_states), graph_rep
-        else:
-            return inner_states, graph_rep
+        return inner_states, graph_rep
 
 
 class GraphormerDecoderHead(nn.Cell):
+    """
+    Graphormer Decoder Head
+    """
     def __init__(self, embedding_dim: int, num_classes: int):
         super().__init__()
-        """num_classes should be 1 for regression, or the number of classes for classification"""
+        # num_classes should be 1 for regression, or the number of classes for classification
         self.lm_output_learned_bias = Parameter(ops.zeros(1))
         self.classifier = nn.Dense(embedding_dim, num_classes, has_bias=False)
         self.num_classes = num_classes
 
-    def construct(self, input_nodes: Tensor, **unused) -> Tensor:
+    def construct(self, input_nodes: Tensor, **kwargs) -> Tensor:
         input_nodes = self.classifier(input_nodes)
         input_nodes = input_nodes + self.lm_output_learned_bias
         return input_nodes
@@ -731,7 +747,7 @@ class GraphormerPreTrainedModel(PreTrainedModel):
         if isinstance(module, nn.Embedding):
             weight = np.random.normal(loc=0.0, scale=0.02, size=module.weight.shape)
             if module.padding_idx:
-                weight[cell.padding_idx] = 0
+                weight[module.padding_idx] = 0
 
             module.weight.set_data(Tensor(weight, module.weight.dtype))
         if isinstance(module, GraphormerMultiheadAttention):
@@ -759,7 +775,7 @@ class GraphormerPreTrainedModel(PreTrainedModel):
         elif isinstance(module, nn.Embedding):
             weight = np.random.normal(loc=0.0, scale=0.02, size=module.weight.shape)
             if module.padding_idx:
-                weight[cell.padding_idx] = 0
+                weight[module.padding_idx] = 0
 
             module.weight.set_data(Tensor(weight, module.weight.dtype))
         elif isinstance(module, GraphormerMultiheadAttention):
@@ -806,6 +822,9 @@ class GraphormerModel(GraphormerPreTrainedModel):
         self.post_init()
 
     def reset_output_layer_parameters(self):
+        """
+        Reset output layer parameters
+        """
         self.lm_output_learned_bias = Parameter(ops.zeros(1))
 
     def construct(
@@ -820,11 +839,11 @@ class GraphormerModel(GraphormerPreTrainedModel):
         perturb: Optional[Tensor] = None,
         masked_tokens: None = None,
         return_dict: Optional[bool] = None,
-        **unused,
+        **kwargs,
     ) -> Union[Tuple[Tensor], BaseModelOutputWithNoAttention]:
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        inner_states, graph_rep = self.graph_encoder(
+        inner_states, _ = self.graph_encoder(
             input_nodes, input_edges, attn_bias, in_degree, out_degree, spatial_pos, attn_edge_type, perturb=perturb
         )
 
@@ -844,10 +863,6 @@ class GraphormerModel(GraphormerPreTrainedModel):
         if not return_dict:
             return tuple(x for x in [input_nodes, inner_states] if x is not None)
         return BaseModelOutputWithNoAttention(last_hidden_state=input_nodes, hidden_states=inner_states)
-
-    def max_nodes(self):
-        """Maximum output length supported by the encoder."""
-        return self.max_nodes
 
 
 class GraphormerForGraphClassification(GraphormerPreTrainedModel):
@@ -884,7 +899,7 @@ class GraphormerForGraphClassification(GraphormerPreTrainedModel):
         attn_edge_type: Tensor,
         labels: Optional[Tensor] = None,
         return_dict: Optional[bool] = None,
-        **unused,
+        **kwargs,
     ) -> Union[Tuple[Tensor], SequenceClassifierOutput]:
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -906,7 +921,7 @@ class GraphormerForGraphClassification(GraphormerPreTrainedModel):
 
         loss = None
         if labels is not None:
-            mask = ~ops.isnan(labels)
+            mask = 1 - ops.isnan(labels) # invert True and False
 
             if self.num_classes == 1:  # regression
                 loss_fct = MSELoss()
