@@ -14,8 +14,9 @@
 # ============================================================================
 """MindNLP Activations"""
 
+from functools import partial
 from collections import OrderedDict
-from mindspore import nn
+from mindspore import nn, ops
 
 
 class ClassInstantier(OrderedDict):
@@ -62,3 +63,6 @@ def get_activation(activation_string):
     if activation_string in ACT2FN:
         return ACT2FN[activation_string]
     raise KeyError(f"function {activation_string} not found in ACT2FN mapping {list(ACT2FN.keys())}")
+
+gelu_new = partial(ops.gelu, approximate='tanh')
+silu = ops.silu

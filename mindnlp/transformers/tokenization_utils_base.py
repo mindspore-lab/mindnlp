@@ -2466,7 +2466,11 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
 
         if text_target is None:
             if for_ms_ds:
-                return (encodings['input_ids'], encodings['token_type_ids'], encodings['attention_mask'])
+                return_data = ()
+                for key in self.model_input_names:
+                    if key in encodings:
+                        return_data += (encodings[key],)
+                return return_data
             return encodings
         if text is None:
             return target_encodings
