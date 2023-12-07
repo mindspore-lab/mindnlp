@@ -13,18 +13,5 @@
 # limitations under the License.
 # ============================================================================
 """
-Graphormer Model.
+Test Graphormer
 """
-from .configuration_graphormer import GraphormerConfig
-from .modeling_graphormer import (
-    GraphormerForGraphClassification,
-    GraphormerModel,
-    GraphormerPreTrainedModel
-)
-
-__all__ = [
-     "GraphormerConfig",
-     "GraphormerForGraphClassification",
-     "GraphormerModel",
-     "GraphormerPreTrainedModel"
-     ]
