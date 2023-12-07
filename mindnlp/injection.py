@@ -90,6 +90,25 @@ def bool_patch_decorator(func):
 
     return wrapper
 
+def bool_io_patch_decorator(func):
+    """bool patch on ascend"""
+    def wrapper(*args, **kwargs):
+        args = [arg.astype(mstype.int32) if isinstance(arg, Tensor) and arg.dtype == mstype.bool_ \
+                else arg for arg in args]
+        has_bool = any(bool(isinstance(arg, Tensor) and arg.dtype == mstype.bool_) for arg in args)
+        if isinstance(args[0], (list, tuple)):
+            # for concat
+            args[0] = [arg.astype(mstype.int32) if isinstance(arg, Tensor) and arg.dtype == mstype.bool_ \
+                else arg for arg in args[0]]
+        kwargs = {k: (v.astype(mstype.int32) if isinstance(v, Tensor) and v.dtype == mstype.bool_ else v) \
+                  for k, v in kwargs.items()}
+        result = func(*args, **kwargs)
+        if has_bool:
+            result = result.astype(mstype.bool_)
+        return result
+
+    return wrapper
+
 def _get_unflatten_size(input_shape, dim, sizes):
     input_rank = len(input_shape)
     if not isinstance(sizes, (tuple, list)):
@@ -284,6 +303,12 @@ def _eq(self, other):
     return ops.eq(self, other)
 
 Parameter.__eq__ = _eq
+
+ops.repeat_interleave = bool_io_patch_decorator(ops.repeat_interleave)
+def _repeat_interleave(self, repeats, dim):
+    return ops.repeat_interleave(self, repeats, axis=dim)
+Tensor.repeat_interleave = _repeat_interleave
+StubTensor.repeat_interleave = _repeat_interleave
 
 # Ascend only
 if DEVICE_TARGET == 'Ascend':

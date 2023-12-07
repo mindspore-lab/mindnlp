@@ -97,7 +97,7 @@ def gelu_impl(x):
 
 
 def gelu(x):
-    return gelu_impl(x)
+    return ops.gelu(x, approximate='tanh')
 
 
 class RotaryEmbedding(nn.Cell):
@@ -213,7 +213,6 @@ def attention_fn(
         beta=0.0,
         alpha=1.0,
     )
-
     # change view to [b, np, sq, sk]
     attention_scores = matmul_result.view(*output_size)
 
@@ -223,15 +222,16 @@ def attention_fn(
     else:
         if not (attention_mask == 0).all():
             # if auto-regressive, skip
-            attention_scores = attention_scores.masked_fill(attention_mask, -10000.0)
+            attention_scores = attention_scores.masked_fill(attention_mask, -60000.0 / query_key_layer_scaling_coeff)
         dtype = attention_scores.dtype
         attention_scores = attention_scores.float()
         attention_scores = attention_scores * query_key_layer_scaling_coeff
-
+        # Avoid the problem of cast not taking effect
+        # attention_scores = ops.select(ops.isinf(attention_scores), -10000.00, attention_scores.float())
+        # if ops.isinf(attention_scores).any():
+        #     exit()
         attention_probs = ops.softmax(attention_scores, axis=-1)
-
         attention_probs = attention_probs.astype(dtype)
-
     # =========================
     # Context layer. [sq, b, hp]
     # =========================
@@ -247,10 +247,8 @@ def attention_fn(
 
     # change view [b * np, sq, sk]
     attention_probs = attention_probs.view(output_size[0] * output_size[1], output_size[2], -1)
-
     # matmul: [b * np, sq, hn]
     context_layer = ops.bmm(attention_probs, value_layer.swapaxes(0, 1))
-
     # change view [b, np, sq, hn]
     context_layer = context_layer.view(*output_size)
 
@@ -357,7 +355,6 @@ class SelfAttention(nn.Cell):
 
         # [seq_len, batch, 3 * hidden_size]
         mixed_raw_layer = self.query_key_value(hidden_states)
-
         # [seq_len, batch, 3 * hidden_size] --> [seq_len, batch, num_attention_heads, 3 * hidden_size_per_attention_head]
         new_tensor_shape = mixed_raw_layer.shape[:-1] + (
             self.num_attention_heads_per_partition,
@@ -396,9 +393,7 @@ class SelfAttention(nn.Cell):
             layer_past=layer_past,
             use_cache=use_cache
         )
-
         output = self.dense(context_layer)
-
         outputs = (output, present)
 
         if output_attentions:
@@ -572,6 +567,7 @@ class ChatGLMPreTrainedModel(PreTrainedModel):
     config_class = ChatGLMConfig
     base_model_prefix = "transformer"
     _no_split_modules = ["GLMBlock"]
+    _keys_to_ignore_on_load_unexpected = [r'inv_freq']
 
     def _init_weights(self, cell: nn.Cell):
         """Initialize the weights."""
@@ -797,7 +793,6 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
             )
 
             hidden_states = layer_ret[0]
-
             if use_cache:
                 presents = presents + (layer_ret[1],)
 
@@ -970,7 +965,6 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
     ):
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
         transformer_outputs = self.transformer(
             input_ids=input_ids,
             position_ids=position_ids,
@@ -986,7 +980,6 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         hidden_states = transformer_outputs[0]
 
         lm_logits = self.lm_head(hidden_states).permute(1, 0, 2)
-
         loss = None
         if labels is not None:
             lm_logits = lm_logits.to(mindspore.float32)
@@ -1064,6 +1057,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             prompt += "[Round {}]\n问：{}\n答：".format(len(history), query)
         inputs = tokenizer([prompt], return_tensors="ms")
         outputs = self.generate(**inputs, **gen_kwargs)
+
         outputs = outputs.tolist()[0][len(inputs["input_ids"][0]):]
         response = tokenizer.decode(outputs)
         response = self.process_response(response)
@@ -1158,7 +1152,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         )
         logits_warper = self._get_logits_warper(generation_config)
 
-        unfinished_sequences = input_ids.new(input_ids.shape[0]).fill(1)
+        unfinished_sequences = ops.ones(input_ids.shape[0], input_ids.dtype)
         scores = None
         while True:
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
