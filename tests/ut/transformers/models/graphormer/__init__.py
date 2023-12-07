@@ -13,17 +13,5 @@
 # limitations under the License.
 # ============================================================================
 """
-GPT Model.
+Test Graphormer
 """
-
-from . import configuration_gpt, modeling_gpt, tokenization_gpt, tokenization_gpt_fast
-from .modeling_gpt import *
-from .configuration_gpt import *
-from .tokenization_gpt import *
-from .tokenization_gpt_fast import *
-
-__all__ = []
-__all__.extend(modeling_gpt.__all__)
-__all__.extend(configuration_gpt.__all__)
-__all__.extend(tokenization_gpt.__all__)
-__all__.extend(tokenization_gpt_fast.__all__)

@@ -15,3 +15,16 @@
 """
 Graphormer Model.
 """
+from .configuration_graphormer import GraphormerConfig
+from .modeling_graphormer import (
+    GraphormerForGraphClassification,
+    GraphormerModel,
+    GraphormerPreTrainedModel
+)
+
+__all__ = [
+     "GraphormerConfig",
+     "GraphormerForGraphClassification",
+     "GraphormerModel",
+     "GraphormerPreTrainedModel"
+     ]
