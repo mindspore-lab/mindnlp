@@ -16,7 +16,7 @@
 
 """ Falcon configuration"""
 from ...configuration_utils import PretrainedConfig
-from mindspore import log as logger
+from mindnlp.utils import logging
 
 
 FALCON_PRETRAINED_CONFIG_ARCHIVE_MAP = {
@@ -24,12 +24,14 @@ FALCON_PRETRAINED_CONFIG_ARCHIVE_MAP = {
     "tiiuae/falcon-7b": "https://huggingface.co/tiiuae/falcon-7b/resolve/main/config.json",
 }
 
+logger = logging.get_logger(__name__)
+
 __all__ = ["FalconConfig"]
 
-model_type = "falcon"
-keys_to_ignore_at_inference = ["past_key_values"]
-
 class FalconConfig(PretrainedConfig):
+
+    model_type = "falcon"
+    keys_to_ignore_at_inference = ["past_key_values"]
 
     def __init__(
         self,

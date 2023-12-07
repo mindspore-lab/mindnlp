@@ -13,7 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-import os
+
+# pylint: disable=W0221
+# pylint: disable=W0223
+# pylint: disable=W0212
+# pylint: disable=W0246
+
+
 import math
 import warnings
 import numpy as np
@@ -44,6 +50,7 @@ from ...modeling_utils import PreTrainedModel
 from .config_falcon import FalconConfig
 
 __all__ = [
+    "FALCON_PRETRAINED_MODEL_ARCHIVE_LIST",
     "FalconLinear",
     "FalconRotaryEmbedding",
     "FalconLinearScalingRotaryEmbedding",
@@ -398,13 +405,13 @@ class FalconAttention(nn.Cell):
             ]
             return query, key, value
         elif not self.multi_query:
-            batch_size, seq_length, three_times_hidden_size = fused_qkv.shape
+            batch_size, seq_length, _ = fused_qkv.shape
             fused_qkv = fused_qkv.view(
                 batch_size, seq_length, self.num_heads, 3, self.head_dim
             )
             return fused_qkv[..., 0, :], fused_qkv[..., 1, :], fused_qkv[..., 2, :]
         else:
-            batch_size, seq_length, three_times_hidden_size = fused_qkv.shape
+            batch_size, seq_length, _ = fused_qkv.shape
             fused_qkv = fused_qkv.view(
                 batch_size, seq_length, self.num_heads + 2, self.head_dim
             )

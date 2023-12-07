@@ -24,3 +24,60 @@ from .config_falcon import *
 __all__ = []
 __all__.extend(falcon.__all__)
 __all__.extend(config_falcon.__all__)
+
+from typing import TYPE_CHECKING
+
+from mindnlp.utils import (
+    OptionalDependencyNotAvailable,
+    _LazyModule,
+    is_mindspore_available,
+)
+
+
+_import_structure = {
+    "config_falcon": ["FALCON_PRETRAINED_CONFIG_ARCHIVE_MAP", "FalconConfig"],
+}
+
+try:
+    if not is_mindspore_available():
+        raise OptionalDependencyNotAvailable()
+except OptionalDependencyNotAvailable:
+    pass
+else:
+    _import_structure["falcon"] = [
+        "FALCON_PRETRAINED_MODEL_ARCHIVE_LIST",
+        "FalconForCausalLM",
+        "FalconModel",
+        "FalconPreTrainedModel",
+        "FalconForSequenceClassification",
+        "FalconForTokenClassification",
+        "FalconForQuestionAnswering",
+    ]
+
+
+if TYPE_CHECKING:
+    from .config_falcon import FALCON_PRETRAINED_CONFIG_ARCHIVE_MAP, FalconConfig
+
+    try:
+        if not is_mindspore_available():
+            raise OptionalDependencyNotAvailable()
+    except OptionalDependencyNotAvailable:
+        pass
+    else:
+        from .falcon import (
+            FALCON_PRETRAINED_MODEL_ARCHIVE_LIST,
+            FalconForCausalLM,
+            FalconForQuestionAnswering,
+            FalconForSequenceClassification,
+            FalconForTokenClassification,
+            FalconModel,
+            FalconPreTrainedModel,
+        )
+
+
+else:
+    import sys
+
+    sys.modules[__name__] = _LazyModule(
+        __name__, globals()["__file__"], _import_structure, module_spec=__spec__
+    )
