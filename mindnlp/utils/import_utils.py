@@ -27,8 +27,10 @@ import warnings
 from types import ModuleType
 from collections import OrderedDict
 from functools import wraps
-from typing import Tuple, Union
+from itertools import chain
+from typing import Tuple, Union, Any
 import importlib.util
+
 if sys.version_info >= (3, 8):
     # For Python 3.8 and later
     from importlib import metadata as importlib_metadata
@@ -41,7 +43,9 @@ from . import logging
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def _is_package_available(pkg_name: str, return_version: bool = False) -> Union[Tuple[bool, str], bool]:
+def _is_package_available(
+    pkg_name: str, return_version: bool = False
+) -> Union[Tuple[bool, str], bool]:
     # Check we're not importing a "pkg_name" directory somewhere but the actual library by trying to grab the version
     package_exists = importlib.util.find_spec(pkg_name) is not None
     package_version = "N/A"
@@ -57,31 +61,39 @@ def _is_package_available(pkg_name: str, return_version: bool = False) -> Union[
     return package_exists
 
 
-
 _pytest_available = _is_package_available("pytest")
 _datasets_available = _is_package_available("datasets")
 _sentencepiece_available = _is_package_available("sentencepiece")
 _tokenizers_available = _is_package_available("tokenizers")
-_modelscope_available = _is_package_available('modelscope')
-_mindspore_version, _mindspore_available = _is_package_available("mindspore", return_version=True)
+_modelscope_available = _is_package_available("modelscope")
+_mindspore_version, _mindspore_available = _is_package_available(
+    "mindspore", return_version=True
+)
+
 
 def is_mindspore_available():
     return _mindspore_available
 
+
 def get_mindspore_version():
     return _mindspore_version
+
 
 def is_datasets_available():
     return _datasets_available
 
+
 def is_sentencepiece_available():
     return _sentencepiece_available
+
 
 def is_tokenizers_available():
     return _tokenizers_available
 
+
 def is_modelscope_available():
     return _modelscope_available
+
 
 def is_protobuf_available():
     if importlib.util.find_spec("google") is None:
@@ -101,7 +113,10 @@ def is_in_notebook():
             raise ImportError("console")
         if "VSCODE_PID" in os.environ:
             raise ImportError("vscode")
-        if "DATABRICKS_RUNTIME_VERSION" in os.environ and os.environ["DATABRICKS_RUNTIME_VERSION"] < "11.0":
+        if (
+            "DATABRICKS_RUNTIME_VERSION" in os.environ
+            and os.environ["DATABRICKS_RUNTIME_VERSION"] < "11.0"
+        ):
             # Databricks Runtime 11.0 and above uses IPython kernel by default so it should be compatible with Jupyter notebook
             # https://docs.microsoft.com/en-us/azure/databricks/notebooks/ipython-kernel
             raise ImportError("databricks")
@@ -215,8 +230,10 @@ def mindspore_required(func):
 
     return wrapper
 
+
 class OptionalDependencyNotAvailable(BaseException):
     """Internally used error class for signalling an optional dependency was not found."""
+
 
 def direct_transformers_import(path: str, file="__init__.py") -> ModuleType:
     """Imports transformers directly
@@ -230,8 +247,72 @@ def direct_transformers_import(path: str, file="__init__.py") -> ModuleType:
     """
     name = "transformers"
     location = os.path.join(path, file)
-    spec = importlib.util.spec_from_file_location(name, location, submodule_search_locations=[path])
+    spec = importlib.util.spec_from_file_location(
+        name, location, submodule_search_locations=[path]
+    )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     module = sys.modules[name]
     return module
+
+
+class _LazyModule(ModuleType):
+    """
+    Module class that surfaces all objects but only performs associated imports when the objects are requested.
+    """
+
+    def __init__(
+        self, name, module_file, import_structure, module_spec=None, extra_objects=None
+    ):
+        super().__init__(name)
+        self._modules = set(import_structure.keys())
+        self._class_to_module = {}
+        for key, values in import_structure.items():
+            for value in values:
+                self._class_to_module[value] = key
+        # Needed for autocompletion in an IDE
+        self.__all__ = list(import_structure.keys()) + list(
+            chain(*import_structure.values())
+        )
+        self.__file__ = module_file
+        self.__spec__ = module_spec
+        self.__path__ = [os.path.dirname(module_file)]
+        self._objects = {} if extra_objects is None else extra_objects
+        self._name = name
+        self._import_structure = import_structure
+
+    # Needed for autocompletion in an IDE
+    def __dir__(self):
+        result = super().__dir__()
+        # The elements of self.__all__ that are submodules may or may not be in the dir already, depending on whether
+        # they have been accessed or not. So we only add the elements of self.__all__ that are not already in the dir.
+        for attr in self.__all__:
+            if attr not in result:
+                result.append(attr)
+        return result
+
+    def __getattr__(self, name: str) -> Any:
+        if name in self._objects:
+            return self._objects[name]
+        if name in self._modules:
+            value = self._get_module(name)
+        elif name in self._class_to_module.keys():
+            module = self._get_module(self._class_to_module[name])
+            value = getattr(module, name)
+        else:
+            raise AttributeError(f"module {self.__name__} has no attribute {name}")
+
+        setattr(self, name, value)
+        return value
+
+    def _get_module(self, module_name: str):
+        try:
+            return importlib.import_module("." + module_name, self.__name__)
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to import {self.__name__}.{module_name} because of the following error (look up to see its"
+                f" traceback):\n{e}"
+            ) from e
+
+    def __reduce__(self):
+        return (self.__class__, (self._name, self.__file__, self._import_structure))
