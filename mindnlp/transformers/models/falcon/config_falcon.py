@@ -15,8 +15,8 @@
 # ============================================================================
 
 """ Falcon configuration"""
-from ...configuration_utils import PretrainedConfig
 from mindnlp.utils import logging
+from ...configuration_utils import PretrainedConfig
 
 
 FALCON_PRETRAINED_CONFIG_ARCHIVE_MAP = {
@@ -29,6 +29,9 @@ logger = logging.get_logger(__name__)
 __all__ = ["FalconConfig"]
 
 class FalconConfig(PretrainedConfig):
+    r"""
+    Falcon config
+    """
 
     model_type = "falcon"
     keys_to_ignore_at_inference = ["past_key_values"]
