@@ -5,6 +5,7 @@ from parameterized import parameterized
 
 from mindnlp.utils import is_mindspore_available
 from mindnlp.transformers import GPTBigCodeConfig
+from mindnlp.utils.testing_utils import slow
 
 from ...generation.test_utils import GenerationTesterMixin, require_mindspore
 from ...test_configuration_common import ConfigTester
@@ -555,6 +556,7 @@ class GPTBigCodeMHAModelTest(GPTBigCodeModelTest):
 
 @require_mindspore
 class GPTBigCodeModelLanguageGenerationTest(unittest.TestCase):
+    @slow
     def test_generate_simple(self):
         model = GPTBigCodeForCausalLM.from_pretrained(
             "gpt_bigcode-santacoder")
@@ -570,7 +572,8 @@ class GPTBigCodeModelLanguageGenerationTest(unittest.TestCase):
 
         expected_output = """def print_hello_world():\n    print("Hello World!")\n\n\ndef print_hello_"""
         self.assertEqual(output_sentence, expected_output)
-
+        
+    @slow
     def test_generate_batched(self):
         tokenizer = AutoTokenizer.from_pretrained(
             "gpt_bigcode-santacoder")
