@@ -529,7 +529,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         if attention_mask is not None and len(attention_mask.shape) == 2 and position_ids is None:
             # create position_ids on the fly for batch generation
             position_ids = attention_mask.long().cumsum(-1) - 1
-            position_ids.masked_fill(attention_mask == 0, 1)
+            position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_length > 0:
                 position_ids = position_ids[:,
                                             past_length: input_shape[-1] + past_length:]
@@ -685,7 +685,7 @@ class GPTBigCodeForCausalLM(GPTBigCodePreTrainedModel):
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
             position_ids = attention_mask.long().cumsum(-1) - 1
-            position_ids.masked_fill(attention_mask == 0, 1)
+            position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1]:]
         else:
