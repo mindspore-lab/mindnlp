@@ -18,20 +18,23 @@
 # pylint: disable=W0223
 # pylint: disable=W0212
 # pylint: disable=W0246
+# pylint: disable=C0103
 
 
 import math
 import warnings
-import numpy as np
 from typing import Optional, Tuple, Union
+import numpy as np
 
 import mindspore
 from mindspore import nn
 from mindspore import ops
 
-from mindnlp._legacy import functional as F
-from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 from mindspore.common.initializer import initializer, Normal
+from mindnlp.utils import logging
+from mindnlp._legacy import functional as F
+from mindnlp._legacy.functional import einsum
+from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
@@ -41,9 +44,6 @@ from ...modeling_outputs import (
     TokenClassifierOutput,
 )
 
-from mindnlp._legacy.functional import einsum
-
-from mindnlp.utils import logging
 
 from ...modeling_utils import PreTrainedModel
 
@@ -229,15 +229,23 @@ class FalconDynamicNTKScalingRotaryEmbedding(FalconRotaryEmbedding):
         self.cos_cached = emb.cos().astype(dtype)
         self.sin_cached = emb.sin().astype(dtype)
 
-def _prepare_4d_attention_mask(mask: mindspore.Tensor, past_key_values_length: int) -> mindspore.Tensor:
+
+def _prepare_4d_attention_mask(
+    mask: mindspore.Tensor, past_key_values_length: int
+) -> mindspore.Tensor:
     """
     Expands attention_mask from `[batch_size, seq_length]` to `[batch_size, 1, seq_length, seq_length + past_length]`.
     """
     batch_size, total_length = mask.shape
-    seq_length = total_length - past_key_values_length if past_key_values_length is not None else total_length
+    seq_length = (
+        total_length - past_key_values_length
+        if past_key_values_length is not None
+        else total_length
+    )
 
     expanded_mask = ~(mask[:, None, None, :].bool())
     return expanded_mask.expand(batch_size, 1, seq_length, total_length)
+
 
 def build_alibi_tensor(
     attention_mask: mindspore.Tensor, num_heads: int, dtype: mindspore.dtype
@@ -556,7 +564,10 @@ class FalconAttention(nn.Cell):
             # cast attention scores to fp32, compute scaled softmax and cast back to initial dtype - [batch_size, num_heads, q_length, kv_length]
             input_dtype = attention_scores.dtype
             # `float16` has a minimum value of -65504.0, whereas `bfloat16` and `float32` have a minimum value of `-3.4e+38`
-            if input_dtype in [mindspore.float16, mindspore.float32]:  # from bfloat32 change to float32
+            if input_dtype in [
+                mindspore.float16,
+                mindspore.float32,
+            ]:  # from bfloat32 change to float32
                 attention_scores = attention_scores.astype(mindspore.float32)
             # Matt (HF) note: We could possibly use F.scaled_dot_product_attention here too, by
             # adding (alibi * self.inv_norm_factor) to attention_mask_float. I think this would be mathematically
@@ -713,6 +724,7 @@ class FalconPreTrainedModel(PreTrainedModel):
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
+
     # convert_torch_to_mindspore = torch_to_mindspore
     config_class = FalconConfig
     base_model_prefix = "transformer"
@@ -745,12 +757,12 @@ class FalconPreTrainedModel(PreTrainedModel):
             if cell.padding_idx:
                 weight[cell.padding_idx] = 0.0
 
-            cell.weight.set_data(
-                mindspore.Tensor(weight, cell.weight.dtype)
-            )
+            cell.weight.set_data(mindspore.Tensor(weight, cell.weight.dtype))
         elif isinstance(cell, nn.LayerNorm):
             cell.bias.set_data(initializer("zeros", cell.bias.shape, cell.bias.dtype))
-            cell.weight.set_data(initializer("ones", cell.weight.shape, cell.weight.dtype))
+            cell.weight.set_data(
+                initializer("ones", cell.weight.shape, cell.weight.dtype)
+            )
 
 
 class FalconModel(FalconPreTrainedModel):
