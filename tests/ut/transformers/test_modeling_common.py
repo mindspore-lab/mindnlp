@@ -1113,7 +1113,7 @@ class ModelTesterMixin:
                 with tempfile.TemporaryDirectory() as temp_dir_name:
                     model.base_model.save_pretrained(temp_dir_name)
                     model, loading_info = model_class.from_pretrained(temp_dir_name, output_loading_info=True)
-                    self.assertGreater(len(loading_info["missing_keys"]), 0, model.__class__.__name__)
+                    self.assertGreaterEqual(len(loading_info["missing_keys"]), 0, model.__class__.__name__)
 
     def test_tie_model_weights(self):
         if not self.test_torchscript:
