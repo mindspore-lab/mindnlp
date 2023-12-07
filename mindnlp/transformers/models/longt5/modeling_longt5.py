@@ -12,18 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=C0103
-# pylint: disable=C0415
-# pylint: disable=E0401
-
+# pylint: disable=invalid-name
+# pylint: disable=arguments-renamed
+# pylint: disable=invalid-unary-operand-type
+# pylint: disable=missing-function-docstring
+# pylint: disable=missing-class-docstring
 """
 MindSpore LongT5 model
 """
 
 import copy
 import math
-import warnings
-from typing import List, Optional, Tuple, Union
+from typing import List, Tuple
 
 import numpy as np
 import mindspore
@@ -41,8 +41,6 @@ from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
     Seq2SeqLMOutput,
     Seq2SeqModelOutput,
-    Seq2SeqQuestionAnsweringModelOutput,
-    Seq2SeqSequenceClassifierOutput,
 )
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import ALL_LAYERNORM_LAYERS, find_pruneable_heads_and_indices, prune_linear_layer
@@ -55,7 +53,7 @@ logger = logging.get_logger(__name__)
 # for the pretrained weights provided with the models
 ####################################################
 # TODO: Update before the merge
-LONGT5_PRETRAINED_MODEL_ARCHIVE_LIST = [
+LongT5_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "google/long-t5-local-base",
     "google/long-t5-local-large",
     "google/long-t5-tglobal-base",
@@ -63,7 +61,7 @@ LONGT5_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 
 
-def _pad_to_multiple(x: mindspore.Tensor, block_len: int, dim: int) -> (mindspore.Tensor):
+def _pad_to_multiple(x: mindspore.Tensor, block_len: int, dim: int, pad_value: int = 0) -> (mindspore.Tensor):
     """Pad a tensor so that a sequence length will be a multiple of `block_len`"""
     pad_len = -x.shape[dim] % block_len
     # Handle cases when an empty input sequence is given
@@ -75,7 +73,7 @@ def _pad_to_multiple(x: mindspore.Tensor, block_len: int, dim: int) -> (mindspor
     pad = [(0, 0)] * x.ndim
     pad[dim] = (0, pad_len)
     pad = sum(pad[::-1], ())
-    x = nn.Pad(pad, mode='CONSTANT')
+    x = ops.pad(x, padding=pad, mode='constant', value=pad_value)
     return x
 
 def _split_into_blocks(x: mindspore.Tensor, block_len: int, dim: int) -> mindspore.Tensor:
@@ -103,7 +101,7 @@ def _concatenate_3_blocks(x: mindspore.Tensor, block_dim: int, sequence_dim: int
     pad[block_dim] = (1, 1)
     pad = sum(pad[::-1], ())
     # [batch_size, num_blocks, block_len] -> [batch_size, num_blocks + 2, block_len]
-    x = nn.Pad(pad, mode='CONSTANT')
+    x = ops.pad(x, padding=pad, mode='constant', value=pad_value)
 
     blocks_list: List[mindspore.Tensor] = []
     for i in range(3):
@@ -114,7 +112,7 @@ def _concatenate_3_blocks(x: mindspore.Tensor, block_dim: int, sequence_dim: int
         indices = tuple(indices)
         blocks_list.append(x[indices])
     # [batch_size, num_blocks, 3 * block_len, ...]
-    return (ops.cat(blocks_list, dim=sequence_dim))
+    return ops.cat(blocks_list, axis=sequence_dim)
 
 def _make_3block_relative_position_ids(block_len: int) -> mindspore.Tensor:
     """Makes 3-blocked relative position ids for local attention."""
@@ -176,7 +174,7 @@ def _make_global_fixed_block_ids(
     mask = ops.where(attention_mask != 0.0, 1.0, -1000.0).type(attention_mask.dtype)
     global_block_ids = ops.floor(mask + fixed_block_mask - 1.0).type(attention_mask.dtype)
     _global_block_ids_lower_bound = mindspore.tensor(-1, dtype=global_block_ids.dtype)
-    global_block_ids = mindspore.where(
+    global_block_ids = ops.where(
         global_block_ids > _global_block_ids_lower_bound, global_block_ids, _global_block_ids_lower_bound
     )
     # set padding tokens to -1
@@ -1861,3 +1859,11 @@ class LongT5EncoderModel(LongT5PreTrainedModel):
         )
 
         return encoder_outputs
+
+__all__ = [
+    "LongT5_PRETRAINED_MODEL_ARCHIVE_LIST",
+    "LongT5EncoderModel",
+    "LongT5ForConditionalGeneration",
+    "LongT5Model",
+    "LongT5PreTrainedModel",
+]
