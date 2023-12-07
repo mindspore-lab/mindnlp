@@ -187,7 +187,7 @@ def _make_global_fixed_block_ids(
         _sequence_block_ids_max = ops.max(global_block_ids, axis=-1).values.repeat(num_globals, 1).transpose(0, 1)
     else:
         _sequence_block_ids_max = ops.zeros(
-            batch_size, 0, dtype=global_block_ids.dtype
+            batch_size, dtype=global_block_ids.dtype
         )
     global_segment_ids = ops.cumsum(ops.ones(batch_size, num_globals), axis=-1) - 1
     global_segment_ids = global_segment_ids.to(attention_mask.device)
