@@ -16,11 +16,11 @@
 Falcon Model.
 """
 
-from . import falcon, config_falcon
+from . import modeling_falcon, configuration_falcon
 
-from .falcon import *
-from .config_falcon import *
+from .modeling_falcon import *
+from .configuration_falcon import *
 
 __all__ = []
-__all__.extend(falcon.__all__)
-__all__.extend(config_falcon.__all__)
+__all__.extend(modeling_falcon.__all__)
+__all__.extend(configuration_falcon.__all__)

@@ -47,7 +47,7 @@ from ...modeling_outputs import (
 
 from ...modeling_utils import PreTrainedModel
 
-from .config_falcon import FalconConfig
+from .configuration_falcon import FalconConfig
 
 __all__ = [
     "FALCON_PRETRAINED_MODEL_ARCHIVE_LIST",

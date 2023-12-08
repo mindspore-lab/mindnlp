@@ -35,7 +35,7 @@ if is_mindspore_available():
     import mindspore
     from mindspore import ops
 
-    from mindnlp.transformers.models.falcon import (
+    from mindnlp.transformers.models.modeling_falcon import (
         FalconConfig,
         FalconForCausalLM,
         FalconForQuestionAnswering,
@@ -582,7 +582,6 @@ class FalconLanguageGenerationTest(unittest.TestCase):
         tokenizer.pad_token = tokenizer.eos_token
         model = AutoModelForCausalLM.from_pretrained(
             "tiiuae/falcon-7b",
-            # load_in_4bit=True,
             from_pt=True,
         )
 
