@@ -437,7 +437,7 @@ CONFIG_TO_TYPE = {v: k for k, v in CONFIG_MAPPING_NAMES.items()}
 def tokenizer_class_from_name(class_name: str):
     if class_name == "PreTrainedTokenizerFast":
         return PreTrainedTokenizerFast
-    
+
     for module_name, tokenizers in TOKENIZER_MAPPING_NAMES.items():
         if class_name in tokenizers:
             module_name = model_type_to_module_name(module_name)

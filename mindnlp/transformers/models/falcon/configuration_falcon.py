@@ -28,6 +28,7 @@ logger = logging.get_logger(__name__)
 
 __all__ = ["FalconConfig"]
 
+
 class FalconConfig(PretrainedConfig):
     r"""
     Falcon config
@@ -74,7 +75,9 @@ class FalconConfig(PretrainedConfig):
 
         self.bos_token_id = bos_token_id
         self.eos_token_id = eos_token_id
-        self.num_kv_heads = num_attention_heads if num_kv_heads is None else num_kv_heads
+        self.num_kv_heads = (
+            num_attention_heads if num_kv_heads is None else num_kv_heads
+        )
         self.alibi = alibi
         self.new_decoder_architecture = new_decoder_architecture
         self.multi_query = multi_query  # Ignored when new_decoder_architecture is True
@@ -89,10 +92,22 @@ class FalconConfig(PretrainedConfig):
 
     @property
     def head_dim(self):
+        """
+        Gets the dimension of each attention head.
+
+        Returns:
+            int: The dimension of each attention head."""
+
         return self.hidden_size // self.num_attention_heads
 
     @property
     def rotary(self):
+        """
+        Checks if the rotary property is enabled.
+
+        Returns:
+            bool: True if the rotary property is enabled, False otherwise."""
+
         return not self.alibi
 
     def _rope_scaling_validation(self):
@@ -116,5 +131,11 @@ class FalconConfig(PretrainedConfig):
             raise ValueError(
                 f"`rope_scaling`'s type field must be one of ['linear', 'dynamic'], got {rope_scaling_type}"
             )
-        if rope_scaling_factor is None or not isinstance(rope_scaling_factor, float) or rope_scaling_factor <= 1.0:
-            raise ValueError(f"`rope_scaling`'s factor field must be an float > 1, got {rope_scaling_factor}")
+        if (
+            rope_scaling_factor is None
+            or not isinstance(rope_scaling_factor, float)
+            or rope_scaling_factor <= 1.0
+        ):
+            raise ValueError(
+                f"`rope_scaling`'s factor field must be an float > 1, got {rope_scaling_factor}"
+            )

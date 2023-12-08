@@ -35,7 +35,7 @@ if is_mindspore_available():
     import mindspore
     from mindspore import ops
 
-    from mindnlp.transformers.models.modeling_falcon import (
+    from mindnlp.transformers.models.falcon import (
         FalconConfig,
         FalconForCausalLM,
         FalconForQuestionAnswering,
