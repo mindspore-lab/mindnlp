@@ -44,7 +44,7 @@ from .configuration_auto import (
 logger = logging.get_logger(__name__)
 
 if is_tokenizers_available():
-    from ... import  PreTrainedTokenizerFast
+    from mindnlp.transformers import PreTrainedTokenizerFast
 else:
     PreTrainedTokenizerFast = None
 
