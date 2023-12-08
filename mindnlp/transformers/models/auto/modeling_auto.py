@@ -37,6 +37,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("gpt2", "GPT2Model"),
         ("t5", "T5Model"),
         ("chatglm", "ChatGLMModel"),
+        ("falcon", "FalconModel"),
     ]
 )
 
@@ -60,7 +61,8 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         # Model for Causal LM mapping
         ("bert", "BertLMHeadModel"),
         ("roberta", "RobertaLMHeadModel"),
-        ("gpt2", "GPT2LMHeadModel")
+        ("gpt2", "GPT2LMHeadModel"),
+        ("falcon", "FalconForCausalLM")
     ]
 )
 
@@ -183,6 +185,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
     [
         # Model for Sequence Classification mapping
         ("bert", "BertForSequenceClassification"),
+        ("falcon", "FalconForSequenceClassification"),
     ]
 )
 

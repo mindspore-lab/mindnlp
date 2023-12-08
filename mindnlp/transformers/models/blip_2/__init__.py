@@ -13,14 +13,5 @@
 # limitations under the License.
 # ============================================================================
 """
-Falcon Model.
+Blip_2 Model.
 """
-
-from . import modeling_falcon, configuration_falcon
-
-from .modeling_falcon import *
-from .configuration_falcon import *
-
-__all__ = []
-__all__.extend(modeling_falcon.__all__)
-__all__.extend(configuration_falcon.__all__)
