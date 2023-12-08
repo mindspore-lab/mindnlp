@@ -37,8 +37,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ('mt5', 'MT5Config'),
         ('t5', 'T5Config'),
         ('chatglm', 'ChatGLMConfig'),
-        ('gpt_bigcode', 'GPTBigCodeConfig')
-        ('chatglm', 'ChatGLMConfig'),
+        ('gpt_bigcode', 'GPTBigCodeConfig'),
         ("falcon", "FalconConfig"),
     ]
 )
