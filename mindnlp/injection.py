@@ -171,6 +171,16 @@ ops.dense = fp16_patch_decorator(dense)
 ops.einsum = einsum
 # conv1d
 ops.conv1d = fp16_patch_decorator(ops.conv1d)
+# cross_entropy
+
+def _cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
+    if weight is None:
+        weight = ops.ones(input.shape[-1], input.dtype)
+    _nll_loss = _get_cache_prim(ops.NLLLoss)(reduction, ignore_index)
+    class_dim = 0 if input.ndim == 1 else 1
+    return _nll_loss(ops.log_softmax(input, class_dim), target, weight)[0]
+
+# ops.cross_entropy = _cross_entropy
 
 # for Tensor
 # unfold
