@@ -16,6 +16,9 @@
 Global configs
 """
 import os
+import mindspore
+
+DEFAULT_DTYPE = mindspore.float32
 
 WEIGHTS_NAME = "mindspore.ckpt"
 PT_WEIGHTS_NAME = "pytorch_model.bin"

@@ -90,17 +90,19 @@ The master branch works with **MindSpore master**.
 
 The table below represents the current support in the library for each of those models, whether they have support in Pynative mode or Graph mode.
 
-| Model                         | Pynative support | Graph Support |
-|-------------------------------|------------------|---------------|
+| Model                         | Pynative support    | Graph Support |
+|-------------------------------|---------------------|---------------|
 | ALBERT                        | ✅                | ✅             |
-| Autoformer                    | TODO              | ❌             |
+| Autoformer                    | ✅ (Inference only)| ❌             |
 | BaiChuan                      | ✅                | ❌             |
 | Bark                          | TODO                | ❌             |
 | BART                          | ✅                | ❌             |
 | BERT                          | ✅                | ✅             |
+| BLIP                          | TODO              | ✅             |
+| BLIP2                         | TODO              | ✅             |
 | BLOOM                         | ✅                | ❌             |
-| CLIP                          | ✅                | ❌             |
 | ChatGLM                       | ✅                | ❌             |
+| CLIP                          | ✅                | ❌             |
 | CodeGen                       | ✅                | ❌             |
 | ConvBERT                      | TODO              | ❌             |
 | CPM                           | ✅                | ❌             |
@@ -108,17 +110,19 @@ The table below represents the current support in the library for each of those 
 | CPM-Bee                       | ✅                | ❌             |
 | EnCodec                       | TODO               | ❌             |
 | ERNIE                         | ✅                | ❌             |
-| Falcon                        | TODO                | ❌             |
+| Falcon                        | ✅                | ❌             |
 | GLM                           | ✅                | ❌             |
+| OpenAI GPT                    | ✅                | ❌             |
+| OpenAI GPT-2                  | ✅                | ✅             |
 | GPT Neo                       | ✅                | ❌             |
 | GPT NeoX                      | TODO                | ❌             |
 | GPTBigCode                    | ✅                | ❌             |
-| Graphormer                    | TODO               | ❌             |
+| Graphormer                    | ✅               | ❌             |
 | Llama                         | ✅                | ❌             |
 | Llama2                        | ✅                | ❌             |
 | CodeLlama                     | ✅                | ❌             |
 | Longformer                    | ✅                | ❌             |
-| LongT5                        | TODO               | ❌             |
+| LongT5                        | ✅                | ❌             |
 | LUKE                          | ✅                | ❌             |
 | MaskFormer                    | ✅                | ❌             |
 | mBART-50                      | ✅                | ❌             |
@@ -126,14 +130,15 @@ The table below represents the current support in the library for each of those 
 | Megatron-GPT2                 | ✅                | ❌             |
 | MobileBERT                    | ✅                | ❌             |
 | Moss                          | ✅                | ❌             |
-| OpenAI GPT                    | ✅                | ❌             |
-| OpenAI GPT-2                  | ✅                | ✅             |
+| Nezha                         | ✅                | ❌             |
 | OPT                           | ✅                | ❌             |
 | Pangu                         | ✅                | ❌             |
+| Pop2piano                     | Todo              | ❌             |
 | RoBERTa                       | ✅                | ✅             |
 | RWKV                          | ✅                | ❌             |
 | T5                            | ✅                | ❌             |
 | TimeSformer                   | TODO               | ❌             |
+| Tinybert                      | ✅                | ❌             |
 | Whisper                       | ✅                | ❌             |
 | XLM                           | ✅                | ❌             |
 | XLM-RoBERTa                   | ✅                | ❌             |

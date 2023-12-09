@@ -38,6 +38,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("t5", "T5Model"),
         ("chatglm", "ChatGLMModel"),
         ("falcon", "FalconModel"),
+        ("mistral", "MistralModel"),
     ]
 )
 
