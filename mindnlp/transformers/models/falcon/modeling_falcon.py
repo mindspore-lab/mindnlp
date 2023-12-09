@@ -27,11 +27,12 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindspore import nn,ops
+from mindspore import nn, ops
 from mindspore.nn import Dense as FalconLinear
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import logging
+from mindnlp._legacy import functional as F
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
     CausalLMOutputWithCrossAttentions,
@@ -548,15 +549,26 @@ class FalconAttention(nn.Cell):
         present = (key_layer, value_layer) if use_cache else None
 
         if alibi is None:
-            attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
-            attention_scores /= math.sqrt(self.head_dim)
+            if hasattr(F, "_scaled_dot_product_attention") and not output_attentions:
+                attn_output, attention_scores = F._scaled_dot_product_attention(
+                    query_layer,
+                    key_layer,
+                    value_layer,
+                    attention_mask,
+                    0.0,
+                    is_causal=False,
+                    is_training=self.training,
+                )
+            else:
+                attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
+                attention_scores /= math.sqrt(self.head_dim)
 
-            attention_scores = ops.softmax(
-                attention_scores + attention_mask,
-                axis=-1,
-                dtype=hidden_states.dtype,
-            )
-            attn_output = ops.matmul(attention_scores, value_layer)
+                attention_scores = ops.softmax(
+                    attention_scores + attention_mask,
+                    axis=-1,
+                    dtype=hidden_states.dtype,
+                )
+                attn_output = ops.matmul(attention_scores, value_layer)
 
             attn_output = attn_output.view(
                 batch_size, self.num_heads, query_length, self.head_dim
@@ -963,13 +975,21 @@ class FalconModel(FalconPreTrainedModel):
                 )
                 position_ids = position_ids.unsqueeze(0)
 
-        # 4d mask is passed through the layers
-        attention_mask = _prepare_4d_causal_attention_mask(
-            attention_mask,
-            (batch_size, seq_length),
-            inputs_embeds,
-            past_key_values_length,
-        )
+        if getattr(self.config, "_flash_attn_2_enabled", False):
+            # 2d mask is passed through the layers
+            attention_mask = (
+                attention_mask
+                if (attention_mask is not None and 0 in attention_mask)
+                else None
+            )
+        else:
+            # 4d mask is passed through the layers
+            attention_mask = _prepare_4d_causal_attention_mask(
+                attention_mask,
+                (batch_size, seq_length),
+                inputs_embeds,
+                past_key_values_length,
+            )
 
         for i, (block, layer_past) in enumerate(zip(self.h, past_key_values)):
             if output_hidden_states:
