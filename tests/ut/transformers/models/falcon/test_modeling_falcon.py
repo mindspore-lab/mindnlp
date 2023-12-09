@@ -44,7 +44,6 @@ if is_mindspore_available():
         FalconModel,
     )
 
-
 class FalconModelTester:
     def __init__(
         self,

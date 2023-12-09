@@ -403,6 +403,8 @@ class Dense(nn.Cell):
                  in_channels,
                  out_channels,
                  has_bias=True,
+                 weight_init='zeros',
+                 bias_init='zeros',
                  dtype=mstype.float32):
         """Initialize Dense."""
         super().__init__()
@@ -414,12 +416,12 @@ class Dense(nn.Cell):
             has_bias, "has_bias", self.cls_name)
 
         self.weight = Parameter(initializer(
-            'zeros', [out_channels, in_channels], dtype=dtype), name="weight")
+            weight_init, [out_channels, in_channels], dtype=dtype), name="weight")
 
         self.bias = None
         if self.has_bias:
             self.bias = Parameter(initializer(
-                'zeros', [out_channels], dtype=dtype), name="bias")
+                bias_init, [out_channels], dtype=dtype), name="bias")
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -445,7 +447,7 @@ class Dense(nn.Cell):
 
 class Embedding(nn.Cell):
     """patched Embedding"""
-    def __init__(self, vocab_size, embedding_size, use_one_hot=False, dtype=mstype.float32, padding_idx=None):
+    def __init__(self, vocab_size, embedding_size, padding_idx=None, use_one_hot=False, dtype=mstype.float32, weight_init='zeros'):
         """Initialize Embedding."""
         super().__init__()
         self.vocab_size = Validator.check_value_type('vocab_size', vocab_size, [int], self.cls_name)
@@ -455,7 +457,7 @@ class Embedding(nn.Cell):
         self.use_one_hot = use_one_hot
         self.dtype = dtype
         self.padding_idx = padding_idx
-        self.weight = Parameter(initializer('zeros', [vocab_size, embedding_size]), name='weight')
+        self.weight = Parameter(initializer(weight_init, [vocab_size, embedding_size]), name='weight')
         self.reset_parameters()
 
     def reset_parameters(self):
