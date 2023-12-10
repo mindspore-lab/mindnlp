@@ -320,7 +320,8 @@ class GPTModel(GPTPreTrainedModel):
             # Since we are adding it to the raw scores before the softmax, this is
             # effectively the same as removing these entirely.
             attention_mask = attention_mask.to(dtype=next(self.get_parameters()).dtype)  # fp16 compatibility
-            attention_mask = (1.0 - attention_mask) * np.finfo(mindspore.dtype_to_nptype(self.dtype)).min
+            attention_mask = (1.0 - attention_mask) * mindspore.tensor(
+                np.finfo(mindspore.dtype_to_nptype(self.dtype)).min, attention_mask.dtype)
 
         # Prepare head mask if needed
         head_mask = self.get_head_mask(head_mask, self.config.n_layer)

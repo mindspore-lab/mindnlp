@@ -66,3 +66,4 @@ def get_activation(activation_string):
 
 gelu_new = partial(ops.gelu, approximate='tanh')
 silu = ops.silu
+gelu = ops.gelu

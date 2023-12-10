@@ -15,12 +15,14 @@
 """
 GPT2 Models init
 """
-from . import longformer, longformer_config, longformer_tokenizer
-from .longformer_config import *
-from .longformer import *
-from .longformer_tokenizer import *
+from . import configuration_longformer, modeling_longformer, tokenization_longformer, tokenization_longformer_fast
+from .configuration_longformer import *
+from .modeling_longformer import *
+from .tokenization_longformer import *
+from .tokenization_longformer_fast import *
 
 __all__ = []
-__all__.extend(longformer.__all__)
-__all__.extend(longformer_config.__all__)
-__all__.extend(longformer_tokenizer.__all__)
+__all__.extend(modeling_longformer.__all__)
+__all__.extend(configuration_longformer.__all__)
+__all__.extend(tokenization_longformer.__all__)
+__all__.extend(tokenization_longformer_fast.__all__)
