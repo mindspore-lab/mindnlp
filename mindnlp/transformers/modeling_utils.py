@@ -1394,7 +1394,7 @@ def convert_torch_to_mindspore(pth_file):
     has_bf16 = False
     for key, value in state_dict.items():
         if value.dtype == torch.bfloat16:
-            data = Tensor(value.to(torch.float).numpy())
+            data = Tensor(value.to(torch.float).numpy(), dtype=mindspore.float16)
             if not has_bf16:
                 has_bf16 = True
         else:

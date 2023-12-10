@@ -27,15 +27,12 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 import mindspore
-from mindspore import nn
-from mindspore import ops
-
+from mindspore import nn, ops
+from mindspore.nn import Dense as FalconLinear
 from mindspore.common.initializer import initializer, Normal
+
 from mindnlp.utils import logging
 from mindnlp._legacy import functional as F
-from mindnlp._legacy.functional import einsum
-from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
-
 from ...modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
     CausalLMOutputWithCrossAttentions,
@@ -46,25 +43,9 @@ from ...modeling_outputs import (
 
 
 from ...modeling_utils import PreTrainedModel
-
+from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 from .configuration_falcon import FalconConfig
 
-__all__ = [
-    "FALCON_PRETRAINED_MODEL_ARCHIVE_LIST",
-    "FalconLinear",
-    "FalconRotaryEmbedding",
-    "FalconLinearScalingRotaryEmbedding",
-    "FalconDynamicNTKScalingRotaryEmbedding",
-    "FalconAttention",
-    "FalconMLP",
-    "FalconDecoderLayer",
-    "FalconPreTrainedModel",
-    "FalconModel",
-    "FalconForCausalLM",
-    "FalconForSequenceClassification",
-    "FalconForTokenClassification",
-    "FalconForQuestionAnswering",
-]
 
 logger = logging.get_logger(__name__)
 
@@ -78,30 +59,6 @@ FALCON_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 _CHECKPOINT_FOR_DOC = "Rocketknight1/falcon-rw-1b"
 _CONFIG_FOR_DOC = "FalconConfig"
-
-
-class FalconLinear(nn.Dense):
-    """
-    A linear layer implementation for the Falcon model.
-
-    Args:
-        in_channels (int): The number of input channels.
-        out_channels (int): The number of output channels.
-        has_bias (bool, optional): Whether to include a bias term. Defaults to True.
-
-    Returns:
-        Tensor: The output tensor after applying the linear transformation."""
-
-    def __init__(self, in_channels, out_channels, has_bias=True):
-        super().__init__(in_channels, out_channels, has_bias=has_bias)
-
-
-    def construct(self, x):
-        hidden_states = ops.matmul(x, self.weight.T)
-        if self.has_bias:
-            hidden_states = hidden_states + self.bias
-        return hidden_states
-
 
 def rotate_half(x):
     """
@@ -121,10 +78,8 @@ def rotate_half(x):
 def _get_unpad_data(padding_mask):
     seqlens_in_batch = padding_mask.sum(axis=-1, dtype=mindspore.int32)
     indices = ops.nonzero(padding_mask.flatten()).flatten()
-    max_seqlen_in_batch = ops.ReduceMax()(seqlens_in_batch).item()
-    cu_seqlens = ops.Pad(((1, 0),))(
-        ops.CumSum()(seqlens_in_batch, axis=0, exclusive=True)
-    )
+    max_seqlen_in_batch = seqlens_in_batch.max().item()
+    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
     return (
         indices,
         cu_seqlens,
@@ -181,10 +136,8 @@ class FalconRotaryEmbedding(nn.Cell):
 
     def _set_cos_sin_cache(self, seq_len, dtype):
         self.max_seq_len_cached = seq_len
-        t = mindspore.Tensor(
-            np.arange(self.max_seq_len_cached), dtype=self.inv_freq.dtype
-        )
-        freqs = einsum("i,j->ij", t, self.inv_freq)
+        t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
+        freqs = ops.einsum("i,j->ij", t, self.inv_freq)
         # freqs = ops.matmul()(t.reshape(-1, 1), self.inv_freq.reshape(1, -1))
         emb = ops.cat((freqs, freqs), axis=-1)
         self.cos_cached = emb.cos().astype(dtype)
@@ -212,9 +165,9 @@ class FalconLinearScalingRotaryEmbedding(FalconRotaryEmbedding):
 
     def _set_cos_sin_cache(self, seq_len, dtype):
         self.max_seq_len_cached = seq_len
-        t = mindspore.Tensor(np.arange(seq_len), dtype=self.inv_freq.dtype)
+        t = ops.arange(seq_len, dtype=self.inv_freq.dtype)
         t = t / self.scaling_factor
-        freqs = einsum("i,j->ij", t, self.inv_freq)
+        freqs = ops.outer(t, self.inv_freq)
         emb = ops.cat((freqs, freqs), axis=-1)
         self.cos_cached = emb.cos().astype(dtype)
         self.sin_cached = emb.sin().astype(dtype)
@@ -244,8 +197,7 @@ class FalconDynamicNTKScalingRotaryEmbedding(FalconRotaryEmbedding):
             )
 
         t = ops.arange(seq_len)
-        freqs = einsum("i,j->ij", t, self.inv_freq)
-        # freqs = ops.matmul()(t.reshape(-1, 1), self.inv_freq.reshape(1, -1))
+        freqs = ops.outer(t, self.inv_freq)
         emb = ops.cat((freqs, freqs), axis=-1)
         self.cos_cached = emb.cos().astype(dtype)
         self.sin_cached = emb.sin().astype(dtype)
@@ -265,7 +217,7 @@ def _prepare_4d_attention_mask(
     )
 
     expanded_mask = ~(mask[:, None, None, :].bool())
-    return expanded_mask.expand(batch_size, 1, seq_length, total_length)
+    return expanded_mask.broadcast_to((batch_size, 1, seq_length, total_length))
 
 
 def build_alibi_tensor(
@@ -303,9 +255,7 @@ def build_alibi_tensor(
         slopes = ops.cat([slopes, ops.pow(extra_base, extra_powers)], axis=0)
 
     arange_tensor = ((attention_mask.cumsum(axis=-1) - 1) * attention_mask)[:, None, :]
-    alibi = slopes[..., None]
-    alibi.astype(mindspore.float32)  # from bfloat16 change to float32
-    alibi = alibi * arange_tensor
+    alibi = slopes[..., None].astype(mindspore.float32) * arange_tensor
     return ops.reshape(alibi, (batch_size * num_heads, 1, seq_length)).astype(dtype)
 
 
@@ -646,7 +596,7 @@ class FalconAttention(nn.Cell):
         # `float16` has a minimum value of -65504.0, whereas `bfloat16` and `float32` have a minimum value of `-3.4e+38`
         if input_dtype in [
             mindspore.float16,
-            mindspore.float32,
+            mindspore.bfloat16,
         ]:  # from bfloat32 change to float32
             attention_scores = attention_scores.astype(mindspore.float32)
         # Matt (HF) note: We could possibly use F.scaled_dot_product_attention here too, by
@@ -701,7 +651,7 @@ class FalconMLP(nn.Cell):
         self.dense_h_to_4h = FalconLinear(
             hidden_size, 4 * hidden_size, has_bias=config.bias
         )
-        self.act = nn.GELU()
+        self.act = nn.GELU(approximate=False)
         self.dense_4h_to_h = FalconLinear(
             4 * hidden_size, hidden_size, has_bias=config.bias
         )
@@ -854,10 +804,8 @@ class FalconPreTrainedModel(PreTrainedModel):
     # convert_torch_to_mindspore = torch_to_mindspore
     config_class = FalconConfig
     base_model_prefix = "transformer"
-    supports_gradient_checkpointing = True
     _no_split_modules = ["FalconDecoderLayer"]
     _supports_flash_attn_2 = False  # change to False
-
 
     def _init_weights(self, cell):
         """Initialize the weights."""
@@ -934,8 +882,6 @@ class FalconModel(FalconPreTrainedModel):
         # Final Layer Norm
         self.ln_f = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_epsilon)
 
-        self.gradient_checkpointing = False
-
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -1000,11 +946,6 @@ class FalconModel(FalconPreTrainedModel):
 
         hidden_states = inputs_embeds
 
-        if self.gradient_checkpointing and self.training and use_cache:
-            logger.warning(
-                "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
-            )
-            use_cache = False
         presents = () if use_cache else None
         all_self_attentions = () if output_attentions else None
         all_hidden_states = () if output_hidden_states else None
@@ -1054,29 +995,16 @@ class FalconModel(FalconPreTrainedModel):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
-            if self.gradient_checkpointing and self.training:
-                outputs = self._gradient_checkpointing_func(
-                    block.__call__,
-                    hidden_states,
-                    alibi,
-                    attention_mask,
-                    position_ids,
-                    head_mask[i],
-                    layer_past,
-                    use_cache,
-                    output_attentions,
-                )
-            else:
-                outputs = block(
-                    hidden_states,
-                    layer_past=layer_past,
-                    attention_mask=attention_mask,
-                    position_ids=position_ids,
-                    head_mask=head_mask[i],
-                    use_cache=use_cache,
-                    output_attentions=output_attentions,
-                    alibi=alibi,
-                )
+            outputs = block(
+                hidden_states,
+                layer_past=layer_past,
+                attention_mask=attention_mask,
+                position_ids=position_ids,
+                head_mask=head_mask[i],
+                use_cache=use_cache,
+                output_attentions=output_attentions,
+                alibi=alibi,
+            )
 
             hidden_states = outputs[0]
             if use_cache is True:
@@ -1375,7 +1303,7 @@ class FalconForSequenceClassification(FalconPreTrainedModel):
             elif self.config.problem_type == "single_label_classification":
                 loss = ops.cross_entropy(pooled_logits, labels)
             elif self.config.problem_type == "multi_label_classification":
-                loss = ops.binary_cross_entropy(pooled_logits, labels)
+                loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
             output = (pooled_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -1604,3 +1532,13 @@ class FalconForQuestionAnswering(FalconPreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
+
+__all__ = [
+    "FALCON_PRETRAINED_MODEL_ARCHIVE_LIST",
+    "FalconForCausalLM",
+    "FalconModel",
+    "FalconPreTrainedModel",
+    "FalconForSequenceClassification",
+    "FalconForTokenClassification",
+    "FalconForQuestionAnswering",
+]
