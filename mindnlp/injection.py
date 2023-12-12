@@ -27,12 +27,13 @@ import numpy as np
 import mindspore
 import mindspore.common.dtype as mstype
 from mindspore import nn, ops, Tensor, Parameter
-from mindspore.nn.layer.conv import _Conv
 from mindspore.common._stub_tensor import StubTensor
+from mindspore.nn.layer.conv import _Conv
 from mindspore.common.initializer import initializer, Normal, HeUniform, Uniform, _calculate_fan_in_and_fan_out
 from mindspore import _checkparam as Validator
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp._legacy.functional import einsum
+
 
 DEVICE_TARGET = mindspore.get_context('device_target')
 GLOBAL_FP16_PATCH = False
@@ -325,12 +326,30 @@ Tensor.nonzero = _nonzero
 StubTensor.nonzero = _nonzero
 
 if version.parse(mindspore.__version__) < version.parse('2.2.0'):
+    mindspore.bfloat16 = None
     def eq(self, other):
         """patched eq"""
         return ops.equal(self, other)
     Tensor.eq = eq
     StubTensor.eq = eq
 
+    def _item(self):
+        return self.asnumpy().item()
+    Tensor.item = _item
+    StubTensor.item = _item
+
+    def _tolist(self):
+        return self.asnumpy().tolist()
+    Tensor.tolist = _tolist
+    StubTensor.tolist = _tolist
+
+if version.parse(mindspore.__version__) < version.parse('2.1.0'):
+    mindspore.tensor = mindspore.Tensor
+    ops.prod = bool_patch_decorator(ops.prod)
+    def _prod(self, axis=None, keep_dims=False):
+        return ops.prod(self, axis, keep_dims)
+    Tensor.prod = _prod
+    StubTensor.prod = _prod
 
 def _eq(self, other):
     if not isinstance(other, (int, float, Tensor)):
@@ -406,7 +425,10 @@ def custom_multinomial(probabilities, num_samples, replacement=True):
     """custom multinomial"""
     if replacement:
         # with replacement
-        cumulative_probs = ops.cumsum(probabilities, axis=-1)
+        if version.parse(mindspore.__version__) < version.parse('2.2.0'):
+            cumulative_probs = mindspore.tensor(np.cumsum(probabilities.asnumpy(), -1), probabilities.dtype)
+        else:
+            cumulative_probs = ops.cumsum(probabilities, axis=-1)
         uniform_samples = ops.rand(probabilities.shape[:-1] + (num_samples,))
         if cumulative_probs.dtype == mindspore.float16:
             cumulative_probs = cumulative_probs.astype(mindspore.float32)

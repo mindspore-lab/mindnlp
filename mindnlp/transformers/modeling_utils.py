@@ -33,6 +33,7 @@ import re
 import json
 from dataclasses import dataclass
 from typing import Union, Optional, Tuple, OrderedDict, Callable, Dict, List
+from packaging import version
 from tqdm.autonotebook import tqdm
 import numpy as np
 
@@ -68,12 +69,15 @@ class CellUtilMixin:
         if not hasattr(self, 'get_mixed_precision_type'):
             return mindspore.float32
         mixed_type = self.get_mixed_precision_type()
+        cast_type = None
         if mixed_type == MixedPrecisionType.FP16:
             cast_type = mindspore.float16
-        elif mixed_type == MixedPrecisionType.BF16:
-            cast_type = mindspore.bfloat16
         else:
             cast_type = mindspore.float32
+
+        if version.parse(mindspore.__version__) < version.parse('2.1.0'):
+            if mixed_type == MixedPrecisionType.BF16:
+                cast_type = mindspore.bfloat16
         return cast_type
 
     @staticmethod
