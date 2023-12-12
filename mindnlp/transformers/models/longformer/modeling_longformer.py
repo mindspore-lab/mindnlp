@@ -13,187 +13,382 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
-# pylint: disable=C0103
-# pylint: disable=C0302
+# pylint: disable=missing-function-docstring
+# pylint: disable=missing-class-docstring
+# pylint: disable=redefined-builtin
+# pylint: disable=attribute-defined-outside-init
+# pylint: disable=invalid-name
+# pylint: disable=arguments-renamed
 """MindSpore Longformer model."""
-import inspect
+
 import math
-from typing import List, Set, Tuple, Callable, Optional, Union
+from dataclasses import dataclass
+from typing import Optional, Tuple, Union
 
 import numpy as np
 import mindspore
-from mindspore import nn
-from mindspore import Tensor
-from mindspore import ops
-from mindspore.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
-from mindnlp.utils import logging
+from mindspore import ops, nn, Parameter, Tensor
+from mindspore.common.initializer import initializer, Normal
+
+from mindnlp.utils import (
+    ModelOutput,
+    logging,
+)
+from ...activations import ACT2FN, gelu
 from ...modeling_utils import PreTrainedModel
-from .longformer_config import LongformerConfig
-from ...activations import ACT2FN
+from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
+from .configuration_longformer import LongformerConfig
+
 
 logger = logging.get_logger(__name__)
 
-def apply_chunking_to_forward(
-    forward_fn: Callable[..., mindspore.Tensor], chunk_size: int, chunk_dim: int, *input_tensors
-) -> mindspore.Tensor:
-    """
-    This function chunks the `input_tensors` into smaller input tensor parts
-    of size `chunk_size` over the dimension
-    `chunk_dim`. It then applies a layer `forward_fn` to each chunk independently to save memory.
+_CHECKPOINT_FOR_DOC = "allenai/longformer-base-4096"
+_CONFIG_FOR_DOC = "LongformerConfig"
 
-    If the `forward_fn` is independent across the `chunk_dim` this function will yield
-    the same result as directly applying `forward_fn` to `input_tensors`.
+LONGFORMER_PRETRAINED_MODEL_ARCHIVE_LIST = [
+    "allenai/longformer-base-4096",
+    "allenai/longformer-large-4096",
+    "allenai/longformer-large-4096-finetuned-triviaqa",
+    "allenai/longformer-base-4096-extra.pos.embd.only",
+    "allenai/longformer-large-4096-extra.pos.embd.only",
+    # See all Longformer models at https://huggingface.co/models?filter=longformer
+]
+
+def scalar_div(input, other, *, rounding_mode="trunc"):
+    """scalar div since ops.div do not support scalar"""
+    if rounding_mode == 'trunc':
+        res = input // other
+        if res < 0:
+            res = res + 1
+        return res
+    if rounding_mode == 'floor':
+        return input // other
+    return input / other
+
+@dataclass
+class LongformerBaseModelOutput(ModelOutput):
+    """
+    Base class for Longformer's outputs, with potential hidden states, local and global attentions.
 
     Args:
-        forward_fn (`Callable[..., torch.Tensor]`):
-            The forward function of the model.
-        chunk_size (`int`):
-            The chunk size of a chunked tensor: `num_chunks = len(input_tensors[0]) / chunk_size`.
-        chunk_dim (`int`):
-            The dimension over which the `input_tensors` should be chunked.
-        input_tensors (`Tuple[torch.Tensor]`):
-            The input tensors of `forward_fn` which will be chunked
+        last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
+            Sequence of hidden-states at the output of the last layer of the model.
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
+            shape `(batch_size, sequence_length, hidden_size)`.
 
-    Returns:
-        `torch.Tensor`: A tensor with the same shape as the `forward_fn`
-         would have given if applied`.
+            Hidden-states of the model at the output of each layer plus the initial embedding outputs.
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x +
+            attention_window + 1)`, where `x` is the number of tokens with global attention mask.
 
+            Local attentions weights after the attention softmax, used to compute the weighted average in the
+            self-attention heads. Those are the attention weights from every token in the sequence to every token with
+            global attention (first `x` values) and to every token in the attention window (remaining `attention_window
+            + 1` values). Note that the first `x` values refer to tokens with fixed positions in the text, but the
+            remaining `attention_window + 1` values refer to tokens with relative positions: the attention weight of a
+            token to itself is located at index `x + attention_window / 2` and the `attention_window / 2` preceding
+            (succeeding) values are the attention weights to the `attention_window / 2` preceding (succeeding) tokens.
+            If the attention window contains a token with global attention, the attention weight at the corresponding
+            index is set to 0; the value should be accessed from the first `x` attention weights. If a token has global
+            attention, the attention weights to all other tokens in `attentions` is set to 0, the values should be
+            accessed from `global_attentions`.
+        global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x)`,
+            where `x` is the number of tokens with global attention mask.
 
-    Examples:
-
-    ```python
-    # rename the usual forward() fn to forward_chunk()
-    def forward_chunk(self, hidden_states):
-        hidden_states = self.decoder(hidden_states)
-        return hidden_states
-
-
-    # implement a chunked forward function
-    def forward(self, hidden_states):
-        return apply_chunking_to_forward(self.forward_chunk, self.chunk_size_lm_head
-        , self.seq_len_dim, hidden_states)
-    ```"""
-
-    assert len(input_tensors) > 0, f"{input_tensors} has to be a tuple/list of tensors"
-
-    # inspect.signature exist since python 3.5 and is a python method
-    # -> no problem with backward compatibility
-    num_args_in_forward_chunk_fn = len(inspect.signature(forward_fn).parameters)
-    if num_args_in_forward_chunk_fn != len(input_tensors):
-        raise ValueError(
-            f"forward_chunk_fn expects {num_args_in_forward_chunk_fn} arguments, but only {len(input_tensors)} input "
-            "tensors are given"
-        )
-
-    if chunk_size > 0:
-        tensor_shape = input_tensors[0].shape[chunk_dim]
-        for input_tensor in input_tensors:
-            if input_tensor.shape[chunk_dim] != tensor_shape:
-                raise ValueError(
-                    f"All input tenors have to be of the same shape: {tensor_shape}, "
-                    f"found shape {input_tensor.shape[chunk_dim]}"
-                )
-
-        if input_tensors[0].shape[chunk_dim] % chunk_size != 0:
-            raise ValueError(
-                f"The dimension to be chunked {input_tensors[0].shape[chunk_dim]} has to be a multiple of the chunk "
-                f"size {chunk_size}"
-            )
-
-        num_chunks = input_tensors[0].shape[chunk_dim] // chunk_size
-
-        # chunk input tensor into tuples
-        input_tensors_chunks = tuple(input_tensor.chunk(num_chunks, dim=chunk_dim) for input_tensor in input_tensors)
-        # apply forward fn to every tuple
-        output_chunks = tuple(forward_fn(*input_tensors_chunk) for input_tensors_chunk in zip(*input_tensors_chunks))
-        # concatenate output at same dimension
-        return ops.cat(output_chunks, axis=chunk_dim)
-
-    return forward_fn(*input_tensors)
-
-
-def find_pruneable_heads_and_indices(
-    heads: List[int], n_heads: int, head_size: int, already_pruned_heads: Set[int]
-) -> Tuple[Set[int], mindspore.Tensor]:
-    # qbh longTensor->tensor
+            Global attentions weights after the attention softmax, used to compute the weighted average in the
+            self-attention heads. Those are the attention weights from every token with global attention to every token
+            in the sequence.
     """
-    Finds the heads and their indices taking `already_pruned_heads` into account.
+
+    last_hidden_state: mindspore.Tensor
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
+    global_attentions: Optional[Tuple[mindspore.Tensor]] = None
+
+
+@dataclass
+class LongformerBaseModelOutputWithPooling(ModelOutput):
+    """
+    Base class for Longformer's outputs that also contains a pooling of the last hidden states.
 
     Args:
-        heads (`List[int]`): List of the indices of heads to prune.
-        n_heads (`int`): The number of heads in the model.
-        head_size (`int`): The size of each head.
-        already_pruned_heads (`Set[int]`): A set of already pruned heads.
+        last_hidden_state (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`):
+            Sequence of hidden-states at the output of the last layer of the model.
+        pooler_output (`mindspore.Tensor` of shape `(batch_size, hidden_size)`):
+            Last layer hidden-state of the first token of the sequence (classification token) further processed by a
+            Linear layer and a Tanh activation function. The Linear layer weights are trained from the next sentence
+            prediction (classification) objective during pretraining.
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
+            shape `(batch_size, sequence_length, hidden_size)`.
 
-    Returns:
-        `Tuple[Set[int], torch.LongTensor]`: A tuple with the remaining heads and their corresponding indices.
-    """
-    mask = mindspore.ops.ones((n_heads, head_size))
-    heads = set(heads) - already_pruned_heads  # Convert to set and remove already pruned heads
-    for head in heads:
-        # Compute how many pruned heads are before the head and move the index accordingly
-        head = head - sum(1 if h < head else 0 for h in already_pruned_heads)
-        mask[head] = 0
-    mask = mask.view(-1).equal(1)
-    index: mindspore.Tensor = mindspore.ops.arange(len(mask))[mask].long()
-    return heads, index
+            Hidden-states of the model at the output of each layer plus the initial embedding outputs.
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x +
+            attention_window + 1)`, where `x` is the number of tokens with global attention mask.
 
+            Local attentions weights after the attention softmax, used to compute the weighted average in the
+            self-attention heads. Those are the attention weights from every token in the sequence to every token with
+            global attention (first `x` values) and to every token in the attention window (remaining `attention_window
+            + 1` values). Note that the first `x` values refer to tokens with fixed positions in the text, but the
+            remaining `attention_window + 1` values refer to tokens with relative positions: the attention weight of a
+            token to itself is located at index `x + attention_window / 2` and the `attention_window / 2` preceding
+            (succeeding) values are the attention weights to the `attention_window / 2` preceding (succeeding) tokens.
+            If the attention window contains a token with global attention, the attention weight at the corresponding
+            index is set to 0; the value should be accessed from the first `x` attention weights. If a token has global
+            attention, the attention weights to all other tokens in `attentions` is set to 0, the values should be
+            accessed from `global_attentions`.
+        global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x)`,
+            where `x` is the number of tokens with global attention mask.
 
-def prune_linear_layer(layer: nn.Dense, index: mindspore.Tensor, dim: int = 0) -> nn.Dense:# qbh longtensor->tensor
+            Global attentions weights after the attention softmax, used to compute the weighted average in the
+            self-attention heads. Those are the attention weights from every token with global attention to every token
+            in the sequence.
     """
-    Prune a linear layer to keep only entries in index.
-    """
-    W = layer.weight.index_select(dim, index).copy()
-    if layer.bias is not None:
-        if dim == 1:
-            b = layer.bias.copy()
-        else:
-            b = layer.bias[index].copy()
-    new_size = list(layer.weight.shape)
-    new_size[dim] = len(index)
-    new_layer = nn.Dense(in_channels=new_size[1], out_channels=new_size[0], has_bias=layer.bias is not None)
-    new_layer.weight.requires_grad = False
-    new_layer.weight.copy_(W)
-    new_layer.weight.requires_grad = True
-    if layer.bias is not None:
-        new_layer.bias.requires_grad = False
-        new_layer.bias.copy_(b)
-        new_layer.bias.requires_grad = True
-    return new_layer
 
-
-def tensor_to_tuple(self):
-    """
-    Computes the index of the first occurrence of `sep_token_id`.
-    """
-    ans = ()
-    for i in range(self.shape[1]):
-        if self.shape[0] == 0:
-            ans = ans + (mindspore.Tensor([], dtype=mindspore.int64), )
-        else:
-            ans = ans + (self[:, i:i+1].reshape(-1), )
-    return ans
+    last_hidden_state: mindspore.Tensor
+    pooler_output: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
+    global_attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
-def as_strided(self, size, stride, storage_offset=None):
+@dataclass
+class LongformerMaskedLMOutput(ModelOutput):
     """
-    Computes the index of the first occurrence of `sep_token_id`.
+    Base class for masked language models outputs.
+
+    Args:
+        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
+            Masked language modeling (MLM) loss.
+        logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, config.vocab_size)`):
+            Prediction scores of the language modeling head (scores for each vocabulary token before SoftMax).
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
+            shape `(batch_size, sequence_length, hidden_size)`.
+
+            Hidden-states of the model at the output of each layer plus the initial embedding outputs.
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x +
+            attention_window + 1)`, where `x` is the number of tokens with global attention mask.
+
+            Local attentions weights after the attention softmax, used to compute the weighted average in the
+            self-attention heads. Those are the attention weights from every token in the sequence to every token with
+            global attention (first `x` values) and to every token in the attention window (remaining `attention_window
+            + 1` values). Note that the first `x` values refer to tokens with fixed positions in the text, but the
+            remaining `attention_window + 1` values refer to tokens with relative positions: the attention weight of a
+            token to itself is located at index `x + attention_window / 2` and the `attention_window / 2` preceding
+            (succeeding) values are the attention weights to the `attention_window / 2` preceding (succeeding) tokens.
+            If the attention window contains a token with global attention, the attention weight at the corresponding
+            index is set to 0; the value should be accessed from the first `x` attention weights. If a token has global
+            attention, the attention weights to all other tokens in `attentions` is set to 0, the values should be
+            accessed from `global_attentions`.
+        global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x)`,
+            where `x` is the number of tokens with global attention mask.
+
+            Global attentions weights after the attention softmax, used to compute the weighted average in the
+            self-attention heads. Those are the attention weights from every token with global attention to every token
+            in the sequence.
     """
-    input_ms = self
-    # if len(size) != len(stride):
-    #     raise RuntimeError("mismatch in length of strides and shape.")
-    index = np.arange(0, size[0] * stride[0], stride[0])
-    for i in range(1, len(size)):
-        tmp = np.arange(0, size[i] * stride[i], stride[i])
-        index = np.expand_dims(index, -1)
-        index = index + tmp
-    if storage_offset is not None:
-        index = index + storage_offset
-    input_indices = mindspore.Tensor(index)
-    out = mindspore.ops.gather(input_ms.reshape(-1), input_indices, 0)
-    out = mindspore.Tensor(out)
-    return out
+
+    loss: Optional[mindspore.Tensor] = None
+    logits: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
+    global_attentions: Optional[Tuple[mindspore.Tensor]] = None
+
+
+@dataclass
+class LongformerQuestionAnsweringModelOutput(ModelOutput):
+    """
+    Base class for outputs of question answering Longformer models.
+
+    Args:
+        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
+            Total span extraction loss is the sum of a Cross-Entropy for the start and end positions.
+        start_logits (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
+            Span-start scores (before SoftMax).
+        end_logits (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
+            Span-end scores (before SoftMax).
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
+            shape `(batch_size, sequence_length, hidden_size)`.
+
+            Hidden-states of the model at the output of each layer plus the initial embedding outputs.
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x +
+            attention_window + 1)`, where `x` is the number of tokens with global attention mask.
+
+            Local attentions weights after the attention softmax, used to compute the weighted average in the
+            self-attention heads. Those are the attention weights from every token in the sequence to every token with
+            global attention (first `x` values) and to every token in the attention window (remaining `attention_window
+            + 1` values). Note that the first `x` values refer to tokens with fixed positions in the text, but the
+            remaining `attention_window + 1` values refer to tokens with relative positions: the attention weight of a
+            token to itself is located at index `x + attention_window / 2` and the `attention_window / 2` preceding
+            (succeeding) values are the attention weights to the `attention_window / 2` preceding (succeeding) tokens.
+            If the attention window contains a token with global attention, the attention weight at the corresponding
+            index is set to 0; the value should be accessed from the first `x` attention weights. If a token has global
+            attention, the attention weights to all other tokens in `attentions` is set to 0, the values should be
+            accessed from `global_attentions`.
+        global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x)`,
+            where `x` is the number of tokens with global attention mask.
+
+            Global attentions weights after the attention softmax, used to compute the weighted average in the
+            self-attention heads. Those are the attention weights from every token with global attention to every token
+            in the sequence.
+    """
+
+    loss: Optional[mindspore.Tensor] = None
+    start_logits: mindspore.Tensor = None
+    end_logits: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
+    global_attentions: Optional[Tuple[mindspore.Tensor]] = None
+
+
+@dataclass
+class LongformerSequenceClassifierOutput(ModelOutput):
+    """
+    Base class for outputs of sentence classification models.
+
+    Args:
+        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
+            Classification (or regression if config.num_labels==1) loss.
+        logits (`mindspore.Tensor` of shape `(batch_size, config.num_labels)`):
+            Classification (or regression if config.num_labels==1) scores (before SoftMax).
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
+            shape `(batch_size, sequence_length, hidden_size)`.
+
+            Hidden-states of the model at the output of each layer plus the initial embedding outputs.
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x +
+            attention_window + 1)`, where `x` is the number of tokens with global attention mask.
+
+            Local attentions weights after the attention softmax, used to compute the weighted average in the
+            self-attention heads. Those are the attention weights from every token in the sequence to every token with
+            global attention (first `x` values) and to every token in the attention window (remaining `attention_window
+            + 1` values). Note that the first `x` values refer to tokens with fixed positions in the text, but the
+            remaining `attention_window + 1` values refer to tokens with relative positions: the attention weight of a
+            token to itself is located at index `x + attention_window / 2` and the `attention_window / 2` preceding
+            (succeeding) values are the attention weights to the `attention_window / 2` preceding (succeeding) tokens.
+            If the attention window contains a token with global attention, the attention weight at the corresponding
+            index is set to 0; the value should be accessed from the first `x` attention weights. If a token has global
+            attention, the attention weights to all other tokens in `attentions` is set to 0, the values should be
+            accessed from `global_attentions`.
+        global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x)`,
+            where `x` is the number of tokens with global attention mask.
+
+            Global attentions weights after the attention softmax, used to compute the weighted average in the
+            self-attention heads. Those are the attention weights from every token with global attention to every token
+            in the sequence.
+    """
+
+    loss: Optional[mindspore.Tensor] = None
+    logits: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
+    global_attentions: Optional[Tuple[mindspore.Tensor]] = None
+
+
+@dataclass
+class LongformerMultipleChoiceModelOutput(ModelOutput):
+    """
+    Base class for outputs of multiple choice Longformer models.
+
+    Args:
+        loss (`mindspore.Tensor` of shape *(1,)*, *optional*, returned when `labels` is provided):
+            Classification loss.
+        logits (`mindspore.Tensor` of shape `(batch_size, num_choices)`):
+            *num_choices* is the second dimension of the input tensors. (see *input_ids* above).
+
+            Classification scores (before SoftMax).
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
+            shape `(batch_size, sequence_length, hidden_size)`.
+
+            Hidden-states of the model at the output of each layer plus the initial embedding outputs.
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x +
+            attention_window + 1)`, where `x` is the number of tokens with global attention mask.
+
+            Local attentions weights after the attention softmax, used to compute the weighted average in the
+            self-attention heads. Those are the attention weights from every token in the sequence to every token with
+            global attention (first `x` values) and to every token in the attention window (remaining `attention_window
+            + 1` values). Note that the first `x` values refer to tokens with fixed positions in the text, but the
+            remaining `attention_window + 1` values refer to tokens with relative positions: the attention weight of a
+            token to itself is located at index `x + attention_window / 2` and the `attention_window / 2` preceding
+            (succeeding) values are the attention weights to the `attention_window / 2` preceding (succeeding) tokens.
+            If the attention window contains a token with global attention, the attention weight at the corresponding
+            index is set to 0; the value should be accessed from the first `x` attention weights. If a token has global
+            attention, the attention weights to all other tokens in `attentions` is set to 0, the values should be
+            accessed from `global_attentions`.
+        global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x)`,
+            where `x` is the number of tokens with global attention mask.
+
+            Global attentions weights after the attention softmax, used to compute the weighted average in the
+            self-attention heads. Those are the attention weights from every token with global attention to every token
+            in the sequence.
+    """
+
+    loss: Optional[mindspore.Tensor] = None
+    logits: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
+    global_attentions: Optional[Tuple[mindspore.Tensor]] = None
+
+
+@dataclass
+class LongformerTokenClassifierOutput(ModelOutput):
+    """
+    Base class for outputs of token classification models.
+
+    Args:
+        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided) :
+            Classification loss.
+        logits (`mindspore.Tensor` of shape `(batch_size, sequence_length, config.num_labels)`):
+            Classification scores (before SoftMax).
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
+            shape `(batch_size, sequence_length, hidden_size)`.
+
+            Hidden-states of the model at the output of each layer plus the initial embedding outputs.
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x +
+            attention_window + 1)`, where `x` is the number of tokens with global attention mask.
+
+            Local attentions weights after the attention softmax, used to compute the weighted average in the
+            self-attention heads. Those are the attention weights from every token in the sequence to every token with
+            global attention (first `x` values) and to every token in the attention window (remaining `attention_window
+            + 1` values). Note that the first `x` values refer to tokens with fixed positions in the text, but the
+            remaining `attention_window + 1` values refer to tokens with relative positions: the attention weight of a
+            token to itself is located at index `x + attention_window / 2` and the `attention_window / 2` preceding
+            (succeeding) values are the attention weights to the `attention_window / 2` preceding (succeeding) tokens.
+            If the attention window contains a token with global attention, the attention weight at the corresponding
+            index is set to 0; the value should be accessed from the first `x` attention weights. If a token has global
+            attention, the attention weights to all other tokens in `attentions` is set to 0, the values should be
+            accessed from `global_attentions`.
+        global_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length, x)`,
+            where `x` is the number of tokens with global attention mask.
+
+            Global attentions weights after the attention softmax, used to compute the weighted average in the
+            self-attention heads. Those are the attention weights from every token with global attention to every token
+            in the sequence.
+    """
+
+    loss: Optional[mindspore.Tensor] = None
+    logits: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
+    global_attentions: Optional[Tuple[mindspore.Tensor]] = None
 
 
 def _get_question_end_index(input_ids, sep_token_id):
@@ -206,31 +401,28 @@ def _get_question_end_index(input_ids, sep_token_id):
 
     assert sep_token_indices.shape[1] == 2, "`input_ids` should have two dimensions"
     assert sep_token_indices.shape[0] == 3 * batch_size, (
-        f"There should be exactly three separator tokens: {sep_token_id} "
-        f"in every sample for questions answering. You"
-        " might also consider to set `global_attention_mask` manually i"
-        "n the forward function to avoid this error."
+        f"There should be exactly three separator tokens: {sep_token_id} in every sample for questions answering. You"
+        " might also consider to set `global_attention_mask` manually in the forward function to avoid this error."
     )
     return sep_token_indices.view(batch_size, 3, 2)[:, 0, 1]
 
 
 def _compute_global_attention_mask(input_ids, sep_token_id, before_sep_token=True):
     """
-    Computes global attention mask by putting attention on all
-    tokens before `sep_token_id` if `before_sep_token is
+    Computes global attention mask by putting attention on all tokens before `sep_token_id` if `before_sep_token is
     True` else after `sep_token_id`.
     """
     question_end_index = _get_question_end_index(input_ids, sep_token_id)
     question_end_index = question_end_index.unsqueeze(dim=1)  # size: batch_size x 1
     # bool attention mask with True in locations of global attention
-    attention_mask = ops.arange(input_ids.shape[1])  # qbh delete device
+    attention_mask = ops.arange(input_ids.shape[1])
     if before_sep_token is True:
-        attention_mask = (attention_mask.expand_as(input_ids) < question_end_index).to(mindspore.uint8)
+        attention_mask = (attention_mask.expand_as(input_ids) < question_end_index).to(mindspore.bool_)
     else:
         # last token is separation token and should not be counted and in the middle are two separation tokens
-        attention_mask = (attention_mask.expand_as(input_ids) > (question_end_index + 1)).to(mindspore.uint8) * (
+        attention_mask = (attention_mask.expand_as(input_ids) > (question_end_index + 1)).to(mindspore.bool_) * (
             attention_mask.expand_as(input_ids) < input_ids.shape[-1]
-        ).to(mindspore.uint8)
+        ).to(mindspore.bool_)
 
     return attention_mask
 
@@ -241,32 +433,30 @@ def create_position_ids_from_input_ids(input_ids, padding_idx):
     are ignored. This is modified from fairseq's `utils.make_positions`.
 
     Args:
-        x: torch.Tensor x:
-_
-    Returns: torch.Tensor
+        x: mindspore.Tensor x:
+
+    Returns: mindspore.Tensor
     """
     # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
-    mask = mindspore.ops.not_equal(input_ids, padding_idx).astype(mindspore.int32)
-    incremental_indices = mindspore.ops.cumsum(mask, axis=1, dtype=mask.dtype) * mask
-    return incremental_indices.astype(mindspore.int32) + padding_idx
+    mask = input_ids.ne(padding_idx).int()
+    incremental_indices = ops.cumsum(mask, axis=1).astype(mask.dtype) * mask
+    return incremental_indices.long() + padding_idx
 
 
 class LongformerEmbeddings(nn.Cell):
     """
     Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
     """
+
     def __init__(self, config):
         super().__init__()
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
-        self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
         self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm(normalized_shape=(config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
-
-        self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
 
         self.padding_idx = config.pad_token_id
         self.position_embeddings = nn.Embedding(
@@ -274,7 +464,6 @@ class LongformerEmbeddings(nn.Cell):
         )
 
     def construct(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
-        """forward"""
         if position_ids is None:
             if input_ids is not None:
                 # Create the position ids from the input token ids. Any padded tokens remain padded.
@@ -288,11 +477,10 @@ class LongformerEmbeddings(nn.Cell):
             input_shape = inputs_embeds.shape[:-1]
 
         if token_type_ids is None:
-            token_type_ids = mindspore.ops.zeros(input_shape, dtype=mindspore.int64)  # delete device
+            token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
-
         position_embeddings = self.position_embeddings(position_ids)
         token_type_embeddings = self.token_type_embeddings(token_type_ids)
 
@@ -306,23 +494,20 @@ class LongformerEmbeddings(nn.Cell):
         We are provided embeddings directly. We cannot infer which are padded so just generate sequential position ids.
 
         Args:
-            inputs_embeds: torch.Tensor inputs_embeds:
+            inputs_embeds: mindspore.Tensor inputs_embeds:
 
-        Returns: torch.Tensor
+        Returns: mindspore.Tensor
         """
-        input_shape = inputs_embeds.size()[:-1]
+        input_shape = inputs_embeds.shape[:-1]
         sequence_length = input_shape[1]
 
         position_ids = ops.arange(
-            self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=mindspore.int64  # delete device
+            self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=mindspore.int64
         )
         return position_ids.unsqueeze(0).broadcast_to(input_shape)
 
 
 class LongformerSelfAttention(nn.Cell):
-    """
-    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
-    """
     def __init__(self, config, layer_id):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0:
@@ -330,8 +515,6 @@ class LongformerSelfAttention(nn.Cell):
                 f"The hidden size ({config.hidden_size}) is not a multiple of the number of attention "
                 f"heads ({config.num_attention_heads})"
             )
-        self.num_attention_heads = None
-        self.all_head_size = None
         self.num_heads = config.num_attention_heads
         self.head_dim = int(config.hidden_size / config.num_attention_heads)
         self.embed_dim = config.hidden_size
@@ -346,6 +529,7 @@ class LongformerSelfAttention(nn.Cell):
         self.value_global = nn.Dense(config.hidden_size, self.embed_dim)
 
         self.dropout = config.attention_probs_dropout_prob
+
         self.layer_id = layer_id
         attention_window = config.attention_window[self.layer_id]
         assert (
@@ -356,6 +540,7 @@ class LongformerSelfAttention(nn.Cell):
         ), f"`attention_window` for layer {self.layer_id} has to be positive. Given {attention_window}"
 
         self.one_sided_attn_window_size = attention_window // 2
+
         self.config = config
 
     def construct(
@@ -394,10 +579,7 @@ class LongformerSelfAttention(nn.Cell):
         query_vectors /= math.sqrt(self.head_dim)
 
         query_vectors = query_vectors.view(seq_len, batch_size, self.num_heads, self.head_dim).swapaxes(0, 1)
-        query_vectors = mindspore.Tensor(query_vectors)
-
         key_vectors = key_vectors.view(seq_len, batch_size, self.num_heads, self.head_dim).swapaxes(0, 1)
-        key_vectors = mindspore.Tensor(key_vectors)
 
         attn_scores = self._sliding_chunks_query_key_matmul(
             query_vectors, key_vectors, self.one_sided_attn_window_size
@@ -407,10 +589,8 @@ class LongformerSelfAttention(nn.Cell):
         remove_from_windowed_attention_mask = (attention_mask != 0)[:, :, None, None]
 
         # cast to fp32/fp16 then replace 1's with -inf
-
         float_mask = remove_from_windowed_attention_mask.astype(query_vectors.dtype).masked_fill(
-            remove_from_windowed_attention_mask,
-            Tensor(np.finfo(mindspore.dtype_to_nptype(query_vectors.dtype)).min, dtype=query_vectors.dtype)
+            remove_from_windowed_attention_mask, float(np.finfo(mindspore.dtype_to_nptype(query_vectors.dtype)).min)
         )
         # diagonal mask with zeros everywhere and -inf inplace of padding
         diagonal_mask = self._sliding_chunks_query_key_matmul(
@@ -419,6 +599,7 @@ class LongformerSelfAttention(nn.Cell):
 
         # pad local attention probs
         attn_scores += diagonal_mask
+
         assert list(attn_scores.shape) == [
             batch_size,
             seq_len,
@@ -426,7 +607,7 @@ class LongformerSelfAttention(nn.Cell):
             self.one_sided_attn_window_size * 2 + 1,
         ], (
             f"local_attn_probs should be of size ({batch_size}, {seq_len}, {self.num_heads},"
-            f" {self.one_sided_attn_window_size * 2 + 1}), but is of size {attn_scores.size()}"
+            f" {self.one_sided_attn_window_size * 2 + 1}), but is of size {attn_scores.shape}"
         )
 
         # compute local attention probs from global attention keys and contact over window dim
@@ -439,8 +620,6 @@ class LongformerSelfAttention(nn.Cell):
                 is_local_index_no_global_attn_nonzero,
             ) = self._get_global_attn_indices(is_index_global_attn)
             # calculate global attn probs from global key
-
-
             global_key_attn_scores = self._concat_with_global_key_attn_probs(
                 query_vectors=query_vectors,
                 key_vectors=key_vectors,
@@ -451,33 +630,33 @@ class LongformerSelfAttention(nn.Cell):
             )
             # concat to local_attn_probs
             # (batch_size, seq_len, num_heads, extra attention count + 2*window+1)
-            attn_scores = mindspore.ops.cat((global_key_attn_scores, attn_scores), axis=-1)
+            attn_scores = ops.cat((global_key_attn_scores, attn_scores), axis=-1)
 
             # free memory
             del global_key_attn_scores
 
-        attn_probs = mindspore.ops.softmax(
-            attn_scores, axis=-1
+        attn_probs = ops.softmax(
+            attn_scores, axis=-1, dtype=mindspore.float32
         )  # use fp32 for numerical stability
-        attn_probs = mindspore.Tensor(attn_probs, dtype=mindspore.float32)
 
         if layer_head_mask is not None:
-            assert layer_head_mask.size() == (
+            assert layer_head_mask.shape == (
                 self.num_heads,
-            ), f"Head mask for a single layer should be of size {(self.num_heads,)}, but is {layer_head_mask.size()}"
+            ), f"Head mask for a single layer should be of size {(self.num_heads,)}, but is {layer_head_mask.shape}"
             attn_probs = layer_head_mask.view(1, 1, -1, 1) * attn_probs
-        # softmax sometimes inserts NaN if all positions are masked, replace them with 0
 
-        attn_probs = ops.masked_fill(attn_probs, is_index_masked[:, :, None, None], 0.0)
+        # softmax sometimes inserts NaN if all positions are masked, replace them with 0
+        attn_probs = attn_probs.masked_fill(is_index_masked[:, :, None, None], 0.0)
         attn_probs = attn_probs.astype(attn_scores.dtype)
 
         # free memory
         del attn_scores
 
         # apply dropout
-        attn_probs = ops.dropout(attn_probs, p=self.dropout, training=self.training)  # qbh no training?
+        attn_probs = ops.dropout(attn_probs, p=self.dropout, training=self.training)
+
         value_vectors = value_vectors.view(seq_len, batch_size, self.num_heads, self.head_dim).swapaxes(0, 1)
-        value_vectors = mindspore.Tensor(value_vectors)
+
         # compute local attention output with global attention value and add
         if is_global_attn:
             # compute sum of global and local attn
@@ -494,9 +673,9 @@ class LongformerSelfAttention(nn.Cell):
                 attn_probs, value_vectors, self.one_sided_attn_window_size
             )
 
-        assert attn_output.shape == (batch_size, seq_len, self.num_heads, self.head_dim), \
-            "Unexpected size"  # qbh want ask
+        assert attn_output.shape == (batch_size, seq_len, self.num_heads, self.head_dim), "Unexpected size"
         attn_output = attn_output.swapaxes(0, 1).reshape(seq_len, batch_size, embed_dim)
+
         # compute value for global attention and overwrite to attention output
         # TODO: remove the redundant computation
         if is_global_attn:
@@ -528,12 +707,13 @@ class LongformerSelfAttention(nn.Cell):
 
         if output_attentions:
             outputs += (attn_probs,)
+
         return outputs + (global_attn_probs,) if (is_global_attn and output_attentions) else outputs
 
     @staticmethod
-    def _pad_and_transpose_last_two_dims(hidden_states_padded, padding):
+    def _pad_and_swapaxes_last_two_dims(hidden_states_padded, padding):
         """pads rows and then flips rows and columns"""
-        hidden_states_padded = mindspore.ops.pad(
+        hidden_states_padded = ops.pad(
             hidden_states_padded, padding
         )  # padding value is not important because it will be overwritten
         hidden_states_padded = hidden_states_padded.view(
@@ -575,16 +755,15 @@ class LongformerSelfAttention(nn.Cell):
                        -0.0405, 0.1599, 0.0000 0.0000, 0.0000, 0.0000, 2.0514, -1.1600, 0.5372, 0.2629 ]
         """
         total_num_heads, num_chunks, window_overlap, hidden_dim = chunked_hidden_states.shape
-        chunked_hidden_states = mindspore.ops.pad(
+        chunked_hidden_states = ops.pad(
             chunked_hidden_states, (0, window_overlap + 1)
-        )  # total_num_heads x num_chunks x window_overlap x (hidden_dim+window_overlap+1).
-        # Padding value is not important because it'll be overwritten
+        )  # total_num_heads x num_chunks x window_overlap x (hidden_dim+window_overlap+1). Padding value is not important because it'll be overwritten
         chunked_hidden_states = chunked_hidden_states.view(
             total_num_heads, num_chunks, -1
         )  # total_num_heads x num_chunks x window_overlap*window_overlap+window_overlap
         chunked_hidden_states = chunked_hidden_states[
-                                :, :, :-window_overlap
-                                ]  # total_num_heads x num_chunks x window_overlap*window_overlap
+            :, :, :-window_overlap
+        ]  # total_num_heads x num_chunks x window_overlap*window_overlap
         chunked_hidden_states = chunked_hidden_states.view(
             total_num_heads, num_chunks, window_overlap, window_overlap + hidden_dim
         )
@@ -598,12 +777,7 @@ class LongformerSelfAttention(nn.Cell):
             # non-overlapping chunks of size = 2w
             hidden_states = hidden_states.view(
                 hidden_states.shape[0],
-                # mindspore.ops.div(
-                #     Tensor(hidden_states.shape[1], dtype=mindspore.int32),
-                #     Tensor((window_overlap * 2), dtype=mindspore.int32),
-                #     rounding_mode="trunc"),
-                # qbh change div
-                int(hidden_states.shape[1] / (window_overlap * 2)),
+                scalar_div(hidden_states.shape[1], (window_overlap * 2), rounding_mode="trunc"),
                 window_overlap * 2,
                 hidden_states.shape[2],
             )
@@ -611,51 +785,45 @@ class LongformerSelfAttention(nn.Cell):
             chunk_size = list(hidden_states.shape)
             chunk_size[1] = chunk_size[1] * 2 - 1
 
-            chunk_stride = list(int(x / 4) for x in hidden_states.strides)
+            chunk_stride = list(hidden_states.stride())
             chunk_stride[1] = chunk_stride[1] // 2
-            value = as_strided(self=hidden_states, size=chunk_size, stride=chunk_stride)
-            return value
+            return hidden_states.as_strided(size=chunk_size, stride=chunk_stride)
 
         # When exporting to ONNX, use this separate logic
-        # have to use slow implementation since as_strided, unfold and
-        # 2d-tensor indexing aren't supported (yet) in ONNX export
+        # have to use slow implementation since as_strided, unfold and 2d-tensor indexing aren't supported (yet) in ONNX export
 
         # TODO replace this with
-        # > return hidden_states.unfold(dimension=1, size=window_overlap * 2, step=window_overlap).transpose(2, 3)
+        # > return hidden_states.unfold(dimension=1, size=window_overlap * 2, step=window_overlap).swapaxes(2, 3)
         # once `unfold` is supported
-        # the case hidden_states.size(1) == window_overlap * 2 can also
-        # simply return hidden_states.unsqueeze(1), but that's control flow
+        # the case hidden_states.shape[1] == window_overlap * 2 can also simply return hidden_states.unsqueeze(1), but that's control flow
 
         chunk_size = [
-            hidden_states.size(0),
-            mindspore.ops.div(hidden_states.size(1), window_overlap, rounding_mode="trunc") - 1,
+            hidden_states.shape[0],
+            scalar_div(hidden_states.shape[1], window_overlap, rounding_mode="trunc") - 1,
             window_overlap * 2,
-            hidden_states.size(2),
+            hidden_states.shape[2],
         ]
-        overlapping_chunks = ops.zeros(chunk_size)
+
+        overlapping_chunks = mindspore.zeros(chunk_size)
         for chunk in range(chunk_size[1]):
             overlapping_chunks[:, chunk, :, :] = hidden_states[
-                                                 :, chunk * window_overlap: chunk * window_overlap + 2 * window_overlap,
-                                                 :
-                                                 ]
+                :, chunk * window_overlap : chunk * window_overlap + 2 * window_overlap, :
+            ]
         return overlapping_chunks
 
     @staticmethod
     def _mask_invalid_locations(input_tensor, affected_seq_len) -> mindspore.Tensor:
-
         beginning_mask_2d = input_tensor.new_ones((affected_seq_len, affected_seq_len + 1)).tril().flip(dims=[0])
         beginning_mask = beginning_mask_2d[None, :, None, :]
-        ending_mask = ops.flip(beginning_mask.copy(), dims=(1, 3))
+        ending_mask = beginning_mask.flip(dims=(1, 3))
         beginning_input = input_tensor[:, :affected_seq_len, :, : affected_seq_len + 1]
-        beginning_mask = ops.broadcast_to(beginning_mask, beginning_input.shape)
-
+        beginning_mask = beginning_mask.expand(beginning_input.shape)
         input_tensor[:, :affected_seq_len, :, : affected_seq_len + 1] = ops.full_like(
             beginning_input, -float("inf")
         ).where(beginning_mask.bool(), beginning_input)
-
-        ending_input = input_tensor[:, -affected_seq_len:, :, -(affected_seq_len + 1):]
-        ending_mask = ending_mask.broadcast_to(ending_input.shape)
-        input_tensor[:, -affected_seq_len:, :, -(affected_seq_len + 1):] = ops.full_like(
+        ending_input = input_tensor[:, -affected_seq_len:, :, -(affected_seq_len + 1) :]
+        ending_mask = ending_mask.expand(ending_input.shape)
+        input_tensor[:, -affected_seq_len:, :, -(affected_seq_len + 1) :] = ops.full_like(
             ending_input, -float("inf")
         ).where(ending_mask.bool(), ending_input)
 
@@ -667,59 +835,55 @@ class LongformerSelfAttention(nn.Cell):
         """
         batch_size, seq_len, num_heads, head_dim = query.shape
         assert (
-                seq_len % (window_overlap * 2) == 0
+            seq_len % (window_overlap * 2) == 0
         ), f"Sequence length should be multiple of {window_overlap * 2}. Given {seq_len}"
         assert query.shape == key.shape
-        chunks_count = mindspore.ops.div(
-            Tensor(seq_len, dtype=mindspore.int32),
-            Tensor(window_overlap, dtype=mindspore.int32),
-            rounding_mode="trunc"
-        ) - 1
+
+        chunks_count = scalar_div(seq_len, window_overlap, rounding_mode="trunc") - 1
+
         # group batch_size and num_heads dimensions into one, then chunk seq_len into chunks of size window_overlap * 2
         query = query.swapaxes(1, 2).reshape(batch_size * num_heads, seq_len, head_dim)
         key = key.swapaxes(1, 2).reshape(batch_size * num_heads, seq_len, head_dim)
-        query = self._chunk(query, window_overlap, self.config.__dict__.get("onnx_export", False))
-        key = self._chunk(key, window_overlap, self.config.__dict__.get("onnx_export", False))
+
+        query = self._chunk(query, window_overlap, getattr(self.config, "onnx_export", False))
+        key = self._chunk(key, window_overlap, getattr(self.config, "onnx_export", False))
 
         # matrix multiplication
         # bcxd: batch_size * num_heads x chunks x 2window_overlap x head_dim
         # bcyd: batch_size * num_heads x chunks x 2window_overlap x head_dim
         # bcxy: batch_size * num_heads x chunks x 2window_overlap x 2window_overlap
-        # diagonal_chunked_attention_scores = ops.einsum("bcxd,bcyd->bcxy", query, key)  # multiply
+        diagonal_chunked_attention_scores = ops.einsum("bcxd,bcyd->bcxy", (query, key))  # multiply
 
-        diagonal_chunked_attention_scores = ops.einsum(
-            "bcxd,bcyd->bcxy", query, key
-        )
         # convert diagonals into columns
-        diagonal_chunked_attention_scores = self._pad_and_transpose_last_two_dims(
+        diagonal_chunked_attention_scores = self._pad_and_swapaxes_last_two_dims(
             diagonal_chunked_attention_scores, padding=(0, 0, 0, 1)
         )
 
         # allocate space for the overall attention matrix where the chunks are combined. The last dimension
-        # has (window_overlap * 2 + 1) columns. The first (window_overlap)
-        # columns are the window_overlap lower triangles (attention from a word to
+        # has (window_overlap * 2 + 1) columns. The first (window_overlap) columns are the window_overlap lower triangles (attention from a word to
         # window_overlap previous words). The following column is attention score from each word to itself, then
         # followed by window_overlap columns for the upper triangle.
+
         diagonal_attention_scores = diagonal_chunked_attention_scores.new_zeros(
-            (batch_size * num_heads, int(chunks_count) + 1, window_overlap, window_overlap * 2 + 1)
+            (batch_size * num_heads, chunks_count + 1, window_overlap, window_overlap * 2 + 1)
         )
+
         # copy parts from diagonal_chunked_attention_scores into the combined matrix of attentions
         # - copying the main diagonal and the upper triangle
         diagonal_attention_scores[:, :-1, :, window_overlap:] = diagonal_chunked_attention_scores[
-                                                                :, :, :window_overlap, : window_overlap + 1
-                                                                ]
+            :, :, :window_overlap, : window_overlap + 1
+        ]
         diagonal_attention_scores[:, -1, :, window_overlap:] = diagonal_chunked_attention_scores[
-                                                               :, -1, window_overlap:, : window_overlap + 1
-                                                               ]
+            :, -1, window_overlap:, : window_overlap + 1
+        ]
         # - copying the lower triangle
         diagonal_attention_scores[:, 1:, :, :window_overlap] = diagonal_chunked_attention_scores[
-                                                               :, :, -(window_overlap + 1): -1, window_overlap + 1:
-                                                               ]
+            :, :, -(window_overlap + 1) : -1, window_overlap + 1 :
+        ]
 
         diagonal_attention_scores[:, 0, 1:window_overlap, 1:window_overlap] = diagonal_chunked_attention_scores[
-                                                                              :, 0, : window_overlap - 1,
-                                                                              1 - window_overlap:
-                                                                              ]
+            :, 0, : window_overlap - 1, 1 - window_overlap :
+        ]
 
         # separate batch_size and num_heads dimensions again
         diagonal_attention_scores = diagonal_attention_scores.view(
@@ -730,7 +894,7 @@ class LongformerSelfAttention(nn.Cell):
         return diagonal_attention_scores
 
     def _sliding_chunks_matmul_attn_probs_value(
-            self, attn_probs: mindspore.Tensor, value: mindspore.Tensor, window_overlap: int
+        self, attn_probs: mindspore.Tensor, value: mindspore.Tensor, window_overlap: int
     ):
         """
         Same as _sliding_chunks_query_key_matmul but for attn_probs and value tensors. Returned tensor will be of the
@@ -741,20 +905,12 @@ class LongformerSelfAttention(nn.Cell):
         assert seq_len % (window_overlap * 2) == 0
         assert attn_probs.shape[:3] == value.shape[:3]
         assert attn_probs.shape[3] == 2 * window_overlap + 1
-        chunks_count = mindspore.ops.div(
-            Tensor(seq_len, dtype=mindspore.float32),
-            Tensor(window_overlap, dtype=mindspore.float32),
-            rounding_mode="trunc"
-        ) - 1
+        chunks_count = scalar_div(seq_len, window_overlap, rounding_mode="trunc") - 1
         # group batch_size and num_heads dimensions into one, then chunk seq_len into chunks of size 2 window overlap
 
         chunked_attn_probs = attn_probs.swapaxes(1, 2).reshape(
             batch_size * num_heads,
-            int(mindspore.ops.div(
-                Tensor(seq_len, dtype=mindspore.float32),
-                Tensor(window_overlap, dtype=mindspore.float32),
-                rounding_mode="trunc"
-            )),
+            scalar_div(seq_len, window_overlap, rounding_mode="trunc"),
             window_overlap,
             2 * window_overlap + 1,
         )
@@ -763,28 +919,22 @@ class LongformerSelfAttention(nn.Cell):
         value = value.swapaxes(1, 2).reshape(batch_size * num_heads, seq_len, head_dim)
 
         # pad seq_len with w at the beginning of the sequence and another window overlap at the end
-        padded_value = mindspore.ops.pad(value, (0, 0, window_overlap, window_overlap), value=-1)
+        padded_value = ops.pad(value, (0, 0, window_overlap, window_overlap), value=-1)
 
         # chunk padded_value into chunks of size 3 window overlap and an overlap of size window overlap
-        chunked_value_size = (batch_size * num_heads, int(chunks_count) + 1, 3 * window_overlap, head_dim)
-        chunked_value_stride = tuple(int(x / 4) for x in padded_value.strides)
+        chunked_value_size = (batch_size * num_heads, chunks_count + 1, 3 * window_overlap, head_dim)
+        chunked_value_stride = padded_value.stride()
         chunked_value_stride = (
             chunked_value_stride[0],
             window_overlap * chunked_value_stride[1],
             chunked_value_stride[1],
             chunked_value_stride[2],
         )
-        # chunked_value = padded_value.as_strided(
-        # size=chunked_value_size, stride=chunked_value_stride)  # qbh no as_stride
-        chunked_value = as_strided(self=padded_value, size=chunked_value_size, stride=chunked_value_stride)
+        chunked_value = padded_value.as_strided(size=chunked_value_size, stride=chunked_value_stride)
+
         chunked_attn_probs = self._pad_and_diagonalize(chunked_attn_probs)
 
-        # context = ops.einsum("bcwd,bcdh->bcwh", chunked_attn_probs, chunked_value)
-        context = Tensor(np.einsum(
-            "bcwd,bcdh->bcwh",
-            chunked_attn_probs.asnumpy(),
-            chunked_value.asnumpy()
-        ))
+        context = ops.einsum("bcwd,bcdh->bcwh", (chunked_attn_probs, chunked_value))
         return context.view(batch_size, num_heads, seq_len, head_dim).swapaxes(1, 2)
 
     @staticmethod
@@ -794,23 +944,18 @@ class LongformerSelfAttention(nn.Cell):
         num_global_attn_indices = is_index_global_attn.long().sum(axis=1)
 
         # max number of global attn indices in batch
-        max_num_global_attn_indices = num_global_attn_indices.max()
+        max_num_global_attn_indices = num_global_attn_indices.max().item()
 
         # indices of global attn
-        is_index_global_attn_nonzero = is_index_global_attn.nonzero()  # as_tuple=True
-        is_index_global_attn_nonzero = tensor_to_tuple(is_index_global_attn_nonzero)
+        is_index_global_attn_nonzero = is_index_global_attn.nonzero(as_tuple=True)
         # helper variable
-        is_local_index_global_attn = ops.arange(
-            max_num_global_attn_indices
-        ) < num_global_attn_indices.unsqueeze(dim=-1)
+        is_local_index_global_attn = ops.arange(max_num_global_attn_indices) < num_global_attn_indices.unsqueeze(dim=-1)
+
         # location of the non-padding values within global attention indices
-        is_local_index_global_attn_nonzero = is_local_index_global_attn.nonzero()
-        # qbh delete as_tuple = false
-        is_local_index_global_attn_nonzero = tensor_to_tuple(is_local_index_global_attn_nonzero)
+        is_local_index_global_attn_nonzero = is_local_index_global_attn.nonzero(as_tuple=True)
+
         # location of the padding values within global attention indices
-        is_local_index_no_global_attn_nonzero = (is_local_index_global_attn == 0).nonzero()
-        # qbh delete as_tuple = false
-        is_local_index_no_global_attn_nonzero = tensor_to_tuple(is_local_index_no_global_attn_nonzero)
+        is_local_index_no_global_attn_nonzero = (is_local_index_global_attn == 0).nonzero(as_tuple=True)
         return (
             max_num_global_attn_indices,
             is_index_global_attn_nonzero,
@@ -827,32 +972,23 @@ class LongformerSelfAttention(nn.Cell):
         is_local_index_global_attn_nonzero,
         is_local_index_no_global_attn_nonzero,
     ):
-        batch_size = key_vectors.shape[0]  # qbh don't understand hint
+        batch_size = key_vectors.shape[0]
+
         # create only global key vectors
         key_vectors_only_global = key_vectors.new_zeros(
-            (batch_size, int(max_num_global_attn_indices), self.num_heads, self.head_dim)
+            (batch_size, max_num_global_attn_indices, self.num_heads, self.head_dim)
         )
+        key_vectors_only_global[is_local_index_global_attn_nonzero] = key_vectors[is_index_global_attn_nonzero]
 
-        key_vectors_only_global[is_local_index_global_attn_nonzero] = \
-            key_vectors[is_index_global_attn_nonzero]
-        key_vectors_only_global = Tensor(key_vectors_only_global)
         # (batch_size, seq_len, num_heads, max_num_global_attn_indices)
-        # attn_probs_from_global_key = ops.einsum("blhd,bshd->blhs", query_vectors, key_vectors_only_global)
-        attn_probs_from_global_key = ops.einsum(
-            "blhd,bshd->blhs", query_vectors, key_vectors_only_global
-        )
+        attn_probs_from_global_key = ops.einsum("blhd,bshd->blhs", (query_vectors, key_vectors_only_global))
 
+        # need to swapaxes since ONNX export only supports consecutive indexing: https://pytorch.org/docs/stable/onnx.html#writes-sets
         attn_probs_from_global_key = attn_probs_from_global_key.swapaxes(1, 3)
-
-        if is_local_index_no_global_attn_nonzero[0].shape[0] != 0:
-            pass
-        #     attn_probs_from_global_key[
-        #         is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
-        #     ] = Tensor(np.finfo(
-        #         mindspore.dtype_to_nptype(attn_probs_from_global_key.dtype)).min,
-        #                dtype=attn_probs_from_global_key.dtype
-        #                )
-
+        if 0 not in is_local_index_no_global_attn_nonzero[0].shape:
+            attn_probs_from_global_key[
+                is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
+            ] = float(np.finfo(mindspore.dtype_to_nptype(attn_probs_from_global_key.dtype)).min)
         attn_probs_from_global_key = attn_probs_from_global_key.swapaxes(1, 3)
 
         return attn_probs_from_global_key
@@ -868,10 +1004,10 @@ class LongformerSelfAttention(nn.Cell):
         batch_size = attn_probs.shape[0]
 
         # cut local attn probs to global only
-        attn_probs_only_global = attn_probs.narrow(-1, 0, int(max_num_global_attn_indices))
+        attn_probs_only_global = attn_probs.narrow(-1, 0, max_num_global_attn_indices)
         # get value vectors for global only
         value_vectors_only_global = value_vectors.new_zeros(
-            (batch_size, int(max_num_global_attn_indices), self.num_heads, self.head_dim)
+            (batch_size, max_num_global_attn_indices, self.num_heads, self.head_dim)
         )
         value_vectors_only_global[is_local_index_global_attn_nonzero] = value_vectors[is_index_global_attn_nonzero]
 
@@ -880,11 +1016,11 @@ class LongformerSelfAttention(nn.Cell):
         # compute attn output only global
         attn_output_only_global = ops.matmul(
             attn_probs_only_global.swapaxes(1, 2).copy(), value_vectors_only_global.swapaxes(1, 2).copy()
-        ).swapaxes(1, 2) # qbh clone substitute copy
+        ).swapaxes(1, 2)
 
         # reshape attn probs
         attn_probs_without_global = attn_probs.narrow(
-            -1, int(max_num_global_attn_indices), attn_probs.shape[-1] - int(max_num_global_attn_indices)
+            -1, max_num_global_attn_indices, attn_probs.shape[-1] - max_num_global_attn_indices
         )
 
         # compute attn output with global
@@ -906,10 +1042,7 @@ class LongformerSelfAttention(nn.Cell):
         seq_len, batch_size = hidden_states.shape[:2]
 
         # prepare global hidden states
-        global_attn_hidden_states = hidden_states.new_zeros(
-            (int(max_num_global_attn_indices),
-             batch_size, self.embed_dim)
-        )
+        global_attn_hidden_states = hidden_states.new_zeros((max_num_global_attn_indices, batch_size, self.embed_dim))
         global_attn_hidden_states[is_local_index_global_attn_nonzero[::-1]] = hidden_states[
             is_index_global_attn_nonzero[::-1]
         ]
@@ -924,10 +1057,9 @@ class LongformerSelfAttention(nn.Cell):
 
         # reshape
         global_query_vectors_only_global = (
-            global_query_vectors_only_global.view(int(max_num_global_attn_indices),
-                                                  batch_size * self.num_heads,
-                                                  self.head_dim
-                                                  ).swapaxes(0, 1)
+            global_query_vectors_only_global
+            .view(max_num_global_attn_indices, batch_size * self.num_heads, self.head_dim)
+            .swapaxes(0, 1)
         )  # (batch_size * self.num_heads, max_num_global_attn_indices, head_dim)
         global_key_vectors = (
             global_key_vectors.view(-1, batch_size * self.num_heads, self.head_dim).swapaxes(0, 1)
@@ -949,41 +1081,27 @@ class LongformerSelfAttention(nn.Cell):
             f" {global_attn_scores.shape}."
         )
 
-        global_attn_scores = global_attn_scores.view(
-            batch_size,
-            self.num_heads, int(max_num_global_attn_indices),
-            seq_len
-        )
+        global_attn_scores = global_attn_scores.view(batch_size, self.num_heads, max_num_global_attn_indices, seq_len)
 
+        # need to swapaxes since ONNX export only supports consecutive indexing: https://pytorch.org/docs/stable/onnx.html#writes-sets
         global_attn_scores = global_attn_scores.swapaxes(1, 2)
-        if is_local_index_no_global_attn_nonzero[0].shape[0] != 0:
-            pass
-        #     global_attn_scores[
-        #         is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
-        #     ] = mindspore.Tensor(np.finfo(
-        #         mindspore.dtype_to_nptype(global_attn_scores.dtype)).min,
-        #                          dtype=global_attn_scores.dtype
-        #                          )
+        if 0 not in is_local_index_no_global_attn_nonzero[0].shape:
+            global_attn_scores[
+                is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
+            ] = float(np.finfo(mindspore.dtype_to_nptype(global_attn_scores.dtype)).min)
         global_attn_scores = global_attn_scores.swapaxes(1, 2)
 
         global_attn_scores = global_attn_scores.masked_fill(
             is_index_masked[:, None, None, :],
-            mindspore.Tensor(np.finfo(
-                mindspore.dtype_to_nptype(global_attn_scores.dtype)).min,
-                             dtype=global_attn_scores.dtype
-                             ),
+            float(np.finfo(mindspore.dtype_to_nptype(global_attn_scores.dtype)).min),
         )
 
-        global_attn_scores = global_attn_scores.view(
-            batch_size * self.num_heads,
-            int(max_num_global_attn_indices),
-            seq_len
-        )
+        global_attn_scores = global_attn_scores.view(batch_size * self.num_heads, max_num_global_attn_indices, seq_len)
 
         # compute global attn probs
-        global_attn_probs_float = mindspore.Tensor(ops.softmax(
-            global_attn_scores, axis=-1
-        ), dtype=mindspore.float32)  # use fp32 for numerical stability
+        global_attn_probs_float = ops.softmax(
+            global_attn_scores, axis=-1, dtype=mindspore.float32
+        )  # use fp32 for numerical stability
 
         # apply layer head masking
         if layer_head_mask is not None:
@@ -996,12 +1114,11 @@ class LongformerSelfAttention(nn.Cell):
             global_attn_probs_float = global_attn_probs_float.view(
                 batch_size * self.num_heads, max_num_global_attn_indices, seq_len
             )
-        if self.training:
-            global_attn_probs = ops.dropout(
-                global_attn_probs_float.type_as(global_attn_scores), p=self.dropout
-            )
-        else:
-            global_attn_probs = global_attn_probs_float
+
+        global_attn_probs = ops.dropout(
+            global_attn_probs_float.astype(global_attn_scores.dtype), p=self.dropout, training=self.training
+        )
+
         # global attn output
         global_attn_output = ops.bmm(global_attn_probs, global_value_vectors)
 
@@ -1015,26 +1132,19 @@ class LongformerSelfAttention(nn.Cell):
             f" {global_attn_output.shape}."
         )
 
-        global_attn_probs = global_attn_probs.view(
-            batch_size,
-            self.num_heads,
-            int(max_num_global_attn_indices),
-            seq_len
-        )
+        global_attn_probs = global_attn_probs.view(batch_size, self.num_heads, max_num_global_attn_indices, seq_len)
         global_attn_output = global_attn_output.view(
-            batch_size, self.num_heads, int(max_num_global_attn_indices), self.head_dim
+            batch_size, self.num_heads, max_num_global_attn_indices, self.head_dim
         )
         return global_attn_output, global_attn_probs
 
 
+# Copied from transformers.models.bert.modeling_bert.BertSelfOutput
 class LongformerSelfOutput(nn.Cell):
-    """
-    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
-    """
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(normalized_shape=(config.hidden_size, ), epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
@@ -1045,19 +1155,13 @@ class LongformerSelfOutput(nn.Cell):
 
 
 class LongformerAttention(nn.Cell):
-    """
-    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
-    """
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.self = LongformerSelfAttention(config, layer_id)
         self.output = LongformerSelfOutput(config)
         self.pruned_heads = set()
 
-    def prune_heads(self, heads):  # qbh pytorch.util
-        """
-        Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
-        """
+    def prune_heads(self, heads):
         if len(heads) == 0:
             return
         heads, index = find_pruneable_heads_and_indices(
@@ -1068,7 +1172,7 @@ class LongformerAttention(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
 
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
@@ -1099,34 +1203,28 @@ class LongformerAttention(nn.Cell):
         return outputs
 
 
+# Copied from transformers.models.bert.modeling_bert.BertIntermediate
 class LongformerIntermediate(nn.Cell):
-    """
-    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
-    """
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
         if isinstance(config.hidden_act, str):
-            self.intermediate_act_fn = ACT2FN[config.hidden_act]  # qbh remain ACT2FN
+            self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
     def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
-        hidden_states = Tensor(hidden_states)
         return hidden_states
 
 
 # Copied from transformers.models.bert.modeling_bert.BertOutput
 class LongformerOutput(nn.Cell):
-    """
-    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
-    """
     def __init__(self, config):
         super().__init__()
-        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)  # qbh remain to do 3.9 22.29
-        self.LayerNorm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
@@ -1137,9 +1235,6 @@ class LongformerOutput(nn.Cell):
 
 
 class LongformerLayer(nn.Cell):
-    """
-    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
-    """
     def __init__(self, config, layer_id=0):
         super().__init__()
         self.attention = LongformerAttention(config, layer_id)
@@ -1177,23 +1272,16 @@ class LongformerLayer(nn.Cell):
         return outputs
 
     def ff_chunk(self, attn_output):
-        """
-        Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
-        """
         intermediate_output = self.intermediate(attn_output)
         layer_output = self.output(intermediate_output, attn_output)
         return layer_output
 
 
 class LongformerEncoder(nn.Cell):
-    """
-    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
-    """
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.layer = nn.CellList([LongformerLayer(config, layer_id=i) for i in range(config.num_hidden_layers)])
-        self.gradient_checkpointing = False
 
     def construct(
         self,
@@ -1205,12 +1293,11 @@ class LongformerEncoder(nn.Cell):
         output_hidden_states=False,
         return_dict=True,
     ):
-        return_dict = return_dict if return_dict is not None else self.config.use_cache
         is_index_masked = attention_mask < 0
         is_index_global_attn = attention_mask > 0
 
         # Record `is_global_attn == True` to enable ONNX export
-        is_global_attn = bool(is_index_global_attn.flatten().any())
+        is_global_attn = is_index_global_attn.flatten().any().item()
 
         all_hidden_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None  # All local attentions.
@@ -1220,28 +1307,11 @@ class LongformerEncoder(nn.Cell):
         if head_mask is not None:
             assert head_mask.shape[0] == (
                 len(self.layer)
-            ), f"The head_mask should be specified for {len(self.layer)} layers, but it is for {head_mask.size()[0]}."
+            ), f"The head_mask should be specified for {len(self.layer)} layers, but it is for {head_mask.shape[0]}."
         for idx, layer_module in enumerate(self.layer):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
-            # qbh TODO
-            # if self.gradient_checkpointing and self.training:
-            #
-            #     def create_custom_forward(module):
-            #         def custom_forward(*inputs):
-            #             return module(*inputs, is_global_attn, output_attentions)
-            #
-            #         return custom_forward
-            #
-            #     layer_outputs = torch.utils.checkpoint.checkpoint(
-            #         create_custom_forward(layer_module),
-            #         hidden_states,
-            #         attention_mask,
-            #         head_mask[idx] if head_mask is not None else None,
-            #         is_index_masked,
-            #         is_index_global_attn,
-            #     )
-            # else:
+
             layer_outputs = layer_module(
                 hidden_states,
                 attention_mask=attention_mask,
@@ -1254,13 +1324,11 @@ class LongformerEncoder(nn.Cell):
             hidden_states = layer_outputs[0]
 
             if output_attentions:
-                # bzs x seq_len x num_attn_heads x (num_global_attn + attention_window_len +
-                # 1) => bzs x num_attn_heads x seq_len x (num_global_attn + attention_window_len + 1)
+                # bzs x seq_len x num_attn_heads x (num_global_attn + attention_window_len + 1) => bzs x num_attn_heads x seq_len x (num_global_attn + attention_window_len + 1)
                 all_attentions = all_attentions + (layer_outputs[1].swapaxes(1, 2),)
 
                 if is_global_attn:
-                    # bzs x num_attn_heads x num_global_attn x seq_len =>
-                    # bzs x num_attn_heads x seq_len x num_global_attn
+                    # bzs x num_attn_heads x num_global_attn x seq_len => bzs x num_attn_heads x seq_len x num_global_attn
                     all_global_attentions = all_global_attentions + (layer_outputs[2].swapaxes(2, 3),)
 
         # Add last layer
@@ -1268,23 +1336,28 @@ class LongformerEncoder(nn.Cell):
             all_hidden_states = all_hidden_states + (hidden_states,)
 
         # undo padding if necessary
-        # unpad `hidden_states` because the calling function is expecting a length == input_ids.size(1)
+        # unpad `hidden_states` because the calling function is expecting a length == input_ids.shape[1]
         hidden_states = hidden_states[:, : hidden_states.shape[1] - padding_len]
         if output_hidden_states:
-            all_hidden_states = (state[:, : state.shape[1] - padding_len] for state in all_hidden_states)
+            all_hidden_states = tuple(state[:, : state.shape[1] - padding_len] for state in all_hidden_states)
 
         if output_attentions:
-            all_attentions = (state[:, :, : state.shape[2] - padding_len, :] for state in all_attentions)
+            all_attentions = tuple(state[:, :, : state.shape[2] - padding_len, :] for state in all_attentions)
 
-        return tuple(
-            v for v in [hidden_states, all_hidden_states, all_attentions, all_global_attentions] if v is not None
+        if not return_dict:
+            return tuple(
+                v for v in [hidden_states, all_hidden_states, all_attentions, all_global_attentions] if v is not None
+            )
+        return LongformerBaseModelOutput(
+            last_hidden_state=hidden_states,
+            hidden_states=all_hidden_states,
+            attentions=all_attentions,
+            global_attentions=all_global_attentions,
         )
 
 
+# Copied from transformers.models.bert.modeling_bert.BertPooler
 class LongformerPooler(nn.Cell):
-    """
-    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
-    """
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -1299,21 +1372,22 @@ class LongformerPooler(nn.Cell):
         return pooled_output
 
 
+# Copied from transformers.models.roberta.modeling_roberta.RobertaLMHead with Roberta->Longformer
 class LongformerLMHead(nn.Cell):
     """Longformer Head for masked language modeling."""
 
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.layer_norm = nn.LayerNorm((config.hidden_size,), epsilon=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
 
         self.decoder = nn.Dense(config.hidden_size, config.vocab_size)
-        self.bias = mindspore.Parameter(ops.zeros(config.vocab_size))
+        self.bias = Parameter(ops.zeros(config.vocab_size), 'bias')
         self.decoder.bias = self.bias
 
     def construct(self, features, **kwargs):
         x = self.dense(features)
-        x = ops.gelu(x)
+        x = gelu(x)
         x = self.layer_norm(x)
 
         # project back to size of vocabulary with bias
@@ -1322,9 +1396,7 @@ class LongformerLMHead(nn.Cell):
         return x
 
     def _tie_weights(self):
-        # To tie those two weights if they get disconnected (on TPU or when the bias is resized)
-        # For accelerate compatibility and to not break backward compatibility
-        self.bias = self.decoder.bias # qbh delete if device
+        self.bias = self.decoder.bias
 
 
 class LongformerPreTrainedModel(PreTrainedModel):
@@ -1333,46 +1405,28 @@ class LongformerPreTrainedModel(PreTrainedModel):
     models.
     """
 
-    def get_input_embeddings(self) -> "nn.Cell":
-        pass
-
-    def set_input_embeddings(self, new_embeddings: "nn.Cell"):
-        pass
-
-    def resize_position_embeddings(self, new_num_position_embeddings: int):
-        pass
-
-    def get_position_embeddings(self):
-        pass
-
     config_class = LongformerConfig
     base_model_prefix = "longformer"
-    supports_gradient_checkpointing = True
-    _keys_to_ignore_on_load_unexpected = [r"position_ids"]
     _no_split_modules = ["LongformerSelfAttention"]
 
-    def post_init(self):
-        pass
-
-    def _init_weights(self, module):
+    def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(module, nn.Dense):
+        if isinstance(cell, nn.Dense):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if module.bias is not None:
-                module.bias.data.zero_()
-        elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
-        elif isinstance(module, nn.LayerNorm):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+                                                    cell.weight.shape, cell.weight.dtype))
+            if cell.has_bias:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        elif isinstance(cell, nn.Embedding):
+            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
+            if cell.padding_idx:
+                weight[cell.padding_idx] = 0
 
-    def _set_gradient_checkpointing(self, module, value=False):
-        if isinstance(module, LongformerEncoder):
-            module.gradient_checkpointing = value
+            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+        elif isinstance(cell, nn.LayerNorm):
+            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
 class LongformerModel(LongformerPreTrainedModel):
@@ -1415,8 +1469,8 @@ class LongformerModel(LongformerPreTrainedModel):
     def get_input_embeddings(self):
         return self.embeddings.word_embeddings
 
-    def set_input_embeddings(self, new_embeddings):
-        self.embeddings.word_embeddings = new_embeddings
+    def set_input_embeddings(self, value):
+        self.embeddings.word_embeddings = value
 
     def _prune_heads(self, heads_to_prune):
         """
@@ -1428,11 +1482,11 @@ class LongformerModel(LongformerPreTrainedModel):
 
     def _pad_to_window_size(
         self,
-        input_ids: Tensor,
-        attention_mask: Tensor,
-        token_type_ids: Tensor,
-        position_ids: Tensor,
-        inputs_embeds: Tensor,
+        input_ids: mindspore.Tensor,
+        attention_mask: mindspore.Tensor,
+        token_type_ids: mindspore.Tensor,
+        position_ids: mindspore.Tensor,
+        inputs_embeds: mindspore.Tensor,
         pad_token_id: int,
     ):
         """A helper function to pad tokens and mask to work with implementation of Longformer self-attention."""
@@ -1452,8 +1506,8 @@ class LongformerModel(LongformerPreTrainedModel):
         # this path should be recorded in the ONNX export, it is fine with padding_len == 0 as well
         if padding_len > 0:
             logger.info(
-                "Input ids are automatically padded from %s to %s to be a multiple of "
-                "`config.attention_window`: %s", seq_len, seq_len + padding_len, attention_window
+                f"Input ids are automatically padded from {seq_len} to {seq_len + padding_len} to be a multiple of "
+                f"`config.attention_window`: {attention_window}"
             )
             if input_ids is not None:
                 input_ids = ops.pad(input_ids, (0, padding_len), value=pad_token_id)
@@ -1461,7 +1515,7 @@ class LongformerModel(LongformerPreTrainedModel):
                 # pad with position_id = pad_token_id as in modeling_roberta.RobertaEmbeddings
                 position_ids = ops.pad(position_ids, (0, padding_len), value=pad_token_id)
             if inputs_embeds is not None:
-                input_ids_padding = inputs_embeds.new_full(
+                input_ids_padding = ops.full(
                     (batch_size, padding_len),
                     self.config.pad_token_id,
                     dtype=mindspore.int64,
@@ -1476,7 +1530,7 @@ class LongformerModel(LongformerPreTrainedModel):
 
         return padding_len, input_ids, attention_mask, token_type_ids, position_ids, inputs_embeds
 
-    def _merge_to_attention_mask(self, attention_mask: Tensor, global_attention_mask: Tensor):
+    def _merge_to_attention_mask(self, attention_mask: mindspore.Tensor, global_attention_mask: mindspore.Tensor):
         # longformer self attention expects attention mask to have 0 (no attn), 1 (local attn), 2 (global attn)
         # (global_attention_mask + 1) => 1 for local attention, 2 for global attention
         # => final attention_mask => 0 for no attention, 1 for local attention 2 for global attention
@@ -1490,17 +1544,17 @@ class LongformerModel(LongformerPreTrainedModel):
 
     def construct(
         self,
-        input_ids: Optional[Tensor] = None,
-        attention_mask: Optional[Tensor] = None,
-        global_attention_mask: Optional[Tensor] = None,
-        head_mask: Optional[Tensor] = None,
-        token_type_ids: Optional[Tensor] = None,
-        position_ids: Optional[Tensor] = None,
-        inputs_embeds: Optional[Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        global_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Tuple:
+    ) -> Union[Tuple, LongformerBaseModelOutputWithPooling]:
         r"""
 
         Returns:
@@ -1515,13 +1569,13 @@ class LongformerModel(LongformerPreTrainedModel):
         >>> tokenizer = AutoTokenizer.from_pretrained("allenai/longformer-base-4096")
 
         >>> SAMPLE_TEXT = " ".join(["Hello world! "] * 1000)  # long input document
-        >>> input_ids = torch.tensor(tokenizer.encode(SAMPLE_TEXT)).unsqueeze(0)  # batch of size 1
+        >>> input_ids = mindspore.Tensor(tokenizer.encode(SAMPLE_TEXT)).unsqueeze(0)  # batch of size 1
 
         >>> attention_mask = torch.ones(
-        ...     input_ids.shape, dtype=torch.long, device=input_ids.device
+        ...     input_ids.shape, dtype=mindspore.int64
         ... )  # initialize to local attention
         >>> global_attention_mask = torch.zeros(
-        ...     input_ids.shape, dtype=torch.long, device=input_ids.device
+        ...     input_ids.shape, dtype=mindspore.int64
         ... )  # initialize to global attention to be deactivated for all tokens
         >>> global_attention_mask[
         ...     :,
@@ -1549,12 +1603,12 @@ class LongformerModel(LongformerPreTrainedModel):
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
         if input_ids is not None:
+            self.warn_if_padding_and_no_attention_mask(input_ids, attention_mask)
             input_shape = input_ids.shape
         elif inputs_embeds is not None:
             input_shape = inputs_embeds.shape[:-1]
         else:
             raise ValueError("You have to specify either input_ids or inputs_embeds")
-
 
         if attention_mask is None:
             attention_mask = ops.ones(input_shape)
@@ -1576,7 +1630,7 @@ class LongformerModel(LongformerPreTrainedModel):
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
-        extended_attention_mask: Tensor = self.get_extended_attention_mask(attention_mask, input_shape)[
+        extended_attention_mask: mindspore.Tensor = self.get_extended_attention_mask(attention_mask, input_shape)[
             :, 0, 0, :
         ]
 
@@ -1596,16 +1650,20 @@ class LongformerModel(LongformerPreTrainedModel):
         sequence_output = encoder_outputs[0]
         pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
 
-        if not return_dict or return_dict:
+        if not return_dict:
             return (sequence_output, pooled_output) + encoder_outputs[1:]
-        return (sequence_output, pooled_output) + encoder_outputs[1:]
+
+        return LongformerBaseModelOutputWithPooling(
+            last_hidden_state=sequence_output,
+            pooler_output=pooled_output,
+            hidden_states=encoder_outputs.hidden_states,
+            attentions=encoder_outputs.attentions,
+            global_attentions=encoder_outputs.global_attentions,
+        )
+
 
 class LongformerForMaskedLM(LongformerPreTrainedModel):
-    """
-    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
-    """
-    _keys_to_ignore_on_load_missing = ["lm_head.decoder"]
-    _keys_to_ignore_on_load_unexpected = [r"pooler"]
+    _tied_weights_keys = ["lm_head.decoder"]
 
     def __init__(self, config):
         super().__init__(config)
@@ -1617,33 +1675,27 @@ class LongformerForMaskedLM(LongformerPreTrainedModel):
         self.post_init()
 
     def get_output_embeddings(self):
-        """
-        Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
-        """
         return self.lm_head.decoder
 
     def set_output_embeddings(self, new_embeddings):
-        """
-        Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
-        """
         self.lm_head.decoder = new_embeddings
 
     def construct(
         self,
-        input_ids: Optional[Tensor] = None,
-        attention_mask: Optional[Tensor] = None,
-        global_attention_mask: Optional[Tensor] = None,
-        head_mask: Optional[Tensor] = None,
-        token_type_ids: Optional[Tensor] = None,
-        position_ids: Optional[Tensor] = None,
-        inputs_embeds: Optional[Tensor] = None,
-        labels: Optional[Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        global_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, None]:
+    ) -> Union[Tuple, LongformerMaskedLMOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+        labels (`mindspore.int64Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
             config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
             loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
@@ -1697,21 +1749,22 @@ class LongformerForMaskedLM(LongformerPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            loss_fct = CrossEntropyLoss()
-            masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
-        if not return_dict or return_dict:
+        if not return_dict:
             output = (prediction_scores,) + outputs[2:]
             return ((masked_lm_loss,) + output) if masked_lm_loss is not None else output
-        return None
+
+        return LongformerMaskedLMOutput(
+            loss=masked_lm_loss,
+            logits=prediction_scores,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+            global_attentions=outputs.global_attentions,
+        )
 
 
 class LongformerForSequenceClassification(LongformerPreTrainedModel):
-    """
-    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
-    """
-    _keys_to_ignore_on_load_unexpected = [r"pooler"]
-
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1723,23 +1776,22 @@ class LongformerForSequenceClassification(LongformerPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    # qbh delete docs
     def construct(
         self,
-        input_ids: Optional[Tensor] = None,
-        attention_mask: Optional[Tensor] = None,
-        global_attention_mask: Optional[Tensor] = None,
-        head_mask: Optional[Tensor] = None,
-        token_type_ids: Optional[Tensor] = None,
-        position_ids: Optional[Tensor] = None,
-        inputs_embeds: Optional[Tensor] = None,
-        labels: Optional[Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        global_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, None]:
+    ) -> Union[Tuple, LongformerSequenceClassifierOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+        labels (`mindspore.int64Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
@@ -1772,28 +1824,33 @@ class LongformerForSequenceClassification(LongformerPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype in (mindspore.int32, mindspore.int64)):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
-                loss_fct = MSELoss()
                 if self.num_labels == 1:
-                    loss = loss_fct(logits.squeeze(), labels.squeeze())
+                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = loss_fct(logits, labels)
+                    loss = ops.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss_fct = BCEWithLogitsLoss()
-                loss = loss_fct(logits, labels)
+                loss = ops.binary_cross_entropy_with_logits(logits, labels)
 
-        if not return_dict or return_dict:
+        if not return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
-        return None
+
+        return LongformerSequenceClassifierOutput(
+            loss=loss,
+            logits=logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+            global_attentions=outputs.global_attentions,
+        )
+
 
 class LongformerClassificationHead(nn.Cell):
     """Head for sentence-level classification tasks."""
@@ -1808,18 +1865,13 @@ class LongformerClassificationHead(nn.Cell):
         hidden_states = hidden_states[:, 0, :]  # take <s> token (equiv. to [CLS])
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.dense(hidden_states)
-        hidden_states = mindspore.ops.tanh(hidden_states)
+        hidden_states = ops.tanh(hidden_states)
         hidden_states = self.dropout(hidden_states)
         output = self.out_proj(hidden_states)
         return output
 
 
 class LongformerForQuestionAnswering(LongformerPreTrainedModel):
-    """
-    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
-    """
-    _keys_to_ignore_on_load_unexpected = [r"pooler"]
-
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1832,25 +1884,25 @@ class LongformerForQuestionAnswering(LongformerPreTrainedModel):
 
     def construct(
         self,
-        input_ids: Optional[Tensor] = None,
-        attention_mask: Optional[Tensor] = None,
-        global_attention_mask: Optional[Tensor] = None,
-        head_mask: Optional[Tensor] = None,
-        token_type_ids: Optional[Tensor] = None,
-        position_ids: Optional[Tensor] = None,
-        inputs_embeds: Optional[Tensor] = None,
-        start_positions: Optional[Tensor] = None,
-        end_positions: Optional[Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        global_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        start_positions: Optional[mindspore.Tensor] = None,
+        end_positions: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, None]:
+    ) -> Union[Tuple, LongformerQuestionAnsweringModelOutput]:
         r"""
-        start_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+        start_positions (`mindspore.int64Tensor` of shape `(batch_size,)`, *optional*):
             Labels for position (index) of the start of the labelled span for computing the token classification loss.
             Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
             are not taken into account for computing the loss.
-        end_positions (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+        end_positions (`mindspore.int64Tensor` of shape `(batch_size,)`, *optional*):
             Labels for position (index) of the end of the labelled span for computing the token classification loss.
             Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
             are not taken into account for computing the loss.
@@ -1928,24 +1980,25 @@ class LongformerForQuestionAnswering(LongformerPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
-            start_loss = loss_fct(start_logits, start_positions)
-            end_loss = loss_fct(end_logits, end_positions)
+            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
-        if not return_dict or return_dict:
+        if not return_dict:
             output = (start_logits, end_logits) + outputs[2:]
             return ((total_loss,) + output) if total_loss is not None else output
 
-        return None
+        return LongformerQuestionAnsweringModelOutput(
+            loss=total_loss,
+            start_logits=start_logits,
+            end_logits=end_logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+            global_attentions=outputs.global_attentions,
+        )
 
 
 class LongformerForTokenClassification(LongformerPreTrainedModel):
-    """
-    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
-    """
-    _keys_to_ignore_on_load_unexpected = [r"pooler"]
-
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1957,23 +2010,22 @@ class LongformerForTokenClassification(LongformerPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    # qbh delete docs
     def construct(
         self,
-        input_ids: Optional[Tensor] = None,
-        attention_mask: Optional[Tensor] = None,
-        global_attention_mask: Optional[Tensor] = None,
-        head_mask: Optional[Tensor] = None,
-        token_type_ids: Optional[Tensor] = None,
-        position_ids: Optional[Tensor] = None,
-        inputs_embeds: Optional[Tensor] = None,
-        labels: Optional[Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        global_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, None]:
+    ) -> Union[Tuple, LongformerTokenClassifierOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+        labels (`mindspore.int64Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -1998,19 +2050,22 @@ class LongformerForTokenClassification(LongformerPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = CrossEntropyLoss()
-            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
-        if not return_dict or return_dict:
+        if not return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
-        return None
+
+        return LongformerTokenClassifierOutput(
+            loss=loss,
+            logits=logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+            global_attentions=outputs.global_attentions,
+        )
 
 
 class LongformerForMultipleChoice(LongformerPreTrainedModel):
-    """
-    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
-    """
     def __init__(self, config):
         super().__init__(config)
 
@@ -2021,23 +2076,22 @@ class LongformerForMultipleChoice(LongformerPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    # qbh delete docs
     def construct(
         self,
-        input_ids: Optional[Tensor] = None,
-        token_type_ids: Optional[Tensor] = None,
-        attention_mask: Optional[Tensor] = None,
-        global_attention_mask: Optional[Tensor] = None,
-        head_mask: Optional[Tensor] = None,
-        labels: Optional[Tensor] = None,
-        position_ids: Optional[Tensor] = None,
-        inputs_embeds: Optional[Tensor] = None,
+        input_ids: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        global_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, None]:
+    ) -> Union[Tuple, LongformerMultipleChoiceModelOutput]:
         r"""
-        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+        labels (`mindspore.int64Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
             num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
             `input_ids` above)
@@ -2092,18 +2146,28 @@ class LongformerForMultipleChoice(LongformerPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = CrossEntropyLoss()
-            loss = loss_fct(reshaped_logits, labels)
+            loss = ops.cross_entropy(reshaped_logits, labels)
 
-        if not return_dict or return_dict:
+        if not return_dict:
             output = (reshaped_logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
-        return None
 
-__all__ = ['LongformerForMaskedLM',
-            'LongformerForMultipleChoice',
-            'LongformerForQuestionAnswering',
-            'LongformerForSequenceClassification',
-            'LongformerForTokenClassification',
-            'LongformerModel',
-            'LongformerPreTrainedModel']
+        return LongformerMultipleChoiceModelOutput(
+            loss=loss,
+            logits=reshaped_logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+            global_attentions=outputs.global_attentions,
+        )
+
+__all__ = [
+    "LONGFORMER_PRETRAINED_MODEL_ARCHIVE_LIST",
+    "LongformerForMaskedLM",
+    "LongformerForMultipleChoice",
+    "LongformerForQuestionAnswering",
+    "LongformerForSequenceClassification",
+    "LongformerForTokenClassification",
+    "LongformerModel",
+    "LongformerPreTrainedModel",
+    "LongformerSelfAttention",
+]

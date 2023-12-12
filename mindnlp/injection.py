@@ -23,6 +23,7 @@ import operator
 from functools import reduce, partial
 import math
 from packaging import version
+import numpy as np
 import mindspore
 import mindspore.common.dtype as mstype
 from mindspore import nn, ops, Tensor, Parameter
@@ -290,6 +291,38 @@ def unflatten(self, dim, sizes):
 
 Tensor.unflatten = unflatten
 StubTensor.unflatten = unflatten
+
+def _as_strided(self, size, stride, storage_offset=None):
+    if len(size) != len(stride):
+        raise RuntimeError("mismatch in length of strides and shape.")
+    index = np.arange(0, size[0]*stride[0], stride[0])
+    for i in range(1, len(size)):
+        tmp = np.arange(0, size[i]*stride[i], stride[i])
+        index = np.expand_dims(index, -1)
+        index = index + tmp
+    if storage_offset is not None:
+        index = index + storage_offset
+    if index.size == 0:
+        input_indices = mindspore.numpy.empty(index.shape, dtype=mstype.int32)
+    else:
+        input_indices = Tensor(index)
+    out = ops.gather(self.reshape(-1), input_indices, 0)
+    return out
+
+Tensor.as_strided = _as_strided
+StubTensor.as_strided = _as_strided
+
+def _nonzero(self, as_tuple=False):
+    if self.dtype == mstype.bool_:
+        self = self.astype(mstype.int64)
+    outs = ops.nonzero(self)
+    if as_tuple:
+        outs = ops.tensor_split(outs, self.ndim, -1)
+        outs = tuple(out.squeeze(-1) for out in outs)
+    return outs
+
+Tensor.nonzero = _nonzero
+StubTensor.nonzero = _nonzero
 
 if version.parse(mindspore.__version__) < version.parse('2.2.0'):
     def eq(self, other):

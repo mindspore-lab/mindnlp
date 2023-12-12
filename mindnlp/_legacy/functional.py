@@ -1464,6 +1464,8 @@ ELLIPSIS = 52
 
 def einsum(equation, *operands):
     assert operands, "einsum(): must provide at least one operand"
+    if isinstance(operands[0], tuple):
+        operands = operands[0]
 
     arrow_pos = equation.find("->")
     num_ops = len(operands)
