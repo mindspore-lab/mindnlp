@@ -75,7 +75,7 @@ class CellUtilMixin:
         else:
             cast_type = mindspore.float32
 
-        if version.parse(mindspore.__version__) < version.parse('2.1.0'):
+        if version.parse(mindspore.__version__) > version.parse('2.1.0'):
             if mixed_type == MixedPrecisionType.BF16:
                 cast_type = mindspore.bfloat16
         return cast_type
