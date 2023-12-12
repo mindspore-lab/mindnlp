@@ -372,6 +372,14 @@ def _repeat_interleave(self, repeats, dim):
 Tensor.repeat_interleave = _repeat_interleave
 StubTensor.repeat_interleave = _repeat_interleave
 
+
+if version.parse(mindspore.__version__) < version.parse('2.3.0'):
+    def _stride(self):
+        strides = self.strides
+        return tuple(stride // 4 for stride in strides)
+    Tensor.stride = _stride
+    StubTensor.stride = _stride
+
 # Ascend only
 if DEVICE_TARGET == 'Ascend':
     # cumsum
