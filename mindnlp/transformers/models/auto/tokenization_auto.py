@@ -17,6 +17,7 @@
 # pylint: disable=E0213
 # pylint: disable=W0613
 # pylint: disable=W1203
+# pylint: disable=c0103
 
 """ Auto Tokenizer class."""
 
@@ -41,6 +42,11 @@ from .configuration_auto import (
 )
 
 logger = logging.get_logger(__name__)
+
+if is_tokenizers_available():
+    from ...tokenization_utils_fast import PreTrainedTokenizerFast # pylint: disable=cyclic-import
+else:
+    PreTrainedTokenizerFast = None
 
 TOKENIZER_MAPPING_NAMES = OrderedDict(
     [
@@ -92,6 +98,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ),
         ("canine", ("CanineTokenizer", None)),
         ("chinese_clip", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
+        ("chatglm", ("ChatGLMTokenizer", None)),
         (
             "clap",
             (
@@ -153,6 +160,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("ernie", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
         ("ernie_m", ("ErnieMTokenizer" if is_sentencepiece_available() else None, None)),
         ("esm", ("EsmTokenizer", None)),
+        ("falcon", (None, "PreTrainedTokenizerFast" if is_tokenizers_available() else None)),
         ("flaubert", ("FlaubertTokenizer", None)),
         ("fnet", ("FNetTokenizer", "FNetTokenizerFast" if is_tokenizers_available() else None)),
         ("fsmt", ("FSMTTokenizer", None)),
@@ -266,7 +274,6 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ),
         ),
         ("oneformer", ("CLIPTokenizer", "CLIPTokenizerFast" if is_tokenizers_available() else None)),
-        ("openai-gpt", ("OpenAIGPTTokenizer", "OpenAIGPTTokenizerFast" if is_tokenizers_available() else None)),
         ("opt", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
         ("owlv2", ("CLIPTokenizer", "CLIPTokenizerFast" if is_tokenizers_available() else None)),
         ("owlvit", ("CLIPTokenizer", "CLIPTokenizerFast" if is_tokenizers_available() else None)),
@@ -428,6 +435,9 @@ CONFIG_TO_TYPE = {v: k for k, v in CONFIG_MAPPING_NAMES.items()}
 
 
 def tokenizer_class_from_name(class_name: str):
+    if class_name == "PreTrainedTokenizerFast":
+        return PreTrainedTokenizerFast
+
     for module_name, tokenizers in TOKENIZER_MAPPING_NAMES.items():
         if class_name in tokenizers:
             module_name = model_type_to_module_name(module_name)
@@ -445,7 +455,7 @@ def tokenizer_class_from_name(class_name: str):
 
     # We did not fine the class, but maybe it's because a dep is missing. In that case, the class will be in the main
     # init and we return the proper dummy to get an appropriate error message.
-    main_module = importlib.import_module("transformers")
+    main_module = importlib.import_module("mindnlp.transformers")
     if hasattr(main_module, class_name):
         return getattr(main_module, class_name)
 

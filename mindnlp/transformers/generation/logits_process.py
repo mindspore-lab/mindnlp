@@ -714,6 +714,9 @@ class TopPLogitsWarper(LogitsWarper):
         self.min_tokens_to_keep = min_tokens_to_keep
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        if self.filter_value == -float("Inf"):
+            self.filter_value = float(np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min)
+        # scores = ops.select(ops.isneginf(scores), mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min), scores)
         sorted_logits, sorted_indices = ops.sort(scores, descending=False)
         cumulative_probs = ops.softmax(sorted_logits, axis=-1).cumsum(axis=-1)
 
@@ -749,9 +752,11 @@ class TopKLogitsWarper(LogitsWarper):
         self.filter_value = filter_value
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        if self.filter_value == -float("Inf"):
+            self.filter_value = float(np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min)
         top_k = min(self.top_k, scores.shape[-1])  # Safety check
         # Remove all tokens with a probability less than the last token of the top-k
-        indices_to_remove = scores < mindspore.Tensor.topk(scores, top_k)[0][..., -1, None]
+        indices_to_remove = scores < ops.topk(scores, top_k)[0][..., -1, None]
         scores = scores.masked_fill(indices_to_remove, self.filter_value)
         return scores
 

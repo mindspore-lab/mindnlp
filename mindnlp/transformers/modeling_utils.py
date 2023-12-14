@@ -33,6 +33,7 @@ import re
 import json
 from dataclasses import dataclass
 from typing import Union, Optional, Tuple, OrderedDict, Callable, Dict, List
+from packaging import version
 from tqdm.autonotebook import tqdm
 import numpy as np
 
@@ -68,12 +69,15 @@ class CellUtilMixin:
         if not hasattr(self, 'get_mixed_precision_type'):
             return mindspore.float32
         mixed_type = self.get_mixed_precision_type()
+        cast_type = None
         if mixed_type == MixedPrecisionType.FP16:
             cast_type = mindspore.float16
-        elif mixed_type == MixedPrecisionType.BF16:
-            cast_type = mindspore.bfloat16
         else:
             cast_type = mindspore.float32
+
+        if version.parse(mindspore.__version__) > version.parse('2.1.0'):
+            if mixed_type == MixedPrecisionType.BF16:
+                cast_type = mindspore.bfloat16
         return cast_type
 
     @staticmethod
@@ -244,10 +248,15 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
     def __init__(self, config):
         super().__init__(config)
+        self._check_and_unset_acl()
         # Save config in model
         self.config = config
         self.name_or_path = config.name_or_path
         self.generation_config = GenerationConfig.from_model_config(config) if self.can_generate() else None
+
+    def _check_and_unset_acl(self):
+        if "MS" in str(self.__class__.__name__):
+            del os.environ['MS_DEV_FORCE_ACL']
 
     def post_init(self):
         """
@@ -1389,7 +1398,7 @@ def convert_torch_to_mindspore(pth_file):
     has_bf16 = False
     for key, value in state_dict.items():
         if value.dtype == torch.bfloat16:
-            data = Tensor(value.to(torch.float).numpy())
+            data = Tensor(value.to(torch.float).numpy(), dtype=mindspore.float16)
             if not has_bf16:
                 has_bf16 = True
         else:

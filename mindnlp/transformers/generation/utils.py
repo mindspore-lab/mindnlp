@@ -2322,7 +2322,6 @@ class GenerationMixin:
         while True:
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
-
             # forward pass to get next token
             outputs = self(
                 **model_inputs,
@@ -2335,7 +2334,6 @@ class GenerationMixin:
                 continue  # don't waste resources running the code we don't need
 
             next_token_logits = outputs.logits[:, -1, :]
-
             # pre-process distribution
             next_tokens_scores = logits_processor(input_ids, next_token_logits)
 
@@ -2359,7 +2357,6 @@ class GenerationMixin:
 
             # argmax
             next_tokens = ops.argmax(next_tokens_scores, dim=-1)
-
             # finished sentences should have their next token be a padding token
             if eos_token_id is not None:
                 if pad_token_id is None:
@@ -2600,7 +2597,6 @@ class GenerationMixin:
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
             )
-
             if synced_gpus and this_peer_finished:
                 continue  # don't waste resources running the code we don't need
 
@@ -2631,7 +2627,6 @@ class GenerationMixin:
             # sample
             probs = ops.softmax(next_token_scores, axis=-1)
             next_tokens = ops.multinomial(probs, num_samples=1).squeeze(1).astype(mindspore.int64)
-
             # finished sentences should have their next token be a padding token
             if eos_token_id is not None:
                 if pad_token_id is None:

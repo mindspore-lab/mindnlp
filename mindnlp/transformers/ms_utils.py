@@ -187,3 +187,17 @@ def apply_chunking_to_forward(forward_fn, chunk_size, chunk_axis, *input_tensors
         return ops.cat(output_chunks, axis=chunk_axis)
 
     return forward_fn(*input_tensors)
+
+def zero_init(cls, *args, **kwargs):
+    """init zeros to speed up initialize stage."""
+    for k in kwargs.keys():# pylint: disable=consider-iterating-dictionary
+        if 'init' in k:
+            kwargs.pop(k)
+    init_signature = inspect.signature(cls.__init__)
+    init_params = init_signature.parameters
+    for param_name in init_params.keys():
+        if 'init' in param_name:
+            kwargs[param_name] = 'zeros'
+    def _reset_parameters(self): pass # pylint: disable=multiple-statements, unused-argument
+    cls.reset_parameters = _reset_parameters
+    return cls(*args, **kwargs)

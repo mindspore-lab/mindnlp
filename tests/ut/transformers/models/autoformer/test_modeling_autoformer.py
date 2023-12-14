@@ -416,3 +416,70 @@ def prepare_batch(filename="train-batch.pt"):
 
 
 
+class AutoformerModelIntegrationTests(unittest.TestCase):
+    @unittest.skip('Mindspore cannot load torch .pt file.')
+    def test_inference_no_head(self):
+        model = AutoformerModel.from_pretrained(
+            "huggingface/autoformer-tourism-monthly",from_pt=True)
+        batch = prepare_batch()
+
+        output = model(
+                past_values=batch["past_values"],
+                past_time_features=batch["past_time_features"],
+                past_observed_mask=batch["past_observed_mask"],
+                static_categorical_features=batch["static_categorical_features"],
+                future_values=batch["future_values"],
+                future_time_features=batch["future_time_features"],
+            )[0]
+
+        expected_shape = (64, model.config.prediction_length +
+             model.config.label_length, model.config.feature_size)
+
+        self.assertEqual(output.shape, expected_shape)
+
+        expected_slice = mindspore.tensor(
+            [[0.3593, -1.3398, 0.6330], [0.2279, 1.5396, -0.1792], [0.0450, 1.3225, -0.2335]]
+        )
+        self.assertTrue(mindspore.allclose(
+            output[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=TOLERANCE))
+
+    @unittest.skip('Mindspore cannot load torch .pt file.')
+    def test_inference_head(self):
+        model = AutoformerForPrediction.from_pretrained(
+            "huggingface/autoformer-tourism-monthly", from_pt=True)
+        batch = prepare_batch("val-batch.pt")
+        output = model(
+                past_values=batch["past_values"],
+                past_time_features=batch["past_time_features"],
+                past_observed_mask=batch["past_observed_mask"],
+                static_categorical_features=batch["static_categorical_features"],
+            ).encoder_last_hidden_state
+        expected_shape = (64, model.config.context_length, model.config.d_model)
+        self.assertEqual(output.shape, expected_shape)
+
+        expected_slice = mindspore.tensor(
+            [[-0.0734, -0.9036, 0.8358], [4.7186, 2.4113, 1.9581], [1.7953, 2.3558, 1.2970]]
+        )
+        self.assertTrue(mindspore.allclose(
+            output[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=TOLERANCE))
+
+    @unittest.skip('Mindspore cannot load torch .pt file.')
+    def test_seq_to_seq_generation(self):
+        model = AutoformerForPrediction.from_pretrained(
+            "huggingface/autoformer-tourism-monthly", from_pt=True)
+        batch = prepare_batch("val-batch.pt")
+        outputs = model.generate(
+                static_categorical_features=batch["static_categorical_features"],
+                past_time_features=batch["past_time_features"],
+                past_values=batch["past_values"],
+                future_time_features=batch["future_time_features"],
+                past_observed_mask=batch["past_observed_mask"],
+            )
+        expected_shape = (64, model.config.num_parallel_samples, model.config.prediction_length)
+        self.assertEqual(outputs.sequences.shape, expected_shape)
+
+        expected_slice = mindspore.tensor(
+            [3130.6763, 4056.5293, 7053.0786])
+        mean_prediction = outputs.sequences.mean(axis=1)
+        self.assertTrue(mindspore.allclose(
+            mean_prediction[0, -3:].asnumpy(), expected_slice.asnumpy(), rtol=1e-1))

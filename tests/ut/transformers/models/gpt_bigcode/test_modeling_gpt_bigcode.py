@@ -5,6 +5,7 @@ from parameterized import parameterized
 
 from mindnlp.utils import is_mindspore_available
 from mindnlp.transformers import GPTBigCodeConfig
+from mindnlp.utils.testing_utils import slow
 
 from ...generation.test_utils import GenerationTesterMixin, require_mindspore
 from ...test_configuration_common import ConfigTester
@@ -555,7 +556,7 @@ class GPTBigCodeMHAModelTest(GPTBigCodeModelTest):
 
 @require_mindspore
 class GPTBigCodeModelLanguageGenerationTest(unittest.TestCase):
-    @unittest.skip("BigCodeGPT's AutoTokenizer not finished yet.")
+    @slow
     def test_generate_simple(self):
         model = GPTBigCodeForCausalLM.from_pretrained(
             "gpt_bigcode-santacoder")
@@ -563,7 +564,7 @@ class GPTBigCodeModelLanguageGenerationTest(unittest.TestCase):
             "gpt_bigcode-santacoder")
 
         input_ids = tokenizer("def print_hello_world():",
-                              return_tensors="pt").input_ids
+                              return_tensors="ms").input_ids
 
         output_sequence = model.generate(input_ids)
         output_sentence = tokenizer.decode(
@@ -571,12 +572,11 @@ class GPTBigCodeModelLanguageGenerationTest(unittest.TestCase):
 
         expected_output = """def print_hello_world():\n    print("Hello World!")\n\n\ndef print_hello_"""
         self.assertEqual(output_sentence, expected_output)
-
-    @unittest.skip("BigCodeGPT's AutoTokenizer not finished yet.")
+        
+    @slow
     def test_generate_batched(self):
-        from transformers import AutoTokenizer as hfAutoTokenizer
-        tokenizer = hfAutoTokenizer.from_pretrained(
-            "bigcode/gpt_bigcode-santacoder")
+        tokenizer = AutoTokenizer.from_pretrained(
+            "gpt_bigcode-santacoder")
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = "left"
 
@@ -584,7 +584,7 @@ class GPTBigCodeModelLanguageGenerationTest(unittest.TestCase):
             "gpt_bigcode-santacoder")
 
         inputs = tokenizer(["def print_hello_world():",
-                           "def say_hello():"], padding=True)
+                           "def say_hello():"], return_tensors="ms", padding=True)
         outputs = model.generate(**inputs)
         outputs = tokenizer.batch_decode(outputs, skip_special_tokens=True)
 

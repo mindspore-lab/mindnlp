@@ -1,4 +1,3 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
 # Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,20 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-
-# This software may be used and distributed according to the terms of the GNU General Public License version 3.
 """
-Glm Model init
+Blip_2 Model.
 """
-from . import glm, chatglm, glm_config, chatglm_config
-
-from .glm import *
-from .glm_config import *
-from .chatglm import *
-from .chatglm_config import *
-
-__all__ = []
-__all__.extend(glm.__all__)
-__all__.extend(glm_config.__all__)
-__all__.extend(chatglm.__all__)
-__all__.extend(chatglm_config.__all__)

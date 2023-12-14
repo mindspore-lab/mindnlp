@@ -23,15 +23,17 @@ import operator
 from functools import reduce, partial
 import math
 from packaging import version
+import numpy as np
 import mindspore
 import mindspore.common.dtype as mstype
 from mindspore import nn, ops, Tensor, Parameter
-from mindspore.nn.layer.conv import _Conv
 from mindspore.common._stub_tensor import StubTensor
+from mindspore.nn.layer.conv import _Conv
 from mindspore.common.initializer import initializer, Normal, HeUniform, Uniform, _calculate_fan_in_and_fan_out
 from mindspore import _checkparam as Validator
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp._legacy.functional import einsum
+
 
 DEVICE_TARGET = mindspore.get_context('device_target')
 GLOBAL_FP16_PATCH = False
@@ -86,6 +88,25 @@ def bool_patch_decorator(func):
         kwargs = {k: (v.astype(mstype.int32) if isinstance(v, Tensor) and v.dtype == mstype.bool_ else v) \
                   for k, v in kwargs.items()}
         result = func(*args, **kwargs)
+        return result
+
+    return wrapper
+
+def bool_io_patch_decorator(func):
+    """bool patch on ascend"""
+    def wrapper(*args, **kwargs):
+        args = [arg.astype(mstype.int32) if isinstance(arg, Tensor) and arg.dtype == mstype.bool_ \
+                else arg for arg in args]
+        has_bool = any(bool(isinstance(arg, Tensor) and arg.dtype == mstype.bool_) for arg in args)
+        if isinstance(args[0], (list, tuple)):
+            # for concat
+            args[0] = [arg.astype(mstype.int32) if isinstance(arg, Tensor) and arg.dtype == mstype.bool_ \
+                else arg for arg in args[0]]
+        kwargs = {k: (v.astype(mstype.int32) if isinstance(v, Tensor) and v.dtype == mstype.bool_ else v) \
+                  for k, v in kwargs.items()}
+        result = func(*args, **kwargs)
+        if has_bool:
+            result = result.astype(mstype.bool_)
         return result
 
     return wrapper
@@ -152,6 +173,16 @@ ops.dense = fp16_patch_decorator(dense)
 ops.einsum = einsum
 # conv1d
 ops.conv1d = fp16_patch_decorator(ops.conv1d)
+# cross_entropy
+
+def _cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
+    if weight is None:
+        weight = ops.ones(input.shape[-1], input.dtype)
+    _nll_loss = _get_cache_prim(ops.NLLLoss)(reduction, ignore_index)
+    class_dim = 0 if input.ndim == 1 else 1
+    return _nll_loss(ops.log_softmax(input, class_dim), target, weight)[0]
+
+# ops.cross_entropy = _cross_entropy
 
 # for Tensor
 # unfold
@@ -262,13 +293,63 @@ def unflatten(self, dim, sizes):
 Tensor.unflatten = unflatten
 StubTensor.unflatten = unflatten
 
+def _as_strided(self, size, stride, storage_offset=None):
+    if len(size) != len(stride):
+        raise RuntimeError("mismatch in length of strides and shape.")
+    index = np.arange(0, size[0]*stride[0], stride[0])
+    for i in range(1, len(size)):
+        tmp = np.arange(0, size[i]*stride[i], stride[i])
+        index = np.expand_dims(index, -1)
+        index = index + tmp
+    if storage_offset is not None:
+        index = index + storage_offset
+    if index.size == 0:
+        input_indices = mindspore.numpy.empty(index.shape, dtype=mstype.int32)
+    else:
+        input_indices = Tensor(index)
+    out = ops.gather(self.reshape(-1), input_indices, 0)
+    return out
+
+Tensor.as_strided = _as_strided
+StubTensor.as_strided = _as_strided
+
+def _nonzero(self, as_tuple=False):
+    if self.dtype == mstype.bool_:
+        self = self.astype(mstype.int64)
+    outs = ops.nonzero(self)
+    if as_tuple:
+        outs = ops.tensor_split(outs, self.ndim, -1)
+        outs = tuple(out.squeeze(-1) for out in outs)
+    return outs
+
+Tensor.nonzero = _nonzero
+StubTensor.nonzero = _nonzero
+
 if version.parse(mindspore.__version__) < version.parse('2.2.0'):
+    mindspore.bfloat16 = None
     def eq(self, other):
         """patched eq"""
         return ops.equal(self, other)
     Tensor.eq = eq
     StubTensor.eq = eq
 
+    def _item(self):
+        return self.asnumpy().item()
+    Tensor.item = _item
+    StubTensor.item = _item
+
+    def _tolist(self):
+        return self.asnumpy().tolist()
+    Tensor.tolist = _tolist
+    StubTensor.tolist = _tolist
+
+if version.parse(mindspore.__version__) < version.parse('2.1.0'):
+    mindspore.tensor = mindspore.Tensor
+    ops.prod = bool_patch_decorator(ops.prod)
+    def _prod(self, axis=None, keep_dims=False):
+        return ops.prod(self, axis, keep_dims)
+    Tensor.prod = _prod
+    StubTensor.prod = _prod
 
 def _eq(self, other):
     if not isinstance(other, (int, float, Tensor)):
@@ -284,6 +365,20 @@ def _eq(self, other):
     return ops.eq(self, other)
 
 Parameter.__eq__ = _eq
+
+ops.repeat_interleave = bool_io_patch_decorator(ops.repeat_interleave)
+def _repeat_interleave(self, repeats, dim):
+    return ops.repeat_interleave(self, repeats, axis=dim)
+Tensor.repeat_interleave = _repeat_interleave
+StubTensor.repeat_interleave = _repeat_interleave
+
+
+if version.parse(mindspore.__version__) < version.parse('2.3.0'):
+    def _stride(self):
+        strides = self.strides
+        return tuple(stride // 4 for stride in strides)
+    Tensor.stride = _stride
+    StubTensor.stride = _stride
 
 # Ascend only
 if DEVICE_TARGET == 'Ascend':
@@ -338,8 +433,13 @@ def custom_multinomial(probabilities, num_samples, replacement=True):
     """custom multinomial"""
     if replacement:
         # with replacement
-        cumulative_probs = ops.cumsum(probabilities, axis=-1)
+        if version.parse(mindspore.__version__) < version.parse('2.2.0'):
+            cumulative_probs = mindspore.tensor(np.cumsum(probabilities.asnumpy(), -1), probabilities.dtype)
+        else:
+            cumulative_probs = ops.cumsum(probabilities, axis=-1)
         uniform_samples = ops.rand(probabilities.shape[:-1] + (num_samples,))
+        if cumulative_probs.dtype == mindspore.float16:
+            cumulative_probs = cumulative_probs.astype(mindspore.float32)
         samples = ops.searchsorted(cumulative_probs, uniform_samples, right=True)
     else:
         # without replacement
@@ -355,7 +455,7 @@ def custom_multinomial(probabilities, num_samples, replacement=True):
 
     return samples
 
-if DEVICE_TARGET == 'GPU':
+if DEVICE_TARGET != 'CPU':
     ops.multinomial = custom_multinomial
 
 
@@ -366,6 +466,8 @@ class Dense(nn.Cell):
                  in_channels,
                  out_channels,
                  has_bias=True,
+                 weight_init='zeros',
+                 bias_init='zeros',
                  dtype=mstype.float32):
         """Initialize Dense."""
         super().__init__()
@@ -377,21 +479,21 @@ class Dense(nn.Cell):
             has_bias, "has_bias", self.cls_name)
 
         self.weight = Parameter(initializer(
-            'zeros', [out_channels, in_channels], dtype=dtype), name="weight")
+            weight_init, [out_channels, in_channels], dtype=dtype), name="weight")
 
         self.bias = None
         if self.has_bias:
             self.bias = Parameter(initializer(
-                'zeros', [out_channels], dtype=dtype), name="bias")
+                bias_init, [out_channels], dtype=dtype), name="bias")
         self.reset_parameters()
 
     def reset_parameters(self):
         """reset_embedding_params"""
-        self.weight.set_data(initializer(HeUniform(math.sqrt(5)), self.weight.shape))
+        self.weight.set_data(initializer(HeUniform(math.sqrt(5)), self.weight.shape, self.weight.dtype))
         if self.has_bias:
             fan_in, _ = _calculate_fan_in_and_fan_out(self.weight.shape)
             bound = 1 / math.sqrt(fan_in)
-            self.bias.set_data(initializer(Uniform(bound), [self.out_channels]))
+            self.bias.set_data(initializer(Uniform(bound), self.bias.shape, self.bias.dtype))
 
     def construct(self, x):
         x_shape = x.shape
@@ -408,7 +510,7 @@ class Dense(nn.Cell):
 
 class Embedding(nn.Cell):
     """patched Embedding"""
-    def __init__(self, vocab_size, embedding_size, use_one_hot=False, dtype=mstype.float32, padding_idx=None):
+    def __init__(self, vocab_size, embedding_size, padding_idx=None, use_one_hot=False, dtype=mstype.float32, weight_init='zeros'):
         """Initialize Embedding."""
         super().__init__()
         self.vocab_size = Validator.check_value_type('vocab_size', vocab_size, [int], self.cls_name)
@@ -418,12 +520,12 @@ class Embedding(nn.Cell):
         self.use_one_hot = use_one_hot
         self.dtype = dtype
         self.padding_idx = padding_idx
-        self.weight = Parameter(initializer('zeros', [vocab_size, embedding_size]), name='weight')
+        self.weight = Parameter(initializer(weight_init, [vocab_size, embedding_size]), name='weight')
         self.reset_parameters()
 
     def reset_parameters(self):
         """reset_embedding_params"""
-        init_tensor = initializer(Normal(1.0), self.weight.shape)
+        init_tensor = initializer(Normal(1.0), self.weight.shape, self.weight.dtype)
         init_tensor = init_tensor.init_data()
         if self.padding_idx:
             init_tensor = init_tensor.asnumpy()
