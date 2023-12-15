@@ -24,6 +24,7 @@
 # pylint: disable=E1102
 # pylint: disable=W1203
 # pylint: disable=C0302
+# pylint: disable=C0123
 # pylint: disable=too-many-locals
 # pylint: disable=consider-using-enumerate
 
