@@ -255,7 +255,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         self.generation_config = GenerationConfig.from_model_config(config) if self.can_generate() else None
 
     def _check_and_unset_acl(self):
-        if "MS" in str(self.__class__.__name__):
+        if "MS" in str(self.__class__.__name__) and \
+            'MS_DEV_FORCE_ACL' in os.environ:
             del os.environ['MS_DEV_FORCE_ACL']
 
     def post_init(self):
@@ -1255,6 +1256,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             if hasattr(cell, "_set_recompute"):
                 cell._set_recompute()
 
+    def check_names(self):
+        pass
 
 def get_parameter_dtype(parameter: Union[nn.Cell, GenerationMixin, "ModuleUtilsMixin"]):
     """

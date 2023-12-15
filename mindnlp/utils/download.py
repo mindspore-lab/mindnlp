@@ -371,7 +371,6 @@ def cached_file(
             if not _raise_exceptions_for_missing_entries:
                 return None
             raise EnvironmentError(f"Could not locate {full_filename} inside {path_or_repo_id}.")
-
     try:
         # Load from URL or cache if already cached
         resolved_file = download(
