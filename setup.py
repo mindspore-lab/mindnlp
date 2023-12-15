@@ -121,7 +121,8 @@ setup(
         'datasets',
         'tokenizers',
         'sentencepiece',
-        'regex'
+        'regex',
+        'easydict'
     ],
     classifiers=[
         'License :: OSI Approved :: Apache Software License'

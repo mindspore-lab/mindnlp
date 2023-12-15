@@ -13,3 +13,4 @@ sacremoses
 librosa
 soundfile
 tokenizers
+easydict
