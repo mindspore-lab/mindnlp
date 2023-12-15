@@ -1606,7 +1606,7 @@ class GenerationTesterMixin:
                 ),
             }
 
-            signature = inspect.signature(model.forward)
+            signature = inspect.signature(model.construct)
             # We want to test only models where encoder/decoder head masking is implemented
             if not set(head_masking.keys()) < {*signature.parameters.keys()}:
                 continue

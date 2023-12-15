@@ -39,7 +39,7 @@ class Conv1D(nn.Cell):
         super().__init__()
         self.n_out = n_out
         self.weight = Parameter(initializer(Normal(sigma=0.02), (n_in, n_out), mindspore.float32))
-        self.bias = Parameter(ops.zeros(n_out, mindspore.float32))
+        self.bias = Parameter(ops.zeros(n_out))
         self.matmul = Matmul()
 
     def construct(self, x):

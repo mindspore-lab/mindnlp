@@ -1565,9 +1565,7 @@ class AutoformerModel(AutoformerPreTrainedModel):
                 .unsqueeze(1)
                 .tile((1, self.config.prediction_length, 1))
             )
-            zeros = ops.zeros(
-                [transformer_inputs.shape[0], self.config.prediction_length, transformer_inputs.shape[2]],
-            )
+            zeros = ops.zeros(transformer_inputs.shape[0], self.config.prediction_length, transformer_inputs.shape[2])
 
             decoder_input = ops.cat(
                 (
@@ -1954,9 +1952,7 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
 
         mean = ops.mean(reshaped_lagged_sequence, axis=1).unsqueeze(
             1).tile((1, self.config.prediction_length, 1))
-        zeros = ops.zeros(
-            [reshaped_lagged_sequence.shape[0], self.config.prediction_length, reshaped_lagged_sequence.shape[2]],
-        )
+        zeros = ops.zeros(reshaped_lagged_sequence.shape[0], self.config.prediction_length, reshaped_lagged_sequence.shape[2])
 
         decoder_input = ops.cat(
             (
