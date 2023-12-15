@@ -153,6 +153,7 @@ FLAX_MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("roberta-prelayernorm", "MSRobertaPreLayerNormForCausalLM"),
         ("xglm", "MSXGLMForCausalLM"),
         ("xlm-roberta", "MSXLMRobertaForCausalLM"),
+        ("gpt_bigcode", "GPTBigCodeForCausalLM")
     ]
 )
 

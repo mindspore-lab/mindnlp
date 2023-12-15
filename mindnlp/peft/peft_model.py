@@ -28,7 +28,7 @@ from mindspore import nn, ops
 from mindspore.train.serialization import  _exec_save
 from mindspore.nn import CrossEntropyLoss
 
-from .config import PeftConfig
+from .config import PeftConfig, PromptLearningConfig
 
 from .tuners import (
     LoraModel,
