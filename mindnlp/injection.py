@@ -34,6 +34,8 @@ from mindspore import _checkparam as Validator
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp._legacy.functional import einsum
 
+LESS_MS_2_1 = version.parse(mindspore.__version__) < version.parse('2.1.0')
+LESS_MS_2_2 = version.parse(mindspore.__version__) < version.parse('2.2.0')
 
 DEVICE_TARGET = mindspore.get_context('device_target')
 GLOBAL_FP16_PATCH = False
@@ -325,7 +327,7 @@ def _nonzero(self, as_tuple=False):
 Tensor.nonzero = _nonzero
 StubTensor.nonzero = _nonzero
 
-if version.parse(mindspore.__version__) < version.parse('2.2.0'):
+if LESS_MS_2_2:
     mindspore.bfloat16 = None
     def eq(self, other):
         """patched eq"""
@@ -343,7 +345,7 @@ if version.parse(mindspore.__version__) < version.parse('2.2.0'):
     Tensor.tolist = _tolist
     StubTensor.tolist = _tolist
 
-if version.parse(mindspore.__version__) < version.parse('2.1.0'):
+if LESS_MS_2_1:
     mindspore.tensor = mindspore.Tensor
     ops.prod = bool_patch_decorator(ops.prod)
     def _prod(self, axis=None, keep_dims=False):
@@ -433,7 +435,7 @@ def custom_multinomial(probabilities, num_samples, replacement=True):
     """custom multinomial"""
     if replacement:
         # with replacement
-        if version.parse(mindspore.__version__) < version.parse('2.2.0'):
+        if LESS_MS_2_2:
             cumulative_probs = mindspore.tensor(np.cumsum(probabilities.asnumpy(), -1), probabilities.dtype)
         else:
             cumulative_probs = ops.cumsum(probabilities, axis=-1)
@@ -496,17 +498,18 @@ class Dense(nn.Cell):
             self.bias.set_data(initializer(Uniform(bound), self.bias.shape, self.bias.dtype))
 
     def construct(self, x):
-        x_shape = x.shape
-        if len(x_shape) != 2:
-            x = x.reshape(-1, x.shape[-1])
-        x = ops.matmul(x, self.weight.T)
-        if self.has_bias:
-            x = ops.add(x, self.bias)
-        if len(x_shape) != 2:
-            out_shape = x_shape[:-1] + (x.shape[-1],)
-            x = x.reshape(out_shape)
-        # return ops.dense(x, self.weight, self.bias)
-        return x
+        if LESS_MS_2_1:
+            x_shape = x.shape
+            if len(x_shape) != 2:
+                x = x.reshape(-1, x.shape[-1])
+            x = ops.matmul(x, self.weight.T)
+            if self.has_bias:
+                x = ops.add(x, self.bias)
+            if len(x_shape) != 2:
+                out_shape = x_shape[:-1] + (x.shape[-1],)
+                x = x.reshape(out_shape)
+            return x
+        return ops.dense(x, self.weight, self.bias)
 
 class Embedding(nn.Cell):
     """patched Embedding"""

@@ -2589,7 +2589,6 @@ class GenerationMixin:
         while True:
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
-
             # forward pass to get next token
             outputs = self(
                 **model_inputs,
@@ -2597,11 +2596,14 @@ class GenerationMixin:
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
             )
+
             if synced_gpus and this_peer_finished:
                 continue  # don't waste resources running the code we don't need
 
-            next_token_logits = outputs.logits[:, -1, :]
+            if isinstance(outputs, dict) and not isinstance(outputs, Seq2SeqLMOutput):
+                outputs = CausalLMOutputWithPast(**outputs)
 
+            next_token_logits = outputs.logits[:, -1, :]
             # pre-process distribution
             next_token_scores = logits_processor(input_ids, next_token_logits)
             next_token_scores = logits_warper(input_ids, next_token_scores)
@@ -2657,7 +2659,6 @@ class GenerationMixin:
 
             if this_peer_finished and not synced_gpus:
                 break
-
         if streamer is not None:
             streamer.end()
 

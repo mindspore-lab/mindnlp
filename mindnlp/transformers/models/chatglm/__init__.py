@@ -15,13 +15,15 @@
 """
 ChatGLM Model init
 """
-from . import modeling_chatglm, configuration_chatglm, tokenization_chatglm
+from . import modeling_chatglm, configuration_chatglm, tokenization_chatglm, modeling_graph_chatglm
 
 from .modeling_chatglm import *
+from .modeling_graph_chatglm import *
 from .configuration_chatglm import *
 from .tokenization_chatglm import *
 
 __all__ = []
 __all__.extend(modeling_chatglm.__all__)
+__all__.extend(modeling_graph_chatglm.__all__)
 __all__.extend(configuration_chatglm.__all__)
 __all__.extend(tokenization_chatglm.__all__)
