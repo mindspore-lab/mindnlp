@@ -277,7 +277,7 @@ class BeamSearchScorer(BeamScorer):
                 beam_hyp.add(final_tokens, final_score, beam_indices=beam_index)
 
         # select the best hypotheses
-        sent_lengths = ops.zeros(batch_size * self.num_beam_hyps_to_keep, input_ids.dtype)
+        sent_lengths = ops.zeros(batch_size * self.num_beam_hyps_to_keep, dtype=input_ids.dtype)
         best = []
         best_indices = []
         best_scores = ops.zeros(batch_size * self.num_beam_hyps_to_keep, dtype=mindspore.float32)
@@ -305,8 +305,7 @@ class BeamSearchScorer(BeamScorer):
         # prepare for adding eos
         sent_lengths_max = sent_lengths.max().asnumpy().item() + 1
         sent_max_len = min(sent_lengths_max, max_length) if max_length is not None else sent_lengths_max
-        decoded: mindspore.Tensor = ops.zeros((batch_size * self.num_beam_hyps_to_keep, sent_max_len), input_ids.dtype)
-
+        decoded: mindspore.Tensor = ops.zeros((batch_size * self.num_beam_hyps_to_keep, sent_max_len), dtype=input_ids.dtype)
         if len(best_indices) > 0 and best_indices[0] is not None:
             indices: mindspore.Tensor = ops.zeros((batch_size * self.num_beam_hyps_to_keep, sent_max_len), dtype=input_ids.dtype)
         else:
@@ -772,7 +771,7 @@ class ConstrainedBeamSearchScorer(BeamScorer):
                         break
 
         # select the best hypotheses
-        sent_lengths = ops.zeros(batch_size * self.num_beam_hyps_to_keep, input_ids.dtype)
+        sent_lengths = ops.zeros(batch_size * self.num_beam_hyps_to_keep, dtype=input_ids.dtype)
         best = []
         best_indices = []
         best_scores = ops.zeros(batch_size * self.num_beam_hyps_to_keep, dtype=mindspore.float32)

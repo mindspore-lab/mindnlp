@@ -4180,7 +4180,7 @@ class GenerationMixin:
             )
 
         # keep track of which sequences are already finished
-        unfinished_sequences = ops.ones(input_ids.shape[0], input_ids.dtype)
+        unfinished_sequences = ops.ones(input_ids.shape[0], dtype=input_ids.dtype)
 
         # other auxiliary variables
         max_len = stopping_criteria[0].max_length
