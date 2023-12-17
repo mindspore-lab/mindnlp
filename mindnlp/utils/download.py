@@ -484,6 +484,7 @@ def download(
     url = build_download_url(repo_id, filename, repo_type=repo_type, endpoint=endpoint)
     # check model whether exist
     model_url = url[: url.rfind('/')].replace('resolve/main', '')
+
     req = requests.get(model_url, timeout=3, proxies=proxies)
     status = req.status_code
     if status == 404:
@@ -492,6 +493,7 @@ def download(
     pointer_path = http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies)
     return pointer_path
 
+# https://modelscope.cn/api/v1/models/mindnlp/THUDM_chatglm-6b/repo?Revision=master&FilePath=mindspore-00001-of-00008.ckpt
 
 def match_file(filename: str, cache_dir: str) -> str:
     r"""
@@ -743,4 +745,5 @@ def build_download_url(
 ) -> str:
     """Construct the URL of a file from the given information.
     """
+    repo_id = repo_id.replace('/', '_')
     return endpoint.format(repo_id, filename)

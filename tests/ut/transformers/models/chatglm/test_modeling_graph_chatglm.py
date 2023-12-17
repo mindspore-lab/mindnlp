@@ -43,9 +43,9 @@ def ids_tensor(shape, vocab_size):
 
 
 def get_model_and_tokenizer():
-    model = MSChatGLMForConditionalGeneration.from_pretrained("THUDM/chatglm-6b", from_pt=True).half()
+    model = MSChatGLMForConditionalGeneration.from_pretrained("THUDM/chatglm-6b").half()
     model.set_train(False)
-    tokenizer = AutoTokenizer.from_pretrained("THUDM/chatglm-6b", from_pt=True)
+    tokenizer = AutoTokenizer.from_pretrained("THUDM/chatglm-6b")
     return model, tokenizer
 
 @require_mindspore

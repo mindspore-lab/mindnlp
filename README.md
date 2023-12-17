@@ -102,6 +102,8 @@ The table below represents the current support in the library for each of those 
 | BLIP2                         | TODO              | ✅             |
 | BLOOM                         | ✅                | ❌             |
 | ChatGLM                       | ✅                | ❌             |
+| ChatGLM2                      | ✅                | ❌             |
+| ChatGLM3                      | ✅                | ❌             |
 | CLIP                          | ✅                | ❌             |
 | CodeGen                       | ✅                | ❌             |
 | ConvBERT                      | TODO              | ❌             |
