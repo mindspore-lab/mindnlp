@@ -531,6 +531,5 @@ __all__ = [
     "BinaryAttention",
     "AdditiveAttention",
     "CosineAttention",
-    "LocationAwareAttention",
     "LinearAttention"
 ]

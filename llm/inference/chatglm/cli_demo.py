@@ -4,9 +4,9 @@ import signal
 from mindnlp.transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
 
-model = AutoModelForSeq2SeqLM.from_pretrained("THUDM/chatglm-6b", from_pt=True).half()
+model = AutoModelForSeq2SeqLM.from_pretrained("THUDM/chatglm-6b").half()
 model.set_train(False)
-tokenizer = AutoTokenizer.from_pretrained("THUDM/chatglm-6b", from_pt=True)
+tokenizer = AutoTokenizer.from_pretrained("THUDM/chatglm-6b")
 
 os_name = platform.system()
 clear_command = 'cls' if os_name == 'Windows' else 'clear'

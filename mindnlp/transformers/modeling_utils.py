@@ -784,7 +784,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     }
                     # try safetensors
                     resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
-                    if resolved_archive_file is None:
+                    if resolved_archive_file is None and from_pt:
                         filename = _add_variant(PT_WEIGHTS_NAME, variant)
                         resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
 
