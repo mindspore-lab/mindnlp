@@ -115,8 +115,7 @@ class MistralRotaryEmbedding(nn.Cell):
 # Copied from transformers.models.llama.modeling_llama.rotate_half
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
-    x1 = x[..., : x.shape[-1] // 2]
-    x2 = x[..., x.shape[-1] // 2 :]
+    x1, x2 = x.chunk(2, -1)
     return ops.cat((-x2, x1), axis=-1)
 
 
