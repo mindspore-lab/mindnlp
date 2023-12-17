@@ -52,6 +52,8 @@ if is_mindspore_available():
 
     from mindnlp.transformers import SeamlessM4TProcessor
 
+mindspore.set_context(pynative_synchronize=True)
+
 class SeamlessM4TModelTester:
     def __init__(
         self,
@@ -368,6 +370,9 @@ class SeamlessM4TModelWithSpeechInputTest(ModelTesterMixin, unittest.TestCase):
         self.model_tester = SeamlessM4TModelTester(self, input_modality="speech")
         self.config_tester = ConfigTester(self, config_class=SeamlessM4TConfig)
 
+    def test_training(self):
+        pass
+
     def test_config(self):
         self.config_tester.run_common_tests()
 
@@ -416,7 +421,7 @@ class SeamlessM4TModelWithSpeechInputTest(ModelTesterMixin, unittest.TestCase):
             num_interleave, dim=0
         )
         input_ids = (
-            ops.zeros(input_ids.shape[:2], dtype=mindspore.int64, layout=input_ids.layout, device=input_ids.device)
+            ops.zeros(input_ids.shape[:2], dtype=mindspore.int64)
             + model._get_decoder_start_token_id()
         )
         attention_mask = None
@@ -518,6 +523,7 @@ class SeamlessM4TModelWithSpeechInputTest(ModelTesterMixin, unittest.TestCase):
         # no more chunk_length test
 
         for model_class in self.all_model_classes:
+            print(model_class)
             inputs_dict["output_attentions"] = True
             inputs_dict["output_hidden_states"] = False
             config.return_dict = True

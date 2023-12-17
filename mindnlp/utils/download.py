@@ -37,7 +37,7 @@ from tqdm.autonotebook import tqdm
 import requests
 from requests.exceptions import ProxyError, SSLError, HTTPError
 
-from mindnlp.configs import DEFAULT_ROOT, ENV_VARS_TRUE_VALUES, MINDNLP_CACHE, REPO_TYPES
+from mindnlp.configs import DEFAULT_ROOT, ENV_VARS_TRUE_VALUES, MINDNLP_CACHE, REPO_TYPES, MS_URL_BASE
 from .errors import (
     EntryNotFoundError,
     LocalEntryNotFoundError,
@@ -745,5 +745,6 @@ def build_download_url(
 ) -> str:
     """Construct the URL of a file from the given information.
     """
-    repo_id = repo_id.replace('/', '_')
+    if endpoint == MS_URL_BASE:
+        repo_id = repo_id.replace('/', '_')
     return endpoint.format(repo_id, filename)
