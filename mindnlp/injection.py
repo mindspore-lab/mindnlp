@@ -660,8 +660,8 @@ class Conv1dTranspose(_Conv):
                  dilation=1,
                  group=1,
                  has_bias=True,
-                 weight_init=None,
-                 bias_init=None,
+                 weight_init='zeros',
+                 bias_init='zeros',
                  dtype=mstype.float32):
         """Initialize Conv1dTranspose."""
         Validator.check_value_type("kernel_size", kernel_size, [int], self.cls_name)
