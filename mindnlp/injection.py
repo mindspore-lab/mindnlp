@@ -642,11 +642,19 @@ class Conv1d(_Conv):
             'zeros',
             'zeros')
         self.padding = padding
+        self.reset_parameters()
 
     def construct(self, x):
         return ops.conv1d(x, self.weight, self.bias, stride=self.stride, pad_mode=self.pad_mode,
                           padding=self.padding, dilation=self.dilation, groups=self.group)
 
+    def reset_parameters(self):
+        """reset_embedding_params"""
+        self.weight.set_data(initializer(HeUniform(math.sqrt(5)), self.weight.shape, self.weight.dtype))
+        if self.has_bias:
+            fan_in, _ = _calculate_fan_in_and_fan_out(self.weight.shape)
+            bound = 1 / math.sqrt(fan_in)
+            self.bias.set_data(initializer(Uniform(bound), self.bias.shape, self.bias.dtype))
 
 class Conv1dTranspose(_Conv):
     """patched Conv1dTranspose"""
@@ -701,7 +709,6 @@ class Conv1dTranspose(_Conv):
         self.is_valid = self.pad_mode == 'valid'
         self.is_same = self.pad_mode == 'same'
         self.is_pad = self.pad_mode == 'pad'
-
         # cause Conv2DBackpropInput's out_channel refers to Conv2D's out_channel.
         self.conv2d_transpose = ops.Conv2DBackpropInput(out_channel=in_channels,
                                                       kernel_size=kernel_size,
@@ -711,6 +718,8 @@ class Conv1dTranspose(_Conv):
                                                       stride=stride,
                                                       dilation=dilation,
                                                       group=group)
+        self.reset_parameters()
+
     def construct(self, x):
         x = x.expand_dims(2)
         n, _, h, w = x.shape
@@ -721,10 +730,17 @@ class Conv1dTranspose(_Conv):
                                       self.stride[1], self.dilation[1], self.padding[2] + self.padding[3])
         output = self.conv2d_transpose(x, self.weight.expand_dims(2), (n, self.out_channels, h_out, w_out))
         if self.has_bias:
-            output = output + self.bias
+            output = ops.bias_add(output, self.bias)
         output = output.squeeze(2)
         return output
 
+    def reset_parameters(self):
+        """reset_embedding_params"""
+        self.weight.set_data(initializer(HeUniform(math.sqrt(5)), self.weight.shape, self.weight.dtype))
+        if self.has_bias:
+            fan_in, _ = _calculate_fan_in_and_fan_out(self.weight.shape)
+            bound = 1 / math.sqrt(fan_in)
+            self.bias.set_data(initializer(Uniform(bound), self.bias.shape, self.bias.dtype))
 
 class LayerNorm(nn.Cell):
     r"""
