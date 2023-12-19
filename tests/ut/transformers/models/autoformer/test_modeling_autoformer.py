@@ -175,8 +175,8 @@ class AutoformerModelTester:
             .unsqueeze(1)
             .tile((1, config.prediction_length, 1))
         )
-        zeros = ops.zeros([transformer_inputs.shape[0], config.prediction_length,
-                           transformer_inputs.shape[2]])
+        zeros = ops.zeros(transformer_inputs.shape[0], config.prediction_length,
+                          transformer_inputs.shape[2])
 
         dec_input = ops.cat(
             (

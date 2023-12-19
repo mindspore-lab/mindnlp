@@ -45,7 +45,6 @@ if is_mindspore_available():
     from mindnlp.transformers.models.bert.modeling_bert import BERT_SUPPORT_LIST
 
 
-mindspore.set_context(pynative_synchronize=True)
 class BertModelTester:
     def __init__(
         self,

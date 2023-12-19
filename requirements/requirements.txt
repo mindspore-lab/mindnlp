@@ -13,3 +13,5 @@ sacremoses
 librosa
 soundfile
 tokenizers
+easydict
+safetensors

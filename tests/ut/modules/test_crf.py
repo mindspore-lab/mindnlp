@@ -328,7 +328,7 @@ class TestDecode(MindNLPTestCase):
         best_tags_no_mask = crf(emissions)
         # No mask means mask is all ones
         best_tags_mask = crf._viterbi_decode(
-            emissions, mask=ops.ones(emissions.shape[:2], mindspore.bool_))
+            emissions, mask=ops.ones(emissions.shape[:2], dtype=mindspore.bool_))
 
         assert (best_tags_no_mask[0] == best_tags_mask[0]).all()
 

@@ -20,7 +20,7 @@ from mindnlp._legacy.nn import transformer
 from mindnlp.modules import encoder, decoder, embeddings, loss, attentions, crf, rnns, \
     accumulator
 from mindnlp.modules.attentions import ScaledDotAttention, SelfAttention, \
-    BinaryAttention, AdditiveAttention, CosineAttention, LocationAwareAttention, \
+    BinaryAttention, AdditiveAttention, CosineAttention, \
     LinearAttention
 from mindnlp.modules.encoder import RNNEncoder, CNNEncoder
 from mindnlp.modules.decoder import RNNDecoder

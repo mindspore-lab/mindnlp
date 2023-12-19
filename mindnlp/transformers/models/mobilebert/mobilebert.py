@@ -105,7 +105,7 @@ class MobileBertEmbeddings(nn.Cell):
             position_ids = self.position_ids[:, :seq_length]
 
         if token_type_ids is None:
-            token_type_ids = ops.zeros(input_shape, mindspore.int32)
+            token_type_ids = ops.zeros(input_shape, dtype=mindspore.int32)
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
 

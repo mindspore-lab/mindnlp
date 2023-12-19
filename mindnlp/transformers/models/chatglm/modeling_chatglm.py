@@ -201,17 +201,9 @@ def attention_fn(
     # [sk, b, np, hn] -> [sk, b * np, hn]
     key_layer = key_layer.view(output_size[3], output_size[0] * output_size[1], -1)
 
-    matmul_result = ops.zeros(
-        (1, 1, 1),
-        dtype=query_layer.dtype,
-    )
-
-    matmul_result = ops.baddbmm(
-        matmul_result,
+    matmul_result = ops.bmm(
         query_layer.swapaxes(0, 1),  # [b * np, sq, hn]
         key_layer.swapaxes(0, 1).swapaxes(1, 2),  # [b * np, hn, sk]
-        beta=0.0,
-        alpha=1.0,
     )
     # change view to [b, np, sq, sk]
     attention_scores = matmul_result.view(*output_size)
@@ -1152,7 +1144,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         )
         logits_warper = self._get_logits_warper(generation_config)
 
-        unfinished_sequences = ops.ones(input_ids.shape[0], input_ids.dtype)
+        unfinished_sequences = ops.ones(input_ids.shape[0], dtype=input_ids.dtype)
         scores = None
         while True:
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)

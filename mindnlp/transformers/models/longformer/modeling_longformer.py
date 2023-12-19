@@ -817,12 +817,12 @@ class LongformerSelfAttention(nn.Cell):
         beginning_mask = beginning_mask_2d[None, :, None, :]
         ending_mask = beginning_mask.flip(dims=(1, 3))
         beginning_input = input_tensor[:, :affected_seq_len, :, : affected_seq_len + 1]
-        beginning_mask = beginning_mask.expand(beginning_input.shape)
+        beginning_mask = beginning_mask.broadcast_to(beginning_input.shape)
         input_tensor[:, :affected_seq_len, :, : affected_seq_len + 1] = ops.full_like(
             beginning_input, -float("inf")
         ).where(beginning_mask.bool(), beginning_input)
         ending_input = input_tensor[:, -affected_seq_len:, :, -(affected_seq_len + 1) :]
-        ending_mask = ending_mask.expand(ending_input.shape)
+        ending_mask = ending_mask.broadcast_to(ending_input.shape)
         input_tensor[:, -affected_seq_len:, :, -(affected_seq_len + 1) :] = ops.full_like(
             ending_input, -float("inf")
         ).where(ending_mask.bool(), ending_input)

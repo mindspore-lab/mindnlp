@@ -64,7 +64,8 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("bert", "BertLMHeadModel"),
         ("roberta", "RobertaLMHeadModel"),
         ("gpt2", "GPT2LMHeadModel"),
-        ("falcon", "FalconForCausalLM")
+        ("falcon", "FalconForCausalLM"),
+        ("gpt_bigcode", "GPTBigCodeForCausalLM")
     ]
 )
 

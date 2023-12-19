@@ -27,12 +27,15 @@ import numpy as np
 import mindspore
 import mindspore.common.dtype as mstype
 from mindspore import nn, ops, Tensor, Parameter
-from mindspore.nn.layer.conv import _Conv
 from mindspore.common._stub_tensor import StubTensor
+from mindspore.nn.layer.conv import _Conv, _deconv_output_length
 from mindspore.common.initializer import initializer, Normal, HeUniform, Uniform, _calculate_fan_in_and_fan_out
 from mindspore import _checkparam as Validator
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp._legacy.functional import einsum
+
+LESS_MS_2_1 = version.parse(mindspore.__version__) < version.parse('2.1.0')
+LESS_MS_2_2 = version.parse(mindspore.__version__) < version.parse('2.2.0')
 
 DEVICE_TARGET = mindspore.get_context('device_target')
 GLOBAL_FP16_PATCH = False
@@ -172,8 +175,28 @@ ops.dense = fp16_patch_decorator(dense)
 ops.einsum = einsum
 # conv1d
 ops.conv1d = fp16_patch_decorator(ops.conv1d)
-# cross_entropy
 
+def _ones(*size, dtype=None):
+    if dtype is None:
+        dtype = mindspore.float32
+    if isinstance(size[0], tuple):
+        size = size[0]
+    ones_ = _get_cache_prim(ops.Ones)()
+    return ones_(size, dtype)
+
+ops.ones = _ones
+
+def _zeros(*size, dtype=None):
+    if dtype is None:
+        dtype = mindspore.float32
+    if isinstance(size[0], tuple):
+        size = size[0]
+    zeros_ = _get_cache_prim(ops.Zeros)()
+    return zeros_(size, dtype)
+
+ops.zeros = _zeros
+
+# cross_entropy
 def _cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
     if weight is None:
         weight = ops.ones(input.shape[-1], input.dtype)
@@ -324,13 +347,37 @@ def _nonzero(self, as_tuple=False):
 Tensor.nonzero = _nonzero
 StubTensor.nonzero = _nonzero
 
-if version.parse(mindspore.__version__) < version.parse('2.2.0'):
+def _expand(self, *size):
+    return ops.broadcast_to(self, size)
+
+Tensor.expand = _expand
+StubTensor.expand = _expand
+
+if LESS_MS_2_2:
+    mindspore.bfloat16 = None
     def eq(self, other):
         """patched eq"""
         return ops.equal(self, other)
     Tensor.eq = eq
     StubTensor.eq = eq
 
+    def _item(self):
+        return self.asnumpy().item()
+    Tensor.item = _item
+    StubTensor.item = _item
+
+    def _tolist(self):
+        return self.asnumpy().tolist()
+    Tensor.tolist = _tolist
+    StubTensor.tolist = _tolist
+
+if LESS_MS_2_1:
+    mindspore.tensor = mindspore.Tensor
+    ops.prod = bool_patch_decorator(ops.prod)
+    def _prod(self, axis=None, keep_dims=False):
+        return ops.prod(self, axis, keep_dims)
+    Tensor.prod = _prod
+    StubTensor.prod = _prod
 
 def _eq(self, other):
     if not isinstance(other, (int, float, Tensor)):
@@ -347,11 +394,35 @@ def _eq(self, other):
 
 Parameter.__eq__ = _eq
 
-ops.repeat_interleave = bool_io_patch_decorator(ops.repeat_interleave)
+old_repeat = Tensor.repeat
+def new_repeat_interleave(input, repeats, axis=None):
+    """new repeat_interleave"""
+    if axis is None:
+        input = input.reshape(-1)
+        axis = 0
+    if isinstance(repeats, Tensor):
+        repeats = repeats.asnumpy().tolist()
+    output = old_repeat(input, repeats, axis)
+    return output
+ops.repeat_interleave = bool_io_patch_decorator(new_repeat_interleave)
 def _repeat_interleave(self, repeats, dim):
-    return ops.repeat_interleave(self, repeats, axis=dim)
+    return old_repeat(self, repeats, axis=dim)
+
 Tensor.repeat_interleave = _repeat_interleave
 StubTensor.repeat_interleave = _repeat_interleave
+
+def _repeat(self, *sizes):
+    return ops.tile(self, tuple(sizes))
+
+Tensor.repeat = _repeat
+StubTensor.repeat = _repeat
+
+if version.parse(mindspore.__version__) < version.parse('2.3.0'):
+    def _stride(self):
+        strides = self.strides
+        return tuple(stride // 4 for stride in strides)
+    Tensor.stride = _stride
+    StubTensor.stride = _stride
 
 # Ascend only
 if DEVICE_TARGET == 'Ascend':
@@ -406,7 +477,10 @@ def custom_multinomial(probabilities, num_samples, replacement=True):
     """custom multinomial"""
     if replacement:
         # with replacement
-        cumulative_probs = ops.cumsum(probabilities, axis=-1)
+        if LESS_MS_2_2:
+            cumulative_probs = mindspore.tensor(np.cumsum(probabilities.asnumpy(), -1), probabilities.dtype)
+        else:
+            cumulative_probs = ops.cumsum(probabilities, axis=-1)
         uniform_samples = ops.rand(probabilities.shape[:-1] + (num_samples,))
         if cumulative_probs.dtype == mindspore.float16:
             cumulative_probs = cumulative_probs.astype(mindspore.float32)
@@ -466,17 +540,18 @@ class Dense(nn.Cell):
             self.bias.set_data(initializer(Uniform(bound), self.bias.shape, self.bias.dtype))
 
     def construct(self, x):
-        x_shape = x.shape
-        if len(x_shape) != 2:
-            x = x.reshape(-1, x.shape[-1])
-        x = ops.matmul(x, self.weight.T)
-        if self.has_bias:
-            x = ops.add(x, self.bias)
-        if len(x_shape) != 2:
-            out_shape = x_shape[:-1] + (x.shape[-1],)
-            x = x.reshape(out_shape)
-        # return ops.dense(x, self.weight, self.bias)
-        return x
+        if LESS_MS_2_2:
+            x_shape = x.shape
+            if len(x_shape) != 2:
+                x = x.reshape(-1, x.shape[-1])
+            x = ops.matmul(x, self.weight.T)
+            if self.has_bias:
+                x = ops.add(x, self.bias)
+            if len(x_shape) != 2:
+                out_shape = x_shape[:-1] + (x.shape[-1],)
+                x = x.reshape(out_shape)
+            return x
+        return ops.dense(x, self.weight, self.bias)
 
 class Embedding(nn.Cell):
     """patched Embedding"""
@@ -531,7 +606,7 @@ class Conv1d(_Conv):
                  padding=0,
                  dilation=1,
                  group=1,
-                 has_bias=False):
+                 has_bias=True):
         """Initialize Conv1d."""
         Validator.check_value_type("kernel_size", kernel_size, [int], self.cls_name)
         Validator.check_value_type("stride", stride, [int], self.cls_name)
@@ -567,10 +642,105 @@ class Conv1d(_Conv):
             'zeros',
             'zeros')
         self.padding = padding
+        self.reset_parameters()
 
     def construct(self, x):
         return ops.conv1d(x, self.weight, self.bias, stride=self.stride, pad_mode=self.pad_mode,
                           padding=self.padding, dilation=self.dilation, groups=self.group)
+
+    def reset_parameters(self):
+        """reset_embedding_params"""
+        self.weight.set_data(initializer(HeUniform(math.sqrt(5)), self.weight.shape, self.weight.dtype))
+        if self.has_bias:
+            fan_in, _ = _calculate_fan_in_and_fan_out(self.weight.shape)
+            bound = 1 / math.sqrt(fan_in)
+            self.bias.set_data(initializer(Uniform(bound), self.bias.shape, self.bias.dtype))
+
+class Conv1dTranspose(_Conv):
+    """patched Conv1dTranspose"""
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 kernel_size,
+                 stride=1,
+                 pad_mode='same',
+                 padding=0,
+                 dilation=1,
+                 group=1,
+                 has_bias=True,
+                 weight_init='zeros',
+                 bias_init='zeros',
+                 dtype=mstype.float32):
+        """Initialize Conv1dTranspose."""
+        Validator.check_value_type("kernel_size", kernel_size, [int], self.cls_name)
+        Validator.check_value_type("stride", stride, [int], self.cls_name)
+        Validator.check_value_type("padding", padding, [int], self.cls_name)
+        Validator.check_value_type("dilation", dilation, [int], self.cls_name)
+        Validator.check_int(kernel_size, 1, Validator.GE, 'kernel_size', self.cls_name)
+        Validator.check_int(stride, 1, Validator.GE, 'stride', self.cls_name)
+        Validator.check_non_negative_int(padding, 'padding', self.cls_name)
+        Validator.check_int(dilation, 1, Validator.GE, 'dilation', self.cls_name)
+        kernel_size = (1, kernel_size,)
+        stride = (1, stride,)
+
+        dilation = (1, dilation,)
+        # out_channels and in_channels swap.
+        # cause Conv2DBackpropInput's out_channel refers to Conv2D's out_channel,
+        # then Conv1dTranspose's out_channel refers to Conv2DBackpropInput's in_channel.
+        super().__init__(
+            in_channels,
+            out_channels,
+            (kernel_size[1],),
+            stride,
+            pad_mode,
+            padding,
+            dilation,
+            group,
+            has_bias,
+            weight_init,
+            bias_init,
+            transposed=True,
+            dtype=dtype)
+        self.kernel_size = kernel_size
+        self.padding = (0, 0, padding, padding)
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        Validator.check_string(pad_mode, ['valid', 'same', 'pad'], 'pad_mode', self.cls_name)
+        self.is_valid = self.pad_mode == 'valid'
+        self.is_same = self.pad_mode == 'same'
+        self.is_pad = self.pad_mode == 'pad'
+        # cause Conv2DBackpropInput's out_channel refers to Conv2D's out_channel.
+        self.conv2d_transpose = ops.Conv2DBackpropInput(out_channel=in_channels,
+                                                      kernel_size=kernel_size,
+                                                      mode=1,
+                                                      pad_mode=pad_mode,
+                                                      pad=self.padding,
+                                                      stride=stride,
+                                                      dilation=dilation,
+                                                      group=group)
+        self.reset_parameters()
+
+    def construct(self, x):
+        x = x.expand_dims(2)
+        n, _, h, w = x.shape
+
+        h_out = _deconv_output_length(self.is_valid, self.is_same, self.is_pad, h, self.kernel_size[0],
+                                      self.stride[0], self.dilation[0], self.padding[0] + self.padding[1])
+        w_out = _deconv_output_length(self.is_valid, self.is_same, self.is_pad, w, self.kernel_size[1],
+                                      self.stride[1], self.dilation[1], self.padding[2] + self.padding[3])
+        output = self.conv2d_transpose(x, self.weight.expand_dims(2), (n, self.out_channels, h_out, w_out))
+        if self.has_bias:
+            output = ops.bias_add(output, self.bias)
+        output = output.squeeze(2)
+        return output
+
+    def reset_parameters(self):
+        """reset_embedding_params"""
+        self.weight.set_data(initializer(HeUniform(math.sqrt(5)), self.weight.shape, self.weight.dtype))
+        if self.has_bias:
+            fan_in, _ = _calculate_fan_in_and_fan_out(self.weight.shape)
+            bound = 1 / math.sqrt(fan_in)
+            self.bias.set_data(initializer(Uniform(bound), self.bias.shape, self.bias.dtype))
 
 class LayerNorm(nn.Cell):
     r"""
@@ -622,6 +792,85 @@ class LayerNorm(nn.Cell):
         return f'normalized_shape={self.normalized_shape}, begin_norm_axis={self.begin_norm_axis}, ' \
                f'begin_params_axis={self.begin_params_axis}, weight={self.weight}, bias={self.bias}'
 
+class BatchNorm1d(nn.Cell):
+    """Batch Normalization base class."""
+    def __init__(self,
+                 num_features,
+                 eps=1e-5,
+                 momentum=0.9,
+                 affine=True,
+                 weight_init='ones',
+                 bias_init='zeros',
+                 moving_mean_init='zeros',
+                 moving_var_init='ones',
+                 use_batch_statistics=None,
+                 dtype=mstype.float32):
+        """Initialize _BatchNorm."""
+        super().__init__()
+        if num_features < 1:
+            raise ValueError(f"For '{self.cls_name}', the 'num_features' must be at least 1, but got {num_features}.")
+
+        if momentum < 0 or momentum > 1:
+            raise ValueError(f"For '{self.cls_name}', the 'momentum' must be a number in range [0, 1], "
+                             f"but got {momentum}.")
+        self.use_batch_statistics = use_batch_statistics
+        if self.use_batch_statistics is not None and not isinstance(self.use_batch_statistics, bool):
+            raise ValueError(f"For '{self.cls_name}', the 'use_batch_statistics' must be a boolean value or None,"
+                             f" but got {use_batch_statistics}.")
+        self.num_features = num_features
+        self.eps = eps
+        self.moving_mean_init = moving_mean_init
+        self.moving_var_init = moving_var_init
+        self.running_mean = Parameter(initializer(
+            moving_mean_init, num_features, dtype=dtype), name="running_mean", requires_grad=False)
+        self.running_var = Parameter(initializer(
+            moving_var_init, num_features, dtype=dtype), name="running_var", requires_grad=False)
+        self.weight = Parameter(initializer(
+            weight_init, num_features, dtype=dtype), name="weight", requires_grad=affine)
+        self.bias = Parameter(initializer(
+            bias_init, num_features, dtype=dtype), name="bias", requires_grad=affine)
+
+        self.momentum = 1.0 - momentum
+
+        self.bn_train = ops.BatchNorm(is_training=True,
+                                    epsilon=self.eps,
+                                    momentum=self.momentum)
+
+        self.bn_infer = ops.BatchNorm(is_training=False, epsilon=self.eps)
+
+    def construct(self, x):
+        if self.use_batch_statistics is None:
+            if self.training:
+                return self.bn_train(x,
+                                     self.weight,
+                                     self.bias,
+                                     self.running_mean,
+                                     self.running_var)[0]
+            if not self.training:
+                return self.bn_infer(x,
+                                     self.weight,
+                                     self.bias,
+                                     self.running_mean,
+                                     self.running_var)[0]
+
+        if self.use_batch_statistics:
+            return self.bn_train(x,
+                                 self.weight,
+                                 self.bias,
+                                 self.running_mean,
+                                 self.running_var)[0]
+
+        return self.bn_infer(x,
+                             self.weight,
+                             self.bias,
+                             self.running_mean,
+                             self.running_var)[0]
+
+    def extend_repr(self):
+        return f'num_features={self.num_features}, eps={self.eps}, momentum={1.0 - self.momentum}, ' \
+               f'weight={self.weight}, bias={self.bias}, running_mean={self.running_mean}, running_var={self.running_var}'
+
+
 def half(self):
     """patched nn.Cell.half"""
     self.to_float(mindspore.float16)
@@ -636,5 +885,7 @@ nn.Cell._check_cell_flags_in_pynative = _check_cell_flags_in_pynative
 
 nn.LayerNorm = LayerNorm
 nn.Conv1d = Conv1d
+nn.Conv1dTranspose = Conv1dTranspose
 nn.Embedding = Embedding
 nn.Dense = Dense
+nn.BatchNorm1d = BatchNorm1d
