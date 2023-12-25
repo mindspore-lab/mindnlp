@@ -46,6 +46,9 @@ def prepare_inputs_dict(
     decoder_head_mask=None,
     cross_attn_head_mask=None,
 ):
+    r"""
+    prepare inputs
+    """
     if input_ids is not None:
         encoder_dict = {"input_ids": input_ids}
     else:
@@ -263,8 +266,6 @@ class EncodecModelTest(ModelTesterMixin, unittest.TestCase):
             loaded_model_state_dict = {
                 key: value for key, value in loaded_model_state_dict.items() if key not in non_persistent_buffers
             }
-            print('load_model',loaded_model_state_dict.keys())
-            print('model',model_state_dict.keys())
             self.assertEqual(set(model_state_dict.keys()), set(loaded_model_state_dict.keys()))
 
             model_buffers = list(model.buffers())
@@ -329,7 +330,8 @@ class EncodecModelTest(ModelTesterMixin, unittest.TestCase):
             model.set_train(False)
 
             hidden_states_with_chunk = model(**inputs)[0]
-            self.assertTrue(np.allclose(hidden_states_no_chunk, hidden_states_with_chunk, atol=1e-3))
+            # print(hidden_states_no_chunk)
+            self.assertTrue(np.allclose(hidden_states_no_chunk.asnumpy().astype(float), hidden_states_with_chunk.asnumpy().astype(float), atol=1e-3))
 
     @unittest.skip("The EncodecModel is not transformers based, thus it does not have the usual `hidden_states` logic")
     def test_hidden_states_output(self):
@@ -365,7 +367,7 @@ class EncodecModelTest(ModelTesterMixin, unittest.TestCase):
         def set_nan_tensor_to_zero(t):
             t[t != t] = 0
             return t
-
+        #pylint: disable=W0102
         def check_equivalence(model, tuple_inputs, dict_inputs, additional_kwargs={}):
             r"""
             check_equivalence
