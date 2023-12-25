@@ -110,7 +110,7 @@ class EncodecConfig(PretrainedConfig):
     >>> configuration = model.config
     ```"""
     model_type = "encodec"
-
+    #pylint: disable=W0102
     def __init__(
         self,
         target_bandwidths = [1.5, 3.0, 6.0, 12.0, 24.0],
@@ -177,8 +177,7 @@ class EncodecConfig(PretrainedConfig):
         """
         if self.chunk_length_s is None:
             return None
-        else:
-            return int(self.chunk_length_s * self.sampling_rate)
+        return int(self.chunk_length_s * self.sampling_rate)
 
     # This is a property because you might want to change the chunk_length_s on the fly
     @property
@@ -188,8 +187,7 @@ class EncodecConfig(PretrainedConfig):
         """
         if self.chunk_length_s is None or self.overlap is None:
             return None
-        else:
-            return max(1, int((1.0 - self.overlap) * self.chunk_length))
+        return max(1, int((1.0 - self.overlap) * self.chunk_length))
 
     @property
     def frame_rate(self) -> int:

@@ -345,7 +345,7 @@ class BarkPreTrainedModel(PreTrainedModel):
     #     return get_parameter_device(self)
 
     def _set_gradient_checkpointing(self, cell, value=False):
-        if isinstance(cell, BarkCausalModel) or isinstance(cell, BarkFineModel) or isinstance(cell, BarkModel):
+        if isinstance(cell, (BarkCausalModel, BarkFineModel, BarkModel)):
             cell.gradient_checkpointing = value
 
 # GPT2-like autoregressive model
@@ -471,13 +471,13 @@ class BarkCausalModel(BarkPreTrainedModel):
         # then compute embeddings.
         if input_ids is not None and input_embeds is not None:
             raise ValueError("You cannot specify both input_ids and input_embeds at the same time")
-        elif input_embeds is not None and past_key_values is None:
+        if input_embeds is not None and past_key_values is None:
             # we want to return the input_embeds in priority so that it is in line with a weird hack
             # of Bark which concatenate two bits of the input_embeds on the first forward pass of the semantic model
             pass
-        elif input_ids is not None:
+        if input_ids is not None:
             input_embeds = self.input_embeds_layer(input_ids)  # token embeddings of shape (b, t, n_embd)
-        elif input_embeds is not None:
+        if input_embeds is not None:
             pass
         else:
             raise ValueError("You have to specify either input_ids or input_embeds")
@@ -766,9 +766,9 @@ class BarkCoarseModel(BarkCausalModel):
 
             # offset x_coarse_history
             if codebook_size is not None:
-                for n in range(1, x_coarse_history.shape[0]):
+                for i in range(1, x_coarse_history.shape[0]):
                     # offset
-                    x_coarse_history[n, :] += codebook_size * n
+                    x_coarse_history[i, :] += codebook_size * i
 
             # flatten x_coarse_history
             x_coarse_history = ops.swapaxes(x_coarse_history, 0, 1).view(-1)

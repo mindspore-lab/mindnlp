@@ -72,8 +72,7 @@ class EncodecFeatureExtractor(SequenceFeatureExtractor):
         """
         if self.chunk_length_s is None:
             return None
-        else:
-            return int(self.chunk_length_s * self.sampling_rate)
+        return int(self.chunk_length_s * self.sampling_rate)
 
 
     @property
@@ -83,8 +82,7 @@ class EncodecFeatureExtractor(SequenceFeatureExtractor):
         """
         if self.chunk_length_s is None or self.overlap is None:
             return None
-        else:
-            return max(1, int((1.0 - self.overlap) * self.chunk_length))
+        return max(1, int((1.0 - self.overlap) * self.chunk_length))
 
     def __call__(
         self,
@@ -143,7 +141,7 @@ class EncodecFeatureExtractor(SequenceFeatureExtractor):
 
         if padding and truncation:
             raise ValueError("Both padding and truncation were set. Make sure you only set one.")
-        elif padding is None:
+        if padding is None:
             # by default let's pad the inputs
             padding = True
 

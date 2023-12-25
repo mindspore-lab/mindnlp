@@ -48,26 +48,25 @@ ENCODEC_PRETRAINED_MODEL_ARCHIVE_LIST = [
     # See all EnCodec models at https://huggingface.co/models?filter=encodec
 ]
 
-def norm_except_dim(v, pows, dim):
+def norm_except_dim(weight_v, pows, dim):
     r"""
-    calculte g/||v|| * v method 
+    calculte g/||weight_v|| * weight_v method 
     """
     if dim == -1:
-        return np.norm(v, pows)
-    elif dim == 0:
-        output_size = (v.shape[0],) + (1,) * (v.ndim - 1)
-        return np.norm(v.view((v.shape[0], -1)), pows, 1).view(output_size)
-    elif dim == (v.ndim - 1):
-        output_size = (1,) * (v.ndim - 1) + (v.shape[v.ndim - 1])
-        return np.norm(v.view((-1, v.shape[v.ndim - 1])), pows, 0).view(output_size)
-    else:
-        return norm_except_dim(v.swapaxes(0, dim), pows, dim).swapaxes(0, dim)
+        return np.norm(weight_v, pows)
+    if dim == 0:
+        output_size = (weight_v.shape[0],) + (1,) * (weight_v.ndim - 1)
+        return np.norm(weight_v.view((weight_v.shape[0], -1)), pows, 1).view(output_size)
+    if dim == (weight_v.ndim - 1):
+        output_size = (1,) * (weight_v.ndim - 1) + (weight_v.shape[weight_v.ndim - 1])
+        return np.norm(weight_v.view((-1, weight_v.shape[weight_v.ndim - 1])), pows, 0).view(output_size)
+    return norm_except_dim(weight_v.swapaxes(0, dim), pows, dim).swapaxes(0, dim)
 
-def _weight_norm(v, g, dim):
+def _weight_norm(weight_v, weight_g, dim):
     r"""
-    calculte g/||v|| * v method 
+    calculte weight_g/||weight_v|| * weight_v method 
     """
-    return v * (g / norm_except_dim(v, 2, dim))
+    return weight_v * (weight_g / norm_except_dim(weight_v, 2, dim))
 
 class WeightNorm:
     r"""
@@ -88,9 +87,9 @@ class WeightNorm:
         computer methods
         """
         # print(cell)
-        g = getattr(cell, self.name + '_g')
-        v = getattr(cell, self.name + '_v')
-        return _weight_norm(v, g, self.dim)
+        weight_g = getattr(cell, self.name + '_g')
+        weight_v = getattr(cell, self.name + '_v')
+        return _weight_norm(weight_v, weight_g, self.dim)
 
     def __call__(self, cell: nn.Cell, inputs: Any) -> None:
         setattr(cell, self.name, self.compute_weight(cell))
@@ -117,23 +116,23 @@ class WeightNorm:
         if dim is None:
             dim = -1
 
-        fn = WeightNorm(name, dim)
+        weight_fn = WeightNorm(name, dim)
 
         weight = getattr(cell, name)
         # del cell._params[name]
         cell.insert_param_to_cell(name + '_g', param= Parameter(norm_except_dim(weight,2,dim)))
         cell.insert_param_to_cell(name + '_v', param= Parameter(weight.data))
         # cell.weight.set_data(Parameter(fn.compute_weight(cell)))
-        setattr(cell, name, Tensor(fn.compute_weight(cell)))
+        setattr(cell, name, Tensor(weight_fn.compute_weight(cell)))
         # print(fn)
 
         # hook = ops.HookBackward(hook_f)
         # fn = hook(fn)
 
         # recompute weight before every forward()
-        cell.register_forward_pre_hook(fn.wrapper_func(cell, fn.__call__))
+        cell.register_forward_pre_hook(weight_fn.wrapper_func(cell, weight_fn.__call__))
 
-        return fn
+        return weight_fn
 
     def remove(self, cell: nn.Cell) -> None:
         r"""
