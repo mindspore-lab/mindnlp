@@ -16,7 +16,6 @@
 Encodec Model init
 """
 
-<<<<<<< HEAD
 from .import modeling_bark, configuration_bark, generation_bark
 from .configuration_bark import *
 from .generation_bark import *
@@ -26,14 +25,3 @@ __all__ = []
 __all__.extend(modeling_bark.__all__)
 __all__.extend(configuration_bark.__all__)
 # __all__.extend(generation_bark.__all__)
-=======
-from .import bark, bark_config, bark_generation
-from .bark_config import *
-from .bark_generation import *
-from .bark import *
-
-__all__ = []
-__all__.extend(bark.__all__)
-__all__.extend(bark_config.__all__)
-# __all__.extend(bark_generation.__all__)
->>>>>>> 523e2f0cc3d30248fac725064d16125a9d23a063

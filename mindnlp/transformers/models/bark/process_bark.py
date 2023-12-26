@@ -84,18 +84,19 @@ class BarkProcessor(ProcessorMixin):
         """
 
         if speaker_embeddings_dict_path is not None:
-            speaker_embeddings_path = get_file_from_repo(
-                pretrained_processor_name_or_path,
-                speaker_embeddings_dict_path,
-                subfolder=kwargs.pop("subfolder", None),
-                cache_dir=kwargs.pop("cache_dir", None),
-                force_download=kwargs.pop("force_download", False),
-                proxies=kwargs.pop("proxies", None),
-                resume_download=kwargs.pop("resume_download", False),
-                local_files_only=kwargs.pop("local_files_only", False),
-                use_auth_token=kwargs.pop("use_auth_token", None),
-                revision=kwargs.pop("revision", None),
-            )
+            # speaker_embeddings_path = get_file_from_repo(
+            #     pretrained_processor_name_or_path,
+            #     speaker_embeddings_dict_path,
+            #     subfolder=kwargs.pop("subfolder", None),
+            #     cache_dir=kwargs.pop("cache_dir", None),
+            #     force_download=kwargs.pop("force_download", False),
+            #     proxies=kwargs.pop("proxies", None),
+            #     resume_download=kwargs.pop("resume_download", False),
+            #     local_files_only=kwargs.pop("local_files_only", False),
+            #     use_auth_token=kwargs.pop("use_auth_token", None),
+            #     revision=kwargs.pop("revision", None),
+            # )
+            speaker_embeddings_path = None
             if speaker_embeddings_path is None:
                 logger.warning(
                     f"""`{os.path.join(pretrained_processor_name_or_path,speaker_embeddings_dict_path)}` does not exists
@@ -180,18 +181,19 @@ class BarkProcessor(ProcessorMixin):
                     f"Voice preset unrecognized, missing {key} as a key in self.speaker_embeddings[{voice_preset}]."
                 )
 
-            path = get_file_from_repo(
-                self.speaker_embeddings.get("repo_or_path", "/"),
-                voice_preset_paths[key],
-                subfolder=kwargs.pop("subfolder", None),
-                cache_dir=kwargs.pop("cache_dir", None),
-                force_download=kwargs.pop("force_download", False),
-                proxies=kwargs.pop("proxies", None),
-                resume_download=kwargs.pop("resume_download", False),
-                local_files_only=kwargs.pop("local_files_only", False),
-                use_auth_token=kwargs.pop("use_auth_token", None),
-                revision=kwargs.pop("revision", None),
-            )
+            # path = get_file_from_repo(
+            #     self.speaker_embeddings.get("repo_or_path", "/"),
+            #     voice_preset_paths[key],
+            #     subfolder=kwargs.pop("subfolder", None),
+            #     cache_dir=kwargs.pop("cache_dir", None),
+            #     force_download=kwargs.pop("force_download", False),
+            #     proxies=kwargs.pop("proxies", None),
+            #     resume_download=kwargs.pop("resume_download", False),
+            #     local_files_only=kwargs.pop("local_files_only", False),
+            #     use_auth_token=kwargs.pop("use_auth_token", None),
+            #     revision=kwargs.pop("revision", None),
+            # )
+            path = None
             if path is None:
                 raise ValueError(
                     f"""`{os.path.join(self.speaker_embeddings.get("repo_or_path", "/"),voice_preset_paths[key])}` does not exists
