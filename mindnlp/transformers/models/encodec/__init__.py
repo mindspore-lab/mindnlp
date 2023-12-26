@@ -16,11 +16,11 @@
 Ernie Model init
 """
 
-from .import encodec, encodec_config
-from .encodec_config import *
-from .encodec import *
+from .import modeling_encodec, configuration_encodec
+from .configuration_encodec import *
+from .modeling_encodec import *
 from .feature_extraction_encodec import *
 
 __all__ = []
-__all__.extend(encodec.__all__)
-__all__.extend(encodec_config.__all__)
+__all__.extend(modeling_encodec.__all__)
+__all__.extend(configuration_encodec.__all__)

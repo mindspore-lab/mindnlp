@@ -56,7 +56,7 @@ class BarkSubModelConfig(PretrainedConfig):
         dropout=0.1,
         bias=True,  # True: bias in Linears and LayerNorms, like GPT-2. False: a bit better and faster
         initializer_range=0.02,
-        use_cache=False,
+        use_cache=True,
         **kwargs,
     ):
         self.block_size = block_size
@@ -79,16 +79,12 @@ class BarkSubModelConfig(PretrainedConfig):
         cache_dir: Optional[Union[str, os.PathLike]] = None,
         force_download: bool = False,
         local_files_only: bool = False,
-        token: Optional[Union[str, bool]] = None,
-        revision: str = "main",
         **kwargs,
     ) -> "PretrainedConfig":
         kwargs["cache_dir"] = cache_dir
         kwargs["force_download"] = force_download
         kwargs["local_files_only"] = local_files_only
-        kwargs["revision"] = revision
 
-        cls._set_token_in_kwargs(kwargs, token)
 
         config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
 

@@ -32,7 +32,7 @@ from ...modeling_outputs import (
     ModelOutput
 )
 
-from .encodec_config import EncodecConfig
+from .configuration_encodec import EncodecConfig
 
 __all__ = [
     "EncodecModel",
