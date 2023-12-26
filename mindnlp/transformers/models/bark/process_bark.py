@@ -15,7 +15,7 @@
 """
 Processor class for Bark
 """
-import json
+# import json
 import os
 from typing import Optional
 
@@ -104,9 +104,9 @@ class BarkProcessor(ProcessorMixin):
                     dictionnary if wanted, otherwise set `speaker_embeddings_dict_path=None`."""
                 )
                 speaker_embeddings = None
-            else:
-                with open(speaker_embeddings_path) as speaker_embeddings_json:
-                    speaker_embeddings = json.load(speaker_embeddings_json)
+            # else:
+            #     with open(speaker_embeddings_path) as speaker_embeddings_json:
+            #         speaker_embeddings = json.load(speaker_embeddings_json)
         else:
             speaker_embeddings = None
 
@@ -117,9 +117,8 @@ class BarkProcessor(ProcessorMixin):
     def save_pretrained(
         self,
         save_directory,
-        speaker_embeddings_dict_path="speaker_embeddings_path.json",
+        # speaker_embeddings_dict_path="speaker_embeddings_path.json",
         speaker_embeddings_directory="speaker_embeddings",
-        push_to_hub: bool = False,
         **kwargs,
     ):
         """
@@ -166,12 +165,12 @@ class BarkProcessor(ProcessorMixin):
 
                     embeddings_dict[prompt_key] = tmp_dict
 
-            with open(os.path.join(save_directory, speaker_embeddings_dict_path), "w") as fp:
-                json.dump(embeddings_dict, fp)
+            # with open(os.path.join(save_directory, speaker_embeddings_dict_path), "w") as fp:
+            #     json.dump(embeddings_dict, fp)
 
         super().save_pretrained(save_directory, **kwargs)
 
-    def _load_voice_preset(self, voice_preset: str = None, **kwargs):
+    def _load_voice_preset(self, voice_preset: str = None):
         voice_preset_paths = self.speaker_embeddings[voice_preset]
 
         voice_preset_dict = {}

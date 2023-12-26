@@ -1104,7 +1104,7 @@ class BarkFineModel(BarkPreTrainedModel):
         if input_ids is not None:
             # the input_embeddings are the sum of the j previous codebooks embeddings before
             # the current codebook_idx codebook
-            print(input_ids[:,:,1])
+            # print(input_ids[:,:,1])
             # forward the GPT model itself
             input_embeds = [
                 input_embeds_layer(input_ids[:, :, i]).unsqueeze(-1)
@@ -1325,7 +1325,6 @@ class BarkModel(BarkPreTrainedModel):
         self.semantic = BarkSemanticModel(config.semantic_config)
         self.coarse_acoustics = BarkCoarseModel(config.coarse_acoustics_config)
         self.fine_acoustics = BarkFineModel(config.fine_acoustics_config)
-
         self.codec_model = AutoModel.from_config(config.codec_config)
 
         self.config = config

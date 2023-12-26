@@ -40,6 +40,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("falcon", "FalconModel"),
         ("longformer", "LongformerModel"),
         ("mistral", "MistralModel"),
+        ('encodec','EncodecModel')
     ]
 )
 
