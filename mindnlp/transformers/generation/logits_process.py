@@ -714,7 +714,9 @@ class TopPLogitsWarper(LogitsWarper):
         self.min_tokens_to_keep = min_tokens_to_keep
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-        scores = ops.select(ops.isneginf(scores), mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min), scores)
+        if self.filter_value == -float("Inf"):
+            self.filter_value = float(np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min)
+        # scores = ops.select(ops.isneginf(scores), mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min), scores)
         sorted_logits, sorted_indices = ops.sort(scores, descending=False)
         cumulative_probs = ops.softmax(sorted_logits, axis=-1).cumsum(axis=-1)
 
@@ -750,6 +752,8 @@ class TopKLogitsWarper(LogitsWarper):
         self.filter_value = filter_value
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        if self.filter_value == -float("Inf"):
+            self.filter_value = float(np.finfo(mindspore.dtype_to_nptype(scores.dtype)).min)
         top_k = min(self.top_k, scores.shape[-1])  # Safety check
         # Remove all tokens with a probability less than the last token of the top-k
         indices_to_remove = scores < ops.topk(scores, top_k)[0][..., -1, None]
@@ -1049,6 +1053,41 @@ class SequenceBiasLogitsProcessor(LogitsProcessor):
 
         # 5 - apply the bias to the scores
         scores = scores + bias
+        return scores
+
+class AlternatingCodebooksLogitsProcessor(LogitsProcessor):
+    r"""
+    [`LogitsProcessor`] enforcing alternated generation between the two codebooks of [`Bark`]'s fine submodel.
+
+    Args:
+        input_start_len (`int`):
+            The length of the initial input sequence.
+        semantic_vocab_size (`int`):
+            Vocabulary size of the semantic part, i.e number of tokens associated to the semantic vocabulary.
+        codebook_size (`int`):
+            Number of tokens associated to the codebook.
+    """
+
+    def __init__(self, input_start_len: int, semantic_vocab_size: int, codebook_size: int):
+        if not isinstance(input_start_len, int) or input_start_len < 0:
+            raise ValueError(f"`input_starting_length` has to be a non-negative integer, but is {input_start_len}")
+
+        self.input_start_len = input_start_len
+        self.semantic_vocab_size = semantic_vocab_size
+        self.codebook_size = codebook_size
+
+    def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        curr_len = input_ids.shape[-1]
+
+        # even -> first codebook, odd -> second codebook
+        is_first_codebook = ((curr_len - self.input_start_len) % 2) == 0
+
+        if is_first_codebook:
+            scores[:, : self.semantic_vocab_size] = -float("inf")
+            scores[:, self.semantic_vocab_size + self.codebook_size :] = -float("inf")
+        else:
+            scores[:, : self.semantic_vocab_size + self.codebook_size] = -float("inf")
+
         return scores
 
 class UnbatchedClassifierFreeGuidanceLogitsProcessor(LogitsProcessor):

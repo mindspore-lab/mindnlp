@@ -24,6 +24,7 @@
 # pylint: disable=E1102
 # pylint: disable=W1203
 # pylint: disable=C0302
+# pylint: disable=C0123
 # pylint: disable=too-many-locals
 # pylint: disable=consider-using-enumerate
 
@@ -36,6 +37,9 @@ import warnings
 import logging
 from dataclasses import dataclass
 from typing import Optional, List, Callable, Dict, Any, Tuple, Union
+
+from easydict import EasyDict
+
 import mindspore
 from mindspore import ops
 
@@ -2589,7 +2593,6 @@ class GenerationMixin:
         while True:
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
-
             # forward pass to get next token
             outputs = self(
                 **model_inputs,
@@ -2597,11 +2600,14 @@ class GenerationMixin:
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
             )
+
             if synced_gpus and this_peer_finished:
                 continue  # don't waste resources running the code we don't need
 
-            next_token_logits = outputs.logits[:, -1, :]
+            if type(outputs) is dict:
+                outputs = EasyDict(**outputs)
 
+            next_token_logits = outputs.logits[:, -1, :]
             # pre-process distribution
             next_token_scores = logits_processor(input_ids, next_token_logits)
             next_token_scores = logits_warper(input_ids, next_token_scores)
@@ -2627,7 +2633,6 @@ class GenerationMixin:
             # sample
             probs = ops.softmax(next_token_scores, axis=-1)
             next_tokens = ops.multinomial(probs, num_samples=1).squeeze(1).astype(mindspore.int64)
-
             # finished sentences should have their next token be a padding token
             if eos_token_id is not None:
                 if pad_token_id is None:
@@ -2658,7 +2663,6 @@ class GenerationMixin:
 
             if this_peer_finished and not synced_gpus:
                 break
-
         if streamer is not None:
             streamer.end()
 
@@ -4176,7 +4180,7 @@ class GenerationMixin:
             )
 
         # keep track of which sequences are already finished
-        unfinished_sequences = ops.ones(input_ids.shape[0], input_ids.dtype)
+        unfinished_sequences = ops.ones(input_ids.shape[0], dtype=input_ids.dtype)
 
         # other auxiliary variables
         max_len = stopping_criteria[0].max_length

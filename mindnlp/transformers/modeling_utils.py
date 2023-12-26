@@ -33,6 +33,7 @@ import re
 import json
 from dataclasses import dataclass
 from typing import Union, Optional, Tuple, OrderedDict, Callable, Dict, List
+from packaging import version
 from tqdm.autonotebook import tqdm
 import numpy as np
 
@@ -41,9 +42,10 @@ from mindspore import load_checkpoint, save_checkpoint
 from mindspore import nn, ops, Tensor, Parameter
 from mindspore._c_expression import MixedPrecisionType
 
-from mindnlp.configs import MS_URL_BASE, HF_URL_BASE, PT_WEIGHTS_NAME, WEIGHTS_NAME, WEIGHTS_INDEX_NAME, PT_WEIGHTS_INDEX_NAME
+from mindnlp.configs import MS_URL_BASE, HF_URL_BASE, PT_WEIGHTS_NAME, WEIGHTS_NAME, WEIGHTS_INDEX_NAME, PT_WEIGHTS_INDEX_NAME, \
+    SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
 from mindnlp.utils.download import is_remote_url, download_url, cached_file, get_checkpoint_shard_files
-from mindnlp.utils import convert_file_size_to_int, logging, ModelOutput
+from mindnlp.utils import convert_file_size_to_int, logging, ModelOutput, is_safetensors_available
 from mindnlp._legacy.functional import arange
 
 from .generation import GenerationMixin
@@ -68,12 +70,15 @@ class CellUtilMixin:
         if not hasattr(self, 'get_mixed_precision_type'):
             return mindspore.float32
         mixed_type = self.get_mixed_precision_type()
+        cast_type = None
         if mixed_type == MixedPrecisionType.FP16:
             cast_type = mindspore.float16
-        elif mixed_type == MixedPrecisionType.BF16:
-            cast_type = mindspore.bfloat16
         else:
             cast_type = mindspore.float32
+
+        if version.parse(mindspore.__version__) > version.parse('2.1.0'):
+            if mixed_type == MixedPrecisionType.BF16:
+                cast_type = mindspore.bfloat16
         return cast_type
 
     @staticmethod
@@ -92,7 +97,7 @@ class CellUtilMixin:
             prefix_seq_len = attention_mask.shape[1] - causal_mask.shape[1]
             causal_mask = ops.concat(
                 [
-                    ops.ones((batch_size, seq_length, prefix_seq_len), causal_mask.dtype),
+                    ops.ones((batch_size, seq_length, prefix_seq_len), dtype=causal_mask.dtype),
                     causal_mask,
                 ],
                 axis=-1,
@@ -251,7 +256,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         self.generation_config = GenerationConfig.from_model_config(config) if self.can_generate() else None
 
     def _check_and_unset_acl(self):
-        if "MS" in str(self.__class__.__name__):
+        if "MS" in str(self.__class__.__name__) and \
+            'MS_DEV_FORCE_ACL' in os.environ:
             del os.environ['MS_DEV_FORCE_ACL']
 
     def post_init(self):
@@ -647,6 +653,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         ignore_mismatched_sizes: bool = False,
         force_download: bool = False,
         local_files_only: bool = False,
+        use_safetensors: bool = None,
         **kwargs,
     ):
         """from_pretrained"""
@@ -663,6 +670,9 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         variant = kwargs.pop("variant", None)
         ms_dtype = kwargs.pop("ms_dtype", None)
         _ = kwargs.pop('low_cpu_mem_usage', None)
+
+        if use_safetensors is None and not is_safetensors_available():
+            use_safetensors = False
 
         is_sharded = False
         # Load config if we don't provide a configuration
@@ -701,6 +711,13 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     archive_file = os.path.join(
                         pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_NAME, variant)
                     )
+                elif use_safetensors is not False and os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, subfolder, _add_variant(SAFE_WEIGHTS_NAME, variant))
+                ):
+                    # Load from a safetensors checkpoint
+                    archive_file = os.path.join(
+                        pretrained_model_name_or_path, subfolder, _add_variant(SAFE_WEIGHTS_NAME, variant)
+                    )
                 elif from_pt and os.path.isfile(
                     os.path.join(pretrained_model_name_or_path, subfolder, _add_variant(PT_WEIGHTS_INDEX_NAME, variant))
                 ):
@@ -717,7 +734,22 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                         pretrained_model_name_or_path, subfolder, _add_variant(WEIGHTS_INDEX_NAME, variant)
                     )
                     is_sharded = True
+                elif use_safetensors is not False and os.path.isfile(
+                    os.path.join(
+                        pretrained_model_name_or_path, subfolder, _add_variant(SAFE_WEIGHTS_INDEX_NAME, variant)
+                    )
+                ):
+                    # Load from a sharded safetensors checkpoint
+                    archive_file = os.path.join(
+                        pretrained_model_name_or_path, subfolder, _add_variant(SAFE_WEIGHTS_INDEX_NAME, variant)
+                    )
+                    is_sharded = True
                 # At this stage we don't have a weight file so we will raise an error.
+                elif use_safetensors:
+                    raise EnvironmentError(
+                        f"Error no file named {_add_variant(SAFE_WEIGHTS_NAME, variant)} found in directory"
+                        f" {pretrained_model_name_or_path}."
+                    )
                 else:
                     raise EnvironmentError(
                         f"Error no file named {_add_variant(WEIGHTS_NAME, variant)}, {PT_WEIGHTS_NAME},"
@@ -732,10 +764,12 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             else:
                 # set correct filename
                 if from_pt:
-                    filename = _add_variant(PT_WEIGHTS_NAME, variant)
+                    if use_safetensors is not False:
+                        filename = _add_variant(SAFE_WEIGHTS_NAME, variant)
+                    else:
+                        filename = _add_variant(PT_WEIGHTS_NAME, variant)
                 else:
                     filename = _add_variant(WEIGHTS_NAME, variant)
-
                 try:
                     # Load from URL or cache if already cached
                     cached_file_kwargs = {
@@ -748,10 +782,29 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                         "_raise_exceptions_for_missing_entries": False,
                         'endpoint': endpoint
                     }
+                    # try safetensors
                     resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
+                    if resolved_archive_file is None and from_pt:
+                        filename = _add_variant(PT_WEIGHTS_NAME, variant)
+                        resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
 
                     # Since we set _raise_exceptions_for_missing_entries=False, we don't get an exception but a None
                     # result when internet is up, the repo and revision exist, but the file does not.
+                    if resolved_archive_file is None and filename == _add_variant(SAFE_WEIGHTS_NAME, variant):
+                        # Maybe the checkpoint is sharded, we try to grab the index name in this case.
+                        resolved_archive_file = cached_file(
+                            pretrained_model_name_or_path,
+                            _add_variant(SAFE_WEIGHTS_INDEX_NAME, variant),
+                            **cached_file_kwargs,
+                        )
+                        if resolved_archive_file is not None:
+                            is_sharded = True
+                        else:
+                            # This repo has no safetensors file of any kind, we switch to PyTorch.
+                            filename = _add_variant(WEIGHTS_NAME, variant)
+                            resolved_archive_file = cached_file(
+                                pretrained_model_name_or_path, filename, **cached_file_kwargs
+                            )
                     if resolved_archive_file is None and filename == _add_variant(WEIGHTS_NAME, variant):
                         # Maybe the checkpoint is sharded, we try to grab the index name in this case.
                         resolved_archive_file = cached_file(
@@ -829,8 +882,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             if is_sharded:
                 converted_filenames = []
                 for name in resolved_archive_file:
-                    converted = convert_torch_to_mindspore(
-                        str(name))
+                    converted = convert_torch_to_mindspore(str(name))
                     converted_filenames.append(converted)
             else:
                 resolved_archive_file = convert_torch_to_mindspore(
@@ -1251,6 +1303,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             if hasattr(cell, "_set_recompute"):
                 cell._set_recompute()
 
+    def check_names(self):
+        pass
 
 def get_parameter_dtype(parameter: Union[nn.Cell, GenerationMixin, "ModuleUtilsMixin"]):
     """
@@ -1379,22 +1433,30 @@ def convert_torch_to_mindspore(pth_file):
         import torch
     except Exception as exc:
         raise ImportError("'import torch' failed, please install torch by "
-                          "`pip install torch` or instructions from 'https://pytorch.org'") \
-                          from exc
+                        "`pip install torch` or instructions from 'https://pytorch.org'") \
+                        from exc
+    if pth_file.endswith(".safetensors"):
+        from safetensors.torch import load_file
+        state_dict = load_file(pth_file)
+        ms_ckpt_path = pth_file.replace('model-', 'mindspore-')
+        ms_ckpt_path = ms_ckpt_path.replace('.safetensors', '.ckpt')
 
-    ms_ckpt_path = pth_file.replace('pytorch_model', 'mindspore')
-    ms_ckpt_path = ms_ckpt_path.replace('.bin', '.ckpt')
+    else:
+        ms_ckpt_path = pth_file.replace('pytorch_model', 'mindspore')
+        ms_ckpt_path = ms_ckpt_path.replace('.bin', '.ckpt')
+
+        state_dict = torch.load(pth_file, map_location='cpu')
+
     if os.path.exists(ms_ckpt_path):
         return ms_ckpt_path
 
-    logger.info('Starting checkpoint conversion.')
     ms_ckpt = []
-    state_dict = torch.load(pth_file, map_location='cpu')
+    logger.info('Starting checkpoint conversion.')
 
     has_bf16 = False
     for key, value in state_dict.items():
         if value.dtype == torch.bfloat16:
-            data = Tensor(value.to(torch.float).numpy())
+            data = Tensor(value.to(torch.float).numpy(), dtype=mindspore.float16)
             if not has_bf16:
                 has_bf16 = True
         else:

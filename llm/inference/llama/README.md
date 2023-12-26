@@ -9,7 +9,13 @@ pip install -r requirements.txt
 
 ## Download
 
-Download checkpoint files and tokenizers. Edit the `download.sh` script with the signed url provided in the email to download the model weights and tokenizer.
+Download checkpoint files and tokenizers.
+
+```
+bash download.sh $model_size $TARGET_FOLDER
+# like:
+# bash download.sh 7B ./ckpt
+```
 
 ## Convert weight
 
@@ -17,6 +23,8 @@ Convert weights from Pytorch to MindSpore.
 
 ```
 python convert.py --ckpt_path $TARGET_FOLDER/model_size
+# like:
+# python convert.py --ckpt_path ./ckpt/7B
 ```
 
 ## Inference
@@ -24,6 +32,8 @@ python convert.py --ckpt_path $TARGET_FOLDER/model_size
 The provided `example.py` can be run on a single or multi-card node with `mpirun` and will output completions for two pre-defined prompts. Using `TARGET_FOLDER` as defined in `download.sh`:
 ```
 mpirun -n MP python example.py --ckpt_dir $TARGET_FOLDER/model_size --tokenizer_path $TARGET_FOLDER/tokenizer.model
+# like:
+# mpirun -n MP python example.py --ckpt_dir ./ckpt/7B --tokenizer_path ./ckpt/tokenizer.model
 ```
 
 Different models require different MP values (at least 24GB per card):

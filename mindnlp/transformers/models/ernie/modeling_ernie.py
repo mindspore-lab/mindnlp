@@ -1,4 +1,5 @@
 # coding=utf-8
+# Copyright 2023 Huawei Technologies Co., Ltd
 # Copyright 2022 The HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ============================================================================
 # pylint: disable=invalid-name
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
@@ -1668,6 +1670,34 @@ class ErnieForQuestionAnswering(ErniePreTrainedModel):
         )
 
 
+@dataclass
+class UIEModelOutput(ModelOutput):
+    """
+    Output class for outputs of UIE.
+    Args:
+        loss (`mindspore.Tensor` of shape `(1,)`, *optional*, returned when `labels` is provided):
+            Total span extraction loss is the sum of a Cross-Entropy for the start and end positions.
+        start_prob (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
+            Span-start scores (after Sigmoid).
+        end_prob (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
+            Span-end scores (after Sigmoid).
+        hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings, if the model has an embedding layer, +
+            one for the output of each layer) of shape `(batch_size, sequence_length, hidden_size)`.
+            Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
+        attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+            sequence_length)`.
+            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
+            heads.
+    """
+    loss: Optional[mindspore.Tensor] = None
+    start_prob: mindspore.Tensor = None
+    end_prob: mindspore.Tensor = None
+    hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[mindspore.Tensor]] = None
+
+
 class UIE(ErniePreTrainedModel):
     """
     Ernie Model with two linear layer on top of the hidden-states
@@ -1685,14 +1715,21 @@ class UIE(ErniePreTrainedModel):
         self.linear_end = nn.Dense(config.hidden_size, 1)
         self.sigmoid = nn.Sigmoid()
 
+        self.post_init()
+
     def construct(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
         inputs_embeds: Optional[mindspore.Tensor] = None,
-        return_dict: Optional[mindspore.Tensor] = None,
+        start_positions: Optional[mindspore.Tensor] = None,
+        end_positions: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None
     ):
         r"""
         Args:
@@ -1715,21 +1752,44 @@ class UIE(ErniePreTrainedModel):
                 start_prob, end_prob = model(**inputs)
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        sequence_output, _ = self.ernie(
+        outputs = self.ernie(
             input_ids=input_ids,
             token_type_ids=token_type_ids,
             position_ids=position_ids,
             attention_mask=attention_mask,
+            head_mask=head_mask,
             inputs_embeds=inputs_embeds,
-            return_dict=return_dict,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict
         )
+
+        sequence_output = outputs[0]
+
         start_logits = self.linear_start(sequence_output)
         start_logits = ops.squeeze(start_logits, -1)
         start_prob = self.sigmoid(start_logits)
         end_logits = self.linear_end(sequence_output)
         end_logits = ops.squeeze(end_logits, -1)
         end_prob = self.sigmoid(end_logits)
-        return start_prob, end_prob
+
+        total_loss = None
+        if start_positions is not None and end_positions is not None:
+            start_loss = ops.binary_cross_entropy_with_logits(start_prob, start_positions)
+            end_loss = ops.binary_cross_entropy_with_logits(end_prob, end_positions)
+            total_loss = (start_loss + end_loss) / 2.0
+
+        if not return_dict:
+            output = (start_prob, end_prob) + outputs[2:]
+            return ((total_loss,) + output) if total_loss is not None else output
+
+        return UIEModelOutput(
+            loss=total_loss,
+            start_prob=start_prob,
+            end_prob=end_prob,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
 
 
 __all__ = [

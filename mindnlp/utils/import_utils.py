@@ -29,6 +29,7 @@ from collections import OrderedDict
 from functools import wraps
 from typing import Tuple, Union
 import importlib.util
+
 if sys.version_info >= (3, 8):
     # For Python 3.8 and later
     from importlib import metadata as importlib_metadata
@@ -41,7 +42,9 @@ from . import logging
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def _is_package_available(pkg_name: str, return_version: bool = False) -> Union[Tuple[bool, str], bool]:
+def _is_package_available(
+    pkg_name: str, return_version: bool = False
+) -> Union[Tuple[bool, str], bool]:
     # Check we're not importing a "pkg_name" directory somewhere but the actual library by trying to grab the version
     package_exists = importlib.util.find_spec(pkg_name) is not None
     package_version = "N/A"
@@ -57,31 +60,42 @@ def _is_package_available(pkg_name: str, return_version: bool = False) -> Union[
     return package_exists
 
 
-
 _pytest_available = _is_package_available("pytest")
 _datasets_available = _is_package_available("datasets")
 _sentencepiece_available = _is_package_available("sentencepiece")
 _tokenizers_available = _is_package_available("tokenizers")
-_modelscope_available = _is_package_available('modelscope')
-_mindspore_version, _mindspore_available = _is_package_available("mindspore", return_version=True)
+_safetensors_available = _is_package_available("safetensors")
+_modelscope_available = _is_package_available("modelscope")
+_mindspore_version, _mindspore_available = _is_package_available(
+    "mindspore", return_version=True
+)
+
 
 def is_mindspore_available():
     return _mindspore_available
 
+
 def get_mindspore_version():
     return _mindspore_version
+
 
 def is_datasets_available():
     return _datasets_available
 
+
 def is_sentencepiece_available():
     return _sentencepiece_available
+
 
 def is_tokenizers_available():
     return _tokenizers_available
 
+def is_safetensors_available():
+    return _safetensors_available
+
 def is_modelscope_available():
     return _modelscope_available
+
 
 def is_protobuf_available():
     if importlib.util.find_spec("google") is None:
@@ -101,7 +115,10 @@ def is_in_notebook():
             raise ImportError("console")
         if "VSCODE_PID" in os.environ:
             raise ImportError("vscode")
-        if "DATABRICKS_RUNTIME_VERSION" in os.environ and os.environ["DATABRICKS_RUNTIME_VERSION"] < "11.0":
+        if (
+            "DATABRICKS_RUNTIME_VERSION" in os.environ
+            and os.environ["DATABRICKS_RUNTIME_VERSION"] < "11.0"
+        ):
             # Databricks Runtime 11.0 and above uses IPython kernel by default so it should be compatible with Jupyter notebook
             # https://docs.microsoft.com/en-us/azure/databricks/notebooks/ipython-kernel
             raise ImportError("databricks")
@@ -215,8 +232,10 @@ def mindspore_required(func):
 
     return wrapper
 
+
 class OptionalDependencyNotAvailable(BaseException):
     """Internally used error class for signalling an optional dependency was not found."""
+
 
 def direct_transformers_import(path: str, file="__init__.py") -> ModuleType:
     """Imports transformers directly
@@ -230,7 +249,9 @@ def direct_transformers_import(path: str, file="__init__.py") -> ModuleType:
     """
     name = "transformers"
     location = os.path.join(path, file)
-    spec = importlib.util.spec_from_file_location(name, location, submodule_search_locations=[path])
+    spec = importlib.util.spec_from_file_location(
+        name, location, submodule_search_locations=[path]
+    )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     module = sys.modules[name]

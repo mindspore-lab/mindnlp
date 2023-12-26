@@ -37,7 +37,7 @@ from tqdm.autonotebook import tqdm
 import requests
 from requests.exceptions import ProxyError, SSLError, HTTPError
 
-from mindnlp.configs import DEFAULT_ROOT, ENV_VARS_TRUE_VALUES, MINDNLP_CACHE, REPO_TYPES
+from mindnlp.configs import DEFAULT_ROOT, ENV_VARS_TRUE_VALUES, MINDNLP_CACHE, REPO_TYPES, MS_URL_BASE
 from .errors import (
     EntryNotFoundError,
     LocalEntryNotFoundError,
@@ -113,7 +113,7 @@ def get_cache_path():
         >>> default_cache_path = get_cache_path()
         >>> print(default_cache_path)
         '{home}\.mindnlp'
-
+ca
     """
     if "CACHE_DIR" in os.environ:
         cache_dir = os.environ.get("CACHE_DIR")
@@ -179,6 +179,8 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None)
             raise EntryNotFoundError(f"Can not found url: {url}")
         if status == 401:
             raise GatedRepoError('You should have authorization to access the model.')
+        if status == 429:
+            raise HTTPError('Too many requests.')
         tmp_file_path = file_path + "_tmp"
         total_size = req.headers.get("content-length")
         with open(tmp_file_path, "wb") as file:
@@ -369,7 +371,6 @@ def cached_file(
             if not _raise_exceptions_for_missing_entries:
                 return None
             raise EnvironmentError(f"Could not locate {full_filename} inside {path_or_repo_id}.")
-
     try:
         # Load from URL or cache if already cached
         resolved_file = download(
@@ -492,6 +493,7 @@ def download(
     pointer_path = http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies)
     return pointer_path
 
+# https://modelscope.cn/api/v1/models/mindnlp/THUDM_chatglm-6b/repo?Revision=master&FilePath=mindspore-00001-of-00008.ckpt
 
 def match_file(filename: str, cache_dir: str) -> str:
     r"""
@@ -643,37 +645,13 @@ def try_to_load_from_cache(
     if cache_dir is None:
         cache_dir = MINDNLP_CACHE
 
-    object_id = repo_id.replace("/", "--")
-    repo_cache = os.path.join(cache_dir, f"{repo_type}s--{object_id}")
+    repo_cache = os.path.join(cache_dir, f"{repo_type}/{repo_id}")
     if not os.path.isdir(repo_cache):
         # No cache for this model
         return None
 
-    refs_dir = os.path.join(repo_cache, "refs")
-    snapshots_dir = os.path.join(repo_cache, "snapshots")
-    no_exist_dir = os.path.join(repo_cache, ".no_exist")
-
-    # Resolve refs (for instance to convert main to the associated commit sha)
-    if os.path.isdir(refs_dir):
-        revision_file = os.path.join(refs_dir, revision)
-        if os.path.isfile(revision_file):
-            with open(revision_file) as f:
-                revision = f.read()
-
-    # Check if file is cached as "no_exist"
-    if os.path.isfile(os.path.join(no_exist_dir, revision, filename)):
-        return _CACHED_NO_EXIST
-
-    # Check if revision folder exists
-    if not os.path.exists(snapshots_dir):
-        return None
-    cached_shas = os.listdir(snapshots_dir)
-    if revision not in cached_shas:
-        # No cache for this revision and we won't try to return a random revision
-        return None
-
     # Check if file exists in cache
-    cache_file = os.path.join(snapshots_dir, revision, filename)
+    cache_file = os.path.join(repo_cache, filename)
     return cache_file if os.path.isfile(cache_file) else None
 
 
@@ -767,4 +745,6 @@ def build_download_url(
 ) -> str:
     """Construct the URL of a file from the given information.
     """
+    if endpoint == MS_URL_BASE:
+        repo_id = repo_id.replace('/', '_')
     return endpoint.format(repo_id, filename)
