@@ -32,7 +32,7 @@ from mindnlp.transformers.generation.logits_process import (
 
 from ...modeling_utils import PreTrainedModel
 from ..auto import AutoModel
-from .bark_config import (
+from .configuration_bark import (
     BarkConfig,
     BarkSubModelConfig,
     BarkSemanticConfig,
@@ -40,7 +40,7 @@ from .bark_config import (
     BarkFineConfig
 )
 
-from .bark_generation import (
+from .generation_bark import (
     BarkCoarseGenerationConfig,
     BarkFineGenerationConfig,
     BarkSemanticGenerationConfig,
@@ -98,7 +98,7 @@ class BarkSelfAttention(nn.Cell):
         self.is_causal = is_causal
         if is_causal:
             block_size = config.block_size
-            self.gamma = Parameter(Tensor(np.tril(np.ones((block_size, block_size))).reshape(
+            self.weight = Parameter(Tensor(np.tril(np.ones((block_size, block_size))).reshape(
                 (1, 1, block_size, block_size)
             ), mindspore.bool_), requires_grad=False)
 
@@ -131,7 +131,7 @@ class BarkSelfAttention(nn.Cell):
             query_length, key_length = query.shape[-2], key.shape[-2]
             # fill the upper left part of the attention weights with inf
             attn_weights = attn_weights.masked_fill(
-                self.gamma[:, :, key_length - query_length : key_length, :key_length] == 0,
+                self.weight[:, :, key_length - query_length : key_length, :key_length] == 0,
                 np.finfo(np.float32).min,
                 )
         if attention_mask is not None:
@@ -419,7 +419,8 @@ class BarkCausalModel(BarkPreTrainedModel):
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
             position_ids = attention_mask.long().cumsum(-1) - 1
-            position_ids.masked_fill_(attention_mask == 0, 1)
+            # position_ids = position_ids
+            position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
         else:
@@ -490,7 +491,8 @@ class BarkCausalModel(BarkPreTrainedModel):
             past_length = 0
             past_key_values = tuple([None] * len(self.layers))
         else:
-            past_length = past_key_values[0][0].size(-2)
+            # print('result:',type(past_key_values[0][0]))
+            past_length = past_key_values[0][0].shape[-2]
 
         if position_ids is None:
             position_ids = ops.arange(past_length, seq_length + past_length, dtype=mindspore.int64)
@@ -517,7 +519,9 @@ class BarkCausalModel(BarkPreTrainedModel):
             # Since we are adding it to the raw scores before the softmax, this is
             # effectively the same as removing these entirely.
             attention_mask = attention_mask.to(dtype=self.dtype)  # fp16 compatibility
-            attention_mask = (1.0 - attention_mask) * np.finfo(self.dtype).min
+            # print(self.dtype)
+            dtypes = np.float32 if self.dtype == mindspore.float32 else np.float16
+            attention_mask = (1.0 - attention_mask) * np.finfo(dtypes).min
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head
         # attention_probs has shape bsz x num_heads x N x N
@@ -616,7 +620,7 @@ class BarkCausalModel(BarkPreTrainedModel):
         """
         # Necessary for beam_search
         return tuple(
-            tuple(past_state.index_select(0, beam_idx.to(past_state.device)) for past_state in layer_past)
+            tuple(past_state.index_select(0, beam_idx) for past_state in layer_past)
             for layer_past in past_key_values
         )
 
@@ -843,7 +847,7 @@ class BarkCoarseModel(BarkCausalModel):
 
         # replace semantic_pad_token (eos_tok and pad_tok here) with coarse_semantic_pad_token i.e the pad_token
         # used in the next model
-        semantic_output.masked_fill_(
+        semantic_output.masked_fill(
             semantic_output == semantic_generation_config.semantic_pad_token,
             coarse_generation_config.coarse_semantic_pad_token,
         )
@@ -1100,7 +1104,7 @@ class BarkFineModel(BarkPreTrainedModel):
         if input_ids is not None:
             # the input_embeddings are the sum of the j previous codebooks embeddings before
             # the current codebook_idx codebook
-
+            # print(input_ids[:,:,1])
             # forward the GPT model itself
             input_embeds = [
                 input_embeds_layer(input_ids[:, :, i]).unsqueeze(-1)
@@ -1108,19 +1112,18 @@ class BarkFineModel(BarkPreTrainedModel):
             ]  # token embeddings of shape (b, t, n_embd)
             input_embeds = ops.cat(input_embeds, axis=-1)
             input_embeds = input_embeds[:, :, :, : codebook_idx + 1].sum(axis=-1)
-
+        # print(input_embeds.shape)
         input_shape = input_embeds.shape[:-1]
         batch_size = input_embeds.shape[0]
         seq_length = input_shape[1]
-
         # device = input_ids.device if input_ids is not None else input_embeds.device
-
+        # print(seq_length)
         if position_ids is None:
-            position_ids = ops.arange(0, seq_length, dtype=mindspore.int64)
+            position_ids = ops.arange(0, seq_length)
             position_ids = position_ids.unsqueeze(0)  # shape (1, seq_length)
-
+        # print(position_ids)
         position_embeds = self.position_embeds_layer(position_ids)  # position embeddings of shape (1, t, n_embd)
-
+        # print(1)
         # Attention mask.
         if attention_mask is not None:
             if batch_size <= 0:
@@ -1128,13 +1131,14 @@ class BarkFineModel(BarkPreTrainedModel):
             attention_mask = attention_mask.view(batch_size, -1)
             attention_mask = attention_mask[:, None, None, :]
             attention_mask = attention_mask.to(dtype=self.dtype)  # fp16 compatibility
-            attention_mask = (1.0 - attention_mask) * np.finfo(self.dtype).min
+            dtypes = np.float32 if self.dtype == mindspore.float32 else np.float16
+            attention_mask = (1.0 - attention_mask) * np.finfo(dtypes).min
 
         head_mask = self.get_head_mask(head_mask, self.config.num_layers)
         hidden_states = self.drop(input_embeds + position_embeds)
         output_shape = input_shape + (hidden_states.shape[-1],)
 
-
+        # print(2)
         all_self_attentions = () if output_attentions else None
         all_hidden_states = () if output_hidden_states else None
 
@@ -1165,7 +1169,7 @@ class BarkFineModel(BarkPreTrainedModel):
 
         if not return_dict:
             return tuple(v for v in [None, logits, all_hidden_states, all_self_attentions] if v is not None)
-
+        # print(3)
         return MaskedLMOutput(
             loss=loss,
             logits=logits,
@@ -1277,7 +1281,7 @@ class BarkFineModel(BarkPreTrainedModel):
             rel_start_fill_idx = start_fill_idx - start_idx
             input_buffer = fine_input[:, start_idx : start_idx + max_fine_input_length, :]
             for n_inner in range(n_coarse, fine_generation_config.n_fine_codebooks):
-                logits = self.forward(n_inner, input_buffer).logits
+                logits = self.construct(n_inner, input_buffer).logits
                 if temperature is None or temperature == 1.0:
                     relevant_logits = logits[:, rel_start_fill_idx:, :codebook_size]
                     codebook_preds = ops.argmax(relevant_logits, -1)
@@ -1321,7 +1325,6 @@ class BarkModel(BarkPreTrainedModel):
         self.semantic = BarkSemanticModel(config.semantic_config)
         self.coarse_acoustics = BarkCoarseModel(config.coarse_acoustics_config)
         self.fine_acoustics = BarkFineModel(config.fine_acoustics_config)
-
         self.codec_model = AutoModel.from_config(config.codec_config)
 
         self.config = config
