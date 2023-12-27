@@ -37,7 +37,7 @@ from tqdm.autonotebook import tqdm
 import requests
 from requests.exceptions import ProxyError, SSLError, HTTPError
 
-from mindnlp.configs import DEFAULT_ROOT, ENV_VARS_TRUE_VALUES, MINDNLP_CACHE, REPO_TYPES
+from mindnlp.configs import DEFAULT_ROOT, ENV_VARS_TRUE_VALUES, MINDNLP_CACHE, REPO_TYPES, MS_URL_BASE
 from .errors import (
     EntryNotFoundError,
     LocalEntryNotFoundError,
@@ -371,7 +371,6 @@ def cached_file(
             if not _raise_exceptions_for_missing_entries:
                 return None
             raise EnvironmentError(f"Could not locate {full_filename} inside {path_or_repo_id}.")
-
     try:
         # Load from URL or cache if already cached
         resolved_file = download(
@@ -485,6 +484,7 @@ def download(
     url = build_download_url(repo_id, filename, repo_type=repo_type, endpoint=endpoint)
     # check model whether exist
     model_url = url[: url.rfind('/')].replace('resolve/main', '')
+
     req = requests.get(model_url, timeout=3, proxies=proxies)
     status = req.status_code
     if status == 404:
@@ -493,6 +493,7 @@ def download(
     pointer_path = http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies)
     return pointer_path
 
+# https://modelscope.cn/api/v1/models/mindnlp/THUDM_chatglm-6b/repo?Revision=master&FilePath=mindspore-00001-of-00008.ckpt
 
 def match_file(filename: str, cache_dir: str) -> str:
     r"""
@@ -744,4 +745,6 @@ def build_download_url(
 ) -> str:
     """Construct the URL of a file from the given information.
     """
+    if endpoint == MS_URL_BASE:
+        repo_id = repo_id.replace('/', '_')
     return endpoint.format(repo_id, filename)

@@ -42,6 +42,8 @@ class PretrainedConfig:
 
     def __init__(self, **kwargs):
         self.ms_dtype = kwargs.pop("ms_dtype", None)
+        if 'torch_dtype' in kwargs:
+            self.ms_dtype = kwargs.pop("torch_dtype", None)
         self.return_dict = kwargs.pop("return_dict", True)
         self.output_hidden_states = kwargs.pop("output_hidden_states", False)
         self.output_attentions = kwargs.pop("output_attentions", False)

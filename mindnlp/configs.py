@@ -24,6 +24,8 @@ WEIGHTS_NAME = "mindspore.ckpt"
 PT_WEIGHTS_NAME = "pytorch_model.bin"
 WEIGHTS_INDEX_NAME = "mindspore.ckpt.index.json"
 PT_WEIGHTS_INDEX_NAME = "pytorch_model.bin.index.json"
+SAFE_WEIGHTS_NAME = "model.safetensors"
+SAFE_WEIGHTS_INDEX_NAME = "model.safetensors.index.json"
 
 CONFIG_NAME = "config.json"
 GENERATION_CONFIG_NAME = "generation_config.json"

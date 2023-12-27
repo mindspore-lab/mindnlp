@@ -2,9 +2,9 @@ from mindnlp.transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 import gradio as gr
 import mdtex2html
 
-model = AutoModelForSeq2SeqLM.from_pretrained("THUDM/chatglm-6b", from_pt=True).half()
+model = AutoModelForSeq2SeqLM.from_pretrained("THUDM/chatglm-6b").half()
 model.set_train(False)
-tokenizer = AutoTokenizer.from_pretrained("THUDM/chatglm-6b", from_pt=True)
+tokenizer = AutoTokenizer.from_pretrained("THUDM/chatglm-6b")
 
 """Override Chatbot.postprocess"""
 

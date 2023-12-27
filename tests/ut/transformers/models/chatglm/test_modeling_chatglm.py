@@ -40,16 +40,16 @@ def ids_tensor(shape, vocab_size):
 
 
 def get_model_and_tokenizer():
-    model = AutoModelForSeq2SeqLM.from_pretrained("THUDM/chatglm-6b", from_pt=True).half()
+    model = AutoModelForSeq2SeqLM.from_pretrained("THUDM/chatglm-6b").half()
     model.set_train(False)
-    tokenizer = AutoTokenizer.from_pretrained("THUDM/chatglm-6b", from_pt=True)
+    tokenizer = AutoTokenizer.from_pretrained("THUDM/chatglm-6b")
     return model, tokenizer
 
 def get_model_and_tokenizer_random_init():
-    config = AutoConfig.from_pretrained("THUDM/chatglm-6b", from_pt=True)
+    config = AutoConfig.from_pretrained("THUDM/chatglm-6b")
     model = AutoModelForSeq2SeqLM.from_config(config).half()
     model.set_train(False)
-    tokenizer = AutoTokenizer.from_pretrained("THUDM/chatglm-6b", from_pt=True)
+    tokenizer = AutoTokenizer.from_pretrained("THUDM/chatglm-6b")
     return model, tokenizer
 
 @require_mindspore

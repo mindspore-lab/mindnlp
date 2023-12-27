@@ -64,6 +64,7 @@ _pytest_available = _is_package_available("pytest")
 _datasets_available = _is_package_available("datasets")
 _sentencepiece_available = _is_package_available("sentencepiece")
 _tokenizers_available = _is_package_available("tokenizers")
+_safetensors_available = _is_package_available("safetensors")
 _modelscope_available = _is_package_available("modelscope")
 _mindspore_version, _mindspore_available = _is_package_available(
     "mindspore", return_version=True
@@ -89,6 +90,8 @@ def is_sentencepiece_available():
 def is_tokenizers_available():
     return _tokenizers_available
 
+def is_safetensors_available():
+    return _safetensors_available
 
 def is_modelscope_available():
     return _modelscope_available

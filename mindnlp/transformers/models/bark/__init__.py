@@ -13,13 +13,15 @@
 # limitations under the License.
 # ============================================================================
 """
-Ernie Model init
+Encodec Model init
 """
 
-from .import bark, bark_config
-from .bark_config import *
-from .bark import *
+from .import modeling_bark, configuration_bark, generation_bark
+from .configuration_bark import *
+from .generation_bark import *
+from .modeling_bark import *
 
 __all__ = []
-__all__.extend(bark.__all__)
-__all__.extend(bark_config.__all__)
+__all__.extend(modeling_bark.__all__)
+__all__.extend(configuration_bark.__all__)
+# __all__.extend(generation_bark.__all__)

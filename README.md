@@ -95,29 +95,31 @@ The table below represents the current support in the library for each of those 
 | ALBERT                        | ✅                | ✅             |
 | Autoformer                    | ✅ (Inference only)| ❌             |
 | BaiChuan                      | ✅                | ❌             |
-| Bark                          | TODO                | ❌             |
+| Bark                          | ✅                | ❌             |
 | BART                          | ✅                | ❌             |
 | BERT                          | ✅                | ✅             |
 | BLIP                          | TODO              | ✅             |
 | BLIP2                         | TODO              | ✅             |
 | BLOOM                         | ✅                | ❌             |
 | ChatGLM                       | ✅                | ❌             |
+| ChatGLM2                      | ✅                | ❌             |
+| ChatGLM3                      | ✅                | ❌             |
 | CLIP                          | ✅                | ❌             |
 | CodeGen                       | ✅                | ❌             |
 | ConvBERT                      | TODO              | ❌             |
 | CPM                           | ✅                | ❌             |
 | CPM-Ant                       | ✅                | ❌             |
 | CPM-Bee                       | ✅                | ❌             |
-| EnCodec                       | TODO               | ❌             |
+| EnCodec                       | ✅               | ❌             |
 | ERNIE                         | ✅                | ❌             |
 | Falcon                        | ✅                | ❌             |
 | GLM                           | ✅                | ❌             |
 | OpenAI GPT                    | ✅                | ❌             |
 | OpenAI GPT-2                  | ✅                | ✅             |
 | GPT Neo                       | ✅                | ❌             |
-| GPT NeoX                      | TODO                | ❌             |
+| GPT NeoX                      | TODO              | ❌             |
 | GPTBigCode                    | ✅                | ❌             |
-| Graphormer                    | ✅               | ❌             |
+| Graphormer                    | ✅                | ❌             |
 | Llama                         | ✅                | ❌             |
 | Llama2                        | ✅                | ❌             |
 | CodeLlama                     | ✅                | ❌             |
@@ -136,8 +138,10 @@ The table below represents the current support in the library for each of those 
 | Pop2piano                     | Todo              | ❌             |
 | RoBERTa                       | ✅                | ✅             |
 | RWKV                          | ✅                | ❌             |
+| SeamlessM4T                   | ✅                | ❌             |
+| SeamlessM4Tv2                 | ✅                | ❌             |
 | T5                            | ✅                | ❌             |
-| TimeSformer                   | TODO               | ❌             |
+| TimeSformer                   | TODO              | ❌             |
 | Tinybert                      | ✅                | ❌             |
 | Whisper                       | ✅                | ❌             |
 | XLM                           | ✅                | ❌             |

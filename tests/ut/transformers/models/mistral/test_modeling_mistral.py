@@ -45,7 +45,6 @@ if is_mindspore_available():
         MistralModel,
     )
 
-
 class MistralModelTester:
     def __init__(
         self,
