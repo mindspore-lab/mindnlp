@@ -95,7 +95,7 @@ The table below represents the current support in the library for each of those 
 | ALBERT                        | ✅                | ✅             |
 | Autoformer                    | ✅ (Inference only)| ❌             |
 | BaiChuan                      | ✅                | ❌             |
-| Bark                          | TODO                | ❌             |
+| Bark                          | ✅                | ❌             |
 | BART                          | ✅                | ❌             |
 | BERT                          | ✅                | ✅             |
 | BLIP                          | TODO              | ✅             |
@@ -110,7 +110,7 @@ The table below represents the current support in the library for each of those 
 | CPM                           | ✅                | ❌             |
 | CPM-Ant                       | ✅                | ❌             |
 | CPM-Bee                       | ✅                | ❌             |
-| EnCodec                       | TODO               | ❌             |
+| EnCodec                       | ✅               | ❌             |
 | ERNIE                         | ✅                | ❌             |
 | Falcon                        | ✅                | ❌             |
 | GLM                           | ✅                | ❌             |
