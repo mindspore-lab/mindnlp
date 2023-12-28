@@ -16,6 +16,7 @@
 Graphormer Model.
 """
 from .configuration_graphormer import GraphormerConfig
+from .collating_graphormer import GraphormerDataCollator
 from .modeling_graphormer import (
     GraphormerForGraphClassification,
     GraphormerModel,
@@ -24,6 +25,7 @@ from .modeling_graphormer import (
 
 __all__ = [
      "GraphormerConfig",
+     "GraphormerDataCollator",
      "GraphormerForGraphClassification",
      "GraphormerModel",
      "GraphormerPreTrainedModel"
