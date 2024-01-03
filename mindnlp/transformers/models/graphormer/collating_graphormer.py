@@ -77,8 +77,24 @@ class GraphormerDataCollator:
 
         self.spatial_pos_max = spatial_pos_max
         self.on_the_fly_processing = on_the_fly_processing
+        self.output_columns=["attn_bias",
+                             "attn_edge_type",
+                             "spatial_pos",
+                             "in_degree",
+                             "input_nodes",
+                             "input_edges",
+                             "out_degree",
+                             "labels"]
 
-    def __call__(self, features: List[dict]) -> Dict[str, Any]:
+    def __call__(self, edge_index, edge_attr, y, num_nodes, node_feat, batch_info):
+        features = []
+        for i in range(len(edge_index)):
+            features.append(dict(edge_index=edge_index[i],
+                                 edge_attr=edge_attr[i],
+                                 y=y[i],
+                                 num_nodes=num_nodes[i],
+                                 node_feat=node_feat[i]))
+
         if self.on_the_fly_processing:
             features = [preprocess_item(i) for i in features]
 
@@ -131,10 +147,17 @@ class GraphormerDataCollator:
         sample = features[0]["labels"]
         if len(sample) == 1:  # one task
             if isinstance(sample[0], float):  # regression
-                batch["labels"] = ms.Tensor.from_numpy(np.concatenate([i["labels"] for i in features]))
+                batch["labels"] = ms.tensor(np.concatenate([i["labels"] for i in features]),
+                                            dtype=ms.int64)
             else:  # binary classification
-                batch["labels"] = ms.Tensor.from_numpy(np.concatenate([i["labels"] for i in features]))
+                batch["labels"] = ms.tensor(np.concatenate([i["labels"] for i in features]),
+                                            dtype=ms.int64)
         else:  # multi task classification, left to float to keep the NaNs
-            batch["labels"] = ms.Tensor.from_numpy(np.stack([i["labels"] for i in features], axis=0))
+            batch["labels"] = ms.tensor(np.stack([i["labels"] for i in features], axis=0),
+                                        dtype=ms.int64)
 
-        return batch
+        outputs = [batch[key] for key in self.output_columns]
+        print("xxxxxxxxxxxoutputs")
+        print(batch_info.get_batch_num())
+        [print(batch[key].dtype) for key in self.output_columns]
+        return tuple(outputs)
