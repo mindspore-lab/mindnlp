@@ -50,7 +50,10 @@ def convert_dataset_to_examples(ds):
     """Convert dataset to examples."""
     examples = []
     iter = ds.create_tuple_iterator()
-    for i, (text_a, text_b, label, _), in enumerate(iter):
+    for (
+        i,
+        (text_a, text_b, label, _),
+    ) in enumerate(iter):
         # print(str(text_a.asnumpy()), str(text_b.asnumpy()))
         examples.append(
             InputExample(
@@ -77,36 +80,34 @@ def _truncate_seq_pair(tokens_a, tokens_b, max_length):
 
 
 def convert_examples_to_features(examples, tokenizer, max_seq_length=512):
+    
     features = []
 
     for ex_index, example in enumerate(examples):
         tokenizer.return_token = True
-        tokens_a = tokenizer(example.text_a)
+        tokens_a = tokenizer.tokenize(example.text_a)
         tokens_b = None
         if example.text_b:
-            tokens_b = tokenizer(example.text_b)
+            tokens_b = tokenizer.tokenize(example.text_b)
         if tokens_b is not None:
             # Modifies `tokens_a` and `tokens_b` in place so that the total
             # length is less than the specified length.
-            # Account for [CLS], [SEP], [SEP] with "- 3"
-            _truncate_seq_pair(tokens_a, tokens_b, max_seq_length - 3)
+            _truncate_seq_pair(tokens_a, tokens_b, max_seq_length)
         else:
-            # Account for [CLS] and [SEP] with "- 2"
-            if len(tokens_a) > max_seq_length - 2:
-                tokens_a = tokens_a[0 : (max_seq_length - 2)]
+            if len(tokens_a) > max_seq_length:
+                tokens_a = tokens_a[0 : max_seq_length]
 
         tokens = []
         token_type_ids = []
+        
         for token in tokens_a:
             tokens.append(token)
             token_type_ids.append(0)
 
         if tokens_b is not None:
-            for token in tokens_b[1:]:
+            for token in tokens_b:
                 tokens.append(token)
                 token_type_ids.append(1)
-            # tokens.append("[SEP]")
-            # token_type_ids.append(1)
 
         tokenizer.return_token = False
         # input_ids = tokenizer.execute_py(example.text_a).tolist() + tokenizer.execute_py(example.text_b).tolist()
@@ -130,15 +131,15 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length=512):
 
         label_id = example.label
 
-        # if ex_index < 5:
-        #     print("*** Example ***")
-        #     print("guid: %s" % (example.guid))
-        #     print("tokens: %s"%" ".join([str(x) for x in tokens]))
-        #     print("input_ids: %s" % " ".join([str(x) for x in input_ids]))
-        #     print("attention_mask: %s" % " ".join([str(x) for x in attention_mask]))
-        #     print("token_type_ids: %s" % " ".join([str(x) for x in token_type_ids]))
-        #     print("label: %s (id = %d)" % (example.label, label_id))
-        #     print("input length: %d" % (input_len))
+        if ex_index < 1:
+            print("*** Example ***")
+            print("guid: %s" % (example.guid))
+            print("tokens: %s" % " ".join([str(x) for x in tokens]))
+            print("input_ids: %s" % " ".join([str(x) for x in input_ids]))
+            print("attention_mask: %s" % " ".join([str(x) for x in attention_mask]))
+            print("token_type_ids: %s" % " ".join([str(x) for x in token_type_ids]))
+            print("label: %s (id = %d)" % (example.label, label_id))
+            print("input length: %d" % (input_len))
 
         features.append(
             InputFeatures(
@@ -159,7 +160,7 @@ def load_examples(tokenizer, max_seq_length, data_type="train"):
     mrpc_test = ds["test"]
     mrpc = mrpc_train if data_type == "train" else mrpc_test
     train_examples = convert_dataset_to_examples(mrpc)
-    # test_examples = convert_dataset_to_examples(mrpc_test)
+    test_examples = convert_dataset_to_examples(mrpc_test)
 
     features = convert_examples_to_features(
         train_examples, tokenizer, max_seq_length=max_seq_length

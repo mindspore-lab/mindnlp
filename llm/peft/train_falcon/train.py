@@ -1,4 +1,8 @@
+"""
+Fine-Tune Falcon on mrpc dataset
+"""
 import sys
+import time
 import argparse
 import logging
 import mindspore
@@ -7,6 +11,7 @@ import numpy as np
 from pathlib import Path
 from tqdm import tqdm
 from mindspore import nn
+from mindspore.amp import auto_mixed_precision
 from mindspore.nn import AdamWeightDecay
 
 # support running without installing as a package
@@ -17,9 +22,9 @@ sys.path.append(str(wd))
 
 from mindnlp.transformers import AutoTokenizer
 
-from mindnlp.transformers.models.falcon import (
-    FalconConfig,
-    FalconForSequenceClassification,
+from mindnlp.transformers import (
+    AutoConfig,
+    AutoModelForSequenceClassification,
 )
 from mindnlp.peft import (
     get_peft_model,
@@ -29,35 +34,31 @@ from mindnlp.peft import (
 from mrpc_dataset import load_examples, get_dataloader_from_ds
 
 
-def load_falcon_model(config_path, model_path):
-    config = FalconConfig.from_pretrained(
-        config_path, problem_type="single_label_classification"
+def load_falcon_model(pretrained_model_name_or_path):
+    config = AutoConfig.from_pretrained(
+        pretrained_model_name_or_path,
+        problem_type="single_label_classification",
     )
     # print(config.to_dict())
-
-    # here we build model from config to make model smaller and test the correctness of training process
-    # mindspore.load_checkpoint(ckpt_path, net=model)
-    config.num_hidden_layers = 2
-    model = FalconForSequenceClassification(config)
-    state_dict = mindspore.load_checkpoint(model_path)
-    param_not_load, ckpt_not_load = mindspore.load_param_into_net(model, state_dict)
-    logging.info("params in model not load\n", param_not_load)
-    logging.info("ckpt not load:\n", ckpt_not_load)
-    # print(model)
+    config.num_hidden_layers = 2  # 为了测试，将层数减少到2
+    # model = AutoModelForSequenceClassification.from_config(config)
+    # model.to_float(mindspore.float16)
+    # state_dict = mindspore.load_checkpoint("falcon-rw-1b/mindspore.ckpt")
+    # mindspore.load_param_into_net(model, state_dict)
+    model = AutoModelForSequenceClassification.from_pretrained(
+        pretrained_model_name_or_path, config=config, ms_dtype=mindspore.float16
+    )
+    # ckpt中无score层参数，故无法加载导致该层数据类型为默认的float32，把模型最后一层score参数改为float16
+    for name, param in model.parameters_and_names():
+        if "score" in name:
+            param.set_dtype(mindspore.float16)
+    # 打印模型参数
+    for name, param in model.parameters_and_names():
+        print(name, param)
+    # model = auto_mixed_precision(model, 'O3')
     tokenizer = AutoTokenizer.from_pretrained("falcon-rw-1b")
 
     return model, config, tokenizer
-
-
-def forward_fn(input_ids, attention_mask, labels):
-    # _, _ = hidden_states, attentions``
-    output= model(
-        input_ids=input_ids,
-        attention_mask=attention_mask,
-        # token_type_ids=token_type_ids,
-        labels=mindspore.Tensor(labels.asnumpy(), mindspore.int32),
-    )
-    return output['loss'], output['logits']
 
 
 def train_one_epoch(model, optimizer, criterion, train_dataloader):
@@ -65,6 +66,16 @@ def train_one_epoch(model, optimizer, criterion, train_dataloader):
     total_loss, total_step = 0, 0
     num_batches = len(train_dataloader)
     preds, label_ids = None, None
+
+    def forward_fn(input_ids, attention_mask, labels):
+        # _, _ = hidden_states, attentions``
+        output = model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            # token_type_ids=token_type_ids,
+            labels=mindspore.Tensor(labels.asnumpy(), mindspore.int32),
+        )
+        return output.loss, output.logits
 
     grad_fn = mindspore.value_and_grad(
         forward_fn, None, optimizer.parameters, has_aux=True
@@ -75,9 +86,7 @@ def train_one_epoch(model, optimizer, criterion, train_dataloader):
             train_dataloader
         ):
             # forward + grad
-            (loss, logits), grad = grad_fn(
-                input_ids, attention_mask, labels
-            )
+            (loss, logits), grad = grad_fn(input_ids, attention_mask, labels)
             # update model params
             optimizer(grad)
             total_loss += loss.asnumpy()
@@ -156,11 +165,43 @@ def eval_model(model, optimizer, criterion, eval_dataloader):
 
 
 if __name__ == "__main__":
+    mindspore.set_context(mode=mindspore.GRAPH_MODE)
+
+    class Logger(object):
+        def __init__(self, filename="default.log", add_flag=True, stream=sys.stdout):
+            self.terminal = stream
+            print("filename:", filename)
+            self.filename = filename
+            self.add_flag = add_flag
+            self.log = open(filename, "a+", encoding="utf-8")
+
+        def write(self, message):
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S ", time.localtime())
+            message_with_timestamp = timestamp + message  # 添加时间戳
+            if self.add_flag:
+                with open(self.filename, "a+", encoding="utf-8") as log:
+                    self.terminal.write(message)
+                    log.write(message_with_timestamp + "\n")  # 写入带时间戳的消息，并换行
+            else:
+                with open(self.filename, "w", encoding="utf-8") as log:
+                    self.terminal.write(message)
+                    log.write(message_with_timestamp + "\n")  # 写入带时间戳的消息，并换行
+
+        def flush(self):
+            pass
+
+    sys.stdout = Logger("out.log", sys.stdout)
+    sys.stderr = Logger("err.log", sys.stderr)
+
     # `python llm/peft/train_llama_lora/train.py --do_train --do_eval --model_name_or_path bert-base-cased`
     # from pretrained
     parser = argparse.ArgumentParser()
-    parser.add_argument("--do_train", action='store_true', help="Whether to run training.")
-    # parser.add_argument("--do_eval", action='store_true', help="Whether to run eval on the dev set.")
+    # parser.add_argument(
+    #     "--do_train", action="store_true", help="Whether to run training."
+    # )
+    # parser.add_argument(
+    #     "--do_eval", action="store_true", help="Whether to run eval on the dev set."
+    # )
     parser.add_argument(
         "--save_dir",
         default=".mindnlp/peft_model/mrpc_lora",
@@ -169,13 +210,11 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--batch_size",
-        default=1,
+        default=4,
         type=int,
         help="Batch size per GPU/CPU for training.",
     )
-    parser.add_argument(
-        "--model_name_or_path", default="falcon-rw-1b", type=str
-    )
+    parser.add_argument("--model_name_or_path", default="falcon-rw-1b", type=str)
     parser.add_argument("--num_epochs", default=5, type=int)
     parser.add_argument(
         "--lr", default=1e-4, type=float, help="Set 2e-5 for full-finetuning."
@@ -185,15 +224,18 @@ if __name__ == "__main__":
     parser.add_argument("--lora", action="store_true", help="lora mode")
 
     args = parser.parse_args()
-    if args.debug:
-        args.num_epochs = 1
 
     # load model
     model, config, tokenizer = load_falcon_model(
-        config_path=r"falcon-rw-1b/config.json",
-        model_path=r"falcon-rw-1b/mindspore.ckpt",
+        pretrained_model_name_or_path=args.model_name_or_path,
     )
     logging.info("model load")
+
+    if args.debug:
+        args.num_epochs = 1
+
+    if args.batch_size > 1:
+        config.pad_token_id = config.eos_token_id
 
     if args.lora:
         # build peft model
