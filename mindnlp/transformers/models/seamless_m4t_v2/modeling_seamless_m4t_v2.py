@@ -615,7 +615,7 @@ class SeamlessM4Tv2ConformerEncoder(nn.Cell):
             attention_mask = self._apply_chunk_attention(attention_mask, hidden_states)
 
         if attention_mask is not None:
-            attention_mask = attention_mask * np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).min
+            attention_mask = attention_mask * float(np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).min)
 
         hidden_states = self.dropout(hidden_states)
 

@@ -490,7 +490,7 @@ class ErnieMModel(ErnieMPreTrainedModel):
         # Adapted from paddlenlp.transformers.ernie_m.ErnieMModel
         if attention_mask is None:
             attention_mask = (input_ids == 0).to(self.dtype)
-            attention_mask *= np.finfo(mindspore.dtype_to_nptype(attention_mask.dtype)).min
+            attention_mask *= mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(attention_mask.dtype)).min, attention_mask.dtype)
             if past_key_values is not None:
                 batch_size = past_key_values[0][0].shape[0]
                 past_mask = ops.zeros([batch_size, 1, 1, past_key_values_length], dtype=attention_mask.dtype)
@@ -499,7 +499,7 @@ class ErnieMModel(ErnieMPreTrainedModel):
         elif attention_mask.ndim == 2:
             attention_mask = attention_mask.to(self.dtype)
             attention_mask = 1.0 - attention_mask
-            attention_mask *= np.finfo(mindspore.dtype_to_nptype(attention_mask.dtype)).min
+            attention_mask *= mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(attention_mask.dtype)).min, attention_mask.dtype)
 
         extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(1)
 
