@@ -970,7 +970,6 @@ class OPTForQuestionAnswering(OPTPreTrainedModel):
 
         ```python
         >>> from transformers import AutoTokenizer, OPTForQuestionAnswering
-        >>> import torch
 
         >>> torch.manual_seed(4)  # doctest: +IGNORE_RESULT
         >>> tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")

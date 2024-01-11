@@ -20,7 +20,6 @@
 
 from typing import Optional, Tuple
 
-import os
 import math
 import mindspore
 import numpy as np
@@ -42,45 +41,6 @@ GPT2_SUPPORT_LIST = ["gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl", "distilgpt2
 
 __all__ = ['GPT2DoubleHeadsModel', 'GPT2ForSequenceClassification',
            'GPT2ForTokenClassification', 'GPT2LMHeadModel', 'GPT2Model']
-
-def torch_to_mindspore(pth_file, **kwargs):
-    """torch to mindspore."""
-    prefix = kwargs.get("prefix", "")
-
-    try:
-        import torch
-    except Exception as exc:
-        raise ImportError("'import torch' failed, please install torch by "
-                          "`pip install torch` or instructions from 'https://pytorch.org'") \
-            from exc
-
-    from mindspore.train.serialization import save_checkpoint
-
-    logger.info('Starting checkpoint conversion.')
-    ms_ckpt = []
-    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
-
-    for k, v in state_dict.items():
-        if 'wte.' in k:
-            k = k.replace('.weight', '.weight')
-        if 'wpe.' in k:
-            k = k.replace('.weight', '.weight')
-        if 'ln' in k:
-            k = k.replace('.weight', '.weight')
-            k = k.replace('.bias', '.bias')
-        if prefix:
-            k = prefix + "." + k
-        ms_ckpt.append({'name': k, 'data': Tensor(v.numpy())})
-
-    ms_ckpt_path = pth_file.replace('pytorch_model.bin', 'mindspore.ckpt')
-    if not os.path.exists(ms_ckpt_path):
-        try:
-            save_checkpoint(ms_ckpt, ms_ckpt_path)
-        except Exception as exc:
-            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, please checkout the path.') \
-                from exc
-
-    return ms_ckpt_path
 
 
 class GPT2Attention(nn.Cell):
@@ -402,7 +362,6 @@ class GPT2PreTrainedModel(PreTrainedModel):
     models.
     """
     config_class = GPT2Config
-    convert_torch_to_mindspore = torch_to_mindspore
 
     base_model_prefix = "transformer"
     is_parallelizable = True

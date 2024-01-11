@@ -2504,7 +2504,7 @@ class GenerationMixin:
         ...     StoppingCriteriaList,
         ...     MaxLengthCriteria,
         ... )
-        >>> import torch
+
 
         >>> tokenizer = AutoTokenizer.from_pretrained("gpt2")
         >>> model = AutoModelForCausalLM.from_pretrained("gpt2")
@@ -2768,7 +2768,7 @@ class GenerationMixin:
         ...     MinLengthLogitsProcessor,
         ...     BeamSearchScorer,
         ... )
-        >>> import torch
+
 
         >>> tokenizer = AutoTokenizer.from_pretrained("t5-base")
         >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base")
@@ -3087,7 +3087,7 @@ class GenerationMixin:
         ...     TemperatureLogitsWarper,
         ...     BeamSearchScorer,
         ... )
-        >>> import torch
+
 
         >>> tokenizer = AutoTokenizer.from_pretrained("t5-base")
         >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base")
@@ -3401,7 +3401,7 @@ class GenerationMixin:
         ...     HammingDiversityLogitsProcessor,
         ...     BeamSearchScorer,
         ... )
-        >>> import torch
+
 
         >>> tokenizer = AutoTokenizer.from_pretrained("t5-base")
         >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base")
@@ -3773,7 +3773,7 @@ class GenerationMixin:
         ...     ConstrainedBeamSearchScorer,
         ...     PhrasalConstraint,
         ... )
-        >>> import torch
+
 
         >>> tokenizer = AutoTokenizer.from_pretrained("t5-base")
         >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base")

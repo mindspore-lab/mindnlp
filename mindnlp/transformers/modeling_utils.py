@@ -47,6 +47,7 @@ from mindnlp.configs import MS_URL_BASE, HF_URL_BASE, PT_WEIGHTS_NAME, WEIGHTS_N
 from mindnlp.utils.download import is_remote_url, download_url, cached_file, get_checkpoint_shard_files
 from mindnlp.utils import convert_file_size_to_int, logging, ModelOutput, is_safetensors_available
 from mindnlp._legacy.functional import arange
+from mindnlp.utils.serialization import load
 
 from .generation import GenerationMixin
 from .configuration_utils import PretrainedConfig
@@ -784,6 +785,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     }
                     # try safetensors
                     resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
+                    use_safetensors = resolved_archive_file is not None
+
                     if resolved_archive_file is None and from_pt:
                         filename = _add_variant(PT_WEIGHTS_NAME, variant)
                         resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
@@ -805,6 +808,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                             resolved_archive_file = cached_file(
                                 pretrained_model_name_or_path, filename, **cached_file_kwargs
                             )
+
                     if resolved_archive_file is None and filename == _add_variant(WEIGHTS_NAME, variant):
                         # Maybe the checkpoint is sharded, we try to grab the index name in this case.
                         resolved_archive_file = cached_file(
@@ -878,20 +882,17 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         if ms_dtype:
             model = model.to_float(ms_dtype)
 
-        if from_pt:
-            if is_sharded:
-                converted_filenames = []
-                for name in resolved_archive_file:
-                    converted = convert_torch_to_mindspore(str(name))
-                    converted_filenames.append(converted)
-            else:
-                resolved_archive_file = convert_torch_to_mindspore(
-                    str(resolved_archive_file))
-        else:
-            if is_sharded:
-                converted_filenames = resolved_archive_file
+        if is_sharded:
+            converted_filenames = resolved_archive_file
 
-        def load_ckpt(resolved_archive_file):
+        def load_ckpt(resolved_archive_file, from_pt=False):
+            if from_pt:
+                if use_safetensors:
+                    from safetensors.numpy import load_file
+                    state_dict = load_file(resolved_archive_file)
+                    new_state_dict = {k: Parameter(v) for k, v in state_dict.items()}
+                    return new_state_dict
+                return load(resolved_archive_file)
             try:
                 state_dict = load_checkpoint(str(resolved_archive_file))
             except Exception as exc:
@@ -968,6 +969,11 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     keys_unexpected.remove(param_name)
                     keys_missing.remove(pname_in_net)
                     param_id_set.add(id(param))
+                else:
+                    # fix missing value parameter dtype cast.
+                    if ms_dtype:
+                        new_param = param.astype(ms_dtype)
+                        replace_references(param, Parameter(new_param, name=param.name, requires_grad=param.requires_grad))
 
             return keys_unexpected, keys_missing
 
@@ -977,13 +983,13 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             if is_sharded:
                 all_keys_unexpected = []
                 for name in tqdm(converted_filenames, desc="Loading checkpoint shards"):
-                    state_dict = load_ckpt(name)
+                    state_dict = load_ckpt(name, from_pt)
                     keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
                     all_keys_unexpected.extend(keys_unexpected)
                     del state_dict
                     gc.collect()
             else:
-                state_dict = load_ckpt(resolved_archive_file)
+                state_dict = load_ckpt(resolved_archive_file, from_pt)
                 all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
         else:
             all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
@@ -1427,52 +1433,6 @@ def dtype_byte_size(dtype):
     bit_size = int(bit_search.groups()[0])
     return bit_size // 8
 
-def convert_torch_to_mindspore(pth_file):
-    """convert torch checkpoint to mindspore"""
-    try:
-        import torch
-    except Exception as exc:
-        raise ImportError("'import torch' failed, please install torch by "
-                        "`pip install torch` or instructions from 'https://pytorch.org'") \
-                        from exc
-    if pth_file.endswith(".safetensors"):
-        from safetensors.torch import load_file
-        state_dict = load_file(pth_file)
-        ms_ckpt_path = pth_file.replace('model-', 'mindspore-')
-        ms_ckpt_path = ms_ckpt_path.replace('.safetensors', '.ckpt')
-
-    else:
-        ms_ckpt_path = pth_file.replace('pytorch_model', 'mindspore')
-        ms_ckpt_path = ms_ckpt_path.replace('.bin', '.ckpt')
-
-        state_dict = torch.load(pth_file, map_location='cpu')
-
-    if os.path.exists(ms_ckpt_path):
-        return ms_ckpt_path
-
-    ms_ckpt = []
-    logger.info('Starting checkpoint conversion.')
-
-    has_bf16 = False
-    for key, value in state_dict.items():
-        if value.dtype == torch.bfloat16:
-            data = Tensor(value.to(torch.float).numpy(), dtype=mindspore.float16)
-            if not has_bf16:
-                has_bf16 = True
-        else:
-            data = Tensor(value.numpy())
-        ms_ckpt.append({'name': key, 'data': data})
-
-    if has_bf16:
-        logger.warning("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
-
-    try:
-        save_checkpoint(ms_ckpt, ms_ckpt_path)
-    except Exception as exc:
-        raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, '
-                            f'please checkout the path.') from exc
-
-    return ms_ckpt_path
 
 class PoolerStartLogits(nn.Cell):
     """

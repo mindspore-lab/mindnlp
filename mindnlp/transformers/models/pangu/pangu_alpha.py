@@ -21,10 +21,7 @@ PanGu_alpha Models
 """
 from typing import Tuple
 
-import os
-import logging
 import math
-# import numpy as np
 
 import mindspore
 from mindspore import nn
@@ -35,56 +32,6 @@ from mindnlp.transformers.activations import ACT2FN
 
 from .pangu_alpha_config import PanGuAlphaConfig
 from ...modeling_utils import PreTrainedModel
-
-
-def torch_to_mindspore(pth_file, **kwargs):
-    """torch to mindspore."""
-    prefix = kwargs.get("prefix", "")
-
-    try:
-        import torch
-    except Exception as exc:
-        raise ImportError("'import torch' failed, please install torch by "
-                          "`pip install torch` or instructions from 'https://pytorch.org'") \
-            from exc
-
-    from mindspore.train.serialization import save_checkpoint
-
-    logging.info('Starting checkpoint conversion.')
-    ms_ckpt = []
-    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
-
-    param_dict = {
-        'wte.weight': 'wte.weight',
-        'wpe.weight': 'wpe.weight',
-        'wqe.weight': 'wqe.weight',
-        'ln_1.weight': 'ln_1.weight',
-        'ln_1.bias': 'ln_1.bias',
-        'ln_2.weight': 'ln_2.weight',
-        'ln_2.bias': 'ln_2.bias',
-        'ln_f.weight': 'ln_f.weight',
-        'ln_f.bias': 'ln_f.bias'
-    }
-
-    for k, v in state_dict.items():
-        for pt_key, pt_val in param_dict.items():
-            if pt_key in k:
-                k = k.replace(pt_key, pt_val)
-
-        k = k[k.find('.') + 1:]
-        if prefix:
-            k = prefix + "." + k
-        ms_ckpt.append({'name': k, 'data': Tensor(v.numpy())})
-
-    ms_ckpt_path = pth_file.replace('pytorch_model.bin', 'mindspore.ckpt')
-    if not os.path.exists(ms_ckpt_path):
-        try:
-            save_checkpoint(ms_ckpt, ms_ckpt_path)
-        except Exception as exc:
-            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, please checkout the path.') \
-                from exc
-
-    return ms_ckpt_path
 
 
 class PanGuAlphaAttention(nn.Cell):
@@ -227,7 +174,6 @@ class PanGuAlphaPreTrainedModel(PreTrainedModel):
     and loading pretrained models.
     """
     config_class = PanGuAlphaConfig
-    convert_torch_to_mindspore = torch_to_mindspore
 
     base_model_prefix = "transformer"
     supports_gradient_checkpointing = True
