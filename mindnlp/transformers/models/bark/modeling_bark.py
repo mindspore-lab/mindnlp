@@ -77,8 +77,8 @@ class BarkSelfAttention(nn.Cell):
 
         # regularization
         self.dropout = config.dropout
-        self.attn_dropout = nn.Dropout(config.dropout)
-        self.resid_dropout = nn.Dropout(config.dropout)
+        self.attn_dropout = nn.Dropout(p=config.dropout)
+        self.resid_dropout = nn.Dropout(p=config.dropout)
 
         self.embed_dim = config.hidden_size
         self.num_heads = config.num_heads
@@ -132,7 +132,7 @@ class BarkSelfAttention(nn.Cell):
             # fill the upper left part of the attention weights with inf
             attn_weights = attn_weights.masked_fill(
                 self.weight[:, :, key_length - query_length : key_length, :key_length] == 0,
-                np.finfo(np.float32).min,
+                mindspore.tensor(np.finfo(np.float32).min),
                 )
         if attention_mask is not None:
             # Apply the attention mask
@@ -217,7 +217,7 @@ class BarkMLP(nn.Cell):
         super().__init__()
         self.in_proj = nn.Dense(config.hidden_size, 4 * config.hidden_size, has_bias=config.bias)
         self.out_proj = nn.Dense(4 * config.hidden_size, config.hidden_size, has_bias=config.bias)
-        self.dropout = nn.Dropout(config.dropout)
+        self.dropout = nn.Dropout(p=config.dropout)
         self.gelu = nn.GELU()
 
     def construct(self, hidden_states):
@@ -363,7 +363,7 @@ class BarkCausalModel(BarkPreTrainedModel):
         self.input_embeds_layer = nn.Embedding(config.input_vocab_size, config.hidden_size)
         self.position_embeds_layer = nn.Embedding(config.block_size, config.hidden_size)
 
-        self.drop = nn.Dropout(config.dropout)
+        self.drop = nn.Dropout(p=config.dropout)
 
         self.layers = nn.CellList([BarkBlock(config, is_causal=True) for _ in range(config.num_layers)])
 
@@ -521,7 +521,7 @@ class BarkCausalModel(BarkPreTrainedModel):
             attention_mask = attention_mask.to(dtype=self.dtype)  # fp16 compatibility
             # print(self.dtype)
             dtypes = np.float32 if self.dtype == mindspore.float32 else np.float16
-            attention_mask = (1.0 - attention_mask) * np.finfo(dtypes).min
+            attention_mask = (1.0 - attention_mask) * mindspore.tensor(np.finfo(dtypes).min)
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head
         # attention_probs has shape bsz x num_heads x N x N
@@ -955,7 +955,7 @@ class BarkFineModel(BarkPreTrainedModel):
         )
         self.position_embeds_layer = nn.Embedding(config.block_size, config.hidden_size)
 
-        self.drop = nn.Dropout(config.dropout)
+        self.drop = nn.Dropout(p=config.dropout)
 
         self.layers = nn.CellList([BarkBlock(config, is_causal=False) for _ in range(config.num_layers)])
 
@@ -1132,7 +1132,7 @@ class BarkFineModel(BarkPreTrainedModel):
             attention_mask = attention_mask[:, None, None, :]
             attention_mask = attention_mask.to(dtype=self.dtype)  # fp16 compatibility
             dtypes = np.float32 if self.dtype == mindspore.float32 else np.float16
-            attention_mask = (1.0 - attention_mask) * np.finfo(dtypes).min
+            attention_mask = (1.0 - attention_mask) * mindspore.tensor(np.finfo(dtypes).min)
 
         head_mask = self.get_head_mask(head_mask, self.config.num_layers)
         hidden_states = self.drop(input_embeds + position_embeds)

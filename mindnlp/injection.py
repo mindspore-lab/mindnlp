@@ -348,6 +348,8 @@ Tensor.nonzero = _nonzero
 StubTensor.nonzero = _nonzero
 
 def _expand(self, *size):
+    if len(size) == 1:
+        size = size[0]
     return ops.broadcast_to(self, size)
 
 Tensor.expand = _expand
