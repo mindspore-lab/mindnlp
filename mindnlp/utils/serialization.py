@@ -289,13 +289,15 @@ def _maybe_decode_ascii(bytes_str: Union[bytes, str]) -> str:
 dtype_map = {
     "HalfStorage": np.float16,
     "FloatStorage": np.float32,
-    'BFloat16Storage': bfloat16
+    'BFloat16Storage': bfloat16,
+    'LongStorage': np.int64
 }
 
 element_size_map = {
     "HalfStorage": 2,
     "FloatStorage": 3,
-    'BFloat16Storage': 2
+    'BFloat16Storage': 2,
+    'LongStorage': 4
 }
 
 def load(f, pickle_module=pickle, *, mmap=None, **pickle_load_args):
