@@ -866,7 +866,7 @@ class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
         Example:
 
         ```python
-        >>> import torch
+
         >>> from transformers import AutoTokenizer, GPT2DoubleHeadsModel
 
         >>> tokenizer = AutoTokenizer.from_pretrained("gpt2")

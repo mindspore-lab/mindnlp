@@ -493,7 +493,7 @@ class GPTDoubleHeadsModel(GPTPreTrainedModel):
 
         ```python
         >>> from transformers import AutoTokenizer, OpenAIGPTDoubleHeadsModel
-        >>> import torch
+
 
         >>> tokenizer = AutoTokenizer.from_pretrained("openai-gpt")
         >>> model = OpenAIGPTDoubleHeadsModel.from_pretrained("openai-gpt")

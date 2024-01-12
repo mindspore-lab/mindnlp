@@ -4,7 +4,6 @@ pylint==2.17
 pytest
 ddt
 datasets
-torch
 sentencepiece
 regex
 parameterized
@@ -15,3 +14,4 @@ soundfile
 tokenizers
 easydict
 safetensors
+ml_dtypes

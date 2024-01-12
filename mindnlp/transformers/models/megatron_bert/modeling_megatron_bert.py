@@ -910,7 +910,6 @@ class MegatronBertForPreTraining(MegatronBertPreTrainedModel):
 
         ```python
         >>> from transformers import AutoTokenizer, MegatronBertForPreTraining
-        >>> import torch
 
         >>> tokenizer = AutoTokenizer.from_pretrained("nvidia/megatron-bert-cased-345m")
         >>> model = MegatronBertForPreTraining.from_pretrained("nvidia/megatron-bert-cased-345m")
@@ -1025,7 +1024,6 @@ class MegatronBertForCausalLM(MegatronBertPreTrainedModel):
 
         ```python
         >>> from transformers import AutoTokenizer, MegatronBertForCausalLM, MegatronBertConfig
-        >>> import torch
 
         >>> tokenizer = AutoTokenizer.from_pretrained("nvidia/megatron-bert-cased-345m")
         >>> model = MegatronBertForCausalLM.from_pretrained("nvidia/megatron-bert-cased-345m", is_decoder=True)
@@ -1241,7 +1239,6 @@ class MegatronBertForNextSentencePrediction(MegatronBertPreTrainedModel):
 
         ```python
         >>> from transformers import AutoTokenizer, MegatronBertForNextSentencePrediction
-        >>> import torch
 
         >>> tokenizer = AutoTokenizer.from_pretrained("nvidia/megatron-bert-cased-345m")
         >>> model = MegatronBertForNextSentencePrediction.from_pretrained("nvidia/megatron-bert-cased-345m")
