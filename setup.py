@@ -116,7 +116,7 @@ setup(
         'build_py': BuildPy,
     },
     install_requires=[
-        'mindspore'
+        'mindspore',
         'tqdm',
         'requests',
         'datasets',
