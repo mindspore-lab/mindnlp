@@ -828,7 +828,6 @@ class XLMRobertaForCausalLM(XLMRobertaPreTrainedModel):
 
         ```python
         >>> from transformers import AutoTokenizer, XLMRobertaForCausalLM, AutoConfig
-        >>> import torch
 
         >>> tokenizer = AutoTokenizer.from_pretrained("roberta-base")
         >>> config = AutoConfig.from_pretrained("roberta-base")

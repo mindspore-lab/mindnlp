@@ -1152,7 +1152,6 @@ class WhisperModel(WhisperPreTrainedModel):
 
         Example:
          ```python
-         >>> import torch
          >>> from transformers import AutoFeatureExtractor, WhisperModel
          >>> from datasets import load_dataset
 
@@ -1283,7 +1282,6 @@ class WhisperForConditionalGeneration(WhisperPreTrainedModel):
         Example:
 
         ```python
-        >>> import torch
         >>> from transformers import AutoProcessor, WhisperForConditionalGeneration
         >>> from datasets import load_dataset
 
@@ -1831,7 +1829,6 @@ class WhisperForCausalLM(WhisperPreTrainedModel):
 
         ```python
         >>> from transformers import WhisperForCausalLM, WhisperForConditionalGeneration, WhisperProcessor
-        >>> import torch
         >>> from datasets import load_dataset
 
         >>> processor = WhisperProcessor.from_pretrained("openai/whisper-large-v2")
@@ -1983,7 +1980,6 @@ class WhisperForAudioClassification(WhisperPreTrainedModel):
         Example:
 
         ```python
-        >>> import torch
         >>> from transformers import AutoFeatureExtractor, WhisperForAudioClassification
         >>> from datasets import load_dataset
 

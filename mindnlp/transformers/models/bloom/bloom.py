@@ -20,7 +20,6 @@
 # pylint: disable=E0401
 """MindSpore BLOOM model."""
 
-import os
 import math
 from typing import Optional, Tuple
 import numpy as np
@@ -39,44 +38,6 @@ from .bloom_config import BloomConfig
 
 logger = logging.get_logger(__name__)
 
-def torch_to_mindspore(pth_file, **kwargs):
-    """torch to mindspore."""
-    prefix = kwargs.get("prefix", "")
-
-    try:
-        import torch
-    except Exception as exc:
-        raise ImportError("'import torch' failed, please install torch by "
-                          "`pip install torch` or instructions from 'https://pytorch.org'") \
-        from exc
-
-    from mindspore.train.serialization import save_checkpoint
-
-    logger.info('Starting checkpoint conversion.')
-    ms_ckpt = []
-    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
-
-    for k, v in state_dict.items():
-        if 'layernorm' in k or 'ln' in k:
-            if '.weight' in k:
-                k = k.replace('.weight', '.weight')
-            if '.bias' in k:
-                k = k.replace('.bias', '.bias')
-        if 'embed' in k:
-            k = k.replace('weight', 'weight')
-        if prefix:
-            k = prefix + "." + k
-        ms_ckpt.append({'name': k, 'data': Tensor(v.numpy())})
-
-    ms_ckpt_path = pth_file.replace('pytorch_model.bin','mindspore.ckpt')
-    if not os.path.exists(ms_ckpt_path):
-        try:
-            save_checkpoint(ms_ckpt, ms_ckpt_path)
-        except Exception as exc:
-            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, please checkout the path.') \
-            from exc
-
-    return ms_ckpt_path
 
 def _make_causal_mask(input_ids_shape, past_key_values_length):
     """
@@ -420,7 +381,6 @@ class BloomPreTrainedModel(PreTrainedModel):
     models.
     """
     _keys_to_ignore_on_load_missing = [r"h.*.self_attention.scale_mask_softmax.causal_mask", r"lm_head.weight"]
-    convert_torch_to_mindspore = torch_to_mindspore
     config_class = BloomConfig
     base_model_prefix = "transformer"
     supports_gradient_checkpointing = True

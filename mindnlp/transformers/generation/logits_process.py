@@ -1235,7 +1235,6 @@ class WhisperTimeStampLogitsProcessor(LogitsProcessor):
 
     Examples:
     ``` python
-    >>> import torch
     >>> from transformers import AutoProcessor, WhisperForConditionalGeneration,GenerationConfig
     >>> from datasets import load_dataset
 

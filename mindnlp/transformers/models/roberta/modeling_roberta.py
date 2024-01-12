@@ -812,7 +812,6 @@ class RobertaForCausalLM(RobertaPreTrainedModel):
 
         ```python
         >>> from transformers import AutoTokenizer, RobertaForCausalLM, AutoConfig
-        >>> import torch
 
         >>> tokenizer = AutoTokenizer.from_pretrained("roberta-base")
         >>> config = AutoConfig.from_pretrained("roberta-base")

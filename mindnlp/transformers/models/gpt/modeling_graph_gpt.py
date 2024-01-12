@@ -21,8 +21,6 @@
 # pylint: disable=E0401
 
 """MindNLP gpt model"""
-import os
-import logging
 import numpy as np
 import mindspore
 from mindspore import nn
@@ -35,46 +33,6 @@ from .configuration_gpt import GPTConfig
 from ...modeling_utils import PreTrainedModel, SequenceSummary
 from ...ms_utils import Conv1D, prune_conv1d_layer, find_pruneable_heads_and_indices
 from ...activations import ACT2FN
-
-
-def torch_to_mindspore(pth_file, **kwargs):
-    """torch to mindspore."""
-    prefix = kwargs.get("prefix", "")
-
-    try:
-        import torch
-    except Exception as exc:
-        raise ImportError("'import torch' failed, please install torch by "
-                          "`pip install torch` or instructions from 'https://pytorch.org'") \
-        from exc
-
-    from mindspore.train.serialization import save_checkpoint
-
-    logging.info('Starting checkpoint conversion.')
-    ms_ckpt = []
-    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
-
-    for k, v in state_dict.items():
-        if 'ln' in k:
-            if '.weight' in k:
-                k = k.replace('.weight', '.weight')
-            if '.bias' in k:
-                k = k.replace('.bias', '.bias')
-        if 'embed' in k:
-            k = k.replace('weight', 'weight')
-        if prefix:
-            k = prefix + "." + k
-        ms_ckpt.append({'name': k, 'data': Tensor(v.numpy())})
-
-    ms_ckpt_path = pth_file.replace('pytorch_model.bin','mindspore.ckpt')
-    if not os.path.exists(ms_ckpt_path):
-        try:
-            save_checkpoint(ms_ckpt, ms_ckpt_path)
-        except Exception as exc:
-            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, please checkout the path.') \
-            from exc
-
-    return ms_ckpt_path
 
 
 class MLP(nn.Cell):
@@ -224,7 +182,6 @@ class Block(nn.Cell):
 
 class GPTPreTrainedModel(PreTrainedModel):
     """BertPretrainedModel"""
-    convert_torch_to_mindspore = torch_to_mindspore
 
     config_class = GPTConfig
     base_model_prefix = 'transformer'
