@@ -11,7 +11,6 @@ import numpy as np
 
 from tqdm import tqdm
 from mindspore import nn
-# from mindspore.amp import auto_mixed_precision
 from mindspore.nn import AdamWeightDecay
 
 # support running without installing as a package
@@ -19,6 +18,8 @@ wd = Path(
     __file__
 ).parent.parent.parent.parent.resolve()  ## put the path of mindnlp here
 sys.path.append(str(wd))
+
+from mrpc_dataset import load_examples, get_dataloader_from_ds
 
 from mindnlp.transformers import AutoTokenizer
 
@@ -31,8 +32,6 @@ from mindnlp.peft import (
     LoraConfig,
 )
 
-from mrpc_dataset import load_examples, get_dataloader_from_ds
-
 
 def load_falcon_model(pretrained_model_name_or_path):
     config = AutoConfig.from_pretrained(
@@ -40,18 +39,18 @@ def load_falcon_model(pretrained_model_name_or_path):
         problem_type="single_label_classification",
     )
     # print(config.to_dict())
-    config.num_hidden_layers = 2  # 为了测试，将层数减少到2
+    # config.num_hidden_layers = 2  # 为了测试，将层数减少到2
     # model = AutoModelForSequenceClassification.from_config(config)
     # model.to_float(mindspore.float16)
     # state_dict = mindspore.load_checkpoint("falcon-rw-1b/mindspore.ckpt")
     # mindspore.load_param_into_net(model, state_dict)
     model = AutoModelForSequenceClassification.from_pretrained(
-        "C:/Users/13706/Desktop/mindnlp/falcon-rw-1b", config=config, ms_dtype=mindspore.float16
+        pretrained_model_name_or_path, config=config, ms_dtype=mindspore.float16
     )
     # ckpt中无score层参数，故无法加载导致该层数据类型为默认的float32，把模型最后一层score参数改为float16
-    for name, param in model.parameters_and_names():
-        if "score" in name:
-            param.set_dtype(mindspore.float16)
+    # for name, param in model.parameters_and_names():
+    #     if "score" in name:
+    #         param.set_dtype(mindspore.float16)
     # 打印模型参数
     for name, param in model.parameters_and_names():
         print(name, param)
@@ -117,13 +116,15 @@ def eval_one_epoch(model, optimizer, criterion, eval_dataloader):
         for i, (input_ids, attention_mask, token_type_ids, lens, labels) in enumerate(
             eval_dataloader
         ):
-            loss, logits, _ = model(
+            output = model(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 # token_typ_ids=token_type_ids,
                 labels=mindspore.Tensor(labels.asnumpy(), mindspore.int32),
             )
             # (loss, logits), grad = grad_fn(input_ids, attention_mask, token_type_ids, lens, labels)
+            loss = output.loss
+            logits = output.logits
             total_loss += loss.asnumpy()
             total_step += 1
             curr_loss = total_loss / total_step  # 当前的平均loss
@@ -153,7 +154,7 @@ def train(model, optimizer, criterion, train_dataloader, eval_dataloader, epochs
         )
 
         print(
-            f"epoch:{epoch} train_loss:{train_loss} eval_acc:{train_acc} \
+            f"epoch:{epoch} train_loss:{train_loss} train_acc:{train_acc} \
               eval_loss:{eval_loss} eval_acc:{eval_acc}"
         )
         # print(f"epoch:{epoch} train_loss:{train_loss} eval_loss:{eval_loss}")
@@ -165,7 +166,7 @@ def eval_model(model, optimizer, criterion, eval_dataloader):
 
 
 if __name__ == "__main__":
-    mindspore.set_context(pynative_synchronize=True)
+    # mindspore.set_context(pynative_synchronize=True)
 
     class Logger(object):
         def __init__(self, filename="default.log", add_flag=True, stream=sys.stdout):
@@ -196,30 +197,24 @@ if __name__ == "__main__":
     # `python llm/peft/train_llama_lora/train.py --do_train --do_eval --model_name_or_path bert-base-cased`
     # from pretrained
     parser = argparse.ArgumentParser()
-    # parser.add_argument(
-    #     "--do_train", action="store_true", help="Whether to run training."
-    # )
-    # parser.add_argument(
-    #     "--do_eval", action="store_true", help="Whether to run eval on the dev set."
-    # )
     parser.add_argument(
         "--save_dir",
-        default=".mindnlp/peft_model/mrpc_lora",
+        default=".mindnlp/peft_model/falcon/mrpc_lora",
         type=str,
         help="The output directory where the model checkpoints will be written.",
     )
     parser.add_argument(
         "--batch_size",
-        default=4,
+        default=8,
         type=int,
         help="Batch size per GPU/CPU for training.",
     )
     parser.add_argument("--model_name_or_path", default="falcon-rw-1b", type=str)
-    parser.add_argument("--num_epochs", default=5, type=int)
+    parser.add_argument("--num_epochs", default=50, type=int)
     parser.add_argument(
         "--lr", default=1e-4, type=float, help="Set 2e-5 for full-finetuning."
     )
-    parser.add_argument("--max_seq_len", default=256, type=int)
+    parser.add_argument("--max_seq_len", default=512, type=int)
     parser.add_argument("--debug", action="store_true", help="debug mode")
     parser.add_argument("--lora", action="store_true", help="lora mode")
 
