@@ -39,7 +39,7 @@ def load_falcon_model(pretrained_model_name_or_path):
         problem_type="single_label_classification",
     )
     # print(config.to_dict())
-    # config.num_hidden_layers = 2  # 为了测试，将层数减少到2
+    # config.num_hidden_layers = 2  # for test, set 2 hidden layers
     # model = AutoModelForSequenceClassification.from_config(config)
     # model.to_float(mindspore.float16)
     # state_dict = mindspore.load_checkpoint("falcon-rw-1b/mindspore.ckpt")
@@ -47,13 +47,8 @@ def load_falcon_model(pretrained_model_name_or_path):
     model = AutoModelForSequenceClassification.from_pretrained(
         pretrained_model_name_or_path, config=config, ms_dtype=mindspore.float16
     )
-    # ckpt中无score层参数，故无法加载导致该层数据类型为默认的float32，把模型最后一层score参数改为float16
     # for name, param in model.parameters_and_names():
-    #     if "score" in name:
-    #         param.set_dtype(mindspore.float16)
-    # 打印模型参数
-    for name, param in model.parameters_and_names():
-        print(name, param)
+    #     print(name, param)
     # model = auto_mixed_precision(model, 'O3')
     tokenizer = AutoTokenizer.from_pretrained("falcon-rw-1b")
 
@@ -127,7 +122,7 @@ def eval_one_epoch(model, optimizer, criterion, eval_dataloader):
             logits = output.logits
             total_loss += loss.asnumpy()
             total_step += 1
-            curr_loss = total_loss / total_step  # 当前的平均loss
+            curr_loss = total_loss / total_step  # the current average loss
             if preds is None:
                 preds = np.argmax(logits.asnumpy(), axis=1)
                 label_ids = labels.asnumpy()
