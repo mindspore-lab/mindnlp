@@ -166,7 +166,7 @@ def eval_model(model, optimizer, criterion, eval_dataloader):
 
 
 if __name__ == "__main__":
-    # mindspore.set_context(pynative_synchronize=True)
+    mindspore.set_context(device_id = 1)
 
     class Logger(object):
         def __init__(self, filename="default.log", add_flag=True, stream=sys.stdout):
@@ -205,11 +205,11 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--batch_size",
-        default=4,
+        default=8,
         type=int,
         help="Batch size per GPU/CPU for training.",
     )
-    parser.add_argument("--model_name_or_path", default="falcon-rw-1b", type=str)
+    parser.add_argument("--model_name_or_path", default=".mindnlp/model/Rocketknight1/falcon-rw-1b", type=str)
     parser.add_argument("--num_epochs", default=50, type=int)
     parser.add_argument(
         "--lr", default=1e-4, type=float, help="Set 2e-5 for full-finetuning."
@@ -223,7 +223,7 @@ if __name__ == "__main__":
     # load model
     model, config, tokenizer = load_falcon_model(
         pretrained_model_name_or_path=args.model_name_or_path,
-    )
+    )                      
     logging.info("model load")
 
     if args.debug:
