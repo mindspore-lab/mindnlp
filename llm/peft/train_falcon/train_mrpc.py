@@ -200,16 +200,16 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--batch_size",
-        default=8,
+        default=16,
         type=int,
         help="Batch size per GPU/CPU for training.",
     )
     parser.add_argument("--model_name_or_path", default=".mindnlp/model/Rocketknight1/falcon-rw-1b", type=str)
-    parser.add_argument("--num_epochs", default=50, type=int)
+    parser.add_argument("--num_epochs", default=10, type=int)
     parser.add_argument(
         "--lr", default=1e-4, type=float, help="Set 2e-5 for full-finetuning."
     )
-    parser.add_argument("--max_seq_len", default=512, type=int)
+    parser.add_argument("--max_seq_len", default=256, type=int)
     parser.add_argument("--debug", action="store_true", help="debug mode")
     parser.add_argument("--lora", action="store_true", help="lora mode")
 
