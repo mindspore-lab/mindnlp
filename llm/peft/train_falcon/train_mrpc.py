@@ -266,4 +266,4 @@ if __name__ == "__main__":
         epochs=args.num_epochs,
     )
     logging.info("end train")
-    model.save_pretrained(save_directory=args.save_dir)
+    # model.save_pretrained(save_directory=args.save_dir)
