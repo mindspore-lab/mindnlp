@@ -25,13 +25,15 @@ import json
 import os
 import re
 from typing import Optional, Tuple, Dict, Union, Any, List
-from mindnlp.utils import logging, is_mindspore_available
+from mindspore import jit_class
 
+from mindnlp.utils import logging, is_mindspore_available
 from mindnlp.configs import HF_URL_BASE, MS_URL_BASE, CONFIG_NAME
 from mindnlp.utils.download import is_remote_url, download_url, cached_file
 
 logger = logging.get_logger(__name__)
 
+@jit_class
 class PretrainedConfig:
     """
     Abstract class for Pretrained models config.
