@@ -41,7 +41,7 @@ def get_args():
 
 def main(args):
     # Choose GPU device to run the training
-    # context.set_context(device_target='GPU', device_id=1)
+    context.set_context(device_target='GPU', device_id=1)
 
     # Load dataset
     dataset = load_dataset(args.dataset_name)
@@ -54,7 +54,7 @@ def main(args):
 
     dataset_train = batch_dataset(dataset_train, args.batch_size,
                                   data_collator, input_columns)
-    dataset_val = batch_dataset(dataset_train, args.batch_size,
+    dataset_val = batch_dataset(dataset_val, args.batch_size,
                                 data_collator, input_columns)
 
     # Set validation metric and checkpoint callbacks
