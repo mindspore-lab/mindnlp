@@ -20,53 +20,13 @@ TinyBert Models
 """
 import math
 import os
-import logging
 from typing import Union
 import mindspore
-from mindspore import nn, ops, Tensor
+from mindspore import nn, ops
 from .tinybert_config import TinyBertConfig
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 
-
-def torch_to_mindspore(pth_file, **kwargs):
-    """convert torch checkpoint to mindspore"""
-    _ = kwargs.get('prefix', '')
-
-    try:
-        import torch
-    except Exception as exc:
-        raise ImportError("'import torch' failed, please install torch by "
-                          "`pip install torch` or instructions from 'https://pytorch.org'") \
-                          from exc
-
-    from mindspore.train.serialization import save_checkpoint
-
-    logging.info('Starting checkpoint conversion.')
-    ms_ckpt = []
-    state_dict = torch.load(pth_file, map_location=torch.device('cpu'))
-
-    for key, value in state_dict.items():
-        if 'LayerNorm' in key:
-            if '.weight' in key:
-                key = key.replace('.weight', '.weight')
-            if '.bias' in key:
-                key = key.replace('.bias', '.bias')
-        if 'embeddings' in key:
-            key = key.replace('weight', 'weight')
-        if 'self' in key:
-            key = key.replace('self', 'self_')
-        ms_ckpt.append({'name': key, 'data': Tensor(value.numpy())})
-
-    ms_ckpt_path = pth_file.replace('pytorch_model.bin', 'mindspore.ckpt')
-    if not os.path.exists(ms_ckpt_path):
-        try:
-            save_checkpoint(ms_ckpt, ms_ckpt_path)
-        except Exception as exc:
-            raise RuntimeError(f'Save checkpoint to {ms_ckpt_path} failed, '
-                               f'please checkout the path.') from exc
-
-    return ms_ckpt_path
 
 class TinyBertEmbeddings(nn.Cell):
     """
@@ -415,7 +375,6 @@ class TinyBertPreTrainedModel(PreTrainedModel):
     config_class = TinyBertConfig
 
     base_model_prefix = 'bert'
-    convert_torch_to_mindspore = torch_to_mindspore
 
     def __init__(self, config):
         super().__init__(config)

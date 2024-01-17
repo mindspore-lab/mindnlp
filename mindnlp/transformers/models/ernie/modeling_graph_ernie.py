@@ -1,7 +1,6 @@
 # coding=utf-8
-# Copyright 2019 Facebook AI Research and the HuggingFace Inc. team.
-# Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
 # Copyright 2023 Huawei Technologies Co., Ltd
+# Copyright 2022 The HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,78 +14,79 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=C0415
-# pylint: disable=C0103
-# pylint: disable=W0237
-# pylint: disable=W0613
+# pylint: disable=invalid-name
+# pylint: disable=missing-function-docstring
+# pylint: disable=missing-class-docstring
+# pylint: disable=arguments-renamed
+# pylint: disable=unused-argument
+"""MindSpore ERNIE model."""
 
-"""MindSpore XLM-RoBERTa model."""
-import math
-import logging
+
+import warnings
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
 from mindspore import nn, ops, Parameter, Tensor
-from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindspore.common.initializer import initializer, Normal
-from mindnlp.utils import logging
-from .configuration_xlm_roberta import XLMRobertaConfig
+
+from mindnlp.utils import (
+    logging,
+)
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
-from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
-from ...modeling_outputs import (
-    BaseModelOutputWithPastAndCrossAttentions,
-    BaseModelOutputWithPoolingAndCrossAttentions,
-    CausalLMOutputWithCrossAttentions,
-    MaskedLMOutput,
-    MultipleChoiceModelOutput,
-    QuestionAnsweringModelOutput,
-    SequenceClassifierOutput,
-    TokenClassifierOutput,
-)
+from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
+from .configuration_ernie import ErnieConfig
 
 
 logger = logging.get_logger(__name__)
 
-# Copied from transformers.models.roberta.modeling_roberta.RobertaEmbeddings with Roberta->XLMRoberta
-class XLMRobertaEmbeddings(nn.Cell):
-    """
-    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
-    """
 
-    # Copied from transformers.models.bert.modeling_bert.BertEmbeddings.__init__
+ERNIE_PRETRAINED_MODEL_ARCHIVE_LIST = [
+    "nghuyong/ernie-1.0-base-zh",
+    "nghuyong/ernie-2.0-base-en",
+    "nghuyong/ernie-2.0-large-en",
+    "nghuyong/ernie-3.0-base-zh",
+    "nghuyong/ernie-3.0-medium-zh",
+    "nghuyong/ernie-3.0-mini-zh",
+    "nghuyong/ernie-3.0-micro-zh",
+    "nghuyong/ernie-3.0-nano-zh",
+    "nghuyong/ernie-gram-zh",
+    "nghuyong/ernie-health-zh",
+    # See all ERNIE models at https://huggingface.co/models?filter=ernie
+]
+
+
+class MSErnieEmbeddings(nn.Cell):
+    """Construct the embeddings from word, position and token_type embeddings."""
+
     def __init__(self, config):
         super().__init__()
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
         self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
+        self.use_task_id = config.use_task_id
+        if config.use_task_id:
+            self.task_type_embeddings = nn.Embedding(config.task_type_vocab_size, config.hidden_size)
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm([config.hidden_size,], epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
         self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
         self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=mindspore.int64)
 
-        # End copy
-        self.padding_idx = config.pad_token_id
-        self.position_embeddings = nn.Embedding(
-            config.max_position_embeddings, config.hidden_size, padding_idx=self.padding_idx
-        )
-
     def construct(
-        self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None, past_key_values_length=0
-    ):
-        if position_ids is None:
-            if input_ids is not None:
-                # Create the position ids from the input token ids. Any padded tokens remain padded.
-                position_ids = create_position_ids_from_input_ids(input_ids, self.padding_idx, past_key_values_length)
-            else:
-                position_ids = self.create_position_ids_from_inputs_embeds(inputs_embeds)
-
+        self,
+        input_ids: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        task_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        past_key_values_length: int = 0,
+    ) -> mindspore.Tensor:
         if input_ids is not None:
             input_shape = input_ids.shape
         else:
@@ -94,13 +94,16 @@ class XLMRobertaEmbeddings(nn.Cell):
 
         seq_length = input_shape[1]
 
+        if position_ids is None:
+            position_ids = self.position_ids[:, past_key_values_length : seq_length + past_key_values_length]
+
         # Setting the token_type_ids to the registered buffer in constructor where it is all zeros, which usually occurs
         # when its auto-generated, registered buffer helps users when tracing the model without passing token_type_ids, solves
         # issue #5664
         if token_type_ids is None:
             if hasattr(self, "token_type_ids"):
                 buffered_token_type_ids = self.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
+                buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to((input_shape[0], seq_length))
                 token_type_ids = buffered_token_type_ids_expanded
             else:
                 token_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
@@ -113,29 +116,21 @@ class XLMRobertaEmbeddings(nn.Cell):
         if self.position_embedding_type == "absolute":
             position_embeddings = self.position_embeddings(position_ids)
             embeddings += position_embeddings
+
+        # add `task_type_id` for ERNIE model
+        if self.use_task_id:
+            if task_type_ids is None:
+                task_type_ids = ops.zeros(input_shape, dtype=mindspore.int64)
+            task_type_embeddings = self.task_type_embeddings(task_type_ids)
+            embeddings += task_type_embeddings
+
         embeddings = self.LayerNorm(embeddings)
         embeddings = self.dropout(embeddings)
         return embeddings
 
-    def create_position_ids_from_inputs_embeds(self, inputs_embeds):
-        """
-        We are provided embeddings directly. We cannot infer which are padded so just generate sequential position ids.
 
-        Args:
-            inputs_embeds: mindspore.Tensor
-
-        Returns: mindspore.Tensor
-        """
-        input_shape = inputs_embeds.shape[:-1]
-        sequence_length = input_shape[1]
-
-        position_ids = ops.arange(
-            self.padding_idx + 1, sequence_length + self.padding_idx + 1, dtype=mindspore.int64)
-        return position_ids.unsqueeze(0).expand(input_shape)
-
-
-class XLMRobertaSelfAttention(nn.Cell):
-    """XLMRobertaSelfAttention"""
+# Copied from transformers.models.bert.modeling_bert.BertSelfAttention with Bert->Ernie
+class MSErnieSelfAttention(nn.Cell):
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -163,7 +158,6 @@ class XLMRobertaSelfAttention(nn.Cell):
         self.is_decoder = config.is_decoder
 
     def transpose_for_scores(self, x: mindspore.Tensor) -> mindspore.Tensor:
-        """transpose_for_scores"""
         new_x_shape = x.shape[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(new_x_shape)
         return x.permute(0, 2, 1, 3)
@@ -222,7 +216,9 @@ class XLMRobertaSelfAttention(nn.Cell):
         if self.position_embedding_type in ('relative_key', 'relative_key_query'):
             query_length, key_length = query_layer.shape[2], key_layer.shape[2]
             if use_cache:
-                position_ids_l = mindspore.Tensor(key_length - 1, dtype=mindspore.int64).view(-1, 1)
+                position_ids_l = mindspore.Tensor(key_length - 1, dtype=mindspore.int64).view(
+                    -1, 1
+                )
             else:
                 position_ids_l = ops.arange(query_length, dtype=mindspore.int64).view(-1, 1)
             position_ids_r = ops.arange(key_length, dtype=mindspore.int64).view(1, -1)
@@ -239,9 +235,9 @@ class XLMRobertaSelfAttention(nn.Cell):
                 relative_position_scores_key = ops.einsum("bhrd,lrd->bhlr", key_layer, positional_embedding)
                 attention_scores = attention_scores + relative_position_scores_query + relative_position_scores_key
 
-        attention_scores = attention_scores / math.sqrt(self.attention_head_size)
+        attention_scores = attention_scores / ops.sqrt(ops.scalar_to_tensor(self.attention_head_size, attention_scores.dtype))
         if attention_mask is not None:
-            # Apply the attention mask is (precomputed for all layers in XLMRobertaModel forward() function)
+            # Apply the attention mask is (precomputed for all layers in ErnieModel forward() function)
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
@@ -257,7 +253,7 @@ class XLMRobertaSelfAttention(nn.Cell):
 
         context_layer = ops.matmul(attention_probs, value_layer)
 
-        context_layer = context_layer.transpose(0, 2, 1, 3)
+        context_layer = context_layer.permute(0, 2, 1, 3)
         new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(new_context_layer_shape)
 
@@ -268,8 +264,8 @@ class XLMRobertaSelfAttention(nn.Cell):
         return outputs
 
 
-class XLMRobertaSelfOutput(nn.Cell):
-    """XLMRobertaSelfOutput"""
+# Copied from transformers.models.bert.modeling_bert.BertSelfOutput with Bert->Ernie
+class MSErnieSelfOutput(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -283,16 +279,15 @@ class XLMRobertaSelfOutput(nn.Cell):
         return hidden_states
 
 
-class XLMRobertaAttention(nn.Cell):
-    """XLMRobertaAttention"""
+# Copied from transformers.models.bert.modeling_bert.BertAttention with Bert->Ernie
+class MSErnieAttention(nn.Cell):
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
-        self.self = XLMRobertaSelfAttention(config, position_embedding_type=position_embedding_type)
-        self.output = XLMRobertaSelfOutput(config)
+        self.self = MSErnieSelfAttention(config, position_embedding_type=position_embedding_type)
+        self.output = MSErnieSelfOutput(config)
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
-        """prune heads"""
         if len(heads) == 0:
             return
         heads, index = find_pruneable_heads_and_indices(
@@ -334,8 +329,8 @@ class XLMRobertaAttention(nn.Cell):
         return outputs
 
 
-class XLMRobertaIntermediate(nn.Cell):
-    """XLMRobertaIntermediate"""
+# Copied from transformers.models.bert.modeling_bert.BertIntermediate with Bert->Ernie
+class MSErnieIntermediate(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
@@ -350,8 +345,8 @@ class XLMRobertaIntermediate(nn.Cell):
         return hidden_states
 
 
-class XLMRobertaOutput(nn.Cell):
-    """XLMRobertaOutput"""
+# Copied from transformers.models.bert.modeling_bert.BertOutput with Bert->Ernie
+class MSErnieOutput(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
@@ -365,21 +360,21 @@ class XLMRobertaOutput(nn.Cell):
         return hidden_states
 
 
-class XLMRobertaLayer(nn.Cell):
-    """XLMRobertaLayer"""
+# Copied from transformers.models.bert.modeling_bert.BertLayer with Bert->Ernie
+class MSErnieLayer(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
-        self.attention = XLMRobertaAttention(config)
+        self.attention = MSErnieAttention(config)
         self.is_decoder = config.is_decoder
         self.add_cross_attention = config.add_cross_attention
         if self.add_cross_attention:
             if not self.is_decoder:
                 raise ValueError(f"{self} should be used as a decoder model if cross attention is added")
-            self.crossattention = XLMRobertaAttention(config, position_embedding_type="absolute")
-        self.intermediate = XLMRobertaIntermediate(config)
-        self.output = XLMRobertaOutput(config)
+            self.crossattention = MSErnieAttention(config, position_embedding_type="absolute")
+        self.intermediate = MSErnieIntermediate(config)
+        self.output = MSErnieOutput(config)
 
     def construct(
         self,
@@ -435,9 +430,11 @@ class XLMRobertaLayer(nn.Cell):
             cross_attn_present_key_value = cross_attention_outputs[-1]
             present_key_value = present_key_value + cross_attn_present_key_value
 
-        layer_output = apply_chunking_to_forward(
-            self.feed_forward_chunk, self.chunk_size_feed_forward, self.seq_len_dim, attention_output
-        )
+        # do not support `apply_chunking_to_forward` on graph mode
+        # layer_output = apply_chunking_to_forward(
+        #     self.feed_forward_chunk, self.chunk_size_feed_forward, self.seq_len_dim, attention_output
+        # )
+        layer_output = self.feed_forward_chunk(attention_output)
         outputs = (layer_output,) + outputs
 
         # if decoder, return the attn key/values as the last output
@@ -447,18 +444,17 @@ class XLMRobertaLayer(nn.Cell):
         return outputs
 
     def feed_forward_chunk(self, attention_output):
-        """feed_forward_chunk"""
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
         return layer_output
 
 
-class XLMRobertaEncoder(nn.Cell):
-    """XLMRobertaEncoder"""
+# Copied from transformers.models.bert.modeling_bert.BertEncoder with Bert->Ernie
+class MSErnieEncoder(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([XLMRobertaLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.CellList([MSErnieLayer(config) for _ in range(config.num_hidden_layers)])
         self.gradient_checkpointing = False
 
     def construct(
@@ -472,8 +468,7 @@ class XLMRobertaEncoder(nn.Cell):
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = False,
         output_hidden_states: Optional[bool] = False,
-        return_dict: Optional[bool] = True,
-    ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
+    ) -> Union[Tuple[mindspore.Tensor], dict]:
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
         all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
@@ -514,29 +509,22 @@ class XLMRobertaEncoder(nn.Cell):
         if output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)
 
-        if not return_dict:
-            return tuple(
-                v
-                for v in [
-                    hidden_states,
-                    next_decoder_cache,
-                    all_hidden_states,
-                    all_self_attentions,
-                    all_cross_attentions,
-                ]
-                if v is not None
-            )
-        return BaseModelOutputWithPastAndCrossAttentions(
-            last_hidden_state=hidden_states,
-            past_key_values=next_decoder_cache,
-            hidden_states=all_hidden_states,
-            attentions=all_self_attentions,
-            cross_attentions=all_cross_attentions,
+        return tuple(
+            v
+            for v in [
+                hidden_states,
+                next_decoder_cache,
+                all_hidden_states,
+                all_self_attentions,
+                all_cross_attentions,
+            ]
+            if v is not None
         )
 
 
-class XLMRobertaPooler(nn.Cell):
-    """XLMRobertaPooler"""
+
+# Copied from transformers.models.bert.modeling_bert.BertPooler with Bert->Ernie
+class MSErniePooler(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -551,18 +539,90 @@ class XLMRobertaPooler(nn.Cell):
         return pooled_output
 
 
-class XLMRobertaPreTrainedModel(PreTrainedModel):
+# Copied from transformers.models.bert.modeling_bert.BertPredictionHeadTransform with Bert->Ernie
+class MSErniePredictionHeadTransform(nn.Cell):
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
+        if isinstance(config.hidden_act, str):
+            self.transform_act_fn = ACT2FN[config.hidden_act]
+        else:
+            self.transform_act_fn = config.hidden_act
+        self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+
+    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        hidden_states = self.dense(hidden_states)
+        hidden_states = self.transform_act_fn(hidden_states)
+        hidden_states = self.LayerNorm(hidden_states)
+        return hidden_states
+
+
+# Copied from transformers.models.bert.modeling_bert.BertLMPredictionHead with Bert->Ernie
+class MSErnieLMPredictionHead(nn.Cell):
+    def __init__(self, config):
+        super().__init__()
+        self.transform = MSErniePredictionHeadTransform(config)
+
+        # The output weights are the same as the input embeddings, but there is
+        # an output-only bias for each token.
+        self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
+
+        self.bias = Parameter(ops.zeros(config.vocab_size), 'bias')
+
+        # Need a link between the two variables so that the bias is correctly resized with `resize_token_embeddings`
+        self.decoder.bias = self.bias
+
+    def construct(self, hidden_states):
+        hidden_states = self.transform(hidden_states)
+        hidden_states = self.decoder(hidden_states)
+        return hidden_states
+
+
+# Copied from transformers.models.bert.modeling_bert.BertOnlyMLMHead with Bert->Ernie
+class MSErnieOnlyMLMHead(nn.Cell):
+    def __init__(self, config):
+        super().__init__()
+        self.predictions = MSErnieLMPredictionHead(config)
+
+    def construct(self, sequence_output: mindspore.Tensor) -> mindspore.Tensor:
+        prediction_scores = self.predictions(sequence_output)
+        return prediction_scores
+
+
+# Copied from transformers.models.bert.modeling_bert.BertOnlyNSPHead with Bert->Ernie
+class MSErnieOnlyNSPHead(nn.Cell):
+    def __init__(self, config):
+        super().__init__()
+        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+
+    def construct(self, pooled_output):
+        seq_relationship_score = self.seq_relationship(pooled_output)
+        return seq_relationship_score
+
+
+# Copied from transformers.models.bert.modeling_bert.BertPreTrainingHeads with Bert->Ernie
+class MSErniePreTrainingHeads(nn.Cell):
+    def __init__(self, config):
+        super().__init__()
+        self.predictions = MSErnieLMPredictionHead(config)
+        self.seq_relationship = nn.Dense(config.hidden_size, 2)
+
+    def construct(self, sequence_output, pooled_output):
+        prediction_scores = self.predictions(sequence_output)
+        seq_relationship_score = self.seq_relationship(pooled_output)
+        return prediction_scores, seq_relationship_score
+
+
+class MSErniePreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
     """
 
-    config_class = XLMRobertaConfig
-    base_model_prefix = "roberta"
-    supports_gradient_checkpointing = False
-    _no_split_modules = ["XLMRobertaEmbeddings", "XLMRobertaSelfAttention"]
+    config_class = ErnieConfig
+    base_model_prefix = "ernie"
+    supports_gradient_checkpointing = True
 
-    # Copied from transformers.models.bert.modeling_bert.BertPreTrainedModel._init_weights
     def _init_weights(self, cell):
         """Initialize the weights"""
         if isinstance(cell, nn.Dense):
@@ -570,7 +630,7 @@ class XLMRobertaPreTrainedModel(PreTrainedModel):
             # cf https://github.com/pytorch/pytorch/pull/5617
             cell.weight.set_data(initializer(Normal(self.config.initializer_range),
                                                     cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
+            if cell.has_bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
@@ -582,44 +642,42 @@ class XLMRobertaPreTrainedModel(PreTrainedModel):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
-    def _set_gradient_checkpointing(self, module, value=False):
-        if isinstance(module, XLMRobertaEncoder):
-            module.gradient_checkpointing = value
 
-
-class XLMRobertaModel(XLMRobertaPreTrainedModel):
+class MSErnieModel(MSErniePreTrainedModel):
     """
 
     The model can behave as an encoder (with only self-attention) as well as a decoder, in which case a layer of
-    cross-attention is added between the self-attention layers, following the architecture described in *Attention is
-    all you need*_ by Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz
-    Kaiser and Illia Polosukhin.
+    cross-attention is added between the self-attention layers, following the architecture described in [Attention is
+    all you need](https://arxiv.org/abs/1706.03762) by Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit,
+    Llion Jones, Aidan N. Gomez, Lukasz Kaiser and Illia Polosukhin.
 
     To behave as an decoder the model needs to be initialized with the `is_decoder` argument of the configuration set
     to `True`. To be used in a Seq2Seq model, the model needs to initialized with both `is_decoder` argument and
     `add_cross_attention` set to `True`; an `encoder_hidden_states` is then expected as an input to the forward pass.
-
-    .. _*Attention is all you need*: https://arxiv.org/abs/1706.03762
-
     """
 
-    # Copied from transformers.models.bert.modeling_bert.BertModel.__init__ with Bert->XLMRoberta
+    # Copied from transformers.models.bert.modeling_bert.BertModel.__init__ with Bert->Ernie
     def __init__(self, config, add_pooling_layer=True):
         super().__init__(config)
         self.config = config
-        self.embeddings = XLMRobertaEmbeddings(config)
-        self.encoder = XLMRobertaEncoder(config)
-        self.pooler = XLMRobertaPooler(config) if add_pooling_layer else None
+
+        self.embeddings = MSErnieEmbeddings(config)
+        self.encoder = MSErnieEncoder(config)
+
+        self.pooler = MSErniePooler(config) if add_pooling_layer else None
 
         # Initialize weights and apply final processing
         self.post_init()
 
+    # Copied from transformers.models.bert.modeling_bert.BertModel.get_input_embeddings
     def get_input_embeddings(self):
         return self.embeddings.word_embeddings
 
+    # Copied from transformers.models.bert.modeling_bert.BertModel.set_input_embeddings
     def set_input_embeddings(self, value):
         self.embeddings.word_embeddings = value
 
+    # Copied from transformers.models.bert.modeling_bert.BertModel._prune_heads
     def _prune_heads(self, heads_to_prune):
         """
         Prunes heads of the model. heads_to_prune: dict of {layer_num: list of heads to prune in this layer} See base
@@ -633,6 +691,7 @@ class XLMRobertaModel(XLMRobertaPreTrainedModel):
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,
+        task_type_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
         inputs_embeds: Optional[mindspore.Tensor] = None,
@@ -642,8 +701,7 @@ class XLMRobertaModel(XLMRobertaPreTrainedModel):
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPoolingAndCrossAttentions]:
+    ) -> Union[Tuple[mindspore.Tensor], dict]:
         r"""
         encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
             Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
@@ -668,7 +726,6 @@ class XLMRobertaModel(XLMRobertaPreTrainedModel):
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if self.config.is_decoder:
             use_cache = use_cache if use_cache is not None else self.config.use_cache
@@ -678,7 +735,6 @@ class XLMRobertaModel(XLMRobertaPreTrainedModel):
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
         if input_ids is not None:
-            self.warn_if_padding_and_no_attention_mask(input_ids, attention_mask)
             input_shape = input_ids.shape
         elif inputs_embeds is not None:
             input_shape = inputs_embeds.shape[:-1]
@@ -703,7 +759,7 @@ class XLMRobertaModel(XLMRobertaPreTrainedModel):
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
-        extended_attention_mask: mindspore.Tensor = self.get_extended_attention_mask(attention_mask, input_shape)
+        extended_attention_mask = self.get_extended_attention_mask(attention_mask, input_shape)
 
         # If a 2D or 3D attention mask is provided for the cross-attention
         # we need to make broadcastable to [batch_size, num_heads, seq_length, seq_length]
@@ -727,6 +783,7 @@ class XLMRobertaModel(XLMRobertaPreTrainedModel):
             input_ids=input_ids,
             position_ids=position_ids,
             token_type_ids=token_type_ids,
+            task_type_ids=task_type_ids,
             inputs_embeds=inputs_embeds,
             past_key_values_length=past_key_values_length,
         )
@@ -740,63 +797,146 @@ class XLMRobertaModel(XLMRobertaPreTrainedModel):
             use_cache=use_cache,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
         )
         sequence_output = encoder_outputs[0]
         pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
 
-        if not return_dict:
-            return (sequence_output, pooled_output) + encoder_outputs[1:]
-
-        return BaseModelOutputWithPoolingAndCrossAttentions(
-            last_hidden_state=sequence_output,
-            pooler_output=pooled_output,
-            past_key_values=encoder_outputs.past_key_values,
-            hidden_states=encoder_outputs.hidden_states,
-            attentions=encoder_outputs.attentions,
-            cross_attentions=encoder_outputs.cross_attentions,
-        )
+        return (sequence_output, pooled_output) + encoder_outputs[1:]
 
 
-class XLMRobertaForCausalLM(XLMRobertaPreTrainedModel):
-    """XLMRobertaForCausalLM"""
-    _tied_weights_keys = ["lm_head.decoder.weight", "lm_head.decoder.bias"]
+class MSErnieForPreTraining(MSErniePreTrainedModel):
+    _tied_weights_keys = ["cls.predictions.decoder.bias", "cls.predictions.decoder.weight"]
 
+    # Copied from transformers.models.bert.modeling_bert.BertForPreTraining.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
         super().__init__(config)
 
-        if not config.is_decoder:
-            logger.warning("If you want to use `XLMRobertaLMHeadModel` as a standalone, add `is_decoder=True.`")
-
-        self.roberta = XLMRobertaModel(config, add_pooling_layer=False)
-        self.lm_head = XLMRobertaLMHead(config)
+        self.ernie = MSErnieModel(config)
+        self.cls = MSErniePreTrainingHeads(config)
 
         # Initialize weights and apply final processing
         self.post_init()
 
+    # Copied from transformers.models.bert.modeling_bert.BertForPreTraining.get_output_embeddings
     def get_output_embeddings(self):
-        return self.lm_head.decoder
+        return self.cls.predictions.decoder
 
+    # Copied from transformers.models.bert.modeling_bert.BertForPreTraining.set_output_embeddings
     def set_output_embeddings(self, new_embeddings):
-        self.lm_head.decoder = new_embeddings
+        self.cls.predictions.decoder = new_embeddings
 
     def construct(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,
+        task_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        next_sentence_label: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+    ) -> Union[Tuple[mindspore.Tensor], dict]:
+        r"""
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
+                config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked),
+                the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+            next_sentence_label (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+                Labels for computing the next sequence prediction (classification) loss. Input should be a sequence
+                pair (see `input_ids` docstring) Indices should be in `[0, 1]`:
+
+                - 0 indicates sequence B is a continuation of sequence A,
+                - 1 indicates sequence B is a random sequence.
+            kwargs (`Dict[str, any]`, optional, defaults to *{}*):
+                Used to hide legacy arguments that have been deprecated.
+
+        Returns:
+
+        Example:
+
+        ```python
+        >>> from transformers import AutoTokenizer, ErnieForPreTraining
+
+
+        >>> tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
+        >>> model = ErnieForPreTraining.from_pretrained("nghuyong/ernie-1.0-base-zh")
+
+        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+        >>> outputs = model(**inputs)
+
+        >>> prediction_logits = outputs.prediction_logits
+        >>> seq_relationship_logits = outputs.seq_relationship_logits
+        ```
+        """
+        outputs = self.ernie(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            task_type_ids=task_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+        )
+
+        sequence_output, pooled_output = outputs[:2]
+        prediction_scores, seq_relationship_score = self.cls(sequence_output, pooled_output)
+
+        total_loss = None
+        if labels is not None and next_sentence_label is not None:
+            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            next_sentence_loss = ops.cross_entropy(seq_relationship_score.view(-1, 2), next_sentence_label.view(-1))
+            total_loss = masked_lm_loss + next_sentence_loss
+
+        output = (prediction_scores, seq_relationship_score) + outputs[2:]
+        return ((total_loss,) + output) if total_loss is not None else output
+
+
+class MSErnieForCausalLM(MSErniePreTrainedModel):
+    _tied_weights_keys = ["cls.predictions.decoder.bias", "cls.predictions.decoder.weight"]
+
+    # Copied from transformers.models.bert.modeling_bert.BertLMHeadModel.__init__ with BertLMHeadModel->ErnieForCausalLM,Bert->Ernie,bert->ernie
+    def __init__(self, config):
+        super().__init__(config)
+
+        if not config.is_decoder:
+            logger.warning("If you want to use `ErnieForCausalLM` as a standalone, add `is_decoder=True.`")
+
+        self.ernie = MSErnieModel(config, add_pooling_layer=False)
+        self.cls = MSErnieOnlyMLMHead(config)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    # Copied from transformers.models.bert.modeling_bert.BertLMHeadModel.get_output_embeddings
+    def get_output_embeddings(self):
+        return self.cls.predictions.decoder
+
+    # Copied from transformers.models.bert.modeling_bert.BertLMHeadModel.set_output_embeddings
+    def set_output_embeddings(self, new_embeddings):
+        self.cls.predictions.decoder = new_embeddings
+
+    def construct(
+        self,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        task_type_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
         inputs_embeds: Optional[mindspore.Tensor] = None,
         encoder_hidden_states: Optional[mindspore.Tensor] = None,
         encoder_attention_mask: Optional[mindspore.Tensor] = None,
         labels: Optional[mindspore.Tensor] = None,
-        past_key_values: Tuple[Tuple[mindspore.Tensor]] = None,
+        past_key_values: Optional[List[mindspore.Tensor]] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple[mindspore.Tensor], CausalLMOutputWithCrossAttentions]:
+    ) -> Union[Tuple[mindspore.Tensor], dict]:
         r"""
         encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
             Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention if
@@ -807,11 +947,10 @@ class XLMRobertaForCausalLM(XLMRobertaPreTrainedModel):
 
             - 1 for tokens that are **not masked**,
             - 0 for tokens that are **masked**.
-
         labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the left-to-right language modeling loss (next word prediction). Indices should be in
             `[-100, 0, ..., config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are
-            ignored (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
+            ignored (masked), the loss is only computed for the tokens with labels n `[0, ..., config.vocab_size]`
         past_key_values (`tuple(tuple(mindspore.Tensor))` of length `config.n_layers` with each tuple having 4 tensors of shape `(batch_size, num_heads, sequence_length - 1, embed_size_per_head)`):
             Contains precomputed key and value hidden states of the attention blocks. Can be used to speed up decoding.
 
@@ -821,32 +960,15 @@ class XLMRobertaForCausalLM(XLMRobertaPreTrainedModel):
         use_cache (`bool`, *optional*):
             If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding (see
             `past_key_values`).
-
-        Returns:
-
-        Example:
-
-        ```python
-        >>> from transformers import AutoTokenizer, XLMRobertaForCausalLM, AutoConfig
-
-        >>> tokenizer = AutoTokenizer.from_pretrained("roberta-base")
-        >>> config = AutoConfig.from_pretrained("roberta-base")
-        >>> config.is_decoder = True
-        >>> model = XLMRobertaForCausalLM.from_pretrained("roberta-base", config=config)
-
-        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
-        >>> outputs = model(**inputs)
-
-        >>> prediction_logits = outputs.logits
-        ```"""
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        """
         if labels is not None:
             use_cache = False
 
-        outputs = self.roberta(
+        outputs = self.ernie(
             input_ids,
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
+            task_type_ids=task_type_ids,
             position_ids=position_ids,
             head_mask=head_mask,
             inputs_embeds=inputs_embeds,
@@ -856,84 +978,93 @@ class XLMRobertaForCausalLM(XLMRobertaPreTrainedModel):
             use_cache=use_cache,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
         )
 
         sequence_output = outputs[0]
-        prediction_scores = self.lm_head(sequence_output)
+        prediction_scores = self.cls(sequence_output)
 
         lm_loss = None
         if labels is not None:
             # we are doing next-token prediction; shift prediction scores and input ids by one
             shifted_prediction_scores = prediction_scores[:, :-1, :]
             labels = labels[:, 1:]
-            loss_fct = CrossEntropyLoss()
-            lm_loss = loss_fct(shifted_prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            lm_loss = ops.cross_entropy(shifted_prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
-        if not return_dict:
-            output = (prediction_scores,) + outputs[2:]
-            return ((lm_loss,) + output) if lm_loss is not None else output
+        output = (prediction_scores,) + outputs[2:]
+        return ((lm_loss,) + output) if lm_loss is not None else output
 
-        return CausalLMOutputWithCrossAttentions(
-            loss=lm_loss,
-            logits=prediction_scores,
-            past_key_values=outputs.past_key_values,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
-            cross_attentions=outputs.cross_attentions,
-        )
-
-    def prepare_inputs_for_generation(self, input_ids, past_key_values=None, attention_mask=None, **model_kwargs):
+    # Copied from transformers.models.bert.modeling_bert.BertLMHeadModel.prepare_inputs_for_generation
+    def prepare_inputs_for_generation(
+        self, input_ids, past_key_values=None, attention_mask=None, use_cache=True, **model_kwargs
+    ):
         input_shape = input_ids.shape
         # if model is used as a decoder in encoder-decoder model, the decoder attention mask is created on the fly
         if attention_mask is None:
             attention_mask = input_ids.new_ones(input_shape)
 
-        # cut decoder_input_ids if past is used
+        # cut decoder_input_ids if past_key_values is used
         if past_key_values is not None:
-            input_ids = input_ids[:, -1:]
+            past_length = past_key_values[0][0].shape[2]
 
-        return {"input_ids": input_ids, "attention_mask": attention_mask, "past_key_values": past_key_values}
+            # Some generation methods already pass only the last input ID
+            if input_ids.shape[1] > past_length:
+                remove_prefix_length = past_length
+            else:
+                # Default to old behavior: keep only final ID
+                remove_prefix_length = input_ids.shape[1] - 1
 
+            input_ids = input_ids[:, remove_prefix_length:]
+
+        return {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "past_key_values": past_key_values,
+            "use_cache": use_cache,
+        }
+
+    # Copied from transformers.models.bert.modeling_bert.BertLMHeadModel._reorder_cache
     def _reorder_cache(self, past_key_values, beam_idx):
         reordered_past = ()
         for layer_past in past_key_values:
             reordered_past += (
-                tuple(past_state.index_select(0, beam_idx.to(past_state.device)) for past_state in layer_past),
+                tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),
             )
         return reordered_past
 
 
-class XLMRobertaForMaskedLM(XLMRobertaPreTrainedModel):
-    """XLMRobertaForMaskedLM"""
-    _tied_weights_keys = ["lm_head.decoder.weight", "lm_head.decoder.bias"]
+class MSErnieForMaskedLM(MSErniePreTrainedModel):
+    _tied_weights_keys = ["cls.predictions.decoder.bias", "cls.predictions.decoder.weight"]
 
+    # Copied from transformers.models.bert.modeling_bert.BertForMaskedLM.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
         super().__init__(config)
 
         if config.is_decoder:
             logger.warning(
-                "If you want to use `XLMRobertaForMaskedLM` make sure `config.is_decoder=False` for "
+                "If you want to use `ErnieForMaskedLM` make sure `config.is_decoder=False` for "
                 "bi-directional self-attention."
             )
 
-        self.roberta = XLMRobertaModel(config, add_pooling_layer=False)
-        self.lm_head = XLMRobertaLMHead(config)
+        self.ernie = MSErnieModel(config, add_pooling_layer=False)
+        self.cls = MSErnieOnlyMLMHead(config)
 
         # Initialize weights and apply final processing
         self.post_init()
 
+    # Copied from transformers.models.bert.modeling_bert.BertForMaskedLM.get_output_embeddings
     def get_output_embeddings(self):
-        return self.lm_head.decoder
+        return self.cls.predictions.decoder
 
+    # Copied from transformers.models.bert.modeling_bert.BertForMaskedLM.set_output_embeddings
     def set_output_embeddings(self, new_embeddings):
-        self.lm_head.decoder = new_embeddings
+        self.cls.predictions.decoder = new_embeddings
 
     def construct(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,
+        task_type_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
         inputs_embeds: Optional[mindspore.Tensor] = None,
@@ -942,22 +1073,18 @@ class XLMRobertaForMaskedLM(XLMRobertaPreTrainedModel):
         labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple[mindspore.Tensor], MaskedLMOutput]:
+    ) -> Union[Tuple[mindspore.Tensor], dict]:
         r"""
         labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the masked language modeling loss. Indices should be in `[-100, 0, ...,
             config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
             loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
-        kwargs (`Dict[str, any]`, optional, defaults to *{}*):
-            Used to hide legacy arguments that have been deprecated.
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
-        outputs = self.roberta(
+        outputs = self.ernie(
             input_ids,
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
+            task_type_ids=task_type_ids,
             position_ids=position_ids,
             head_mask=head_mask,
             inputs_embeds=inputs_embeds,
@@ -965,71 +1092,44 @@ class XLMRobertaForMaskedLM(XLMRobertaPreTrainedModel):
             encoder_attention_mask=encoder_attention_mask,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
         )
+
         sequence_output = outputs[0]
-        prediction_scores = self.lm_head(sequence_output)
+        prediction_scores = self.cls(sequence_output)
 
         masked_lm_loss = None
         if labels is not None:
-            # move labels to correct device to enable model parallelism
-            labels = labels.to(prediction_scores.device)
-            loss_fct = CrossEntropyLoss()
-            masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = ops.cross_entropy(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
-        if not return_dict:
-            output = (prediction_scores,) + outputs[2:]
-            return ((masked_lm_loss,) + output) if masked_lm_loss is not None else output
+        output = (prediction_scores,) + outputs[2:]
+        return ((masked_lm_loss,) + output) if masked_lm_loss is not None else output
 
-        return MaskedLMOutput(
-            loss=masked_lm_loss,
-            logits=prediction_scores,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
+
+    # Copied from transformers.models.bert.modeling_bert.BertForMaskedLM.prepare_inputs_for_generation
+    def prepare_inputs_for_generation(self, input_ids, attention_mask=None, **model_kwargs):
+        input_shape = input_ids.shape
+        effective_batch_size = input_shape[0]
+
+        #  add a dummy token
+        if self.config.pad_token_id is None:
+            raise ValueError("The PAD token should be defined for generation")
+
+        attention_mask = ops.cat([attention_mask, attention_mask.new_zeros((attention_mask.shape[0], 1))], axis=-1)
+        dummy_token = ops.full(
+            (effective_batch_size, 1), self.config.pad_token_id, dtype=mindspore.int64
         )
+        input_ids = ops.cat([input_ids, dummy_token], axis=1)
+
+        return {"input_ids": input_ids, "attention_mask": attention_mask}
 
 
-# Copied from transformers.models.roberta.modeling_roberta.RobertaLMHead
-class XLMRobertaLMHead(nn.Cell):
-    """Roberta Head for masked language modeling."""
-
-    def __init__(self, config):
-        super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.layer_norm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
-
-        self.decoder = nn.Dense(config.hidden_size, config.vocab_size)
-        self.bias = Parameter(ops.zeros(config.vocab_size), 'bias')
-        self.decoder.bias = self.bias
-
-    def construct(self, features, **kwargs):
-        x = self.dense(features)
-        x = ops.gelu(x)
-        x = self.layer_norm(x)
-
-        # project back to size of vocabulary with bias
-        x = self.decoder(x)
-
-        return x
-
-    def _tie_weights(self):
-        # To tie those two weights if they get disconnected (on TPU or when the bias is resized)
-        # For accelerate compatibility and to not break backward compatibility
-        if self.decoder.bias.device.type == "meta":
-            self.decoder.bias = self.bias
-        else:
-            self.bias = self.decoder.bias
-
-
-class XLMRobertaForSequenceClassification(XLMRobertaPreTrainedModel):
-    """XLMRobertaForSequenceClassification"""
+class MSErnieForNextSentencePrediction(MSErniePreTrainedModel):
+    # Copied from transformers.models.bert.modeling_bert.BertForNextSentencePrediction.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
         super().__init__(config)
-        self.num_labels = config.num_labels
-        self.config = config
 
-        self.roberta = XLMRobertaModel(config, add_pooling_layer=False)
-        self.classifier = XLMRobertaClassificationHead(config)
+        self.ernie = MSErnieModel(config)
+        self.cls = MSErnieOnlyNSPHead(config)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -1039,160 +1139,85 @@ class XLMRobertaForSequenceClassification(XLMRobertaPreTrainedModel):
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,
+        task_type_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
         inputs_embeds: Optional[mindspore.Tensor] = None,
         labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
+        **kwargs,
+    ) -> Union[Tuple[mindspore.Tensor], dict]:
         r"""
         labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
-            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
-            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
-        """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+            Labels for computing the next sequence prediction (classification) loss. Input should be a sequence pair
+            (see `input_ids` docstring). Indices should be in `[0, 1]`:
 
-        outputs = self.roberta(
+            - 0 indicates sequence B is a continuation of sequence A,
+            - 1 indicates sequence B is a random sequence.
+
+        Returns:
+
+        Example:
+
+        ```python
+        >>> from transformers import AutoTokenizer, ErnieForNextSentencePrediction
+
+
+        >>> tokenizer = AutoTokenizer.from_pretrained("nghuyong/ernie-1.0-base-zh")
+        >>> model = ErnieForNextSentencePrediction.from_pretrained("nghuyong/ernie-1.0-base-zh")
+
+        >>> prompt = "In Italy, pizza served in formal settings, such as at a restaurant, is presented unsliced."
+        >>> next_sentence = "The sky is blue due to the shorter wavelength of blue light."
+        >>> encoding = tokenizer(prompt, next_sentence, return_tensors="pt")
+
+        >>> outputs = model(**encoding, labels=mindspore.Tensor([1]))
+        >>> logits = outputs.logits
+        >>> assert logits[0, 0] < logits[0, 1]  # next sentence was random
+        ```
+        """
+
+        if "next_sentence_label" in kwargs:
+            warnings.warn(
+                "The `next_sentence_label` argument is deprecated and will be removed in a future version, use"
+                " `labels` instead.",
+                FutureWarning,
+            )
+            labels = kwargs.pop("next_sentence_label")
+
+
+        outputs = self.ernie(
             input_ids,
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
+            task_type_ids=task_type_ids,
             position_ids=position_ids,
             head_mask=head_mask,
             inputs_embeds=inputs_embeds,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-        )
-        sequence_output = outputs[0]
-        logits = self.classifier(sequence_output)
-
-        loss = None
-        if labels is not None:
-            # move labels to correct device to enable model parallelism
-            labels = labels.to(logits.device)
-            if self.config.problem_type is None:
-                if self.num_labels == 1:
-                    self.config.problem_type = "regression"
-                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
-                    self.config.problem_type = "single_label_classification"
-                else:
-                    self.config.problem_type = "multi_label_classification"
-
-            if self.config.problem_type == "regression":
-                loss_fct = MSELoss()
-                if self.num_labels == 1:
-                    loss = loss_fct(logits.squeeze(), labels.squeeze())
-                else:
-                    loss = loss_fct(logits, labels)
-            elif self.config.problem_type == "single_label_classification":
-                loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-            elif self.config.problem_type == "multi_label_classification":
-                loss_fct = BCEWithLogitsLoss()
-                loss = loss_fct(logits, labels)
-
-        if not return_dict:
-            output = (logits,) + outputs[2:]
-            return ((loss,) + output) if loss is not None else output
-
-        return SequenceClassifierOutput(
-            loss=loss,
-            logits=logits,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
         )
 
-
-class XLMRobertaForMultipleChoice(XLMRobertaPreTrainedModel):
-    """XLMRobertaForMultipleChoice"""
-    def __init__(self, config):
-        super().__init__(config)
-
-        self.roberta = XLMRobertaModel(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.classifier = nn.Linear(config.hidden_size, 1)
-
-        # Initialize weights and apply final processing
-        self.post_init()
-
-    def construct(
-        self,
-        input_ids: Optional[mindspore.Tensor] = None,
-        token_type_ids: Optional[mindspore.Tensor] = None,
-        attention_mask: Optional[mindspore.Tensor] = None,
-        labels: Optional[mindspore.Tensor] = None,
-        position_ids: Optional[mindspore.Tensor] = None,
-        head_mask: Optional[mindspore.Tensor] = None,
-        inputs_embeds: Optional[mindspore.Tensor] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple[mindspore.Tensor], MultipleChoiceModelOutput]:
-        r"""
-        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
-            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
-            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
-            `input_ids` above)
-        """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
-
-        flat_input_ids = input_ids.view(-1, input_ids.size(-1)) if input_ids is not None else None
-        flat_position_ids = position_ids.view(-1, position_ids.size(-1)) if position_ids is not None else None
-        flat_token_type_ids = token_type_ids.view(-1, token_type_ids.size(-1)) if token_type_ids is not None else None
-        flat_attention_mask = attention_mask.view(-1, attention_mask.size(-1)) if attention_mask is not None else None
-        flat_inputs_embeds = (
-            inputs_embeds.view(-1, inputs_embeds.size(-2), inputs_embeds.size(-1))
-            if inputs_embeds is not None
-            else None
-        )
-
-        outputs = self.roberta(
-            flat_input_ids,
-            position_ids=flat_position_ids,
-            token_type_ids=flat_token_type_ids,
-            attention_mask=flat_attention_mask,
-            head_mask=head_mask,
-            inputs_embeds=flat_inputs_embeds,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-        )
         pooled_output = outputs[1]
 
-        pooled_output = self.dropout(pooled_output)
-        logits = self.classifier(pooled_output)
-        reshaped_logits = logits.view(-1, num_choices)
+        seq_relationship_scores = self.cls(pooled_output)
 
-        loss = None
+        next_sentence_loss = None
         if labels is not None:
-            # move labels to correct device to enable model parallelism
-            labels = labels.to(reshaped_logits.device)
-            loss_fct = CrossEntropyLoss()
-            loss = loss_fct(reshaped_logits, labels)
+            next_sentence_loss = ops.cross_entropy(seq_relationship_scores.view(-1, 2), labels.view(-1))
 
-        if not return_dict:
-            output = (reshaped_logits,) + outputs[2:]
-            return ((loss,) + output) if loss is not None else output
-
-        return MultipleChoiceModelOutput(
-            loss=loss,
-            logits=reshaped_logits,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
-        )
+        output = (seq_relationship_scores,) + outputs[2:]
+        return ((next_sentence_loss,) + output) if next_sentence_loss is not None else output
 
 
-class XLMRobertaForTokenClassification(XLMRobertaPreTrainedModel):
-    """XLMRobertaForTokenClassification"""
+class MSErnieForSequenceClassification(MSErniePreTrainedModel):
+    # Copied from transformers.models.bert.modeling_bert.BertForSequenceClassification.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
+        self.config = config
 
-        self.roberta = XLMRobertaModel(config, add_pooling_layer=False)
+        self.ernie = MSErnieModel(config)
         classifier_dropout = (
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
@@ -1207,30 +1232,179 @@ class XLMRobertaForTokenClassification(XLMRobertaPreTrainedModel):
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,
+        task_type_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
         inputs_embeds: Optional[mindspore.Tensor] = None,
         labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]:
+    ) -> Union[Tuple[mindspore.Tensor], dict]:
         r"""
-        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        outputs = self.roberta(
+        outputs = self.ernie(
             input_ids,
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
+            task_type_ids=task_type_ids,
             position_ids=position_ids,
             head_mask=head_mask,
             inputs_embeds=inputs_embeds,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
+        )
+
+        pooled_output = outputs[1]
+
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+
+        loss = None
+        if labels is not None:
+            if self.config.problem_type is None:
+                if self.num_labels == 1:
+                    self.config.problem_type = "regression"
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
+                    self.config.problem_type = "single_label_classification"
+                else:
+                    self.config.problem_type = "multi_label_classification"
+
+            if self.config.problem_type == "regression":
+                if self.num_labels == 1:
+                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
+                else:
+                    loss = ops.mse_loss(logits, labels)
+            elif self.config.problem_type == "single_label_classification":
+                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
+            elif self.config.problem_type == "multi_label_classification":
+                loss = ops.binary_cross_entropy_with_logits(logits, labels)
+
+        output = (logits,) + outputs[2:]
+        return ((loss,) + output) if loss is not None else output
+
+
+class MSErnieForMultipleChoice(MSErniePreTrainedModel):
+    # Copied from transformers.models.bert.modeling_bert.BertForMultipleChoice.__init__ with Bert->Ernie,bert->ernie
+    def __init__(self, config):
+        super().__init__(config)
+
+        self.ernie = MSErnieModel(config)
+        classifier_dropout = (
+            config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
+        )
+        self.dropout = nn.Dropout(p=classifier_dropout)
+        self.classifier = nn.Dense(config.hidden_size, 1)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def construct(
+        self,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        task_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+    ) -> Union[Tuple[mindspore.Tensor], dict]:
+        r"""
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
+            num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
+            `input_ids` above)
+        """
+        num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
+
+        input_ids = input_ids.view(-1, input_ids.shape[-1]) if input_ids is not None else None
+        attention_mask = attention_mask.view(-1, attention_mask.shape[-1]) if attention_mask is not None else None
+        token_type_ids = token_type_ids.view(-1, token_type_ids.shape[-1]) if token_type_ids is not None else None
+        position_ids = position_ids.view(-1, position_ids.shape[-1]) if position_ids is not None else None
+        inputs_embeds = (
+            inputs_embeds.view(-1, inputs_embeds.shape[-2], inputs_embeds.shape[-1])
+            if inputs_embeds is not None
+            else None
+        )
+
+        outputs = self.ernie(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            task_type_ids=task_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+        )
+
+        pooled_output = outputs[1]
+
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+        reshaped_logits = logits.view(-1, num_choices)
+
+        loss = None
+        if labels is not None:
+            loss = ops.cross_entropy(reshaped_logits, labels)
+
+        output = (reshaped_logits,) + outputs[2:]
+        return ((loss,) + output) if loss is not None else output
+
+
+
+class MSErnieForTokenClassification(MSErniePreTrainedModel):
+    # Copied from transformers.models.bert.modeling_bert.BertForTokenClassification.__init__ with Bert->Ernie,bert->ernie
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+
+        self.ernie = MSErnieModel(config, add_pooling_layer=False)
+        classifier_dropout = (
+            config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
+        )
+        self.dropout = nn.Dropout(p=classifier_dropout)
+        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def construct(
+        self,
+        input_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        task_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+    ) -> Union[Tuple[mindspore.Tensor], dict]:
+        r"""
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        """
+
+        outputs = self.ernie(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            task_type_ids=task_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
         )
 
         sequence_output = outputs[0]
@@ -1240,53 +1414,19 @@ class XLMRobertaForTokenClassification(XLMRobertaPreTrainedModel):
 
         loss = None
         if labels is not None:
-            # move labels to correct device to enable model parallelism
-            labels = labels.to(logits.device)
-            loss_fct = CrossEntropyLoss()
-            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
-        if not return_dict:
-            output = (logits,) + outputs[2:]
-            return ((loss,) + output) if loss is not None else output
-
-        return TokenClassifierOutput(
-            loss=loss,
-            logits=logits,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
-        )
+        output = (logits,) + outputs[2:]
+        return ((loss,) + output) if loss is not None else output
 
 
-# Copied from transformers.models.roberta.modeling_roberta.RobertaClassificationHead with Roberta->XLMRoberta
-class XLMRobertaClassificationHead(nn.Cell):
-    """Head for sentence-level classification tasks."""
-
-    def __init__(self, config):
-        super().__init__()
-        self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        classifier_dropout = (
-            config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
-        )
-        self.dropout = nn.Dropout(p=classifier_dropout)
-        self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
-
-    def construct(self, features, **kwargs):
-        x = features[:, 0, :]  # take <s> token (equiv. to [CLS])
-        x = self.dropout(x)
-        x = self.dense(x)
-        x = ops.tanh(x)
-        x = self.dropout(x)
-        x = self.out_proj(x)
-        return x
-
-
-class XLMRobertaForQuestionAnswering(XLMRobertaPreTrainedModel):
-    """XLMRobertaForQuestionAnswering"""
+class MSErnieForQuestionAnswering(MSErniePreTrainedModel):
+    # Copied from transformers.models.bert.modeling_bert.BertForQuestionAnswering.__init__ with Bert->Ernie,bert->ernie
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
 
-        self.roberta = XLMRobertaModel(config, add_pooling_layer=False)
+        self.ernie = MSErnieModel(config, add_pooling_layer=False)
         self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
@@ -1297,6 +1437,7 @@ class XLMRobertaForQuestionAnswering(XLMRobertaPreTrainedModel):
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
         token_type_ids: Optional[mindspore.Tensor] = None,
+        task_type_ids: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
         head_mask: Optional[mindspore.Tensor] = None,
         inputs_embeds: Optional[mindspore.Tensor] = None,
@@ -1304,8 +1445,7 @@ class XLMRobertaForQuestionAnswering(XLMRobertaPreTrainedModel):
         end_positions: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple[mindspore.Tensor], QuestionAnsweringModelOutput]:
+    ) -> Union[Tuple[mindspore.Tensor], dict]:
         r"""
         start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for position (index) of the start of the labelled span for computing the token classification loss.
@@ -1316,24 +1456,23 @@ class XLMRobertaForQuestionAnswering(XLMRobertaPreTrainedModel):
             Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
             are not taken into account for computing the loss.
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        outputs = self.roberta(
+        outputs = self.ernie(
             input_ids,
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
+            task_type_ids=task_type_ids,
             position_ids=position_ids,
             head_mask=head_mask,
             inputs_embeds=inputs_embeds,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
         )
 
         sequence_output = outputs[0]
 
         logits = self.qa_outputs(sequence_output)
-        start_logits, end_logits = logits.split(1, dim=-1)
+        start_logits, end_logits = logits.split(1, axis=-1)
         start_logits = start_logits.squeeze(-1)
         end_logits = end_logits.squeeze(-1)
 
@@ -1345,50 +1484,112 @@ class XLMRobertaForQuestionAnswering(XLMRobertaPreTrainedModel):
             if len(end_positions.shape) > 1:
                 end_positions = end_positions.squeeze(-1)
             # sometimes the start/end positions are outside our model inputs, we ignore these terms
-            ignored_index = start_logits.size(1)
+            ignored_index = start_logits.shape[1]
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
-            start_loss = loss_fct(start_logits, start_positions)
-            end_loss = loss_fct(end_logits, end_positions)
+            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
-        if not return_dict:
-            output = (start_logits, end_logits) + outputs[2:]
-            return ((total_loss,) + output) if total_loss is not None else output
+        output = (start_logits, end_logits) + outputs[2:]
+        return ((total_loss,) + output) if total_loss is not None else output
 
-        return QuestionAnsweringModelOutput(
-            loss=total_loss,
-            start_logits=start_logits,
-            end_logits=end_logits,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
+
+
+class MSUIE(MSErniePreTrainedModel):
+    """
+    Ernie Model with two linear layer on top of the hidden-states
+    output to compute `start_prob` and `end_prob`,
+    designed for Universal Information Extraction.
+    Args:
+        config (:class:`ErnieConfig`):
+            An instance of ErnieConfig used to construct UIE
+    """
+
+    def __init__(self, config: ErnieConfig):
+        super().__init__(config)
+        self.ernie = MSErnieModel(config)
+        self.linear_start = nn.Dense(config.hidden_size, 1)
+        self.linear_end = nn.Dense(config.hidden_size, 1)
+        self.sigmoid = nn.Sigmoid()
+
+        self.post_init()
+
+    def construct(
+        self,
+        input_ids: Optional[mindspore.Tensor] = None,
+        token_type_ids: Optional[mindspore.Tensor] = None,
+        position_ids: Optional[mindspore.Tensor] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        start_positions: Optional[mindspore.Tensor] = None,
+        end_positions: Optional[mindspore.Tensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+    ):
+        r"""
+        Args:
+            input_ids (Tensor):
+                See :class:`ErnieModel`.
+            token_type_ids (Tensor, optional):
+                See :class:`ErnieModel`.
+            position_ids (Tensor, optional):
+                See :class:`ErnieModel`.
+            attention_mask (Tensor, optional):
+                See :class:`ErnieModel`.
+        Example:
+            .. code-block::
+                import paddle
+                from paddlenlp.transformers import UIE, ErnieTokenizer
+                tokenizer = ErnieTokenizer.from_pretrained('uie-base')
+                model = UIE.from_pretrained('uie-base')
+                inputs = tokenizer("Welcome to use PaddlePaddle and PaddleNLP!")
+                inputs = {k:paddle.to_tensor([v]) for (k, v) in inputs.items()}
+                start_prob, end_prob = model(**inputs)
+        """
+        outputs = self.ernie(
+            input_ids=input_ids,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            attention_mask=attention_mask,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
         )
 
+        sequence_output = outputs[0]
 
-def create_position_ids_from_input_ids(input_ids, padding_idx, past_key_values_length=0):
-    """
-    Replace non-padding symbols with their position numbers. Position numbers begin at padding_idx+1. Padding symbols
-    are ignored. This is modified from fairseq's `utils.make_positions`.
+        start_logits = self.linear_start(sequence_output)
+        start_logits = ops.squeeze(start_logits, -1)
+        start_prob = self.sigmoid(start_logits)
+        end_logits = self.linear_end(sequence_output)
+        end_logits = ops.squeeze(end_logits, -1)
+        end_prob = self.sigmoid(end_logits)
 
-    Args:
-        x: mindspore.Tensor x:
+        total_loss = None
+        if start_positions is not None and end_positions is not None:
+            start_loss = ops.binary_cross_entropy_with_logits(start_prob, start_positions)
+            end_loss = ops.binary_cross_entropy_with_logits(end_prob, end_positions)
+            total_loss = (start_loss + end_loss) / 2.0
 
-    Returns: mindspore.Tensor
-    """
-    # The series of casts and type-conversions here are carefully balanced to both work with ONNX export and XLA.
-    mask = input_ids.ne(padding_idx).int()
-    incremental_indices = (ops.cumsum(mask, axis=1).astype(mask.dtype) + past_key_values_length) * mask
-    return incremental_indices.long() + padding_idx
+        output = (start_prob, end_prob) + outputs[2:]
+        return ((total_loss,) + output) if total_loss is not None else output
+
 
 __all__ = [
-        "XLMRobertaForCausalLM",
-        "XLMRobertaForMaskedLM",
-        "XLMRobertaForMultipleChoice",
-        "XLMRobertaForQuestionAnswering",
-        "XLMRobertaForSequenceClassification",
-        "XLMRobertaForTokenClassification",
-        "XLMRobertaModel",
-        "XLMRobertaPreTrainedModel",
-    ]
+    "ERNIE_PRETRAINED_MODEL_ARCHIVE_LIST",
+    "MSErnieForCausalLM",
+    "MSErnieForMaskedLM",
+    "MSErnieForMultipleChoice",
+    "MSErnieForNextSentencePrediction",
+    "MSErnieForPreTraining",
+    "MSErnieForQuestionAnswering",
+    "MSErnieForSequenceClassification",
+    "MSErnieForTokenClassification",
+    "MSErnieModel",
+    "MSErniePreTrainedModel",
+    "MSUIE"
+]

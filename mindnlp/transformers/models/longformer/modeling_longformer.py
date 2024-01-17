@@ -1562,7 +1562,7 @@ class LongformerModel(LongformerPreTrainedModel):
         Examples:
 
         ```python
-        >>> import torch
+
         >>> from transformers import LongformerModel, AutoTokenizer
 
         >>> model = LongformerModel.from_pretrained("allenai/longformer-base-4096")
@@ -1913,7 +1913,7 @@ class LongformerForQuestionAnswering(LongformerPreTrainedModel):
 
         ```python
         >>> from transformers import AutoTokenizer, LongformerForQuestionAnswering
-        >>> import torch
+
 
         >>> tokenizer = AutoTokenizer.from_pretrained("allenai/longformer-large-4096-finetuned-triviaqa")
         >>> model = LongformerForQuestionAnswering.from_pretrained("allenai/longformer-large-4096-finetuned-triviaqa")
