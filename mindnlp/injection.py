@@ -43,6 +43,14 @@ GLOBAL_FP16_PATCH = False
 if DEVICE_TARGET == 'Ascend':
     GLOBAL_FP16_PATCH = True
 
+old_set_context = mindspore.set_context
+def _set_context(**kwargs):
+    if 'device_target' in kwargs and kwargs['device_target'] != 'Ascend':
+        set_global_fp16(False)
+    old_set_context(**kwargs)
+
+mindspore.set_context = _set_context
+
 def set_global_fp16(mode: bool):
     """set global fp16"""
     global GLOBAL_FP16_PATCH
@@ -52,12 +60,14 @@ def fp16_patch_decorator(func):
     """fp16 patch on ascend"""
     def wrapper(*args, **kwargs):
         if GLOBAL_FP16_PATCH:
-            args = [arg.astype(mstype.float16) if arg is not None and isinstance(arg, Tensor) \
-                    else arg for arg in args]
+            has_fp32 = any(bool(isinstance(arg, Tensor) and arg.dtype == mstype.float32) for arg in args)
+            args = (arg.astype(mstype.float16) if arg is not None and isinstance(arg, Tensor) \
+                    else arg for arg in args)
             kwargs = {k: (v.astype(mstype.float16) if v is not None and isinstance(v, Tensor) else v) \
                       for k, v in kwargs.items()}
             result = func(*args, **kwargs)
-            result = result.astype(mstype.float32)
+            if has_fp32:
+                result = result.astype(mstype.float32)
             return result
         return func(*args, **kwargs)
 
@@ -512,8 +522,6 @@ class Dense(nn.Cell):
                  in_channels,
                  out_channels,
                  has_bias=True,
-                 weight_init='zeros',
-                 bias_init='zeros',
                  dtype=mstype.float32):
         """Initialize Dense."""
         super().__init__()
@@ -525,21 +533,14 @@ class Dense(nn.Cell):
             has_bias, "has_bias", self.cls_name)
 
         self.weight = Parameter(initializer(
-            weight_init, [out_channels, in_channels], dtype=dtype), name="weight")
+            HeUniform(math.sqrt(5)), [out_channels, in_channels], dtype=dtype), name="weight")
 
         self.bias = None
         if self.has_bias:
-            self.bias = Parameter(initializer(
-                bias_init, [out_channels], dtype=dtype), name="bias")
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        """reset_embedding_params"""
-        self.weight.set_data(initializer(HeUniform(math.sqrt(5)), self.weight.shape, self.weight.dtype))
-        if self.has_bias:
             fan_in, _ = _calculate_fan_in_and_fan_out(self.weight.shape)
             bound = 1 / math.sqrt(fan_in)
-            self.bias.set_data(initializer(Uniform(bound), self.bias.shape, self.bias.dtype))
+            self.bias = Parameter(initializer(
+                Uniform(bound), [out_channels], dtype=dtype), name="bias")
 
     def construct(self, x):
         if LESS_MS_2_2:
@@ -557,7 +558,7 @@ class Dense(nn.Cell):
 
 class Embedding(nn.Cell):
     """patched Embedding"""
-    def __init__(self, vocab_size, embedding_size, padding_idx=None, use_one_hot=False, dtype=mstype.float32, weight_init='zeros'):
+    def __init__(self, vocab_size, embedding_size, padding_idx=None, use_one_hot=False, dtype=mstype.float32):
         """Initialize Embedding."""
         super().__init__()
         self.vocab_size = Validator.check_value_type('vocab_size', vocab_size, [int], self.cls_name)
@@ -567,18 +568,9 @@ class Embedding(nn.Cell):
         self.use_one_hot = use_one_hot
         self.dtype = dtype
         self.padding_idx = padding_idx
-        self.weight = Parameter(initializer(weight_init, [vocab_size, embedding_size]), name='weight')
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        """reset_embedding_params"""
-        init_tensor = initializer(Normal(1.0), self.weight.shape, self.weight.dtype)
-        init_tensor = init_tensor.init_data()
-        if self.padding_idx:
-            init_tensor = init_tensor.asnumpy()
-            init_tensor[self.padding_idx] = 0
-            init_tensor = Tensor(init_tensor)
-        self.weight.assign_value(init_tensor)
+        self.weight = Parameter(initializer(Normal(1.0), [vocab_size, embedding_size]), name='weight')
+        if self.padding_idx and self.weight.init_flag:
+            self.weight[self.padding_idx] = 0
 
     def construct(self, ids):
         out_shape = ids.shape + (self.embedding_size,)
@@ -630,7 +622,6 @@ class Conv1d(_Conv):
             stride = (stride,)
 
         dilation = (dilation,)
-
         super().__init__(
             in_channels,
             out_channels,
@@ -641,22 +632,14 @@ class Conv1d(_Conv):
             dilation,
             group,
             has_bias,
-            'zeros',
-            'zeros')
+            None,
+            None)
         self.padding = padding
-        self.reset_parameters()
 
     def construct(self, x):
         return ops.conv1d(x, self.weight, self.bias, stride=self.stride, pad_mode=self.pad_mode,
                           padding=self.padding, dilation=self.dilation, groups=self.group)
 
-    def reset_parameters(self):
-        """reset_embedding_params"""
-        self.weight.set_data(initializer(HeUniform(math.sqrt(5)), self.weight.shape, self.weight.dtype))
-        if self.has_bias:
-            fan_in, _ = _calculate_fan_in_and_fan_out(self.weight.shape)
-            bound = 1 / math.sqrt(fan_in)
-            self.bias.set_data(initializer(Uniform(bound), self.bias.shape, self.bias.dtype))
 
 class Conv1dTranspose(_Conv):
     """patched Conv1dTranspose"""
@@ -699,8 +682,8 @@ class Conv1dTranspose(_Conv):
             dilation,
             group,
             has_bias,
-            weight_init,
-            bias_init,
+            None,
+            None,
             transposed=True,
             dtype=dtype)
         self.kernel_size = kernel_size
@@ -720,7 +703,6 @@ class Conv1dTranspose(_Conv):
                                                       stride=stride,
                                                       dilation=dilation,
                                                       group=group)
-        self.reset_parameters()
 
     def construct(self, x):
         x = x.expand_dims(2)
@@ -736,13 +718,6 @@ class Conv1dTranspose(_Conv):
         output = output.squeeze(2)
         return output
 
-    def reset_parameters(self):
-        """reset_embedding_params"""
-        self.weight.set_data(initializer(HeUniform(math.sqrt(5)), self.weight.shape, self.weight.dtype))
-        if self.has_bias:
-            fan_in, _ = _calculate_fan_in_and_fan_out(self.weight.shape)
-            bound = 1 / math.sqrt(fan_in)
-            self.bias.set_data(initializer(Uniform(bound), self.bias.shape, self.bias.dtype))
 
 class LayerNorm(nn.Cell):
     r"""
@@ -875,7 +850,7 @@ class BatchNorm1d(nn.Cell):
 
 def half(self):
     """patched nn.Cell.half"""
-    self.to_float(mindspore.float16)
+    # self.to_float(mindspore.float16)
     return self
 
 nn.Cell.half = half
@@ -884,6 +859,15 @@ def _check_cell_flags_in_pynative(self):
     pass
 
 nn.Cell._check_cell_flags_in_pynative = _check_cell_flags_in_pynative
+
+def _update_parameters_name(self, prefix='', recurse=True):
+    for name, param in self.parameters_and_names(expand=recurse):
+        if prefix != '':
+            param.is_init = False
+        if param.name in name: # for tied weight
+            param.name = prefix + name
+
+nn.Cell.update_parameters_name = _update_parameters_name
 
 nn.LayerNorm = LayerNorm
 nn.Conv1d = Conv1d

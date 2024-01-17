@@ -130,7 +130,7 @@ def _mask_local_attention_mask(local_attention_mask: mindspore.Tensor, block_len
     locality_mask = locality_mask.to(local_attention_mask.device)
     return ops.logical_and(local_attention_mask, locality_mask)
 
-def _get_local_attention_mask(attention_mask: mindspore.Tensor, block_len: int, device: mindspore.device) -> mindspore.Tensor:
+def _get_local_attention_mask(attention_mask: mindspore.Tensor, block_len: int) -> mindspore.Tensor:
     """Prepare attention mask to be applied for a local attention."""
     # [batch_size, num_blocks, block_len]
     _blocked_attention_mask = _split_into_blocks(attention_mask, block_len, dim=1)
@@ -143,7 +143,7 @@ def _get_local_attention_mask(attention_mask: mindspore.Tensor, block_len: int, 
     local_attention_mask = ops.logical_and(_blocked_attention_mask, _3blocked_attention_mask)
     local_attention_mask = _mask_local_attention_mask(local_attention_mask, block_len)
     # [batch_size, 1, num_block, block_len, 3 * block_len]
-    return local_attention_mask.unsqueeze(1).to(device)
+    return local_attention_mask.unsqueeze(1)
 
 
 def _make_global_fixed_block_ids(
@@ -829,7 +829,7 @@ class LongT5TransientGlobalAttention(nn.Cell):
 
         if mask is not None:
             # We need to adjust position bias shape to be sum with mask
-            local_attention_mask = _get_local_attention_mask(mask, self.block_len, hidden_states.device)
+            local_attention_mask = _get_local_attention_mask(mask, self.block_len)
             # Replace masked positions with -10_000 (according to the original implementation)
             local_attention_mask = ops.where(local_attention_mask > 0, 0.0, -1e10)
         else:
@@ -1354,7 +1354,7 @@ class LongT5Stack(LongT5PreTrainedModel):
                 attention_mask, input_shape, inputs_embeds.device
             )
         elif self.config.encoder_attention_type == "local":
-            extended_attention_mask = _get_local_attention_mask(attention_mask, self.block_len, inputs_embeds.device)
+            extended_attention_mask = _get_local_attention_mask(attention_mask, self.block_len)
         else:  # we need to use both local attention mask and standard extended mask for transient-global attention
             extended_attention_mask = attention_mask
 

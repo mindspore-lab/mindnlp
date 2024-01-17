@@ -341,7 +341,7 @@ class CLIPPreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _keys_to_ignore_on_load_missing = [r"position_ids"]
 
-    def _init_weights(self, module):
+    def _init_weights(self, cell):
         pass
 
     def _set_gradient_checkpointing(self, module, value=False):

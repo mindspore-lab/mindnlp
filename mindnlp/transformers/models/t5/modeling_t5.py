@@ -72,7 +72,7 @@ class T5LayerNorm(nn.Cell):
         Construct a layernorm module in the T5 style. No bias and no subtraction of mean.
         """
         super().__init__()
-        self.weight = Parameter(ops.ones(hidden_size), 'gamma')
+        self.weight = Parameter(ops.ones(hidden_size), 'weight')
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
@@ -838,7 +838,6 @@ class T5Stack(T5PreTrainedModel):
                 layer_outputs = layer_outputs[:1] + (None,) + layer_outputs[1:]
 
             hidden_states, present_key_value_state = layer_outputs[:2]
-
             # We share the position biases between the layers - the first layer store them
             # layer_outputs = hidden-states, key-value-states (self-attention position bias), (self-attention weights),
             # (cross-attention position bias), (cross-attention weights)
@@ -1294,7 +1293,6 @@ class T5ForSequenceClassification(T5PreTrainedModel):
         super().__init__(config)
         self.transformer = T5Model(config)
         self.classification_head = T5ClassificationHead(config)
-
         # Initialize weights and apply final processing
         self.post_init()
 

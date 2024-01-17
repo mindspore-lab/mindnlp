@@ -295,26 +295,26 @@ class GPTNeoPreTrainedModel(PreTrainedModel):
         initialize model weights.
         """
 
-    def _init_weights(self, module):
+    def _init_weights(self, cell):
         """Initialize the weights."""
-        if isinstance(module, (nn.Dense,)):
-            module.weight.set_data(initializer(Normal(
-                sigma=self.config.initializer_range, mean=0.0)), module.weight.shape, module.weight.dtype)
-            if module.bias is not None:
-                module.bias.set_data(initializer('zeros'),
-                                     module.bias.shape, module.bias.dtype)
-        elif isinstance(module, nn.Embedding):
-            module.weight.set_data(initializer(Normal(
-                sigma=self.config.initializer_range, mean=0.0)), module.weight.shape, module.weight.dtype)
-            if module.padding_idx is not None:
+        if isinstance(cell, (nn.Dense,)):
+            cell.weight.set_data(initializer(Normal(
+                sigma=self.config.initializer_range, mean=0.0)), cell.weight.shape, cell.weight.dtype)
+            if cell.bias is not None:
+                cell.bias.set_data(initializer('zeros'),
+                                     cell.bias.shape, cell.bias.dtype)
+        elif isinstance(cell, nn.Embedding):
+            cell.weight.set_data(initializer(Normal(
+                sigma=self.config.initializer_range, mean=0.0)), cell.weight.shape, cell.weight.dtype)
+            if cell.padding_idx is not None:
                 zeroslike = ops.ZerosLike()
-                module.weight.data[module.padding_idx] = zeroslike(
-                    module.weight.data[module.padding_idx])
-        elif isinstance(module, nn.LayerNorm):
-            module.bias.set_data(initializer('zeros'),
-                                 module.bias.shape, module.bias.dtype)
-            module.weight.data = ops.fill(
-                module.weight.data.dtype, module.weight.data.shape, 1.0)
+                cell.weight.data[cell.padding_idx] = zeroslike(
+                    cell.weight.data[cell.padding_idx])
+        elif isinstance(cell, nn.LayerNorm):
+            cell.bias.set_data(initializer('zeros'),
+                               cell.bias.shape, cell.bias.dtype)
+            cell.weight.data = ops.fill(
+                cell.weight.data.dtype, cell.weight.data.shape, 1.0)
 
     def post_init(self):
         """

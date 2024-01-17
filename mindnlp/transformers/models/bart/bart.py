@@ -531,30 +531,30 @@ class BartPretrainedModel(PreTrainedModel):
     def save(self, save_dir: Union[str, os.PathLike]):
         "save"
 
-    def _init_weights(self, module):
+    def _init_weights(self, cell):
         "_init_weights"
         std = self.config.init_std
-        if isinstance(module, nn.Dense):
-            module.weight.set_data(
+        if isinstance(cell, nn.Dense):
+            cell.weight.set_data(
                 initializer(
                     Normal(sigma=std, mean=0.0),
-                    module.weight.shape,
-                    module.weight.dtype,
+                    cell.weight.shape,
+                    cell.weight.dtype,
                 )
             )
-            if module.bias is not None:
-                module.bias.set_data(ops.zeros_like(module.bias))
-        elif isinstance(module, nn.Embedding):
-            module.weight.set_data(
+            if cell.bias is not None:
+                cell.bias.set_data(ops.zeros_like(cell.bias))
+        elif isinstance(cell, nn.Embedding):
+            cell.weight.set_data(
                 initializer(
                     Normal(sigma=std, mean=0.0),
-                    module.weight.shape,
-                    module.weight.dtype,
+                    cell.weight.shape,
+                    cell.weight.dtype,
                 )
             )
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx] = ops.zeros_like(
-                    module.weight.data[module.padding_idx]
+            if cell.padding_idx is not None:
+                cell.weight.data[cell.padding_idx] = ops.zeros_like(
+                    cell.weight.data[cell.padding_idx]
                 )
 
     def _set_gradient_checkpointing(self, module, value=False):
