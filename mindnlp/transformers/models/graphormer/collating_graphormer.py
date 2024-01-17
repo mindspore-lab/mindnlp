@@ -32,12 +32,12 @@ if is_cython_available():
     from . import algos_graphormer  # noqa E402
 
 
-def convert_to_single_emb(xs, offset: int = 512):
-    """Convert single to embedding"""
-    feature_num = xs.shape[1] if len(xs.shape) > 1 else 1
+def convert_to_single_emb(node_feature, offset: int = 512):
+    """Convert to single embedding"""
+    feature_num = node_feature.shape[1] if len(node_feature.shape) > 1 else 1
     feature_offset = 1 + np.arange(0, feature_num * offset, offset, dtype=np.int64)
-    xs = xs + feature_offset
-    return xs
+    node_feature = node_feature + feature_offset
+    return node_feature
 
 
 def preprocess_item(item, keep_features=True):
@@ -108,13 +108,14 @@ class GraphormerDataCollator:
                              "input_edges",
                              "out_degree",
                              "labels"]
-
-    def __call__(self, edge_index, edge_attr, ys, num_nodes, node_feat, batch_info):
+    # pylint: disable=invalid-name
+    def __call__(self, edge_index, edge_attr, y, num_nodes, node_feat, batch_info):
         features = []
-        for i in range(len(edge_index)):
+        num_features = len(edge_index)
+        for i in range(num_features):
             features.append({"edge_index": edge_index[i],
                              "edge_attr": edge_attr[i],
-                             "y": ys[i],
+                             "y": y[i],
                              "num_nodes": num_nodes[i],
                              "node_feat": node_feat[i]})
 

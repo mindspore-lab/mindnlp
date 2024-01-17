@@ -41,7 +41,7 @@ def get_args():
 
 def main(args):
     # Choose GPU device to run the training
-    context.set_context(device_target='GPU', device_id=1)
+    # context.set_context(device_target='GPU', device_id=1)
 
     # Load dataset
     dataset = load_dataset(args.dataset_name)
