@@ -28,7 +28,7 @@ def batch_dataset(dataset: GeneratorDataset,
     dataset_batched = dataset.batch(batch_size=batch_size,
                                     per_batch_map=data_collator,
                                     input_columns=input_columns,
-                                    output_columns=dataset.output_columns)
+                                    output_columns=data_collator.output_columns)
     return dataset_batched
 
 
