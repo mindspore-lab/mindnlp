@@ -4,8 +4,6 @@
 from typing import Any, Dict, List, Mapping
 
 import numpy as np
-import mindspore as ms
-from mindspore import ops
 
 from ....utils import is_cython_available, requires_backends
 
@@ -109,24 +107,22 @@ class GraphormerDataCollator:
         edge_input_size = len(features[0]["input_edges"][0][0][0])
         batch_size = len(features)
 
-        batch["attn_bias"] = ops.zeros((batch_size, max_node_num + 1, max_node_num + 1),
-                                       dtype=ms.float32)
-        batch["attn_edge_type"] = ops.zeros((batch_size, max_node_num, max_node_num, edge_feat_size),
-                                            dtype=ms.int64)
-        batch["spatial_pos"] = ops.zeros((batch_size, max_node_num, max_node_num),
-                                         dtype=ms.int64)
-        batch["in_degree"] = ops.zeros((batch_size, max_node_num),
-                                       dtype=ms.int64)
-        batch["input_nodes"] = ops.zeros((batch_size, max_node_num, node_feat_size),
-                                         dtype=ms.int64)
-        batch["input_edges"] = ops.zeros(
+        batch["attn_bias"] = np.zeros((batch_size, max_node_num + 1, max_node_num + 1),
+                                       dtype=np.float32)
+        batch["attn_edge_type"] = np.zeros((batch_size, max_node_num, max_node_num, edge_feat_size),
+                                            dtype=np.int64)
+        batch["spatial_pos"] = np.zeros((batch_size, max_node_num, max_node_num),
+                                         dtype=np.int64)
+        batch["in_degree"] = np.zeros((batch_size, max_node_num),
+                                       dtype=np.int64)
+        batch["input_nodes"] = np.zeros((batch_size, max_node_num, node_feat_size),
+                                         dtype=np.int64)
+        batch["input_edges"] = np.zeros(
             (batch_size, max_node_num, max_node_num, max_dist, edge_input_size),
-            dtype=ms.int64
+            dtype=np.int64
         )
 
         for ix, f in enumerate(features):
-            for k in ["attn_bias", "attn_edge_type", "spatial_pos", "in_degree", "input_nodes", "input_edges"]:
-                f[k] = ms.tensor(f[k])
 
             if len(f["attn_bias"][1:, 1:][f["spatial_pos"] >= self.spatial_pos_max]) > 0:
                 f["attn_bias"][1:, 1:][f["spatial_pos"] >= self.spatial_pos_max] = float("-inf")
@@ -147,17 +143,11 @@ class GraphormerDataCollator:
         sample = features[0]["labels"]
         if len(sample) == 1:  # one task
             if isinstance(sample[0], float):  # regression
-                batch["labels"] = ms.tensor(np.concatenate([i["labels"] for i in features]),
-                                            dtype=ms.int64)
+                batch["labels"] = np.concatenate([i["labels"] for i in features])
             else:  # binary classification
-                batch["labels"] = ms.tensor(np.concatenate([i["labels"] for i in features]),
-                                            dtype=ms.int64)
+                batch["labels"] = np.concatenate([i["labels"] for i in features])
         else:  # multi task classification, left to float to keep the NaNs
-            batch["labels"] = ms.tensor(np.stack([i["labels"] for i in features], axis=0),
-                                        dtype=ms.int64)
+            batch["labels"] = np.stack([i["labels"] for i in features], axis=0)
 
         outputs = [batch[key] for key in self.output_columns]
-        print("xxxxxxxxxxxoutputs")
-        print(batch_info.get_batch_num())
-        [print(batch[key].dtype) for key in self.output_columns]
         return tuple(outputs)
