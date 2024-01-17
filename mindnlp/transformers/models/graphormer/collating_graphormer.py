@@ -1,7 +1,23 @@
-# Copyright (c) Microsoft Corporation and HuggingFace
-# Licensed under the MIT License.
+# Copyright 2023 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+"""
+MindNLP Graphormer data collator
+"""
 
-from typing import Any, Dict, List, Mapping
+
+from typing import Mapping
 
 import numpy as np
 
@@ -11,17 +27,21 @@ if is_cython_available():
     import pyximport
 
     pyximport.install(setup_args={"include_dirs": np.get_include()})
+    # pylint: disable=no-name-in-module
+    # pylint: disable=cyclic-import
     from . import algos_graphormer  # noqa E402
 
 
-def convert_to_single_emb(x, offset: int = 512):
-    feature_num = x.shape[1] if len(x.shape) > 1 else 1
+def convert_to_single_emb(xs, offset: int = 512):
+    """Convert single to embedding"""
+    feature_num = xs.shape[1] if len(xs.shape) > 1 else 1
     feature_offset = 1 + np.arange(0, feature_num * offset, offset, dtype=np.int64)
-    x = x + feature_offset
-    return x
+    xs = xs + feature_offset
+    return xs
 
 
 def preprocess_item(item, keep_features=True):
+    """Process each item of the graph dataset"""
     requires_backends(preprocess_item, ["cython"])
 
     if keep_features and "edge_attr" in item.keys():  # edge_attr
@@ -69,6 +89,11 @@ def preprocess_item(item, keep_features=True):
 
 
 class GraphormerDataCollator:
+    """
+    Graphormer data collator
+
+    Converts graph dataset into the format accepted by Graphormer model
+    """
     def __init__(self, spatial_pos_max=20, on_the_fly_processing=False):
         if not is_cython_available():
             raise ImportError("Graphormer preprocessing needs Cython (pyximport)")
@@ -84,14 +109,14 @@ class GraphormerDataCollator:
                              "out_degree",
                              "labels"]
 
-    def __call__(self, edge_index, edge_attr, y, num_nodes, node_feat, batch_info):
+    def __call__(self, edge_index, edge_attr, ys, num_nodes, node_feat, batch_info):
         features = []
         for i in range(len(edge_index)):
-            features.append(dict(edge_index=edge_index[i],
-                                 edge_attr=edge_attr[i],
-                                 y=y[i],
-                                 num_nodes=num_nodes[i],
-                                 node_feat=node_feat[i]))
+            features.append({"edge_index": edge_index[i],
+                             "edge_attr": edge_attr[i],
+                             "y": ys[i],
+                             "num_nodes": num_nodes[i],
+                             "node_feat": node_feat[i]})
 
         if self.on_the_fly_processing:
             features = [preprocess_item(i) for i in features]
@@ -122,21 +147,21 @@ class GraphormerDataCollator:
             dtype=np.int64
         )
 
-        for ix, f in enumerate(features):
+        for idx, ftr in enumerate(features):
 
-            if len(f["attn_bias"][1:, 1:][f["spatial_pos"] >= self.spatial_pos_max]) > 0:
-                f["attn_bias"][1:, 1:][f["spatial_pos"] >= self.spatial_pos_max] = float("-inf")
+            if len(ftr["attn_bias"][1:, 1:][ftr["spatial_pos"] >= self.spatial_pos_max]) > 0:
+                ftr["attn_bias"][1:, 1:][ftr["spatial_pos"] >= self.spatial_pos_max] = float("-inf")
 
-            batch["attn_bias"][ix, : f["attn_bias"].shape[0], : f["attn_bias"].shape[1]] = f["attn_bias"]
-            batch["attn_edge_type"][ix, : f["attn_edge_type"].shape[0], : f["attn_edge_type"].shape[1], :] = f[
+            batch["attn_bias"][idx, : ftr["attn_bias"].shape[0], : ftr["attn_bias"].shape[1]] = ftr["attn_bias"]
+            batch["attn_edge_type"][idx, : ftr["attn_edge_type"].shape[0], : ftr["attn_edge_type"].shape[1], :] = ftr[
                 "attn_edge_type"
             ]
-            batch["spatial_pos"][ix, : f["spatial_pos"].shape[0], : f["spatial_pos"].shape[1]] = f["spatial_pos"]
-            batch["in_degree"][ix, : f["in_degree"].shape[0]] = f["in_degree"]
-            batch["input_nodes"][ix, : f["input_nodes"].shape[0], :] = f["input_nodes"]
+            batch["spatial_pos"][idx, : ftr["spatial_pos"].shape[0], : ftr["spatial_pos"].shape[1]] = ftr["spatial_pos"]
+            batch["in_degree"][idx, : ftr["in_degree"].shape[0]] = ftr["in_degree"]
+            batch["input_nodes"][idx, : ftr["input_nodes"].shape[0], :] = ftr["input_nodes"]
             batch["input_edges"][
-                ix, : f["input_edges"].shape[0], : f["input_edges"].shape[1], : f["input_edges"].shape[2], :
-            ] = f["input_edges"]
+                idx, : ftr["input_edges"].shape[0], : ftr["input_edges"].shape[1], : ftr["input_edges"].shape[2], :
+            ] = ftr["input_edges"]
 
         batch["out_degree"] = batch["in_degree"]
 
