@@ -27,7 +27,7 @@ def batch_dataset(dataset: GeneratorDataset,
                   input_columns: List[str]):
     dataset_batched = dataset.batch(batch_size=batch_size,
                                     per_batch_map=data_collator,
-                                    input_columns=column_names,
+                                    input_columns=input_columns,
                                     output_columns=dataset.output_columns)
     return dataset_batched
 
@@ -47,15 +47,15 @@ def main(args):
     dataset = load_dataset(args.dataset_name)
     dataset_train = dataset["train"]
     dataset_val = dataset["validation"]
-    column_names = ["edge_index", "edge_attr", "y", "num_nodes", "node_feat"]
+    input_columns = ["edge_index", "edge_attr", "y", "num_nodes", "node_feat"]
 
     # Batch dataset and introduce the data collator required by graphormer
     data_collator = GraphormerDataCollator(on_the_fly_processing=True)
 
     dataset_train = batch_dataset(dataset_train, args.batch_size,
-                                  data_collator, column_names)
+                                  data_collator, input_columns)
     dataset_val = batch_dataset(dataset_train, args.batch_size,
-                                data_collator, column_names)
+                                data_collator, input_columns)
 
     # Set validation metric and checkpoint callbacks
     metric = Accuracy()
