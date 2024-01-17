@@ -34,7 +34,7 @@ def batch_dataset(dataset: GeneratorDataset,
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset_name", type=str, default="ogb/ogbg-molhiv/")
+    parser.add_argument("--dataset_name", type=str, default="ogb/ogbg-molhiv")
     parser.add_argument("--batch_size", type=str, default=3)
     return parser.parse_args()
 
