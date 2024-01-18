@@ -54,7 +54,6 @@ def convert_dataset_to_examples(ds):
         i,
         (text_a, text_b, label, _),
     ) in enumerate(iter):
-        # print(str(text_a.asnumpy()), str(text_b.asnumpy()))
         examples.append(
             InputExample(
                 guid=i,
@@ -80,7 +79,6 @@ def _truncate_seq_pair(tokens_a, tokens_b, max_length):
 
 
 def convert_examples_to_features(examples, tokenizer, max_seq_length=512):
-    
     features = []
 
     for ex_index, example in enumerate(examples):
@@ -95,11 +93,11 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length=512):
             _truncate_seq_pair(tokens_a, tokens_b, max_seq_length)
         else:
             if len(tokens_a) > max_seq_length:
-                tokens_a = tokens_a[0 : max_seq_length]
+                tokens_a = tokens_a[0:max_seq_length]
 
         tokens = []
         token_type_ids = []
-        
+
         for token in tokens_a:
             tokens.append(token)
             token_type_ids.append(0)
@@ -110,12 +108,8 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length=512):
                 token_type_ids.append(1)
 
         tokenizer.return_token = False
-        # input_ids = tokenizer.execute_py(example.text_a).tolist() + tokenizer.execute_py(example.text_b).tolist()
         input_ids = tokenizer.convert_tokens_to_ids(tokens)
 
-        # print(tokenizer.execute_py(np.array(tokens)).tolist())
-        # The mask has 1 for real tokens and 0 for padding tokens. Only real
-        # tokens are attended to.
         attention_mask = [1] * len(input_ids)
         input_len = len(input_ids)
 
