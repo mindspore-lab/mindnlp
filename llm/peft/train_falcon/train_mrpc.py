@@ -1,11 +1,9 @@
 """
 Fine-Tune Falcon on mrpc dataset
 """
-import sys
-import time
+
 import argparse
 import logging
-from pathlib import Path
 import mindspore
 import numpy as np
 
@@ -13,18 +11,11 @@ from tqdm import tqdm
 from mindspore import nn
 from mindspore.nn import AdamWeightDecay
 
-# support running without installing as a package
-wd = Path(
-    __file__
-).parent.parent.parent.parent.resolve()  ## put the path of mindnlp here
-sys.path.append(str(wd))
-
 from mrpc_dataset import load_examples, get_dataloader_from_ds
-
-from mindnlp.transformers import AutoTokenizer
 
 from mindnlp.transformers import (
     AutoConfig,
+    AutoTokenizer,
     AutoModelForSequenceClassification,
 )
 from mindnlp.peft import (
@@ -38,23 +29,9 @@ def load_falcon_model(pretrained_model_name_or_path):
         pretrained_model_name_or_path,
         problem_type="single_label_classification",
     )
-    # print(config.to_dict())
-    # config.num_hidden_layers = 2  # 为了测试，将层数减少到2
-    # model = AutoModelForSequenceClassification.from_config(config)
-    # model.to_float(mindspore.float16)
-    # state_dict = mindspore.load_checkpoint("falcon-rw-1b/mindspore.ckpt")
-    # mindspore.load_param_into_net(model, state_dict)
     model = AutoModelForSequenceClassification.from_pretrained(
         pretrained_model_name_or_path, config=config, ms_dtype=mindspore.float16
     )
-    # ckpt中无score层参数，故无法加载导致该层数据类型为默认的float32，把模型最后一层score参数改为float16
-    # for name, param in model.parameters_and_names():
-    #     if "score" in name:
-    #         param.set_dtype(mindspore.float16)
-    # 打印模型参数
-    for name, param in model.parameters_and_names():
-        print(name, param)
-    # model = auto_mixed_precision(model, 'O3')
     tokenizer = AutoTokenizer.from_pretrained("falcon-rw-1b")
 
     return model, config, tokenizer
@@ -168,34 +145,6 @@ def eval_model(model, optimizer, criterion, eval_dataloader):
 if __name__ == "__main__":
     # mindspore.set_context(pynative_synchronize=True)
 
-    class Logger(object):
-        def __init__(self, filename="default.log", add_flag=True, stream=sys.stdout):
-            self.terminal = stream
-            print("filename:", filename)
-            self.filename = filename
-            self.add_flag = add_flag
-            self.log = open(filename, "a+", encoding="utf-8")
-
-        def write(self, message):
-            timestamp = time.strftime("%Y-%m-%d %H:%M:%S ", time.localtime())
-            message_with_timestamp = timestamp + message  # 添加时间戳
-            if self.add_flag:
-                with open(self.filename, "a+", encoding="utf-8") as log:
-                    self.terminal.write(message)
-                    log.write(message_with_timestamp + "\n")  # 写入带时间戳的消息，并换行
-            else:
-                with open(self.filename, "w", encoding="utf-8") as log:
-                    self.terminal.write(message)
-                    log.write(message_with_timestamp + "\n")  # 写入带时间戳的消息，并换行
-
-        def flush(self):
-            pass
-
-    sys.stdout = Logger("out.log", sys.stdout)
-    sys.stderr = Logger("err.log", sys.stderr)
-
-    # `python llm/peft/train_llama_lora/train.py --do_train --do_eval --model_name_or_path bert-base-cased`
-    # from pretrained
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--save_dir",
@@ -205,16 +154,20 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--batch_size",
-        default=4,
+        default=8,
         type=int,
         help="Batch size per GPU/CPU for training.",
     )
-    parser.add_argument("--model_name_or_path", default="falcon-rw-1b", type=str)
-    parser.add_argument("--num_epochs", default=50, type=int)
+    parser.add_argument(
+        "--model_name_or_path",
+        default=".mindnlp/model/Rocketknight1/falcon-rw-1b",
+        type=str,
+    )
+    parser.add_argument("--num_epochs", default=10, type=int)
     parser.add_argument(
         "--lr", default=1e-4, type=float, help="Set 2e-5 for full-finetuning."
     )
-    parser.add_argument("--max_seq_len", default=512, type=int)
+    parser.add_argument("--max_seq_len", default=256, type=int)
     parser.add_argument("--debug", action="store_true", help="debug mode")
     parser.add_argument("--lora", action="store_true", help="lora mode")
 
@@ -266,4 +219,4 @@ if __name__ == "__main__":
         epochs=args.num_epochs,
     )
     logging.info("end train")
-    # model.save_pretrained(save_directory=args.save_dir)
+    model.save_pretrained(save_directory=args.save_dir)
