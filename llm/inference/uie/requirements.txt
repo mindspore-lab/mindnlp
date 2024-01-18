@@ -1,0 +1,5 @@
+mindspore>=2.2.0
+colorlog
+colorama
+fast-tokenizer-python>=1.0.0
+git+https://github.com/mindspore-lab/mindnlp.git

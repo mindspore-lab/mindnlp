@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 from mindspore import ops, Tensor
 from mindnlp._legacy.functional import einsum_label_to_index, sumproduct_pair, einsum
 
@@ -21,7 +20,6 @@ def test_einsum_two_operand():
 
     equation = "abef,abghi->egh" # 5,6,7,8,10
     out = einsum(equation, Tensor(a1), Tensor(a2))
-    pt_out = torch.einsum(equation, torch.tensor(
-        a1), torch.tensor(a2))
-    assert out.shape == pt_out.shape
-    assert np.abs(out.asnumpy() - pt_out.detach().numpy()).sum() / out.size < 5e-3
+    np_out = np.einsum(equation, a1, a2)
+    assert out.shape == np_out.shape
+    assert np.abs(out.asnumpy() - np_out).sum() / out.size < 5e-3

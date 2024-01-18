@@ -876,7 +876,6 @@ class XLMForQuestionAnswering(XLMPreTrainedModel):
 
         ```python
         >>> from transformers import AutoTokenizer, XLMForQuestionAnswering
-        >>> import torch
 
         >>> tokenizer = AutoTokenizer.from_pretrained("xlm-mlm-en-2048")
         >>> model = XLMForQuestionAnswering.from_pretrained("xlm-mlm-en-2048")

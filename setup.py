@@ -116,6 +116,7 @@ setup(
         'build_py': BuildPy,
     },
     install_requires=[
+        'mindspore',
         'tqdm',
         'requests',
         'datasets',
@@ -123,7 +124,8 @@ setup(
         'sentencepiece',
         'regex',
         'easydict',
-        'safetensors'
+        'safetensors',
+        'ml_dtypes'
     ],
     classifiers=[
         'License :: OSI Approved :: Apache Software License'

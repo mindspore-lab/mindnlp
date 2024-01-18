@@ -1489,7 +1489,7 @@ class AutoformerModel(AutoformerPreTrainedModel):
 
         ```python
         >>> from huggingface_hub import hf_hub_download
-        >>> import torch
+
         >>> from transformers import AutoformerModel
 
         >>> file = hf_hub_download(
@@ -1701,7 +1701,7 @@ class AutoformerForPrediction(AutoformerPreTrainedModel):
 
         ```python
         >>> from huggingface_hub import hf_hub_download
-        >>> import torch
+
         >>> from transformers import AutoformerForPrediction
 
         >>> file = hf_hub_download(

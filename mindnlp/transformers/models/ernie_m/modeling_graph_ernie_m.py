@@ -22,8 +22,7 @@
 """ MindSpore ErnieM model."""
 
 
-import math
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 import numpy as np
 import mindspore
@@ -31,15 +30,8 @@ from mindspore import ops, nn, Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import logging
+from mindnlp.modules.functional.graph_func import finfo
 from ...activations import ACT2FN
-from ...modeling_outputs import (
-    BaseModelOutputWithPastAndCrossAttentions,
-    BaseModelOutputWithPoolingAndCrossAttentions,
-    MultipleChoiceModelOutput,
-    QuestionAnsweringModelOutput,
-    SequenceClassifierOutput,
-    TokenClassifierOutput,
-)
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
 from .configuration_ernie_m import ErnieMConfig
@@ -56,7 +48,7 @@ ERNIE_M_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 
 # Adapted from paddlenlp.transformers.ernie_m.modeling.ErnieEmbeddings
-class ErnieMEmbeddings(nn.Cell):
+class MSErnieMEmbeddings(nn.Cell):
     """Construct the embeddings from word and position embeddings."""
 
     def __init__(self, config):
@@ -98,7 +90,7 @@ class ErnieMEmbeddings(nn.Cell):
 
 
 # Copied from transformers.models.bert.modeling_bert.BertSelfAttention with Bert->ErnieM,self.value->self.v_proj,self.key->self.k_proj,self.query->self.q_proj
-class ErnieMSelfAttention(nn.Cell):
+class MSErnieMSelfAttention(nn.Cell):
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -203,7 +195,7 @@ class ErnieMSelfAttention(nn.Cell):
                 relative_position_scores_key = ops.einsum("bhrd,lrd->bhlr", key_layer, positional_embedding)
                 attention_scores = attention_scores + relative_position_scores_query + relative_position_scores_key
 
-        attention_scores = attention_scores / math.sqrt(self.attention_head_size)
+        attention_scores = attention_scores / ops.sqrt(ops.scalar_to_tensor(self.attention_head_size, attention_scores.dtype))
         if attention_mask is not None:
             # Apply the attention mask is (precomputed for all layers in ErnieMModel forward() function)
             attention_scores = attention_scores + attention_mask
@@ -232,10 +224,10 @@ class ErnieMSelfAttention(nn.Cell):
         return outputs
 
 
-class ErnieMAttention(nn.Cell):
+class MSErnieMAttention(nn.Cell):
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
-        self.self_attn = ErnieMSelfAttention(config, position_embedding_type=position_embedding_type)
+        self.self_attn = MSErnieMSelfAttention(config, position_embedding_type=position_embedding_type)
         self.out_proj = nn.Dense(config.hidden_size, config.hidden_size)
         self.pruned_heads = set()
 
@@ -281,14 +273,14 @@ class ErnieMAttention(nn.Cell):
         return outputs
 
 
-class ErnieMEncoderLayer(nn.Cell):
+class MSErnieMEncoderLayer(nn.Cell):
     def __init__(self, config):
         super().__init__()
         # to mimic paddlenlp implementation
         dropout = 0.1 if config.hidden_dropout_prob is None else config.hidden_dropout_prob
         act_dropout = config.hidden_dropout_prob if config.act_dropout is None else config.act_dropout
 
-        self.self_attn = ErnieMAttention(config)
+        self.self_attn = MSErnieMAttention(config)
         self.linear1 = nn.Dense(config.hidden_size, config.intermediate_size)
         self.dropout = nn.Dropout(p=act_dropout)
         self.linear2 = nn.Dense(config.intermediate_size, config.hidden_size)
@@ -310,8 +302,7 @@ class ErnieMEncoderLayer(nn.Cell):
         output_attentions: Optional[bool] = True,
     ):
         residual = hidden_states
-        if output_attentions:
-            hidden_states, attention_opt_weights = self.self_attn(
+        outputs = self.self_attn(
                 hidden_states=hidden_states,
                 attention_mask=attention_mask,
                 head_mask=head_mask,
@@ -319,14 +310,7 @@ class ErnieMEncoderLayer(nn.Cell):
                 output_attentions=output_attentions,
             )
 
-        else:
-            hidden_states = self.self_attn(
-                hidden_states=hidden_states,
-                attention_mask=attention_mask,
-                head_mask=head_mask,
-                past_key_value=past_key_value,
-                output_attentions=output_attentions,
-            )
+        hidden_states = outputs[0]
         hidden_states = residual + self.dropout1(hidden_states)
         hidden_states = self.norm1(hidden_states)
         residual = hidden_states
@@ -339,15 +323,15 @@ class ErnieMEncoderLayer(nn.Cell):
         hidden_states = self.norm2(hidden_states)
 
         if output_attentions:
-            return hidden_states, attention_opt_weights
+            return (hidden_states,) + outputs[1:]
         return hidden_states
 
 
-class ErnieMEncoder(nn.Cell):
+class MSErnieMEncoder(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layers = nn.CellList([ErnieMEncoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.CellList([MSErnieMEncoderLayer(config) for _ in range(config.num_hidden_layers)])
 
     def construct(
         self,
@@ -357,8 +341,7 @@ class ErnieMEncoder(nn.Cell):
         past_key_values: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
         output_hidden_states: Optional[bool] = False,
-        return_dict: Optional[bool] = True,
-    ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPastAndCrossAttentions]:
+    ) -> Tuple[mindspore.Tensor]:
         hidden_states = () if output_hidden_states else None
         attentions = () if output_attentions else None
 
@@ -382,16 +365,12 @@ class ErnieMEncoder(nn.Cell):
                 attentions = attentions + (opt_attn_weights,)
 
         last_hidden_state = output
-        if not return_dict:
-            return tuple(v for v in [last_hidden_state, hidden_states, attentions] if v is not None)
+        return tuple(v for v in [last_hidden_state, hidden_states, attentions] if v is not None)
 
-        return BaseModelOutputWithPastAndCrossAttentions(
-            last_hidden_state=last_hidden_state, hidden_states=hidden_states, attentions=attentions
-        )
 
 
 # Copied from transformers.models.bert.modeling_bert.BertPooler with Bert->ErnieM
-class ErnieMPooler(nn.Cell):
+class MSErnieMPooler(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -406,7 +385,7 @@ class ErnieMPooler(nn.Cell):
         return pooled_output
 
 
-class ErnieMPreTrainedModel(PreTrainedModel):
+class MSErnieMPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
@@ -435,13 +414,13 @@ class ErnieMPreTrainedModel(PreTrainedModel):
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
-class ErnieMModel(ErnieMPreTrainedModel):
+class MSErnieMModel(MSErnieMPreTrainedModel):
     def __init__(self, config, add_pooling_layer=True):
         super().__init__(config)
         self.initializer_range = config.initializer_range
-        self.embeddings = ErnieMEmbeddings(config)
-        self.encoder = ErnieMEncoder(config)
-        self.pooler = ErnieMPooler(config) if add_pooling_layer else None
+        self.embeddings = MSErnieMEmbeddings(config)
+        self.encoder = MSErnieMEncoder(config)
+        self.pooler = MSErnieMPooler(config) if add_pooling_layer else None
         self.post_init()
 
     def get_input_embeddings(self):
@@ -469,8 +448,7 @@ class ErnieMModel(ErnieMPreTrainedModel):
         use_cache: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple[mindspore.Tensor], BaseModelOutputWithPoolingAndCrossAttentions]:
+    ) -> Tuple[mindspore.Tensor]:
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time.")
 
@@ -479,7 +457,6 @@ class ErnieMModel(ErnieMPreTrainedModel):
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        return_dict = return_dict if return_dict is not None else self.config.return_dict
 
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
 
@@ -490,7 +467,7 @@ class ErnieMModel(ErnieMPreTrainedModel):
         # Adapted from paddlenlp.transformers.ernie_m.ErnieMModel
         if attention_mask is None:
             attention_mask = (input_ids == 0).to(self.dtype)
-            attention_mask *= mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(attention_mask.dtype)).min, attention_mask.dtype)
+            attention_mask = attention_mask * finfo(attention_mask.dtype, 'min')
             if past_key_values is not None:
                 batch_size = past_key_values[0][0].shape[0]
                 past_mask = ops.zeros([batch_size, 1, 1, past_key_values_length], dtype=attention_mask.dtype)
@@ -499,7 +476,7 @@ class ErnieMModel(ErnieMPreTrainedModel):
         elif attention_mask.ndim == 2:
             attention_mask = attention_mask.to(self.dtype)
             attention_mask = 1.0 - attention_mask
-            attention_mask *= mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(attention_mask.dtype)).min, attention_mask.dtype)
+            attention_mask = attention_mask * finfo(attention_mask.dtype, 'min')
 
         extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(1)
 
@@ -516,35 +493,21 @@ class ErnieMModel(ErnieMPreTrainedModel):
             past_key_values=past_key_values,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
         )
 
-        if not return_dict:
-            sequence_output = encoder_outputs[0]
-            pooler_output = self.pooler(sequence_output) if self.pooler is not None else None
-            return (sequence_output, pooler_output) + encoder_outputs[1:]
-
-        sequence_output = encoder_outputs["last_hidden_state"]
+        sequence_output = encoder_outputs[0]
         pooler_output = self.pooler(sequence_output) if self.pooler is not None else None
-        hidden_states = None if not output_hidden_states else encoder_outputs["hidden_states"]
-        attentions = None if not output_attentions else encoder_outputs["attentions"]
-
-        return BaseModelOutputWithPoolingAndCrossAttentions(
-            last_hidden_state=sequence_output,
-            pooler_output=pooler_output,
-            hidden_states=hidden_states,
-            attentions=attentions,
-        )
+        return (sequence_output, pooler_output) + encoder_outputs[1:]
 
 
-class ErnieMForSequenceClassification(ErnieMPreTrainedModel):
+class MSErnieMForSequenceClassification(MSErnieMPreTrainedModel):
     # Copied from transformers.models.bert.modeling_bert.BertForSequenceClassification.__init__ with Bert->ErnieM,bert->ernie_m
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.config = config
 
-        self.ernie_m = ErnieMModel(config)
+        self.ernie_m = MSErnieMModel(config)
         classifier_dropout = (
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
@@ -565,16 +528,14 @@ class ErnieMForSequenceClassification(ErnieMPreTrainedModel):
         use_cache: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
-        return_dict: Optional[bool] = True,
         labels: Optional[mindspore.Tensor] = None,
-    ) -> Union[Tuple[mindspore.Tensor], SequenceClassifierOutput]:
+    ) -> Tuple[mindspore.Tensor]:
         r"""
         labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.ernie_m(
             input_ids,
@@ -585,7 +546,6 @@ class ErnieMForSequenceClassification(ErnieMPreTrainedModel):
             past_key_values=past_key_values,
             output_hidden_states=output_hidden_states,
             output_attentions=output_attentions,
-            return_dict=return_dict,
         )
 
         pooled_output = outputs[1]
@@ -612,24 +572,17 @@ class ErnieMForSequenceClassification(ErnieMPreTrainedModel):
                 loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
                 loss = ops.binary_cross_entropy_with_logits(logits, labels)
-        if not return_dict:
-            output = (logits,) + outputs[2:]
-            return ((loss,) + output) if loss is not None else output
 
-        return SequenceClassifierOutput(
-            loss=loss,
-            logits=logits,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
-        )
+        output = (logits,) + outputs[2:]
+        return ((loss,) + output) if loss is not None else output
 
 
-class ErnieMForMultipleChoice(ErnieMPreTrainedModel):
+class MSErnieMForMultipleChoice(MSErnieMPreTrainedModel):
     # Copied from transformers.models.bert.modeling_bert.BertForMultipleChoice.__init__ with Bert->ErnieM,bert->ernie_m
     def __init__(self, config):
         super().__init__(config)
 
-        self.ernie_m = ErnieMModel(config)
+        self.ernie_m = MSErnieMModel(config)
         classifier_dropout = (
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
@@ -649,15 +602,13 @@ class ErnieMForMultipleChoice(ErnieMPreTrainedModel):
         labels: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = True,
-    ) -> Union[Tuple[mindspore.Tensor], MultipleChoiceModelOutput]:
+    ) -> Tuple[mindspore.Tensor]:
         r"""
         labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for computing the multiple choice classification loss. Indices should be in `[0, ...,
             num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
             `input_ids` above)
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
 
         input_ids = input_ids.view(-1, input_ids.shape[-1]) if input_ids is not None else None
@@ -677,7 +628,6 @@ class ErnieMForMultipleChoice(ErnieMPreTrainedModel):
             inputs_embeds=inputs_embeds,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
         )
 
         pooled_output = outputs[1]
@@ -690,25 +640,17 @@ class ErnieMForMultipleChoice(ErnieMPreTrainedModel):
         if labels is not None:
             loss = ops.cross_entropy(reshaped_logits, labels)
 
-        if not return_dict:
-            output = (reshaped_logits,) + outputs[2:]
-            return ((loss,) + output) if loss is not None else output
-
-        return MultipleChoiceModelOutput(
-            loss=loss,
-            logits=reshaped_logits,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
-        )
+        output = (reshaped_logits,) + outputs[2:]
+        return ((loss,) + output) if loss is not None else output
 
 
-class ErnieMForTokenClassification(ErnieMPreTrainedModel):
+class MSErnieMForTokenClassification(MSErnieMPreTrainedModel):
     # Copied from transformers.models.bert.modeling_bert.BertForTokenClassification.__init__ with Bert->ErnieM,bert->ernie_m
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
 
-        self.ernie_m = ErnieMModel(config, add_pooling_layer=False)
+        self.ernie_m = MSErnieMModel(config, add_pooling_layer=False)
         classifier_dropout = (
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
@@ -728,14 +670,12 @@ class ErnieMForTokenClassification(ErnieMPreTrainedModel):
         past_key_values: Optional[List[mindspore.Tensor]] = None,
         output_hidden_states: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
-        return_dict: Optional[bool] = True,
         labels: Optional[mindspore.Tensor] = None,
-    ) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]:
+    ) -> Tuple[mindspore.Tensor]:
         r"""
         labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.ernie_m(
             input_ids,
@@ -746,7 +686,6 @@ class ErnieMForTokenClassification(ErnieMPreTrainedModel):
             past_key_values=past_key_values,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
         )
 
         sequence_output = outputs[0]
@@ -758,25 +697,17 @@ class ErnieMForTokenClassification(ErnieMPreTrainedModel):
         if labels is not None:
             loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
-        if not return_dict:
-            output = (logits,) + outputs[2:]
-            return ((loss,) + output) if loss is not None else output
-
-        return TokenClassifierOutput(
-            loss=loss,
-            logits=logits,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
-        )
+        output = (logits,) + outputs[2:]
+        return ((loss,) + output) if loss is not None else output
 
 
-class ErnieMForQuestionAnswering(ErnieMPreTrainedModel):
+class MSErnieMForQuestionAnswering(MSErnieMPreTrainedModel):
     # Copied from transformers.models.bert.modeling_bert.BertForQuestionAnswering.__init__ with Bert->ErnieM,bert->ernie_m
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
 
-        self.ernie_m = ErnieMModel(config, add_pooling_layer=False)
+        self.ernie_m = MSErnieMModel(config, add_pooling_layer=False)
         self.qa_outputs = nn.Dense(config.hidden_size, config.num_labels)
 
         # Initialize weights and apply final processing
@@ -793,8 +724,7 @@ class ErnieMForQuestionAnswering(ErnieMPreTrainedModel):
         end_positions: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = True,
-    ) -> Union[Tuple[mindspore.Tensor], QuestionAnsweringModelOutput]:
+    ) -> Tuple[mindspore.Tensor]:
         r"""
         start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
             Labels for position (index) of the start of the labelled span for computing the token classification loss.
@@ -805,7 +735,6 @@ class ErnieMForQuestionAnswering(ErnieMPreTrainedModel):
             Positions are clamped to the length of the sequence (`sequence_length`). Position outside of the sequence
             are not taken into account for computing the loss.
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.ernie_m(
             input_ids,
@@ -815,7 +744,6 @@ class ErnieMForQuestionAnswering(ErnieMPreTrainedModel):
             inputs_embeds=inputs_embeds,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
         )
 
         sequence_output = outputs[0]
@@ -841,24 +769,15 @@ class ErnieMForQuestionAnswering(ErnieMPreTrainedModel):
             end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
-        if not return_dict:
-            output = (start_logits, end_logits) + outputs[2:]
-            return ((total_loss,) + output) if total_loss is not None else output
-
-        return QuestionAnsweringModelOutput(
-            loss=total_loss,
-            start_logits=start_logits,
-            end_logits=end_logits,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
-        )
+        output = (start_logits, end_logits) + outputs[2:]
+        return ((total_loss,) + output) if total_loss is not None else output
 
 
 # Copied from paddlenlp.transformers.ernie_m.modeling.UIEM
-class ErnieMForInformationExtraction(ErnieMPreTrainedModel):
+class MSErnieMForInformationExtraction(MSErnieMPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
-        self.ernie_m = ErnieMModel(config)
+        self.ernie_m = MSErnieMModel(config)
         self.linear_start = nn.Dense(config.hidden_size, 1)
         self.linear_end = nn.Dense(config.hidden_size, 1)
         self.sigmoid = nn.Sigmoid()
@@ -875,8 +794,7 @@ class ErnieMForInformationExtraction(ErnieMPreTrainedModel):
         end_positions: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = True,
-    ) -> Union[Tuple[mindspore.Tensor], QuestionAnsweringModelOutput]:
+    ) -> Tuple[mindspore.Tensor]:
         r"""
         start_positions (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for position (index) for computing the start_positions loss. Position outside of the sequence are
@@ -894,12 +812,9 @@ class ErnieMForInformationExtraction(ErnieMPreTrainedModel):
             inputs_embeds=inputs_embeds,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
         )
-        if return_dict:
-            sequence_output = result.last_hidden_state
-        elif not return_dict:
-            sequence_output = result[0]
+
+        sequence_output = result[0]
 
         start_logits = self.linear_start(sequence_output)
         start_logits = start_logits.squeeze(-1)
@@ -924,22 +839,10 @@ class ErnieMForInformationExtraction(ErnieMPreTrainedModel):
             end_loss = ops.binary_cross_entropy(end_prob, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
-        if not return_dict:
-            return tuple(
-                i
-                for i in [total_loss, start_prob, end_prob, result.hidden_states, result.attentions]
-                if i is not None
-            )
+        return (total_loss, start_prob, end_prob) + result[1:]
 
-        return QuestionAnsweringModelOutput(
-            loss=total_loss,
-            start_logits=start_prob,
-            end_logits=end_prob,
-            hidden_states=result.hidden_states,
-            attentions=result.attentions,
-        )
 
-class UIEM(ErnieMForInformationExtraction):
+class MSUIEM(MSErnieMForInformationExtraction):
     """UIEM model"""
     def construct(
         self,
@@ -952,8 +855,7 @@ class UIEM(ErnieMForInformationExtraction):
         end_positions: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = True,
-    ) -> Union[Tuple[mindspore.Tensor], QuestionAnsweringModelOutput]:
+    ) -> Tuple[mindspore.Tensor]:
         r"""
         start_positions (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for position (index) for computing the start_positions loss. Position outside of the sequence are
@@ -965,18 +867,14 @@ class UIEM(ErnieMForInformationExtraction):
 
         result = self.ernie_m(
             input_ids,
-            # attention_mask=attention_mask,
+            attention_mask=attention_mask,
             position_ids=position_ids,
-            # head_mask=head_mask,
+            head_mask=head_mask,
             inputs_embeds=inputs_embeds,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
         )
-        if return_dict:
-            sequence_output = result.last_hidden_state
-        elif not return_dict:
-            sequence_output = result[0]
+        sequence_output = result[0]
 
         start_logits = self.linear_start(sequence_output)
         start_logits = start_logits.squeeze(-1)
@@ -1001,29 +899,16 @@ class UIEM(ErnieMForInformationExtraction):
             end_loss = ops.binary_cross_entropy(end_prob, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
-        if not return_dict:
-            return tuple(
-                i
-                for i in [total_loss, start_prob, end_prob, result.hidden_states, result.attentions]
-                if i is not None
-            )
-
-        return QuestionAnsweringModelOutput(
-            loss=total_loss,
-            start_logits=start_prob,
-            end_logits=end_prob,
-            hidden_states=result.hidden_states,
-            attentions=result.attentions,
-        )
+        return (total_loss, start_prob, end_prob) + result[1:]
 
 __all__ = [
     "ERNIE_M_PRETRAINED_MODEL_ARCHIVE_LIST",
-    "ErnieMForMultipleChoice",
-    "ErnieMForQuestionAnswering",
-    "ErnieMForSequenceClassification",
-    "ErnieMForTokenClassification",
-    "ErnieMModel",
-    "ErnieMPreTrainedModel",
-    "ErnieMForInformationExtraction",
-    "UIEM"
+    "MSErnieMForMultipleChoice",
+    "MSErnieMForQuestionAnswering",
+    "MSErnieMForSequenceClassification",
+    "MSErnieMForTokenClassification",
+    "MSErnieMModel",
+    "MSErnieMPreTrainedModel",
+    "MSErnieMForInformationExtraction",
+    "MSUIEM"
 ]
