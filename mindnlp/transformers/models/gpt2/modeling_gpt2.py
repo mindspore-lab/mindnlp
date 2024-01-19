@@ -999,9 +999,9 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
         logits = self.score(hidden_states)
 
         if input_ids is not None:
-            batch_size, sequence_length = input_ids.shape[:2]
+            batch_size, _ = input_ids.shape[:2]
         else:
-            batch_size, sequence_length = inputs_embeds.shape[:2]
+            batch_size, _ = inputs_embeds.shape[:2]
 
         assert (
             self.config.pad_token_id is not None or batch_size == 1
@@ -1011,7 +1011,7 @@ class GPT2ForSequenceClassification(GPT2PreTrainedModel):
         else:
             if input_ids is not None:
                 sequence_lengths = ops.eq(input_ids, self.config.pad_token_id).int().argmax(-1) - 1
-                sequence_lengths = ops.where(sequence_lengths == -1, sequence_length -1, sequence_lengths)
+                sequence_lengths = sequence_lengths % input_ids.shape[-1]
 
             else:
                 sequence_lengths = -1

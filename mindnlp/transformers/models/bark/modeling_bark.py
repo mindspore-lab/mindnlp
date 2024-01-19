@@ -1104,7 +1104,6 @@ class BarkFineModel(BarkPreTrainedModel):
         if input_ids is not None:
             # the input_embeddings are the sum of the j previous codebooks embeddings before
             # the current codebook_idx codebook
-            # print(input_ids[:,:,1])
             # forward the GPT model itself
             input_embeds = [
                 input_embeds_layer(input_ids[:, :, i]).unsqueeze(-1)
@@ -1112,18 +1111,14 @@ class BarkFineModel(BarkPreTrainedModel):
             ]  # token embeddings of shape (b, t, n_embd)
             input_embeds = ops.cat(input_embeds, axis=-1)
             input_embeds = input_embeds[:, :, :, : codebook_idx + 1].sum(axis=-1)
-        # print(input_embeds.shape)
         input_shape = input_embeds.shape[:-1]
         batch_size = input_embeds.shape[0]
         seq_length = input_shape[1]
         # device = input_ids.device if input_ids is not None else input_embeds.device
-        # print(seq_length)
         if position_ids is None:
             position_ids = ops.arange(0, seq_length)
             position_ids = position_ids.unsqueeze(0)  # shape (1, seq_length)
-        # print(position_ids)
         position_embeds = self.position_embeds_layer(position_ids)  # position embeddings of shape (1, t, n_embd)
-        # print(1)
         # Attention mask.
         if attention_mask is not None:
             if batch_size <= 0:
@@ -1138,7 +1133,6 @@ class BarkFineModel(BarkPreTrainedModel):
         hidden_states = self.drop(input_embeds + position_embeds)
         output_shape = input_shape + (hidden_states.shape[-1],)
 
-        # print(2)
         all_self_attentions = () if output_attentions else None
         all_hidden_states = () if output_hidden_states else None
 

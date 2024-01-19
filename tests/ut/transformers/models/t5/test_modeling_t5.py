@@ -1045,7 +1045,6 @@ class T5ModelIntegrationTests(unittest.TestCase):
 
         loss = model(input_ids, labels=labels).loss
         mtf_score = -(labels.shape[-1] * loss.item())
-
         EXPECTED_SCORE = -59.0293
         self.assertTrue(abs(mtf_score - EXPECTED_SCORE) < 1e-4)
 
