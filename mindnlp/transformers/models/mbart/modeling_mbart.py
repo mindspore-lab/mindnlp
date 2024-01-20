@@ -882,8 +882,8 @@ class MBartModel(MBartPreTrainedModel):
 
     def set_input_embeddings(self, new_embeddings):
         self.shared = new_embeddings
-        # self.encoder.embed_tokens = self.shared
-        # self.decoder.embed_tokens = self.shared
+        self.encoder.embed_tokens = self.shared
+        self.decoder.embed_tokens = self.shared
 
     def _tie_weights(self):
         if self.config.tie_word_embeddings:
@@ -985,9 +985,8 @@ class MBartForConditionalGeneration(MBartPreTrainedModel):
     def __init__(self, config: MBartConfig):
         super().__init__(config)
         self.model = MBartModel(config)
-        self.final_logits_bias = Parameter(ops.zeros((1, self.model.shared.vocab_size)), 'final_logits_bias',
-                                           requires_grad=False)
-        self.lm_head = nn.Dense(config.d_model, self.model.shared.vocab_size, has_bias=False)
+        self.final_logits_bias = Parameter(ops.zeros((1, config.vocab_size)), 'final_logits_bias')
+        self.lm_head = nn.Dense(config.d_model, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
