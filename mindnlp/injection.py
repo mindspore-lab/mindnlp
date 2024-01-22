@@ -383,13 +383,12 @@ if LESS_MS_2_2:
     Tensor.tolist = _tolist
     StubTensor.tolist = _tolist
 
-if LESS_MS_2_1:
-    mindspore.tensor = mindspore.Tensor
-    ops.prod = bool_patch_decorator(ops.prod)
-    def _prod(self, axis=None, keep_dims=False):
-        return ops.prod(self, axis, keep_dims)
-    Tensor.prod = _prod
-    StubTensor.prod = _prod
+mindspore.tensor = mindspore.Tensor
+ops.prod = bool_patch_decorator(ops.prod)
+def _prod(self, axis=None, keep_dims=False):
+    return ops.prod(self, axis, keep_dims)
+Tensor.prod = _prod
+StubTensor.prod = _prod
 
 def _eq(self, other):
     if not isinstance(other, (int, float, Tensor)):
@@ -485,7 +484,7 @@ if DEVICE_TARGET == 'Ascend':
     ops.concat = bool_patch_decorator(ops.concat)
 
 # GPU only
-def custom_multinomial(probabilities, num_samples, replacement=True):
+def custom_multinomial(probabilities, num_samples, replacement=False):
     """custom multinomial"""
     if replacement:
         # with replacement
@@ -511,9 +510,7 @@ def custom_multinomial(probabilities, num_samples, replacement=True):
 
     return samples
 
-if DEVICE_TARGET != 'CPU':
-    ops.multinomial = custom_multinomial
-
+ops.multinomial = custom_multinomial
 
 # For Cells
 class Dense(nn.Cell):
@@ -730,7 +727,7 @@ class LayerNorm(nn.Cell):
                  begin_params_axis=-1,
                  gamma_init='ones',
                  beta_init='zeros',
-                 epsilon=1e-7,
+                 epsilon=1e-5,
                  dtype=mstype.float32,
                  elementwise_affine=True
                  ):
@@ -868,6 +865,22 @@ def _update_parameters_name(self, prefix='', recurse=True):
             param.name = prefix + name
 
 nn.Cell.update_parameters_name = _update_parameters_name
+
+def _cells_and_names(self, name_prefix=''):
+    """
+    Returns an iterator over all cells in the network, including the cell's name and itself.
+    """
+    yield name_prefix, self
+
+    for name, cell in self._cells.items():
+        if cell:
+            cells_name_prefix = name
+            if name_prefix:
+                cells_name_prefix = name_prefix + '.' + cells_name_prefix
+            for ele in cell.cells_and_names(cells_name_prefix):
+                yield ele
+
+nn.Cell.cells_and_names = _cells_and_names
 
 nn.LayerNorm = LayerNorm
 nn.Conv1d = Conv1d

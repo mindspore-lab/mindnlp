@@ -132,6 +132,7 @@ save/
 kernel_meta/
 kernel_meta*/
 rank_0/
+ge*.json
 
 .vscode/
 *.ckpt
