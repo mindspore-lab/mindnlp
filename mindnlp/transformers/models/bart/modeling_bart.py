@@ -658,7 +658,7 @@ class BartEncoder(BartPreTrainedModel):
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
             to_drop = False
             if self.training:
-                dropout_probability = ops.rand([])
+                dropout_probability = ops.rand(1)
                 if dropout_probability < self.layerdrop:  # skip the layer
                     to_drop = True
 
@@ -873,7 +873,7 @@ class BartDecoder(BartPreTrainedModel):
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
             if self.training:
-                dropout_probability = ops.rand([])
+                dropout_probability = ops.rand(1)
                 if dropout_probability < self.layerdrop:
                     continue
 
@@ -1287,8 +1287,9 @@ class BartForSequenceClassification(BartPreTrainedModel):
 
         eos_mask = input_ids.eq(self.config.eos_token_id)
 
-        if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
-            raise ValueError("All examples must have the same number of <eos> tokens.")
+        # if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
+        #     raise ValueError("All examples must have the same number of <eos> tokens.")
+
         sentence_representation = hidden_states[eos_mask].view(hidden_states.shape[0], -1, hidden_states.shape[-1])[
             :, -1, :
         ]

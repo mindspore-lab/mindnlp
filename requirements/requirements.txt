@@ -15,4 +15,3 @@ tokenizers
 easydict
 safetensors
 ml_dtypes
-timeout_decorator
