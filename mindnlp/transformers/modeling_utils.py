@@ -32,6 +32,7 @@ import os
 import gc
 import re
 import json
+import collections
 from dataclasses import dataclass
 from typing import Union, Optional, Tuple, OrderedDict, Callable, Dict, List
 from contextlib import contextmanager
@@ -98,6 +99,7 @@ def set_initialized_submodules(model: nn.Cell, state_dict_keys):
             module._is_initialized = True
         else:
             not_initialized_submodules[module_name] = module
+
     return not_initialized_submodules
 
 class CellUtilMixin:
@@ -513,7 +515,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         # Update base model and current model config
         self.config.vocab_size = model_embeds.weight.shape[0]
         self.vocab_size = model_embeds.weight.shape[0]
-
         # Tie weights again if needed
         self.tie_weights()
 
@@ -522,8 +523,9 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
     def _resize_token_embeddings(self, new_num_tokens, pad_to_multiple_of=None):
         old_embeddings = self.get_input_embeddings()
         new_embeddings = self._get_resized_embeddings(old_embeddings, new_num_tokens, pad_to_multiple_of)
-        self.set_input_embeddings(new_embeddings)
 
+        self.set_input_embeddings(new_embeddings)
+        self.get_input_embeddings().weight.data_sync(True)
         # Update new_num_tokens with the actual size of new_embeddings
         if pad_to_multiple_of is not None:
             new_num_tokens = new_embeddings.weight.shape[0]
@@ -533,6 +535,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             new_lm_head = self._get_resized_lm_head(
                 old_lm_head, new_num_tokens)
             self.set_output_embeddings(new_lm_head)
+            self.get_output_embeddings().weight.data_sync(True)
+
 
         return self.get_input_embeddings()
 
@@ -598,7 +602,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         num_tokens_to_copy = min(old_num_tokens, new_num_tokens)
         new_embeddings.weight.data[:num_tokens_to_copy, :] = old_embeddings.weight.data[
                                                                       :num_tokens_to_copy, :]
-
         return new_embeddings
 
     def _get_resized_lm_head(
@@ -958,6 +961,9 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         if ms_dtype is None or ms_dtype == 'auto':
             ms_dtype = config.ms_dtype
 
+        if ms_dtype is None:
+            ms_dtype = mindspore.float32
+
         def empty_initializer(init, shape=None, dtype=mindspore.float32):
             if not isinstance(shape, (tuple, list)):
                 shape = (shape,)
@@ -974,6 +980,19 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
         if is_sharded:
             converted_filenames = resolved_archive_file
+
+        # tie the model weights before retrieving the state_dict
+        model.tie_weights()
+
+
+        ptrs = collections.defaultdict(list)
+        for name, tensor in model.parameters_dict().items():
+            id_tensor = id(tensor)
+            ptrs[id_tensor].append(name)
+
+        # These are all the pointers of shared tensors.
+        tied_params = [names for _, names in ptrs.items() if len(names) > 1]
+
 
         def load_ckpt(resolved_archive_file, from_pt=False):
             if from_pt:
@@ -1039,6 +1058,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     if param_name in keys_unexpected:
                         keys_unexpected.remove(param_name)
                     continue
+
                 new_param = param_dict.pop(param_name, None)
 
                 if new_param is not None:
@@ -1078,6 +1098,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     if ms_dtype and ms_dtype != param.dtype:
                         new_param = param.astype(ms_dtype)
                         replace_references(param, Parameter(new_param, name=param.name, requires_grad=param.requires_grad))
+
             return keys_unexpected, keys_missing
 
         all_keys_unexpected = None
@@ -1099,9 +1120,13 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             loaded_keys = list(state_dict.keys())
             all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
 
-        loaded_keys = list(set(loaded_keys) - set(all_keys_unexpected))
-        if model._tied_weights_keys:
-            loaded_keys += model._tied_weights_keys
+        loaded_add_keys = []
+        for group in tied_params:
+            missing_in_group = [k for k in keys_missing if k in group]
+            if len(missing_in_group) > 0 and len(missing_in_group) < len(group):
+                loaded_add_keys = [k for k in keys_missing if k in missing_in_group]
+                keys_missing = [k for k in keys_missing if k not in missing_in_group]
+
         if cls._keys_to_ignore_on_load_missing is not None:
             for pat in cls._keys_to_ignore_on_load_missing:
                 keys_missing = [k for k in keys_missing if re.search(pat, k) is None]
@@ -1122,6 +1147,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     _loaded_keys = [k[len(cls.base_model_prefix) + 1 :] for k in loaded_keys]
                 else:
                     _loaded_keys = loaded_keys
+
+                _loaded_keys += loaded_add_keys
                 _ = set_initialized_submodules(model, _loaded_keys)
             else:
                 _ = dict(model.cells_and_names())
@@ -1253,6 +1280,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                         par_new_name = cell_name + '.' + par_new_name
 
                     yield par_new_name, par
+
 
     def num_parameters(self, only_trainable=False):
         """return parameters count"""
