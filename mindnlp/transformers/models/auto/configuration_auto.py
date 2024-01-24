@@ -32,6 +32,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
     [
         # Add configs here
         ("roberta", "RobertaConfig"),
+        ("bart", "BartConfig"),
         ("bert", "BertConfig"),
         ("gpt2", "GPT2Config"),
         ('mt5', 'MT5Config'),
