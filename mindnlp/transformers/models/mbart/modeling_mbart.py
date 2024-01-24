@@ -13,6 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=arguments-renamed
+# pylint: disable=signature-differs
 """
 MindNLP MBART model.
 """
@@ -23,12 +25,12 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 from mindspore import log as logger
 import mindspore
-from mindspore import Tensor, Parameter
+from mindspore import Tensor
 from mindspore import nn, ops
-from mindspore import dtype as mstype
 from mindspore.common.initializer import initializer, Normal
 
 from ...activations import ACT2FN
+from ...modeling_attn_mask_utils import _prepare_4d_attention_mask, _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (
     BaseModelOutput,
     BaseModelOutputWithPastAndCrossAttentions,
@@ -57,46 +59,14 @@ def shift_tokens_right(input_ids: Tensor, pad_token_id: int):
     if pad_token_id is None:
         raise ValueError("self.model.config.pad_token_id has to be defined.")
     # replace possible -100 values in labels by `pad_token_id`
-    prev_output_tokens = ops.masked_fill(prev_output_tokens, prev_output_tokens == -100, pad_token_id)
-    index_of_eos = ops.ne(prev_output_tokens, pad_token_id).sum(axis=1) - 1
-    index_of_eos = ops.unsqueeze(index_of_eos, -1)
-    decoder_start_tokens = ops.gather_elements(prev_output_tokens, 1, index_of_eos)
-    decoder_start_tokens = ops.squeeze(decoder_start_tokens)
-    prev_output_tokens[:, 1:] = prev_output_tokens[:, :-1].copy()
+    prev_output_tokens.masked_fill_(prev_output_tokens == -100, pad_token_id)
+
+    index_of_eos = (prev_output_tokens.ne(pad_token_id).sum(dim=1) - 1).unsqueeze(-1)
+    decoder_start_tokens = prev_output_tokens.gather_elements(1, index_of_eos).squeeze()
+    prev_output_tokens[:, 1:] = prev_output_tokens[:, :-1].clone()
     prev_output_tokens[:, 0] = decoder_start_tokens
 
     return prev_output_tokens
-
-
-def _make_causal_mask(
-        input_ids_shape: Union[tuple, list], dtype: mstype, past_key_values_length: int = 0
-):
-    """
-    Make causal mask used for bi-directional self-attention.
-    """
-    bsz, tgt_len = input_ids_shape
-    mask = ops.full((tgt_len, tgt_len), Tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min, dtype))
-    mask_cond = ops.arange(mask.shape[-1])
-    mask = mask.masked_fill(mask_cond < (mask_cond + 1).view(mask.shape[-1], 1), 0)
-    mask = mask.to(dtype)
-
-    if past_key_values_length > 0:
-        mask = ops.concat([ops.zeros((tgt_len, past_key_values_length), dtype=dtype), mask], axis=-1)
-    return ops.broadcast_to(mask[None, None, :, :], (bsz, 1, tgt_len, tgt_len + past_key_values_length))
-
-
-def _expand_mask(mask: Tensor, dtype: mstype, tgt_len: Optional[int] = None):
-    """
-    Expands attention_mask from `[bsz, seq_len]` to `[bsz, 1, tgt_seq_len, src_seq_len]`.
-    """
-    bsz, src_len = mask.shape
-    tgt_len = tgt_len if tgt_len is not None else src_len
-
-    expanded_mask = ops.broadcast_to(mask[:, None, None, :], (bsz, 1, tgt_len, src_len)).to(dtype)
-
-    inverted_mask = 1.0 - expanded_mask
-
-    return inverted_mask.masked_fill(inverted_mask.to(mindspore.bool_), np.finfo(mindspore.dtype_to_nptype(dtype)).min)
 
 
 class MBartLearnedPositionalEmbedding(nn.Embedding):
@@ -110,14 +80,13 @@ class MBartLearnedPositionalEmbedding(nn.Embedding):
         self.offset = 2
         super().__init__(num_embeddings + self.offset, embedding_dim)
 
-    def construct(self, ids: Tensor, past_key_values_length: int = 0):
+    def construct(self, input_ids: Tensor, past_key_values_length: int = 0):
         """`ids' shape is expected to be [bsz x seqlen]."""
 
-        bsz, seq_len = ids.shape[:2]
+        bsz, seq_len = input_ids.shape[:2]
         positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
-        )
-        positions = ops.broadcast_to(positions, (bsz, -1))
+        ).expand(bsz, -1)
 
         return super().construct(positions + self.offset)
 
@@ -152,18 +121,18 @@ class MBartAttention(nn.Cell):
         self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
         self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
-    def _shape(self, tensor: Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(0, 2, 1, 3)
+    def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
     def construct(
-            self,
-            hidden_states: Tensor,
-            key_value_states: Optional[Tensor] = None,
-            past_key_value: Optional[Tuple[Tensor]] = None,
-            attention_mask: Optional[Tensor] = None,
-            layer_head_mask: Optional[Tensor] = None,
-            output_attentions: bool = False,
-    ) -> Tuple[Tensor, Optional[Tensor], Optional[Tuple[Tensor]]]:
+        self,
+        hidden_states: mindspore.Tensor,
+        key_value_states: Optional[mindspore.Tensor] = None,
+        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        layer_head_mask: Optional[mindspore.Tensor] = None,
+        output_attentions: bool = False,
+    ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
 
         # if key_value_states are provided this layer is used as a cross-attention layer
@@ -179,9 +148,9 @@ class MBartAttention(nn.Cell):
         # is checking that the `sequence_length` of the `past_key_value` is the same as
         # the provided `key_value_states` to support prefix tuning
         if (
-                is_cross_attention
-                and past_key_value is not None
-                and past_key_value[0].shape[2] == key_value_states.shape[1]
+            is_cross_attention
+            and past_key_value is not None
+            and past_key_value[0].shape[2] == key_value_states.shape[1]
         ):
             # reuse k,v, cross_attentions
             key_states = past_key_value[0]
@@ -194,18 +163,18 @@ class MBartAttention(nn.Cell):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.concat([past_key_value[0], key_states], axis=2)
-            value_states = ops.concat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], axis=2)
+            value_states = ops.cat([past_key_value[1], value_states], axis=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
 
         if self.is_decoder:
-            # if cross_attention save Tuple(torch.Tensor, torch.Tensor) of all cross attention key/value_states.
+            # if cross_attention save Tuple(mindspore.Tensor, mindspore.Tensor) of all cross attention key/value_states.
             # Further calls to cross_attention layer can then reuse all cross-attention
             # key/value_states (first "if" case)
-            # if uni-directional self-attention (decoder) save Tuple(torch.Tensor, torch.Tensor) of
+            # if uni-directional self-attention (decoder) save Tuple(mindspore.Tensor, mindspore.Tensor) of
             # all previous decoder key/value_states. Further calls to uni-directional self-attention
             # can concat previous decoder key/value_states to current projected key/value_states (third "elif" case)
             # if encoder bi-directional self-attention `past_key_value` is always `None`
@@ -217,7 +186,7 @@ class MBartAttention(nn.Cell):
         value_states = value_states.reshape(*proj_shape)
 
         src_len = key_states.shape[1]
-        attn_weights = ops.bmm(query_states, key_states.transpose(0, 2, 1))
+        attn_weights = ops.bmm(query_states, key_states.swapaxes(1, 2))
 
         if attn_weights.shape != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
@@ -260,12 +229,12 @@ class MBartAttention(nn.Cell):
 
         if attn_output.shape != (bsz * self.num_heads, tgt_len, self.head_dim):
             raise ValueError(
-                f"`attn_output` should be of shape {(bsz * self.num_heads, tgt_len, self.head_dim)}, but is"
+                f"`attn_output` should be of size {(bsz * self.num_heads, tgt_len, self.head_dim)}, but is"
                 f" {attn_output.shape}"
             )
 
         attn_output = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim)
-        attn_output = attn_output.transpose(0, 2, 1, 3)
+        attn_output = attn_output.swapaxes(1, 2)
 
         # Use the `embed_dim` from the config (stored in the class) rather than `hidden_state` because `attn_output` can be
         # partitioned across GPUs when using tensor-parallelism.
@@ -483,10 +452,6 @@ class MBartPreTrainedModel(PreTrainedModel):
                 cell.weight.data[cell.padding_idx] = ops.zeros_like(
                     cell.weight.data[cell.padding_idx])
 
-    def _set_gradient_checkpointing(self, module, value=False):
-        if isinstance(module, (MBartDecoder, MBartDecoder)):
-            module.gradient_checkpointing = value
-
     @property
     def dummy_inputs(self):
         """dummy_inputs"""
@@ -530,17 +495,12 @@ class MBartEncoder(MBartPreTrainedModel):
             embed_dim,
         )
         self.layers = nn.CellList([MBartEncoderLayer(config) for _ in range(config.encoder_layers)])
-        self.layernorm_embedding = nn.LayerNorm([embed_dim], epsilon=0.00001)
-        self.layer_norm = nn.LayerNorm([config.d_model], epsilon=0.00001)
+        self.layernorm_embedding = nn.LayerNorm([embed_dim])
+        self.layer_norm = nn.LayerNorm([config.d_model])
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
-
-    def _backward_compatibility_gradient_checkpointing(self):
-        # Override to not delete the attribute from the config
-        if self.supports_gradient_checkpointing and getattr(self.config, "gradient_checkpointing", False):
-            self.gradient_checkpointing_enable()
 
     def construct(
             self,
@@ -582,7 +542,7 @@ class MBartEncoder(MBartPreTrainedModel):
         # expand attention_mask
         if attention_mask is not None:
             # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
-            attention_mask = _expand_mask(attention_mask, inputs_embeds.dtype)
+            attention_mask = _prepare_4d_attention_mask(attention_mask, inputs_embeds.dtype)
 
         encoder_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
@@ -602,22 +562,6 @@ class MBartEncoder(MBartPreTrainedModel):
             if self.training and dropout_probability < self.layerdrop:  # skip the layer
                 layer_outputs = (None, None)
             else:
-                # TODO
-                # if self.gradient_checkpointing and self.training:
-                #
-                #     def create_custom_forward(module):
-                #         def custom_forward(*inputs):
-                #             return module(*inputs, output_attentions)
-                #
-                #         return custom_forward
-                #
-                #     layer_outputs = torch.utils.checkpoint.checkpoint(
-                #         create_custom_forward(encoder_layer),
-                #         hidden_states,
-                #         attention_mask,
-                #         (head_mask[idx] if head_mask is not None else None),
-                #     )
-                # else:
                 layer_outputs = encoder_layer(
                     hidden_states,
                     attention_mask,
@@ -682,26 +626,6 @@ class MBartDecoder(MBartPreTrainedModel):
     def set_input_embeddings(self, new_embeddings):
         self.embed_tokens = new_embeddings
 
-    def _prepare_decoder_attention_mask(self, attention_mask, input_shape, inputs_embeds, past_key_values_length):
-        # create causal mask
-        # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
-        combined_attention_mask = None
-        if input_shape[-1] > 1:
-            combined_attention_mask = _make_causal_mask(
-                input_shape,
-                inputs_embeds.dtype,
-                past_key_values_length=past_key_values_length,
-            )
-
-        if attention_mask is not None:
-            # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
-            expanded_attn_mask = _expand_mask(attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1])
-            combined_attention_mask = (
-                expanded_attn_mask if combined_attention_mask is None else expanded_attn_mask + combined_attention_mask
-            )
-
-        return combined_attention_mask
-
     def construct(
             self,
             input_ids: Tensor = None,
@@ -745,14 +669,16 @@ class MBartDecoder(MBartPreTrainedModel):
             # or _input
             inputs_embeds = self.embed_tokens(input_ids) * self.embed_scale
 
-        attention_mask = self._prepare_decoder_attention_mask(
+        attention_mask = _prepare_4d_causal_attention_mask(
             attention_mask, input_shape, inputs_embeds, past_key_values_length
         )
 
         # expand encoder attention mask
         if encoder_hidden_states is not None and encoder_attention_mask is not None:
             # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
-            encoder_attention_mask = _expand_mask(encoder_attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1])
+            encoder_attention_mask = _prepare_4d_attention_mask(
+                encoder_attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1]
+            )
 
         # embed positions
         positions = self.embed_positions(_input, past_key_values_length)
@@ -793,27 +719,7 @@ class MBartDecoder(MBartPreTrainedModel):
                     continue
 
             past_key_value = past_key_values[idx] if past_key_values is not None else None
-            # TODO
-            # if self.gradient_checkpointing and self.training:
-            #
-            #     def create_custom_forward(module):
-            #         def custom_forward(*inputs):
-            #             # None for past_key_value
-            #             return module(*inputs, output_attentions, use_cache)
-            #
-            #         return custom_forward
-            #
-            #     layer_outputs = torch.utils.checkpoint.checkpoint(
-            #         create_custom_forward(decoder_layer),
-            #         hidden_states,
-            #         attention_mask,
-            #         encoder_hidden_states,
-            #         encoder_attention_mask,
-            #         head_mask[idx] if head_mask is not None else None,
-            #         cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None,
-            #         None,
-            #     )
-            # else:
+
             layer_outputs = decoder_layer(
                 hidden_states,
                 attention_mask=attention_mask,
@@ -980,13 +886,14 @@ class MBartModel(MBartPreTrainedModel):
 class MBartForConditionalGeneration(MBartPreTrainedModel):
     """MBartForConditionalGeneration"""
     base_model_prefix = "model"
-    _keys_to_ignore_on_load_missing = ["final_logits_bias"]
+    # _keys_to_ignore_on_load_missing = ["final_logits_bias"]
     _tied_weights_keys = ["model.encoder.embed_tokens.weight", "model.decoder.embed_tokens.weight", "lm_head.weight"]
+
     def __init__(self, config: MBartConfig):
         super().__init__(config)
         self.model = MBartModel(config)
-        self.final_logits_bias = Parameter(ops.zeros((1, config.vocab_size)), 'final_logits_bias')
-        self.lm_head = nn.Dense(config.d_model, config.vocab_size, has_bias=False)
+        self.final_logits_bias = ops.zeros((1, self.model.shared.vocab_size))
+        self.lm_head = nn.Dense(config.d_model, self.model.shared.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -999,9 +906,8 @@ class MBartForConditionalGeneration(MBartPreTrainedModel):
         """get_decoder"""
         return self.model.get_decoder()
 
-    def resize_token_embeddings(self, new_num_tokens: Optional[int] = None) -> nn.Embedding:
-        """resize_token_embeddings"""
-        new_embeddings = super().resize_token_embeddings(new_num_tokens)
+    def resize_token_embeddings(self, new_num_tokens: int, pad_to_multiple_of: Optional[int] = None) -> nn.Embedding:
+        new_embeddings = super().resize_token_embeddings(new_num_tokens, pad_to_multiple_of)
         self._resize_final_logits_bias(new_embeddings.weight.shape[0])
         return new_embeddings
 
@@ -1013,7 +919,6 @@ class MBartForConditionalGeneration(MBartPreTrainedModel):
         else:
             extra_bias = ops.zeros((1, new_num_tokens - old_num_tokens))
             new_bias = ops.concat([self.final_logits_bias, extra_bias], axis=1)
-        # self.register_buffer("final_logits_bias", new_bias)
         self.final_logits_bias = new_bias
 
     def get_output_embeddings(self):
@@ -1515,5 +1420,4 @@ __all__ = [
     'MBartForSequenceClassification',
     'MBartModel',
     'MBartPreTrainedModel',
-
 ]
