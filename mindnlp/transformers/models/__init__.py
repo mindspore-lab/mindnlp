@@ -17,7 +17,8 @@ Models init
 """
 from . import albert, auto, bart, bert, bloom, clip, codegen, cpm, ernie, ernie_m, chatglm, chatglm2, gpt, gpt_neo, gpt2, \
     llama, longformer, luke, mbart, megatron_bert, mistral, mobilebert, nezha, opt, pangu, phi_2, roberta, rwkv, \
-    seamless_m4t, seamless_m4t_v2, t5, tinybert, xlm, xlm_roberta, gpt_bigcode, whisper, bark, encodec
+    seamless_m4t, seamless_m4t_v2, t5, tinybert, xlm, xlm_roberta, gpt_bigcode, whisper, bark, encodec, \
+    graphormer
 from .albert import *
 from .auto import *
 from .bark import *
@@ -34,6 +35,7 @@ from .chatglm2 import *
 from .gpt import *
 from .gpt_neo import *
 from .gpt2 import *
+from .graphormer import *
 from .llama import *
 from .longformer import *
 from .luke import *
@@ -73,6 +75,7 @@ __all__.extend(chatglm2.__all__)
 __all__.extend(gpt.__all__)
 __all__.extend(gpt_neo.__all__)
 __all__.extend(gpt2.__all__)
+__all__.extend(graphormer.__all__)
 __all__.extend(llama.__all__)
 __all__.extend(longformer.__all__)
 __all__.extend(luke.__all__)

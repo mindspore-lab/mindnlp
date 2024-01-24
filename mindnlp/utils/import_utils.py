@@ -96,6 +96,8 @@ def is_safetensors_available():
 def is_modelscope_available():
     return _modelscope_available
 
+def is_cython_available():
+    return importlib.util.find_spec("pyximport") is not None
 
 def is_protobuf_available():
     if importlib.util.find_spec("google") is None:
@@ -127,6 +129,11 @@ def is_in_notebook():
     except (AttributeError, ImportError, KeyError):
         return False
 
+# docstyle-ignore
+CYTHON_IMPORT_ERROR = """
+{0} requires the Cython library but it was not found in your environment. You can install it with pip: `pip install
+Cython`. Please note that you may need to restart your runtime after installation.
+"""
 
 # docstyle-ignore
 DATASETS_IMPORT_ERROR = """
@@ -185,6 +192,7 @@ Please note that you may need to restart your runtime after installation.
 
 BACKENDS_MAPPING = OrderedDict(
     [
+        ("cython", (is_cython_available, CYTHON_IMPORT_ERROR)),
         ("datasets", (is_datasets_available, DATASETS_IMPORT_ERROR)),
         ("protobuf", (is_protobuf_available, PROTOBUF_IMPORT_ERROR)),
         ("sentencepiece", (is_sentencepiece_available, SENTENCEPIECE_IMPORT_ERROR)),
