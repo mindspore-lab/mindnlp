@@ -1,10 +1,12 @@
+# coding=utf-8
 # Copyright 2023 Huawei Technologies Co., Ltd
+# Copyright 2021 The Fairseq Authors and The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,22 +14,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""
-Bart Model
-"""
+# pylint: disable=arguments-renamed
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+# pylint: disable=redefined-builtin
+# pylint: disable=signature-differs
+""" MindSpore BART model."""
 import copy
 import math
-import random
-import os
 from typing import List, Optional, Tuple, Union
+
 import numpy as np
 import mindspore
-from mindspore import Tensor, Parameter
-from mindspore import nn, ops
-from mindspore import dtype as mstype
+from mindspore import nn, ops, Tensor
 from mindspore.common.initializer import initializer, Normal
 
-from .bart_config import BartConfig
+from mindnlp.utils import logging
+from mindnlp.modules.functional import finfo
+from ...activations import ACT2FN
+from ...modeling_attn_mask_utils import (
+    _prepare_4d_attention_mask,
+    _prepare_4d_causal_attention_mask,
+)
 from ...modeling_outputs import (
     BaseModelOutput,
     BaseModelOutputWithPastAndCrossAttentions,
@@ -38,12 +46,31 @@ from ...modeling_outputs import (
     Seq2SeqSequenceClassifierOutput,
 )
 from ...modeling_utils import PreTrainedModel
-from ...activations import ACT2FN
+from .configuration_bart import BartConfig
 
 
-def shift_tokens_right(
-    input_ids: Tensor, pad_token_id: int, decoder_start_token_id: int
-):
+logger = logging.get_logger(__name__)
+
+BART_PRETRAINED_MODEL_ARCHIVE_LIST = [
+    "facebook/bart-large",
+    # see all BART models at https://huggingface.co/models?filter=bart
+]
+
+
+# Copied from transformers.models.llama.modeling_llama._get_unpad_data
+def _get_unpad_data(attention_mask):
+    seqlens_in_batch = attention_mask.sum(axis=-1, dtype=mindspore.int32)
+    indices = ops.nonzero(attention_mask.flatten()).flatten()
+    max_seqlen_in_batch = seqlens_in_batch.max().item()
+    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
+    return (
+        indices,
+        cu_seqlens,
+        max_seqlen_in_batch,
+    )
+
+
+def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_start_token_id: int):
     """
     Shift input ids one token to the right.
     """
@@ -54,54 +81,9 @@ def shift_tokens_right(
     if pad_token_id is None:
         raise ValueError("self.model.config.pad_token_id has to be defined.")
     # replace possible -100 values in labels by `pad_token_id`
-    shifted_input_ids = ops.masked_fill(
-        shifted_input_ids, shifted_input_ids == -100, pad_token_id
-    )
+    shifted_input_ids = shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
 
     return shifted_input_ids
-
-
-def _make_causal_mask(
-    input_ids_shape: Union[tuple, list], dtype: mstype, past_key_values_length: int = 0
-):
-    """
-    Make causal mask used for bi-directional self-attention.
-    """
-    bsz, tgt_len = input_ids_shape
-    mask = ops.full(
-        (tgt_len, tgt_len),
-        Tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min, dtype),
-    )
-    mask_cond = ops.arange(mask.shape[-1])
-    mask = ops.masked_fill(mask, mask_cond < (mask_cond + 1).view(mask.shape[-1], 1), 0)
-    mask = mask.to(dtype)
-
-    if past_key_values_length > 0:
-        mask = ops.concat(
-            [ops.zeros((tgt_len, past_key_values_length), dtype=dtype), mask], axis=-1
-        )
-    return ops.broadcast_to(
-        mask[None, None, :, :], (bsz, 1, tgt_len, tgt_len + past_key_values_length)
-    )
-
-
-def _expand_mask(mask: Tensor, dtype: mstype, tgt_len: Optional[int] = None):
-    """
-    Expands attention_mask from `[bsz, seq_len]` to `[bsz, 1, tgt_seq_len, src_seq_len]`.
-    """
-    bsz, src_len = mask.shape
-    tgt_len = tgt_len if tgt_len is not None else src_len
-
-    expanded_mask = ops.broadcast_to(
-        mask[:, None, None, :], (bsz, 1, tgt_len, src_len)
-    ).to(dtype)
-
-    inverted_mask = 1.0 - expanded_mask
-
-    return inverted_mask.masked_fill(
-        inverted_mask.to(mindspore.bool_),
-        Tensor(np.finfo(mindspore.dtype_to_nptype(dtype)).min),
-    )
 
 
 class BartLearnedPositionalEmbedding(nn.Embedding):
@@ -115,16 +97,13 @@ class BartLearnedPositionalEmbedding(nn.Embedding):
         self.offset = 2
         super().__init__(num_embeddings + self.offset, embedding_dim)
 
-    def construct(self, ids: Tensor, past_key_values_length: int = 0):
-        """`ids' shape is expected to be [bsz x seqlen]."""
+    def construct(self, input_ids: mindspore.Tensor, past_key_values_length: int = 0):
+        """`input_ids' shape is expected to be [bsz x seqlen]."""
 
-        bsz, seq_len = ids.shape[:2]
+        bsz, seq_len = input_ids.shape[:2]
         positions = ops.arange(
-            past_key_values_length,
-            past_key_values_length + seq_len,
-            dtype=mindspore.int64,
-        )
-        positions = ops.broadcast_to(positions, (bsz, -1))
+            past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
+        ).expand(bsz, -1)
 
         return super().construct(positions + self.offset)
 
@@ -139,12 +118,15 @@ class BartAttention(nn.Cell):
         dropout: float = 0.0,
         is_decoder: bool = False,
         bias: bool = True,
+        is_causal: bool = False,
+        config: Optional[BartConfig] = None,
     ):
         super().__init__()
         self.embed_dim = embed_dim
         self.num_heads = num_heads
         self.dropout = dropout
         self.head_dim = embed_dim // num_heads
+        self.config = config
 
         if (self.head_dim * num_heads) != self.embed_dim:
             raise ValueError(
@@ -153,26 +135,25 @@ class BartAttention(nn.Cell):
             )
         self.scaling = self.head_dim**-0.5
         self.is_decoder = is_decoder
+        self.is_causal = is_causal
 
         self.k_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
         self.v_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
         self.q_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
         self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
-    def _shape(self, tensor: Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(
-            0, 2, 1, 3
-        )
+    def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
     def construct(
         self,
-        hidden_states: Tensor,
-        key_value_states: Optional[Tensor] = None,
-        past_key_value: Optional[Tuple[Tensor]] = None,
-        attention_mask: Optional[Tensor] = None,
-        layer_head_mask: Optional[Tensor] = None,
+        hidden_states: mindspore.Tensor,
+        key_value_states: Optional[mindspore.Tensor] = None,
+        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        layer_head_mask: Optional[mindspore.Tensor] = None,
         output_attentions: bool = False,
-    ) -> Tuple[Tensor, Optional[Tensor], Optional[Tuple[Tensor]]]:
+    ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
         """Input shape: Batch x Time x Channel"""
 
         # if key_value_states are provided this layer is used as a cross-attention layer
@@ -203,18 +184,18 @@ class BartAttention(nn.Cell):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = ops.concat([past_key_value[0], key_states], axis=2)
-            value_states = ops.concat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], axis=2)
+            value_states = ops.cat([past_key_value[1], value_states], axis=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
 
         if self.is_decoder:
-            # if cross_attention save Tuple(torch.Tensor, torch.Tensor) of all cross attention key/value_states.
+            # if cross_attention save Tuple(mindspore.Tensor, mindspore.Tensor) of all cross attention key/value_states.
             # Further calls to cross_attention layer can then reuse all cross-attention
             # key/value_states (first "if" case)
-            # if uni-directional self-attention (decoder) save Tuple(torch.Tensor, torch.Tensor) of
+            # if uni-directional self-attention (decoder) save Tuple(mindspore.Tensor, mindspore.Tensor) of
             # all previous decoder key/value_states. Further calls to uni-directional self-attention
             # can concat previous decoder key/value_states to current projected key/value_states (third "elif" case)
             # if encoder bi-directional self-attention `past_key_value` is always `None`
@@ -226,7 +207,7 @@ class BartAttention(nn.Cell):
         value_states = value_states.reshape(*proj_shape)
 
         src_len = key_states.shape[1]
-        attn_weights = ops.bmm(query_states, key_states.transpose(0, 2, 1))
+        attn_weights = ops.bmm(query_states, key_states.swapaxes(1, 2))
 
         if attn_weights.shape != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
@@ -239,10 +220,7 @@ class BartAttention(nn.Cell):
                 raise ValueError(
                     f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {attention_mask.shape}"
                 )
-            attn_weights = (
-                attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
-                + attention_mask
-            )
+            attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         attn_weights = ops.softmax(attn_weights, axis=-1)
@@ -253,9 +231,7 @@ class BartAttention(nn.Cell):
                     f"Head mask for a single layer should be of size {(self.num_heads,)}, but is"
                     f" {layer_head_mask.shape}"
                 )
-            attn_weights = layer_head_mask.view(1, -1, 1, 1) * attn_weights.view(
-                bsz, self.num_heads, tgt_len, src_len
-            )
+            attn_weights = layer_head_mask.view(1, -1, 1, 1) * attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         if output_attentions:
@@ -263,12 +239,8 @@ class BartAttention(nn.Cell):
             # make sure that attn_weights keeps its gradient.
             # In order to do so, attn_weights have to be reshaped
             # twice and have to be reused in the following
-            attn_weights_reshaped = attn_weights.view(
-                bsz, self.num_heads, tgt_len, src_len
-            )
-            attn_weights = attn_weights_reshaped.view(
-                bsz * self.num_heads, tgt_len, src_len
-            )
+            attn_weights_reshaped = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
+            attn_weights = attn_weights_reshaped.view(bsz * self.num_heads, tgt_len, src_len)
         else:
             attn_weights_reshaped = None
 
@@ -278,12 +250,12 @@ class BartAttention(nn.Cell):
 
         if attn_output.shape != (bsz * self.num_heads, tgt_len, self.head_dim):
             raise ValueError(
-                f"`attn_output` should be of shape {(bsz * self.num_heads, tgt_len, self.head_dim)}, but is"
+                f"`attn_output` should be of size {(bsz * self.num_heads, tgt_len, self.head_dim)}, but is"
                 f" {attn_output.shape}"
             )
 
         attn_output = attn_output.view(bsz, self.num_heads, tgt_len, self.head_dim)
-        attn_output = attn_output.transpose(0, 2, 1, 3)
+        attn_output = attn_output.swapaxes(1, 2)
 
         # Use the `embed_dim` from the config (stored in the class) rather than `hidden_state` because `attn_output` can be
         # partitioned across GPUs when using tensor-parallelism.
@@ -294,32 +266,49 @@ class BartAttention(nn.Cell):
         return attn_output, attn_weights_reshaped, past_key_value
 
 
-class BartEncoderLayer(nn.Cell):
-    "BartEncoderLayer"
 
+BART_ATTENTION_CLASSES = {
+    "eager": BartAttention,
+}
+
+
+class BartEncoderLayer(nn.Cell):
     def __init__(self, config: BartConfig):
         super().__init__()
         self.embed_dim = config.d_model
-        self.self_attn = BartAttention(
+
+        self.self_attn = BART_ATTENTION_CLASSES["eager"](
             embed_dim=self.embed_dim,
             num_heads=config.encoder_attention_heads,
             dropout=config.attention_dropout,
+            config=config,
         )
-        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim], epsilon=0.00001)
+        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim])
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
         self.fc1 = nn.Dense(self.embed_dim, config.encoder_ffn_dim)
         self.fc2 = nn.Dense(config.encoder_ffn_dim, self.embed_dim)
-        self.final_layer_norm = nn.LayerNorm([self.embed_dim], epsilon=0.00001)
+        self.final_layer_norm = nn.LayerNorm([self.embed_dim])
 
     def construct(
         self,
-        hidden_states: Tensor,
-        attention_mask: Tensor,
-        layer_head_mask: Tensor,
+        hidden_states: mindspore.Tensor,
+        attention_mask: mindspore.Tensor,
+        layer_head_mask: mindspore.Tensor,
         output_attentions: Optional[bool] = False,
-    ) -> Tuple[Tensor, Optional[Tensor]]:
+    ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor]]:
+        """
+        Args:
+            hidden_states (`mindspore.Tensor`): input to the layer of shape `(batch, seq_len, embed_dim)`
+            attention_mask (`mindspore.Tensor`): attention mask of size
+                `(batch, 1, tgt_len, src_len)` where padding elements are indicated by very large negative values.
+            layer_head_mask (`mindspore.Tensor`): mask for attention heads in a given layer of size
+                `(encoder_attention_heads,)`.
+            output_attentions (`bool`, *optional*):
+                Whether or not to return the attentions tensors of all attention layers. See `attentions` under
+                returned tensors for more detail.
+        """
         residual = hidden_states
         hidden_states, attn_weights, _ = self.self_attn(
             hidden_states=hidden_states,
@@ -327,30 +316,22 @@ class BartEncoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(
-            hidden_states, p=self.dropout, training=self.training
-        )
+        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(
-            hidden_states, p=self.activation_dropout, training=self.training
-        )
+        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(
-            hidden_states, p=self.dropout, training=self.training
-        )
+        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
         if hidden_states.dtype == mindspore.float16 and (
             ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any()
         ):
-            clamp_value = (
-                np.finfo(mindspore.dtype_to_nptype(hidden_states.dtype)).max - 1000
-            )
+            clamp_value = finfo(hidden_states.dtype, 'max') - 1000
             hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
@@ -362,53 +343,70 @@ class BartEncoderLayer(nn.Cell):
 
 
 class BartDecoderLayer(nn.Cell):
-    "BartDecoderLayer"
-
     def __init__(self, config: BartConfig):
         super().__init__()
         self.embed_dim = config.d_model
 
-        self.self_attn = BartAttention(
+        self.self_attn = BART_ATTENTION_CLASSES["eager"](
             embed_dim=self.embed_dim,
             num_heads=config.decoder_attention_heads,
             dropout=config.attention_dropout,
             is_decoder=True,
+            is_causal=True,
+            config=config,
         )
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
 
-        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim], epsilon=0.00001)
-        self.encoder_attn = BartAttention(
+        self.self_attn_layer_norm = nn.LayerNorm([self.embed_dim])
+        self.encoder_attn = BART_ATTENTION_CLASSES["eager"](
             self.embed_dim,
             config.decoder_attention_heads,
             dropout=config.attention_dropout,
             is_decoder=True,
+            config=config,
         )
-        self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim], epsilon=0.00001)
+        self.encoder_attn_layer_norm = nn.LayerNorm([self.embed_dim])
         self.fc1 = nn.Dense(self.embed_dim, config.decoder_ffn_dim)
         self.fc2 = nn.Dense(config.decoder_ffn_dim, self.embed_dim)
-        self.final_layer_norm = nn.LayerNorm([self.embed_dim], epsilon=0.00001)
+        self.final_layer_norm = nn.LayerNorm([self.embed_dim])
 
     def construct(
         self,
-        hidden_states: Tensor,
-        attention_mask: Optional[Tensor] = None,
-        encoder_hidden_states: Optional[Tensor] = None,
-        encoder_attention_mask: Optional[Tensor] = None,
-        layer_head_mask: Optional[Tensor] = None,
-        cross_attn_layer_head_mask: Optional[Tensor] = None,
-        past_key_value: Optional[Tuple[Tensor]] = None,
+        hidden_states: mindspore.Tensor,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        encoder_hidden_states: Optional[mindspore.Tensor] = None,
+        encoder_attention_mask: Optional[mindspore.Tensor] = None,
+        layer_head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_layer_head_mask: Optional[mindspore.Tensor] = None,
+        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
         output_attentions: Optional[bool] = False,
         use_cache: Optional[bool] = True,
-    ) -> Tuple[Tensor, Optional[Tuple[Tensor, Tensor]]]:
+    ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
+        """
+        Args:
+            hidden_states (`mindspore.Tensor`): input to the layer of shape `(batch, seq_len, embed_dim)`
+            attention_mask (`mindspore.Tensor`): attention mask of size
+                `(batch, 1, tgt_len, src_len)` where padding elements are indicated by very large negative values.
+            encoder_hidden_states (`mindspore.Tensor`):
+                cross attention input to the layer of shape `(batch, seq_len, embed_dim)`
+            encoder_attention_mask (`mindspore.Tensor`): encoder attention mask of size
+                `(batch, 1, tgt_len, src_len)` where padding elements are indicated by very large negative values.
+            layer_head_mask (`mindspore.Tensor`): mask for attention heads in a given layer of size
+                `(encoder_attention_heads,)`.
+            cross_attn_layer_head_mask (`mindspore.Tensor`): mask for cross-attention heads in a given layer of
+                size `(decoder_attention_heads,)`.
+            past_key_value (`Tuple(mindspore.Tensor)`): cached past key and value projection states
+            output_attentions (`bool`, *optional*):
+                Whether or not to return the attentions tensors of all attention layers. See `attentions` under
+                returned tensors for more detail.
+        """
         residual = hidden_states
 
         # Self Attention
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
-        self_attn_past_key_value = (
-            past_key_value[:2] if past_key_value is not None else None
-        )
+        self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
         # add present self-attn cache to positions 1,2 of present_key_value tuple
         hidden_states, self_attn_weights, present_key_value = self.self_attn(
             hidden_states=hidden_states,
@@ -417,9 +415,7 @@ class BartDecoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = ops.dropout(
-            hidden_states, p=self.dropout, training=self.training
-        )
+        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
@@ -430,14 +426,8 @@ class BartDecoderLayer(nn.Cell):
             residual = hidden_states
 
             # cross_attn cached key/values tuple is at positions 3,4 of present_key_value tuple
-            cross_attn_past_key_value = (
-                past_key_value[-2:] if past_key_value is not None else None
-            )
-            (
-                hidden_states,
-                cross_attn_weights,
-                cross_attn_present_key_value,
-            ) = self.encoder_attn(
+            cross_attn_past_key_value = past_key_value[-2:] if past_key_value is not None else None
+            hidden_states, cross_attn_weights, cross_attn_present_key_value = self.encoder_attn(
                 hidden_states=hidden_states,
                 key_value_states=encoder_hidden_states,
                 attention_mask=encoder_attention_mask,
@@ -445,9 +435,7 @@ class BartDecoderLayer(nn.Cell):
                 past_key_value=cross_attn_past_key_value,
                 output_attentions=output_attentions,
             )
-            hidden_states = ops.dropout(
-                hidden_states, p=self.dropout, training=self.training
-            )
+            hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
             hidden_states = self.encoder_attn_layer_norm(hidden_states)
 
@@ -457,13 +445,9 @@ class BartDecoderLayer(nn.Cell):
         # Fully Connected
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = ops.dropout(
-            hidden_states, p=self.activation_dropout, training=self.training
-        )
+        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = ops.dropout(
-            hidden_states, p=self.dropout, training=self.training
-        )
+        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
 
@@ -493,7 +477,7 @@ class BartClassificationHead(nn.Cell):
         self.dropout = nn.Dropout(p=pooler_dropout)
         self.out_proj = nn.Dense(inner_dim, num_classes)
 
-    def construct(self, hidden_states: Tensor) -> Tensor:
+    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.dense(hidden_states)
         hidden_states = ops.tanh(hidden_states)
@@ -502,70 +486,34 @@ class BartClassificationHead(nn.Cell):
         return hidden_states
 
 
-class BartPretrainedModel(PreTrainedModel):
-    "BartPretrainedModel"
+class BartPreTrainedModel(PreTrainedModel):
     config_class = BartConfig
     base_model_prefix = "model"
-    supports_gradient_checkpointing = True
-    _keys_to_ignore_on_load_unexpected = [r"encoder.version", r"decoder.version"]
+    supports_gradient_checkpointing = False
+    _keys_to_ignore_on_load_unexpected = ["encoder.version", "decoder.version"]
     _no_split_modules = [r"BartEncoderLayer", r"BartDecoderLayer"]
 
-    def post_init(self):
-        "post_init"
-
-    def init_model_weights(self):
-        "init_model_weights"
-
-    def get_input_embeddings(self) -> "nn.Cell":
-        "get_input_embeddings"
-
-    def set_input_embeddings(self, new_embeddings: "nn.Cell"):
-        "set_input_embeddings"
-
-    def resize_position_embeddings(self, new_num_position_embeddings: int):
-        "resize_position_embeddings"
-
-    def get_position_embeddings(self):
-        "get_position_embeddings"
-
-    def save(self, save_dir: Union[str, os.PathLike]):
-        "save"
-
     def _init_weights(self, cell):
-        "_init_weights"
+        """Initialize the weights"""
         std = self.config.init_std
         if isinstance(cell, nn.Dense):
-            cell.weight.set_data(
-                initializer(
-                    Normal(sigma=std, mean=0.0),
-                    cell.weight.shape,
-                    cell.weight.dtype,
-                )
-            )
-            if cell.bias is not None:
-                cell.bias.set_data(ops.zeros_like(cell.bias))
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
+            if cell.has_bias:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            cell.weight.set_data(
-                initializer(
-                    Normal(sigma=std, mean=0.0),
-                    cell.weight.shape,
-                    cell.weight.dtype,
-                )
-            )
-            if cell.padding_idx is not None:
-                cell.weight.data[cell.padding_idx] = ops.zeros_like(
-                    cell.weight.data[cell.padding_idx]
-                )
+            weight = np.random.normal(0.0, std, cell.weight.shape)
+            if cell.padding_idx:
+                weight[cell.padding_idx] = 0
 
-    def _set_gradient_checkpointing(self, module, value=False):
-        if isinstance(module, (BartDecoder, BartEncoder)):
-            module.gradient_checkpointing = value
+            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+
 
     @property
     def dummy_inputs(self):
-        "dummy_inputs"
         pad_token = self.config.pad_token_id
-        input_ids = Tensor([[0, 6, 10, 4, 2], [0, 8, 12, 2, pad_token]])
+        input_ids = mindspore.Tensor([[0, 6, 10, 4, 2], [0, 8, 12, 2, pad_token]])
         dummy_inputs = {
             "attention_mask": input_ids.ne(pad_token),
             "input_ids": input_ids,
@@ -573,7 +521,7 @@ class BartPretrainedModel(PreTrainedModel):
         return dummy_inputs
 
 
-class BartEncoder(BartPretrainedModel):
+class BartEncoder(BartPreTrainedModel):
     """
     Transformer encoder consisting of *config.encoder_layers* self attention layers. Each layer is a
     [`BartEncoderLayer`].
@@ -594,9 +542,7 @@ class BartEncoder(BartPretrainedModel):
         self.max_source_positions = config.max_position_embeddings
         self.embed_scale = math.sqrt(embed_dim) if config.scale_embedding else 1.0
 
-        self.embed_tokens = nn.Embedding(
-            config.vocab_size, embed_dim, padding_idx=self.padding_idx
-        )
+        self.embed_tokens = nn.Embedding(config.vocab_size, embed_dim, self.padding_idx)
 
         if embed_tokens is not None:
             self.embed_tokens.weight = embed_tokens.weight
@@ -605,10 +551,8 @@ class BartEncoder(BartPretrainedModel):
             config.max_position_embeddings,
             embed_dim,
         )
-        self.layers = nn.CellList(
-            [BartEncoderLayer(config) for _ in range(config.encoder_layers)]
-        )
-        self.layernorm_embedding = nn.LayerNorm([embed_dim], epsilon=0.00001)
+        self.layers = nn.CellList([BartEncoderLayer(config) for _ in range(config.encoder_layers)])
+        self.layernorm_embedding = nn.LayerNorm([embed_dim])
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
@@ -617,61 +561,85 @@ class BartEncoder(BartPretrainedModel):
     def get_input_embeddings(self):
         return self.embed_tokens
 
-    def set_input_embeddings(self, new_embeddings):
-        self.embed_tokens = new_embeddings
+    def set_input_embeddings(self, value):
+        self.embed_tokens = value
 
     def construct(
         self,
-        input_ids: Tensor = None,
-        attention_mask: Optional[Tensor] = None,
-        head_mask: Optional[Tensor] = None,
-        inputs_embeds: Optional[Tensor] = None,
+        input_ids: mindspore.Tensor = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, dict]:
-        output_attentions = (
-            output_attentions
-            if output_attentions is not None
-            else self.config.output_attentions
-        )
+    ) -> Union[Tuple, BaseModelOutput]:
+        r"""
+        Args:
+            input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
+                Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you
+                provide it.
+
+                Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
+                [`PreTrainedTokenizer.__call__`] for details.
+
+                [What are input IDs?](../glossary#input-ids)
+            attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
+                [What are attention masks?](../glossary#attention-mask)
+            head_mask (`mindspore.Tensor` of shape `(encoder_layers, encoder_attention_heads)`, *optional*):
+                Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
+
+                - 1 indicates the head is **not masked**,
+                - 0 indicates the head is **masked**.
+
+            inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+                Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation.
+                This is useful if you want more control over how to convert `input_ids` indices into associated vectors
+                than the model's internal embedding lookup matrix.
+            output_attentions (`bool`, *optional*):
+                Whether or not to return the attentions tensors of all attention layers. See `attentions` under
+                returned tensors for more detail.
+            output_hidden_states (`bool`, *optional*):
+                Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors
+                for more detail.
+            return_dict (`bool`, *optional*):
+                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
+        """
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
-            output_hidden_states
-            if output_hidden_states is not None
-            else self.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # retrieve input_ids and inputs_embeds
         if input_ids is not None and inputs_embeds is not None:
-            raise ValueError(
-                "You cannot specify both input_ids and inputs_embeds at the same time"
-            )
+            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
         if input_ids is not None:
-            _input = input_ids
+            input = input_ids
             input_ids = input_ids.view(-1, input_ids.shape[-1])
         elif inputs_embeds is not None:
-            _input = inputs_embeds[:, :, -1]
+            input = inputs_embeds[:, :, -1]
         else:
             raise ValueError("You have to specify either input_ids or inputs_embeds")
 
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids) * self.embed_scale
 
-        embed_pos = self.embed_positions(_input)
+        embed_pos = self.embed_positions(input)
 
         hidden_states = inputs_embeds + embed_pos
         hidden_states = self.layernorm_embedding(hidden_states)
-        hidden_states = ops.dropout(
-            hidden_states, p=self.dropout, training=self.training
-        )
+        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # expand attention_mask
         if attention_mask is not None:
             # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
-            attention_mask = _expand_mask(attention_mask, inputs_embeds.dtype)
+            attention_mask = _prepare_4d_attention_mask(attention_mask, inputs_embeds.dtype)
 
         encoder_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
@@ -688,27 +656,15 @@ class BartEncoder(BartPretrainedModel):
             if output_hidden_states:
                 encoder_states = encoder_states + (hidden_states,)
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
-            dropout_probability = random.uniform(0, 1)
-            if self.training and (
-                dropout_probability < self.layerdrop
-            ):  # skip the layer
+            to_drop = False
+            if self.training:
+                dropout_probability = ops.rand(1)
+                if dropout_probability < self.layerdrop:  # skip the layer
+                    to_drop = True
+
+            if to_drop:
                 layer_outputs = (None, None)
             else:
-                # TODO
-                # if self.gradient_checkpointing and self.training:
-
-                #     def create_custom_forward(module):
-                #         def custom_forward(*inputs):
-                #             return module(*inputs, output_attentions)
-
-                #         return custom_forward
-
-                #     layer_outputs = torch.utils.checkpoint.checkpoint(
-                #         create_custom_forward(encoder_layer),
-                #         hidden_states,
-                #         attention_mask,
-                #         (head_mask[idx] if head_mask is not None else None),
-                #     )
                 layer_outputs = encoder_layer(
                     hidden_states,
                     attention_mask,
@@ -725,19 +681,13 @@ class BartEncoder(BartPretrainedModel):
             encoder_states = encoder_states + (hidden_states,)
 
         if not return_dict:
-            return tuple(
-                v
-                for v in [hidden_states, encoder_states, all_attentions]
-                if v is not None
-            )
+            return tuple(v for v in [hidden_states, encoder_states, all_attentions] if v is not None)
         return BaseModelOutput(
-            last_hidden_state=hidden_states,
-            hidden_states=encoder_states,
-            attentions=all_attentions,
+            last_hidden_state=hidden_states, hidden_states=encoder_states, attentions=all_attentions
         )
 
 
-class BartDecoder(BartPretrainedModel):
+class BartDecoder(BartPreTrainedModel):
     """
     Transformer decoder consisting of *config.decoder_layers* layers. Each layer is a [`BartDecoderLayer`]
 
@@ -754,9 +704,7 @@ class BartDecoder(BartPretrainedModel):
         self.max_target_positions = config.max_position_embeddings
         self.embed_scale = math.sqrt(config.d_model) if config.scale_embedding else 1.0
 
-        self.embed_tokens = nn.Embedding(
-            config.vocab_size, config.d_model, padding_idx=self.padding_idx
-        )
+        self.embed_tokens = nn.Embedding(config.vocab_size, config.d_model, self.padding_idx)
 
         if embed_tokens is not None:
             self.embed_tokens.weight = embed_tokens.weight
@@ -765,10 +713,9 @@ class BartDecoder(BartPretrainedModel):
             config.max_position_embeddings,
             config.d_model,
         )
-        self.layers = nn.CellList(
-            [BartDecoderLayer(config) for _ in range(config.decoder_layers)]
-        )
-        self.layernorm_embedding = nn.LayerNorm([config.d_model], epsilon=0.00001)
+        self.layers = nn.CellList([BartDecoderLayer(config) for _ in range(config.decoder_layers)])
+
+        self.layernorm_embedding = nn.LayerNorm([config.d_model])
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
@@ -777,130 +724,143 @@ class BartDecoder(BartPretrainedModel):
     def get_input_embeddings(self):
         return self.embed_tokens
 
-    def set_input_embeddings(self, new_embeddings):
-        self.embed_tokens = new_embeddings
-
-    def _prepare_decoder_attention_mask(
-        self, attention_mask, input_shape, inputs_embeds, past_key_values_length
-    ):
-        # create causal mask
-        # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
-        combined_attention_mask = None
-        if input_shape[-1] > 1:
-            combined_attention_mask = _make_causal_mask(
-                input_shape,
-                inputs_embeds.dtype,
-                past_key_values_length=past_key_values_length,
-            )
-
-        if attention_mask is not None:
-            # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
-            expanded_attn_mask = _expand_mask(
-                attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1]
-            )
-            combined_attention_mask = (
-                expanded_attn_mask
-                if combined_attention_mask is None
-                else expanded_attn_mask + combined_attention_mask
-            )
-
-        return combined_attention_mask
+    def set_input_embeddings(self, value):
+        self.embed_tokens = value
 
     def construct(
         self,
-        input_ids: Tensor = None,
-        attention_mask: Optional[Tensor] = None,
-        encoder_hidden_states: Optional[Tensor] = None,
-        encoder_attention_mask: Optional[Tensor] = None,
-        head_mask: Optional[Tensor] = None,
-        cross_attn_head_mask: Optional[Tensor] = None,
-        past_key_values: Optional[List[Tensor]] = None,
-        inputs_embeds: Optional[Tensor] = None,
+        input_ids: mindspore.Tensor = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        encoder_hidden_states: Optional[mindspore.Tensor] = None,
+        encoder_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        past_key_values: Optional[List[mindspore.Tensor]] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, dict]:
-        output_attentions = (
-            output_attentions
-            if output_attentions is not None
-            else self.config.output_attentions
-        )
+    ) -> Union[Tuple, BaseModelOutputWithPastAndCrossAttentions]:
+        r"""
+        Args:
+            input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
+                Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you
+                provide it.
+
+                Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
+                [`PreTrainedTokenizer.__call__`] for details.
+
+                [What are input IDs?](../glossary#input-ids)
+            attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
+                [What are attention masks?](../glossary#attention-mask)
+            encoder_hidden_states (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length, hidden_size)`, *optional*):
+                Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention
+                of the decoder.
+            encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, encoder_sequence_length)`, *optional*):
+                Mask to avoid performing cross-attention on padding tokens indices of encoder input_ids. Mask values
+                selected in `[0, 1]`:
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
+                [What are attention masks?](../glossary#attention-mask)
+            head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
+                Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
+
+                - 1 indicates the head is **not masked**,
+                - 0 indicates the head is **masked**.
+
+            cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
+                Mask to nullify selected heads of the cross-attention modules in the decoder to avoid performing
+                cross-attention on hidden heads. Mask values selected in `[0, 1]`:
+
+                - 1 indicates the head is **not masked**,
+                - 0 indicates the head is **masked**.
+
+            past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+                Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
+                shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
+                shape `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`.
+
+                Contains pre-computed hidden-states (key and values in the self-attention blocks and in the
+                cross-attention blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
+
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those
+                that don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of
+                all `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            inputs_embeds (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+                Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation.
+                This is useful if you want more control over how to convert `input_ids` indices into associated vectors
+                than the model's internal embedding lookup matrix.
+            output_attentions (`bool`, *optional*):
+                Whether or not to return the attentions tensors of all attention layers. See `attentions` under
+                returned tensors for more detail.
+            output_hidden_states (`bool`, *optional*):
+                Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors
+                for more detail.
+            return_dict (`bool`, *optional*):
+                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
+        """
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
-            output_hidden_states
-            if output_hidden_states is not None
-            else self.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
         use_cache = use_cache if use_cache is not None else self.config.use_cache
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # retrieve input_ids and inputs_embeds
         if input_ids is not None and inputs_embeds is not None:
-            raise ValueError(
-                "You cannot specify both decoder_input_ids and decoder_inputs_embeds at the same time"
-            )
+            raise ValueError("You cannot specify both decoder_input_ids and decoder_inputs_embeds at the same time")
         if input_ids is not None:
-            _input = input_ids
-            input_shape = _input.shape
+            input = input_ids
+            input_shape = input.shape
             input_ids = input_ids.view(-1, input_shape[-1])
         elif inputs_embeds is not None:
             input_shape = inputs_embeds.shape[:-1]
-            _input = inputs_embeds[:, :, -1]
+            input = inputs_embeds[:, :, -1]
         else:
-            raise ValueError(
-                "You have to specify either decoder_input_ids or decoder_inputs_embeds"
-            )
+            raise ValueError("You have to specify either decoder_input_ids or decoder_inputs_embeds")
 
         # past_key_values_length
-        past_key_values_length = (
-            past_key_values[0][0].shape[2] if past_key_values is not None else 0
-        )
+        past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
 
         if inputs_embeds is None:
-            inputs_embeds = self.embed_tokens(_input) * self.embed_scale
+            inputs_embeds = self.embed_tokens(input) * self.embed_scale
 
-        attention_mask = self._prepare_decoder_attention_mask(
+        # 4d mask is passed through the layers
+        attention_mask = _prepare_4d_causal_attention_mask(
             attention_mask, input_shape, inputs_embeds, past_key_values_length
         )
 
         # expand encoder attention mask
         if encoder_hidden_states is not None and encoder_attention_mask is not None:
             # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
-            encoder_attention_mask = _expand_mask(
+            encoder_attention_mask = _prepare_4d_attention_mask(
                 encoder_attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1]
             )
 
         # embed positions
-        positions = self.embed_positions(_input, past_key_values_length)
+        positions = self.embed_positions(input, past_key_values_length)
 
         hidden_states = inputs_embeds + positions
         hidden_states = self.layernorm_embedding(hidden_states)
 
-        hidden_states = ops.dropout(
-            hidden_states, p=self.dropout, training=self.training
-        )
-
-        if self.gradient_checkpointing and self.training:
-            if use_cache:
-                # logger.warning_once(
-                #     "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
-                # )
-                use_cache = False
+        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
-        all_cross_attentions = (
-            () if (output_attentions and encoder_hidden_states is not None) else None
-        )
+        all_cross_attentions = () if (output_attentions and encoder_hidden_states is not None) else None
         next_decoder_cache = () if use_cache else None
 
         # check if head_mask/cross_attn_head_mask has a correct number of layers specified if desired
-        for attn_mask, mask_name in zip(
-            [head_mask, cross_attn_head_mask], ["head_mask", "cross_attn_head_mask"]
-        ):
+        for attn_mask, mask_name in zip([head_mask, cross_attn_head_mask], ["head_mask", "cross_attn_head_mask"]):
             if attn_mask is not None:
                 if attn_mask.shape[0] != (len(self.layers)):
                     raise ValueError(
@@ -912,34 +872,12 @@ class BartDecoder(BartPretrainedModel):
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
-            dropout_probability = random.uniform(0, 1)
-            if self.training and (dropout_probability < self.layerdrop):
-                continue
+            if self.training:
+                dropout_probability = ops.rand(1)
+                if dropout_probability < self.layerdrop:
+                    continue
 
-            past_key_value = (
-                past_key_values[idx] if past_key_values is not None else None
-            )
-
-            # TODO
-            # if self.gradient_checkpointing and self.training:
-
-            #     def create_custom_forward(module):
-            #         def custom_forward(*inputs):
-            #             # None for past_key_value
-            #             return module(*inputs, output_attentions, use_cache)
-
-            #         return custom_forward
-
-            #     layer_outputs = torch.utils.checkpoint.checkpoint(
-            #         create_custom_forward(decoder_layer),
-            #         hidden_states,
-            #         attention_mask,
-            #         encoder_hidden_states,
-            #         encoder_attention_mask,
-            #         head_mask[idx] if head_mask is not None else None,
-            #         cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None,
-            #         None,
-            #     )
+            past_key_value = past_key_values[idx] if past_key_values is not None else None
 
             layer_outputs = decoder_layer(
                 hidden_states,
@@ -948,14 +886,13 @@ class BartDecoder(BartPretrainedModel):
                 encoder_attention_mask=encoder_attention_mask,
                 layer_head_mask=(head_mask[idx] if head_mask is not None else None),
                 cross_attn_layer_head_mask=(
-                    cross_attn_head_mask[idx]
-                    if cross_attn_head_mask is not None
-                    else None
+                    cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None
                 ),
                 past_key_value=past_key_value,
                 output_attentions=output_attentions,
                 use_cache=use_cache,
             )
+
             hidden_states = layer_outputs[0]
 
             if use_cache:
@@ -975,13 +912,7 @@ class BartDecoder(BartPretrainedModel):
         if not return_dict:
             return tuple(
                 v
-                for v in [
-                    hidden_states,
-                    next_cache,
-                    all_hidden_states,
-                    all_self_attns,
-                    all_cross_attentions,
-                ]
+                for v in [hidden_states, next_cache, all_hidden_states, all_self_attns, all_cross_attentions]
                 if v is not None
             )
         return BaseModelOutputWithPastAndCrossAttentions(
@@ -993,18 +924,14 @@ class BartDecoder(BartPretrainedModel):
         )
 
 
-class BartModel(BartPretrainedModel):
-    "BartModel"
-    _keys_to_ignore_on_load_missing = [
-        "encoder.embed_tokens.weight",
-        "decoder.embed_tokens.weight",
-    ]
+class BartModel(BartPreTrainedModel):
+    _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config: BartConfig):
         super().__init__(config)
 
         padding_idx, vocab_size = config.pad_token_id, config.vocab_size
-        self.shared = nn.Embedding(vocab_size, config.d_model, padding_idx=padding_idx)
+        self.shared = nn.Embedding(vocab_size, config.d_model, padding_idx)
 
         self.encoder = BartEncoder(config, self.shared)
         self.decoder = BartDecoder(config, self.shared)
@@ -1012,40 +939,43 @@ class BartModel(BartPretrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
+    def _tie_weights(self):
+        if self.config.tie_word_embeddings:
+            self._tie_or_clone_weights(self.encoder.embed_tokens, self.shared)
+            self._tie_or_clone_weights(self.decoder.embed_tokens, self.shared)
+
     def get_input_embeddings(self):
         return self.shared
 
-    def set_input_embeddings(self, new_embeddings):
-        self.shared = new_embeddings
+    def set_input_embeddings(self, value):
+        self.shared = value
         self.encoder.embed_tokens = self.shared
         self.decoder.embed_tokens = self.shared
 
     def get_encoder(self):
-        "get_encoder"
         return self.encoder
 
     def get_decoder(self):
-        "get_decoder"
         return self.decoder
 
     def construct(
         self,
-        input_ids: Tensor = None,
-        attention_mask: Optional[Tensor] = None,
-        decoder_input_ids: Optional[Tensor] = None,
-        decoder_attention_mask: Optional[Tensor] = None,
-        head_mask: Optional[Tensor] = None,
-        decoder_head_mask: Optional[Tensor] = None,
-        cross_attn_head_mask: Optional[Tensor] = None,
-        encoder_outputs: Optional[List[Tensor]] = None,
-        past_key_values: Optional[List[Tensor]] = None,
-        inputs_embeds: Optional[Tensor] = None,
-        decoder_inputs_embeds: Optional[Tensor] = None,
+        input_ids: mindspore.Tensor = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        decoder_input_ids: Optional[mindspore.Tensor] = None,
+        decoder_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        decoder_head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        encoder_outputs: Optional[List[mindspore.Tensor]] = None,
+        past_key_values: Optional[List[mindspore.Tensor]] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        decoder_inputs_embeds: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, dict]:
+    ) -> Union[Tuple, Seq2SeqModelOutput]:
         # different to other models, Bart automatically creates decoder_input_ids from
         # input_ids if no decoder_input_ids are provided
         if decoder_input_ids is None and decoder_inputs_embeds is None:
@@ -1060,20 +990,12 @@ class BartModel(BartPretrainedModel):
                 input_ids, self.config.pad_token_id, self.config.decoder_start_token_id
             )
 
-        output_attentions = (
-            output_attentions
-            if output_attentions is not None
-            else self.config.output_attentions
-        )
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
-            output_hidden_states
-            if output_hidden_states is not None
-            else self.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
         use_cache = use_cache if use_cache is not None else self.config.use_cache
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if encoder_outputs is None:
             encoder_outputs = self.encoder(
@@ -1124,43 +1046,29 @@ class BartModel(BartPretrainedModel):
         )
 
 
-class BartForConditionalGeneration(BartPretrainedModel):
-    "BartForConditionalGeneration"
+class BartForConditionalGeneration(BartPreTrainedModel):
     base_model_prefix = "model"
-    _keys_to_ignore_on_load_missing = [
-        r"final_logits_bias",
-        r"lm_head.weight",
-        "encoder.embed_tokens.weight",
-        "decoder.embed_tokens.weight",
-    ]
+    _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight", "lm_head.weight"]
+    # _keys_to_ignore_on_load_missing = ["final_logits_bias"]
 
     def __init__(self, config: BartConfig):
         super().__init__(config)
         self.model = BartModel(config)
-        self.final_logits_bias = Parameter(
-            ops.zeros((1, self.model.shared.vocab_size)), requires_grad=False
-        )
-        self.lm_head = nn.Dense(
-            config.d_model, self.model.shared.vocab_size, has_bias=False
-        )
+        self.final_logits_bias = ops.zeros((1, self.model.shared.vocab_size))
+        self.lm_head = nn.Dense(config.d_model, self.model.shared.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
     def get_encoder(self):
-        "get_encoder"
         return self.model.get_encoder()
 
     def get_decoder(self):
-        "get_decoder"
         return self.model.get_decoder()
 
-    def resize_token_embeddings(
-        self, new_num_tokens: Optional[int] = None
-    ) -> nn.Embedding:
-        # 如果需要调用此方法, 需要在PretrainedModel上继承实现了该函数的Mixin类
-        new_embeddings = super().resize_token_embeddings(new_num_tokens)
-        self._resize_final_logits_bias(new_num_tokens)
+    def resize_token_embeddings(self, new_num_tokens: int, pad_to_multiple_of: Optional[int] = None) -> nn.Embedding:
+        new_embeddings = super().resize_token_embeddings(new_num_tokens, pad_to_multiple_of)
+        self._resize_final_logits_bias(new_embeddings.weight.shape[0])
         return new_embeddings
 
     def _resize_final_logits_bias(self, new_num_tokens: int) -> None:
@@ -1169,43 +1077,47 @@ class BartForConditionalGeneration(BartPretrainedModel):
             new_bias = self.final_logits_bias[:, :new_num_tokens]
         else:
             extra_bias = ops.zeros((1, new_num_tokens - old_num_tokens))
-            new_bias = ops.concat([self.final_logits_bias, extra_bias], axis=1)
-        self.final_logits_bias.set_data(new_bias)
+            new_bias = ops.cat([self.final_logits_bias, extra_bias], axis=1)
+        self.final_logits_bias = new_bias
 
     def get_output_embeddings(self):
-        "get_output_embeddings"
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-        "set_output_embeddings"
         self.lm_head = new_embeddings
 
     def construct(
         self,
-        input_ids: Tensor = None,
-        attention_mask: Optional[Tensor] = None,
-        decoder_input_ids: Optional[Tensor] = None,
-        decoder_attention_mask: Optional[Tensor] = None,
-        head_mask: Optional[Tensor] = None,
-        decoder_head_mask: Optional[Tensor] = None,
-        cross_attn_head_mask: Optional[Tensor] = None,
-        encoder_outputs: Optional[List[Tensor]] = None,
-        past_key_values: Optional[List[Tensor]] = None,
-        inputs_embeds: Optional[Tensor] = None,
-        decoder_inputs_embeds: Optional[Tensor] = None,
-        labels: Optional[Tensor] = None,
+        input_ids: mindspore.Tensor = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        decoder_input_ids: Optional[mindspore.Tensor] = None,
+        decoder_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        decoder_head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        encoder_outputs: Optional[List[mindspore.Tensor]] = None,
+        past_key_values: Optional[List[mindspore.Tensor]] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        decoder_inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, dict]:
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+    ) -> Union[Tuple, Seq2SeqLMOutput]:
+        r"""
+        labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
+            config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
+            (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+
+        Returns:
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if labels is not None:
-            # if use_cache:
-            #     logger.warning("The `use_cache` argument is changed to `False` since `labels` is provided.")
+            if use_cache:
+                logger.warning("The `use_cache` argument is changed to `False` since `labels` is provided.")
             use_cache = False
             if decoder_input_ids is None and decoder_inputs_embeds is None:
                 decoder_input_ids = shift_tokens_right(
@@ -1230,22 +1142,16 @@ class BartForConditionalGeneration(BartPretrainedModel):
             return_dict=return_dict,
         )
 
-        # 未实现返回Dataclass, 返回字典模式可能出错
         lm_logits = self.lm_head(outputs[0])
         lm_logits = lm_logits + self.final_logits_bias
 
         masked_lm_loss = None
         if labels is not None:
-            loss_fct = nn.CrossEntropyLoss()
-            masked_lm_loss = loss_fct(
-                lm_logits.view(-1, self.config.vocab_size), labels.view(-1)
-            )
+            masked_lm_loss = ops.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (lm_logits,) + outputs[1:]
-            return (
-                ((masked_lm_loss,) + output) if masked_lm_loss is not None else output
-            )
+            return ((masked_lm_loss,) + output) if masked_lm_loss is not None else output
 
         return Seq2SeqLMOutput(
             loss=masked_lm_loss,
@@ -1270,11 +1176,20 @@ class BartForConditionalGeneration(BartPretrainedModel):
         cross_attn_head_mask=None,
         use_cache=None,
         encoder_outputs=None,
+        **kwargs,
     ):
-        "prepare_inputs_for_generation"
         # cut decoder_input_ids if past_key_values is used
         if past_key_values is not None:
-            decoder_input_ids = decoder_input_ids[:, -1:]
+            past_length = past_key_values[0][0].shape[2]
+
+            # Some generation methods already pass only the last input ID
+            if decoder_input_ids.shape[1] > past_length:
+                remove_prefix_length = past_length
+            else:
+                # Default to old behavior: keep only final ID
+                remove_prefix_length = decoder_input_ids.shape[1] - 1
+
+            decoder_input_ids = decoder_input_ids[:, remove_prefix_length:]
 
         return {
             "input_ids": None,  # encoder_outputs is defined. input_ids not needed
@@ -1289,11 +1204,8 @@ class BartForConditionalGeneration(BartPretrainedModel):
             "use_cache": use_cache,  # change this to avoid caching (presumably for debugging)
         }
 
-    def prepare_decoder_input_ids_from_labels(self, labels: Tensor):
-        "prepare_decoder_input_ids_from_labels"
-        return shift_tokens_right(
-            labels, self.config.pad_token_id, self.config.decoder_start_token_id
-        )
+    def prepare_decoder_input_ids_from_labels(self, labels: mindspore.Tensor):
+        return shift_tokens_right(labels, self.config.pad_token_id, self.config.decoder_start_token_id)
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
@@ -1301,21 +1213,14 @@ class BartForConditionalGeneration(BartPretrainedModel):
         for layer_past in past_key_values:
             # cached cross_attention states don't have to be reordered -> they are always the same
             reordered_past += (
-                tuple(
-                    past_state.index_select(0, beam_idx)
-                    for past_state in layer_past[:2]
-                )
+                tuple(past_state.index_select(0, beam_idx) for past_state in layer_past[:2])
                 + layer_past[2:],
             )
         return reordered_past
 
 
-class BartForSequenceClassification(BartPretrainedModel):
-    "BartForSequenceClassification"
-    _keys_to_ignore_on_load_missing = [
-        "encoder.embed_tokens.weight",
-        "decoder.embed_tokens.weight",
-    ]
+class BartForSequenceClassification(BartPreTrainedModel):
+    _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config: BartConfig, **kwargs):
         super().__init__(config, **kwargs)
@@ -1332,25 +1237,28 @@ class BartForSequenceClassification(BartPretrainedModel):
 
     def construct(
         self,
-        input_ids: Tensor = None,
-        attention_mask: Optional[Tensor] = None,
-        decoder_input_ids: Optional[Tensor] = None,
-        decoder_attention_mask: Optional[Tensor] = None,
-        head_mask: Optional[Tensor] = None,
-        decoder_head_mask: Optional[Tensor] = None,
-        cross_attn_head_mask: Optional[Tensor] = None,
-        encoder_outputs: Optional[List[Tensor]] = None,
-        inputs_embeds: Optional[Tensor] = None,
-        decoder_inputs_embeds: Optional[Tensor] = None,
-        labels: Optional[Tensor] = None,
+        input_ids: mindspore.Tensor = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        decoder_input_ids: Optional[mindspore.Tensor] = None,
+        decoder_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        decoder_head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        encoder_outputs: Optional[List[mindspore.Tensor]] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        decoder_inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, dict]:
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+    ) -> Union[Tuple, Seq2SeqSequenceClassifierOutput]:
+        r"""
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None:
             use_cache = False
 
@@ -1375,20 +1283,16 @@ class BartForSequenceClassification(BartPretrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-
-        # 未实现返回Dataclass, 返回字典模式可能出错
         hidden_states = outputs[0]  # last hidden state
 
-        eos_mask = ops.equal(input_ids, self.config.eos_token_id)
+        eos_mask = input_ids.eq(self.config.eos_token_id)
 
-        # do not support unique_consecutive on Ascend
         # if len(ops.unique_consecutive(eos_mask.sum(1))) > 1:
         #     raise ValueError("All examples must have the same number of <eos> tokens.")
 
-        sentence_representation = hidden_states[eos_mask].view(
-            hidden_states.shape[0], -1, hidden_states.shape[-1]
-        )[:, -1, :]
-
+        sentence_representation = hidden_states[eos_mask].view(hidden_states.shape[0], -1, hidden_states.shape[-1])[
+            :, -1, :
+        ]
         logits = self.classification_head(sentence_representation)
 
         loss = None
@@ -1396,27 +1300,20 @@ class BartForSequenceClassification(BartPretrainedModel):
             if self.config.problem_type is None:
                 if self.config.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.config.num_labels > 1 and (
-                    labels.dtype in (mindspore.int64, mindspore.int32)
-                ):
+                elif self.config.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
-                loss_fct = nn.MSELoss()
                 if self.config.num_labels == 1:
-                    loss = loss_fct(logits.squeeze(), labels.squeeze())
+                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = loss_fct(logits, labels)
+                    loss = ops.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss_fct = nn.CrossEntropyLoss()
-                loss = loss_fct(
-                    logits.view(-1, self.config.num_labels), labels.view(-1)
-                )
+                loss = ops.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss_fct = nn.BCEWithLogitsLoss()
-                loss = loss_fct(logits, labels)
+                loss = ops.binary_cross_entropy_with_logits(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[1:]
             return ((loss,) + output) if loss is not None else output
@@ -1434,12 +1331,8 @@ class BartForSequenceClassification(BartPretrainedModel):
         )
 
 
-class BartForQuestionAnswering(BartPretrainedModel):
-    "BartForQuestionAnswering"
-    _keys_to_ignore_on_load_missing = [
-        "encoder.embed_tokens.weight",
-        "decoder.embed_tokens.weight",
-    ]
+class BartForQuestionAnswering(BartPreTrainedModel):
+    _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
     def __init__(self, config):
         super().__init__(config)
@@ -1455,26 +1348,34 @@ class BartForQuestionAnswering(BartPretrainedModel):
 
     def construct(
         self,
-        input_ids: Tensor = None,
-        attention_mask: Optional[Tensor] = None,
-        decoder_input_ids: Optional[Tensor] = None,
-        decoder_attention_mask: Optional[Tensor] = None,
-        head_mask: Optional[Tensor] = None,
-        decoder_head_mask: Optional[Tensor] = None,
-        cross_attn_head_mask: Optional[Tensor] = None,
-        encoder_outputs: Optional[List[Tensor]] = None,
-        start_positions: Optional[Tensor] = None,
-        end_positions: Optional[Tensor] = None,
-        inputs_embeds: Optional[Tensor] = None,
-        decoder_inputs_embeds: Optional[Tensor] = None,
+        input_ids: mindspore.Tensor = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        decoder_input_ids: Optional[mindspore.Tensor] = None,
+        decoder_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        decoder_head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        encoder_outputs: Optional[List[mindspore.Tensor]] = None,
+        start_positions: Optional[mindspore.Tensor] = None,
+        end_positions: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        decoder_inputs_embeds: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, dict]:
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+    ) -> Union[Tuple, Seq2SeqQuestionAnsweringModelOutput]:
+        r"""
+        start_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the start of the labelled span for computing the token classification loss.
+            Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
+            are not taken into account for computing the loss.
+        end_positions (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for position (index) of the end of the labelled span for computing the token classification loss.
+            Positions are clamped to the length of the sequence (*sequence_length*). Position outside of the sequence
+            are not taken into account for computing the loss.
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if start_positions is not None and end_positions is not None:
             use_cache = False
 
@@ -1495,7 +1396,6 @@ class BartForQuestionAnswering(BartPretrainedModel):
             return_dict=return_dict,
         )
 
-        # 未实现返回Dataclass, 返回字典模式可能出错
         sequence_output = outputs[0]
 
         logits = self.qa_outputs(sequence_output)
@@ -1506,18 +1406,17 @@ class BartForQuestionAnswering(BartPretrainedModel):
         total_loss = None
         if start_positions is not None and end_positions is not None:
             # If we are on multi-GPU, split add a dimension
-            if len(start_positions.size()) > 1:
+            if len(start_positions.shape) > 1:
                 start_positions = start_positions.squeeze(-1)
-            if len(end_positions.size()) > 1:
+            if len(end_positions.shape) > 1:
                 end_positions = end_positions.squeeze(-1)
             # sometimes the start/end positions are outside our model inputs, we ignore these terms
             ignored_index = start_logits.shape[1]
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            loss_fct = nn.CrossEntropyLoss(ignore_index=ignored_index)
-            start_loss = loss_fct(start_logits, start_positions)
-            end_loss = loss_fct(end_logits, end_positions)
+            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:
@@ -1541,7 +1440,7 @@ class BartForQuestionAnswering(BartPretrainedModel):
         )
 
 
-class BartDecoderWrapper(BartPretrainedModel):
+class BartDecoderWrapper(BartPreTrainedModel):
     """
     This wrapper class is a helper class to correctly load pretrained checkpoints when the causal language model is
     used in combination with the [`EncoderDecoderModel`] framework.
@@ -1555,9 +1454,8 @@ class BartDecoderWrapper(BartPretrainedModel):
         return self.decoder(*args, **kwargs)
 
 
-class BartForCausalLM(BartPretrainedModel):
-    "BartForCausalLM"
-    _keys_to_ignore_on_load_missing = ["lm_head.weight"]
+class BartForCausalLM(BartPreTrainedModel):
+    _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
         config = copy.deepcopy(config)
@@ -1574,53 +1472,127 @@ class BartForCausalLM(BartPretrainedModel):
     def get_input_embeddings(self):
         return self.model.decoder.embed_tokens
 
-    def set_input_embeddings(self, new_embeddings):
-        self.model.decoder.embed_tokens = new_embeddings
+    def set_input_embeddings(self, value):
+        self.model.decoder.embed_tokens = value
 
     def get_output_embeddings(self):
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
-        "set_output_embeddings"
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
-        "set_decoder"
         self.model.decoder = decoder
 
     def get_decoder(self):
-        "get_decoder"
         return self.model.decoder
 
     def construct(
         self,
-        input_ids: Tensor = None,
-        attention_mask: Optional[Tensor] = None,
-        encoder_hidden_states: Optional[Tensor] = None,
-        encoder_attention_mask: Optional[Tensor] = None,
-        head_mask: Optional[Tensor] = None,
-        cross_attn_head_mask: Optional[Tensor] = None,
-        past_key_values: Optional[List[Tensor]] = None,
-        inputs_embeds: Optional[Tensor] = None,
-        labels: Optional[Tensor] = None,
+        input_ids: mindspore.Tensor = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        encoder_hidden_states: Optional[mindspore.Tensor] = None,
+        encoder_attention_mask: Optional[mindspore.Tensor] = None,
+        head_mask: Optional[mindspore.Tensor] = None,
+        cross_attn_head_mask: Optional[mindspore.Tensor] = None,
+        past_key_values: Optional[List[mindspore.Tensor]] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, dict]:
-        output_attentions = (
-            output_attentions
-            if output_attentions is not None
-            else self.config.output_attentions
-        )
+    ) -> Union[Tuple, CausalLMOutputWithCrossAttentions]:
+        r"""
+        Args:
+            input_ids (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
+                Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you
+                provide it.
+
+                Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
+                [`PreTrainedTokenizer.__call__`] for details.
+
+                [What are input IDs?](../glossary#input-ids)
+            attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+
+                [What are attention masks?](../glossary#attention-mask)
+            encoder_hidden_states  (`mindspore.Tensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
+                Sequence of hidden-states at the output of the last layer of the encoder. Used in the cross-attention
+                if the model is configured as a decoder.
+            encoder_attention_mask (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Mask to avoid performing attention on the padding token indices of the encoder input. This mask is used
+                in the cross-attention if the model is configured as a decoder. Mask values selected in `[0, 1]`:
+            head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
+                Mask to nullify selected heads of the attention modules. Mask values selected in `[0, 1]`:
+
+                - 1 indicates the head is **not masked**,
+                - 0 indicates the head is **masked**.
+
+            cross_attn_head_mask (`mindspore.Tensor` of shape `(decoder_layers, decoder_attention_heads)`, *optional*):
+                Mask to nullify selected heads of the cross-attention modules. Mask values selected in `[0, 1]`:
+
+                - 1 indicates the head is **not masked**,
+                - 0 indicates the head is **masked**.
+
+            past_key_values (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+                Tuple of `tuple(mindspore.Tensor)` of length `config.n_layers`, with each tuple having 2 tensors of
+                shape `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and 2 additional tensors of
+                shape `(batch_size, num_heads, encoder_sequence_length, embed_size_per_head)`. The two additional
+                tensors are only required when the model is used as a decoder in a Sequence to Sequence model.
+
+                Contains pre-computed hidden-states (key and values in the self-attention blocks and in the
+                cross-attention blocks) that can be used (see `past_key_values` input) to speed up sequential decoding.
+
+                If `past_key_values` are used, the user can optionally input only the last `decoder_input_ids` (those
+                that don't have their past key value states given to this model) of shape `(batch_size, 1)` instead of
+                all `decoder_input_ids` of shape `(batch_size, sequence_length)`.
+            labels (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
+                config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
+                (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding
+                (see `past_key_values`).
+
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+            output_attentions (`bool`, *optional*):
+                Whether or not to return the attentions tensors of all attention layers. See `attentions` under
+                returned tensors for more detail.
+            output_hidden_states (`bool`, *optional*):
+                Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors
+                for more detail.
+            return_dict (`bool`, *optional*):
+                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
+
+        Returns:
+
+        Example:
+
+        ```python
+        >>> from transformers import AutoTokenizer, BartForCausalLM
+
+        >>> tokenizer = AutoTokenizer.from_pretrained("facebook/bart-base")
+        >>> model = BartForCausalLM.from_pretrained("facebook/bart-base", add_cross_attention=False)
+        >>> assert model.config.is_decoder, f"{model.__class__} has to be configured as a decoder."
+        >>> inputs = tokenizer("Hello, my dog is cute", return_tensors="pt")
+        >>> outputs = model(**inputs)
+
+        >>> logits = outputs.logits
+        >>> expected_shape = [1, inputs.input_ids.shape[-1], model.config.vocab_size]
+        >>> list(logits.shape) == expected_shape
+        True
+        ```"""
+
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
-            output_hidden_states
-            if output_hidden_states is not None
-            else self.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
         outputs = self.model.decoder(
@@ -1638,13 +1610,11 @@ class BartForCausalLM(BartPretrainedModel):
             return_dict=return_dict,
         )
 
-        # 未实现返回Dataclass, 返回字典模式可能出错
         logits = self.lm_head(outputs[0])
 
         loss = None
         if labels is not None:
-            loss_fct = nn.CrossEntropyLoss()
-            loss = loss_fct(logits.view(-1, self.config.vocab_size), labels.view(-1))
+            loss = ops.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -1660,15 +1630,23 @@ class BartForCausalLM(BartPretrainedModel):
         )
 
     def prepare_inputs_for_generation(
-        self, input_ids, past_key_values=None, attention_mask=None, use_cache=None
+        self, input_ids, past_key_values=None, attention_mask=None, use_cache=None, **kwargs
     ):
-        "prepare_inputs_for_generation"
         # if model is used as a decoder in encoder-decoder model, the decoder attention mask is created on the fly
         if attention_mask is None:
-            attention_mask = ops.ones_like(input_ids)
+            attention_mask = input_ids.new_ones(input_ids.shape)
 
         if past_key_values:
-            input_ids = input_ids[:, -1:]
+            past_length = past_key_values[0][0].shape[2]
+
+            # Some generation methods already pass only the last input ID
+            if input_ids.shape[1] > past_length:
+                remove_prefix_length = past_length
+            else:
+                # Default to old behavior: keep only final ID
+                remove_prefix_length = input_ids.shape[1] - 1
+
+            input_ids = input_ids[:, remove_prefix_length:]
         # first step, decoder_cached_states are empty
         return {
             "input_ids": input_ids,  # encoder_outputs is defined. input_ids not needed
@@ -1682,18 +1660,16 @@ class BartForCausalLM(BartPretrainedModel):
         reordered_past = ()
         for layer_past in past_key_values:
             reordered_past += (
-                tuple(
-                    past_state.index_select(0, beam_idx) for past_state in layer_past
-                ),
+                tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),
             )
         return reordered_past
 
-
 __all__ = [
+    "BART_PRETRAINED_MODEL_ARCHIVE_LIST",
     "BartForCausalLM",
     "BartForConditionalGeneration",
     "BartForQuestionAnswering",
     "BartForSequenceClassification",
     "BartModel",
-    "BartPretrainedModel",
+    "BartPreTrainedModel",
 ]
