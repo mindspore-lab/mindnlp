@@ -832,7 +832,7 @@ class GenerationMixin:
                 decoder_attention_mask = model_kwargs["decoder_attention_mask"]
                 model_kwargs["decoder_attention_mask"] = ops.cat(
                     [decoder_attention_mask, decoder_attention_mask.new_ones((decoder_attention_mask.shape[0], 1))],
-                    dim=-1,
+                    axis=-1,
                 )
 
         return model_kwargs
@@ -3242,7 +3242,6 @@ class GenerationMixin:
 
             next_token_scores, _indices = ops.sort(next_token_scores, descending=True, axis=1)
             next_tokens = ops.gather_elements(next_tokens, -1, _indices)
-
             next_indices = ops.div(next_tokens, vocab_size, rounding_mode="floor")
             next_tokens = next_tokens % vocab_size
 

@@ -279,7 +279,7 @@ TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING = {
     # "mpt": ["Wqkv"],
     # "RefinedWebModel": ["query_key_value"],
     # "RefinedWeb": ["query_key_value"],
-    # "falcon": ["query_key_value"],
+    "falcon": ["query_key_value"],
     # "btlm": ["c_proj", "c_attn"],
     # "codegen": ["qkv_proj"],
 }

@@ -1,4 +1,4 @@
-# Copyright 2023 Huawei Technologies Co., Ltd
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,16 +13,13 @@
 # limitations under the License.
 # ============================================================================
 """
-mbart Model.
+Phi2 Model init
 """
-from . import modeling_mbart, configuration_mbart, tokenization_mbart, tokenization_mbart_fast
-from .modeling_mbart import *
-from .configuration_mbart import *
-from .tokenization_mbart import *
-from .tokenization_mbart_fast import *
+from . import configuration_phi, modeling_phi
+
+from .configuration_phi import *
+from .modeling_phi import *
 
 __all__ = []
-__all__.extend(modeling_mbart.__all__)
-__all__.extend(configuration_mbart.__all__)
-__all__.extend(tokenization_mbart.__all__)
-__all__.extend(tokenization_mbart_fast.__all__)
+__all__.extend(configuration_phi.__all__)
+__all__.extend(modeling_phi.__all__)

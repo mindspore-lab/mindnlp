@@ -1,10 +1,5 @@
 # coding=utf-8
-# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
-#
-# This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
-# and OPT implementations in this library. It has been modified from its
-# original forms to accommodate minor architectural differences compared
-# to GPT-NeoX and OPT used by the Meta AI team that trained the model.
+# Copyright 2023 Microsoft and the HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,51 +12,62 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ============================================================================
 # pylint: disable=invalid-name
 # pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
+# pylint: disable=unexpected-keyword-arg
+# pylint: disable=missing-class-docstring
 # pylint: disable=arguments-renamed
-""" MindSpore LLaMA model."""
+# pylint: disable=missing-function-docstring
+# pylint: disable=unused-argument
+# pylint: disable=invalid-unary-operand-type
+""" MindSpore Phi model."""
+
 import math
 from typing import List, Optional, Tuple, Union
+
 import numpy as np
 import mindspore
-from mindspore import ops, nn, Parameter, Tensor
-from mindspore.common.initializer import initializer, Normal
+from mindspore import nn, ops, Tensor
+from mindspore.common.initializer import Normal, initializer
 
-from mindnlp.utils import logging
+from mindnlp.utils import logging, get_default_dtype
 from ...activations import ACT2FN
+from ...cache_utils import Cache, DynamicCache
 from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
-from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, SequenceClassifierOutputWithPast
+from ...modeling_outputs import (
+    BaseModelOutputWithPast,
+    CausalLMOutputWithPast,
+    SequenceClassifierOutputWithPast,
+    TokenClassifierOutput,
+)
 from ...modeling_utils import PreTrainedModel
-from ...ms_utils import ALL_LAYERNORM_LAYERS
-from .configuration_llama import LlamaConfig
-
+from .configuration_phi import PhiConfig
 
 logger = logging.get_logger(__name__)
 
 
-class LlamaRMSNorm(nn.Cell):
-    def __init__(self, hidden_size, eps=1e-6):
-        """
-        LlamaRMSNorm is equivalent to T5LayerNorm
-        """
-        super().__init__()
-        self.weight = Parameter(ops.ones(hidden_size), 'weight')
-        self.variance_epsilon = eps
-
-    def construct(self, hidden_states):
-        input_dtype = hidden_states.dtype
-        hidden_states = hidden_states.to(mindspore.float32)
-        variance = hidden_states.pow(2).mean(-1, keep_dims=True)
-        hidden_states = hidden_states * ops.rsqrt(variance + self.variance_epsilon)
-        return self.weight.astype(input_dtype) * hidden_states.astype(input_dtype)
+PHI_PRETRAINED_MODEL_ARCHIVE_LIST = [
+    "microsoft/phi-2",
+    # See all Phi models at https://huggingface.co/models?filter=phi
+]
 
 
-ALL_LAYERNORM_LAYERS.append(LlamaRMSNorm)
+# Copied from transformers.models.llama.modeling_llama._get_unpad_data
+def _get_unpad_data(attention_mask):
+    seqlens_in_batch = attention_mask.sum(dim=-1, dtype=mindspore.int32)
+    indices = ops.nonzero(attention_mask.flatten()).flatten()
+    max_seqlen_in_batch = seqlens_in_batch.max().item()
+    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
+    return (
+        indices,
+        cu_seqlens,
+        max_seqlen_in_batch,
+    )
 
 
-class LlamaRotaryEmbedding(nn.Cell):
+# Copied from transformers.models.llama.modeling_llama.LlamaRotaryEmbedding with Llama->Phi
+class PhiRotaryEmbedding(nn.Cell):
     def __init__(self, dim, max_position_embeddings=2048, base=10000):
         super().__init__()
 
@@ -71,15 +77,16 @@ class LlamaRotaryEmbedding(nn.Cell):
         inv_freq = 1.0 / (self.base ** (ops.arange(0, self.dim, 2).float() / self.dim))
         self.inv_freq = inv_freq
 
+        # Build here to make `torch.jit.trace` work.
         self._set_cos_sin_cache(
-            seq_len=max_position_embeddings, dtype=mindspore.float32
+            seq_len=max_position_embeddings, dtype=get_default_dtype()
         )
 
     def _set_cos_sin_cache(self, seq_len, dtype):
         self.max_seq_len_cached = seq_len
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
 
-        freqs = ops.einsum("i,j->ij", t, self.inv_freq)
+        freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
         emb = ops.cat((freqs, freqs), axis=-1)
         self.cos_cached = emb.cos().to(dtype)
@@ -96,8 +103,9 @@ class LlamaRotaryEmbedding(nn.Cell):
         )
 
 
-class LlamaLinearScalingRotaryEmbedding(LlamaRotaryEmbedding):
-    """LlamaRotaryEmbedding extended with linear scaling. Credits to the Reddit user /u/kaiokendev"""
+# Copied from transformers.models.llama.modeling_llama.LlamaLinearScalingRotaryEmbedding with Llama->Phi
+class PhiLinearScalingRotaryEmbedding(PhiRotaryEmbedding):
+    """PhiRotaryEmbedding extended with linear scaling. Credits to the Reddit user /u/kaiokendev"""
 
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
         self.scaling_factor = scaling_factor
@@ -108,15 +116,16 @@ class LlamaLinearScalingRotaryEmbedding(LlamaRotaryEmbedding):
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
         t = t / self.scaling_factor
 
-        freqs = ops.einsum("i,j->ij", t, self.inv_freq)
+        freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
         emb = ops.cat((freqs, freqs), axis=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
 
-class LlamaDynamicNTKScalingRotaryEmbedding(LlamaRotaryEmbedding):
-    """LlamaRotaryEmbedding extended with Dynamic NTK scaling. Credits to the Reddit users /u/bloc97 and /u/emozilla"""
+# Copied from transformers.models.llama.modeling_llama.LlamaDynamicNTKScalingRotaryEmbedding with Llama->Phi
+class PhiDynamicNTKScalingRotaryEmbedding(PhiRotaryEmbedding):
+    """PhiRotaryEmbedding extended with Dynamic NTK scaling. Credits to the Reddit users /u/bloc97 and /u/emozilla"""
 
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
         self.scaling_factor = scaling_factor
@@ -134,21 +143,22 @@ class LlamaDynamicNTKScalingRotaryEmbedding(LlamaRotaryEmbedding):
 
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
 
-        freqs = ops.einsum("i,j->ij", t, self.inv_freq)
+        freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
         emb = ops.cat((freqs, freqs), axis=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
 
 
+# Copied from transformers.models.llama.modeling_llama.rotate_half
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
-    # x1 = x[..., : x.shape[-1] // 2]
-    # x2 = x[..., x.shape[-1] // 2 :]
-    (x1, x2) = x.tensor_split(2, axis=-1)
-    return ops.cat((-x2, x1), axis=x.ndim-1)
+    x1 = x[..., : x.shape[-1] // 2]
+    x2 = x[..., x.shape[-1] // 2 :]
+    return ops.cat((-x2, x1), axis=-1)
 
 
+# Copied from transformers.models.llama.modeling_llama.apply_rotary_pos_emb
 def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
     """Applies Rotary Position Embedding to the query and key tensors.
 
@@ -177,40 +187,23 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
     return q_embed, k_embed
 
 
-class LlamaMLP(nn.Cell):
+# Copied from transformers.models.clip.modeling_clip.CLIPMLP with CLIP->Phi
+class PhiMLP(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.hidden_size = config.hidden_size
-        self.intermediate_size = config.intermediate_size
-        self.gate_proj = nn.Dense(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.up_proj = nn.Dense(self.hidden_size, self.intermediate_size, has_bias=False)
-        self.down_proj = nn.Dense(self.intermediate_size, self.hidden_size, has_bias=False)
-        self.act_fn = ACT2FN[config.hidden_act]
+        self.activation_fn = ACT2FN[config.hidden_act]
+        self.fc1 = nn.Dense(config.hidden_size, config.intermediate_size)
+        self.fc2 = nn.Dense(config.intermediate_size, config.hidden_size)
 
-    def construct(self, x):
-        if self.config.pretraining_tp > 1:
-            slices = self.intermediate_size // self.config.pretraining_tp
-            gate_proj_slices = self.gate_proj.weight.split(slices, axis=0)
-            up_proj_slices = self.up_proj.weight.split(slices, axis=0)
-            down_proj_slices = self.down_proj.weight.split(slices, axis=1)
-
-            gate_proj = ops.cat(
-                [ops.dense(x, gate_proj_slices[i]) for i in range(self.config.pretraining_tp)], axis=-1
-            )
-            up_proj = ops.cat([ops.dense(x, up_proj_slices[i]) for i in range(self.config.pretraining_tp)], axis=-1)
-
-            intermediate_states = (self.act_fn(gate_proj) * up_proj).split(slice, axis=2)
-            down_proj = [
-                ops.dense(intermediate_states[i], down_proj_slices[i]) for i in range(self.config.pretraining_tp)
-            ]
-            down_proj = sum(down_proj)
-        else:
-            down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
-
-        return down_proj
+    def construct(self, hidden_states: mindspore.Tensor) -> mindspore.Tensor:
+        hidden_states = self.fc1(hidden_states)
+        hidden_states = self.activation_fn(hidden_states)
+        hidden_states = self.fc2(hidden_states)
+        return hidden_states
 
 
+# Copied from transformers.models.llama.modeling_llama.repeat_kv with llama->phi
 def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
     """
     This is the equivalent of torch.repeat_interleave(x, dim=1, repeats=n_rep). The hidden states go from (batch,
@@ -219,16 +212,24 @@ def repeat_kv(hidden_states: mindspore.Tensor, n_rep: int) -> mindspore.Tensor:
     batch, num_key_value_heads, slen, head_dim = hidden_states.shape
     if n_rep == 1:
         return hidden_states
-    hidden_states = hidden_states[:, :, None, :, :].broadcast_to((batch, num_key_value_heads, n_rep, slen, head_dim))
+    hidden_states = hidden_states[:, :, None, :, :].expand(batch, num_key_value_heads, n_rep, slen, head_dim)
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
-class LlamaAttention(nn.Cell):
+class PhiAttention(nn.Cell):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
-    def __init__(self, config: LlamaConfig):
+    def __init__(self, config: PhiConfig, layer_idx: Optional[int] = None):
         super().__init__()
         self.config = config
+        self.layer_idx = layer_idx
+        if layer_idx is None:
+            logger.warning_once(
+                f"Instantiating {self.__class__.__name__} without passing `layer_idx` is not recommended and will "
+                "to errors during the forward call, if caching is used. Please make sure to provide a `layer_idx` "
+                "when creating this class."
+            )
+
         self.attention_dropout = config.attention_dropout
         self.hidden_size = config.hidden_size
         self.num_heads = config.num_attention_heads
@@ -237,6 +238,7 @@ class LlamaAttention(nn.Cell):
         self.num_key_value_groups = self.num_heads // self.num_key_value_heads
         self.max_position_embeddings = config.max_position_embeddings
         self.rope_theta = config.rope_theta
+        self.partial_rotary_factor = config.partial_rotary_factor
         self.is_causal = True
 
         if (self.head_dim * self.num_heads) != self.hidden_size:
@@ -245,16 +247,27 @@ class LlamaAttention(nn.Cell):
                 f" and `num_heads`: {self.num_heads})."
             )
 
-        self.q_proj = nn.Dense(self.hidden_size, self.num_heads * self.head_dim, has_bias=config.attention_bias)
-        self.k_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=config.attention_bias)
-        self.v_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=config.attention_bias)
-        self.o_proj = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=config.attention_bias)
+        self.q_proj = nn.Dense(self.hidden_size, self.num_heads * self.head_dim, has_bias=True)
+        self.k_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=True)
+        self.v_proj = nn.Dense(self.hidden_size, self.num_key_value_heads * self.head_dim, has_bias=True)
+        self.dense = nn.Dense(self.num_heads * self.head_dim, self.hidden_size, has_bias=True)
+
+        self.qk_layernorm = config.qk_layernorm
+        if self.qk_layernorm:
+            self.q_layernorm = nn.LayerNorm(
+                [config.hidden_size // self.num_heads], epsilon=config.layer_norm_eps, elementwise_affine=True
+            )
+            self.k_layernorm = nn.LayerNorm(
+                [config.hidden_size // self.num_heads], epsilon=config.layer_norm_eps, elementwise_affine=True
+            )
+
         self._init_rope()
+        self.is_ascend = mindspore.get_context('device_target') == 'Ascend'
 
     def _init_rope(self):
         if self.config.rope_scaling is None:
-            self.rotary_emb = LlamaRotaryEmbedding(
-                self.head_dim,
+            self.rotary_emb = PhiRotaryEmbedding(
+                int(self.partial_rotary_factor * self.head_dim),
                 max_position_embeddings=self.max_position_embeddings,
                 base=self.rope_theta,
             )
@@ -262,15 +275,15 @@ class LlamaAttention(nn.Cell):
             scaling_type = self.config.rope_scaling["type"]
             scaling_factor = self.config.rope_scaling["factor"]
             if scaling_type == "linear":
-                self.rotary_emb = LlamaLinearScalingRotaryEmbedding(
-                    self.head_dim,
+                self.rotary_emb = PhiLinearScalingRotaryEmbedding(
+                    int(self.partial_rotary_factor * self.head_dim),
                     max_position_embeddings=self.max_position_embeddings,
                     scaling_factor=scaling_factor,
                     base=self.rope_theta,
                 )
             elif scaling_type == "dynamic":
-                self.rotary_emb = LlamaDynamicNTKScalingRotaryEmbedding(
-                    self.head_dim,
+                self.rotary_emb = PhiDynamicNTKScalingRotaryEmbedding(
+                    int(self.partial_rotary_factor * self.head_dim),
                     max_position_embeddings=self.max_position_embeddings,
                     scaling_factor=scaling_factor,
                     base=self.rope_theta,
@@ -278,43 +291,22 @@ class LlamaAttention(nn.Cell):
             else:
                 raise ValueError(f"Unknown RoPE scaling type {scaling_type}")
 
-    def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
-
     def construct(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
-        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
+        past_key_value: Optional[Cache] = None,
         output_attentions: bool = False,
         use_cache: bool = False,
-        **kwargs,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-
         bsz, q_len, _ = hidden_states.shape
-
-        if self.config.pretraining_tp > 1:
-            key_value_slicing = (self.num_key_value_heads * self.head_dim) // self.config.pretraining_tp
-            query_slices = self.q_proj.weight.split(
-                (self.num_heads * self.head_dim) // self.config.pretraining_tp, axis=0
-            )
-            key_slices = self.k_proj.weight.split(key_value_slicing, axis=0)
-            value_slices = self.v_proj.weight.split(key_value_slicing, axis=0)
-
-            query_states = [ops.dense(hidden_states, query_slices[i]) for i in range(self.config.pretraining_tp)]
-            query_states = ops.cat(query_states, axis=-1)
-
-            key_states = [ops.dense(hidden_states, key_slices[i]) for i in range(self.config.pretraining_tp)]
-            key_states = ops.cat(key_states, axis=-1)
-
-            value_states = [ops.dense(hidden_states, value_slices[i]) for i in range(self.config.pretraining_tp)]
-            value_states = ops.cat(value_states, axis=-1)
-
-        else:
-            query_states = self.q_proj(hidden_states)
-            key_states = self.k_proj(hidden_states)
-            value_states = self.v_proj(hidden_states)
+        query_states = self.q_proj(hidden_states)
+        key_states = self.k_proj(hidden_states)
+        value_states = self.v_proj(hidden_states)
+        if self.qk_layernorm:
+            query_states = self.q_layernorm(query_states)
+            key_states = self.k_layernorm(key_states)
 
         query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)
         key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).swapaxes(1, 2)
@@ -322,22 +314,42 @@ class LlamaAttention(nn.Cell):
 
         kv_seq_len = key_states.shape[-2]
         if past_key_value is not None:
-            kv_seq_len += past_key_value[0].shape[-2]
+            if self.layer_idx is None:
+                raise ValueError(
+                    f"The cache structure has changed since version v4.36. If you are using {self.__class__.__name__} "
+                    "for auto-regressive decoding with k/v caching, please make sure to initialize the attention class "
+                    "with a layer index."
+                )
+            kv_seq_len += past_key_value.get_usable_length(kv_seq_len, self.layer_idx)
         cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
-        query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
+
+        # Partial rotary embedding
+        query_rot, query_pass = (
+            query_states[..., : self.rotary_emb.dim],
+            query_states[..., self.rotary_emb.dim :],
+        )
+        key_rot, key_pass = (
+            key_states[..., : self.rotary_emb.dim],
+            key_states[..., self.rotary_emb.dim :],
+        )
+        # [batch_size, seq_length, num_heads, head_dim // config.partial_rotary_factor]
+        query_rot, key_rot = apply_rotary_pos_emb(query_rot, key_rot, cos, sin, position_ids)
+
+        # [batch_size, seq_length, num_heads, head_dim]
+        query_states = ops.cat((query_rot, query_pass), axis=-1)
+        key_states = ops.cat((key_rot, key_pass), axis=-1)
 
         if past_key_value is not None:
-            # reuse k, v, self_attention
-            key_states = ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = ops.cat([past_key_value[1], value_states], axis=2)
-
-        past_key_value = (key_states, value_states) if use_cache else None
+            cache_kwargs = {"sin": sin, "cos": cos, "partial_rotation_size": self.rotary_emb.dim}
+            key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
-        attn_weights = ops.matmul(query_states, key_states.swapaxes(2, 3)) / math.sqrt(self.head_dim)
-
+        # Queries and keys upcast to fp32 is required by Phi-2 to avoid overflow
+        attn_weights = ops.matmul(
+            query_states.to(mindspore.float32), key_states.to(mindspore.float32).swapaxes(2, 3)
+        ) / math.sqrt(self.head_dim)
         if attn_weights.shape != (bsz, self.num_heads, q_len, kv_seq_len):
             raise ValueError(
                 f"Attention weights should be of size {(bsz, self.num_heads, q_len, kv_seq_len)}, but is"
@@ -352,8 +364,9 @@ class LlamaAttention(nn.Cell):
             attn_weights = attn_weights + attention_mask
 
         # upcast attention to fp32
-        attn_weights = ops.softmax(attn_weights, axis=-1, dtype=mindspore.float32).to(query_states.dtype)
+        attn_weights = ops.softmax(attn_weights, axis=-1, dtype=mindspore.float32).to(value_states.dtype)
         attn_weights = ops.dropout(attn_weights, p=self.attention_dropout, training=self.training)
+
         attn_output = ops.matmul(attn_weights, value_states)
 
         if attn_output.shape != (bsz, self.num_heads, q_len, self.head_dim):
@@ -363,47 +376,47 @@ class LlamaAttention(nn.Cell):
             )
 
         attn_output = attn_output.swapaxes(1, 2)
-
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
 
-        if self.config.pretraining_tp > 1:
-            attn_output = attn_output.split(self.hidden_size // self.config.pretraining_tp, axis=2)
-            o_proj_slices = self.o_proj.weight.split(self.hidden_size // self.config.pretraining_tp, axis=1)
-            attn_output = sum(ops.dense(attn_output[i], o_proj_slices[i]) for i in range(self.config.pretraining_tp))
-        else:
-            attn_output = self.o_proj(attn_output)
+        attn_output = self.dense(attn_output)
 
         if not output_attentions:
             attn_weights = None
 
         return attn_output, attn_weights, past_key_value
 
-class LlamaDecoderLayer(nn.Cell):
-    def __init__(self, config: LlamaConfig):
-        super().__init__()
-        self.hidden_size = config.hidden_size
-        self.self_attn = LlamaAttention(config=config)
 
-        self.mlp = LlamaMLP(config)
-        self.input_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.post_attention_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+PHI_ATTENTION_CLASSES = {
+    "eager": PhiAttention,
+}
+
+
+class PhiDecoderLayer(nn.Cell):
+    def __init__(self, config: PhiConfig, layer_idx: int):
+        super().__init__()
+        self.self_attn = PHI_ATTENTION_CLASSES["eager"](config, layer_idx=layer_idx)
+        self.mlp = PhiMLP(config)
+        self.input_layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
+        self.resid_dropout = nn.Dropout(p=config.resid_pdrop)
 
     def construct(
         self,
         hidden_states: mindspore.Tensor,
         attention_mask: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
-        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
         output_attentions: Optional[bool] = False,
         use_cache: Optional[bool] = False,
-        **kwargs,
+        past_key_value: Optional[Tuple[mindspore.Tensor]] = None,
     ) -> Tuple[mindspore.Tensor, Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]]:
         """
         Args:
-            hidden_states (`mindspore.Tensor`): input to the layer of shape `(batch, seq_len, embed_dim)`
-            attention_mask (`mindspore.Tensor`, *optional*):
-                attention mask of size `(batch_size, sequence_length)` if flash attention is used or `(batch_size, 1,
-                query_sequence_length, key_sequence_length)` if default attention is used.
+            hidden_states (`mindspore.Tensor`):
+                input to the layer of shape `(batch, seq_len, embed_dim)`
+            attention_mask (`mindspore.Tensor`, *optional*): attention mask of size
+                `(batch, 1, tgt_len, src_len)` where padding elements are indicated by very large negative values.
+            position_ids (`mindspore.Tensor` of shape `({0})`, *optional*):
+                Indices of positions of each input sequence tokens in the position embeddings. Selected in the range
+                `[0, config.n_positions - 1]`. [What are position IDs?](../glossary#position-ids)
             output_attentions (`bool`, *optional*):
                 Whether or not to return the attentions tensors of all attention layers. See `attentions` under
                 returned tensors for more detail.
@@ -412,28 +425,24 @@ class LlamaDecoderLayer(nn.Cell):
                 (see `past_key_values`).
             past_key_value (`Tuple(mindspore.Tensor)`, *optional*): cached past key and value projection states
         """
+
         residual = hidden_states
 
         hidden_states = self.input_layernorm(hidden_states)
 
         # Self Attention
-        hidden_states, self_attn_weights, present_key_value = self.self_attn(
+        attn_outputs, self_attn_weights, present_key_value = self.self_attn(
             hidden_states=hidden_states,
             attention_mask=attention_mask,
             position_ids=position_ids,
             past_key_value=past_key_value,
             output_attentions=output_attentions,
             use_cache=use_cache,
-            **kwargs,
         )
-        hidden_states = residual + hidden_states
+        attn_outputs = self.resid_dropout(attn_outputs)
 
-        # Fully Connected
-        residual = hidden_states
-        hidden_states = self.post_attention_layernorm(hidden_states)
-        hidden_states = self.mlp(hidden_states)
-        hidden_states = residual + hidden_states
-
+        feed_forward_hidden_states = self.resid_dropout(self.mlp(hidden_states))
+        hidden_states = attn_outputs + feed_forward_hidden_states + residual
         outputs = (hidden_states,)
 
         if output_attentions:
@@ -445,47 +454,47 @@ class LlamaDecoderLayer(nn.Cell):
         return outputs
 
 
-class LlamaPreTrainedModel(PreTrainedModel):
-    config_class = LlamaConfig
+class PhiPreTrainedModel(PreTrainedModel):
+    config_class = PhiConfig
     base_model_prefix = "model"
-    supports_gradient_checkpointing = True
-    _no_split_modules = ["LlamaDecoderLayer"]
-    _skip_keys_device_placement = "past_key_values"
+    supports_gradient_checkpointing = False
+    _no_split_modules = ["PhiDecoderLayer"]
+    _supports_cache_class = True
 
     def _init_weights(self, cell):
-        """Initialize the weights"""
+        std = self.config.initializer_range
         if isinstance(cell, nn.Dense):
-            # Slightly different from the TF version which uses truncated_normal for initialization
-            # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
+            cell.weight.set_data(initializer(Normal(std), cell.weight.shape, cell.weight.dtype))
             if cell.has_bias:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
+            weight = np.random.normal(0.0, std, cell.weight.shape)
             if cell.padding_idx:
                 weight[cell.padding_idx] = 0
 
             cell.weight.set_data(Tensor(weight, cell.weight.dtype))
 
-
-class LlamaModel(LlamaPreTrainedModel):
+class PhiModel(PhiPreTrainedModel):
     """
-    Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`LlamaDecoderLayer`]
+    Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`PhiDecoderLayer`]
 
     Args:
-        config: LlamaConfig
+        config: PhiConfig
     """
 
-    def __init__(self, config: LlamaConfig):
+    def __init__(self, config: PhiConfig):
         super().__init__(config)
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
 
-        self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=self.padding_idx)
-        self.layers = nn.CellList([LlamaDecoderLayer(config) for _ in range(config.num_hidden_layers)])
-        self.norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
+        self.embed_dropout = nn.Dropout(p=config.embd_pdrop)
+        self.layers = nn.CellList(
+            [PhiDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
+        )
+        self.final_layernorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
 
+        self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -526,42 +535,51 @@ class LlamaModel(LlamaPreTrainedModel):
             raise ValueError("You have to specify either input_ids or inputs_embeds")
 
         past_key_values_length = 0
-        if past_key_values is not None:
-            past_key_values_length = past_key_values[0][0].shape[2]
+
+        if self.gradient_checkpointing and self.training:
+            if use_cache:
+                logger.warning_once(
+                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
+                )
+                use_cache = False
+
+        if use_cache:
+            use_legacy_cache = not isinstance(past_key_values, Cache)
+            if use_legacy_cache:
+                past_key_values = DynamicCache.from_legacy_cache(past_key_values)
+            past_key_values_length = past_key_values.get_usable_length(seq_length)
 
         if position_ids is None:
             position_ids = ops.arange(
-                past_key_values_length, seq_length + past_key_values_length, dtype=mindspore.int64
-            )
+                past_key_values_length, seq_length + past_key_values_length, dtype=mindspore.int64)
             position_ids = position_ids.unsqueeze(0)
 
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
 
-        # 4d mask is passed through the layers
+        inputs_embeds = self.embed_dropout(inputs_embeds)
+
+        # Attention mask.
         attention_mask = _prepare_4d_causal_attention_mask(
             attention_mask, (batch_size, seq_length), inputs_embeds, past_key_values_length
         )
 
-        # embed positions
         hidden_states = inputs_embeds
 
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
-        next_decoder_cache = () if use_cache else None
+        next_decoder_cache = None
 
-        for idx, decoder_layer in enumerate(self.layers):
+        for decoder_layer in self.layers:
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
-
-            past_key_value = past_key_values[idx] if past_key_values is not None else None
 
             layer_outputs = decoder_layer(
                 hidden_states,
                 attention_mask=attention_mask,
                 position_ids=position_ids,
-                past_key_value=past_key_value,
+                past_key_value=past_key_values,
                 output_attentions=output_attentions,
                 use_cache=use_cache,
             )
@@ -569,18 +587,20 @@ class LlamaModel(LlamaPreTrainedModel):
             hidden_states = layer_outputs[0]
 
             if use_cache:
-                next_decoder_cache += (layer_outputs[2 if output_attentions else 1],)
+                next_decoder_cache = layer_outputs[2 if output_attentions else 1]
 
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
 
-        hidden_states = self.norm(hidden_states)
+        hidden_states = self.final_layernorm(hidden_states)
 
         # add hidden states from the last decoder layer
         if output_hidden_states:
             all_hidden_states += (hidden_states,)
 
-        next_cache = next_decoder_cache if use_cache else None
+        next_cache = None
+        if use_cache:
+            next_cache = next_decoder_cache.to_legacy_cache() if use_legacy_cache else next_decoder_cache
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
         return BaseModelOutputWithPast(
@@ -591,33 +611,39 @@ class LlamaModel(LlamaPreTrainedModel):
         )
 
 
-class LlamaForCausalLM(LlamaPreTrainedModel):
+class PhiForCausalLM(PhiPreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.__init__ with Llama->Phi,bias=False->has_bias=True
     def __init__(self, config):
         super().__init__(config)
-        self.model = LlamaModel(config)
+        self.model = PhiModel(config)
         self.vocab_size = config.vocab_size
-        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
-
+        self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=True)
         # Initialize weights and apply final processing
         self.post_init()
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.get_input_embeddings
     def get_input_embeddings(self):
         return self.model.embed_tokens
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.set_input_embeddings
     def set_input_embeddings(self, value):
         self.model.embed_tokens = value
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.get_output_embeddings
     def get_output_embeddings(self):
         return self.lm_head
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.set_output_embeddings
     def set_output_embeddings(self, new_embeddings):
         self.lm_head = new_embeddings
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.set_decoder
     def set_decoder(self, decoder):
         self.model = decoder
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.get_decoder
     def get_decoder(self):
         return self.model
 
@@ -646,18 +672,18 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         Example:
 
         ```python
-        >>> from transformers import AutoTokenizer, LlamaForCausalLM
+        >>> from transformers import AutoTokenizer, PhiForCausalLM
 
-        >>> model = LlamaForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
-        >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
+        >>> model = PhiForCausalLM.from_pretrained("microsoft/phi-1")
+        >>> tokenizer = AutoTokenizer.from_pretrained("microsoft/phi-1")
 
-        >>> prompt = "Hey, are you conscious? Can you talk to me?"
+        >>> prompt = "This is an example script ."
         >>> inputs = tokenizer(prompt, return_tensors="pt")
 
         >>> # Generate
         >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
         >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
+        'This is an example script .\n\n\n\nfrom typing import List\n\ndef find_most_common_letter(words: List[str'
         ```"""
 
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -680,12 +706,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         )
 
         hidden_states = outputs[0]
-        if self.config.pretraining_tp > 1:
-            lm_head_slices = self.lm_head.weight.split(self.vocab_size // self.config.pretraining_tp, dim=0)
-            logits = [ops.dense(hidden_states, lm_head_slices[i]) for i in range(self.config.pretraining_tp)]
-            logits = ops.cat(logits, axis=-1)
-        else:
-            logits = self.lm_head(hidden_states)
+        logits = self.lm_head(hidden_states)
         logits = logits.float()
 
         loss = None
@@ -711,20 +732,38 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             attentions=outputs.attentions,
         )
 
+    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM.prepare_inputs_for_generation
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
         if past_key_values is not None:
-            past_length = past_key_values[0][0].shape[2]
-
-            # Some generation methods already pass only the last input ID
-            if input_ids.shape[1] > past_length:
-                remove_prefix_length = past_length
+            if isinstance(past_key_values, Cache):
+                cache_length = past_key_values.get_seq_length()
+                past_length = past_key_values.seen_tokens
+                max_cache_length = past_key_values.get_max_length()
             else:
-                # Default to old behavior: keep only final ID
-                remove_prefix_length = input_ids.shape[1] - 1
+                cache_length = past_length = past_key_values[0][0].shape[2]
+                max_cache_length = None
 
-            input_ids = input_ids[:, remove_prefix_length:]
+            # Keep only the unprocessed tokens:
+            # 1 - If the length of the attention_mask exceeds the length of input_ids, then we are in a setting where
+            # some of the inputs are exclusively passed as part of the cache (e.g. when passing input_embeds as
+            # input)
+            if attention_mask is not None and attention_mask.shape[1] > input_ids.shape[1]:
+                input_ids = input_ids[:, -(attention_mask.shape[1] - past_length) :]
+            # 2 - If the past_length is smaller than input_ids', then input_ids holds all input tokens. We can discard
+            # input_ids based on the past_length.
+            elif past_length < input_ids.shape[1]:
+                input_ids = input_ids[:, past_length:]
+            # 3 - Otherwise (past_length >= input_ids.shape[1]), let's assume input_ids only has unprocessed tokens.
+
+            # If we are about to go beyond the maximum cache length, we need to crop the input attention mask.
+            if (
+                max_cache_length is not None
+                and attention_mask is not None
+                and cache_length + input_ids.shape[1] > max_cache_length
+            ):
+                attention_mask = attention_mask[:, -max_cache_length:]
 
         position_ids = kwargs.get("position_ids", None)
         if attention_mask is not None and position_ids is None:
@@ -751,6 +790,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         return model_inputs
 
     @staticmethod
+    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM._reorder_cache
     def _reorder_cache(past_key_values, beam_idx):
         reordered_past = ()
         for layer_past in past_key_values:
@@ -760,12 +800,13 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         return reordered_past
 
 
-class LlamaForSequenceClassification(LlamaPreTrainedModel):
+# Copied from transformers.models.llama.modeling_llama.LlamaForSequenceClassification with LLAMA->PHI,Llama->Phi with self.transformer->self.model, transformer_outputs->model_outputs
+class PhiForSequenceClassification(PhiPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
-        self.model = LlamaModel(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
+        self.model = PhiModel(config)
+        self.score = nn.Dense(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -797,7 +838,7 @@ class LlamaForSequenceClassification(LlamaPreTrainedModel):
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        transformer_outputs = self.model(
+        model_outputs = self.model(
             input_ids,
             attention_mask=attention_mask,
             position_ids=position_ids,
@@ -808,13 +849,13 @@ class LlamaForSequenceClassification(LlamaPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-        hidden_states = transformer_outputs[0]
+        hidden_states = model_outputs[0]
         logits = self.score(hidden_states)
 
         if input_ids is not None:
-            batch_size, _ = input_ids.shape[:2]
+            batch_size = input_ids.shape[0]
         else:
-            batch_size, _ = inputs_embeds.shape[:2]
+            batch_size = inputs_embeds.shape[0]
 
         if self.config.pad_token_id is None and batch_size != 1:
             raise ValueError("Cannot handle batch sizes > 1 if no padding token is defined.")
@@ -822,6 +863,7 @@ class LlamaForSequenceClassification(LlamaPreTrainedModel):
             sequence_lengths = -1
         else:
             if input_ids is not None:
+                # if no pad token found, use modulo instead of reverse indexing for ONNX compatibility
                 sequence_lengths = ops.eq(input_ids, self.config.pad_token_id).int().argmax(-1) - 1
                 sequence_lengths = sequence_lengths % input_ids.shape[-1]
             else:
@@ -849,20 +891,96 @@ class LlamaForSequenceClassification(LlamaPreTrainedModel):
             elif self.config.problem_type == "multi_label_classification":
                 loss = ops.binary_cross_entropy_with_logits(pooled_logits, labels)
         if not return_dict:
-            output = (pooled_logits,) + transformer_outputs[1:]
+            output = (pooled_logits,) + model_outputs[1:]
             return ((loss,) + output) if loss is not None else output
 
         return SequenceClassifierOutputWithPast(
             loss=loss,
             logits=pooled_logits,
-            past_key_values=transformer_outputs.past_key_values,
-            hidden_states=transformer_outputs.hidden_states,
-            attentions=transformer_outputs.attentions,
+            past_key_values=model_outputs.past_key_values,
+            hidden_states=model_outputs.hidden_states,
+            attentions=model_outputs.attentions,
+        )
+
+
+# Copied from transformers.models.mpt.modeling_mpt.MptForTokenClassification with MPT->PHI,Mpt->Phi,self.transformer->self.model,transformer_outputs->model_outputs
+class PhiForTokenClassification(PhiPreTrainedModel):
+    def __init__(self, config: PhiConfig):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+
+        self.model = PhiModel(config)
+        if hasattr(config, "classifier_dropout") and config.classifier_dropout is not None:
+            classifier_dropout = config.classifier_dropout
+        elif hasattr(config, "hidden_dropout") and config.hidden_dropout is not None:
+            classifier_dropout = config.hidden_dropout
+        else:
+            classifier_dropout = 0.1
+        self.dropout = nn.Dropout(p=classifier_dropout)
+        self.classifier = nn.Dense(config.hidden_size, config.num_labels)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def construct(
+        self,
+        input_ids: Optional[mindspore.Tensor] = None,
+        past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None,
+        attention_mask: Optional[mindspore.Tensor] = None,
+        inputs_embeds: Optional[mindspore.Tensor] = None,
+        labels: Optional[mindspore.Tensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+        **deprecated_arguments,
+    ) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]:
+        r"""
+        labels (`mindspore.Tensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        model_outputs = self.model(
+            input_ids,
+            past_key_values=past_key_values,
+            attention_mask=attention_mask,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        hidden_states = model_outputs[0]
+        hidden_states = self.dropout(hidden_states)
+        logits = self.classifier(hidden_states)
+
+        loss = None
+        if labels is not None:
+            batch_size, seq_length = labels.shape
+            loss = ops.cross_entropy(
+                logits.view(batch_size * seq_length, self.num_labels), labels.view(batch_size * seq_length)
+            )
+
+        if not return_dict:
+            output = (logits,) + model_outputs[2:]
+            return ((loss,) + output) if loss is not None else output
+
+        return TokenClassifierOutput(
+            loss=loss,
+            logits=logits,
+            hidden_states=model_outputs.hidden_states,
+            attentions=model_outputs.attentions,
         )
 
 __all__ = [
-    "LlamaForCausalLM",
-    "LlamaModel",
-    "LlamaPreTrainedModel",
-    "LlamaForSequenceClassification",
+    'PHI_PRETRAINED_MODEL_ARCHIVE_LIST',
+    'PhiForTokenClassification',
+    'PhiForSequenceClassification',
+    'PhiForCausalLM',
+    'PhiModel',
+    'PhiPreTrainedModel',
 ]

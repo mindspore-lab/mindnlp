@@ -24,6 +24,7 @@
 # pylint: disable=attribute-defined-outside-init
 # pylint: disable=self-cls-assignment
 # pylint: disable=no-name-in-module
+# pylint: disable=global-statement
 """
 Abstract class for Pretrained models.
 """
@@ -31,16 +32,17 @@ import os
 import gc
 import re
 import json
+import collections
 from dataclasses import dataclass
 from typing import Union, Optional, Tuple, OrderedDict, Callable, Dict, List
-from packaging import version
+from contextlib import contextmanager
 from tqdm.autonotebook import tqdm
-import numpy as np
 
+import numpy as np
 import mindspore
 from mindspore import load_checkpoint, save_checkpoint
 from mindspore import nn, ops, Tensor, Parameter
-from mindspore._c_expression import MixedPrecisionType
+from mindspore._c_expression import Tensor as Tensor_
 
 from mindnlp.configs import MS_URL_BASE, HF_URL_BASE, PT_WEIGHTS_NAME, WEIGHTS_NAME, WEIGHTS_INDEX_NAME, PT_WEIGHTS_INDEX_NAME, \
     SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
@@ -57,6 +59,48 @@ from .activations import get_activation
 logger = logging.get_logger(__name__)
 
 _init_weights = True
+init_func = mindspore.common.initializer.initializer
+
+
+@contextmanager
+def no_init_weights(_skip_init, _enable=True):
+    """
+    Context manager to globally disable weight initialization to speed up loading large models.
+
+    TODO(Patrick): Delete safety argument `_enable=True` at next major version. .
+    """
+    global _init_weights
+    old_init_weights = _init_weights
+
+    if _enable:
+        _init_weights = False
+        # # Save the original initialization functions
+        replace_references(mindspore.common.initializer.initializer, _skip_init, ignore_vars=['init_func'])
+
+    try:
+        yield
+    finally:
+        _init_weights = old_init_weights
+        if _enable:
+            # # Restore the original initialization functions
+            replace_references(mindspore.common.initializer.initializer, init_func, ignore_vars=['init_func'])
+
+
+def set_initialized_submodules(model: nn.Cell, state_dict_keys):
+    """
+    Sets the `_is_hf_initialized` flag in all submodules of a given model when all its weights are in the loaded state
+    dict.
+    """
+    not_initialized_submodules = {}
+    for module_name, module in model.cells_and_names():
+        loaded_keys = {k.replace(f"{module_name}.", "") for k in state_dict_keys if k.startswith(f"{module_name}.")}
+        params_keys = {k.replace(f"{module_name}.", "") for k in module.parameters_dict().keys() if k.startswith(f"{module_name}.")}
+        if loaded_keys.issuperset(params_keys):
+            module._is_initialized = True
+        else:
+            not_initialized_submodules[module_name] = module
+
+    return not_initialized_submodules
 
 class CellUtilMixin:
     """
@@ -68,19 +112,13 @@ class CellUtilMixin:
         """
         `mindspore.dtype`: The dtype of the module (assuming that all the module parameters have the same dtype).
         """
-        if not hasattr(self, 'get_mixed_precision_type'):
+        if not hasattr(self, '_dtype'):
             return mindspore.float32
-        mixed_type = self.get_mixed_precision_type()
-        cast_type = None
-        if mixed_type == MixedPrecisionType.FP16:
-            cast_type = mindspore.float16
-        else:
-            cast_type = mindspore.float32
+        return self._dtype
 
-        if version.parse(mindspore.__version__) > version.parse('2.1.0'):
-            if mixed_type == MixedPrecisionType.BF16:
-                cast_type = mindspore.bfloat16
-        return cast_type
+    @dtype.setter
+    def dtype(self, dtype):
+        self._dtype = dtype
 
     @staticmethod
     def create_extended_attention_mask_for_decoder(input_shape, attention_mask):
@@ -320,11 +358,22 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
         self.base_model._prune_heads(heads_to_prune)
 
+    def _init_weights(self, cell):
+        """
+        Initialize the weights. This method should be overridden by derived class and is
+        the only initialization method that will be called when loading a checkpoint
+        using `from_pretrained`. Any attempt to initialize outside of this function
+        will be useless as the torch.nn.init function are all replaced with skip.
+        """
+
     def _initialize_weights(self, module):
         """
         Initialize the weights if they are not already initialized.
         """
+        if getattr(module, "_is_initialized", False):
+            return
         self._init_weights(module)
+        module._is_initialized = True
 
     @property
     def base_model(self):
@@ -466,7 +515,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         # Update base model and current model config
         self.config.vocab_size = model_embeds.weight.shape[0]
         self.vocab_size = model_embeds.weight.shape[0]
-
         # Tie weights again if needed
         self.tie_weights()
 
@@ -475,8 +523,9 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
     def _resize_token_embeddings(self, new_num_tokens, pad_to_multiple_of=None):
         old_embeddings = self.get_input_embeddings()
         new_embeddings = self._get_resized_embeddings(old_embeddings, new_num_tokens, pad_to_multiple_of)
-        self.set_input_embeddings(new_embeddings)
 
+        self.set_input_embeddings(new_embeddings)
+        self.get_input_embeddings().weight.data_sync(True)
         # Update new_num_tokens with the actual size of new_embeddings
         if pad_to_multiple_of is not None:
             new_num_tokens = new_embeddings.weight.shape[0]
@@ -486,6 +535,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             new_lm_head = self._get_resized_lm_head(
                 old_lm_head, new_num_tokens)
             self.set_output_embeddings(new_lm_head)
+            self.get_output_embeddings().weight.data_sync(True)
+
 
         return self.get_input_embeddings()
 
@@ -551,7 +602,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         num_tokens_to_copy = min(old_num_tokens, new_num_tokens)
         new_embeddings.weight.data[:num_tokens_to_copy, :] = old_embeddings.weight.data[
                                                                       :num_tokens_to_copy, :]
-
         return new_embeddings
 
     def _get_resized_lm_head(
@@ -762,15 +812,11 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             elif is_remote_url(pretrained_model_name_or_path):
                 filename = pretrained_model_name_or_path
                 resolved_archive_file = download_url(pretrained_model_name_or_path)
-            else:
-                # set correct filename
-                if from_pt:
-                    if use_safetensors is not False:
-                        filename = _add_variant(SAFE_WEIGHTS_NAME, variant)
-                    else:
-                        filename = _add_variant(PT_WEIGHTS_NAME, variant)
+            elif from_pt:
+                if use_safetensors is not False:
+                    filename = _add_variant(SAFE_WEIGHTS_NAME, variant)
                 else:
-                    filename = _add_variant(WEIGHTS_NAME, variant)
+                    filename = _add_variant(PT_WEIGHTS_NAME, variant)
                 try:
                     # Load from URL or cache if already cached
                     cached_file_kwargs = {
@@ -787,10 +833,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
                     use_safetensors = resolved_archive_file is not None
 
-                    if resolved_archive_file is None and from_pt:
-                        filename = _add_variant(PT_WEIGHTS_NAME, variant)
-                        resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
-
                     # Since we set _raise_exceptions_for_missing_entries=False, we don't get an exception but a None
                     # result when internet is up, the repo and revision exist, but the file does not.
                     if resolved_archive_file is None and filename == _add_variant(SAFE_WEIGHTS_NAME, variant):
@@ -802,22 +844,17 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                         )
                         if resolved_archive_file is not None:
                             is_sharded = True
+                            use_safetensors = True
                         else:
                             # This repo has no safetensors file of any kind, we switch to PyTorch.
-                            filename = _add_variant(WEIGHTS_NAME, variant)
+                            filename = _add_variant(PT_WEIGHTS_NAME, variant)
                             resolved_archive_file = cached_file(
                                 pretrained_model_name_or_path, filename, **cached_file_kwargs
                             )
 
-                    if resolved_archive_file is None and filename == _add_variant(WEIGHTS_NAME, variant):
-                        # Maybe the checkpoint is sharded, we try to grab the index name in this case.
-                        resolved_archive_file = cached_file(
-                            pretrained_model_name_or_path,
-                            _add_variant(WEIGHTS_INDEX_NAME, variant),
-                            **cached_file_kwargs,
-                        )
-                        if resolved_archive_file is not None:
-                            is_sharded = True
+                    if resolved_archive_file is None:
+                        filename = _add_variant(PT_WEIGHTS_NAME, variant)
+                        resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
 
                     if resolved_archive_file is None and filename == _add_variant(PT_WEIGHTS_NAME, variant):
                         # Maybe the checkpoint is sharded, we try to grab the index name in this case.
@@ -832,7 +869,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     if resolved_archive_file is None:
                         raise EnvironmentError(
                             f"{pretrained_model_name_or_path} does not appear to have a file named"
-                            f" {_add_variant(WEIGHTS_NAME, variant)}, {_add_variant(PT_WEIGHTS_NAME, variant)}"
+                            f" {_add_variant(SAFE_WEIGHTS_NAME, variant)}, {_add_variant(PT_WEIGHTS_NAME, variant)}"
                         )
                 except EnvironmentError:
                     # Raise any environment error raise by `cached_file`. It will have a helpful error message adapted
@@ -844,8 +881,53 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                         f"Can't load the model for '{pretrained_model_name_or_path}'. If you were trying to load it"
                         ", make sure you don't have a local directory with the"
                         f" same name. Otherwise, make sure '{pretrained_model_name_or_path}' is the correct path to a"
-                        f" directory containing a file named {_add_variant(WEIGHTS_NAME, variant)},"
+                        f" directory containing a file named {_add_variant(SAFE_WEIGHTS_NAME, variant)},"
                         f" {_add_variant(PT_WEIGHTS_NAME, variant)}."
+                    ) from exc
+            else:
+                # set correct filename
+                filename = _add_variant(WEIGHTS_NAME, variant)
+                try:
+                    # Load from URL or cache if already cached
+                    cached_file_kwargs = {
+                        "cache_dir": cache_dir,
+                        "force_download": force_download,
+                        "proxies": proxies,
+                        "resume_download": resume_download,
+                        "local_files_only": local_files_only,
+                        "subfolder": subfolder,
+                        "_raise_exceptions_for_missing_entries": False,
+                        'endpoint': endpoint
+                    }
+
+                    resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
+
+                    if resolved_archive_file is None and filename == _add_variant(WEIGHTS_NAME, variant):
+                        # Maybe the checkpoint is sharded, we try to grab the index name in this case.
+                        resolved_archive_file = cached_file(
+                            pretrained_model_name_or_path,
+                            _add_variant(WEIGHTS_INDEX_NAME, variant),
+                            **cached_file_kwargs,
+                        )
+                        if resolved_archive_file is not None:
+                            is_sharded = True
+
+                    if resolved_archive_file is None:
+                        raise EnvironmentError(
+                            f"{pretrained_model_name_or_path} does not appear to have a file named"
+                            f" {_add_variant(WEIGHTS_NAME, variant)}."
+                        )
+                except EnvironmentError:
+                    # Raise any environment error raise by `cached_file`. It will have a helpful error message adapted
+                    # to the original exception.
+                    raise
+                except Exception as exc:
+                    # For any other exception, we throw a generic error.
+                    raise EnvironmentError(
+                        f"Can't load the model for '{pretrained_model_name_or_path}'. If you were trying to load it"
+                        ", make sure you don't have a local directory with the"
+                        f" same name. Otherwise, make sure '{pretrained_model_name_or_path}' is the correct path to a"
+                        f" directory containing a file named {_add_variant(WEIGHTS_NAME, variant)}."
                     ) from exc
 
             if is_local:
@@ -858,7 +940,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
         if is_sharded:
             # rsolved_archive_file becomes a list of files that point to the different checkpoint shards in this case.
-            resolved_archive_file, _ = get_checkpoint_shard_files(
+            resolved_archive_file, sharded_metadata = get_checkpoint_shard_files(
                 pretrained_model_name_or_path,
                 resolved_archive_file,
                 cache_dir=cache_dir,
@@ -870,20 +952,47 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 endpoint=endpoint
             )
 
-
         if pretrained_model_name_or_path is None and state_dict is None:
             raise ValueError("the argument 'pretrained_model_name_or_path' should be "
                              "a string of model name or checkpoint path, but got 'None'.")
 
         config.name_or_path = pretrained_model_name_or_path
-
         # Instantiate model.
-        model = cls(config, *model_args, **model_kwargs)
+        if ms_dtype is None or ms_dtype == 'auto':
+            ms_dtype = config.ms_dtype
+
+        if ms_dtype is None:
+            ms_dtype = mindspore.float32
+
+        def empty_initializer(init, shape=None, dtype=mindspore.float32):
+            if not isinstance(shape, (tuple, list)):
+                shape = (shape,)
+            if dtype in (mindspore.float16, mindspore.float32) \
+                and ms_dtype is not None:
+                dtype = ms_dtype
+            return Tensor_(shape=shape, dtype=dtype)
+
+        with no_init_weights(empty_initializer, _fast_init):
+            model = cls(config, *model_args, **model_kwargs)
+
         if ms_dtype:
-            model = model.to_float(ms_dtype)
+            model.dtype = ms_dtype
 
         if is_sharded:
             converted_filenames = resolved_archive_file
+
+        # tie the model weights before retrieving the state_dict
+        model.tie_weights()
+
+
+        ptrs = collections.defaultdict(list)
+        for name, tensor in model.parameters_dict().items():
+            id_tensor = id(tensor)
+            ptrs[id_tensor].append(name)
+
+        # These are all the pointers of shared tensors.
+        tied_params = [names for _, names in ptrs.items() if len(names) > 1]
+
 
         def load_ckpt(resolved_archive_file, from_pt=False):
             if from_pt:
@@ -900,9 +1009,12 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     f"Unable to load weights from mindspore checkpoint file '{resolved_archive_file}'. "
                 ) from exc
 
-            new_state_dict = {key.replace('gamma', 'weight').replace('beta', 'bias')\
-                                 .replace('embedding_table', 'weight'): \
-                value for key, value in state_dict.items()}
+            new_state_dict = {}
+            for key, value in state_dict.items():
+                key = key.replace('gamma', 'weight').replace('beta', 'bias').replace('embedding_table', 'weight')
+                value.name = value.name.replace('gamma', 'weight').replace('beta', 'bias')\
+                    .replace('embedding_table', 'weight')
+                new_state_dict[key] = value
             return new_state_dict
 
         keys_missing = list(model.parameters_dict().keys())
@@ -912,6 +1024,9 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         if model._keep_in_fp32_modules:
             use_keep_in_fp32_modules = True
 
+        remove_prefix_from_model = None
+        add_prefix_to_model = None
+
         def load_param_into_net(model: nn.Cell, param_dict: dict, prefix: str):
             keep_in_fp32_modules = model._keep_in_fp32_modules
             keys_unexpected = list(param_dict.keys())
@@ -919,10 +1034,15 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             has_prefix_module = any(s.startswith(prefix) for s in keys_unexpected)
             expects_prefix_module = any(s.startswith(prefix) for s in keys_missing)
 
+            nonlocal remove_prefix_from_model
+            nonlocal add_prefix_to_model
+            remove_prefix_from_model = not has_prefix_module and expects_prefix_module
+            add_prefix_to_model = has_prefix_module and not expects_prefix_module
+
             for pname_in_net, param in model.parameters_and_names():
-                if has_prefix_module and not expects_prefix_module:
+                if add_prefix_to_model:
                     param_name = prefix + '.' + pname_in_net
-                elif not has_prefix_module and expects_prefix_module:
+                elif remove_prefix_from_model:
                     param_name = pname_in_net.replace(f'{prefix}.', '')
                 else:
                     param_name = pname_in_net
@@ -938,6 +1058,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     if param_name in keys_unexpected:
                         keys_unexpected.remove(param_name)
                     continue
+
                 new_param = param_dict.pop(param_name, None)
 
                 if new_param is not None:
@@ -951,19 +1072,22 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                                         f' `{param_name} with shape {new_param.shape} in checkpoint, ')
                         continue
 
-                    if new_param.dtype != param.dtype:
-                        use_replace = True
-
-                    if ms_dtype:
-                        use_replace = True
-                        new_param = new_param.astype(ms_dtype)
-
                     if use_keep_in_fp32_modules and \
                         any(module_to_keep_in_fp32 in pname_in_net.split(".") for module_to_keep_in_fp32 in keep_in_fp32_modules):
                         new_param = new_param.astype(mindspore.float32)
+                    elif ms_dtype and param.dtype in (mindspore.float32, mindspore.float16):
+                        new_param = new_param.astype(ms_dtype)
+
+                    if new_param.dtype != param.dtype or new_param.shape != param.shape:
+                        use_replace = True
 
                     if use_replace:
-                        replace_references(param, Parameter(new_param, name=param.name, requires_grad=param.requires_grad))
+                        if isinstance(new_param, Parameter):
+                            new_param.name = param.name
+                            new_param.requires_grad = param.requires_grad
+                            replace_references(param, new_param)
+                        else:
+                            replace_references(param, Parameter(new_param, requires_grad=param.requires_grad, name=param.name))
                     else:
                         param.set_data(new_param)
                     keys_unexpected.remove(param_name)
@@ -971,14 +1095,13 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     param_id_set.add(id(param))
                 else:
                     # fix missing value parameter dtype cast.
-                    if ms_dtype:
+                    if ms_dtype and ms_dtype != param.dtype:
                         new_param = param.astype(ms_dtype)
                         replace_references(param, Parameter(new_param, name=param.name, requires_grad=param.requires_grad))
 
             return keys_unexpected, keys_missing
 
         all_keys_unexpected = None
-
         if state_dict is None:
             if is_sharded:
                 all_keys_unexpected = []
@@ -988,11 +1111,21 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     all_keys_unexpected.extend(keys_unexpected)
                     del state_dict
                     gc.collect()
+                loaded_keys = sharded_metadata["all_checkpoint_keys"]
             else:
                 state_dict = load_ckpt(resolved_archive_file, from_pt)
+                loaded_keys = list(state_dict.keys())
                 all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
         else:
+            loaded_keys = list(state_dict.keys())
             all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
+
+        loaded_add_keys = []
+        for group in tied_params:
+            missing_in_group = [k for k in keys_missing if k in group]
+            if len(missing_in_group) > 0 and len(missing_in_group) < len(group):
+                loaded_add_keys = [k for k in keys_missing if k in missing_in_group]
+                keys_missing = [k for k in keys_missing if k not in missing_in_group]
 
         if cls._keys_to_ignore_on_load_missing is not None:
             for pat in cls._keys_to_ignore_on_load_missing:
@@ -1002,9 +1135,25 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             for pat in cls._keys_to_ignore_on_load_unexpected:
                 all_keys_unexpected = [k for k in all_keys_unexpected if re.search(pat, k) is None]
 
-
         # make sure token embedding weights are still tied if needed
         model.tie_weights()
+
+        # retrieve unintialized modules and initialize before maybe overriding that with the pretrained weights.
+        if _fast_init:
+            if not ignore_mismatched_sizes:
+                if remove_prefix_from_model:
+                    _loaded_keys = [f"{cls.base_model_prefix}.{k}" for k in loaded_keys]
+                elif add_prefix_to_model:
+                    _loaded_keys = [k[len(cls.base_model_prefix) + 1 :] for k in loaded_keys]
+                else:
+                    _loaded_keys = loaded_keys
+
+                _loaded_keys += loaded_add_keys
+                _ = set_initialized_submodules(model, _loaded_keys)
+            else:
+                _ = dict(model.cells_and_names())
+
+            model.apply(model._initialize_weights)
 
         # Set model in evaluation mode to deactivate DropOut modules by default
         model.set_train(False)
@@ -1131,6 +1280,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                         par_new_name = cell_name + '.' + par_new_name
 
                     yield par_new_name, par
+
 
     def num_parameters(self, only_trainable=False):
         """return parameters count"""
@@ -1806,18 +1956,20 @@ class SequenceSummary(nn.Cell):
         output = self.last_dropout(output)
         return output
 
-def replace_references(old_obj, new_obj):
+def replace_references(old_obj, new_obj, ignore_vars=None):
     """use replace_references instead of Tensor.set_data due to mindspore errors."""
     # Get all objects referring to old_obj
+    if ignore_vars is None:
+        ignore_vars = []
     referrers = gc.get_referrers(old_obj)
-
     # Replace references
     for referrer in referrers:
         if isinstance(referrer, dict):
             # If the reference is in a dictionary
             for key, value in referrer.items():
                 if value is old_obj:
-                    referrer[key] = new_obj
+                    if key not in ignore_vars:
+                        referrer[key] = new_obj
         elif isinstance(referrer, list):
             # If the reference is in a list or tuple
             index = referrer.index(old_obj)

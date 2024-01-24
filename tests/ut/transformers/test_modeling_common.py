@@ -106,9 +106,8 @@ def _mock_all_init_weights(self):
         self.prune_heads(self.config.pruned_heads)
 
     from mindnlp.transformers import modeling_utils
-
     if modeling_utils._init_weights:
-        for cell in self.cells():
+        for _, cell in self.cells_and_names():
             cell._is_initialized = False
         # Initialize weights
         self.apply(self._initialize_weights)
@@ -267,7 +266,6 @@ class ModelTesterMixin:
                 model.save_pretrained(tmpdirname)
 
                 model = model_class.from_pretrained(tmpdirname, ms_dtype=mindspore.float16)
-
                 for name, param in model.parameters_and_names():
                     if any(n in model_class._keep_in_fp32_modules for n in name.split(".")):
                         self.assertTrue(param.dtype == mindspore.float32)
@@ -332,10 +330,15 @@ class ModelTesterMixin:
             model_class_copy.init_weights = _mock_all_init_weights
 
             model = base_class(config)
+            state_dict = model.parameters_dict()
+
+            # this will often delete a single weight of a multi-weight module
+            # to test an edge case
+            random_key_to_del = random.choice(list(state_dict.keys()))
+            del state_dict[random_key_to_del]
 
             # check that certain keys didn't get saved with the model
             with tempfile.TemporaryDirectory() as tmpdirname:
-                # print(tmpdirname)
                 model.save_pretrained(tmpdirname)
                 # mindspore.save_checkpoint(model, os.path.join(tmpdirname, "mindspore.ckpt"))
                 model_fast_init = model_class_copy.from_pretrained(tmpdirname)
@@ -360,7 +363,6 @@ class ModelTesterMixin:
         for model_class in self.all_model_classes:
             if model_class == base_class:
                 continue
-
             # make a copy of model class to not break future tests
             # from https://stackoverflow.com/questions/9541025/how-to-copy-a-python-class
             class CopyClass(base_class):
@@ -377,7 +379,6 @@ class ModelTesterMixin:
             base_class_copy.init_weights = _mock_all_init_weights
 
             model = model_class(config)
- 
             # check that certain keys didn't get saved with the model
             with tempfile.TemporaryDirectory() as tmpdirname:
                 model.config.save_pretrained(tmpdirname)
@@ -395,7 +396,6 @@ class ModelTesterMixin:
                         max_diff = ops.max(
                             model_slow_init.parameters_dict()[key] ^ model_fast_init.parameters_dict()[key]
                         )[0].asnumpy().item()
-                        
                     self.assertLessEqual(max_diff, 1e-3, msg=f"{key} not identical")
 
     def test_initialization(self):
@@ -1136,6 +1136,7 @@ class ModelTesterMixin:
             config_tied = copy.deepcopy(config)
             model_tied = model_class(config_tied)
             params_tied = list(model_tied.get_parameters())
+            params_tied_keys = model_tied.parameters_dict().keys()
             # Check that the embedding layer and decoding layer are the same in size and in value
             # self.assertTrue(check_same_values(embeddings, decoding))
 
@@ -1153,7 +1154,9 @@ class ModelTesterMixin:
 
             # Check that after resize they remain tied.
             model_tied.resize_token_embeddings(config.vocab_size + 10)
+
             params_tied_2 = list(model_tied.get_parameters())
+            params_tied_2_keys = model_tied.parameters_dict().keys()
             self.assertEqual(len(params_tied_2), len(params_tied))
 
             # decoding.weight.data.mul_(20)
