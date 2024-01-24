@@ -30,6 +30,7 @@ logger = logging.get_logger(__name__)
 MODEL_MAPPING_NAMES = OrderedDict(
     [
         # Base model mapping
+        ("bart", "BartModel"),
         ("bert", "BertModel"),
         ("ernie", "ErnieModel"),
         ("ernie_m", "ErnieMModel"),
@@ -42,7 +43,8 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("falcon", "FalconModel"),
         ("longformer", "LongformerModel"),
         ("mistral", "MistralModel"),
-        ('encodec','EncodecModel')
+        ('encodec','EncodecModel'),
+        ('mbart','MBartModel')
     ]
 )
 
@@ -190,6 +192,7 @@ MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING_NAMES = OrderedDict(
 MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
     [
         # Model for Sequence Classification mapping
+        ("bart", "BartForSequenceClassification"),
         ("bert", "BertForSequenceClassification"),
         ("falcon", "FalconForSequenceClassification"),
     ]

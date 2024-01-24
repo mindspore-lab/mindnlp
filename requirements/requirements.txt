@@ -15,3 +15,4 @@ tokenizers
 easydict
 safetensors
 ml_dtypes
+cython

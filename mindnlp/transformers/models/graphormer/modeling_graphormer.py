@@ -760,35 +760,32 @@ class GraphormerPreTrainedModel(PreTrainedModel):
 
     def _init_weights(
         self,
-        module: Union[
-            nn.Dense, nn.Conv2d, nn.Embedding, nn.LayerNorm, GraphormerMultiheadAttention, GraphormerGraphEncoder
-        ],
+        cell
     ):
         """
         Initialize the weights
         """
-        if isinstance(module, (nn.Dense, nn.Conv2d)):
+        if isinstance(cell, (nn.Dense, nn.Conv2d)):
             # We might be missing part of the Linear init, dependant on the layer num
-            module.weight.set_data(init_normal(module.weight, sigma=0.02, mean=0.0))
-            if module.has_bias:
-                module.bias.set_data(init_zero(module.bias))
-        elif isinstance(module, nn.Embedding):
-            weight = np.random.normal(loc=0.0, scale=0.02, size=module.weight.shape)
-            if module.padding_idx:
-                weight[module.padding_idx] = 0
+            cell.weight.set_data(init_normal(cell.weight, sigma=0.02, mean=0.0))
+            if cell.has_bias:
+                cell.bias.set_data(init_zero(cell.bias))
+        elif isinstance(cell, nn.Embedding):
+            weight = np.random.normal(loc=0.0, scale=0.02, size=cell.weight.shape)
+            if cell.padding_idx:
+                weight[cell.padding_idx] = 0
 
-            module.weight.set_data(Tensor(weight, module.weight.dtype))
-        elif isinstance(module, GraphormerMultiheadAttention):
-            module.q_proj.weight.set_data(init_normal(module.q_proj.weight,
+            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+        elif isinstance(cell, GraphormerMultiheadAttention):
+            cell.q_proj.weight.set_data(init_normal(cell.q_proj.weight,
                                                       sigma=0.02, mean=0.0))
-            module.k_proj.weight.set_data(init_normal(module.k_proj.weight,
+            cell.k_proj.weight.set_data(init_normal(cell.k_proj.weight,
                                                       sigma=0.02, mean=0.0))
-            module.v_proj.weight.set_data(init_normal(module.v_proj.weight,
+            cell.v_proj.weight.set_data(init_normal(cell.v_proj.weight,
                                                       sigma=0.02, mean=0.0))
-            module.reset_parameters()
-        elif isinstance(module, GraphormerGraphEncoder):
-            if module.apply_graphormer_init:
-                module.apply(self.init_graphormer_params)
+        elif isinstance(cell, GraphormerGraphEncoder):
+            if cell.apply_graphormer_init:
+                cell.apply(self.init_graphormer_params)
 
     def _set_gradient_checkpointing(self, module, value=False):
         if isinstance(module, GraphormerModel):

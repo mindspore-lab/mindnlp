@@ -483,14 +483,27 @@ def download(
 
     url = build_download_url(repo_id, filename, repo_type=repo_type, endpoint=endpoint)
     # check model whether exist
-    model_url = url[: url.rfind('/')].replace('resolve/main', '')
+    # for hf
+    model_url = url[: url.rfind('/')].replace('/resolve/main', '')
+    # for modelscope
+    model_url = model_url.replace('api/v1/', '')
 
-    req = requests.get(model_url, timeout=3, proxies=proxies)
-    status = req.status_code
-    if status == 404:
-        raise RepositoryNotFoundError(f"Can not found model: {repo_id}")
+    try:
+        req = requests.head(model_url, timeout=3, proxies=proxies)
+        if req.status_code >= 400:
+            raise RepositoryNotFoundError(f"Can not found model: {repo_id}")
+        pointer_path = http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies)
+    except (requests.exceptions.SSLError, requests.exceptions.ProxyError):
+        # Actually raise for those subclasses of ConnectionError
+        raise
+    except (
+        requests.exceptions.ConnectionError,
+        requests.exceptions.Timeout,
+    ):
+        # Otherwise, our Internet connection is down.
+        # etag is None
+        return None
 
-    pointer_path = http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies)
     return pointer_path
 
 # https://modelscope.cn/api/v1/models/mindnlp/THUDM_chatglm-6b/repo?Revision=master&FilePath=mindspore-00001-of-00008.ckpt

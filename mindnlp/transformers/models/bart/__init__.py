@@ -15,13 +15,15 @@
 """
 Bart Model.
 """
-from . import bart, bart_config, bart_tokenizer
+from . import configuration_bart, modeling_bart, tokenization_bart, tokenization_bart_fast
 
-from .bart import *
-from .bart_config import *
-from .bart_tokenizer import *
+from .modeling_bart import *
+from .configuration_bart import *
+from .tokenization_bart import *
+from .tokenization_bart_fast import *
 
 __all__ = []
-__all__.extend(bart.__all__)
-__all__.extend(bart_config.__all__)
-__all__.extend(bart_tokenizer.__all__)
+__all__.extend(modeling_bart.__all__)
+__all__.extend(configuration_bart.__all__)
+__all__.extend(tokenization_bart.__all__)
+__all__.extend(tokenization_bart_fast.__all__)
