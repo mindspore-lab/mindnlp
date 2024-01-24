@@ -40,7 +40,8 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ('chatglm', 'ChatGLMConfig'),
         ('gpt_bigcode', 'GPTBigCodeConfig'),
         ("falcon", "FalconConfig"),
-        ("encodec","EncodecConfig")
+        ("encodec","EncodecConfig"),
+        ("mbart","MBartConfig")
     ]
 )
 
