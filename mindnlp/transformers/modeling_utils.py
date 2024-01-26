@@ -50,6 +50,7 @@ from mindnlp.utils.download import is_remote_url, download_url, cached_file, get
 from mindnlp.utils import convert_file_size_to_int, logging, ModelOutput, is_safetensors_available
 from mindnlp._legacy.functional import arange
 from mindnlp.utils.serialization import load
+from mindnlp.injection import set_global_fp16
 
 from .generation import GenerationMixin
 from .configuration_utils import PretrainedConfig
@@ -977,6 +978,9 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
         if ms_dtype:
             model.dtype = ms_dtype
+
+        if ms_dtype != mindspore.float32:
+            set_global_fp16(False)
 
         if is_sharded:
             converted_filenames = resolved_archive_file
