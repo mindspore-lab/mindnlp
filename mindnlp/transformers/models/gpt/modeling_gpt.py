@@ -621,7 +621,10 @@ class GPTForSequenceClassification(GPTPreTrainedModel):
                     "unexpected if using padding tokens in conjunction with `inputs_embeds.`"
                 )
 
-        pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
+        if isinstance(sequence_lengths, int):
+            pooled_logits = logits[ops.arange(batch_size), sequence_lengths]
+        else:
+            pooled_logits = ops.gather(logits, sequence_lengths, 1, 1)
 
         loss = None
         if labels is not None:
