@@ -1,0 +1,2 @@
+streamlit
+protobuf==3.20
