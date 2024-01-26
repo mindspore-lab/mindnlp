@@ -60,14 +60,12 @@ def fp16_patch_decorator(func):
     """fp16 patch on ascend"""
     def wrapper(*args, **kwargs):
         if GLOBAL_FP16_PATCH:
-            has_fp32 = any(bool(isinstance(arg, Tensor) and arg.dtype == mstype.float32) for arg in args)
             args = (arg.astype(mstype.float16) if arg is not None and isinstance(arg, Tensor) \
                     else arg for arg in args)
             kwargs = {k: (v.astype(mstype.float16) if v is not None and isinstance(v, Tensor) else v) \
                       for k, v in kwargs.items()}
             result = func(*args, **kwargs)
-            if has_fp32:
-                result = result.astype(mstype.float32)
+            result = result.astype(mstype.float32)
             return result
         return func(*args, **kwargs)
 
