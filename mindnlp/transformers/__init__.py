@@ -13,8 +13,9 @@
 # limitations under the License.
 # ============================================================================
 """MindNLP Transformers"""
-from . import models
+from . import models, pipelines
 from .models import *
+from .pipelines import *
 from .configuration_utils import PretrainedConfig
 from .modeling_utils import PreTrainedModel
 from .tokenization_utils_base import PreTrainedTokenizerBase, SpecialTokensMixin
@@ -24,3 +25,4 @@ from .tokenization_utils_fast import PreTrainedTokenizerFast
 __all__ = ['PretrainedConfig', 'PreTrainedModel', 'PreTrainedTokenizerBase',
            'SpecialTokensMixin', 'PreTrainedTokenizer', 'PreTrainedTokenizerFast']
 __all__.extend(models.__all__)
+__all__.extend(pipelines.__all__)
