@@ -15,10 +15,10 @@
 # limitations under the License.
 # ============================================================================
 """RWKV model"""
-from . import rwkv, rwkv_config
-from .rwkv_config import *
-from .rwkv import *
+from . import configuration_rwkv, modeling_rwkv
+from .configuration_rwkv import *
+from .modeling_rwkv import *
 
 __all__ = []
-__all__.extend(rwkv.__all__)
-__all__.extend(rwkv_config.__all__)
+__all__.extend(modeling_rwkv.__all__)
+__all__.extend(configuration_rwkv.__all__)

@@ -21,6 +21,7 @@
 # pylint: disable=unused-argument
 # pylint: disable=pointless-string-statement
 # pylint: disable=too-many-return-statements
+# pylint: disable=too-many-ancestors
 """Utils for test cases."""
 import collections
 import contextlib

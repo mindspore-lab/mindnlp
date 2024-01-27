@@ -45,6 +45,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("mistral", "MistralModel"),
         ('encodec','EncodecModel'),
         ('mbart','MBartModel'),
+        ("rwkv", "RwkvModel"),
         ("xlm-roberta", "XLMRobertaModel"),
     ]
 )
@@ -53,6 +54,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
     [
         # Model for pre-training mapping
         ("bert", "BertForPreTraining"),
+        ("rwkv", "RwkvForCausalLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
     ]
 )
@@ -62,6 +64,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         # Model with LM heads mapping
         ("bert", "BertForMaskedLM"),
         ("roberta", "RobertaForMaskedLM"),
+        ("rwkv", "RwkvForCausalLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
     ]
 )
@@ -74,6 +77,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("gpt2", "GPT2LMHeadModel"),
         ("falcon", "FalconForCausalLM"),
         ("gpt_bigcode", "GPTBigCodeForCausalLM"),
+        ("rwkv", "RwkvForCausalLM"),
         ("xlm-roberta", "XLMRobertaForCausalLM"),
     ]
 )
