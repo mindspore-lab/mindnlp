@@ -15,11 +15,16 @@
 """
 XLM Roberta init
 """
-from . import configuration_xlm_roberta, modeling_xlm_roberta
+from . import configuration_xlm_roberta, modeling_xlm_roberta, \
+    tokenization_xlm_roberta, tokenization_xlm_roberta_fast
 
 from .configuration_xlm_roberta import *
 from .modeling_xlm_roberta import *
+from .tokenization_xlm_roberta import *
+from .tokenization_xlm_roberta_fast import *
 
 __all__ = []
 __all__.extend(configuration_xlm_roberta.__all__)
 __all__.extend(modeling_xlm_roberta.__all__)
+__all__.extend(tokenization_xlm_roberta.__all__)
+__all__.extend(tokenization_xlm_roberta_fast.__all__)

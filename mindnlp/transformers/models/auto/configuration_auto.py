@@ -41,7 +41,8 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ('gpt_bigcode', 'GPTBigCodeConfig'),
         ("falcon", "FalconConfig"),
         ("encodec","EncodecConfig"),
-        ("mbart","MBartConfig")
+        ("mbart","MBartConfig"),
+        ('xlm-roberta', 'XLMRobertaConfig')
     ]
 )
 

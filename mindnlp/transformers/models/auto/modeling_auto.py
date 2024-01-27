@@ -44,7 +44,8 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("longformer", "LongformerModel"),
         ("mistral", "MistralModel"),
         ('encodec','EncodecModel'),
-        ('mbart','MBartModel')
+        ('mbart','MBartModel'),
+        ("xlm-roberta", "XLMRobertaModel"),
     ]
 )
 
@@ -52,6 +53,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
     [
         # Model for pre-training mapping
         ("bert", "BertForPreTraining"),
+        ("xlm-roberta", "XLMRobertaForMaskedLM"),
     ]
 )
 
@@ -60,6 +62,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         # Model with LM heads mapping
         ("bert", "BertForMaskedLM"),
         ("roberta", "RobertaForMaskedLM"),
+        ("xlm-roberta", "XLMRobertaForMaskedLM"),
     ]
 )
 
@@ -70,7 +73,8 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("roberta", "RobertaLMHeadModel"),
         ("gpt2", "GPT2LMHeadModel"),
         ("falcon", "FalconForCausalLM"),
-        ("gpt_bigcode", "GPTBigCodeForCausalLM")
+        ("gpt_bigcode", "GPTBigCodeForCausalLM"),
+        ("xlm-roberta", "XLMRobertaForCausalLM"),
     ]
 )
 
@@ -117,6 +121,7 @@ MODEL_FOR_MASKED_LM_MAPPING_NAMES = OrderedDict(
     [
         # Model for Masked LM mapping
         ("bert", "BertForMaskedLM"),
+        ("xlm-roberta", "XLMRobertaForMaskedLM"),
     ]
 )
 
@@ -195,6 +200,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("bart", "BartForSequenceClassification"),
         ("bert", "BertForSequenceClassification"),
         ("falcon", "FalconForSequenceClassification"),
+        ("xlm-roberta", "XLMRobertaForSequenceClassification")
     ]
 )
 

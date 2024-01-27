@@ -15,24 +15,28 @@
 # ============================================================================
 # pylint: disable=invalid-name
 # pylint: disable=inconsistent-return-statements
+# pylint: disable=wrong-import-order
 """ Tokenization classes for XLM-RoBERTa model."""
 
 
 import os
 from shutil import copyfile
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
-import sentencepiece as spm
+from ...tokenization_utils import AddedToken
+from ...tokenization_utils_fast import PreTrainedTokenizerFast
+from mindnlp.utils import is_sentencepiece_available, logging
 
-from mindnlp.utils import logging
-from ...tokenization_utils import AddedToken, PreTrainedTokenizer
+
+if is_sentencepiece_available():
+    from .tokenization_xlm_roberta import XLMRobertaTokenizer
+else:
+    XLMRobertaTokenizer = None
 
 
 logger = logging.get_logger(__name__)
 
-SPIECE_UNDERLINE = "▁"
-
-VOCAB_FILES_NAMES = {"vocab_file": "sentencepiece.bpe.model"}
+VOCAB_FILES_NAMES = {"vocab_file": "sentencepiece.bpe.model", "tokenizer_file": "tokenizer.json"}
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
@@ -50,7 +54,23 @@ PRETRAINED_VOCAB_FILES_MAP = {
         "xlm-roberta-large-finetuned-conll03-german": (
             "https://huggingface.co/xlm-roberta-large-finetuned-conll03-german/resolve/main/sentencepiece.bpe.model"
         ),
-    }
+    },
+    "tokenizer_file": {
+        "xlm-roberta-base": "https://huggingface.co/xlm-roberta-base/resolve/main/tokenizer.json",
+        "xlm-roberta-large": "https://huggingface.co/xlm-roberta-large/resolve/main/tokenizer.json",
+        "xlm-roberta-large-finetuned-conll02-dutch": (
+            "https://huggingface.co/xlm-roberta-large-finetuned-conll02-dutch/resolve/main/tokenizer.json"
+        ),
+        "xlm-roberta-large-finetuned-conll02-spanish": (
+            "https://huggingface.co/xlm-roberta-large-finetuned-conll02-spanish/resolve/main/tokenizer.json"
+        ),
+        "xlm-roberta-large-finetuned-conll03-english": (
+            "https://huggingface.co/xlm-roberta-large-finetuned-conll03-english/resolve/main/tokenizer.json"
+        ),
+        "xlm-roberta-large-finetuned-conll03-german": (
+            "https://huggingface.co/xlm-roberta-large-finetuned-conll03-german/resolve/main/tokenizer.json"
+        ),
+    },
 }
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
@@ -63,13 +83,14 @@ PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
 }
 
 
-class XLMRobertaTokenizer(PreTrainedTokenizer):
+class XLMRobertaTokenizerFast(PreTrainedTokenizerFast):
     """
-    Adapted from [`RobertaTokenizer`] and [`XLNetTokenizer`]. Based on
-    [SentencePiece](https://github.com/google/sentencepiece).
+    Construct a "fast" XLM-RoBERTa tokenizer (backed by HuggingFace's *tokenizers* library). Adapted from
+    [`RobertaTokenizer`] and [`XLNetTokenizer`]. Based on
+    [BPE](https://huggingface.co/docs/tokenizers/python/latest/components.html?highlight=BPE#models).
 
-    This tokenizer inherits from [`PreTrainedTokenizer`] which contains most of the main methods. Users should refer to
-    this superclass for more information regarding those methods.
+    This tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. Users should
+    refer to this superclass for more information regarding those methods.
 
     Args:
         vocab_file (`str`):
@@ -109,35 +130,20 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
         mask_token (`str`, *optional*, defaults to `"<mask>"`):
             The token used for masking values. This is the token used when training this model with masked language
             modeling. This is the token which the model will try to predict.
-        sp_model_kwargs (`dict`, *optional*):
-            Will be passed to the `SentencePieceProcessor.__init__()` method. The [Python wrapper for
-            SentencePiece](https://github.com/google/sentencepiece/tree/master/python) can be used, among other things,
-            to set:
-
-            - `enable_sampling`: Enable subword regularization.
-            - `nbest_size`: Sampling parameters for unigram. Invalid for BPE-Dropout.
-
-              - `nbest_size = {0,1}`: No sampling is performed.
-              - `nbest_size > 1`: samples from the nbest_size results.
-              - `nbest_size < 0`: assuming that nbest_size is infinite and samples from the all hypothesis (lattice)
-                using forward-filtering-and-backward-sampling algorithm.
-
-            - `alpha`: Smoothing parameter for unigram sampling, and dropout probability of merge operations for
-              BPE-dropout.
-
-    Attributes:
-        sp_model (`SentencePieceProcessor`):
-            The *SentencePiece* processor that is used for every conversion (string, tokens and IDs).
+        additional_special_tokens (`List[str]`, *optional*, defaults to `["<s>NOTUSED", "</s>NOTUSED"]`):
+            Additional special tokens used by the tokenizer.
     """
 
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
     model_input_names = ["input_ids", "attention_mask"]
+    slow_tokenizer_class = XLMRobertaTokenizer
 
     def __init__(
         self,
-        vocab_file,
+        vocab_file=None,
+        tokenizer_file=None,
         bos_token="<s>",
         eos_token="</s>",
         sep_token="</s>",
@@ -145,60 +151,29 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
         unk_token="<unk>",
         pad_token="<pad>",
         mask_token="<mask>",
-        sp_model_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs,
-    ) -> None:
+    ):
         # Mask token behave like a normal word, i.e. include the space before it
-        mask_token = AddedToken(mask_token, lstrip=True, special=True) if isinstance(mask_token, str) else mask_token
-
-        self.sp_model_kwargs = {} if sp_model_kwargs is None else sp_model_kwargs
-
-        self.sp_model = spm.SentencePieceProcessor(**self.sp_model_kwargs)
-        self.sp_model.Load(str(vocab_file))
-        self.vocab_file = vocab_file
-
-        # Original fairseq vocab and spm vocab must be "aligned":
-        # Vocab    |    0    |    1    |   2    |    3    |  4  |  5  |  6  |   7   |   8   |  9
-        # -------- | ------- | ------- | ------ | ------- | --- | --- | --- | ----- | ----- | ----
-        # fairseq  | '<s>'   | '<pad>' | '</s>' | '<unk>' | ',' | '.' | '▁' | 's'   | '▁de' | '-'
-        # spm      | '<unk>' | '<s>'   | '</s>' | ','     | '.' | '▁' | 's' | '▁de' | '-'   | '▁a'
-
-        # Mimic fairseq token-to-id alignment for the first 4 token
-        self.fairseq_tokens_to_ids = {"<s>": 0, "<pad>": 1, "</s>": 2, "<unk>": 3}
-
-        # The first "real" token "," has position 4 in the original fairseq vocab and position 3 in the spm vocab
-        self.fairseq_offset = 1
-
-        self.fairseq_tokens_to_ids["<mask>"] = len(self.sp_model) + self.fairseq_offset
-        self.fairseq_ids_to_tokens = {v: k for k, v in self.fairseq_tokens_to_ids.items()}
+        mask_token = AddedToken(mask_token, lstrip=True, rstrip=False) if isinstance(mask_token, str) else mask_token
 
         super().__init__(
+            vocab_file,
+            tokenizer_file=tokenizer_file,
             bos_token=bos_token,
             eos_token=eos_token,
-            unk_token=unk_token,
             sep_token=sep_token,
             cls_token=cls_token,
+            unk_token=unk_token,
             pad_token=pad_token,
             mask_token=mask_token,
-            sp_model_kwargs=self.sp_model_kwargs,
             **kwargs,
         )
 
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        state["sp_model"] = None
-        state["sp_model_proto"] = self.sp_model.serialized_model_proto()
-        return state
+        self.vocab_file = vocab_file
 
-    def __setstate__(self, d):
-        self.__dict__ = d
-
-        # for backward compatibility
-        if not hasattr(self, "sp_model_kwargs"):
-            self.sp_model_kwargs = {}
-
-        self.sp_model = spm.SentencePieceProcessor(**self.sp_model_kwargs)
-        self.sp_model.LoadFromSerializedProto(self.sp_model_proto)
+    @property
+    def can_save_slow_tokenizer(self) -> bool:
+        return os.path.isfile(self.vocab_file) if self.vocab_file else False
 
     def build_inputs_with_special_tokens(
         self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None
@@ -226,34 +201,6 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
         sep = [self.sep_token_id]
         return cls + token_ids_0 + sep + sep + token_ids_1 + sep
 
-    def get_special_tokens_mask(
-        self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None, already_has_special_tokens: bool = False
-    ) -> List[int]:
-        """
-        Retrieve sequence ids from a token list that has no special tokens added. This method is called when adding
-        special tokens using the tokenizer `prepare_for_model` method.
-
-        Args:
-            token_ids_0 (`List[int]`):
-                List of IDs.
-            token_ids_1 (`List[int]`, *optional*):
-                Optional second list of IDs for sequence pairs.
-            already_has_special_tokens (`bool`, *optional*, defaults to `False`):
-                Whether or not the token list is already formatted with special tokens for the model.
-
-        Returns:
-            `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
-        """
-
-        if already_has_special_tokens:
-            return super().get_special_tokens_mask(
-                token_ids_0=token_ids_0, token_ids_1=token_ids_1, already_has_special_tokens=True
-            )
-
-        if token_ids_1 is None:
-            return [1] + ([0] * len(token_ids_0)) + [1]
-        return [1] + ([0] * len(token_ids_0)) + [1, 1] + ([0] * len(token_ids_1)) + [1]
-
     def create_token_type_ids_from_sequences(
         self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None
     ) -> List[int]:
@@ -279,54 +226,23 @@ class XLMRobertaTokenizer(PreTrainedTokenizer):
             return len(cls + token_ids_0 + sep) * [0]
         return len(cls + token_ids_0 + sep + sep + token_ids_1 + sep) * [0]
 
-    @property
-    def vocab_size(self):
-        return len(self.sp_model) + self.fairseq_offset + 1  # Add the <mask> token
-
-    def get_vocab(self):
-        vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
-        vocab.update(self.added_tokens_encoder)
-        return vocab
-
-    def _tokenize(self, text: str) -> List[str]:
-        # TODO check if the t5/llama PR also applies here
-        return self.sp_model.encode(text, out_type=str)
-
-    def _convert_token_to_id(self, token):
-        """Converts a token (str) in an id using the vocab."""
-        if token in self.fairseq_tokens_to_ids:
-            return self.fairseq_tokens_to_ids[token]
-        spm_id = self.sp_model.PieceToId(token)
-
-        # Need to return unknown token if the SP model returned 0
-        return spm_id + self.fairseq_offset if spm_id else self.unk_token_id
-
-    def _convert_id_to_token(self, index):
-        """Converts an index (integer) in a token (str) using the vocab."""
-        if index in self.fairseq_ids_to_tokens:
-            return self.fairseq_ids_to_tokens[index]
-        return self.sp_model.IdToPiece(index - self.fairseq_offset)
-
-    def convert_tokens_to_string(self, tokens):
-        """Converts a sequence of tokens (strings for sub-words) in a single string."""
-        out_string = "".join(tokens).replace(SPIECE_UNDERLINE, " ").strip()
-        return out_string
-
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+        if not self.can_save_slow_tokenizer:
+            raise ValueError(
+                "Your fast tokenizer does not have the necessary information to save the vocabulary for a slow "
+                "tokenizer."
+            )
+
         if not os.path.isdir(save_directory):
-            logger.error(f"Vocabulary path ({save_directory}) should be a directory")
+            logger.error(f"Vocabulary path ({save_directory}) should be a directory.")
             return
         out_vocab_file = os.path.join(
             save_directory, (filename_prefix + "-" if filename_prefix else "") + VOCAB_FILES_NAMES["vocab_file"]
         )
 
-        if os.path.abspath(self.vocab_file) != os.path.abspath(out_vocab_file) and os.path.isfile(self.vocab_file):
+        if os.path.abspath(self.vocab_file) != os.path.abspath(out_vocab_file):
             copyfile(self.vocab_file, out_vocab_file)
-        elif not os.path.isfile(self.vocab_file):
-            with open(out_vocab_file, "wb") as fi:
-                content_spiece_model = self.sp_model.serialized_model_proto()
-                fi.write(content_spiece_model)
 
         return (out_vocab_file,)
 
-__all__ = ['XLMRobertaTokenizer']
+__all__ = ['XLMRobertaTokenizerFast']
