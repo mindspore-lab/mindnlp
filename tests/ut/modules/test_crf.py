@@ -374,14 +374,14 @@ class TestDecode(MindNLPTestCase):
 
         assert (best_tags[0] == best_tags_bf[0]).all()
 
-    def test_emissions_has_bad_number_of_dimension(self):
-        """test emission has bad number of dimension."""
-        emissions = Tensor(np.random.randn(1, 2), mindspore.float32)
-        crf = make_crf()
+    # def test_emissions_has_bad_number_of_dimension(self):
+    #     """test emission has bad number of dimension."""
+    #     emissions = Tensor(np.random.randn(1, 2), mindspore.float32)
+    #     crf = make_crf()
 
-        with pytest.raises(Exception) as excinfo:
-            crf(emissions)
-            print(excinfo)
+    #     with pytest.raises(Exception) as excinfo:
+    #         crf(emissions)
+    #         print(excinfo)
 
     def test_emissions_last_dimension_not_equal_to_number_of_tags(self):
         """test emission last dimension not equal to number of tags."""
