@@ -257,8 +257,9 @@ class _open_zipfile_reader(_opener):
 
 def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, backward_hooks, metadata=None):
     num_elemets = reduce(operator.mul, size)
+    stride = tuple((s * 4 for s in stride))
     array = storage[storage_offset: storage_offset + num_elemets]
-    array = array.reshape(size)
+    array = np.lib.stride_tricks.as_strided(array, size, stride)
     if array.dtype == bfloat16:
         logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
         array = array.astype(np.float16)
