@@ -42,6 +42,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("falcon", "FalconConfig"),
         ("encodec","EncodecConfig"),
         ("mbart","MBartConfig"),
+        ("phi", "PhiConfig"),
         ('xlm-roberta', 'XLMRobertaConfig')
     ]
 )
@@ -177,6 +178,7 @@ CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
         ("pegasus_x", "PEGASUS_X_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("perceiver", "PERCEIVER_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("persimmon", "PERSIMMON_PRETRAINED_CONFIG_ARCHIVE_MAP"),
+        ("phi", "PHI_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("pix2struct", "PIX2STRUCT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("plbart", "PLBART_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("poolformer", "POOLFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP"),
@@ -407,6 +409,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("pegasus_x", "PEGASUS-X"),
         ("perceiver", "Perceiver"),
         ("persimmon", "Persimmon"),
+        ("phi", "Phi"),
         ("phobert", "PhoBERT"),
         ("pix2struct", "Pix2Struct"),
         ("plbart", "PLBart"),

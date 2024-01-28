@@ -48,6 +48,8 @@ logger = logging.get_logger(__name__)
 
 
 PHI_PRETRAINED_MODEL_ARCHIVE_LIST = [
+    "microsoft/phi-1",
+    "microsoft/phi-1_5",
     "microsoft/phi-2",
     # See all Phi models at https://huggingface.co/models?filter=phi
 ]
@@ -261,7 +263,6 @@ class PhiAttention(nn.Cell):
             )
 
         self._init_rope()
-        self.is_ascend = mindspore.get_context('device_target') == 'Ascend'
 
     def _init_rope(self):
         if self.config.rope_scaling is None:
@@ -805,7 +806,7 @@ class PhiForSequenceClassification(PhiPreTrainedModel):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.model = PhiModel(config)
-        self.score = nn.Dense(config.hidden_size, self.num_labels, bias=False)
+        self.score = nn.Dense(config.hidden_size, self.num_labels, has_bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
