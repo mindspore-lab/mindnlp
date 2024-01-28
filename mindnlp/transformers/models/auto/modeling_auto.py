@@ -46,6 +46,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ('encodec','EncodecModel'),
         ('mbart','MBartModel'),
         ("rwkv", "RwkvModel"),
+        ("phi", "PhiModel"),
         ("xlm-roberta", "XLMRobertaModel"),
     ]
 )
@@ -77,6 +78,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("gpt2", "GPT2LMHeadModel"),
         ("falcon", "FalconForCausalLM"),
         ("gpt_bigcode", "GPTBigCodeForCausalLM"),
+        ("phi", "PhiForCausalLM"),
         ("rwkv", "RwkvForCausalLM"),
         ("xlm-roberta", "XLMRobertaForCausalLM"),
     ]
@@ -204,6 +206,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("bart", "BartForSequenceClassification"),
         ("bert", "BertForSequenceClassification"),
         ("falcon", "FalconForSequenceClassification"),
+        ("phi", "PhiForSequenceClassification"),
         ("xlm-roberta", "XLMRobertaForSequenceClassification")
     ]
 )
@@ -343,6 +346,7 @@ MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("mra", "MraForTokenClassification"),
         ("nezha", "NezhaForTokenClassification"),
         ("nystromformer", "NystromformerForTokenClassification"),
+        ("phi", "PhiForTokenClassification"),
         ("qdqbert", "QDQBertForTokenClassification"),
         ("rembert", "RemBertForTokenClassification"),
         ("roberta", "RobertaForTokenClassification"),
