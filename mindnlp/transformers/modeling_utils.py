@@ -965,6 +965,11 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         if ms_dtype is None:
             ms_dtype = mindspore.float32
 
+        use_bf16 = False
+        if ms_dtype == mindspore.bfloat16:
+            ms_dtype = mindspore.float16
+            use_bf16 = True
+
         def empty_initializer(init, shape=None, dtype=mindspore.float32):
             if not isinstance(shape, (tuple, list)):
                 shape = (shape,)
@@ -997,13 +1002,16 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         # These are all the pointers of shared tensors.
         tied_params = [names for _, names in ptrs.items() if len(names) > 1]
 
-
         def load_ckpt(resolved_archive_file, from_pt=False):
             if from_pt:
                 if use_safetensors:
                     from safetensors.numpy import load_file
                     state_dict = load_file(resolved_archive_file)
-                    new_state_dict = {k: Parameter(v) for k, v in state_dict.items()}
+                    if use_bf16:
+                        logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
+                        new_state_dict = {k: Parameter(v.astype(np.float16)) for k, v in state_dict.items()}
+                    else:
+                        new_state_dict = {k: Parameter(v) for k, v in state_dict.items()}
                     return new_state_dict
                 return load(resolved_archive_file)
             try:

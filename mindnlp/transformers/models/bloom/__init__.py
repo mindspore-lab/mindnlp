@@ -15,10 +15,12 @@
 """
 Bloom Model.
 """
-from . import bloom, bloom_config
-from .bloom import *
-from .bloom_config import *
+from . import configuration_bloom, modeling_bloom, tokenization_bloom_fast
+from .modeling_bloom import *
+from .configuration_bloom import *
+from .tokenization_bloom_fast import *
 
 __all__ = []
-__all__.extend(bloom.__all__)
-__all__.extend(bloom_config.__all__)
+__all__.extend(modeling_bloom.__all__)
+__all__.extend(configuration_bloom.__all__)
+__all__.extend(tokenization_bloom_fast.__all__)

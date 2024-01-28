@@ -32,6 +32,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         # Base model mapping
         ("bart", "BartModel"),
         ("bert", "BertModel"),
+        ("bloom", "BloomModel"),
         ("ernie", "ErnieModel"),
         ("ernie_m", "ErnieMModel"),
         ("roberta", "RobertaModel"),
@@ -55,6 +56,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
     [
         # Model for pre-training mapping
         ("bert", "BertForPreTraining"),
+        ("bloom", "BloomForCausalLM"),
         ("rwkv", "RwkvForCausalLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
     ]
@@ -64,6 +66,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
     [
         # Model with LM heads mapping
         ("bert", "BertForMaskedLM"),
+        ("bloom", "BloomForCausalLM"),
         ("roberta", "RobertaForMaskedLM"),
         ("rwkv", "RwkvForCausalLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
@@ -74,6 +77,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
     [
         # Model for Causal LM mapping
         ("bert", "BertLMHeadModel"),
+        ("bloom", "BloomForCausalLM"),
         ("roberta", "RobertaLMHeadModel"),
         ("gpt2", "GPT2LMHeadModel"),
         ("falcon", "FalconForCausalLM"),
@@ -205,6 +209,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         # Model for Sequence Classification mapping
         ("bart", "BartForSequenceClassification"),
         ("bert", "BertForSequenceClassification"),
+        ("bloom", "BloomForSequenceClassification"),
         ("falcon", "FalconForSequenceClassification"),
         ("phi", "PhiForSequenceClassification"),
         ("xlm-roberta", "XLMRobertaForSequenceClassification")
