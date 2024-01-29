@@ -16,3 +16,4 @@ easydict
 safetensors
 ml_dtypes
 cython
+jieba

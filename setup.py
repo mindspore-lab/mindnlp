@@ -125,7 +125,8 @@ setup(
         'regex',
         'easydict',
         'safetensors',
-        'ml_dtypes'
+        'ml_dtypes',
+        'jieba'
     ],
     classifiers=[
         'License :: OSI Approved :: Apache Software License'

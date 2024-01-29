@@ -15,11 +15,13 @@
 """
 PanGu_Alpha Model init
 """
-from . import pangu_alpha, pangu_alpha_config
+from . import configuration_gptpangu, modeling_gptpangu, tokenization_gptpangu
 
-from .pangu_alpha_config import *
-from .pangu_alpha import *
+from .configuration_gptpangu import *
+from .modeling_gptpangu import *
+from .tokenization_gptpangu import *
 
 __all__ = []
-__all__.extend(pangu_alpha.__all__)
-__all__.extend(pangu_alpha_config.__all__)
+__all__.extend(modeling_gptpangu.__all__)
+__all__.extend(configuration_gptpangu.__all__)
+__all__.extend(tokenization_gptpangu.__all__)

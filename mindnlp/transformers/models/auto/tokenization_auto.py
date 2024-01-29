@@ -277,6 +277,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("opt", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
         ("owlv2", ("CLIPTokenizer", "CLIPTokenizerFast" if is_tokenizers_available() else None)),
         ("owlvit", ("CLIPTokenizer", "CLIPTokenizerFast" if is_tokenizers_available() else None)),
+        ("gpt_pangu", ("GPTPanguTokenizer", None)),
         (
             "pegasus",
             (
