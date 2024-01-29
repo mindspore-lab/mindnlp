@@ -30,6 +30,7 @@ from .codegen import *
 from .cpm import *
 from .ernie import *
 from .ernie_m import *
+from .electra import *
 from .chatglm import *
 from .chatglm2 import *
 from .gpt import *
@@ -71,6 +72,7 @@ __all__.extend(codegen.__all__)
 __all__.extend(cpm.__all__)
 __all__.extend(ernie.__all__)
 __all__.extend(ernie_m.__all__)
+__all__.extend(electra.__all__)
 __all__.extend(chatglm.__all__)
 __all__.extend(chatglm2.__all__)
 __all__.extend(gpt.__all__)
