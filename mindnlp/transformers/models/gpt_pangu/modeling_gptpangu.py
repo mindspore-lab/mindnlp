@@ -12,40 +12,45 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=C0103
-# pylint: disable=C0415
-# pylint: disable=E0401
+# pylint: disable=invalid-name
+# pylint: disable=missing-class-docstring
+"""MindSpore PanguAlpha GPT2 Model"""
 
-"""
-PanGu_alpha Models
-"""
 from typing import Tuple
-
 import math
 
 import mindspore
-from mindspore import nn
-from mindspore import Parameter, Tensor, ops
+from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
-from mindnlp._legacy.nn import Matmul
-from mindnlp.transformers.activations import ACT2FN
 
-from .pangu_alpha_config import PanGuAlphaConfig
+from mindnlp.utils import logging
+from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
+from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
+from .configuration_gptpangu import GPTPanguConfig
 
 
-class PanGuAlphaAttention(nn.Cell):
-    """PanGu-Alpha Attention"""
+logger = logging.get_logger(__name__)
+
+GPTPangu_PRETRAINED_MODEL_ARCHIVE_LIST = [
+    "sunzeyeah/pangu-350M-sft",
+    "sunzeyeah/pangu-2_6B-sft",
+    "sunzeyeah/pangu-350M-reward",
+    "sunzeyeah/pangu-350M",
+    "sunzeyeah/pangu-2_6B",
+    "sunzeyeah/pangu-13B",
+]
+
+
+class GPTPanguAttention(nn.Cell):
     def __init__(self, config):
         super().__init__()
 
         max_positions = config.max_position_embeddings
-        self.bias = Parameter(ops.tril(
-            ops.ones((max_positions, max_positions), dtype=mindspore.uint8)).view(1, 1, max_positions, max_positions),
-            name="bias",
-            requires_grad=False)
-        self.masked_bias = Parameter(
-            Tensor(-1e4), name="masked_bias", requires_grad=False)
+        self.bias = ops.tril(ops.ones((max_positions, max_positions), dtype=mindspore.uint8)).view(
+                1, 1, max_positions, max_positions
+            )
+        self.masked_bias = mindspore.tensor(-1e4)
 
         self.embed_dim = config.hidden_size
         self.num_heads = config.num_heads
@@ -64,12 +69,11 @@ class PanGuAlphaAttention(nn.Cell):
 
         self.attn_dropout = nn.Dropout(p=config.attn_pdrop)
         self.resid_dropout = nn.Dropout(p=config.resid_pdrop)
-        self.matmul = Matmul()
 
 
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
-        query = mindspore.numpy.broadcast_to(query, key.shape)
-        attn_weights = self.matmul(query, key.swapaxes(-1, -2))
+        attn_weights = ops.matmul(query, key.swapaxes(-1, -2))
+
         if self.scale_attn_weights:
             attn_weights = attn_weights / (float(value.shape[-1]) ** 0.5)
 
@@ -84,7 +88,7 @@ class PanGuAlphaAttention(nn.Cell):
         attn_weights = ops.softmax(attn_weights, axis=-1)
 
         # Downcast (if necessary) back to V's dtype (if in mixed-precision) -- No-Op otherwise
-        attn_weights = attn_weights.to(value.dtype)
+        attn_weights = attn_weights.astype(value.dtype)
         attn_weights = self.attn_dropout(attn_weights)
 
         # Mask heads if we want to
@@ -124,6 +128,7 @@ class PanGuAlphaAttention(nn.Cell):
         query = self.q_proj(custom_query) if custom_query is not None else self.q_proj(hidden_states)
         key = self.k_proj(hidden_states)
         value = self.v_proj(hidden_states)
+
         query = self._split_heads(query, self.num_heads, self.head_dim)
         key = self._split_heads(key, self.num_heads, self.head_dim)
         value = self._split_heads(value, self.num_heads, self.head_dim)
@@ -139,6 +144,7 @@ class PanGuAlphaAttention(nn.Cell):
             present = None
 
         attn_output, attn_weights = self._attn(query, key, value, attention_mask, head_mask)
+
         attn_output = self._merge_heads(attn_output, self.num_heads, self.head_dim)
         attn_output = self.c_proj(attn_output)
         attn_output = self.resid_dropout(attn_output)
@@ -150,8 +156,7 @@ class PanGuAlphaAttention(nn.Cell):
         return outputs  # a, present, (attentions)
 
 
-class PanGuAlphaMLP(nn.Cell):
-    """PanGu-Alpha MLP"""
+class GPTPanguMLP(nn.Cell):
     def __init__(self, intermediate_size, config):  # in MLP: intermediate_size= 4 * hidden_size
         super().__init__()
         embed_dim = config.hidden_size
@@ -168,74 +173,16 @@ class PanGuAlphaMLP(nn.Cell):
         return hidden_states
 
 
-class PanGuAlphaPreTrainedModel(PreTrainedModel):
-    """
-    An abstract class to handle weights initialization and a simple interface for downloading 
-    and loading pretrained models.
-    """
-    config_class = PanGuAlphaConfig
-
-    base_model_prefix = "transformer"
-    supports_gradient_checkpointing = True
-
-    def __init__(self, config):
-        super().__init__(config)
-        if not isinstance(config, PanGuAlphaConfig):
-            raise ValueError(
-                f"Parameter config in `{self.__class__.__name__}(config)` should be an instance of " +
-                "class `PanGuAlphaConfig`. To create a model from a Google pretrained model use " +
-                f"`model = {self.__class__.__name__}.from_pretrained(PRETRAINED_MODEL_NAME)`"
-            )
-        self.config = config
-
-    def _init_weights(self, cell):
-        """Initialize the weights."""
-        if isinstance(cell, (nn.Dense,)):
-            # Slightly different from the TF version which uses truncated_normal for initialization
-            # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if cell.bias is not None:
-                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-        elif isinstance(cell, nn.Embedding):
-            weight = initializer(Normal(self.config.initializer_range),
-                                                 cell.weight.shape,
-                                                 cell.weight.dtype)
-            if cell.padding_idx is not None:
-                weight[cell.padding_idx] = 0
-            cell.weight.set_data(weight)
-        elif isinstance(cell, nn.LayerNorm):
-            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
-            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
-
-        # Reinitialize selected weights subject to the OpenAI GPT-2 Paper Scheme:
-        #   > A modified initialization which accounts for the accumulation on the residual path with model depth. Scale
-        #   > the weights of residual layers at initialization by a factor of 1/√N where N is the # of residual layers.
-        #   >   -- GPT-2 :: https://openai.com/blog/better-language-models/
-        #
-        # Reference (Megatron-LM): https://github.com/NVIDIA/Megatron-LM/blob/main/megatron/model/gpt_model.py
-        for name, p in cell.parameters_and_names():
-            if name == "c_proj.weight":
-                # Special Scaled Initialization --> There are 2 Layer Norms per Transformer Block
-                p.set_data(initializer(Normal((self.config.initializer_range / math.sqrt(2 * self.config.num_layers))),
-                                              p.shape, p.dtype))
-
-    def _set_gradient_checkpointing(self, module, value=False):
-        if isinstance(module, PanGuAlphaModel):
-            module.gradient_checkpointing = value
-
-
-class PanGuAlphaBlock(nn.Cell):
-    """PanGu-Alpha Block"""
+class GPTPanguBlock(nn.Cell):
     def __init__(self, config):
         super().__init__()
         hidden_size = config.hidden_size
         inner_dim = config.intermediate_size if config.intermediate_size is not None else 4 * hidden_size
 
-        self.ln_1 = nn.LayerNorm((hidden_size,), begin_norm_axis=2, begin_params_axis=2, epsilon=config.layer_norm_epsilon)
-        self.attn = PanGuAlphaAttention(config)
-        self.ln_2 = nn.LayerNorm((hidden_size,), begin_norm_axis=2, begin_params_axis=2, epsilon=config.layer_norm_epsilon)
-        self.mlp = PanGuAlphaMLP(inner_dim, config)
+        self.ln_1 = nn.LayerNorm([hidden_size], epsilon=config.layer_norm_epsilon)
+        self.attn = GPTPanguAttention(config)
+        self.ln_2 = nn.LayerNorm([hidden_size], epsilon=config.layer_norm_epsilon)
+        self.mlp = GPTPanguMLP(inner_dim, config)
 
     def construct(
         self,
@@ -277,8 +224,50 @@ class PanGuAlphaBlock(nn.Cell):
         return outputs  # hidden_states, present, (attentions, cross_attentions)
 
 
-class PanGuAlphaModel(PanGuAlphaPreTrainedModel):
-    """PanGu-Alpha Model"""
+class GPTPanguPreTrainedModel(PreTrainedModel):
+    """
+    An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
+    models.
+    """
+
+    config_class = GPTPanguConfig
+    base_model_prefix = "transformer"
+    supports_gradient_checkpointing = False
+
+    def _init_weights(self, cell):
+        """Initialize the weights"""
+        if isinstance(cell, (nn.Dense,)):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
+                                                    cell.weight.shape, cell.weight.dtype))
+            if cell.bias is not None:
+                cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        elif isinstance(cell, nn.Embedding):
+            weight = initializer(Normal(self.config.initializer_range),
+                                                 cell.weight.shape,
+                                                 cell.weight.dtype)
+            if cell.padding_idx is not None:
+                weight[cell.padding_idx] = 0
+            cell.weight.set_data(weight)
+        elif isinstance(cell, nn.LayerNorm):
+            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+
+        # Reinitialize selected weights subject to the OpenAI GPT-2 Paper Scheme:
+        #   > A modified initialization which accounts for the accumulation on the residual path with model depth. Scale
+        #   > the weights of residual layers at initialization by a factor of 1/√N where N is the # of residual layers.
+        #   >   -- GPT-2 :: https://openai.com/blog/better-language-models/
+        #
+        # Reference (Megatron-LM): https://github.com/NVIDIA/Megatron-LM/blob/main/megatron/model/gpt_model.py
+        for name, p in cell.parameters_and_names():
+            if "c_proj" in name and "weight" in name:
+                # Special Scaled Initialization --> There are 2 Layer Norms per Transformer Block
+                p.set_data(initializer(Normal(self.config.initializer_range / math.sqrt(2 * self.config.num_layers)),
+                                       p.shape, p.dtype))
+
+
+class GPTPanguModel(GPTPanguPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
 
@@ -289,8 +278,8 @@ class PanGuAlphaModel(PanGuAlphaPreTrainedModel):
         self.wqe = nn.Embedding(config.max_position_embeddings, self.embed_dim)
 
         self.drop = nn.Dropout(p=config.embd_pdrop)
-        self.h = nn.CellList([PanGuAlphaBlock(config) for _ in range(config.num_layers)])
-        self.ln_f = nn.LayerNorm((self.embed_dim,), begin_norm_axis=2, begin_params_axis=2, epsilon=config.layer_norm_epsilon)
+        self.h = nn.CellList([GPTPanguBlock(config) for _ in range(config.num_layers)])
+        self.ln_f = nn.LayerNorm([self.embed_dim], epsilon=config.layer_norm_epsilon)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
@@ -316,12 +305,12 @@ class PanGuAlphaModel(PanGuAlphaPreTrainedModel):
         output_hidden_states=None,
         return_dict=None,
     ):
-        # output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        # output_hidden_states = (
-        #     output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
-        # )
-        # use_cache = use_cache if use_cache is not None else self.config.use_cache
-        # return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        )
+        use_cache = use_cache if use_cache is not None else self.config.use_cache
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
@@ -346,9 +335,8 @@ class PanGuAlphaModel(PanGuAlphaPreTrainedModel):
         else:
             past_length = past_key_values[0][0].shape[-2]
         if position_ids is None:
-            position_ids = mindspore.numpy.arange(past_length, input_shape[-1] + past_length, dtype=mindspore.int64)
-            position_ids = ops.ExpandDims()(position_ids, 0)
-            position_ids = position_ids.view(-1, input_shape[-1])
+            position_ids = ops.arange(past_length, input_shape[-1] + past_length, dtype=mindspore.int64)
+            position_ids = position_ids.unsqueeze(0).view(-1, input_shape[-1])
 
         # GPT2Attention mask.
         if attention_mask is not None:
@@ -392,6 +380,7 @@ class PanGuAlphaModel(PanGuAlphaPreTrainedModel):
         # top attention custom query
         last_layer_id = len(self.h) - 1
         query_embeds = self.wqe(position_ids)
+
         presents = () if use_cache else None
         all_self_attentions = () if output_attentions else None
         all_hidden_states = () if output_hidden_states else None
@@ -399,6 +388,7 @@ class PanGuAlphaModel(PanGuAlphaPreTrainedModel):
             # Final LayerNorm before last query layer
             if i == last_layer_id:
                 hidden_states = self.ln_f(hidden_states)
+
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
@@ -428,19 +418,18 @@ class PanGuAlphaModel(PanGuAlphaPreTrainedModel):
         if not return_dict:
             return tuple(v for v in [hidden_states, presents, all_hidden_states, all_self_attentions] if v is not None)
 
-        return {
-            "last_hidden_state": hidden_states,
-            "past_key_values": presents,
-            "hidden_states": all_hidden_states,
-            "attentions": all_self_attentions,
-        }
+        return BaseModelOutputWithPast(
+            last_hidden_state=hidden_states,
+            past_key_values=presents,
+            hidden_states=all_hidden_states,
+            attentions=all_self_attentions,
+        )
 
 
-class PanGuAlphaForCausalLM(PanGuAlphaPreTrainedModel):
-    """PanGu-Alpha For CausalLM"""
+class GPTPanguForCausalLM(GPTPanguPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
-        self.transformer = PanGuAlphaModel(config)
+        self.transformer = GPTPanguModel(config)
         self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
@@ -456,19 +445,19 @@ class PanGuAlphaForCausalLM(PanGuAlphaPreTrainedModel):
         token_type_ids = kwargs.get("token_type_ids", None)
         # only last token for inputs_ids if past is defined in kwargs
         if past:
-            input_ids = input_ids[:, -1].expand_dims(-1)
+            input_ids = input_ids[:, -1].unsqueeze(-1)
             if token_type_ids is not None:
-                token_type_ids = token_type_ids[:, -1].expand_dims(-1)
+                token_type_ids = token_type_ids[:, -1].unsqueeze(-1)
 
         attention_mask = kwargs.get("attention_mask", None)
         position_ids = kwargs.get("position_ids", None)
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
-            position_ids.masked_fill_(attention_mask == 0, 1)
+            position_ids = attention_mask.int().cumsum(-1).long() - 1
+            position_ids = position_ids.masked_fill(attention_mask == 0, 1)
             if past:
-                position_ids = position_ids[:, -1].expand_dims(-1)
+                position_ids = position_ids[:, -1].unsqueeze(-1)
         else:
             position_ids = None
         return {
@@ -495,12 +484,13 @@ class PanGuAlphaForCausalLM(PanGuAlphaPreTrainedModel):
         output_hidden_states=None,
         return_dict=None,
     ):
-        """
+        r"""
         labels (:obj:`torch.LongTensor` of shape :obj:`(batch_size, sequence_length)`, `optional`):
             Labels for language modeling. Note that the labels **are shifted** inside the model, i.e. you can set
             ``labels = input_ids`` Indices are selected in ``[-100, 0, ..., config.vocab_size]`` All labels set to
             ``-100`` are ignored (masked), the loss is only computed for labels in ``[0, ..., config.vocab_size]``
         """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         transformer_outputs = self.transformer(
             input_ids,
@@ -515,32 +505,30 @@ class PanGuAlphaForCausalLM(PanGuAlphaPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-        if not return_dict:
-            hidden_states = transformer_outputs[0]
-        else:
-            hidden_states = transformer_outputs["last_hidden_state"]
+        hidden_states = transformer_outputs[0]
 
         lm_logits = self.lm_head(hidden_states)
+
         loss = None
         if labels is not None:
             # Shift so that tokens < n predict n
             shift_logits = lm_logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            loss_fct = nn.CrossEntropyLoss(ignore_index=self.config.pad_token_id)
-            loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+            loss = ops.cross_entropy(shift_logits.view(-1, shift_logits.shape[-1]), shift_labels.view(-1),
+                                     ignore_index=self.config.pad_token_id)
 
         if not return_dict:
             output = (lm_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output
 
-        return {
-            "loss": loss,
-            "logits": lm_logits,
-            "past_key_values": transformer_outputs["past_key_values"],
-            "hidden_states": transformer_outputs["hidden_states"],
-            "attentions": transformer_outputs["attentions"],
-        }
+        return CausalLMOutputWithPast(
+            loss=loss,
+            logits=lm_logits,
+            past_key_values=transformer_outputs.past_key_values,
+            hidden_states=transformer_outputs.hidden_states,
+            attentions=transformer_outputs.attentions,
+        )
 
     @staticmethod
     def _reorder_cache(past: Tuple[Tuple[mindspore.Tensor]], beam_idx: mindspore.Tensor) -> Tuple[Tuple[mindspore.Tensor]]:
@@ -550,8 +538,13 @@ class PanGuAlphaForCausalLM(PanGuAlphaPreTrainedModel):
         called. This is required to match :obj:`past_key_values` with the correct beam_idx at every generation step.
         """
         return tuple(
-            tuple(past_state.index_select(0, beam_idx.astype(past_state.device)) for past_state in layer_past)
+            tuple(past_state.index_select(0, beam_idx) for past_state in layer_past)
             for layer_past in past
         )
 
-__all__ = ['PanGuAlphaModel', 'PanGuAlphaForCausalLM']
+__all__ = [
+    "GPTPangu_PRETRAINED_MODEL_ARCHIVE_LIST",
+    "GPTPanguPreTrainedModel",
+    "GPTPanguModel",
+    "GPTPanguForCausalLM"
+]

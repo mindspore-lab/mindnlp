@@ -39,6 +39,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("gpt_bigcode", "GPTBigCodeModel"),
         ("gpt", "GPTModel"),
         ("gpt2", "GPT2Model"),
+        ("gpt_pangu", "GPTPanguModel"),
         ("t5", "T5Model"),
         ("chatglm", "ChatGLMModel"),
         ("falcon", "FalconModel"),
@@ -56,6 +57,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
     [
         # Model for pre-training mapping
         ("bert", "BertForPreTraining"),
+        ("gpt_pangu", "GPTPanguForCausalLM"),
         ("bloom", "BloomForCausalLM"),
         ("rwkv", "RwkvForCausalLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
@@ -67,6 +69,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         # Model with LM heads mapping
         ("bert", "BertForMaskedLM"),
         ("bloom", "BloomForCausalLM"),
+        ("gpt_pangu", "GPTPanguForCausalLM"),
         ("roberta", "RobertaForMaskedLM"),
         ("rwkv", "RwkvForCausalLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
@@ -80,6 +83,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("bloom", "BloomForCausalLM"),
         ("roberta", "RobertaLMHeadModel"),
         ("gpt2", "GPT2LMHeadModel"),
+        ("gpt_pangu", "GPTPanguForCausalLM"),
         ("falcon", "FalconForCausalLM"),
         ("gpt_bigcode", "GPTBigCodeForCausalLM"),
         ("phi", "PhiForCausalLM"),
