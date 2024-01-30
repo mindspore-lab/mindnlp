@@ -15,7 +15,7 @@
 """
 Models init
 """
-from . import albert, auto, bart, bert, bloom, clip, codegen, cpm, ernie, ernie_m, chatglm, chatglm2, gpt, gpt_neo, gpt_neox, gpt2, \
+from . import albert, auto, bart, bert, bloom, clip, codegen, cpm, electra, ernie, ernie_m, chatglm, chatglm2, gpt, gpt_neo, gpt_neox, gpt2, \
     llama, longformer, luke, mbart, megatron_bert, mistral, mobilebert, nezha, opt, gpt_pangu, phi, roberta, rwkv, \
     seamless_m4t, seamless_m4t_v2, t5, tinybert, xlm, xlm_roberta, gpt_bigcode, whisper, bark, encodec, \
     graphormer
