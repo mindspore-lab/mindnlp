@@ -30,9 +30,8 @@ import mindspore
 from mindspore import nn, ops, Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
 
-from mindnlp.utils import (
-    logging,
-)
+from mindnlp.utils import logging
+from mindnlp.injection import LESS_MS_2_2
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
 from ...ms_utils import find_pruneable_heads_and_indices, prune_linear_layer
@@ -284,6 +283,8 @@ class MSErnieAttention(nn.Cell):
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
         self.self = MSErnieSelfAttention(config, position_embedding_type=position_embedding_type)
+        if LESS_MS_2_2:
+            self.self_attn = self.self
         self.output = MSErnieSelfOutput(config)
         self.pruned_heads = set()
 
@@ -315,15 +316,26 @@ class MSErnieAttention(nn.Cell):
         past_key_value: Optional[Tuple[Tuple[mindspore.Tensor]]] = None,
         output_attentions: Optional[bool] = False,
     ) -> Tuple[mindspore.Tensor]:
-        self_outputs = self.self(
-            hidden_states,
-            attention_mask,
-            head_mask,
-            encoder_hidden_states,
-            encoder_attention_mask,
-            past_key_value,
-            output_attentions,
-        )
+        if LESS_MS_2_2:
+            self_outputs = self.self_attn(
+                hidden_states,
+                attention_mask,
+                head_mask,
+                encoder_hidden_states,
+                encoder_attention_mask,
+                past_key_value,
+                output_attentions,
+            )
+        else:
+            self_outputs = self.self(
+                hidden_states,
+                attention_mask,
+                head_mask,
+                encoder_hidden_states,
+                encoder_attention_mask,
+                past_key_value,
+                output_attentions,
+            )
         attention_output = self.output(self_outputs[0], hidden_states)
         outputs = (attention_output,) + self_outputs[1:]  # add attentions if we output them
         return outputs
@@ -403,6 +415,7 @@ class MSErnieLayer(nn.Cell):
             present_key_value = self_attention_outputs[-1]
         else:
             outputs = self_attention_outputs[1:]  # add self attentions if we output attention weights
+            present_key_value = None
 
         cross_attn_present_key_value = None
         if self.is_decoder and encoder_hidden_states is not None:
@@ -472,13 +485,6 @@ class MSErnieEncoder(nn.Cell):
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
         all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
-
-        if self.gradient_checkpointing and self.training:
-            if use_cache:
-                logger.warning_once(
-                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
-                )
-                use_cache = False
 
         next_decoder_cache = () if use_cache else None
         for i, layer_module in enumerate(self.layer):
