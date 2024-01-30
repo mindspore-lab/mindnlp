@@ -62,9 +62,10 @@ def fp16_patch_decorator(func):
         if GLOBAL_FP16_PATCH:
             args = (arg.astype(mstype.float16) if arg is not None and isinstance(arg, Tensor) \
                     else arg for arg in args)
-            kwargs = {k: (v.astype(mstype.float16) if v is not None and isinstance(v, Tensor) else v) \
-                      for k, v in kwargs.items()}
-            result = func(*args, **kwargs)
+            new_kwargs = {}
+            for k, v in kwargs.items():
+                new_kwargs[k] = v.astype(mstype.float16) if v is not None and isinstance(v, Tensor) else v
+            result = func(*args, **new_kwargs)
             result = result.astype(mstype.float32)
             return result
         return func(*args, **kwargs)
