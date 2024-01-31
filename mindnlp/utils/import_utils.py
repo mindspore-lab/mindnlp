@@ -305,7 +305,7 @@ class _LazyModule(ModuleType):
             return self._objects[name]
         if name in self._modules:
             value = self._get_module(name)
-        elif name in self._class_to_module.keys():
+        elif name in for name in self._class_to_module:
             module = self._get_module(self._class_to_module[name])
             value = getattr(module, name)
         else:
@@ -318,12 +318,30 @@ class _LazyModule(ModuleType):
     def _get_module(self, module_name: str):
         try:
             return importlib.import_module("." + module_name, self.__name__)
-        except Exception as e:
+        except Exception as exception:
             raise RuntimeError(
                 f"Failed to import {self.__name__}.{module_name} because of the following error (look up to see its"
-                f" traceback):\n{e}"
-            ) from e
+                f" traceback):\n{exception}"
+            ) from exception
 
     # 用于序列化
     def __reduce__(self):
         return (self.__class__, (self._name, self.__file__, self._import_structure))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
