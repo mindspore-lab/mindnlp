@@ -844,12 +844,38 @@ class BatchNorm1d(nn.Cell):
                f'weight={self.weight}, bias={self.bias}, running_mean={self.running_mean}, running_var={self.running_var}'
 
 
-def half(self):
+def _half(self):
     """patched nn.Cell.half"""
-    # self.to_float(mindspore.float16)
+    self.to_float(mindspore.float16)
+    for _, param in self.parameters_and_names():
+        if param.dtype in (mindspore.float16, mindspore.float32, mindspore.bfloat16):
+            param.set_dtype(mindspore.float16)
     return self
 
-nn.Cell.half = half
+nn.Cell.half = _half
+
+def _float(self):
+    """patched nn.Cell.float"""
+    self.to_float(mindspore.float32)
+    for _, param in self.parameters_and_names():
+        if param.dtype in (mindspore.float16, mindspore.float32, mindspore.bfloat16):
+            param.set_dtype(mindspore.float32)
+    return self
+
+nn.Cell.float = _float
+
+
+if not LESS_MS_2_2:
+    def _bfloat16(self):
+        """patched nn.Cell.bfloat16"""
+        self.to_float(mindspore.bfloat16)
+        for _, param in self.parameters_and_names():
+            if param.dtype in (mindspore.float16, mindspore.float32, mindspore.bfloat16):
+                param.set_dtype(mindspore.bfloat16)
+        return self
+
+    nn.Cell.bfloat16 = _bfloat16
+
 
 def _check_cell_flags_in_pynative(self):
     pass
