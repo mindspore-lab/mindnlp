@@ -711,7 +711,7 @@ class MSBertForSequenceClassification(MSBertPreTrainedModel):
 
         output = (logits,) + outputs[2:]
 
-        return output
+        return output, logits
 
 
 __all__ = [
