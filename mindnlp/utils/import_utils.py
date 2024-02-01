@@ -17,6 +17,7 @@
 # pylint: disable=logging-fstring-interpolation
 # pylint: disable=inconsistent-return-statements
 # pylint: disable=wrong-import-position
+# pylint: disable=invalid-name
 """
 Import utilities: Utilities related to imports and our lazy inits.
 """
@@ -120,10 +121,9 @@ def is_protobuf_available():
         return False
     return importlib.util.find_spec("google.protobuf") is not None
 
-
 def is_pytest_available():
     return _pytest_available
-    
+
 def is_pretty_midi_available():
     return _pretty_midi_available
 

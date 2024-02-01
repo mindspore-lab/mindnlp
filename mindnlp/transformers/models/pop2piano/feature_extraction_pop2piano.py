@@ -1,9 +1,29 @@
+# coding=utf-8
+# Copyright 2018 Mesh TensorFlow authors, T5 Authors and HuggingFace Inc. team.
+# Copyright 2022 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+# pylint: disable=invalid-name
+# pylint: disable=arguments-renamed
+# pylint: disable=invalid-unary-operand-type
+# pylint: disable=missing-function-docstring
+# pylint: disable=missing-class-docstring
 """ Feature extractor class for Pop2Piano"""
 
 import warnings
 from typing import List, Optional, Union
 
-import numpy
 import numpy as np
 
 from ...audio_utils import mel_filter_bank, spectrogram
@@ -141,7 +161,7 @@ class Pop2PianoFeatureExtractor(SequenceFeatureExtractor):
         return bpm, beat_times, confidence, estimates, essentia_beat_intervals
 
     def interpolate_beat_times(
-        self, beat_times: numpy.ndarray, steps_per_beat: numpy.ndarray, n_extend: numpy.ndarray
+        self, beat_times: np.ndarray, steps_per_beat: np.ndarray, n_extend: np.ndarray
     ):
         """
         This method takes beat_times and then interpolates that using `scipy.interpolate.interp1d` and the output is
@@ -377,7 +397,7 @@ class Pop2PianoFeatureExtractor(SequenceFeatureExtractor):
 
         batch_input_features, batch_beatsteps, batch_ext_beatstep = [], [], []
         for single_raw_audio, single_sampling_rate in zip(audio, sampling_rate):
-            bpm, beat_times, confidence, estimates, essentia_beat_intervals = self.extract_rhythm(
+            _, beat_times, _, _, _ = self.extract_rhythm(
                 audio=single_raw_audio
             )
             beatsteps = self.interpolate_beat_times(beat_times=beat_times, steps_per_beat=steps_per_beat, n_extend=1)

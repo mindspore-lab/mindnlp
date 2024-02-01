@@ -1,10 +1,12 @@
-# Copyright 2023 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2018 Mesh TensorFlow authors, T5 Authors and HuggingFace Inc. team.
+# Copyright 2022 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,6 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=invalid-name
+# pylint: disable=arguments-renamed
+# pylint: disable=invalid-unary-operand-type
+# pylint: disable=missing-function-docstring
+# pylint: disable=missing-class-docstring
+# pylint: disable＝cyclic-import
 """ Processor class for Pop2Piano. """
 import os
 from typing import List, Optional, Union
@@ -43,8 +51,8 @@ class Pop2PianoProcessor(ProcessorMixin):
     tokenzier_class = "Pop2PianoTokenizer"
 
     def __init__(self, feature_extractor, tokenizer):
-        super.__init__(feature_extractor, tokenizer)
-    
+        super().__init__(feature_extractor, tokenizer)
+
     def __call__(
         self,
         audio: Union[np.ndarray, List[float], List[np.ndarray]] = None,
@@ -65,7 +73,7 @@ class Pop2PianoProcessor(ProcessorMixin):
 
         Please refer to the docstring of the above two methods for more information.
         """
-        
+
         # Since Feature Extractor needs both audio and sampling_rate and tokenizer needs both token_ids and
         # feature_extractor_output, we must check for both.
         if (audio is None and sampling_rate is None) and (notes is None):
@@ -73,7 +81,7 @@ class Pop2PianoProcessor(ProcessorMixin):
                 "You have to specify at least audios and sampling_rate in order to use feature extractor or "
                 "notes to use the tokenizer part."
             )
-        
+
         if audio is not None and sampling_rate is not None:
             inputs = self.feature_extractor(
                 audio=audio,
@@ -82,7 +90,7 @@ class Pop2PianoProcessor(ProcessorMixin):
                 resample=resample,
                 **kwargs,
             )
-        
+
         if notes is not None:
             encoded_token_ids = self.tokenizer(
                 notes=notes,
@@ -93,17 +101,17 @@ class Pop2PianoProcessor(ProcessorMixin):
                 verbose=verbose,
                 **kwargs,
             )
-        
+
         if notes is None:
             return inputs
-        
-        elif audio is None or sampling_rate is None:
+
+        if audio is None or sampling_rate is None:
             return encoded_token_ids
-        
-        else:
-            inputs["token_ids"] = encoded_token_ids["token_ids"]
-            return inputs
-    
+
+
+        inputs["token_ids"] = encoded_token_ids["token_ids"]
+        return inputs
+
     def batch_decode(
         self,
         token_ids,
@@ -115,26 +123,26 @@ class Pop2PianoProcessor(ProcessorMixin):
 
         Please refer to the docstring of the above two methods for more information.
         """
-        
+
         return self.tokenizer.batch_decode(
             token_ids=token_ids, feature_extractor_output=feature_extractor_output, return_midi=return_midi
         )
 
-        @property
-        def model_input_names(self):
-            tokenizer_input_names = self.tokenizer.model_input_names
-            feature_extractor_input_names = self.feature_extractor.model_input_names
-            return list(dict.fromkeys(tokenizer_input_names + feature_extractor_input_names))
+    @property
+    def model_input_names(self):
+        tokenizer_input_names = self.tokenizer.model_input_names
+        feature_extractor_input_names = self.feature_extractor.model_input_names
+        return list(dict.fromkeys(tokenizer_input_names + feature_extractor_input_names))
 
-        def save_pretrained(self, save_directory, **kwargs):
-            if os.path.isfile(save_directory):
-                raise ValueError(f"Provided path ({save_directory}) should be a directory, not a file.")
-            os.makedirs(save_directory, exist_ok=True)
-            return super().save_pretrained(save_directory, **kwargs)
-        
-        @classmethod
-        def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
-            args = cls._get_arguments_from_pretrained(pretrained_model_name_or_path, **kwargs)
-            return cls(*args)
+    def save_pretrained(self, save_directory, **kwargs):
+        if os.path.isfile(save_directory):
+            raise ValueError(f"Provided path ({save_directory}) should be a directory, not a file.")
+        os.makedirs(save_directory, exist_ok=True)
+        return super().save_pretrained(save_directory, **kwargs)
+
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
+        args = cls._get_arguments_from_pretrained(pretrained_model_name_or_path, **kwargs)
+        return cls(*args)
 
 __all__ = ["Pop2PianoProcessor"]

@@ -55,6 +55,10 @@ from mindnlp.utils import logging as mindnlp_logging
 from .import_utils import (
     is_pytest_available,
     is_mindspore_available,
+    is_essentia_available,
+    is_librosa_available,
+    is_pretty_midi_available,
+    is_scipy_available,
 )
 from .generic import strtobool
 
@@ -132,6 +136,30 @@ def require_mindspore(test_case):
 
     """
     return unittest.skipUnless(is_mindspore_available(), "test requires MindSpore")(test_case)
+
+def require_librosa(test_case):
+    """
+    Decorator marking a test that requires librosa
+    """
+    return unittest.skipUnless(is_librosa_available(), "test requires librosa")(test_case)
+
+def require_essentia(test_case):
+    """
+    Decorator marking a test that requires essentia
+    """
+    return unittest.skipUnless(is_essentia_available(), "test requires essentia")(test_case)
+
+def require_pretty_midi(test_case):
+    """
+    Decorator marking a test that requires pretty_midi
+    """
+    return unittest.skipUnless(is_pretty_midi_available(), "test requires pretty_midi")(test_case)
+
+def require_scipy(test_case):
+    """
+    Decorator marking a test that requires Scipy. These tests are skipped when SentencePiece isn't installed.
+    """
+    return unittest.skipUnless(is_scipy_available(), "test requires Scipy")(test_case)
 
 def cmd_exists(cmd):
     return shutil.which(cmd) is not None

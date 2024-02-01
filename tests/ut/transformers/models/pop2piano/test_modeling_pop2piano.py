@@ -1,3 +1,17 @@
+# coding=utf-8
+# Copyright 2021, The HuggingFace Inc. team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """ Testing suite for the Mindspore Pop2Piano model. """
 
 import copy
@@ -9,18 +23,14 @@ from datasets import load_dataset
 
 from mindnlp.transformers import Pop2PianoConfig
 from mindnlp.transformers.feature_extraction_utils import BatchFeature
-from mindnlp.utils.testing_utils import require_mindspore, slow
-from mindnlp.utils import is_mindspore_available
-
-# from mindnlp.utils.testing_utils import (
-#     require_essentia,
-#     require_librosa,
-#     require_onnx,
-#     require_scipy,
-#     slow,
-# )
-# from mindnlp.utils.testing_utils import is_essentia_available, is_librosa_available, is_scipy_available, is_torch_available
-
+from mindnlp.utils.testing_utils import (
+    require_mindspore,
+    require_essentia,
+    require_librosa,
+    require_scipy,
+    slow,
+)
+from mindnlp.utils.testing_utils import is_mindspore_available, is_essentia_available, is_librosa_available, is_scipy_available
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
@@ -95,6 +105,7 @@ class Pop2PianoModelTester:
         lm_labels = (
             ids_tensor([self.batch_size, self.decoder_seq_length], self.vocab_size) if self.use_labels else None
         )
+        lm_labels = lm_labels.astype("int32")
 
         return self.get_config(), input_ids, decoder_input_ids, attention_mask, decoder_attention_mask, lm_labels
 
@@ -391,7 +402,7 @@ class Pop2PianoModelTester:
             # torch.manual_seed(0)
             model = model_class(config=config).set_train(False)
             # load state dict copies weights but does not tie them
-            mindspore.load_param_into_net(model.encoder, model.decoder.get_parameters(), \
+            mindspore.load_param_into_net(model.encoder, model.decoder.parameters_dict(), \
                                           strict_load=False)
 
             # torch.manual_seed(0)
@@ -465,7 +476,7 @@ class Pop2PianoModelTester:
         model = Pop2PianoForConditionalGeneration(config=config).set_train(False)
         model.resize_token_embeddings(prev_vocab_size - 10)
 
-        self.parent.assertEqual(model.get_input_embeddings().embedding_table.shape[0], prev_vocab_size - 10)
+        self.parent.assertEqual(model.get_input_embeddings().weight.shape[0], prev_vocab_size - 10)
         self.parent.assertEqual(model.get_output_embeddings().weight.shape[0], prev_vocab_size - 10)
         self.parent.assertEqual(model.config.vocab_size, prev_vocab_size - 10)
 
@@ -529,11 +540,8 @@ class Pop2PianoModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
 
     def test_config_and_model_silu_gated(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        print(config_and_inputs)
         config = config_and_inputs[0]
         config.feed_forward_proj = "gated-silu"
-        from icecream import ic
-        print(config)
         self.model_tester.create_and_check_model(*config_and_inputs)
 
     def test_with_lm_head(self):
@@ -599,20 +607,6 @@ class Pop2PianoModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
             model = Pop2PianoForConditionalGeneration.from_pretrained(model_name)
             self.assertIsNotNone(model)
 
-    # @require_onnx
-    # def test_export_to_onnx(self):
-    #     config_and_inputs = self.model_tester.prepare_config_and_inputs()
-    #     model = Pop2PianoForConditionalGeneration(config_and_inputs[0])
-    #     with tempfile.TemporaryDirectory() as tmpdirname:
-    #         torch.onnx.export(
-    #             model,
-    #             (config_and_inputs[1], config_and_inputs[3], config_and_inputs[2]),
-    #             f"{tmpdirname}/Pop2Piano_test.onnx",
-    #             export_params=True,
-    #             opset_version=9,
-    #             input_names=["input_ids", "decoder_input_ids"],
-    #         )
-
     def test_pass_with_input_features(self):
         input_features = BatchFeature(
             {
@@ -634,17 +628,17 @@ class Pop2PianoModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
                 "extrapolated_beatstep": mindspore.ops.randint(size=(5, 900), low=0, high=100).type(mindspore.float32),
                 "attention_mask": mindspore.ops.cat(
                     [
-                        mindspore.ops.ones([120, 70], dtype=mindspore.int32),
-                        mindspore.ops.zeros([1, 70], dtype=mindspore.int32),
-                        mindspore.ops.ones([50, 70], dtype=mindspore.int32),
-                        mindspore.ops.zeros([1, 70], dtype=mindspore.int32),
-                        mindspore.ops.ones([47, 70], dtype=mindspore.int32),
-                        mindspore.ops.zeros([1, 70], dtype=mindspore.int32),
+                        mindspore.ops.ones((120, 70), dtype=mindspore.int32),
+                        mindspore.ops.zeros((1, 70), dtype=mindspore.int32),
+                        mindspore.ops.ones((50, 70), dtype=mindspore.int32),
+                        mindspore.ops.zeros((1, 70), dtype=mindspore.int32),
+                        mindspore.ops.ones((47, 70), dtype=mindspore.int32),
+                        mindspore.ops.zeros((1, 70), dtype=mindspore.int32),
                     ],
                     axis=0,
                 ),
-                "attention_mask_beatsteps": mindspore.ops.ones((5, 955)).type(mindspore.int32),
-                "attention_mask_extrapolated_beatstep": mindspore.ops.ones((5, 900)).type(mindspore.int32),
+                "attention_mask_beatsteps": mindspore.ops.ones((5, 955), dtype=mindspore.int32),
+                "attention_mask_extrapolated_beatstep": mindspore.ops.ones((5, 900), dtype=mindspore.int32),
             }
         )
         model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
@@ -663,7 +657,7 @@ class Pop2PianoModelIntegrationTests(unittest.TestCase):
     def test_mel_conditioner_integration(self):
         composer = "composer1"
         model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
-        input_embeds = mindspore.ops.ones([10, 100, 512])
+        input_embeds = mindspore.ops.ones((10, 100, 512))
 
         composer_value = model.generation_config.composer_to_feature_token[composer]
         composer_value = mindspore.tensor(composer_value)
@@ -683,80 +677,80 @@ class Pop2PianoModelIntegrationTests(unittest.TestCase):
         self.assertTrue(mindspore.ops.allclose(outputs[0, :3, :3], EXPECTED_OUTPUTS, atol=1e-4))
 
     @slow
-    # @require_essentia
-    # @require_librosa
-    # @require_scipy
+    @require_essentia
+    @require_librosa
+    @require_scipy
     def test_full_model_integration(self):
-        # if is_librosa_available() and is_scipy_available() and is_essentia_available() and is_torch_available():
-        from transformers import Pop2PianoProcessor
+        if is_librosa_available() and is_scipy_available() and is_essentia_available() and is_mindspore_available():
+            from transformers import Pop2PianoProcessor
 
-        speech_input1 = np.zeros([1_000_000], dtype=np.float32)
-        sampling_rate = 44_100
+            speech_input1 = np.zeros([1_000_000], dtype=np.float32)
+            sampling_rate = 44_100
 
-        processor = Pop2PianoProcessor.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
-        input_features = processor.feature_extractor(
-            speech_input1, sampling_rate=sampling_rate, return_tensors="ms"
-        )
+            processor = Pop2PianoProcessor.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
+            input_features = processor.feature_extractor(
+                speech_input1, sampling_rate=sampling_rate, return_tensors="ms"
+            )
 
-        model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
-        outputs = model.generate(
-            input_features=input_features["input_features"], return_dict_in_generate=True
-        ).sequences
+            model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
+            outputs = model.generate(
+                input_features=input_features["input_features"], return_dict_in_generate=True
+            ).sequences
 
-        # check for shapes
-        self.assertEqual(outputs.shape[0], 70)
+            # check for shapes
+            self.assertEqual(outputs.shape[0], 70)
 
-        # check for values
-        self.assertEqual(outputs[0, :2].cpu().numpy().tolist(), [0, 1])
+            # check for values
+            self.assertEqual(outputs[0, :2].cpu().numpy().tolist(), [0, 1])
 
     # This is the test for a real music from K-Pop genre.
     @slow
-    # @require_essentia
-    # @require_librosa
-    # @require_scipy
+    @require_essentia
+    @require_librosa
+    @require_scipy
     def test_real_music(self):
-        # if is_librosa_available() and is_scipy_available() and is_essentia_available() and is_torch_available():
-        from transformers import Pop2PianoFeatureExtractor, Pop2PianoTokenizer
+        if is_librosa_available() and is_scipy_available() and is_essentia_available() and is_mindspore_available():
+            from transformers import Pop2PianoFeatureExtractor, Pop2PianoTokenizer
 
-        model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
-        model.set_train(False)
-        feature_extractor = Pop2PianoFeatureExtractor.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
-        tokenizer = Pop2PianoTokenizer.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
-        ds = load_dataset("sweetcocoa/pop2piano_ci", split="test")
+            model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
+            model.set_train(False)
+            feature_extractor = Pop2PianoFeatureExtractor.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
+            tokenizer = Pop2PianoTokenizer.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
+            ds = load_dataset("sweetcocoa/pop2piano_ci", split="test")
 
-        output_fe = feature_extractor(
-            ds["audio"][0]["array"], sampling_rate=ds["audio"][0]["sampling_rate"], return_tensors="ms"
-        )
-        output_model = model.generate(input_features=output_fe["input_features"], composer="composer1")
-        output_tokenizer = tokenizer.batch_decode(token_ids=output_model, feature_extractor_output=output_fe)
-        pretty_midi_object = output_tokenizer["pretty_midi_objects"][0]
+            output_fe = feature_extractor(
+                ds["audio"][0]["array"], sampling_rate=ds["audio"][0]["sampling_rate"], return_tensors="ms"
+            )
+            output_model = model.generate(input_features=output_fe["input_features"], composer="composer1")
+            output_tokenizer = tokenizer.batch_decode(token_ids=output_model, feature_extractor_output=output_fe)
+            pretty_midi_object = output_tokenizer["pretty_midi_objects"][0]
 
-        # Checking if no of notes are same
-        self.assertEqual(len(pretty_midi_object.instruments[0].notes), 59)
-        predicted_timings = []
-        for i in pretty_midi_object.instruments[0].notes:
-            predicted_timings.append(i.start)
+            # Checking if no of notes are same
+            self.assertEqual(len(pretty_midi_object.instruments[0].notes), 59)
+            predicted_timings = []
+            for i in pretty_midi_object.instruments[0].notes:
+                predicted_timings.append(i.start)
 
-        # Checking note start timings(first 6)
-        EXPECTED_START_TIMINGS = [
-            0.4876190423965454,
-            0.7314285635948181,
-            0.9752380847930908,
-            1.4396371841430664,
-            1.6718367338180542,
-            1.904036283493042,
-        ]
+            # Checking note start timings(first 6)
+            EXPECTED_START_TIMINGS = [
+                0.4876190423965454,
+                0.7314285635948181,
+                0.9752380847930908,
+                1.4396371841430664,
+                1.6718367338180542,
+                1.904036283493042,
+            ]
 
-        np.allclose(EXPECTED_START_TIMINGS, predicted_timings[:6])
+            np.allclose(EXPECTED_START_TIMINGS, predicted_timings[:6])
 
-        # Checking note end timings(last 6)
-        EXPECTED_END_TIMINGS = [
-            12.341403007507324,
-            12.567797183990479,
-            12.567797183990479,
-            12.567797183990479,
-            12.794191360473633,
-            12.794191360473633,
-        ]
+            # Checking note end timings(last 6)
+            EXPECTED_END_TIMINGS = [
+                12.341403007507324,
+                12.567797183990479,
+                12.567797183990479,
+                12.567797183990479,
+                12.794191360473633,
+                12.794191360473633,
+            ]
 
-        np.allclose(EXPECTED_END_TIMINGS, predicted_timings[-6:])
+            np.allclose(EXPECTED_END_TIMINGS, predicted_timings[-6:])

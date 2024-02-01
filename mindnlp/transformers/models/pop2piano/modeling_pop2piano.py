@@ -1,5 +1,25 @@
+# coding=utf-8
+# Copyright 2018 Mesh TensorFlow authors, T5 Authors and HuggingFace Inc. team.
+# Copyright 2022 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+# pylint: disable=invalid-name
+# pylint: disable=arguments-renamed
+# pylint: disable=invalid-unary-operand-type
+# pylint: disable=missing-function-docstring
+# pylint: disable=missing-class-docstring
 """ Mindspore Pop2Piano model."""
-
 
 import copy
 import math
@@ -8,7 +28,7 @@ from typing import Optional, Tuple, Union
 import mindspore
 from mindspore import Parameter, nn
 from mindspore.nn import CrossEntropyLoss
-from mindspore.common.initializer import initializer
+from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.transformers.generation import GenerationConfig
 
@@ -168,7 +188,7 @@ class Pop2PianoAttention(nn.Cell):
         self.q = prune_linear_layer(self.q, index)
         self.k = prune_linear_layer(self.k, index)
         self.v = prune_linear_layer(self.v, index)
-        self.o = prune_linear_layer(self.o, index, dim=1)
+        self.o = prune_linear_layer(self.o, index, axis=1)
         # Update hyper params
         self.n_heads = self.n_heads - len(heads)
         self.inner_dim = self.key_value_proj_dim * self.n_heads
@@ -276,7 +296,7 @@ class Pop2PianoAttention(nn.Cell):
 
         def unshape(states):
             """reshape"""
-            return states.transpose(0, 2, 1, 3).contiguous().view(batch_size, -1, self.inner_dim)
+            return states.transpose(0, 2, 1, 3).view(batch_size, -1, self.inner_dim)
 
         def project(hidden_states, proj_layer, key_value_states, past_key_value):
             """projects hidden states correctly to key/query states"""
@@ -464,7 +484,6 @@ class Pop2PianoBlock(nn.Cell):
         past_key_value=None,
         use_cache=False,
         output_attentions=False,
-        return_dict=True,
     ):
         if past_key_value is not None:
             if not self.is_decoder:
@@ -581,48 +600,79 @@ class Pop2PianoPreTrainedModel(PreTrainedModel):
         """Initialize the weights"""
         factor = self.config.initializer_factor  # Used for testing weights initialization
         if isinstance(module, Pop2PianoLayerNorm):
-            module.weight.data.set_data(initializer(factor * 1.0, \
+            module.weight.data.set_data(initializer(Normal(factor * 1.0), \
                                                     module.weight.data.shape, module.weight.data.dtype))
         elif isinstance(module, Pop2PianoConcatEmbeddingToMel):
-            module.embedding.embedding_table.data.log_normal(mean=0.0, std=factor * 1.0)
+            module.embedding.weight.data.set_data(initializer(Normal(factor * 1.0), \
+                                                              module.embedding.weight.data.shape, \
+                                                              module.embedding.weight.data.dtype))
         elif isinstance(module, Pop2PianoForConditionalGeneration):
             # Mesh TensorFlow embeddings initialization
             # See https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L1624
-            module.shared.embedding_table.data.log_normal(mean=0.0, std=factor * 1.0)
+            module.shared.weight.data.set_data(initializer(Normal(factor * 1.0), \
+                                               module.shared.weight.data.shape, \
+                                               module.shared.weight.data.dtype))
             if hasattr(module, "lm_head") and not self.config.tie_word_embeddings:
-                module.lm_head.weight.data.log_normal(mean=0.0, std=factor * 1.0)
+                module.lm_head.weight.data.set_data(initializer(Normal(factor * 1.0), \
+                                                    module.lm_head.weight.data.shape, \
+                                                    module.lm_head.weight.data.dtype))
         elif isinstance(module, Pop2PianoDenseActDense):
             # Mesh TensorFlow FF initialization
             # See https://github.com/tensorflow/mesh/blob/master/mesh_tensorflow/transformer/transformer_layers.py#L56
             # and https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L89
-            module.wi.weight.data.log_normal(mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
+            module.wi.weight.data.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)), \
+                                           module.wi.weight.data.shape, \
+                                           module.wi.weight.data.dtype))
             if hasattr(module.wi, "bias") and module.wi.bias is not None:
-                module.wi.bias.data.zero_()
-            module.wo.weight.data.log_normal(mean=0.0, std=factor * ((self.config.d_ff) ** -0.5))
+                module.wi.bias.data.set_data(initializer("zero", module.wi.bias.data.shape, \
+                                                         module.wi.bias.data.dtype))
+            module.wo.weight.data.set_data(initializer(Normal(factor * ((self.config.d_ff) ** -0.5)), \
+                                           module.wo.weight.data.shape, \
+                                           module.wo.weight.data.dtype))
             if hasattr(module.wo, "bias") and module.wo.bias is not None:
-                module.wo.bias.data.zero_()
+                module.wo.bias.data.set_data(initializer("zero", module.wo.bias.data.shape, \
+                                                         module.wo.bias.data.dtype))
         elif isinstance(module, Pop2PianoDenseGatedActDense):
-            module.wi_0.weight.data.log_normal(mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
+            module.wi_0.weight.data.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)), \
+                                             module.wi_0.weight.data.shape, \
+                                             module.wi_0.weight.data.dtype))
             if hasattr(module.wi_0, "bias") and module.wi_0.bias is not None:
-                module.wi_0.bias.data.zero_()
-            module.wi_1.weight.data.log_normal(mean=0.0, std=factor * ((self.config.d_model) ** -0.5))
+                module.wi_0.bias.data.set_data(initializer("zero", module.wi_0.bias.data.shape, \
+                                                           module.wi_0.bias.data.dtype))
+            module.wi_1.weight.data.set_data(initializer(Normal(factor * ((self.config.d_model) ** -0.5)), \
+                                             module.wi_1.weight.data.shape, \
+                                             module.wi_1.weight.data.dtype))
             if hasattr(module.wi_1, "bias") and module.wi_1.bias is not None:
-                module.wi_1.bias.data.zero_()
-            module.wo.weight.data.log_normal(mean=0.0, std=factor * ((self.config.d_ff) ** -0.5))
+                module.wi_1.bias.data.set_data(initializer("zero", module.wi_1.bias.data.shape, \
+                                               module.wi_1.bias.data.dtype))
+            module.wo.weight.data.set_data(initializer(Normal(factor * ((self.config.d_ff) ** -0.5)), \
+                                           module.wo.weight.data.shape, \
+                                           module.wo.weight.data.dtype))
             if hasattr(module.wo, "bias") and module.wo.bias is not None:
-                module.wo.bias.data.zero_()
+                module.wo.bias.data.set_data(initializer("zero", module.wo.bias.data.shape, \
+                                                         module.wo.bias.data.dtype))
         elif isinstance(module, Pop2PianoAttention):
             # Mesh TensorFlow attention initialization to avoid scaling before softmax
             # See https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/transformer/attention.py#L136
             d_model = self.config.d_model
             key_value_proj_dim = self.config.d_kv
             n_heads = self.config.num_heads
-            module.q.weight.data.log_normal(mean=0.0, std=factor * ((d_model * key_value_proj_dim) ** -0.5))
-            module.k.weight.data.log_normal(mean=0.0, std=factor * (d_model**-0.5))
-            module.v.weight.data.log_normal(mean=0.0, std=factor * (d_model**-0.5))
-            module.o.weight.data.log_normal(mean=0.0, std=factor * ((n_heads * key_value_proj_dim) ** -0.5))
+            module.q.weight.data.set_data(initializer(Normal(factor * ((d_model * key_value_proj_dim) ** -0.5)), \
+                                          module.q.weight.data.shape, \
+                                          module.q.weight.data.dtype))
+            module.k.weight.data.set_data(initializer(Normal(factor * (d_model**-0.5)), \
+                                          module.k.weight.data.shape, \
+                                          module.k.weight.data.dtype))
+            module.v.weight.data.set_data(initializer(Normal(factor * (d_model**-0.5)), \
+                                          module.v.weight.data.shape, \
+                                          module.v.weight.data.dtype))
+            module.o.weight.data.set_data(initializer(Normal(factor * ((n_heads * key_value_proj_dim) ** -0.5)), \
+                                          module.o.weight.data.shape, \
+                                          module.o.weight.data.dtype))
             if module.has_relative_attention_bias:
-                module.relative_attention_bias.embedding_table.data.log_normal(mean=0.0, std=factor * ((d_model) ** -0.5))
+                module.relative_attention_bias.weight.data.set_data(initializer(Normal(factor * ((d_model) ** -0.5)), \
+                                                                    module.relative_attention_bias.weight.data.shape, \
+                                                                    module.relative_attention_bias.weight.data.dtype))
 
     def _shift_right(self, input_ids):
         decoder_start_token_id = self.config.decoder_start_token_id
@@ -707,7 +757,7 @@ class Pop2PianoStack(Pop2PianoPreTrainedModel):
             raise ValueError(
                 f"You cannot specify both {err_msg_prefix}input_ids and {err_msg_prefix}inputs_embeds at the same time"
             )
-        elif input_ids is not None:
+        if input_ids is not None:
             input_shape = input_ids.shape
             input_ids = input_ids.view(-1, input_shape[-1])
         elif inputs_embeds is not None:
@@ -1006,7 +1056,7 @@ class Pop2PianoForConditionalGeneration(Pop2PianoPreTrainedModel):
 
         if inputs_embeds is not None and input_features is not None:
             raise ValueError("Both `inputs_embeds` and `input_features` received! Please provide only one of them")
-        elif input_features is not None and inputs_embeds is None:
+        if input_features is not None and inputs_embeds is None:
             inputs_embeds = input_features
 
         # Encode if needed (training, first prediction pass)
@@ -1228,7 +1278,7 @@ class Pop2PianoForConditionalGeneration(Pop2PianoPreTrainedModel):
 
             reordered_decoder_past = reordered_decoder_past + (reordered_layer_past_states,)
         return reordered_decoder_past
-    
+
 __all__ = [
     "Pop2PianoPreTrainedModel",
     "Pop2PianoForConditionalGeneration",
