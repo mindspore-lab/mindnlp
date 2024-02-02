@@ -17,6 +17,7 @@
 # pylint: disable=logging-fstring-interpolation
 # pylint: disable=inconsistent-return-statements
 # pylint: disable=wrong-import-position
+# pylint: disable=invalid-name
 """
 Import utilities: Utilities related to imports and our lazy inits.
 """
@@ -70,6 +71,22 @@ _mindspore_version, _mindspore_available = _is_package_available(
     "mindspore", return_version=True
 )
 
+_librosa_available = _is_package_available("librosa")
+_scipy_available = _is_package_available("scipy")
+
+_pretty_midi_available = importlib.util.find_spec("pretty_midi") is not None
+try:
+    _pretty_midi_version = importlib.metadata.version("pretty_midi")
+    logger.debug(f"Successfully imported pretty_midi version {_pretty_midi_version}")
+except importlib.metadata.PackageNotFoundError:
+    _pretty_midi_available = False
+
+_essentia_available = importlib.util.find_spec("essentia") is not None
+try:
+    _essentia_version = importlib.metadata.version("essentia")
+    logger.debug(f"Successfully imported essentia version {_essentia_version}")
+except importlib.metadata.PackageNotFoundError:
+    _essentia_version = False
 
 def is_mindspore_available():
     return _mindspore_available
@@ -104,10 +121,20 @@ def is_protobuf_available():
         return False
     return importlib.util.find_spec("google.protobuf") is not None
 
-
 def is_pytest_available():
     return _pytest_available
 
+def is_pretty_midi_available():
+    return _pretty_midi_available
+
+def is_librosa_available():
+    return _librosa_available
+
+def is_essentia_available():
+    return _essentia_available
+
+def is_scipy_available():
+    return _scipy_available
 
 def is_in_notebook():
     try:
