@@ -26,8 +26,7 @@ import math
 from typing import Optional, Tuple, Union
 
 import mindspore
-from mindspore import Parameter, nn
-from mindspore.nn import CrossEntropyLoss
+from mindspore import nn, ops, Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.transformers.generation import GenerationConfig
@@ -59,7 +58,7 @@ class Pop2PianoLayerNorm(nn.Cell):
         Construct a layernorm module in the Pop2Piano style. No bias and no subtraction of mean.
         """
         super().__init__()
-        self.weight = Parameter(mindspore.ops.ones(hidden_size))
+        self.weight = Parameter(ops.ones(hidden_size))
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
@@ -69,7 +68,7 @@ class Pop2PianoLayerNorm(nn.Cell):
         # half-precision inputs is done in fp32
 
         variance = hidden_states.to(mindspore.float32).pow(2).mean(-1, keep_dims=True)
-        hidden_states = hidden_states * mindspore.ops.rsqrt(variance + self.variance_epsilon)
+        hidden_states = hidden_states * ops.rsqrt(variance + self.variance_epsilon)
 
         # convert into half-precision if necessary
         if self.weight.dtype in [mindspore.float16, mindspore.bfloat16]:
@@ -87,7 +86,7 @@ class Pop2PianoDenseActDense(nn.Cell):
         super().__init__()
         self.wi = nn.Dense(config.d_model, config.d_ff, has_bias=False)
         self.wo = nn.Dense(config.d_ff, config.d_model, has_bias=False)
-        self.dropout = nn.Dropout(config.dropout_rate)
+        self.dropout = nn.Dropout(p=config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
     def construct(self, hidden_states):
@@ -111,7 +110,7 @@ class Pop2PianoDenseGatedActDense(nn.Cell):
         self.wi_0 = nn.Dense(config.d_model, config.d_ff, has_bias=False)
         self.wi_1 = nn.Dense(config.d_model, config.d_ff, has_bias=False)
         self.wo = nn.Dense(config.d_ff, config.d_model, has_bias=False)
-        self.dropout = nn.Dropout(config.dropout_rate)
+        self.dropout = nn.Dropout(p=config.dropout_rate)
         self.act = ACT2FN[config.dense_act_fn]
 
     def construct(self, hidden_states):
@@ -144,7 +143,7 @@ class Pop2PianoLayerFF(nn.Cell):
             self.DenseReluDense = Pop2PianoDenseActDense(config)
 
         self.layer_norm = Pop2PianoLayerNorm(config.d_model, eps=config.layer_norm_epsilon)
-        self.dropout = nn.Dropout(config.dropout_rate)
+        self.dropout = nn.Dropout(p=config.dropout_rate)
 
     def construct(self, hidden_states):
         forwarded_states = self.layer_norm(hidden_states)
@@ -220,9 +219,9 @@ class Pop2PianoAttention(nn.Cell):
         if bidirectional:
             num_buckets //= 2
             relative_buckets += (relative_position > 0).to(mindspore.int64) * num_buckets
-            relative_position = mindspore.ops.abs(relative_position)
+            relative_position = ops.abs(relative_position)
         else:
-            relative_position = -mindspore.ops.minimum(relative_position, mindspore.ops.zeros_like(relative_position))
+            relative_position = -ops.minimum(relative_position, ops.zeros_like(relative_position))
         # now relative_position is in the range [0, inf)
 
         # half of the buckets are for exact increments in positions
@@ -231,23 +230,23 @@ class Pop2PianoAttention(nn.Cell):
 
         # The other half of the buckets are for logarithmically bigger bins in positions up to max_distance
         relative_position_if_large = max_exact + (
-            mindspore.ops.log(relative_position.float() / max_exact)
+            ops.log(relative_position.float() / max_exact)
             / math.log(max_distance / max_exact)
             * (num_buckets - max_exact)
         ).to(mindspore.int64)
-        relative_position_if_large = mindspore.ops.minimum(
-            relative_position_if_large, mindspore.ops.full_like(relative_position_if_large, num_buckets - 1)
+        relative_position_if_large = ops.minimum(
+            relative_position_if_large, ops.full_like(relative_position_if_large, num_buckets - 1)
         )
 
-        relative_buckets += mindspore.ops.where(is_small, relative_position, relative_position_if_large)
+        relative_buckets += ops.where(is_small, relative_position, relative_position_if_large)
         return relative_buckets
 
     def compute_bias(self, query_length, key_length):
         """Compute binned relative position bias"""
         # if device is None:
         #     device = self.relative_attention_bias.weight.device
-        context_position = mindspore.ops.arange(query_length, dtype=mindspore.int64)[:, None]
-        memory_position = mindspore.ops.arange(key_length, dtype=mindspore.int64)[None, :]
+        context_position = ops.arange(query_length, dtype=mindspore.int64)[:, None]
+        memory_position = ops.arange(key_length, dtype=mindspore.int64)[None, :]
         relative_position = memory_position - context_position  # shape (query_length, key_length)
         relative_position_bucket = self._relative_position_bucket(
             relative_position,  # shape (query_length, key_length)
@@ -313,7 +312,7 @@ class Pop2PianoAttention(nn.Cell):
                 if key_value_states is None:
                     # self-attn
                     # (batch_size, n_heads, key_length, dim_per_head)
-                    hidden_states = mindspore.ops.cat([past_key_value, hidden_states], axis=2)
+                    hidden_states = ops.cat([past_key_value, hidden_states], axis=2)
                 elif past_key_value.shape[2] != key_value_states.shape[1]:
                     # checking that the `sequence_length` of the `past_key_value` is the same as
                     # the provided `key_value_states` to support prefix tuning
@@ -337,13 +336,13 @@ class Pop2PianoAttention(nn.Cell):
         )
 
         # compute scores
-        scores = mindspore.ops.matmul(
+        scores = ops.matmul(
             query_states, key_states.transpose(0, 1, 3, 2)
-        )  # equivalent of mindspore.ops.einsum("bnqd,bnkd->bnqk", query_states, key_states), compatible with onnx op>9
+        )  # equivalent of ops.einsum("bnqd,bnkd->bnqk", query_states, key_states), compatible with onnx op>9
 
         if position_bias is None:
             if not self.has_relative_attention_bias:
-                position_bias = mindspore.ops.zeros(
+                position_bias = ops.zeros(
                     (1, self.n_heads, real_seq_length, key_length), dtype=scores.dtype
                 )
                 if self.gradient_checkpointing and self.training:
@@ -360,17 +359,17 @@ class Pop2PianoAttention(nn.Cell):
                 position_bias = position_bias + mask  # (batch_size, n_heads, seq_length, key_length)
 
         if self.pruned_heads:
-            mask = mindspore.ops.ones(position_bias.shape[1])
+            mask = ops.ones(position_bias.shape[1])
             mask[list(self.pruned_heads)] = 0
             position_bias_masked = position_bias[:, mask.bool()]
         else:
             position_bias_masked = position_bias
 
         scores += position_bias_masked
-        attn_weights = mindspore.ops.softmax(scores.float(), axis=-1).astype(
+        attn_weights = ops.softmax(scores.float(), axis=-1).astype(
             scores.dtype
         )  # (batch_size, n_heads, seq_length, key_length)
-        attn_weights = mindspore.ops.dropout(
+        attn_weights = ops.dropout(
             attn_weights, p=self.dropout, training=self.training
         )  # (batch_size, n_heads, seq_length, key_length)
 
@@ -378,7 +377,7 @@ class Pop2PianoAttention(nn.Cell):
         if layer_head_mask is not None:
             attn_weights = attn_weights * layer_head_mask
 
-        attn_output = unshape(mindspore.ops.matmul(attn_weights, value_states))  # (batch_size, seq_length, dim)
+        attn_output = unshape(ops.matmul(attn_weights, value_states))  # (batch_size, seq_length, dim)
         attn_output = self.o(attn_output)
 
         present_key_value_state = (key_states, value_states) if (self.is_decoder and use_cache) else None
@@ -395,7 +394,7 @@ class Pop2PianoLayerSelfAttention(nn.Cell):
         super().__init__()
         self.SelfAttention = Pop2PianoAttention(config, has_relative_attention_bias=has_relative_attention_bias)
         self.layer_norm = Pop2PianoLayerNorm(config.d_model, eps=config.layer_norm_epsilon)
-        self.dropout = nn.Dropout(config.dropout_rate)
+        self.dropout = nn.Dropout(p=config.dropout_rate)
 
     def construct(
         self,
@@ -428,7 +427,7 @@ class Pop2PianoLayerCrossAttention(nn.Cell):
         super().__init__()
         self.EncDecAttention = Pop2PianoAttention(config, has_relative_attention_bias=False)
         self.layer_norm = Pop2PianoLayerNorm(config.d_model, eps=config.layer_norm_epsilon)
-        self.dropout = nn.Dropout(config.dropout_rate)
+        self.dropout = nn.Dropout(p=config.dropout_rate)
 
     def construct(
         self,
@@ -516,12 +515,9 @@ class Pop2PianoBlock(nn.Cell):
 
         # clamp inf values to enable fp16 training
         if hidden_states.dtype == mindspore.float16:
-            clamp_value = mindspore.ops.where(
-                mindspore.ops.isinf(hidden_states).any(),
-                finfo(hidden_states.dtype, 'max') - 1000,
-                finfo(hidden_states.dtype, 'max'),
-            )
-            hidden_states = mindspore.ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
+            clamp_value = finfo(hidden_states.dtype, 'max') - 1000 if ops.isinf(hidden_states).any() else \
+                finfo(hidden_states.dtype, 'max')
+            hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         do_cross_attention = self.is_decoder and encoder_hidden_states is not None
         if do_cross_attention:
@@ -547,12 +543,9 @@ class Pop2PianoBlock(nn.Cell):
 
             # clamp inf values to enable fp16 training
             if hidden_states.dtype == mindspore.float16:
-                clamp_value = mindspore.where(
-                    mindspore.ops.isinf(hidden_states).any(),
-                    finfo(hidden_states.dtype, 'max') - 1000,
-                    finfo(hidden_states.dtype, 'max'),
-                )
-                hidden_states = mindspore.ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
+                clamp_value = finfo(hidden_states.dtype, 'max') - 1000 if ops.isinf(hidden_states).any() else \
+                    finfo(hidden_states.dtype, 'max')
+                hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
             # Combine self attn and cross attn key value states
             if present_key_value_state is not None:
@@ -566,12 +559,9 @@ class Pop2PianoBlock(nn.Cell):
 
         # clamp inf values to enable fp16 training
         if hidden_states.dtype == mindspore.float16:
-            clamp_value = mindspore.where(
-                    mindspore.ops.isinf(hidden_states).any(),
-                    finfo(hidden_states.dtype, 'max') - 1000,
-                    finfo(hidden_states.dtype, 'max'),
-                )
-            hidden_states = mindspore.ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
+            clamp_value = finfo(hidden_states.dtype, 'max') - 1000 if ops.isinf(hidden_states).any() else \
+                    finfo(hidden_states.dtype, 'max')
+            hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
 
@@ -696,7 +686,7 @@ class Pop2PianoPreTrainedModel(PreTrainedModel):
         if pad_token_id is None:
             raise ValueError("self.model.config.pad_token_id has to be defined.")
         # replace possible -100 values in labels by `pad_token_id`
-        shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
+        shifted_input_ids = shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
 
         return shifted_input_ids
 
@@ -713,7 +703,7 @@ class Pop2PianoStack(Pop2PianoPreTrainedModel):
             [Pop2PianoBlock(config, has_relative_attention_bias=bool(i == 0)) for i in range(config.num_layers)]
         )
         self.final_layer_norm = Pop2PianoLayerNorm(config.d_model, eps=config.layer_norm_epsilon)
-        self.dropout = nn.Dropout(config.dropout_rate)
+        self.dropout = nn.Dropout(p=config.dropout_rate)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -781,10 +771,10 @@ class Pop2PianoStack(Pop2PianoPreTrainedModel):
                 raise ValueError(f"`use_cache` can only be set to `True` if {self} is used as a decoder")
 
         if attention_mask is None:
-            attention_mask = mindspore.ops.ones((batch_size, mask_seq_length))
+            attention_mask = ops.ones((batch_size, mask_seq_length))
         if self.is_decoder and encoder_attention_mask is None and encoder_hidden_states is not None:
             encoder_seq_length = encoder_hidden_states.shape[1]
-            encoder_attention_mask = mindspore.ops.ones(
+            encoder_attention_mask = ops.ones(
                 (batch_size, encoder_seq_length), dtype=mindspore.int64
             )
 
@@ -802,7 +792,7 @@ class Pop2PianoStack(Pop2PianoPreTrainedModel):
             encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.shape
             encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
             if encoder_attention_mask is None:
-                encoder_attention_mask = mindspore.ops.ones(encoder_hidden_shape)
+                encoder_attention_mask = ops.ones(encoder_hidden_shape)
             encoder_extended_attention_mask = self.invert_attention_mask(encoder_attention_mask)
         else:
             encoder_extended_attention_mask = None
@@ -922,7 +912,7 @@ class Pop2PianoConcatEmbeddingToMel(nn.Cell):
     def construct(self, feature, index_value, embedding_offset):
         index_shifted = index_value - embedding_offset
         composer_embedding = self.embedding(index_shifted).unsqueeze(1)
-        inputs_embeds = mindspore.ops.cat([composer_embedding, feature], axis=1)
+        inputs_embeds = ops.cat([composer_embedding, feature], axis=1)
         return inputs_embeds
 
 class Pop2PianoForConditionalGeneration(Pop2PianoPreTrainedModel):
@@ -1019,7 +1009,7 @@ class Pop2PianoForConditionalGeneration(Pop2PianoPreTrainedModel):
             input_features[~attention_mask[:, 0].bool()] = 0.0
 
             # since self.mel_conditioner adds a new array at the front of inputs_embeds we need to do the same for attention_mask to keep the shapes same
-            attention_mask = mindspore.ops.cat([attention_mask[:, 0].view(-1, 1), attention_mask], axis=1)
+            attention_mask = ops.cat([attention_mask[:, 0].view(-1, 1), attention_mask], axis=1)
             return input_features, attention_mask
 
         return input_features, None
@@ -1111,8 +1101,7 @@ class Pop2PianoForConditionalGeneration(Pop2PianoPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = CrossEntropyLoss(ignore_index=-100)
-            loss = loss_fct(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1))
+            loss = ops.cross_entropy(lm_logits.view(-1, lm_logits.shape[-1]), labels.view(-1), ignore_index=-100)
 
         if not return_dict:
             output = (lm_logits,) + decoder_outputs[1:] + encoder_outputs
