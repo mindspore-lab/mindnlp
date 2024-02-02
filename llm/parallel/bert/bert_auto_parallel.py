@@ -221,11 +221,12 @@ if __name__ == "__main__":
             self._backbone = backbone
             self._loss_fn = loss_fn
         def construct(self, input_ids, attention_mask, token_type_ids, lens, label):
-            output, logits = self._backbone(
+            output = self._backbone(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 token_type_ids=token_type_ids)
             label = label.to(mindspore.float32)
+            logits = output[0]
             return self._loss_fn(logits, label)
         @property
         def backbone_network(self):
