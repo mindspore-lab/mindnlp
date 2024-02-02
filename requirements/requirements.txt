@@ -17,3 +17,6 @@ safetensors
 ml_dtypes
 cython
 jieba
+pretty_midi
+essentia
+scipy
