@@ -1,0 +1,1 @@
+mpirun -n 4 python bert_auto_parallel.py > bert_parallel.log 2>&1 &
