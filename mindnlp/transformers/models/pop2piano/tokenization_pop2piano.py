@@ -22,6 +22,7 @@
 # pylint: disable=consider-using-enumerate
 # pylint: disable=consider-using-generator
 # pylint: disable=unspecified-encoding
+# pylint: disable=signature-differs
 """Tokenization class for Pop2Piano."""
 
 import json
@@ -303,7 +304,7 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
         if len(notes) == 0:
             return []
 
-        notes = np.ndarray(notes)
+        notes = np.array(notes)
         note_order = notes[:, 0] * 128 + notes[:, 1]
         notes = notes[note_order.argsort()]
         return notes
@@ -679,7 +680,7 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
         for index, end_idx in enumerate(batch_idx):
             each_tokens_ids = token_ids[start_idx:end_idx]
             # check where the whole example ended by searching for eos_token_id and getting the upper bound
-            each_tokens_ids = each_tokens_ids[:, : np.max(np.where(each_tokens_ids == int(self.eos_token))[1]) + 1]
+            each_tokens_ids = each_tokens_ids[:, : int(np.max(np.where(each_tokens_ids == int(self.eos_token))[1])) + 1]
             beatsteps = feature_extractor_output["beatsteps"][index]
             extrapolated_beatstep = feature_extractor_output["extrapolated_beatstep"][index]
 
@@ -689,9 +690,9 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
                 attention_mask_extrapolated_beatstep = feature_extractor_output[
                     "attention_mask_extrapolated_beatstep"
                 ][index]
-                beatsteps = beatsteps[: np.max(np.where(attention_mask_beatsteps == 1)[0]) + 1]
+                beatsteps = beatsteps[: int(np.max(np.where(attention_mask_beatsteps == 1)[0])) + 1]
                 extrapolated_beatstep = extrapolated_beatstep[
-                    : np.max(np.where(attention_mask_extrapolated_beatstep == 1)[0]) + 1
+                    : int(np.max(np.where(attention_mask_extrapolated_beatstep == 1)[0])) + 1
                 ]
 
             each_tokens_ids = to_numpy(each_tokens_ids)

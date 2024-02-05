@@ -19,6 +19,7 @@
 # pylint: disable=invalid-unary-operand-type
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
+# pylint: disable=potential-index-error
 """ Feature extractor class for Pop2Piano"""
 
 import warnings
@@ -40,8 +41,8 @@ from ....utils import (
 
 
 if is_essentia_available():
-    import essentia
-    import essentia.standard
+    import essentia # pylint: disable=import-error
+    import essentia.standard # pylint: disable=import-error
 
 if is_librosa_available():
     import librosa

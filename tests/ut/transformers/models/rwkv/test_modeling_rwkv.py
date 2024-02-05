@@ -431,6 +431,8 @@ class RWKVIntegrationTests(unittest.TestCase):
         output = model.generate(input_ids, max_new_tokens=10)
         output_sentence = self.tokenizer.decode(output[0].tolist())
 
+        print(output_sentence)
+
         self.assertEqual(output_sentence, expected_output)
 
     def test_simple_generate_fp16(self):

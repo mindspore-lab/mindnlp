@@ -469,6 +469,80 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
     @staticmethod
     def _tie_encoder_decoder_weights(encoder: nn.Cell, decoder: nn.Cell, base_model_prefix: str):
         """tie encoder decoder weights"""
+        uninitialized_encoder_weights: List[str] = []
+        if decoder.__class__ != encoder.__class__:
+            logger.info(
+                f"{decoder.__class__} and {encoder.__class__} are not equal. In this case make sure that all encoder"
+                " weights are correctly initialized."
+            )
+
+        def tie_encoder_to_decoder_recursively(
+            decoder_pointer: nn.Cell,
+            encoder_pointer: nn.Cell,
+            module_name: str,
+            uninitialized_encoder_weights: List[str],
+            depth=0,
+        ):
+            assert isinstance(decoder_pointer, nn.Cell) and isinstance(
+                encoder_pointer, nn.Cell
+            ), f"{decoder_pointer} and {encoder_pointer} have to be of type nn.Module"
+            if hasattr(decoder_pointer, "weight"):
+                assert hasattr(encoder_pointer, "weight")
+                encoder_pointer.weight = decoder_pointer.weight
+                encoder_pointer._params['weight'] = decoder_pointer.weight
+                if hasattr(decoder_pointer, "bias"):
+                    assert hasattr(encoder_pointer, "bias")
+                    encoder_pointer.bias = decoder_pointer.bias
+                    encoder_pointer._params['bias'] = decoder_pointer.bias
+                return
+
+            encoder_cells = encoder_pointer._cells
+            decoder_cells = decoder_pointer._cells
+            if len(decoder_cells) > 0:
+                assert (
+                    len(encoder_cells) > 0
+                ), f"Encoder cell {encoder_pointer} does not match decoder cell {decoder_pointer}"
+
+                all_encoder_weights = {module_name + "/" + sub_name for sub_name in encoder_cells.keys()}
+                encoder_layer_pos = 0
+                for name, _ in decoder_cells.items():
+                    if name.isdigit():
+                        encoder_name = str(int(name) + encoder_layer_pos)
+                        decoder_name = name
+                        if not isinstance(decoder_cells[decoder_name], type(encoder_cells[encoder_name])) and len(
+                            encoder_cells
+                        ) != len(decoder_cells):
+                            # this can happen if the name corresponds to the position in a list module list of layers
+                            # in this case the decoder has added a cross-attention that the encoder does not have
+                            # thus skip this step and subtract one layer pos from encoder
+                            encoder_layer_pos -= 1
+                            continue
+                    elif name not in encoder_cells:
+                        continue
+                    elif depth > 500:
+                        raise ValueError(
+                            "Max depth of recursive function `tie_encoder_to_decoder` reached. It seems that there is"
+                            " a circular dependency between two or more `nn.Cell` of your model."
+                        )
+                    else:
+                        decoder_name = encoder_name = name
+                    tie_encoder_to_decoder_recursively(
+                        decoder_cells[decoder_name],
+                        encoder_cells[encoder_name],
+                        module_name + "/" + name,
+                        uninitialized_encoder_weights,
+                        depth=depth + 1,
+                    )
+                    all_encoder_weights.remove(module_name + "/" + encoder_name)
+
+                uninitialized_encoder_weights += list(all_encoder_weights)
+
+        # tie weights recursively
+        tie_encoder_to_decoder_recursively(decoder, encoder, base_model_prefix, uninitialized_encoder_weights)
+        if len(uninitialized_encoder_weights) > 0:
+            logger.warning(
+                f"The following encoder weights were not tied to the decoder {uninitialized_encoder_weights}"
+            )
 
     def _tie_or_clone_weights(self, output_embeddings, input_embeddings):
         """ Tie or clone module weights depending of weither we are using or not
