@@ -29,8 +29,9 @@ import mindspore.common.dtype as mstype
 from mindspore import nn, ops, Tensor, Parameter
 from mindspore.common._stub_tensor import StubTensor
 from mindspore.nn.layer.conv import _Conv, _deconv_output_length
-from mindspore.common.initializer import initializer, Normal, HeUniform, Uniform, _calculate_fan_in_and_fan_out
+from mindspore.common.initializer import initializer, Constant, HeNormal, XavierNormal, Normal, HeUniform, XavierUniform, Uniform, _calculate_fan_in_and_fan_out
 from mindspore import _checkparam as Validator
+from mindspore.ops import functional as F
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp._legacy.functional import einsum
 
@@ -552,6 +553,12 @@ class Dense(nn.Cell):
             return x
         return ops.dense(x, self.weight, self.bias)
 
+    def extend_repr(self):
+        s = f'input_channels={self.in_channels}, output_channels={self.out_channels}'
+        if self.has_bias:
+            s += f', has_bias={self.has_bias}'
+        return s
+
 class Embedding(nn.Cell):
     """patched Embedding"""
     def __init__(self, vocab_size, embedding_size, padding_idx=None, use_one_hot=False, dtype=mstype.float32):
@@ -732,6 +739,8 @@ class LayerNorm(nn.Cell):
                  ):
         """Initialize LayerNorm."""
         super().__init__()
+        if isinstance(normalized_shape, int):
+            normalized_shape = [normalized_shape]
         if not isinstance(normalized_shape, (tuple, list)):
             raise TypeError(f"For '{self.cls_name}', the type of 'normalized_shape' must be tuple[int] or list[int], "
                             f"but got {normalized_shape} and the type is {type(normalized_shape)}.")
@@ -913,3 +922,79 @@ nn.Conv1dTranspose = Conv1dTranspose
 nn.Embedding = Embedding
 nn.Dense = Dense
 nn.BatchNorm1d = BatchNorm1d
+
+
+nn.GroupNorm_original = nn.GroupNorm
+
+class GroupNorm_hijack(nn.GroupNorm_original):
+    r"""
+    Group Normalization over a mini-batch of inputs.
+    """
+
+    def __init__(self, num_groups, num_channels, eps=0.00001, affine=True, gamma_init='ones', beta_init='zeros', dtype=mstype.float32):
+        super().__init__(num_groups, num_channels, eps, affine, gamma_init, beta_init, dtype)
+        self.weight = self.gamma
+        self.bias = self.beta
+        del self.gamma
+        del self.beta
+
+    def _cal_output(self, x):
+        batch, channel, height, width = F.shape(x)
+        self._channel_check(channel, self.num_channels, self.cls_name)
+        x = F.reshape(x, (batch, self.num_groups, -1))
+        mean = self.reduce_mean(x, 2)
+        var = F.div(self.reduce_sum(F.square(F.sub(x, mean)), 2), (channel * height * width / self.num_groups))
+        std = self.sqrt(var + self.eps)     # pylint: disable=redefined-outer-name
+        x = F.div(F.sub(x, mean), std)
+        x = F.reshape(x, (batch, channel, height, width))
+        output = F.add(x * F.reshape(self.weight, (-1, 1, 1)), F.reshape(self.bias, (-1, 1, 1)))
+        return output
+
+    def construct(self, x:Tensor) -> Tensor:
+        is_3d_tensor = len(x.shape) == 3        # support 3D tensors [B, C, L]
+        if is_3d_tensor: x = x.unsqueeze(-1)    # pylint: disable=multiple-statements
+        o = super().construct(x)
+        if is_3d_tensor: o = o.squeeze(-1)      # pylint: disable=multiple-statements
+        return o
+
+nn.GroupNorm = GroupNorm_hijack
+
+
+def _Parameter_zeros_(self:Parameter) -> Parameter:
+    return self.set_data(Parameter(initializer('zeros', self.shape, self.dtype)))
+Parameter.zeros_ = _Parameter_zeros_
+
+def _Parameter_ones_(self:Parameter) -> Parameter:
+    return self.set_data(Parameter(initializer('ones', self.shape, self.dtype)))
+Parameter.ones_ = _Parameter_ones_
+
+def _Parameter_constant_(self:Parameter, v) -> Parameter:
+    return self.set_data(Parameter(initializer(Constant(v), self.shape, self.dtype)))
+Parameter.constant_ = _Parameter_constant_
+
+def _Parameter_uniform_(self:Parameter, a:float=0.0, b:float=1.0) -> Parameter:
+    s = (b - a) / 2
+    offset = a + s
+    data = Parameter(initializer(Uniform(s), self.shape, self.dtype))
+    return self.set_data(data + mindspore.tensor(offset, dtype=data.dtype))
+Parameter.uniform_ = _Parameter_uniform_
+
+def _Parameter_normal_(self:Parameter, mean:float=0.0, std:float=1.0) -> Parameter:  # pylint: disable=redefined-outer-name
+    return self.set_data(Parameter(initializer(Normal(std, mean), self.shape, self.dtype)))
+Parameter.normal_ = _Parameter_normal_
+
+def _Parameter_xavier_uniform_(self:Parameter, gain:float=1.0) -> Parameter:
+    return self.set_data(Parameter(initializer(XavierUniform(gain), self.shape, self.dtype)))
+Parameter.xavier_uniform_ = _Parameter_xavier_uniform_
+
+def _Parameter_xavier_normal_(self:Parameter, gain:float=1.0) -> Parameter:
+    return self.set_data(Parameter(initializer(XavierNormal(gain), self.shape, self.dtype)))
+Parameter.xavier_normal_ = _Parameter_xavier_normal_
+
+def _Parameter_kaiming_uniform_(self:Parameter, a:float=0, mode:str='fan_in', nonlinearity:str='leaky_relu') -> Parameter:
+    return self.set_data(Parameter(initializer(HeUniform(a, mode, nonlinearity), self.shape, self.dtype)))
+Parameter.kaiming_uniform_ = _Parameter_kaiming_uniform_
+
+def _Parameter_kaiming_normal_(self:Parameter, a:float=0, mode:str='fan_in', nonlinearity:str='leaky_relu') -> Parameter:
+    return self.set_data(Parameter(initializer(HeNormal(a, mode, nonlinearity), self.shape, self.dtype)))
+Parameter.kaiming_normal_ = _Parameter_kaiming_normal_
