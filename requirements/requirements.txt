@@ -16,6 +16,6 @@ easydict
 safetensors
 ml_dtypes
 cython
-jieba
+cjieba
 pretty_midi
 scipy

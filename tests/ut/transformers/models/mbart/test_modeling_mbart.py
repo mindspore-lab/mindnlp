@@ -47,6 +47,7 @@ if is_mindspore_available():
     from mindnlp.transformers.tokenization_utils import BatchEncoding
     from mindnlp.transformers.models.mbart.modeling_mbart import MBartDecoder, MBartEncoder
 
+mindspore.set_context(pynative_synchronize=True)
 
 def prepare_mbart_inputs_dict(
     config,
@@ -448,7 +449,6 @@ class MBartEnroIntegrationTest(AbstractSeq2SeqIntegrationTest):
         for name in mbart_models:
             config = MBartConfig.from_pretrained(name, from_pt=True)
             for k, v in expected.items():
-                # print("kvtest: ",k, v, getattr(config, k))
                 try:
                     self.assertEqual(v, getattr(config, k))
                 except AssertionError as e:
