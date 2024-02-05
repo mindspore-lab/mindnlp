@@ -113,13 +113,8 @@ class CellUtilMixin:
         """
         `mindspore.dtype`: The dtype of the module (assuming that all the module parameters have the same dtype).
         """
-        if not hasattr(self, '_dtype'):
-            return mindspore.float32
-        return self._dtype
+        return get_parameter_dtype(self)
 
-    @dtype.setter
-    def dtype(self, dtype):
-        self._dtype = dtype
 
     @staticmethod
     def create_extended_attention_mask_for_decoder(input_shape, attention_mask):
@@ -174,7 +169,7 @@ class CellUtilMixin:
         return encoder_extended_attention_mask
 
     def get_extended_attention_mask(
-        self, attention_mask: Tensor, input_shape: Tuple[int],dtype = None
+        self, attention_mask: Tensor, input_shape: Tuple[int], dtype = None
     ) -> Tensor:
         """
         Makes broadcastable attention and causal masks so that future and masked tokens are ignored.
@@ -1054,9 +1049,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
         with no_init_weights(empty_initializer, _fast_init):
             model = cls(config, *model_args, **model_kwargs)
-
-        if ms_dtype:
-            model.dtype = ms_dtype
 
         if ms_dtype != mindspore.float32:
             set_global_fp16(False)

@@ -329,7 +329,6 @@ class T5Attention(nn.Cell):
         scores = ops.matmul(
             query_states, key_states.swapaxes(3, 2)
         )  # equivalent of torch.einsum("bnqd,bnkd->bnqk", query_states, key_states), compatible with onnx op>9
-
         if position_bias is None:
             if not self.has_relative_attention_bias:
                 position_bias = ops.zeros(
