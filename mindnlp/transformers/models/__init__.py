@@ -18,7 +18,7 @@ Models init
 from . import albert, auto, bart, bert, bloom, clip, codegen, cpm, electra, ernie, ernie_m, chatglm, chatglm2, gpt, gpt_neo, gpt_neox, gpt2, \
     llama, longformer, luke, mbart, megatron_bert, mistral, mobilebert, nezha, opt, gpt_pangu, phi, roberta, rwkv, \
     seamless_m4t, seamless_m4t_v2, t5, tinybert, xlm, xlm_roberta, gpt_bigcode, whisper, bark, encodec, \
-    graphormer, pop2piano
+    graphormer, pop2piano, wav2vec2, hubert
 from .albert import *
 from .auto import *
 from .bark import *
@@ -61,6 +61,8 @@ from .gpt_bigcode import *
 from .whisper import *
 from .encodec import *
 from .pop2piano import *
+from .wav2vec2 import *
+from .hubert import *
 
 __all__ = []
 __all__.extend(albert.__all__)
@@ -105,3 +107,5 @@ __all__.extend(whisper.__all__)
 __all__.extend(bark.__all__)
 __all__.extend(encodec.__all__)
 __all__.extend(pop2piano.__all__)
+__all__.extend(wav2vec2.__all__)
+__all__.extend(hubert.__all__)
