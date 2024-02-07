@@ -19,17 +19,17 @@ PanGu_Alpha Tokenizer.
 """
 import mindspore
 import sentencepiece
-import cjieba
+import jieba
 import numpy as np
 
 from mindnlp.transformers.tokenization_utils import PreTrainedTokenizer
 
-cjieba.add_user_word('<s>')
-cjieba.add_user_word('</s>')
-cjieba.add_user_word('<eot>')
-cjieba.add_user_word('<unk>')
-cjieba.add_user_word('<sep>')
-cjieba.add_user_word('<pad>')
+jieba.add_word('<s>')
+jieba.add_word('</s>')
+jieba.add_word('<eot>')
+jieba.add_word('<unk>')
+jieba.add_word('<sep>')
+jieba.add_word('<pad>')
 
 
 class GPTPanguTokenizer(PreTrainedTokenizer):
@@ -92,7 +92,7 @@ class GPTPanguTokenizer(PreTrainedTokenizer):
 
     def tokenize(self, text, **kwargs):
         """ Tokenize a string. """
-        seg_list = [x.translate(self.translator) for x in cjieba.cut(text, cut_all=False)]
+        seg_list = [x.translate(self.translator) for x in jieba.cut(text, cut_all=False)]
         return seg_list
 
     def convert_tokens_to_ids(self, tokens):
