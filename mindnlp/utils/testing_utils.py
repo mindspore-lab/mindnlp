@@ -59,6 +59,7 @@ from .import_utils import (
     is_librosa_available,
     is_pretty_midi_available,
     is_scipy_available,
+    is_pyctcdecode_available,
 )
 from .generic import strtobool
 
@@ -160,6 +161,12 @@ def require_scipy(test_case):
     Decorator marking a test that requires Scipy. These tests are skipped when SentencePiece isn't installed.
     """
     return unittest.skipUnless(is_scipy_available(), "test requires Scipy")(test_case)
+
+def require_pyctcdecode(test_case):
+    """
+    Decorator marking a test that requires pyctcdecode
+    """
+    return unittest.skipUnless(is_pyctcdecode_available(), "test requires pyctcdecode")(test_case)
 
 def cmd_exists(cmd):
     return shutil.which(cmd) is not None

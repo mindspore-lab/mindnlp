@@ -65,6 +65,7 @@ _pytest_available = _is_package_available("pytest")
 _datasets_available = _is_package_available("datasets")
 _sentencepiece_available = _is_package_available("sentencepiece")
 _tokenizers_available = _is_package_available("tokenizers")
+_pyctcdecode_available = _is_package_available("pyctcdecode")
 _safetensors_available = _is_package_available("safetensors")
 _modelscope_available = _is_package_available("modelscope")
 _mindspore_version, _mindspore_available = _is_package_available(
@@ -132,6 +133,9 @@ def is_librosa_available():
 
 def is_essentia_available():
     return _essentia_available
+
+def is_pyctcdecode_available():
+    return _pyctcdecode_available
 
 def is_scipy_available():
     return _scipy_available
@@ -240,6 +244,12 @@ PRETTY_MIDI_IMPORT_ERROR = """
 Please note that you may need to restart your runtime after installation.
 """
 
+# docstyle-ignore
+PYCTCDECODE_IMPORT_ERROR = """
+{0} requires the pyctcdecode library but it was not found in your environment. You can install it with pip:
+`pip install pyctcdecode`. Please note that you may need to restart your runtime after installation.
+"""
+
 BACKENDS_MAPPING = OrderedDict(
     [
         ("cython", (is_cython_available, CYTHON_IMPORT_ERROR)),
@@ -251,6 +261,7 @@ BACKENDS_MAPPING = OrderedDict(
         ("essentia", (is_essentia_available, ESSENTIA_IMPORT_ERROR)),
         ("scipy", (is_scipy_available, SCIPY_IMPORT_ERROR)),
         ("pretty_midi", (is_pretty_midi_available, PRETTY_MIDI_IMPORT_ERROR)),
+        ("pyctcdecode", (is_pyctcdecode_available, PYCTCDECODE_IMPORT_ERROR)),
     ]
 )
 
