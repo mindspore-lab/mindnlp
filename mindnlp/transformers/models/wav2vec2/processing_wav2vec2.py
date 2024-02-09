@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # pylint: disable=no-else-return
+# pylint: disable=cyclic-import
 """
 Speech processor class for Wav2Vec2
 """

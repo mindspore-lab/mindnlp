@@ -14,6 +14,7 @@
 # limitations under the License.
 # pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
+# pylint: disable=invalid-name
 # pylint: disable=unused-argument
 # pylint: disable=unused-variable
 # pylint: disable=arguments-renamed

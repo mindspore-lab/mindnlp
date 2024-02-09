@@ -13,6 +13,7 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=missing-function-docstring
+# pylint: disable=invalid-name
 """Weight Norm"""
 
 from typing import Any

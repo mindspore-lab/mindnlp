@@ -780,7 +780,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         return cls.from_pretrained(pretrained_model_name_or_path, args, kwargs)
 
     @classmethod
-    def from_pretrained(
+    def from_pretrained(    # pylint: disable=too-many-locals
         cls,
         pretrained_model_name_or_path: Optional[Union[str, os.PathLike]],
         *model_args,

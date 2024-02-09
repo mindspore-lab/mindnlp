@@ -16,6 +16,7 @@
 # pylint: disable=no-else-return
 # pylint: disable=inconsistent-return-statements
 # pylint: disable=not-an-iterable
+# pylint: disable=invalid-name
 """Tokenization class for Wav2Vec2."""
 
 import json
