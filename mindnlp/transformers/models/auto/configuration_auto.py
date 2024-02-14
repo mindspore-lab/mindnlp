@@ -45,7 +45,9 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("encodec","EncodecConfig"),
         ("mbart","MBartConfig"),
         ("phi", "PhiConfig"),
-        ('xlm-roberta', 'XLMRobertaConfig')
+        ('xlm-roberta', 'XLMRobertaConfig'),
+        ('hubert', 'HubertConfig'),
+        ('wav2vec2', 'Wav2Vec2Config'),
     ]
 )
 

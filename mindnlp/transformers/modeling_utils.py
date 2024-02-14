@@ -92,10 +92,25 @@ def set_initialized_submodules(model: nn.Cell, state_dict_keys):
     Sets the `_is_hf_initialized` flag in all submodules of a given model when all its weights are in the loaded state
     dict.
     """
+    def fix_weight_norm_loaded_keys(loaded_keys: Dict[str, Tensor]) -> List[str]:
+        ''' if both `weight_g` and `weight_v` are loaded, pretend `weight` to be loaded :) '''
+        patched_keys = []
+        for key in loaded_keys:
+            if not key.endswith('_g'):
+                continue
+            key_base = key[:-len('_g')]
+            key_v = key_base + '_v'
+            if key_v in loaded_keys:
+                patched_keys.append(key_base)
+        return patched_keys
+
     not_initialized_submodules = {}
     for module_name, module in model.cells_and_names():
         loaded_keys = {k.replace(f"{module_name}.", "") for k in state_dict_keys if k.startswith(f"{module_name}.")}
         params_keys = {k.replace(f"{module_name}.", "") for k in module.parameters_dict().keys() if k.startswith(f"{module_name}.")}
+        # NOTE: monkey patching weight_norm
+        loaded_keys.update(fix_weight_norm_loaded_keys(loaded_keys))
+
         if loaded_keys.issuperset(params_keys):
             module._is_initialized = True
         else:
@@ -765,7 +780,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         return cls.from_pretrained(pretrained_model_name_or_path, args, kwargs)
 
     @classmethod
-    def from_pretrained(
+    def from_pretrained(    # pylint: disable=too-many-locals
         cls,
         pretrained_model_name_or_path: Optional[Union[str, os.PathLike]],
         *model_args,
@@ -1105,7 +1120,16 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         remove_prefix_from_model = None
         add_prefix_to_model = None
 
+        def fix_weight_norm_missing_keys(state_dict_keys: dict, keys_missing:List[str]) -> List[str]:
+            ''' if both `weight_g` and `weight_v` are loaded, key `weight` is not missing :) '''
+            non_missing_keys = []
+            for key in keys_missing:
+                if f'{key}_g' in state_dict_keys and f'{key}_v' in state_dict_keys:
+                    non_missing_keys.append(key)
+            return non_missing_keys
+
         def load_param_into_net(model: nn.Cell, param_dict: dict, prefix: str):
+            state_dict_keys = list(param_dict.keys())
             keep_in_fp32_modules = model._keep_in_fp32_modules
             keys_unexpected = list(param_dict.keys())
 
@@ -1176,6 +1200,10 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     if ms_dtype and ms_dtype != param.dtype:
                         new_param = param.astype(ms_dtype)
                         replace_references(param, Parameter(new_param, name=param.name, requires_grad=param.requires_grad))
+
+            # NOTE: monkey patching weight_norm
+            for key in fix_weight_norm_missing_keys(state_dict_keys, keys_missing):
+                keys_missing.remove(key)
 
             return keys_unexpected, keys_missing
 
