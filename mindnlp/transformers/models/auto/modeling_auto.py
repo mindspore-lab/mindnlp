@@ -47,6 +47,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("mistral", "MistralModel"),
         ('encodec','EncodecModel'),
         ('mbart','MBartModel'),
+        ('minicpm', 'MiniCPMModel'),
         ("rwkv", "RwkvModel"),
         ("phi", "PhiModel"),
         ("xlm-roberta", "XLMRobertaModel"),
@@ -61,6 +62,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("bloom", "BloomForCausalLM"),
         ("rwkv", "RwkvForCausalLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
+        ('minicpm', 'MiniCPMForCausalLM')
     ]
 )
 
@@ -73,6 +75,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("roberta", "RobertaForMaskedLM"),
         ("rwkv", "RwkvForCausalLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
+        ('minicpm', 'MiniCPMForCausalLM')
     ]
 )
 
@@ -89,6 +92,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("phi", "PhiForCausalLM"),
         ("rwkv", "RwkvForCausalLM"),
         ("xlm-roberta", "XLMRobertaForCausalLM"),
+        ('minicpm', 'MiniCPMForCausalLM')
     ]
 )
 
@@ -216,7 +220,8 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("bloom", "BloomForSequenceClassification"),
         ("falcon", "FalconForSequenceClassification"),
         ("phi", "PhiForSequenceClassification"),
-        ("xlm-roberta", "XLMRobertaForSequenceClassification")
+        ("xlm-roberta", "XLMRobertaForSequenceClassification"),
+        ('minicpm', 'MiniCPMForSequenceClassification')
     ]
 )
 

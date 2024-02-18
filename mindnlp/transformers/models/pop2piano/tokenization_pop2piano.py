@@ -366,7 +366,7 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
 
     def encode_plus(
         self,
-        notes: Union[np.ndarray, List[pretty_midi.Note]],
+        notes: Union[np.ndarray, List["pretty_midi.Note"]],
         truncation_strategy: Optional[TruncationStrategy] = None,
         max_length: Optional[int] = None,
         **kwargs,
@@ -437,7 +437,7 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
 
     def batch_encode_plus(
         self,
-        notes: Union[np.ndarray, List[pretty_midi.Note]],
+        notes: Union[np.ndarray, List["pretty_midi.Note"]],
         truncation_strategy: Optional[TruncationStrategy] = None,
         max_length: Optional[int] = None,
         **kwargs,
@@ -478,8 +478,8 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
         self,
         notes: Union[
             np.ndarray,
-            List[pretty_midi.Note],
-            List[List[pretty_midi.Note]],
+            List["pretty_midi.Note"],
+            List[List["pretty_midi.Note"]],
         ],
         padding: Union[bool, str, PaddingStrategy] = False,
         truncation: Union[bool, str, TruncationStrategy] = None,

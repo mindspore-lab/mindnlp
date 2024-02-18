@@ -1,7 +1,7 @@
 requests
 tqdm
 pylint==2.17
-pytest
+pytest>=7.2.0,<8.0.0
 ddt
 datasets
 sentencepiece

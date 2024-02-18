@@ -16,7 +16,7 @@
 Models init
 """
 from . import albert, auto, bart, bert, bloom, clip, codegen, cpm, electra, ernie, ernie_m, chatglm, chatglm2, gpt, gpt_neo, gpt_neox, gpt2, \
-    llama, longformer, luke, mbart, megatron_bert, mistral, mobilebert, nezha, opt, gpt_pangu, phi, roberta, rwkv, \
+    llama, longformer, luke, mbart, megatron_bert, minicpm, mistral, mobilebert, nezha, opt, gpt_pangu, phi, roberta, rwkv, \
     seamless_m4t, seamless_m4t_v2, t5, tinybert, xlm, xlm_roberta, gpt_bigcode, whisper, bark, encodec, \
     graphormer, pop2piano, wav2vec2, hubert
 from .albert import *
@@ -43,6 +43,7 @@ from .longformer import *
 from .luke import *
 from .mbart import *
 from .megatron_bert import *
+from .minicpm import *
 from .mistral import *
 from .mobilebert import *
 from .nezha import *
@@ -88,6 +89,7 @@ __all__.extend(longformer.__all__)
 __all__.extend(luke.__all__)
 __all__.extend(mbart.__all__)
 __all__.extend(megatron_bert.__all__)
+__all__.extend(minicpm.__all__)
 __all__.extend(mistral.__all__)
 __all__.extend(mobilebert.__all__)
 __all__.extend(nezha.__all__)

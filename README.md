@@ -110,17 +110,20 @@ The table below represents the current support in the library for each of those 
 | CPM                           | ✅                | ❌             |
 | CPM-Ant                       | ✅                | ❌             |
 | CPM-Bee                       | ✅                | ❌             |
+| MiniCPM                       | ✅                | ❌             |
+| Electra                       | TODO               | ❌             |
 | EnCodec                       | ✅               | ❌             |
 | ERNIE                         | ✅                | ✅             |
 | ERNIEM                        | ✅                | ✅             |
 | Falcon                        | ✅                | ❌             |
-| GLM                           | ✅                | ❌             |
 | OpenAI GPT                    | ✅                | ❌             |
 | OpenAI GPT-2                  | ✅                | ✅             |
 | GPT Neo                       | ✅                | ❌             |
 | GPT NeoX                      | TODO              | ❌             |
+| GPT Pangu                     | ✅                | ❌             |
 | GPTBigCode                    | ✅                | ❌             |
 | Graphormer                    | ✅                | ❌             |
+| Hubert                        | ✅                | ❌             |
 | Llama                         | ✅                | ❌             |
 | Llama2                        | ✅                | ❌             |
 | CodeLlama                     | ✅                | ❌             |
@@ -131,19 +134,22 @@ The table below represents the current support in the library for each of those 
 | mBART-50                      | ✅                | ❌             |
 | Megatron-BERT                 | ✅                | ❌             |
 | Megatron-GPT2                 | ✅                | ❌             |
+| Mistral                       | ✅                | ❌             |
 | MobileBERT                    | ✅                | ❌             |
 | Moss                          | ✅                | ❌             |
 | Nezha                         | ✅                | ❌             |
 | OPT                           | ✅                | ❌             |
-| Pangu                         | ✅                | ❌             |
-| Pop2piano                     | Todo              | ❌             |
+| Phi2                          | ✅                | ❌             |
+| Pop2piano                     | ✅                | ❌             |
+| RegNet                        | Todo               | ❌             |
 | RoBERTa                       | ✅                | ✅             |
 | RWKV                          | ✅                | ❌             |
 | SeamlessM4T                   | ✅                | ❌             |
 | SeamlessM4Tv2                 | ✅                | ❌             |
 | T5                            | ✅                | ❌             |
-| TimeSformer                   | TODO              | ❌             |
+| Timesformer                   | TODO              | ❌             |
 | Tinybert                      | ✅                | ❌             |
+| wav2vec                       | ✅                | ❌             |
 | Whisper                       | ✅                | ❌             |
 | XLM                           | ✅                | ❌             |
 | XLM-RoBERTa                   | ✅                | ❌             |
