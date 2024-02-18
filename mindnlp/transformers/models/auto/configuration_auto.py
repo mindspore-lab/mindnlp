@@ -48,6 +48,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ('xlm-roberta', 'XLMRobertaConfig'),
         ('hubert', 'HubertConfig'),
         ('wav2vec2', 'Wav2Vec2Config'),
+        ('minicpm', 'MiniCPMConfig'),
     ]
 )
 
@@ -385,6 +386,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("megatron-bert", "Megatron-BERT"),
         ("megatron_gpt2", "Megatron-GPT2"),
         ("mgp-str", "MGP-STR"),
+        ("minicpm", "MiniCPM"),
         ("mistral", "Mistral"),
         ("mluke", "mLUKE"),
         ("mms", "MMS"),
@@ -847,7 +849,7 @@ class AutoConfig:
         # Fallback: use pattern matching on the string.
         # We go from longer names to shorter names to catch roberta before bert (for instance)
         for pattern in sorted(CONFIG_MAPPING.keys(), key=len, reverse=True):
-            if pattern in str(pretrained_model_name_or_path):
+            if pattern in str(pretrained_model_name_or_path).lower():
                 return CONFIG_MAPPING[pattern].from_dict(config_dict, **unused_kwargs)
 
         raise ValueError(

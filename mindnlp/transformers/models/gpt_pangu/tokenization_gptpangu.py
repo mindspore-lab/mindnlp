@@ -19,17 +19,19 @@ PanGu_Alpha Tokenizer.
 """
 import mindspore
 import sentencepiece
-import jieba
 import numpy as np
 
+from mindnlp.utils.import_utils import is_jieba_available
 from mindnlp.transformers.tokenization_utils import PreTrainedTokenizer
 
-jieba.add_word('<s>')
-jieba.add_word('</s>')
-jieba.add_word('<eot>')
-jieba.add_word('<unk>')
-jieba.add_word('<sep>')
-jieba.add_word('<pad>')
+if is_jieba_available():
+    import jieba
+    jieba.add_word('<s>')
+    jieba.add_word('</s>')
+    jieba.add_word('<eot>')
+    jieba.add_word('<unk>')
+    jieba.add_word('<sep>')
+    jieba.add_word('<pad>')
 
 
 class GPTPanguTokenizer(PreTrainedTokenizer):

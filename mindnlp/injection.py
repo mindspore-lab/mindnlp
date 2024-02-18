@@ -483,6 +483,16 @@ if DEVICE_TARGET == 'Ascend':
     ops.cat = bool_patch_decorator(ops.cat)
     ops.concat = bool_patch_decorator(ops.concat)
 
+def randperm(n, seed=0, offset=0, dtype=mstype.int64):
+    """randperm"""
+    if DEVICE_TARGET == 'CPU':
+        randperm_v2_op = _get_cache_prim(ops.RandpermV2)(seed, offset, dtype)
+        return randperm_v2_op(n)
+    randperm_op = _get_cache_prim(ops.Randperm)(max_length=n, dtype=dtype)
+    return randperm_op(mindspore.tensor([n]))
+
+ops.randperm = randperm
+
 # GPU only
 def custom_multinomial(probabilities, num_samples, replacement=False):
     """custom multinomial"""
@@ -505,7 +515,7 @@ def custom_multinomial(probabilities, num_samples, replacement=False):
         if n_dist != 1:
             random_uniform = random_uniform.reshape(n_dist, probabilities.shape[-1])
 
-        vals = ops.div(ops.log(random_uniform), probabilities + 1e-6)
+        vals = ops.div(ops.log(random_uniform), probabilities + 1e-10)
         _, samples = ops.top_k(vals, num_samples)
 
     return samples

@@ -68,6 +68,7 @@ _tokenizers_available = _is_package_available("tokenizers")
 _pyctcdecode_available = _is_package_available("pyctcdecode")
 _safetensors_available = _is_package_available("safetensors")
 _modelscope_available = _is_package_available("modelscope")
+_jieba_available = _is_package_available("jieba")
 _mindspore_version, _mindspore_available = _is_package_available(
     "mindspore", return_version=True
 )
@@ -139,6 +140,9 @@ def is_pyctcdecode_available():
 
 def is_scipy_available():
     return _scipy_available
+
+def is_jieba_available():
+    return _jieba_available
 
 def is_in_notebook():
     try:
