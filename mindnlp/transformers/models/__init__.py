@@ -15,7 +15,7 @@
 """
 Models init
 """
-from . import albert, auto, bart, bert, bloom, clip, codegen, cpm, electra, ernie, ernie_m, chatglm, chatglm2, gpt, gpt_neo, gpt_neox, gpt2, \
+from . import albert, auto, bart, bert, bloom, clip, codegen, cpm, distilbert, electra, ernie, ernie_m, chatglm, chatglm2, gpt, gpt_neo, gpt_neox, gpt2, \
     llama, longformer, luke, mbart, megatron_bert, minicpm, mistral, mobilebert, nezha, opt, gpt_pangu, phi, roberta, rwkv, \
     seamless_m4t, seamless_m4t_v2, t5, tinybert, xlm, xlm_roberta, gpt_bigcode, whisper, bark, encodec, \
     graphormer, pop2piano, wav2vec2, hubert
@@ -28,6 +28,7 @@ from .bloom import *
 from .clip import *
 from .codegen import *
 from .cpm import *
+from .distilbert import *
 from .ernie import *
 from .ernie_m import *
 from .electra import *
@@ -74,6 +75,7 @@ __all__.extend(bloom.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cpm.__all__)
+__all__.extend(distilbert.__all__)
 __all__.extend(ernie.__all__)
 __all__.extend(ernie_m.__all__)
 __all__.extend(electra.__all__)

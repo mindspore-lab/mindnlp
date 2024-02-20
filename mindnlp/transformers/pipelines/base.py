@@ -12,7 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import collections
+# ============================================================================
+# pylint: disable=missing-function-docstring
+# pylint: disable=invalid-name
+# pylint: disable=no-else-return
+# pylint: disable=no-else-raise
+# pylint: disable=unspecified-encoding
+# pylint: disable=redefined-builtin
+# pylint: disable=missing-class-docstring
+"""pipeline base"""
+
 import csv
 import importlib
 import json
@@ -23,30 +32,27 @@ import traceback
 import types
 import warnings
 from abc import ABC, abstractmethod
-from collections import UserDict
-from contextlib import contextmanager
 from os.path import abspath, exists
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-from ..feature_extraction_utils import PreTrainedFeatureExtractor
-from ..image_processing_utils import BaseImageProcessor
-from ..modelcard import ModelCard
-from ..models.auto.configuration_auto import AutoConfig
-from ..tokenization_utils import PreTrainedTokenizer
+import mindspore
+from mindspore import ops
+from mindspore.dataset import Dataset
+
 from mindnlp.utils import (
     ModelOutput,
     is_mindspore_available,
     logging,
 )
+from ..feature_extraction_utils import PreTrainedFeatureExtractor
+# from ..image_processing_utils import BaseImageProcessor
+from ..models.auto.configuration_auto import AutoConfig
+from ..tokenization_utils import PreTrainedTokenizer
 
-
-GenericTensor = Union[List["GenericTensor"], "mindspore.Tensor"]
-
-import mindspore
-from mindspore import ops
 from ..models.auto.modeling_auto import AutoModel
 from ..modeling_utils import PreTrainedModel
 
+GenericTensor = Union[List["GenericTensor"], "mindspore.Tensor"]
 
 logger = logging.get_logger(__name__)
 
@@ -174,7 +180,6 @@ def load_model(
     model,
     config: AutoConfig,
     model_classes: Optional[Dict[str, Tuple[type]]] = None,
-    task: Optional[str] = None,
     **model_kwargs,
 ):
     """
@@ -208,7 +213,7 @@ def load_model(
             "To install MindSpore, read the instructions at https://www.mindspore.cn/."
         )
     if isinstance(model, str):
-        model_kwargs["_from_pipeline"] = task
+        # model_kwargs["_from_pipeline"] = task
         class_tuple = ()
         if model_classes:
             class_tuple = class_tuple + model_classes.get("ms", (AutoModel,))
@@ -288,7 +293,7 @@ def from_model(
 
 
 def get_default_model_and_revision(
-    targeted_task: Dict, framework: Optional[str], task_options: Optional[Any]
+    targeted_task: Dict, task_options: Optional[Any]
 ) -> Union[str, Tuple[str, str]]:
     """
     Select a default model to use for a given task. Defaults to pytorch if ambiguous.
@@ -308,10 +313,7 @@ def get_default_model_and_revision(
 
         `str` The model string representing the default model for this pipeline
     """
-    if is_torch_available() and not is_tf_available():
-        framework = "pt"
-    elif is_tf_available() and not is_torch_available():
-        framework = "tf"
+    framework = "ms"
 
     defaults = targeted_task["default"]
     if task_options:
@@ -321,12 +323,8 @@ def get_default_model_and_revision(
     elif "model" in defaults:
         default_models = targeted_task["default"]["model"]
     else:
-        # XXX This error message needs to be updated to be more generic if more tasks are going to become
         # parametrized
         raise ValueError('The task defaults can\'t be correctly selected. You probably meant "translation_XX_to_YY"')
-
-    if framework is None:
-        framework = "pt"
 
     return default_models[framework]
 
@@ -618,14 +616,6 @@ class _ScikitCompat(ABC):
     def predict(self, X):
         raise NotImplementedError()
 
-if is_torch_available():
-    from transformers.pipelines.pt_utils import (
-        PipelineChunkIterator,
-        PipelineDataset,
-        PipelineIterator,
-        PipelinePackIterator,
-    )
-
 
 class Pipeline(_ScikitCompat):
     """
@@ -651,11 +641,10 @@ class Pipeline(_ScikitCompat):
         model: "PreTrainedModel",
         tokenizer: Optional[PreTrainedTokenizer] = None,
         feature_extractor: Optional[PreTrainedFeatureExtractor] = None,
-        image_processor: Optional[BaseImageProcessor] = None,
-        modelcard: Optional[ModelCard] = None,
+        image_processor: Optional['BaseImageProcessor'] = None,
+        modelcard: Optional['ModelCard'] = None,
         task: str = "",
-        args_parser: ArgumentHandler = None,
-        ms_dtype: Optional[Union[str, "torch.dtype"]] = None,
+        ms_dtype: Optional[Union[str, "mindspore.common.dtype.Dtype"]] = None,
         binary_output: bool = False,
         **kwargs,
     ):
@@ -680,12 +669,12 @@ class Pipeline(_ScikitCompat):
         self._num_workers = kwargs.pop("num_workers", None)
         self._preprocess_params, self._forward_params, self._postprocess_params = self._sanitize_parameters(**kwargs)
 
-        if self.image_processor is None and self.feature_extractor is not None:
-            if isinstance(self.feature_extractor, BaseImageProcessor):
-                # Backward compatible change, if users called
-                # ImageSegmentationPipeline(.., feature_extractor=MyFeatureExtractor())
-                # then we should keep working
-                self.image_processor = self.feature_extractor
+        # if self.image_processor is None and self.feature_extractor is not None:
+        #     if isinstance(self.feature_extractor, BaseImageProcessor):
+        #         # Backward compatible change, if users called
+        #         # ImageSegmentationPipeline(.., feature_extractor=MyFeatureExtractor())
+        #         # then we should keep working
+        #         self.image_processor = self.feature_extractor
 
     def save_pretrained(self, save_directory: str, safe_serialization: bool = True):
         """
@@ -746,7 +735,7 @@ class Pipeline(_ScikitCompat):
                     supported_models_names.append(model_name)
             if hasattr(supported_models, "_model_mapping"):
                 for _, model in supported_models._model_mapping._extra_content.items():
-                    if isinstance(model_name, tuple):
+                    if isinstance(model_name, tuple): # pylint: disable=undefined-loop-variable
                         supported_models_names.extend([m.__name__ for m in model])
                     else:
                         supported_models_names.append(model.__name__)
@@ -804,31 +793,6 @@ class Pipeline(_ScikitCompat):
         model_outputs = self._forward(model_inputs, **forward_params)
         return model_outputs
 
-    def get_iterator(
-        self, inputs, num_workers: int, batch_size: int, preprocess_params, forward_params, postprocess_params
-    ):
-        if isinstance(inputs, collections.abc.Sized):
-            dataset = PipelineDataset(inputs, self.preprocess, preprocess_params)
-        else:
-            if num_workers > 1:
-                logger.warning(
-                    "For iterable dataset using num_workers>1 is likely to result"
-                    " in errors since everything is iterable, setting `num_workers=1`"
-                    " to guarantee correctness."
-                )
-                num_workers = 1
-            dataset = PipelineIterator(inputs, self.preprocess, preprocess_params)
-        if "TOKENIZERS_PARALLELISM" not in os.environ:
-            logger.info("Disabling tokenizer parallelism, we're using DataLoader multithreading already")
-            os.environ["TOKENIZERS_PARALLELISM"] = "false"
-        # TODO hack by collating feature_extractor and image_processor
-        feature_extractor = self.feature_extractor if self.feature_extractor is not None else self.image_processor
-        collate_fn = no_collate_fn if batch_size == 1 else pad_collate_fn(self.tokenizer, feature_extractor)
-        dataloader = DataLoader(dataset, num_workers=num_workers, batch_size=batch_size, collate_fn=collate_fn)
-        model_iterator = PipelineIterator(dataloader, self.forward, forward_params, loader_batch_size=batch_size)
-        final_iterator = PipelineIterator(model_iterator, self.postprocess, postprocess_params)
-        return final_iterator
-
     def __call__(self, inputs, *args, num_workers=None, batch_size=None, **kwargs):
         if args:
             logger.warning(f"Ignoring args : {args}")
@@ -845,7 +809,6 @@ class Pipeline(_ScikitCompat):
                 batch_size = self._batch_size
 
         preprocess_params, forward_params, postprocess_params = self._sanitize_parameters(**kwargs)
-
         # Fuse __init__ params and __call__ params without modifying the __init__ ones.
         preprocess_params = {**self._preprocess_params, **preprocess_params}
         forward_params = {**self._forward_params, **forward_params}
@@ -859,38 +822,16 @@ class Pipeline(_ScikitCompat):
                 UserWarning,
             )
 
-        is_dataset = Dataset is not None and isinstance(inputs, Dataset)
+        is_dataset = isinstance(inputs, Dataset)
         is_generator = isinstance(inputs, types.GeneratorType)
         is_list = isinstance(inputs, list)
 
         is_iterable = is_dataset or is_generator or is_list
 
-        # TODO make the get_iterator work also for `tf` (and `flax`).
-        can_use_iterator = self.framework == "pt" and (is_dataset or is_generator or is_list)
-
         if is_list:
-            if can_use_iterator:
-                final_iterator = self.get_iterator(
-                    inputs, num_workers, batch_size, preprocess_params, forward_params, postprocess_params
-                )
-                outputs = list(final_iterator)
-                return outputs
-            else:
-                return self.run_multi(inputs, preprocess_params, forward_params, postprocess_params)
-        elif can_use_iterator:
-            return self.get_iterator(
-                inputs, num_workers, batch_size, preprocess_params, forward_params, postprocess_params
-            )
+            return self.run_multi(inputs, preprocess_params, forward_params, postprocess_params)
         elif is_iterable:
             return self.iterate(inputs, preprocess_params, forward_params, postprocess_params)
-        elif self.framework == "pt" and isinstance(self, ChunkPipeline):
-            return next(
-                iter(
-                    self.get_iterator(
-                        [inputs], num_workers, batch_size, preprocess_params, forward_params, postprocess_params
-                    )
-                )
-            )
         else:
             return self.run_single(inputs, preprocess_params, forward_params, postprocess_params)
 
@@ -906,8 +847,12 @@ class Pipeline(_ScikitCompat):
     def iterate(self, inputs, preprocess_params, forward_params, postprocess_params):
         # This function should become `get_iterator` again, this is a temporary
         # easy solution.
-        for input_ in inputs:
-            yield self.run_single(input_, preprocess_params, forward_params, postprocess_params)
+        if isinstance(inputs, Dataset):
+            for input_ in inputs.create_dict_iterator(output_numpy=True):
+                yield self.run_single(input_, preprocess_params, forward_params, postprocess_params)
+        else:
+            for input_ in inputs:
+                yield self.run_single(input_, preprocess_params, forward_params, postprocess_params)
 
 
 class ChunkPipeline(Pipeline):
@@ -918,28 +863,6 @@ class ChunkPipeline(Pipeline):
             all_outputs.append(model_outputs)
         outputs = self.postprocess(all_outputs, **postprocess_params)
         return outputs
-
-    def get_iterator(
-        self, inputs, num_workers: int, batch_size: int, preprocess_params, forward_params, postprocess_params
-    ):
-        if "TOKENIZERS_PARALLELISM" not in os.environ:
-            logger.info("Disabling tokenizer parallelism, we're using DataLoader multithreading already")
-            os.environ["TOKENIZERS_PARALLELISM"] = "false"
-        if num_workers > 1:
-            logger.warning(
-                "For ChunkPipeline using num_workers>0 is likely to result in errors since everything is iterable,"
-                " setting `num_workers=1` to guarantee correctness."
-            )
-            num_workers = 1
-        dataset = PipelineChunkIterator(inputs, self.preprocess, preprocess_params)
-
-        # TODO hack by collating feature_extractor and image_processor
-        feature_extractor = self.feature_extractor if self.feature_extractor is not None else self.image_processor
-        collate_fn = no_collate_fn if batch_size == 1 else pad_collate_fn(self.tokenizer, feature_extractor)
-        dataloader = DataLoader(dataset, num_workers=num_workers, batch_size=batch_size, collate_fn=collate_fn)
-        model_iterator = PipelinePackIterator(dataloader, self.forward, forward_params, loader_batch_size=batch_size)
-        final_iterator = PipelineIterator(model_iterator, self.postprocess, postprocess_params)
-        return final_iterator
 
 
 class PipelineRegistry:
@@ -975,28 +898,22 @@ class PipelineRegistry:
         self,
         task: str,
         pipeline_class: type,
-        pt_model: Optional[Union[type, Tuple[type]]] = None,
-        tf_model: Optional[Union[type, Tuple[type]]] = None,
+        model: Optional[Union[type, Tuple[type]]] = None,
         default: Optional[Dict] = None,
         type: Optional[str] = None,
     ) -> None:
         if task in self.supported_tasks:
             logger.warning(f"{task} is already registered. Overwriting pipeline for task {task}...")
 
-        if pt_model is None:
-            pt_model = ()
-        elif not isinstance(pt_model, tuple):
-            pt_model = (pt_model,)
+        if model is None:
+            model = ()
+        elif not isinstance(model, tuple):
+            model = (model,)
 
-        if tf_model is None:
-            tf_model = ()
-        elif not isinstance(tf_model, tuple):
-            tf_model = (tf_model,)
-
-        task_impl = {"impl": pipeline_class, "pt": pt_model, "tf": tf_model}
+        task_impl = {"impl": pipeline_class, "ms": model}
 
         if default is not None:
-            if "model" not in default and ("pt" in default or "tf" in default):
+            if "model" not in default and "ms" in default:
                 default = {"model": default}
             task_impl["default"] = default
 

@@ -1603,7 +1603,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         resume_download = kwargs.pop("resume_download", False)
         proxies = kwargs.pop("proxies", None)
         subfolder = kwargs.pop("subfolder", None)
-        from_pt = kwargs.pop("from_pt", False)
+        from_pt = kwargs.pop("from_pt", True)
 
         endpoint = HF_URL_BASE if from_pt else MS_URL_BASE
 
@@ -2439,7 +2439,6 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
             "return_length": return_length,
             "verbose": verbose,
         }
-        for_ms_ds = False
         all_kwargs.update(kwargs)
         if text is None and text_target is None:
             raise ValueError("You need to specify either `text` or `text_target`.")
@@ -2451,8 +2450,6 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
                     text_pair = str(text_pair)
                 elif isinstance(text_pair, list):
                     text_pair = [str(t) for t in text_pair]
-                return_tensors = 'np'
-                for_ms_ds = True
             # The context manager will send the inputs as normal texts and not text_target, but we shouldn't change the
             # input mode in this case.
             if not self._in_target_context_manager:
@@ -2465,12 +2462,6 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         self._switch_to_input_mode()
 
         if text_target is None:
-            if for_ms_ds:
-                return_data = ()
-                for key in self.model_input_names:
-                    if key in encodings:
-                        return_data += (encodings[key],)
-                return return_data
             return encodings
         if text is None:
             return target_encodings

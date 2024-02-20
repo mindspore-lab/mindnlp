@@ -12,45 +12,42 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import io
+# ============================================================================
+# pylint: disable=invalid-name
+# pylint: disable=missing-function-docstring
+# pylint: disable=redefined-outer-name
+# pylint: disable=import-outside-toplevel
+# pylint: disable=broad-exception-raised
+# pylint: disable=cyclic-import
+"""pipelines"""
 import json
-import os
 import warnings
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
+from pathlib import Path
 
-from huggingface_hub import model_info
-from numpy import isin
+import requests
+from easydict import EasyDict
 
+from mindnlp.configs import HF_ENDPOINT
+from mindnlp.utils import (
+    is_offline_mode,
+    logging,
+)
+from mindnlp.utils.peft_utils import find_adapter_config_file
 from ..configuration_utils import PretrainedConfig
 from ..feature_extraction_utils import PreTrainedFeatureExtractor
 from ..models.auto.configuration_auto import AutoConfig
-from ..models.auto.modeling_auto import AutoModelForDepthEstimation, AutoModelForImageToImage
 from ..models.auto.tokenization_auto import TOKENIZER_MAPPING, AutoTokenizer
 from ..tokenization_utils import PreTrainedTokenizer
-from mindnlp.configs import CONFIG_NAME
-from mindnlp.utils import (
-    HUGGINGFACE_CO_RESOLVE_ENDPOINT,
-    cached_file,
-    extract_commit_hash,
-    find_adapter_config_file,
-    is_kenlm_available,
-    is_offline_mode,
-    is_peft_available,
-    is_pyctcdecode_available,
-    is_tf_available,
-    is_torch_available,
-    logging,
-)
 
 from .base import (
-    ArgumentHandler,
+    # ArgumentHandler,
     CsvPipelineDataFormat,
     JsonPipelineDataFormat,
     PipedPipelineDataFormat,
     Pipeline,
     PipelineDataFormat,
-    PipelineException,
+    # PipelineException,
     PipelineRegistry,
     get_default_model_and_revision,
     load_model,
@@ -58,31 +55,29 @@ from .base import (
 from .text_classification import TextClassificationPipeline
 
 
-import mindspore
-from mindspore import ops
 
 from ..models.auto.modeling_auto import (
-    AutoModel,
-    AutoModelForAudioClassification,
-    AutoModelForCausalLM,
-    AutoModelForCTC,
-    AutoModelForDocumentQuestionAnswering,
-    AutoModelForMaskedLM,
-    AutoModelForMaskGeneration,
-    AutoModelForObjectDetection,
-    AutoModelForQuestionAnswering,
-    AutoModelForSeq2SeqLM,
+    # AutoModel,
+    # AutoModelForAudioClassification,
+    # AutoModelForCausalLM,
+    # AutoModelForCTC,
+    # AutoModelForDocumentQuestionAnswering,
+    # AutoModelForMaskedLM,
+    # AutoModelForMaskGeneration,
+    # AutoModelForObjectDetection,
+    # AutoModelForQuestionAnswering,
+    # AutoModelForSeq2SeqLM,
     AutoModelForSequenceClassification,
-    AutoModelForSpeechSeq2Seq,
-    AutoModelForTableQuestionAnswering,
-    AutoModelForTextToSpectrogram,
-    AutoModelForTextToWaveform,
-    AutoModelForTokenClassification,
-    AutoModelForVideoClassification,
-    AutoModelForVision2Seq,
-    AutoModelForVisualQuestionAnswering,
-    AutoModelForZeroShotImageClassification,
-    AutoModelForZeroShotObjectDetection,
+    # AutoModelForSpeechSeq2Seq,
+    # AutoModelForTableQuestionAnswering,
+    # AutoModelForTextToSpectrogram,
+    # AutoModelForTextToWaveform,
+    # AutoModelForTokenClassification,
+    # AutoModelForVideoClassification,
+    # AutoModelForVision2Seq,
+    # AutoModelForVisualQuestionAnswering,
+    # AutoModelForZeroShotImageClassification,
+    # AutoModelForZeroShotObjectDetection,
 )
 
 
@@ -144,24 +139,31 @@ def get_supported_tasks() -> List[str]:
     """
     return PIPELINE_REGISTRY.get_supported_tasks()
 
+def model_info(
+    repo_id: str,
+    *,
+    timeout: Optional[float] = None,
+    securityStatus: Optional[bool] = None,
+    files_metadata: bool = False,
+):
+    path = f"{HF_ENDPOINT}/api/models/{repo_id}"
 
-def get_task(model: str, token: Optional[str] = None, **deprecated_kwargs) -> str:
-    use_auth_token = deprecated_kwargs.pop("use_auth_token", None)
-    if use_auth_token is not None:
-        warnings.warn(
-            "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
-            FutureWarning,
-        )
-        if token is not None:
-            raise ValueError("`token` and `use_auth_token` are both specified. Please set only the argument `token`.")
-        token = use_auth_token
+    params = {}
+    if securityStatus:
+        params["securityStatus"] = True
+    if files_metadata:
+        params["blobs"] = True
+    r = requests.get(path, timeout=timeout, params=params)
+    data = r.json()
+    return EasyDict(**data)
 
+def get_task(model: str) -> str:
     if is_offline_mode():
         raise RuntimeError("You cannot infer task automatically within `pipeline` when using offline mode")
     try:
-        info = model_info(model, token=token)
+        info = model_info(model)
     except Exception as e:
-        raise RuntimeError(f"Instantiating a pipeline without a task set raised an error: {e}")
+        raise RuntimeError(f"Instantiating a pipeline without a task set raised an error: {e}") from e
     if not info.pipeline_tag:
         raise RuntimeError(
             f"The model {model} does not seem to have a correct `pipeline_tag` set to infer the task automatically"
@@ -238,13 +240,8 @@ def pipeline(
     tokenizer: Optional[Union[str, PreTrainedTokenizer, "PreTrainedTokenizerFast"]] = None,
     feature_extractor: Optional[Union[str, PreTrainedFeatureExtractor]] = None,
     image_processor: Optional[str] = None,
-    framework: Optional[str] = None,
-    revision: Optional[str] = None,
     use_fast: bool = True,
-    token: Optional[Union[str, bool]] = None,
-    device_map=None,
-    torch_dtype=None,
-    trust_remote_code: Optional[bool] = None,
+    ms_dtype=None,
     model_kwargs: Dict[str, Any] = None,
     pipeline_class: Optional[Any] = None,
     **kwargs,
@@ -325,44 +322,14 @@ def pipeline(
             `model` is not specified or not a string, then the default feature extractor for `config` is loaded (if it
             is a string). However, if `config` is also not given or not a string, then the default feature extractor
             for the given `task` will be loaded.
-        framework (`str`, *optional*):
-            The framework to use, either `"pt"` for PyTorch or `"tf"` for TensorFlow. The specified framework must be
-            installed.
 
-            If no framework is specified, will default to the one currently installed. If no framework is specified and
-            both frameworks are installed, will default to the framework of the `model`, or to PyTorch if no model is
-            provided.
-        revision (`str`, *optional*, defaults to `"main"`):
-            When passing a task name or a string model identifier: The specific model version to use. It can be a
-            branch name, a tag name, or a commit id, since we use a git-based system for storing models and other
-            artifacts on huggingface.co, so `revision` can be any identifier allowed by git.
         use_fast (`bool`, *optional*, defaults to `True`):
             Whether or not to use a Fast tokenizer if possible (a [`PreTrainedTokenizerFast`]).
-        use_auth_token (`str` or *bool*, *optional*):
-            The token to use as HTTP bearer authorization for remote files. If `True`, will use the token generated
-            when running `huggingface-cli login` (stored in `~/.huggingface`).
-        device (`int` or `str` or `torch.device`):
-            Defines the device (*e.g.*, `"cpu"`, `"cuda:1"`, `"mps"`, or a GPU ordinal rank like `1`) on which this
-            pipeline will be allocated.
-        device_map (`str` or `Dict[str, Union[int, str, torch.device]`, *optional*):
-            Sent directly as `model_kwargs` (just a simpler shortcut). When `accelerate` library is present, set
-            `device_map="auto"` to compute the most optimized `device_map` automatically (see
-            [here](https://huggingface.co/docs/accelerate/main/en/package_reference/big_modeling#accelerate.cpu_offload)
-            for more information).
 
-            <Tip warning={true}>
-
-            Do not use `device_map` AND `device` at the same time as they will conflict
-
-            </Tip>
-
-        torch_dtype (`str` or `torch.dtype`, *optional*):
+        ms_dtype (`str` or `torch.dtype`, *optional*):
             Sent directly as `model_kwargs` (just a simpler shortcut) to use the available precision for this model
             (`torch.float16`, `torch.bfloat16`, ... or `"auto"`).
-        trust_remote_code (`bool`, *optional*, defaults to `False`):
-            Whether or not to allow for custom code defined on the Hub in their own modeling, configuration,
-            tokenization or even pipeline files. This option should only be set to `True` for repositories you trust
-            and in which you have read the code, as it will execute code present on the Hub on your local machine.
+
         model_kwargs (`Dict[str, Any]`, *optional*):
             Additional dictionary of keyword arguments passed along to the model's `from_pretrained(...,
             **model_kwargs)` function.
@@ -395,25 +362,6 @@ def pipeline(
         model_kwargs = {}
     # Make sure we only pass use_auth_token once as a kwarg (it used to be possible to pass it in model_kwargs,
     # this is to keep BC).
-    use_auth_token = model_kwargs.pop("use_auth_token", None)
-    if use_auth_token is not None:
-        warnings.warn(
-            "The `use_auth_token` argument is deprecated and will be removed in v5 of Transformers. Please use `token` instead.",
-            FutureWarning,
-        )
-        if token is not None:
-            raise ValueError("`token` and `use_auth_token` are both specified. Please set only the argument `token`.")
-        token = use_auth_token
-
-    code_revision = kwargs.pop("code_revision", None)
-    commit_hash = kwargs.pop("_commit_hash", None)
-
-    hub_kwargs = {
-        "revision": revision,
-        "token": token,
-        "trust_remote_code": trust_remote_code,
-        "_commit_hash": commit_hash,
-    }
 
     if task is None and model is None:
         raise RuntimeError(
@@ -437,60 +385,30 @@ def pipeline(
     if isinstance(model, Path):
         model = str(model)
 
-    if commit_hash is None:
-        pretrained_model_name_or_path = None
-        if isinstance(config, str):
-            pretrained_model_name_or_path = config
-        elif config is None and isinstance(model, str):
-            pretrained_model_name_or_path = model
-
-        if not isinstance(config, PretrainedConfig) and pretrained_model_name_or_path is not None:
-            # We make a call to the config file first (which may be absent) to get the commit hash as soon as possible
-            resolved_config_file = cached_file(
-                pretrained_model_name_or_path,
-                CONFIG_NAME,
-                _raise_exceptions_for_gated_repo=False,
-                _raise_exceptions_for_missing_entries=False,
-                _raise_exceptions_for_connection_errors=False,
-                **hub_kwargs,
-            )
-            hub_kwargs["_commit_hash"] = extract_commit_hash(resolved_config_file, commit_hash)
-        else:
-            hub_kwargs["_commit_hash"] = getattr(config, "_commit_hash", None)
-
-    # Config is the primordial information item.
     # Instantiate config if needed
     if isinstance(config, str):
         config = AutoConfig.from_pretrained(
-            config, _from_pipeline=task, code_revision=code_revision, **hub_kwargs, **model_kwargs
+            config, _from_pipeline=task, **model_kwargs
         )
-        hub_kwargs["_commit_hash"] = config._commit_hash
     elif config is None and isinstance(model, str):
         # Check for an adapter file in the model path if PEFT is available
-        if is_peft_available():
-            # `find_adapter_config_file` doesn't accept `trust_remote_code`
-            _hub_kwargs = {k: v for k, v in hub_kwargs.items() if k != "trust_remote_code"}
-            maybe_adapter_path = find_adapter_config_file(
-                model,
-                token=hub_kwargs["token"],
-                revision=hub_kwargs["revision"],
-                _commit_hash=hub_kwargs["_commit_hash"],
-            )
+        # `find_adapter_config_file` doesn't accept `trust_remote_code`
+        maybe_adapter_path = find_adapter_config_file(model)
 
-            if maybe_adapter_path is not None:
-                with open(maybe_adapter_path, "r", encoding="utf-8") as f:
-                    adapter_config = json.load(f)
-                    model = adapter_config["base_model_name_or_path"]
+        if maybe_adapter_path is not None:
+            with open(maybe_adapter_path, "r", encoding="utf-8") as f:
+                adapter_config = json.load(f)
+                model = adapter_config["base_model_name_or_path"]
 
         config = AutoConfig.from_pretrained(
-            model, _from_pipeline=task, code_revision=code_revision, **hub_kwargs, **model_kwargs
+            model, _from_pipeline=task, **model_kwargs
         )
-        hub_kwargs["_commit_hash"] = config._commit_hash
+        # hub_kwargs["_commit_hash"] = config._commit_hash
 
     custom_tasks = {}
     if config is not None and len(getattr(config, "custom_pipelines", {})) > 0:
         custom_tasks = config.custom_pipelines
-        if task is None and trust_remote_code is not False:
+        if task is None:
             if len(custom_tasks) == 1:
                 task = list(custom_tasks.keys())[0]
             else:
@@ -505,78 +423,43 @@ def pipeline(
                 "Inferring the task automatically requires to check the hub with a model_id defined as a `str`. "
                 f"{model} is not a valid model_id."
             )
-        task = get_task(model, token)
+        task = get_task(model)
 
-    # Retrieve the task
-    if task in custom_tasks:
-        normalized_task = task
-        targeted_task, task_options = clean_custom_task(custom_tasks[task])
-        if pipeline_class is None:
-            if not trust_remote_code:
-                raise ValueError(
-                    "Loading this pipeline requires you to execute the code in the pipeline file in that"
-                    " repo on your local machine. Make sure you have read the code there to avoid malicious use, then"
-                    " set the option `trust_remote_code=True` to remove this error."
-                )
-            class_ref = targeted_task["impl"]
-            pipeline_class = get_class_from_dynamic_module(
-                class_ref,
-                model,
-                code_revision=code_revision,
-                **hub_kwargs,
-            )
-    else:
-        normalized_task, targeted_task, task_options = check_task(task)
-        if pipeline_class is None:
-            pipeline_class = targeted_task["impl"]
+    normalized_task, targeted_task, task_options = check_task(task)
+    if pipeline_class is None:
+        pipeline_class = targeted_task["impl"]
 
     # Use default model/config/tokenizer for the task if no model is provided
     if model is None:
         # At that point framework might still be undetermined
-        model, default_revision = get_default_model_and_revision(targeted_task, framework, task_options)
-        revision = revision if revision is not None else default_revision
-        logger.warning(
-            f"No model was supplied, defaulted to {model} and revision"
-            f" {revision} ({HUGGINGFACE_CO_RESOLVE_ENDPOINT}/{model}).\n"
-            "Using a pipeline without specifying a model name and revision in production is not recommended."
-        )
-        if config is None and isinstance(model, str):
-            config = AutoConfig.from_pretrained(model, _from_pipeline=task, **hub_kwargs, **model_kwargs)
-            hub_kwargs["_commit_hash"] = config._commit_hash
+        model, _ = get_default_model_and_revision(targeted_task, task_options)
 
-    if device_map is not None:
-        if "device_map" in model_kwargs:
+        if config is None and isinstance(model, str):
+            config = AutoConfig.from_pretrained(model, _from_pipeline=task, **model_kwargs)
+
+    if ms_dtype is not None:
+        if "ms_dtype" in model_kwargs:
             raise ValueError(
-                'You cannot use both `pipeline(... device_map=..., model_kwargs={"device_map":...})` as those'
+                'You cannot use both `pipeline(... ms_dtype=..., model_kwargs={"ms_dtype":...})` as those'
                 " arguments might conflict, use only one.)"
             )
-        model_kwargs["device_map"] = device_map
-    if torch_dtype is not None:
-        if "torch_dtype" in model_kwargs:
-            raise ValueError(
-                'You cannot use both `pipeline(... torch_dtype=..., model_kwargs={"torch_dtype":...})` as those'
-                " arguments might conflict, use only one.)"
-            )
-        model_kwargs["torch_dtype"] = torch_dtype
+        model_kwargs["ms_dtype"] = ms_dtype
 
     model_name = model if isinstance(model, str) else None
 
     # Load the correct model if possible
-    # Infer the framework from the model if not already defined
-    if isinstance(model, str) or framework is None:
-        model_classes = {"tf": targeted_task["tf"], "pt": targeted_task["pt"]}
-        framework, model = load_model(
+    if isinstance(model, str):
+        model_classes = {"ms": targeted_task["ms"]}
+        model = load_model(
             model,
             model_classes=model_classes,
             config=config,
-            framework=framework,
             task=task,
-            **hub_kwargs,
             **model_kwargs,
         )
 
     model_config = model.config
-    hub_kwargs["_commit_hash"] = model.config._commit_hash
+
     load_tokenizer = type(model_config) in TOKENIZER_MAPPING or model_config.tokenizer_class is not None
 
     # If `model` (instance of `PretrainedModel` instead of `str`) is passed (and/or same for config), while
@@ -584,9 +467,6 @@ def pipeline(
     # vision tasks when calling `pipeline()` with `model` and only one of the `image_processor` and `feature_extractor`.
     # TODO: we need to make `NO_IMAGE_PROCESSOR_TASKS` and `NO_FEATURE_EXTRACTOR_TASKS` more robust to avoid such issue.
     # This block is only temporarily to make CI green.
-    if load_image_processor and load_feature_extractor:
-        load_feature_extractor = False
-
     if (
         tokenizer is None
         and not load_tokenizer
@@ -598,29 +478,6 @@ def pipeline(
         # so the model_config might not define a tokenizer, but it seems to be
         # necessary for the task, so we're force-trying to load it.
         load_tokenizer = True
-    if (
-        image_processor is None
-        and not load_image_processor
-        and normalized_task not in NO_IMAGE_PROCESSOR_TASKS
-        # Using class name to avoid importing the real class.
-        and model_config.__class__.__name__ in MULTI_MODEL_CONFIGS
-        and normalized_task != "automatic-speech-recognition"
-    ):
-        # This is a special category of models, that are fusions of multiple models
-        # so the model_config might not define a tokenizer, but it seems to be
-        # necessary for the task, so we're force-trying to load it.
-        load_image_processor = True
-    if (
-        feature_extractor is None
-        and not load_feature_extractor
-        and normalized_task not in NO_FEATURE_EXTRACTOR_TASKS
-        # Using class name to avoid importing the real class.
-        and model_config.__class__.__name__ in MULTI_MODEL_CONFIGS
-    ):
-        # This is a special category of models, that are fusions of multiple models
-        # so the model_config might not define a tokenizer, but it seems to be
-        # necessary for the task, so we're force-trying to load it.
-        load_feature_extractor = True
 
     if task in NO_TOKENIZER_TASKS:
         # These will never require a tokenizer.
@@ -628,11 +485,6 @@ def pipeline(
         # the files could be missing from the hub, instead of failing
         # on such repos, we just force to not load it.
         load_tokenizer = False
-
-    if task in NO_FEATURE_EXTRACTOR_TASKS:
-        load_feature_extractor = False
-    if task in NO_IMAGE_PROCESSOR_TASKS:
-        load_image_processor = False
 
     if load_tokenizer:
         # Try to infer tokenizer from model or config name (if provided as str)
@@ -658,10 +510,10 @@ def pipeline(
             else:
                 tokenizer_identifier = tokenizer
                 tokenizer_kwargs = model_kwargs.copy()
-                tokenizer_kwargs.pop("torch_dtype", None)
+                tokenizer_kwargs.pop("ms_dtype", None)
 
             tokenizer = AutoTokenizer.from_pretrained(
-                tokenizer_identifier, use_fast=use_fast, _from_pipeline=task, **hub_kwargs, **tokenizer_kwargs
+                tokenizer_identifier, use_fast=use_fast, _from_pipeline=task, **tokenizer_kwargs
             )
 
     if task == "translation" and model.config.task_specific_params:
@@ -680,20 +532,20 @@ def pipeline(
     if feature_extractor is not None:
         kwargs["feature_extractor"] = feature_extractor
 
-    if torch_dtype is not None:
-        kwargs["torch_dtype"] = torch_dtype
+    if ms_dtype is not None:
+        kwargs["ms_dtype"] = ms_dtype
 
     if image_processor is not None:
         kwargs["image_processor"] = image_processor
 
-    return pipeline_class(model=model, framework=framework, task=task, **kwargs)
+    return pipeline_class(model=model, task=task, **kwargs)
 
 __all__ = [
-    CsvPipelineDataFormat,
-    JsonPipelineDataFormat,
-    PipedPipelineDataFormat,
-    Pipeline,
-    PipelineDataFormat,
-    TextClassificationPipeline,
-    pipeline,
+    'CsvPipelineDataFormat',
+    'JsonPipelineDataFormat',
+    'PipedPipelineDataFormat',
+    'Pipeline',
+    'PipelineDataFormat',
+    'TextClassificationPipeline',
+    'pipeline',
 ]

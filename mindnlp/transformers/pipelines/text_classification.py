@@ -1,3 +1,22 @@
+# Copyright 2024 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+# pylint: disable=missing-function-docstring
+# pylint: disable=missing-class-docstring
+# pylint: disable=no-else-return
+# pylint: disable=arguments-renamed
+"""text classification pipeline."""
 import inspect
 import warnings
 from typing import Dict
@@ -134,13 +153,12 @@ class TextClassificationPipeline(Pipeline):
             return result
 
     def preprocess(self, inputs, **tokenizer_kwargs) -> Dict[str, GenericTensor]:
-        return_tensors = self.framework
         if isinstance(inputs, dict):
-            return self.tokenizer(**inputs, return_tensors=return_tensors, **tokenizer_kwargs)
+            return self.tokenizer(**inputs, return_tensors='ms', **tokenizer_kwargs)
         elif isinstance(inputs, list) and len(inputs) == 1 and isinstance(inputs[0], list) and len(inputs[0]) == 2:
             # It used to be valid to use a list of list of list for text pairs, keeping this path for BC
             return self.tokenizer(
-                text=inputs[0][0], text_pair=inputs[0][1], return_tensors=return_tensors, **tokenizer_kwargs
+                text=inputs[0][0], text_pair=inputs[0][1], return_tensors='ms', **tokenizer_kwargs
             )
         elif isinstance(inputs, list):
             # This is likely an invalid usage of the pipeline attempting to pass text pairs.
@@ -148,14 +166,14 @@ class TextClassificationPipeline(Pipeline):
                 "The pipeline received invalid inputs, if you are trying to send text pairs, you can try to send a"
                 ' dictionary `{"text": "My text", "text_pair": "My pair"}` in order to send a text pair.'
             )
-        return self.tokenizer(inputs, return_tensors=return_tensors, **tokenizer_kwargs)
+        return self.tokenizer(inputs, return_tensors='ms', **tokenizer_kwargs)
 
     def _forward(self, model_inputs):
         # `XXXForSequenceClassification` models should not use `use_cache=True` even if it's supported
-        model_forward = self.model.forward if self.framework == "pt" else self.model.call
+        model_forward = self.model.construct
         if "use_cache" in inspect.signature(model_forward).parameters.keys():
             model_inputs["use_cache"] = False
-        return self.model(**model_inputs)
+        return model_forward(**model_inputs)
 
     def postprocess(self, model_outputs, function_to_apply=None, top_k=1, _legacy=True):
         # `_legacy` is used to determine if we're running the naked pipeline and in backward

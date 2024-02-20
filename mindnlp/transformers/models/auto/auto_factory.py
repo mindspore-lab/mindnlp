@@ -69,7 +69,7 @@ class _BaseAutoModelClass:
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
         config = kwargs.pop("config", None)
-        from_pt = kwargs.get('from_pt', False)
+        from_pt = kwargs.get('from_pt', True)
         if not isinstance(config, PretrainedConfig):
             kwargs_orig = copy.deepcopy(kwargs)
             # ensure not to pollute the config object with torch_dtype="auto" - since it's

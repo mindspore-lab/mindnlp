@@ -743,7 +743,8 @@ class LayerNorm(nn.Cell):
                  begin_params_axis=-1,
                  gamma_init='ones',
                  beta_init='zeros',
-                 epsilon=1e-5,
+                 epsilon=None,
+                 eps=None,
                  dtype=mstype.float32,
                  elementwise_affine=True
                  ):
@@ -759,10 +760,18 @@ class LayerNorm(nn.Cell):
                 f"Expected normalized_shape to be at least 1-dimensional, i.e., containing at "
                 f"least one element, but got normalized_shape = {normalized_shape}"
             )
+        if eps is None and epsilon is None:
+            raise TypeError(f"For '{self.cls_name}', the type of 'eps' must be float, "
+                            f"but got {eps} and the type is None.")
+
         self.normalized_shape = normalized_shape
         self.begin_norm_axis = begin_norm_axis
         self.begin_params_axis = begin_params_axis
-        self.epsilon = epsilon
+        if eps:
+            self.epsilon = eps
+        if epsilon:
+            self.epsilon = epsilon
+
         self.weight = Parameter(initializer(
             gamma_init, normalized_shape, dtype=dtype), name="weight")
         self.bias = Parameter(initializer(

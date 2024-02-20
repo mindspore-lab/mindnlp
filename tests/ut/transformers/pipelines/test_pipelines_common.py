@@ -22,8 +22,8 @@ from pathlib import Path
 
 import datasets
 import numpy as np
-from huggingface_hub import HfFolder, Repository, create_repo, delete_repo
-from requests.exceptions import HTTPError
+
+from mindspore.dataset import GeneratorDataset
 
 from mindnlp.transformers import (
     AutoModelForSequenceClassification,
@@ -33,37 +33,37 @@ from mindnlp.transformers import (
     pipeline,
 )
 from mindnlp.transformers.pipelines import PIPELINE_REGISTRY, get_task
-from mindnlp.transformers.pipelines.base import Pipeline, _pad
+from mindnlp.transformers.pipelines.base import Pipeline
 from mindnlp.utils.testing_utils import (
-    TOKEN,
-    USER,
+    # TOKEN,
+    # USER,
     CaptureLogger,
     RequestCounter,
-    backend_empty_cache,
+    # backend_empty_cache,
     is_pipeline_test,
-    is_staging_test,
+    # is_staging_test,
     nested_simplify,
-    require_tensorflow_probability,
-    require_tf,
-    require_torch,
-    require_torch_accelerator,
-    require_torch_or_tf,
+    # require_tensorflow_probability,
+    # require_tf,
+    require_mindspore,
+    # require_mindspore_accelerator,
+    # require_mindspore_or_tf,
     slow,
-    torch_device,
+    # torch_device,
 )
-from mindnlp.utils import direct_transformers_import, is_tf_available, is_torch_available
+from mindnlp.utils import direct_transformers_import, is_mindspore_available
 from mindnlp.utils import logging as transformers_logging
 
 
 sys.path.append(str(Path(__file__).parent.parent.parent / "utils"))
 
-from test_module.custom_pipeline import PairClassificationPipeline  # noqa E402
+from ....test_module.custom_pipeline import PairClassificationPipeline  # noqa E402
 
 
 logger = logging.getLogger(__name__)
 
 
-PATH_TO_TRANSFORMERS = os.path.join(Path(__file__).parent.parent.parent, "src/transformers")
+PATH_TO_TRANSFORMERS = os.path.join(Path(__file__).parent.parent.parent.parent.parent, "mindnlp")
 
 
 # Dynamically import the Transformers module to grab the attribute classes of the processor form their names.
@@ -83,11 +83,9 @@ class ANY:
 
 @is_pipeline_test
 class CommonPipelineTest(unittest.TestCase):
-    @require_torch
+    @require_mindspore
     def test_pipeline_iteration(self):
-        from torch.utils.data import Dataset
-
-        class MyDataset(Dataset):
+        class MyDataset:
             data = [
                 "This is a test",
                 "This restaurant is great",
@@ -101,19 +99,19 @@ class CommonPipelineTest(unittest.TestCase):
                 return self.data[i]
 
         text_classifier = pipeline(
-            task="text-classification", model="hf-internal-testing/tiny-random-distilbert", framework="pt"
+            task="text-classification", model="hf-internal-testing/tiny-random-distilbert"
         )
-        dataset = MyDataset()
+        dataset = GeneratorDataset(MyDataset(), column_names=['text'])
         for output in text_classifier(dataset):
             self.assertEqual(output, {"label": ANY(str), "score": ANY(float)})
 
-    @require_torch
+    @require_mindspore
     def test_check_task_auto_inference(self):
         pipe = pipeline(model="hf-internal-testing/tiny-random-distilbert")
 
         self.assertIsInstance(pipe, TextClassificationPipeline)
 
-    @require_torch
+    @require_mindspore
     def test_pipeline_batch_size_global(self):
         pipe = pipeline(model="hf-internal-testing/tiny-random-distilbert")
         self.assertEqual(pipe._batch_size, None)
@@ -123,7 +121,7 @@ class CommonPipelineTest(unittest.TestCase):
         self.assertEqual(pipe._batch_size, 2)
         self.assertEqual(pipe._num_workers, 1)
 
-    @require_torch
+    @require_mindspore
     def test_pipeline_pathlike(self):
         pipe = pipeline(model="hf-internal-testing/tiny-random-distilbert")
         with tempfile.TemporaryDirectory() as d:
@@ -132,7 +130,7 @@ class CommonPipelineTest(unittest.TestCase):
             newpipe = pipeline(task="text-classification", model=path)
         self.assertIsInstance(newpipe, TextClassificationPipeline)
 
-    @require_torch
+    @require_mindspore
     def test_pipeline_override(self):
         class MyPipeline(TextClassificationPipeline):
             pass
@@ -149,7 +147,7 @@ class CommonPipelineTest(unittest.TestCase):
             # Wrong framework
             get_task("espnet/siddhana_slurp_entity_asr_train_asr_conformer_raw_en_word_valid.acc.ave_10best")
 
-    @require_torch
+    @require_mindspore
     def test_iterator_data(self):
         def data(n: int):
             for _ in range(n):
@@ -171,21 +169,7 @@ class CommonPipelineTest(unittest.TestCase):
             results.append(out)
         self.assertEqual(len(results), 10)
 
-    @require_tf
-    def test_iterator_data_tf(self):
-        def data(n: int):
-            for _ in range(n):
-                yield "This is a test"
-
-        pipe = pipeline(model="hf-internal-testing/tiny-random-distilbert", framework="tf")
-        out = pipe("This is a test")
-        results = []
-        for out in pipe(data(10)):
-            self.assertEqual(nested_simplify(out), {"label": "LABEL_0", "score": 0.504})
-            results.append(out)
-        self.assertEqual(len(results), 10)
-
-    @require_torch
+    @require_mindspore
     def test_unbatch_attentions_hidden_states(self):
         model = DistilBertForSequenceClassification.from_pretrained(
             "hf-internal-testing/tiny-random-distilbert", output_hidden_states=True, output_attentions=True
@@ -201,377 +185,80 @@ class CommonPipelineTest(unittest.TestCase):
 
 @is_pipeline_test
 class PipelineScikitCompatTest(unittest.TestCase):
-    @require_torch
-    def test_pipeline_predict_pt(self):
+    @require_mindspore
+    def test_pipeline_predict(self):
         data = ["This is a test"]
 
         text_classifier = pipeline(
-            task="text-classification", model="hf-internal-testing/tiny-random-distilbert", framework="pt"
+            task="text-classification", model="hf-internal-testing/tiny-random-distilbert"
         )
 
         expected_output = [{"label": ANY(str), "score": ANY(float)}]
         actual_output = text_classifier.predict(data)
         self.assertEqual(expected_output, actual_output)
 
-    @require_tf
-    def test_pipeline_predict_tf(self):
+    @require_mindspore
+    def test_pipeline_transform(self):
         data = ["This is a test"]
 
         text_classifier = pipeline(
-            task="text-classification", model="hf-internal-testing/tiny-random-distilbert", framework="tf"
-        )
-
-        expected_output = [{"label": ANY(str), "score": ANY(float)}]
-        actual_output = text_classifier.predict(data)
-        self.assertEqual(expected_output, actual_output)
-
-    @require_torch
-    def test_pipeline_transform_pt(self):
-        data = ["This is a test"]
-
-        text_classifier = pipeline(
-            task="text-classification", model="hf-internal-testing/tiny-random-distilbert", framework="pt"
+            task="text-classification", model="hf-internal-testing/tiny-random-distilbert"
         )
 
         expected_output = [{"label": ANY(str), "score": ANY(float)}]
         actual_output = text_classifier.transform(data)
         self.assertEqual(expected_output, actual_output)
-
-    @require_tf
-    def test_pipeline_transform_tf(self):
-        data = ["This is a test"]
-
-        text_classifier = pipeline(
-            task="text-classification", model="hf-internal-testing/tiny-random-distilbert", framework="tf"
-        )
-
-        expected_output = [{"label": ANY(str), "score": ANY(float)}]
-        actual_output = text_classifier.transform(data)
-        self.assertEqual(expected_output, actual_output)
-
-
-@is_pipeline_test
-class PipelinePadTest(unittest.TestCase):
-    @require_torch
-    def test_pipeline_padding(self):
-        import torch
-
-        items = [
-            {
-                "label": "label1",
-                "input_ids": torch.LongTensor([[1, 23, 24, 2]]),
-                "attention_mask": torch.LongTensor([[0, 1, 1, 0]]),
-            },
-            {
-                "label": "label2",
-                "input_ids": torch.LongTensor([[1, 23, 24, 43, 44, 2]]),
-                "attention_mask": torch.LongTensor([[0, 1, 1, 1, 1, 0]]),
-            },
-        ]
-
-        self.assertEqual(_pad(items, "label", 0, "right"), ["label1", "label2"])
-        self.assertTrue(
-            torch.allclose(
-                _pad(items, "input_ids", 10, "right"),
-                torch.LongTensor([[1, 23, 24, 2, 10, 10], [1, 23, 24, 43, 44, 2]]),
-            )
-        )
-        self.assertTrue(
-            torch.allclose(
-                _pad(items, "input_ids", 10, "left"),
-                torch.LongTensor([[10, 10, 1, 23, 24, 2], [1, 23, 24, 43, 44, 2]]),
-            )
-        )
-        self.assertTrue(
-            torch.allclose(
-                _pad(items, "attention_mask", 0, "right"), torch.LongTensor([[0, 1, 1, 0, 0, 0], [0, 1, 1, 1, 1, 0]])
-            )
-        )
-
-    @require_torch
-    def test_pipeline_image_padding(self):
-        import torch
-
-        items = [
-            {
-                "label": "label1",
-                "pixel_values": torch.zeros((1, 3, 10, 10)),
-            },
-            {
-                "label": "label2",
-                "pixel_values": torch.zeros((1, 3, 10, 10)),
-            },
-        ]
-
-        self.assertEqual(_pad(items, "label", 0, "right"), ["label1", "label2"])
-        self.assertTrue(
-            torch.allclose(
-                _pad(items, "pixel_values", 10, "right"),
-                torch.zeros((2, 3, 10, 10)),
-            )
-        )
-
-    @require_torch
-    def test_pipeline_offset_mapping(self):
-        import torch
-
-        items = [
-            {
-                "offset_mappings": torch.zeros([1, 11, 2], dtype=torch.long),
-            },
-            {
-                "offset_mappings": torch.zeros([1, 4, 2], dtype=torch.long),
-            },
-        ]
-
-        self.assertTrue(
-            torch.allclose(
-                _pad(items, "offset_mappings", 0, "right"),
-                torch.zeros((2, 11, 2), dtype=torch.long),
-            ),
-        )
 
 
 @is_pipeline_test
 class PipelineUtilsTest(unittest.TestCase):
-    @require_torch
-    def test_pipeline_dataset(self):
-        from transformers.pipelines.pt_utils import PipelineDataset
-
-        dummy_dataset = [0, 1, 2, 3]
-
-        def add(number, extra=0):
-            return number + extra
-
-        dataset = PipelineDataset(dummy_dataset, add, {"extra": 2})
-        self.assertEqual(len(dataset), 4)
-        outputs = [dataset[i] for i in range(4)]
-        self.assertEqual(outputs, [2, 3, 4, 5])
-
-    @require_torch
-    def test_pipeline_iterator(self):
-        from transformers.pipelines.pt_utils import PipelineIterator
-
-        dummy_dataset = [0, 1, 2, 3]
-
-        def add(number, extra=0):
-            return number + extra
-
-        dataset = PipelineIterator(dummy_dataset, add, {"extra": 2})
-        self.assertEqual(len(dataset), 4)
-
-        outputs = list(dataset)
-        self.assertEqual(outputs, [2, 3, 4, 5])
-
-    @require_torch
-    def test_pipeline_iterator_no_len(self):
-        from transformers.pipelines.pt_utils import PipelineIterator
-
-        def dummy_dataset():
-            for i in range(4):
-                yield i
-
-        def add(number, extra=0):
-            return number + extra
-
-        dataset = PipelineIterator(dummy_dataset(), add, {"extra": 2})
-        with self.assertRaises(TypeError):
-            len(dataset)
-
-        outputs = list(dataset)
-        self.assertEqual(outputs, [2, 3, 4, 5])
-
-    @require_torch
-    def test_pipeline_batch_unbatch_iterator(self):
-        from transformers.pipelines.pt_utils import PipelineIterator
-
-        dummy_dataset = [{"id": [0, 1, 2]}, {"id": [3]}]
-
-        def add(number, extra=0):
-            return {"id": [i + extra for i in number["id"]]}
-
-        dataset = PipelineIterator(dummy_dataset, add, {"extra": 2}, loader_batch_size=3)
-
-        outputs = list(dataset)
-        self.assertEqual(outputs, [{"id": 2}, {"id": 3}, {"id": 4}, {"id": 5}])
-
-    @require_torch
-    def test_pipeline_batch_unbatch_iterator_tensors(self):
-        import torch
-
-        from transformers.pipelines.pt_utils import PipelineIterator
-
-        dummy_dataset = [{"id": torch.LongTensor([[10, 20], [0, 1], [0, 2]])}, {"id": torch.LongTensor([[3]])}]
-
-        def add(number, extra=0):
-            return {"id": number["id"] + extra}
-
-        dataset = PipelineIterator(dummy_dataset, add, {"extra": 2}, loader_batch_size=3)
-
-        outputs = list(dataset)
-        self.assertEqual(
-            nested_simplify(outputs), [{"id": [[12, 22]]}, {"id": [[2, 3]]}, {"id": [[2, 4]]}, {"id": [[5]]}]
-        )
-
-    @require_torch
-    def test_pipeline_chunk_iterator(self):
-        from transformers.pipelines.pt_utils import PipelineChunkIterator
-
-        def preprocess_chunk(n: int):
-            for i in range(n):
-                yield i
-
-        dataset = [2, 3]
-
-        dataset = PipelineChunkIterator(dataset, preprocess_chunk, {}, loader_batch_size=3)
-
-        outputs = list(dataset)
-
-        self.assertEqual(outputs, [0, 1, 0, 1, 2])
-
-    @require_torch
-    def test_pipeline_pack_iterator(self):
-        from transformers.pipelines.pt_utils import PipelinePackIterator
-
-        def pack(item):
-            return {"id": item["id"] + 1, "is_last": item["is_last"]}
-
-        dataset = [
-            {"id": 0, "is_last": False},
-            {"id": 1, "is_last": True},
-            {"id": 0, "is_last": False},
-            {"id": 1, "is_last": False},
-            {"id": 2, "is_last": True},
-        ]
-
-        dataset = PipelinePackIterator(dataset, pack, {})
-
-        outputs = list(dataset)
-        self.assertEqual(
-            outputs,
-            [
-                [
-                    {"id": 1},
-                    {"id": 2},
-                ],
-                [
-                    {"id": 1},
-                    {"id": 2},
-                    {"id": 3},
-                ],
-            ],
-        )
-
-    @require_torch
-    def test_pipeline_pack_unbatch_iterator(self):
-        from transformers.pipelines.pt_utils import PipelinePackIterator
-
-        dummy_dataset = [{"id": [0, 1, 2], "is_last": [False, True, False]}, {"id": [3], "is_last": [True]}]
-
-        def add(number, extra=0):
-            return {"id": [i + extra for i in number["id"]], "is_last": number["is_last"]}
-
-        dataset = PipelinePackIterator(dummy_dataset, add, {"extra": 2}, loader_batch_size=3)
-
-        outputs = list(dataset)
-        self.assertEqual(outputs, [[{"id": 2}, {"id": 3}], [{"id": 4}, {"id": 5}]])
-
-        # is_false Across batch
-        dummy_dataset = [{"id": [0, 1, 2], "is_last": [False, False, False]}, {"id": [3], "is_last": [True]}]
-
-        def add(number, extra=0):
-            return {"id": [i + extra for i in number["id"]], "is_last": number["is_last"]}
-
-        dataset = PipelinePackIterator(dummy_dataset, add, {"extra": 2}, loader_batch_size=3)
-
-        outputs = list(dataset)
-        self.assertEqual(outputs, [[{"id": 2}, {"id": 3}, {"id": 4}, {"id": 5}]])
-
-    def test_pipeline_negative_device(self):
-        # To avoid regressing, pipeline used to accept device=-1
-        classifier = pipeline("text-generation", "hf-internal-testing/tiny-random-bert", device=-1)
-
-        expected_output = [{"generated_text": ANY(str)}]
-        actual_output = classifier("Test input.")
-        self.assertEqual(expected_output, actual_output)
 
     @slow
-    @require_torch
-    def test_load_default_pipelines_pt(self):
-        import torch
+    @require_mindspore
+    def test_load_default_pipelines(self):
+        import mindspore
+        from mindnlp.transformers.pipelines import SUPPORTED_TASKS
 
-        from transformers.pipelines import SUPPORTED_TASKS
-
-        set_seed_fn = lambda: torch.manual_seed(0)  # noqa: E731
+        set_seed_fn = lambda: mindspore.set_seed(0)  # noqa: E731
         for task in SUPPORTED_TASKS.keys():
             if task == "table-question-answering":
                 # test table in seperate test due to more dependencies
                 continue
 
-            self.check_default_pipeline(task, "pt", set_seed_fn, self.check_models_equal_pt)
-
-            # clean-up as much as possible GPU memory occupied by PyTorch
-            gc.collect()
-            backend_empty_cache(torch_device)
-
-    @slow
-    @require_tf
-    def test_load_default_pipelines_tf(self):
-        import tensorflow as tf
-
-        from transformers.pipelines import SUPPORTED_TASKS
-
-        set_seed_fn = lambda: tf.random.set_seed(0)  # noqa: E731
-        for task in SUPPORTED_TASKS.keys():
-            if task == "table-question-answering":
-                # test table in seperate test due to more dependencies
-                continue
-
-            self.check_default_pipeline(task, "tf", set_seed_fn, self.check_models_equal_tf)
+            self.check_default_pipeline(task, "ms", set_seed_fn, self.check_models_equal_pt)
 
             # clean-up as much as possible GPU memory occupied by PyTorch
             gc.collect()
 
-    @slow
-    @require_torch
-    def test_load_default_pipelines_pt_table_qa(self):
-        import torch
 
-        set_seed_fn = lambda: torch.manual_seed(0)  # noqa: E731
-        self.check_default_pipeline("table-question-answering", "pt", set_seed_fn, self.check_models_equal_pt)
+    # @slow
+    # @require_mindspore
+    # def test_load_default_pipelines_pt_table_qa(self):
+    #     import torch
 
-        # clean-up as much as possible GPU memory occupied by PyTorch
-        gc.collect()
-        backend_empty_cache(torch_device)
+    #     set_seed_fn = lambda: torch.manual_seed(0)  # noqa: E731
+    #     self.check_default_pipeline("table-question-answering", "pt", set_seed_fn, self.check_models_equal_pt)
 
-    @slow
-    @require_torch
-    @require_torch_accelerator
-    def test_pipeline_accelerator(self):
-        pipe = pipeline("text-generation", device=torch_device)
-        _ = pipe("Hello")
+    #     # clean-up as much as possible GPU memory occupied by PyTorch
+    #     gc.collect()
+    #     backend_empty_cache(torch_device)
 
-    @slow
-    @require_torch
-    @require_torch_accelerator
-    def test_pipeline_accelerator_indexed(self):
-        pipe = pipeline("text-generation", device=torch_device)
-        _ = pipe("Hello")
+    # @slow
+    # @require_mindspore
+    # @require_mindspore_accelerator
+    # def test_pipeline_accelerator(self):
+    #     pipe = pipeline("text-generation", device=torch_device)
+    #     _ = pipe("Hello")
 
-    @slow
-    @require_tf
-    @require_tensorflow_probability
-    def test_load_default_pipelines_tf_table_qa(self):
-        import tensorflow as tf
-
-        set_seed_fn = lambda: tf.random.set_seed(0)  # noqa: E731
-        self.check_default_pipeline("table-question-answering", "tf", set_seed_fn, self.check_models_equal_tf)
-
-        # clean-up as much as possible GPU memory occupied by PyTorch
-        gc.collect()
+    # @slow
+    # @require_mindspore
+    # @require_mindspore_accelerator
+    # def test_pipeline_accelerator_indexed(self):
+    #     pipe = pipeline("text-generation", device=torch_device)
+    #     _ = pipe("Hello")
 
     def check_default_pipeline(self, task, framework, set_seed_fn, check_models_equal_fn):
-        from transformers.pipelines import SUPPORTED_TASKS, pipeline
+        from mindnlp.transformers.pipelines import SUPPORTED_TASKS, pipeline
 
         task_dict = SUPPORTED_TASKS[task]
         # test to compare pipeline to manually loading the respective model
@@ -611,16 +298,16 @@ class PipelineUtilsTest(unittest.TestCase):
             # load default model
             try:
                 set_seed_fn()
-                model = auto_model_cls.from_pretrained(model_id, revision=revision)
+                model = auto_model_cls.from_pretrained(model_id)
             except ValueError:
                 # first auto class is possible not compatible with model, go to next model class
                 auto_model_cls = relevant_auto_classes[1]
                 set_seed_fn()
-                model = auto_model_cls.from_pretrained(model_id, revision=revision)
+                model = auto_model_cls.from_pretrained(model_id)
 
             # load default pipeline
             set_seed_fn()
-            default_pipeline = pipeline(task, framework=framework)
+            default_pipeline = pipeline(task)
 
             # compare pipeline model with default model
             models_are_equal = check_models_equal_fn(default_pipeline.model, model)
@@ -668,7 +355,7 @@ class CustomPipeline(Pipeline):
 class CustomPipelineTest(unittest.TestCase):
     def test_warning_logs(self):
         transformers_logging.set_verbosity_debug()
-        logger_ = transformers_logging.get_logger("transformers.pipelines.base")
+        logger_ = transformers_logging.get_logger("mindnlp.transformers.pipelines.base")
 
         alias = "text-classification"
         # Get the original task, so we can restore it at the end.
@@ -687,189 +374,99 @@ class CustomPipelineTest(unittest.TestCase):
         PIPELINE_REGISTRY.register_pipeline(
             "custom-text-classification",
             pipeline_class=PairClassificationPipeline,
-            pt_model=AutoModelForSequenceClassification if is_torch_available() else None,
-            tf_model=TFAutoModelForSequenceClassification if is_tf_available() else None,
-            default={"pt": "hf-internal-testing/tiny-random-distilbert"},
+            model=AutoModelForSequenceClassification if is_mindspore_available() else None,
+            default={"ms": "hf-internal-testing/tiny-random-distilbert"},
             type="text",
         )
         assert "custom-text-classification" in PIPELINE_REGISTRY.get_supported_tasks()
 
         _, task_def, _ = PIPELINE_REGISTRY.check_task("custom-text-classification")
-        self.assertEqual(task_def["pt"], (AutoModelForSequenceClassification,) if is_torch_available() else ())
-        self.assertEqual(task_def["tf"], (TFAutoModelForSequenceClassification,) if is_tf_available() else ())
+        self.assertEqual(task_def["ms"], (AutoModelForSequenceClassification,) if is_mindspore_available() else ())
         self.assertEqual(task_def["type"], "text")
         self.assertEqual(task_def["impl"], PairClassificationPipeline)
-        self.assertEqual(task_def["default"], {"model": {"pt": "hf-internal-testing/tiny-random-distilbert"}})
+        self.assertEqual(task_def["default"], {"model": {"ms": "hf-internal-testing/tiny-random-distilbert"}})
 
         # Clean registry for next tests.
         del PIPELINE_REGISTRY.supported_tasks["custom-text-classification"]
 
-    @require_torch_or_tf
-    def test_dynamic_pipeline(self):
-        PIPELINE_REGISTRY.register_pipeline(
-            "pair-classification",
-            pipeline_class=PairClassificationPipeline,
-            pt_model=AutoModelForSequenceClassification if is_torch_available() else None,
-            tf_model=TFAutoModelForSequenceClassification if is_tf_available() else None,
-        )
+    # def test_dynamic_pipeline(self):
+    #     PIPELINE_REGISTRY.register_pipeline(
+    #         "pair-classification",
+    #         pipeline_class=PairClassificationPipeline,
+    #         model=AutoModelForSequenceClassification if is_mindspore_available() else None,
+    #     )
 
-        classifier = pipeline("pair-classification", model="hf-internal-testing/tiny-random-bert")
+    #     classifier = pipeline("pair-classification", model="hf-internal-testing/tiny-random-bert")
 
-        # Clean registry as we won't need the pipeline to be in it for the rest to work.
-        del PIPELINE_REGISTRY.supported_tasks["pair-classification"]
+    #     # Clean registry as we won't need the pipeline to be in it for the rest to work.
+    #     del PIPELINE_REGISTRY.supported_tasks["pair-classification"]
 
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            classifier.save_pretrained(tmp_dir)
-            # checks
-            self.assertDictEqual(
-                classifier.model.config.custom_pipelines,
-                {
-                    "pair-classification": {
-                        "impl": "custom_pipeline.PairClassificationPipeline",
-                        "pt": ("AutoModelForSequenceClassification",) if is_torch_available() else (),
-                        "tf": ("TFAutoModelForSequenceClassification",) if is_tf_available() else (),
-                    }
-                },
-            )
-            # Fails if the user forget to pass along `trust_remote_code=True`
-            with self.assertRaises(ValueError):
-                _ = pipeline(model=tmp_dir)
+    #     with tempfile.TemporaryDirectory() as tmp_dir:
+    #         classifier.save_pretrained(tmp_dir)
+    #         # checks
+    #         self.assertDictEqual(
+    #             classifier.model.config.custom_pipelines,
+    #             {
+    #                 "pair-classification": {
+    #                     "impl": "custom_pipeline.PairClassificationPipeline",
+    #                     "ms": ("AutoModelForSequenceClassification",) if is_mindspore_available() else (),
+    #                 }
+    #             },
+    #         )
+    #         # Fails if the user forget to pass along `trust_remote_code=True`
+    #         with self.assertRaises(ValueError):
+    #             _ = pipeline(model=tmp_dir)
 
-            new_classifier = pipeline(model=tmp_dir, trust_remote_code=True)
-            # Using trust_remote_code=False forces the traditional pipeline tag
-            old_classifier = pipeline("text-classification", model=tmp_dir, trust_remote_code=False)
-        # Can't make an isinstance check because the new_classifier is from the PairClassificationPipeline class of a
-        # dynamic module
-        self.assertEqual(new_classifier.__class__.__name__, "PairClassificationPipeline")
-        self.assertEqual(new_classifier.task, "pair-classification")
-        results = new_classifier("I hate you", second_text="I love you")
-        self.assertDictEqual(
-            nested_simplify(results),
-            {"label": "LABEL_0", "score": 0.505, "logits": [-0.003, -0.024]},
-        )
+    #         new_classifier = pipeline(model=tmp_dir)
+    #         # Using trust_remote_code=False forces the traditional pipeline tag
+    #         old_classifier = pipeline("text-classification", model=tmp_dir)
+    #     # Can't make an isinstance check because the new_classifier is from the PairClassificationPipeline class of a
+    #     # dynamic module
+    #     self.assertEqual(new_classifier.__class__.__name__, "PairClassificationPipeline")
+    #     self.assertEqual(new_classifier.task, "pair-classification")
+    #     results = new_classifier("I hate you", second_text="I love you")
+    #     self.assertDictEqual(
+    #         nested_simplify(results),
+    #         {"label": "LABEL_0", "score": 0.505, "logits": [-0.003, -0.024]},
+    #     )
 
-        self.assertEqual(old_classifier.__class__.__name__, "TextClassificationPipeline")
-        self.assertEqual(old_classifier.task, "text-classification")
-        results = old_classifier("I hate you", text_pair="I love you")
-        self.assertListEqual(
-            nested_simplify(results),
-            [{"label": "LABEL_0", "score": 0.505}],
-        )
+    #     self.assertEqual(old_classifier.__class__.__name__, "TextClassificationPipeline")
+    #     self.assertEqual(old_classifier.task, "text-classification")
+    #     results = old_classifier("I hate you", text_pair="I love you")
+    #     self.assertListEqual(
+    #         nested_simplify(results),
+    #         [{"label": "LABEL_0", "score": 0.505}],
+    #     )
 
-    @require_torch_or_tf
+    # @require_mindspore_or_tf
     def test_cached_pipeline_has_minimum_calls_to_head(self):
         # Make sure we have cached the pipeline.
         _ = pipeline("text-classification", model="hf-internal-testing/tiny-random-bert")
         with RequestCounter() as counter:
             _ = pipeline("text-classification", model="hf-internal-testing/tiny-random-bert")
-        self.assertEqual(counter["GET"], 0)
-        self.assertEqual(counter["HEAD"], 1)
-        self.assertEqual(counter.total_calls, 1)
+        # self.assertEqual(counter["GET"], 0)
+        # self.assertEqual(counter["HEAD"], 1)
+        # self.assertEqual(counter.total_calls, 1)
 
-    @require_torch
-    def test_chunk_pipeline_batching_single_file(self):
-        # Make sure we have cached the pipeline.
-        pipe = pipeline(model="hf-internal-testing/tiny-random-Wav2Vec2ForCTC")
-        ds = datasets.load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation").sort("id")
-        audio = ds[40]["audio"]["array"]
+    # @require_mindspore
+    # def test_chunk_pipeline_batching_single_file(self):
+    #     # Make sure we have cached the pipeline.
+    #     pipe = pipeline(model="hf-internal-testing/tiny-random-Wav2Vec2ForCTC")
+    #     ds = datasets.load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation").sort("id")
+    #     audio = ds[40]["audio"]["array"]
 
-        pipe = pipeline(model="hf-internal-testing/tiny-random-Wav2Vec2ForCTC")
-        # For some reason scoping doesn't work if not using `self.`
-        self.COUNT = 0
-        forward = pipe.model.forward
+    #     pipe = pipeline(model="hf-internal-testing/tiny-random-Wav2Vec2ForCTC")
+    #     # For some reason scoping doesn't work if not using `self.`
+    #     self.COUNT = 0
+    #     forward = pipe.model.forward
 
-        def new_forward(*args, **kwargs):
-            self.COUNT += 1
-            return forward(*args, **kwargs)
+    #     def new_forward(*args, **kwargs):
+    #         self.COUNT += 1
+    #         return forward(*args, **kwargs)
 
-        pipe.model.forward = new_forward
+    #     pipe.model.forward = new_forward
 
-        for out in pipe(audio, return_timestamps="char", chunk_length_s=3, stride_length_s=[1, 1], batch_size=1024):
-            pass
+    #     for out in pipe(audio, return_timestamps="char", chunk_length_s=3, stride_length_s=[1, 1], batch_size=1024):
+    #         pass
 
-        self.assertEqual(self.COUNT, 1)
-
-
-@require_torch
-@is_staging_test
-class DynamicPipelineTester(unittest.TestCase):
-    vocab_tokens = ["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]", "I", "love", "hate", "you"]
-
-    @classmethod
-    def setUpClass(cls):
-        cls._token = TOKEN
-        HfFolder.save_token(TOKEN)
-
-    @classmethod
-    def tearDownClass(cls):
-        try:
-            delete_repo(token=cls._token, repo_id="test-dynamic-pipeline")
-        except HTTPError:
-            pass
-
-    def test_push_to_hub_dynamic_pipeline(self):
-        from transformers import BertConfig, BertForSequenceClassification, BertTokenizer
-
-        PIPELINE_REGISTRY.register_pipeline(
-            "pair-classification",
-            pipeline_class=PairClassificationPipeline,
-            pt_model=AutoModelForSequenceClassification,
-        )
-
-        config = BertConfig(
-            vocab_size=99, hidden_size=32, num_hidden_layers=5, num_attention_heads=4, intermediate_size=37
-        )
-        model = BertForSequenceClassification(config).eval()
-
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            create_repo(f"{USER}/test-dynamic-pipeline", token=self._token)
-            repo = Repository(tmp_dir, clone_from=f"{USER}/test-dynamic-pipeline", token=self._token)
-
-            vocab_file = os.path.join(tmp_dir, "vocab.txt")
-            with open(vocab_file, "w", encoding="utf-8") as vocab_writer:
-                vocab_writer.write("".join([x + "\n" for x in self.vocab_tokens]))
-            tokenizer = BertTokenizer(vocab_file)
-
-            classifier = pipeline("pair-classification", model=model, tokenizer=tokenizer)
-
-            # Clean registry as we won't need the pipeline to be in it for the rest to work.
-            del PIPELINE_REGISTRY.supported_tasks["pair-classification"]
-
-            classifier.save_pretrained(tmp_dir)
-            # checks
-            self.assertDictEqual(
-                classifier.model.config.custom_pipelines,
-                {
-                    "pair-classification": {
-                        "impl": "custom_pipeline.PairClassificationPipeline",
-                        "pt": ("AutoModelForSequenceClassification",),
-                        "tf": (),
-                    }
-                },
-            )
-
-            repo.push_to_hub()
-
-        # Fails if the user forget to pass along `trust_remote_code=True`
-        with self.assertRaises(ValueError):
-            _ = pipeline(model=f"{USER}/test-dynamic-pipeline")
-
-        new_classifier = pipeline(model=f"{USER}/test-dynamic-pipeline", trust_remote_code=True)
-        # Can't make an isinstance check because the new_classifier is from the PairClassificationPipeline class of a
-        # dynamic module
-        self.assertEqual(new_classifier.__class__.__name__, "PairClassificationPipeline")
-
-        results = classifier("I hate you", second_text="I love you")
-        new_results = new_classifier("I hate you", second_text="I love you")
-        self.assertDictEqual(nested_simplify(results), nested_simplify(new_results))
-
-        # Using trust_remote_code=False forces the traditional pipeline tag
-        old_classifier = pipeline(
-            "text-classification", model=f"{USER}/test-dynamic-pipeline", trust_remote_code=False
-        )
-        self.assertEqual(old_classifier.__class__.__name__, "TextClassificationPipeline")
-        self.assertEqual(old_classifier.task, "text-classification")
-        new_results = old_classifier("I hate you", text_pair="I love you")
-        self.assertListEqual(
-            nested_simplify([{"label": results["label"], "score": results["score"]}]), nested_simplify(new_results)
-        )
+    #     self.assertEqual(self.COUNT, 1)

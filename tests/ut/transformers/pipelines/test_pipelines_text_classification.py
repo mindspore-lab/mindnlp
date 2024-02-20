@@ -16,11 +16,10 @@ import unittest
 
 from mindnlp.transformers import (
     MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING,
-    TF_MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING,
     TextClassificationPipeline,
     pipeline,
 )
-from mindnlp.utils.testing_utils import is_pipeline_test, nested_simplify, require_tf, require_torch, slow, torch_device
+from mindnlp.utils.testing_utils import is_pipeline_test, nested_simplify, require_mindspore, slow
 
 from .test_pipelines_common import ANY
 
@@ -32,19 +31,14 @@ _TO_SKIP = {"LayoutLMv2Config", "LayoutLMv3Config"}
 @is_pipeline_test
 class TextClassificationPipelineTests(unittest.TestCase):
     model_mapping = MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING
-    tf_model_mapping = TF_MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING
 
     if model_mapping is not None:
         model_mapping = {config: model for config, model in model_mapping.items() if config.__name__ not in _TO_SKIP}
-    if tf_model_mapping is not None:
-        tf_model_mapping = {
-            config: model for config, model in tf_model_mapping.items() if config.__name__ not in _TO_SKIP
-        }
 
-    @require_torch
-    def test_small_model_pt(self):
+    @require_mindspore
+    def test_small_model(self):
         text_classifier = pipeline(
-            task="text-classification", model="hf-internal-testing/tiny-random-distilbert", framework="pt"
+            task="text-classification", model="hf-internal-testing/tiny-random-distilbert"
         )
 
         outputs = text_classifier("This is great !")
@@ -94,43 +88,10 @@ class TextClassificationPipelineTests(unittest.TestCase):
             ],
         )
 
-    @require_torch
-    def test_accepts_torch_device(self):
-        text_classifier = pipeline(
-            task="text-classification",
-            model="hf-internal-testing/tiny-random-distilbert",
-            framework="pt",
-            device=torch_device,
-        )
-
-        outputs = text_classifier("This is great !")
-        self.assertEqual(nested_simplify(outputs), [{"label": "LABEL_0", "score": 0.504}])
-
-    @require_tf
-    def test_small_model_tf(self):
-        text_classifier = pipeline(
-            task="text-classification", model="hf-internal-testing/tiny-random-distilbert", framework="tf"
-        )
-
-        outputs = text_classifier("This is great !")
-        self.assertEqual(nested_simplify(outputs), [{"label": "LABEL_0", "score": 0.504}])
-
     @slow
-    @require_torch
-    def test_pt_bert(self):
+    @require_mindspore
+    def test_bert(self):
         text_classifier = pipeline("text-classification")
-
-        outputs = text_classifier("This is great !")
-        self.assertEqual(nested_simplify(outputs), [{"label": "POSITIVE", "score": 1.0}])
-        outputs = text_classifier("This is bad !")
-        self.assertEqual(nested_simplify(outputs), [{"label": "NEGATIVE", "score": 1.0}])
-        outputs = text_classifier("Birds are a type of animal")
-        self.assertEqual(nested_simplify(outputs), [{"label": "POSITIVE", "score": 0.988}])
-
-    @slow
-    @require_tf
-    def test_tf_bert(self):
-        text_classifier = pipeline("text-classification", framework="tf")
 
         outputs = text_classifier("This is great !")
         self.assertEqual(nested_simplify(outputs), [{"label": "POSITIVE", "score": 1.0}])

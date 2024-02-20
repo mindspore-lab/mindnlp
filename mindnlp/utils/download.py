@@ -37,7 +37,7 @@ from tqdm.autonotebook import tqdm
 import requests
 from requests.exceptions import ProxyError, SSLError, HTTPError
 
-from mindnlp.configs import DEFAULT_ROOT, ENV_VARS_TRUE_VALUES, MINDNLP_CACHE, REPO_TYPES, MS_URL_BASE
+from mindnlp.configs import DEFAULT_ROOT, ENV_VARS_TRUE_VALUES, MINDNLP_CACHE, REPO_TYPES, MS_URL_BASE, HF_URL_BASE
 from .errors import (
     EntryNotFoundError,
     LocalEntryNotFoundError,
@@ -171,7 +171,6 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None)
         else:
             raise HTTPError(
                 f"Download from {url} failed. " "Retry limit reached")
-
         req = requests.get(url, stream=True, timeout=10, proxies=proxies)
 
         status = req.status_code
@@ -278,7 +277,8 @@ def cached_file(
     subfolder: str = "",
     repo_type: Optional[str] = None,
     user_agent: Optional[Union[str, Dict[str, str]]] = None,
-    endpoint: str = None,
+    endpoint: str = HF_URL_BASE,
+    _raise_exceptions_for_gated_repo: bool = True,
     _raise_exceptions_for_missing_entries: bool = True,
     _raise_exceptions_for_connection_errors: bool = True,
 ):
@@ -389,8 +389,11 @@ def cached_file(
     except GatedRepoError as e:
         if not _raise_exceptions_for_missing_entries:
             return None
+        if resolved_file is not None or not _raise_exceptions_for_gated_repo:
+            return resolved_file
         raise EnvironmentError(
-            f"{path_or_repo_id} does not appear to have authorization to access."
+            "You are trying to access a gated repo.\nMake sure to have access to it at "
+            f"https://huggingface.co/{path_or_repo_id}.\n{str(e)}"
         ) from e
     except RepositoryNotFoundError as e:
         raise EnvironmentError(
