@@ -454,7 +454,6 @@ def pipeline(
             model,
             model_classes=model_classes,
             config=config,
-            task=task,
             **model_kwargs,
         )
 

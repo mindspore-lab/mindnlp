@@ -198,8 +198,6 @@ def load_model(
             The config associated with the model to help using the correct class
         model_classes (dictionary `str` to `type`, *optional*):
             A mapping framework to class.
-        task (`str`):
-            The task defining which pipeline will be returned.
         model_kwargs:
             Additional dictionary of keyword arguments passed along to the model's `from_pretrained(...,
             **model_kwargs)` function.
