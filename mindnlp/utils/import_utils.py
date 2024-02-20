@@ -324,7 +324,7 @@ def direct_transformers_import(path: str, file="__init__.py") -> ModuleType:
     Returns:
         `ModuleType`: The resulting imported module
     """
-    name = "transformers"
+    name = "mindnlp.transformers"
     location = os.path.join(path, file)
     spec = importlib.util.spec_from_file_location(
         name, location, submodule_search_locations=[path]

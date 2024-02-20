@@ -795,7 +795,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         """from_pretrained"""
         state_dict = kwargs.pop("state_dict", None)
         cache_dir = kwargs.pop("cache_dir", None)
-        from_pt = kwargs.pop("from_pt", False)
+        from_pt = kwargs.pop("from_pt", True)
         force_download = kwargs.pop("force_download", False)
         resume_download = kwargs.pop("resume_download", False)
         proxies = kwargs.pop("proxies", None)
@@ -1084,7 +1084,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         tied_params = [names for _, names in ptrs.items() if len(names) > 1]
 
         def load_ckpt(resolved_archive_file, from_pt=False):
-            if from_pt:
+            if from_pt and 'ckpt' not in resolved_archive_file:
                 if use_safetensors:
                     from safetensors.numpy import load_file
                     state_dict = load_file(resolved_archive_file)

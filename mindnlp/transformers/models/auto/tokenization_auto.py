@@ -57,7 +57,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
                 "AlbertTokenizerFast" if is_tokenizers_available() else None,
             ),
         ),
-        ("align", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
+        # ("align", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
         ("bark", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
         ("bart", ("BartTokenizer", "BartTokenizerFast")),
         (

@@ -397,7 +397,7 @@ class PretrainedConfig:
         resume_download = kwargs.pop("resume_download", False)
         proxies = kwargs.pop("proxies", None)
         local_files_only = kwargs.pop("local_files_only", False)
-        from_pt = kwargs.pop("from_pt", False) # reuse
+        from_pt = kwargs.pop("from_pt", True) # reuse
         subfolder = kwargs.pop("subfolder", "")
 
         pretrained_model_name_or_path = str(pretrained_model_name_or_path)
