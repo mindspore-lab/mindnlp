@@ -19,20 +19,27 @@
 """
 Injection mindspore.nn for MindNLP
 """
+import os
 import operator
 from functools import reduce, partial
 import math
+import inspect
 from packaging import version
 import numpy as np
+
 import mindspore
 import mindspore.common.dtype as mstype
+from mindspore import log as logger
+from mindspore import context
 from mindspore import nn, ops, Tensor, Parameter
 from mindspore.common._stub_tensor import StubTensor
-from mindspore.nn.layer.conv import _Conv, _deconv_output_length
+from mindspore.common.api import _pynative_executor
 from mindspore.common.initializer import initializer, Constant, HeNormal, XavierNormal, Normal, HeUniform, XavierUniform, Uniform, _calculate_fan_in_and_fan_out
+from mindspore.nn.layer.conv import _Conv, _deconv_output_length
 from mindspore import _checkparam as Validator
 from mindspore.ops import functional as F
 from mindspore.ops._primitive_cache import _get_cache_prim
+from mindspore.ops._tracefunc import PackFunc
 from mindnlp._legacy.functional import einsum
 
 LESS_MS_2_1 = version.parse(mindspore.__version__) < version.parse('2.1.0')
@@ -518,7 +525,7 @@ def custom_multinomial(probabilities, num_samples, replacement=False):
         vals = ops.div(ops.log(random_uniform), probabilities + 1e-10)
         _, samples = ops.top_k(vals, num_samples)
 
-    return samples
+    return samples.astype(mindspore.int64)
 
 ops.multinomial = custom_multinomial
 
@@ -568,6 +575,66 @@ class Dense(nn.Cell):
         if self.has_bias:
             s += f', has_bias={self.has_bias}'
         return s
+
+def new_call(self, *args, **kwargs):
+    """new nn.Cell.__call__"""
+    if self.__class__.construct is nn.Cell.construct:
+        raise AttributeError("For 'Cell', the method 'construct' is not defined.")
+
+    if kwargs:
+        bound_arguments = inspect.signature(self.construct).bind(*args, **kwargs)
+        bound_arguments.apply_defaults()
+        args = bound_arguments.args
+        kwargs = bound_arguments.kwargs
+
+    if PackFunc.is_tracing():
+        return self._run_tracefunc(*args, **kwargs)
+
+    if hasattr(self, '_is_check_and_refresh') and not self._is_check_and_refresh:
+        self.check_names_and_refresh_name()
+        self._is_check_and_refresh = True
+
+    # Run in Graph mode.
+    if os.getenv("MS_JIT") != '0' and context._get_mode() == context.GRAPH_MODE:
+        self._check_construct_args(*args)
+        if self._hook_fn_registered():
+            logger.warning("For 'Cell', it's not support hook function in graph mode. If you want to use hook "
+                           "function, please use context.set_context to set pynative mode.")
+        out = self.compile_and_run(*args, **kwargs)
+        return out
+
+    # Run in PyNative mode.
+    if _pynative_executor.is_first_cell():
+        _pynative_executor._optimizer = getattr(self, "optimizer", None)
+        _pynative_executor._top_cell = self
+        # There many Casts in parameter_broadcast. Enable build faster.
+        self._do_parameter_broadcast()
+
+    # _check_args(args)
+    self._check_cell_flags_in_pynative()
+
+    if self.requires_grad and _pynative_executor.enable_grad():
+        _pynative_executor.set_grad_flag(True)
+
+    if self._dynamic_shape_inputs is not None:
+        self._check_compile_dynamic_shape(self._dynamic_shape_inputs, args)
+
+    if self.training:
+        try:
+            _pynative_executor.new_graph(self, *args, **kwargs)
+            output = self._run_construct(args, kwargs)
+            _pynative_executor.end_graph(self, output, *args, **kwargs)
+        except Exception as err:
+            _pynative_executor.clear_res()
+            raise err
+    else:
+        output = self._run_construct(args, kwargs)
+
+    if isinstance(output, Parameter):
+        output = output.data
+    return output
+
+nn.Cell.__call__ = new_call
 
 class Embedding(nn.Cell):
     """patched Embedding"""
