@@ -81,7 +81,7 @@ class GPTBigCodeModelTester:
         self.multi_query = multi_query
 
     def get_large_model_config(self):
-        return GPTBigCodeConfig.from_pretrained("gpt_bigcode-santacoder")
+        return GPTBigCodeConfig.from_pretrained("bigcode/gpt_bigcode-santacoder")
 
     def prepare_config_and_inputs(
         self, gradient_checkpointing=False, scale_attn_by_inverse_layer_idx=False, reorder_and_upcast_attn=False
@@ -559,9 +559,9 @@ class GPTBigCodeModelLanguageGenerationTest(unittest.TestCase):
     @slow
     def test_generate_simple(self):
         model = GPTBigCodeForCausalLM.from_pretrained(
-            "gpt_bigcode-santacoder")
+            "bigcode/gpt_bigcode-santacoder")
         tokenizer = AutoTokenizer.from_pretrained(
-            "gpt_bigcode-santacoder")
+            "bigcode/gpt_bigcode-santacoder")
 
         input_ids = tokenizer("def print_hello_world():",
                               return_tensors="ms").input_ids
@@ -576,12 +576,12 @@ class GPTBigCodeModelLanguageGenerationTest(unittest.TestCase):
     @slow
     def test_generate_batched(self):
         tokenizer = AutoTokenizer.from_pretrained(
-            "gpt_bigcode-santacoder")
+            "bigcode/gpt_bigcode-santacoder")
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = "left"
 
         model = GPTBigCodeForCausalLM.from_pretrained(
-            "gpt_bigcode-santacoder")
+            "bigcode/gpt_bigcode-santacoder")
 
         inputs = tokenizer(["def print_hello_world():",
                            "def say_hello():"], return_tensors="ms", padding=True)
@@ -599,7 +599,7 @@ class GPTBigCodeModelLanguageGenerationTest(unittest.TestCase):
 class GPTBigCodeMQATest(unittest.TestCase):
     def get_attention(self, multi_query):
         config = GPTBigCodeConfig.from_pretrained(
-            "gpt_bigcode-santacoder",
+            "bigcode/gpt_bigcode-santacoder",
             multi_query=multi_query,
             attn_pdrop=0,
             resid_pdrop=0,

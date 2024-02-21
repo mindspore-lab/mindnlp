@@ -1087,20 +1087,21 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             if from_pt and 'ckpt' not in resolved_archive_file:
                 if use_safetensors:
                     from safetensors.numpy import load_file
-                    state_dict = load_file(resolved_archive_file)
+                    origin_state_dict = load_file(resolved_archive_file)
                     if use_bf16:
                         logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
-                        new_state_dict = {k: Parameter(v.astype(np.float16)) for k, v in state_dict.items()}
+                        state_dict = {k: Parameter(v.astype(np.float16)) for k, v in origin_state_dict.items()}
                     else:
-                        new_state_dict = {k: Parameter(v) for k, v in state_dict.items()}
-                    return new_state_dict
-                return load(resolved_archive_file)
-            try:
-                state_dict = load_checkpoint(str(resolved_archive_file))
-            except Exception as exc:
-                raise OSError(
-                    f"Unable to load weights from mindspore checkpoint file '{resolved_archive_file}'. "
-                ) from exc
+                        state_dict = {k: Parameter(v) for k, v in origin_state_dict.items()}
+                else:
+                    state_dict = load(resolved_archive_file)
+            else:
+                try:
+                    state_dict = load_checkpoint(str(resolved_archive_file))
+                except Exception as exc:
+                    raise OSError(
+                        f"Unable to load weights from mindspore checkpoint file '{resolved_archive_file}'. "
+                    ) from exc
 
             new_state_dict = {}
             for key, value in state_dict.items():
