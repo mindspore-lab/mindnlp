@@ -1522,6 +1522,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         cache_dir: Optional[Union[str, os.PathLike]] = None,
         force_download: bool = False,
         local_files_only: bool = False,
+        token: str = None,
         **kwargs,
     ):
         r"""
@@ -1653,6 +1654,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
                     resume_download=resume_download,
                     proxies=proxies,
                     local_files_only=local_files_only,
+                    token=token,
                     subfolder=subfolder,
                     endpoint=endpoint,
                     _raise_exceptions_for_missing_entries=False,
@@ -1685,6 +1687,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
                     proxies=proxies,
                     resume_download=resume_download,
                     local_files_only=local_files_only,
+                    token=token,
                     subfolder=subfolder,
                     endpoint=endpoint,
                     _raise_exceptions_for_missing_entries=False,

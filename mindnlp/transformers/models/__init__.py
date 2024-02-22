@@ -15,9 +15,9 @@
 """
 Models init
 """
-from . import albert, auto, bart, bert, bloom, clip, codegen, cpm, distilbert, electra, ernie, ernie_m, chatglm, chatglm2, gpt, gpt_neo, gpt_neox, gpt2, \
+from . import albert, auto, bart, bert, bloom, clip, codegen, cpm, distilbert, electra, ernie, ernie_m, chatglm, chatglm2, gemma, gpt, gpt_bigcode, gpt_neo, gpt_neox, gpt2, \
     llama, longformer, luke, mbart, megatron_bert, minicpm, mistral, mobilebert, nezha, opt, gpt_pangu, phi, roberta, rwkv, \
-    seamless_m4t, seamless_m4t_v2, t5, tinybert, xlm, xlm_roberta, gpt_bigcode, whisper, bark, encodec, \
+    seamless_m4t, seamless_m4t_v2, t5, tinybert, xlm, xlm_roberta, whisper, bark, encodec, \
     graphormer, pop2piano, wav2vec2, hubert
 from .albert import *
 from .auto import *
@@ -34,6 +34,7 @@ from .ernie_m import *
 from .electra import *
 from .chatglm import *
 from .chatglm2 import *
+from .gemma import *
 from .gpt import *
 from .gpt_neo import *
 from .gpt_neox import *
@@ -82,6 +83,7 @@ __all__.extend(electra.__all__)
 __all__.extend(chatglm.__all__)
 __all__.extend(chatglm2.__all__)
 __all__.extend(gpt.__all__)
+__all__.extend(gemma.__all__)
 __all__.extend(gpt_neo.__all__)
 __all__.extend(gpt_neox.__all__)
 __all__.extend(gpt2.__all__)

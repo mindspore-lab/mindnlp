@@ -195,7 +195,9 @@ class _LazyAutoMapping(OrderedDict):
 
         # Maybe there was several model types associated with this config.
         model_types = [k for k, v in self._config_mapping.items() if v == key.__name__]
+        print(model_types)
         for mtype in model_types:
+            print(self._model_mapping)
             if mtype in self._model_mapping:
                 model_name = self._model_mapping[mtype]
                 return self._load_attr_from_module(mtype, model_name)

@@ -37,7 +37,8 @@ from tqdm.autonotebook import tqdm
 import requests
 from requests.exceptions import ProxyError, SSLError, HTTPError
 
-from mindnlp.configs import DEFAULT_ROOT, ENV_VARS_TRUE_VALUES, MINDNLP_CACHE, REPO_TYPES, MS_URL_BASE, HF_URL_BASE
+from mindnlp.configs import DEFAULT_ROOT, ENV_VARS_TRUE_VALUES, MINDNLP_CACHE, REPO_TYPES, MS_URL_BASE, HF_URL_BASE, \
+    HF_TOKEN
 from .errors import (
     EntryNotFoundError,
     LocalEntryNotFoundError,
@@ -126,7 +127,7 @@ ca
     return cache_dir
 
 
-def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None):
+def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None, headers=None):
     r"""
     Download from given url, save to path.
 
@@ -171,7 +172,7 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None)
         else:
             raise HTTPError(
                 f"Download from {url} failed. " "Retry limit reached")
-        req = requests.get(url, stream=True, timeout=10, proxies=proxies)
+        req = requests.get(url, stream=True, timeout=10, proxies=proxies, headers=headers)
 
         status = req.status_code
         if status == 404:
@@ -274,6 +275,7 @@ def cached_file(
     resume_download: bool = False,
     proxies: Optional[Dict[str, str]] = None,
     local_files_only: bool = False,
+    token = None,
     subfolder: str = "",
     repo_type: Optional[str] = None,
     user_agent: Optional[Union[str, Dict[str, str]]] = None,
@@ -384,7 +386,8 @@ def cached_file(
             proxies=proxies,
             resume_download=resume_download,
             local_files_only=local_files_only,
-            endpoint=endpoint
+            endpoint=endpoint,
+            token=token
         )
     except GatedRepoError as e:
         if not _raise_exceptions_for_missing_entries:
@@ -445,6 +448,7 @@ def download(
     proxies: Optional[Dict] = None,
     resume_download: bool = False,
     local_files_only: bool = False,
+    token: str = None,
     endpoint: Optional[str] = None,
 ) -> str:
     """Download a given file if it's not already present in the local cache.
@@ -491,11 +495,19 @@ def download(
     # for modelscope
     model_url = model_url.replace('api/v1/', '')
 
+    token = HF_TOKEN if not token else token
+
+    headers = None
+    if token:
+        headers = {
+            'authorization': f"Bearer {token}"
+        }
+
     try:
-        req = requests.head(model_url, timeout=3, proxies=proxies)
+        req = requests.head(model_url, timeout=3, proxies=proxies, headers=headers)
         if req.status_code >= 400:
             raise RepositoryNotFoundError(f"Can not found model: {repo_id}")
-        pointer_path = http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies)
+        pointer_path = http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies, headers=headers)
     except (requests.exceptions.SSLError, requests.exceptions.ProxyError):
         # Actually raise for those subclasses of ConnectionError
         raise
@@ -679,6 +691,7 @@ def get_checkpoint_shard_files(
     proxies=None,
     resume_download=False,
     local_files_only=False,
+    token=None,
     user_agent=None,
     subfolder="",
     endpoint=None,
@@ -731,7 +744,8 @@ def get_checkpoint_shard_files(
                 local_files_only=local_files_only,
                 user_agent=user_agent,
                 subfolder=subfolder,
-                endpoint=endpoint
+                endpoint=endpoint,
+                token=token
             )
         # We have already dealt with RepositoryNotFoundError and RevisionNotFoundError when getting the index, so
         # we don't have to catch them here.

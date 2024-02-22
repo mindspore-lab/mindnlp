@@ -789,6 +789,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         ignore_mismatched_sizes: bool = False,
         force_download: bool = False,
         local_files_only: bool = False,
+        token: Optional[Union[str, bool]] = None,
         use_safetensors: bool = None,
         **kwargs,
     ):
@@ -912,7 +913,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                         "local_files_only": local_files_only,
                         "subfolder": subfolder,
                         "_raise_exceptions_for_missing_entries": False,
-                        'endpoint': endpoint
+                        'endpoint': endpoint,
+                        "token": token
                     }
                     # try safetensors
                     resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
@@ -982,7 +984,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                         "local_files_only": local_files_only,
                         "subfolder": subfolder,
                         "_raise_exceptions_for_missing_entries": False,
-                        'endpoint': endpoint
+                        'endpoint': endpoint,
+                        'token': token
                     }
 
                     resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
@@ -1033,6 +1036,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 proxies=proxies,
                 resume_download=resume_download,
                 local_files_only=local_files_only,
+                token=token,
                 subfolder=subfolder,
                 endpoint=endpoint
             )
@@ -1049,10 +1053,12 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         if ms_dtype is None:
             ms_dtype = mindspore.float32
 
-        use_bf16 = False
+        use_fp16 = False
+        usage_dtype = mindspore.dtype_to_nptype(ms_dtype)
         if ms_dtype == mindspore.bfloat16:
             ms_dtype = mindspore.float16
-            use_bf16 = True
+            usage_dtype = np.float16
+            use_fp16 = True
 
         def empty_initializer(init, shape=None, dtype=mindspore.float32):
             if not isinstance(shape, (tuple, list)):
@@ -1088,11 +1094,10 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 if use_safetensors:
                     from safetensors.numpy import load_file
                     origin_state_dict = load_file(resolved_archive_file)
-                    if use_bf16:
+                    if use_fp16:
                         logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
-                        state_dict = {k: Parameter(v.astype(np.float16)) for k, v in origin_state_dict.items()}
-                    else:
-                        state_dict = {k: Parameter(v) for k, v in origin_state_dict.items()}
+
+                    state_dict = {k: Parameter(v.astype(np.float32).astype(usage_dtype)) for k, v in origin_state_dict.items()}
                 else:
                     state_dict = load(resolved_archive_file)
             else:
