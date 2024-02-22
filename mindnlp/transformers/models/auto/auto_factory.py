@@ -70,6 +70,7 @@ class _BaseAutoModelClass:
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
         config = kwargs.pop("config", None)
         from_pt = kwargs.get('from_pt', True)
+        token = kwargs.get('token', None)
         if not isinstance(config, PretrainedConfig):
             kwargs_orig = copy.deepcopy(kwargs)
             # ensure not to pollute the config object with torch_dtype="auto" - since it's
@@ -92,6 +93,7 @@ class _BaseAutoModelClass:
                 kwargs["quantization_config"] = kwargs_orig["quantization_config"]
 
         kwargs['from_pt'] = from_pt
+        kwargs['token'] = token
         if type(config) in cls._model_mapping.keys():
             model_class = _get_model_class(config, cls._model_mapping)
             return model_class.from_pretrained(
@@ -195,9 +197,7 @@ class _LazyAutoMapping(OrderedDict):
 
         # Maybe there was several model types associated with this config.
         model_types = [k for k, v in self._config_mapping.items() if v == key.__name__]
-        print(model_types)
         for mtype in model_types:
-            print(self._model_mapping)
             if mtype in self._model_mapping:
                 model_name = self._model_mapping[mtype]
                 return self._load_attr_from_module(mtype, model_name)
