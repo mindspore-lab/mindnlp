@@ -46,3 +46,6 @@ MINDNLP_CACHE = os.getenv("MINDNLP_CACHE", DEFAULT_ROOT)
 REPO_TYPE_DATASET = "dataset"
 REPO_TYPE_MODEL = "model"
 REPO_TYPES = [None, REPO_TYPE_MODEL, REPO_TYPE_DATASET]
+
+# Token
+HF_TOKEN = os.environ.get('HF_TOKEN', None)

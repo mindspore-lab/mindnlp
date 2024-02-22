@@ -36,6 +36,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("ernie", "ErnieModel"),
         ("ernie_m", "ErnieMModel"),
         ("roberta", "RobertaModel"),
+        ("gemma", "GemmaModel"),
         ("gpt_bigcode", "GPTBigCodeModel"),
         ("gpt", "GPTModel"),
         ("gpt2", "GPT2Model"),
@@ -84,15 +85,16 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         # Model for Causal LM mapping
         ("bert", "BertLMHeadModel"),
         ("bloom", "BloomForCausalLM"),
-        ("roberta", "RobertaLMHeadModel"),
+        ("gemma", "GemmaForCausalLM"),
         ("gpt2", "GPT2LMHeadModel"),
         ("gpt_pangu", "GPTPanguForCausalLM"),
         ("falcon", "FalconForCausalLM"),
         ("gpt_bigcode", "GPTBigCodeForCausalLM"),
+        ('minicpm', 'MiniCPMForCausalLM'),
         ("phi", "PhiForCausalLM"),
+        ("roberta", "RobertaLMHeadModel"),
         ("rwkv", "RwkvForCausalLM"),
         ("xlm-roberta", "XLMRobertaForCausalLM"),
-        ('minicpm', 'MiniCPMForCausalLM')
     ]
 )
 
@@ -438,6 +440,7 @@ MODEL_FOR_AUDIO_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         # Model for Audio Classification mapping
         ("audio-spectrogram-transformer", "ASTForAudioClassification"),
         ("data2vec-audio", "Data2VecAudioForSequenceClassification"),
+        ("gemma", "GemmaForSequenceClassification"),
         ("hubert", "HubertForSequenceClassification"),
         ("sew", "SEWForSequenceClassification"),
         ("sew-d", "SEWDForSequenceClassification"),

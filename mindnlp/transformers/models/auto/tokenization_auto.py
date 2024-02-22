@@ -165,6 +165,13 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("fnet", ("FNetTokenizer", "FNetTokenizerFast" if is_tokenizers_available() else None)),
         ("fsmt", ("FSMTTokenizer", None)),
         ("funnel", ("FunnelTokenizer", "FunnelTokenizerFast" if is_tokenizers_available() else None)),
+        (
+            "gemma",
+            (
+                "GemmaTokenizer" if is_sentencepiece_available() else None,
+                "GemmaTokenizerFast" if is_tokenizers_available() else None,
+            ),
+        ),
         ("git", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
         ("gpt-sw3", ("GPTSw3Tokenizer" if is_sentencepiece_available() else None, None)),
         ("gpt2", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
@@ -548,6 +555,7 @@ def get_tokenizer_config(
         resume_download=resume_download,
         proxies=proxies,
         local_files_only=local_files_only,
+        token=token,
         subfolder=subfolder,
         _raise_exceptions_for_missing_entries=False,
         _raise_exceptions_for_connection_errors=False,

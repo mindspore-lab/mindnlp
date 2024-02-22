@@ -399,6 +399,7 @@ class PretrainedConfig:
         local_files_only = kwargs.pop("local_files_only", False)
         from_pt = kwargs.pop("from_pt", True) # reuse
         subfolder = kwargs.pop("subfolder", "")
+        token = kwargs.pop('token', None)
 
         pretrained_model_name_or_path = str(pretrained_model_name_or_path)
 
@@ -426,6 +427,7 @@ class PretrainedConfig:
                     proxies=proxies,
                     resume_download=resume_download,
                     local_files_only=local_files_only,
+                    token=token,
                     subfolder=subfolder,
                     endpoint=endpoint
                 )
