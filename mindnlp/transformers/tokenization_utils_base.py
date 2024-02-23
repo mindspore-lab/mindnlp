@@ -658,9 +658,10 @@ class BatchEncoding(UserDict):
             def as_tensor(value, dtype=None):
                 if isinstance(value, list) and isinstance(value[0], np.ndarray):
                     return mindspore.tensor(np.array(value), dtype)
+                if isinstance(value, np.ndarray) and value.shape == (0,):
+                    return mindspore.tensor(mindspore._c_expression.Tensor(value, dtype)) # pylint: disable=c-extension-no-member
                 return mindspore.tensor(value, dtype)
         else:
-
             def as_tensor(value, dtype=None):
                 if isinstance(value, (list, tuple)) and isinstance(value[0], (list, tuple, np.ndarray)):
                     value_lens = [len(val) for val in value]
@@ -676,7 +677,6 @@ class BatchEncoding(UserDict):
             try:
                 if prepend_batch_axis:
                     value = [value]
-
                 if not is_tensor(value):
                     tensor = as_tensor(value)
 

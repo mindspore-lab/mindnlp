@@ -530,6 +530,10 @@ class PretrainedConfig:
             config_dict = self.to_diff_dict()
         else:
             config_dict = self.to_dict()
+
+        if 'ms_dtype' in config_dict:
+            config_dict['ms_dtype'] = str(config_dict['ms_dtype']).lower()
+
         return json.dumps(config_dict, indent=2, sort_keys=True) + "\n"
 
     def to_file(self, save_path):

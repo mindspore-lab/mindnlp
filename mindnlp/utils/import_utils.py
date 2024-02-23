@@ -254,6 +254,11 @@ PYCTCDECODE_IMPORT_ERROR = """
 `pip install pyctcdecode`. Please note that you may need to restart your runtime after installation.
 """
 
+JIEBA_IMPORT_ERROR = """
+{0} requires the jieba library but it was not found in your environment. You can install it with pip: `pip install
+jieba`. Please note that you may need to restart your runtime after installation.
+"""
+
 BACKENDS_MAPPING = OrderedDict(
     [
         ("cython", (is_cython_available, CYTHON_IMPORT_ERROR)),
@@ -266,6 +271,7 @@ BACKENDS_MAPPING = OrderedDict(
         ("scipy", (is_scipy_available, SCIPY_IMPORT_ERROR)),
         ("pretty_midi", (is_pretty_midi_available, PRETTY_MIDI_IMPORT_ERROR)),
         ("pyctcdecode", (is_pyctcdecode_available, PYCTCDECODE_IMPORT_ERROR)),
+        ("jieba", (is_jieba_available, JIEBA_IMPORT_ERROR)),
     ]
 )
 

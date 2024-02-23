@@ -118,6 +118,7 @@ The table below represents the current support in the library for each of those 
 | Falcon                        | ✅                | ❌             |
 | OpenAI GPT                    | ✅                | ❌             |
 | OpenAI GPT-2                  | ✅                | ✅             |
+| Gemma                         | ✅                | ❌             |
 | GPT Neo                       | ✅                | ❌             |
 | GPT NeoX                      | TODO              | ❌             |
 | GPT Pangu                     | ✅                | ❌             |

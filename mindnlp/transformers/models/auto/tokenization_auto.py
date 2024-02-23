@@ -137,6 +137,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ),
         ),
         ("cpmant", ("CpmAntTokenizer", None)),
+        ("cpmbee", ("CpmBeeTokenizer", None)),
         ("ctrl", ("CTRLTokenizer", None)),
         #("data2vec-audio", ("Wav2Vec2CTCTokenizer", None)),
         ("data2vec-text", ("RobertaTokenizer", "RobertaTokenizerFast" if is_tokenizers_available() else None)),
