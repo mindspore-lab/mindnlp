@@ -19,8 +19,8 @@
 from typing import Any
 from types import MethodType
 
+import numpy as np
 from mindspore import nn
-import mindspore.numpy as mnp
 from mindspore import Tensor, Parameter
 
 __all__ = [
@@ -32,20 +32,21 @@ __all__ = [
 # ref: https://zhuanlan.zhihu.com/p/425483093
 def norm_except_dim(weight_v:Tensor, p:float, dim:int=-1) -> Tensor:
     ''' ||weight_v|| '''
+    weight_v = weight_v.asnumpy()
     if dim == -1:
-        return mnp.norm(weight_v, p)
+        return np.linalg.norm(weight_v, p)
     if dim == 0:
         output_size = (weight_v.shape[0],) + (1,) * (weight_v.ndim - 1)
-        return mnp.norm(weight_v.view((weight_v.shape[0], -1)), p, 1).view(output_size)
+        return np.linalg.norm(weight_v.reshape((weight_v.shape[0], -1)), p, 1).reshape(output_size)
     if dim == (weight_v.ndim - 1):
         output_size = (1,) * (weight_v.ndim - 1) + (weight_v.shape[weight_v.ndim - 1],)
-        return mnp.norm(weight_v.view((-1, weight_v.shape[weight_v.ndim - 1])), p, 0).view(output_size)
+        return np.linalg.norm(weight_v.reshape((-1, weight_v.shape[weight_v.ndim - 1])), p, 0).reshape(output_size)
     return norm_except_dim(weight_v.swapaxes(0, dim), p, dim).swapaxes(0, dim)
 
 
 def _weight_norm(weight_v:Tensor, weight_g:Tensor, dim:int=-1) -> Tensor:
     ''' weight = weight_g * weight_v / ||weight_v|| '''
-    return weight_g * weight_v / norm_except_dim(weight_v, 2, dim)
+    return weight_g.asnumpy() * weight_v.asnumpy() / norm_except_dim(weight_v, 2, dim)
 
 
 def recompute_weight(cell:nn.Cell):
@@ -55,7 +56,7 @@ def recompute_weight(cell:nn.Cell):
     new_weight = _weight_norm(v, g, cell.wn_dim)
     weight: Parameter = getattr(cell, name, None)
     assert weight is not None, f'property {name!r} not found'
-    weight.set_data(new_weight)
+    weight.set_data(Tensor(new_weight))
 
 
 def weight_norm(cell:nn.Cell, name:str='weight', dim:int=-1, axis:int=None) -> nn.Cell:

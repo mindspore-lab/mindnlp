@@ -14,12 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""CPM model"""
-from . import tokenization_cpm, tokenization_cpm_fast
-
-from .tokenization_cpm import *
-from .tokenization_cpm_fast import *
+"""CPM Bee model"""
+from . import configuration_cpmbee, tokenization_cpmbee, modeling_cpmbee
+from .configuration_cpmbee import *
+from .tokenization_cpmbee import *
+from .modeling_cpmbee import *
 
 __all__ = []
-__all__.extend(tokenization_cpm.__all__)
-__all__.extend(tokenization_cpm_fast.__all__)
+__all__.extend(configuration_cpmbee.__all__)
+__all__.extend(tokenization_cpmbee.__all__)
+__all__.extend(modeling_cpmbee.__all__)

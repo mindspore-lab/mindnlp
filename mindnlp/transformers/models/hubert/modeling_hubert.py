@@ -17,15 +17,16 @@
 # pylint: disable=arguments-renamed
 # pylint: disable=unused-argument
 # pylint: disable=unused-variable
-""" Mindspore Hubert model. """
+""" MindSpore Hubert model. """
 
 from typing import Optional, Tuple, Union
 
 import numpy as np
-import mindspore as ms
-import mindspore.ops as F
-from mindspore import nn
+
+import mindspore
+from mindspore import nn, ops
 from mindspore import Tensor, Parameter
+from mindspore.common.initializer import initializer, Normal, Uniform, HeNormal
 
 from mindnlp.modules.functional.weight_norm import weight_norm
 from mindnlp.modules.functional import finfo
@@ -415,8 +416,8 @@ class HubertAttention(nn.Cell):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = F.cat([past_key_value[0], key_states], axis=2)
-            value_states = F.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], axis=2)
+            value_states = ops.cat([past_key_value[1], value_states], axis=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -438,7 +439,7 @@ class HubertAttention(nn.Cell):
         value_states = value_states.reshape(*proj_shape)
 
         src_len = key_states.shape[1]
-        attn_weights = F.bmm(query_states, key_states.swapaxes(1, 2))
+        attn_weights = ops.bmm(query_states, key_states.swapaxes(1, 2))
 
         if attn_weights.shape != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
@@ -452,7 +453,7 @@ class HubertAttention(nn.Cell):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = F.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, axis=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -473,8 +474,8 @@ class HubertAttention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = F.dropout(attn_weights, p=self.dropout, training=self.training)
-        attn_output = F.bmm(attn_probs, value_states)
+        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_output = ops.bmm(attn_probs, value_states)
 
         if attn_output.shape != (bsz * self.num_heads, tgt_len, self.head_dim):
             raise ValueError(
@@ -659,7 +660,7 @@ class HubertEncoder(nn.Cell):
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
-            dropout_probability = F.rand([])
+            dropout_probability = ops.rand([])
 
             skip_the_layer = self.training and (dropout_probability < self.config.layerdrop)
             if not skip_the_layer:
@@ -727,7 +728,7 @@ class HubertEncoderStableLayerNorm(nn.Cell):
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
-            dropout_probability = F.rand([])
+            dropout_probability =ops.rand([])
 
             skip_the_layer = self.training and (dropout_probability < self.config.layerdrop)
             if not skip_the_layer:
@@ -765,19 +766,19 @@ class HubertPreTrainedModel(PreTrainedModel):
     base_model_prefix = "hubert"
     main_input_name = "input_values"
 
-    def _init_weights(self, module):
+    def _init_weights(self, cell):
         """Initialize the weights"""
-        if isinstance(module, nn.Dense):
+        if isinstance(cell, nn.Dense):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            module.weight.normal_(mean=0.0, std=self.config.initializer_range)
-        elif isinstance(module, (nn.LayerNorm, nn.GroupNorm)):
-            module.bias.zeros_()
-            module.weight.ones_()
-        elif isinstance(module, nn.Conv1d):
-            module.weight.kaiming_normal_()
-        if isinstance(module, (nn.Dense, nn.Conv1d)) and module.bias is not None:
-            module.bias.zeros_()
+            cell.weight.set_data(initializer(Normal(self.config.initializer_range), cell.weight.shape, cell.weight.dtype))
+        elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
+            cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
+            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+        elif isinstance(cell, nn.Conv1d):
+            cell.weight.set_data(initializer(HeNormal(), cell.weight.shape, cell.weight.dtype))
+        if isinstance(cell, (nn.Dense, nn.Conv1d)) and cell.bias is not None:
+            cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
     def _get_feat_extract_output_lengths(self, input_lengths: Union[Tensor, int]):
         """
@@ -786,8 +787,8 @@ class HubertPreTrainedModel(PreTrainedModel):
 
         def _conv_out_length(input_length, kernel_size, stride):
             # 1D convolutional layer output length formula taken
-            # from https://pytorch.org/docs/stable/generated/F.nn.Conv1d.html
-            #return F.div(input_length - kernel_size, stride, rounding_mode="floor") + 1
+            # from https://pytorch.org/docs/stable/generated/ops.nn.Conv1d.html
+            #return ops.div(input_length - kernel_size, stride, rounding_mode="floor") + 1
             return (input_length - kernel_size) // stride + 1
 
         for kernel_size, stride in zip(self.config.conv_kernel, self.config.conv_stride):
@@ -795,12 +796,12 @@ class HubertPreTrainedModel(PreTrainedModel):
         return input_lengths
 
     def _get_feature_vector_attention_mask(self, feature_vector_length: int, attention_mask: Tensor):
-        output_lengths = self._get_feat_extract_output_lengths(attention_mask.sum(-1)).to(ms.int64)
+        output_lengths = self._get_feat_extract_output_lengths(attention_mask.sum(-1)).to(mindspore.int64)
         batch_size = attention_mask.shape[0]
 
-        attention_mask = F.zeros((batch_size, feature_vector_length), dtype=attention_mask.dtype)
+        attention_mask = ops.zeros((batch_size, feature_vector_length), dtype=attention_mask.dtype)
         # these two operations makes sure that all values before the output lengths idxs are attended to
-        attention_mask[(F.arange(attention_mask.shape[0]), output_lengths - 1)] = 1
+        attention_mask[(ops.arange(attention_mask.shape[0]), output_lengths - 1)] = 1
         attention_mask = attention_mask.flip([-1]).cumsum(-1).flip([-1]).bool()
         return attention_mask
 
@@ -813,7 +814,7 @@ class HubertModel(HubertPreTrainedModel):
         self.feature_projection = HubertFeatureProjection(config)
 
         if config.mask_time_prob > 0.0 or config.mask_feature_prob > 0.0:
-            self.masked_spec_embed = Parameter(F.zeros(config.hidden_size, dtype=ms.float32)).uniform_()
+            self.masked_spec_embed = Parameter(initializer(Uniform(), (config.hidden_size,), dtype=mindspore.float32))
 
         if config.do_stable_layer_norm:
             self.encoder = HubertEncoderStableLayerNorm(config)
@@ -853,7 +854,7 @@ class HubertModel(HubertPreTrainedModel):
                 attention_mask=attention_mask,
                 min_masks=self.config.mask_time_min_masks,
             )
-            mask_time_indices = Tensor(mask_time_indices, dtype=ms.bool_)
+            mask_time_indices = Tensor(mask_time_indices, dtype=mindspore.bool_)
             hidden_states[mask_time_indices] = self.masked_spec_embed.to(hidden_states.dtype)
 
         if self.config.mask_feature_prob > 0 and self.training:
@@ -864,7 +865,7 @@ class HubertModel(HubertPreTrainedModel):
                 mask_length=self.config.mask_feature_length,
                 min_masks=self.config.mask_feature_min_masks,
             )
-            mask_feature_indices = Tensor(mask_feature_indices, dtype=ms.bool_)
+            mask_feature_indices = Tensor(mask_feature_indices, dtype=mindspore.bool_)
             mask_feature_indices = mask_feature_indices[:, None].expand(-1, sequence_length, -1)
             hidden_states[mask_feature_indices] = 0
 
@@ -1037,15 +1038,15 @@ class HubertForCTC(HubertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            labels = labels.astype(ms.int32)
+            labels = labels.astype(mindspore.int32)
             if labels.max() >= self.config.vocab_size:
                 raise ValueError(f"Label values must be <= vocab_size: {self.config.vocab_size}")
 
             # retrieve loss input_lengths from attention_mask
             attention_mask = (
-                attention_mask if attention_mask is not None else F.ones_like(input_values, dtype=ms.int64)
+                attention_mask if attention_mask is not None else ops.ones_like(input_values, dtype=mindspore.int64)
             )
-            input_lengths = self._get_feat_extract_output_lengths(attention_mask.sum(-1)).to(ms.int64)
+            input_lengths = self._get_feat_extract_output_lengths(attention_mask.sum(-1)).to(mindspore.int64)
 
             # assuming that padded tokens are filled with -100
             # when not being attended to
@@ -1054,8 +1055,8 @@ class HubertForCTC(HubertPreTrainedModel):
             flattened_targets = labels.masked_select(labels_mask)
 
             # ctc_loss doesn't support fp16
-            log_probs = F.log_softmax(logits, axis=-1).swapaxes(0, 1)
-            loss, log_alpha = F.ctc_loss(
+            log_probs = ops.log_softmax(logits, axis=-1).swapaxes(0, 1)
+            loss, log_alpha = ops.ctc_loss(
                 log_probs,   # [T, N/B, C/NC]
                 labels,      # [N/B, S], replace `flattened_targets`
                 input_lengths,
@@ -1084,7 +1085,7 @@ class HubertForSequenceClassification(HubertPreTrainedModel):
         self.hubert = HubertModel(config)
         num_layers = config.num_hidden_layers + 1  # transformer layers + input embeddings
         if config.use_weighted_layer_sum:
-            self.layer_weights = Parameter(F.ones(num_layers) / num_layers)
+            self.layer_weights = Parameter(ops.ones(num_layers) / num_layers)
         self.projector = nn.Dense(config.hidden_size, config.classifier_proj_size)
         self.classifier = nn.Dense(config.classifier_proj_size, config.num_labels)
 
@@ -1135,8 +1136,8 @@ class HubertForSequenceClassification(HubertPreTrainedModel):
 
         if self.config.use_weighted_layer_sum:
             hidden_states = outputs[_HIDDEN_STATES_START_POSITION]
-            hidden_states = F.stack(hidden_states, axis=1)
-            norm_weights = F.softmax(self.layer_weights, axis=-1)
+            hidden_states = ops.stack(hidden_states, axis=1)
+            norm_weights = ops.softmax(self.layer_weights, axis=-1)
             hidden_states = (hidden_states * norm_weights.view(-1, 1, 1)).sum(axis=1)
         else:
             hidden_states = outputs[0]
@@ -1153,8 +1154,8 @@ class HubertForSequenceClassification(HubertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            labels = labels.astype(ms.int32)
-            loss = F.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
+            labels = labels.astype(mindspore.int32)
+            loss = ops.cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]

@@ -1,6 +1,5 @@
 # coding=utf-8
 # Copyright 2022 The OpenBMB Team and The HuggingFace Inc. team. All rights reserved.
-# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,10 +15,13 @@
 # ============================================================================
 """ CPMAnt model configuration"""
 
+from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
 
 
-CONFIG_ARCHIVE_MAP = {
+logger = logging.get_logger(__name__)
+
+CPMANT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
     "openbmb/cpm-ant-10b": "https://huggingface.co/openbmb/cpm-ant-10b/blob/main/config.json"
     # See all CPMAnt models at https://huggingface.co/models?filter=cpmant
 }
@@ -29,7 +31,8 @@ class CpmAntConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`CpmAntModel`]. It is used to instantiate an
     CPMAnt model according to the specified arguments, defining the model architecture. Instantiating a configuration
-    with the defaults will yield a similar configuration to that of the CPMAnt architecture.
+    with the defaults will yield a similar configuration to that of the CPMAnt
+    [openbmb/cpm-ant-10b](https://huggingface.co/openbmb/cpm-ant-10b) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -48,15 +51,17 @@ class CpmAntConfig(PretrainedConfig):
             Dimension of the "intermediate" (i.e., feed-forward) layer in the Transformer encoder.
         num_hidden_layers (`int`, *optional*, defaults to 48):
             Number of layers of the Transformer encoder.
-        dropout_p (`float`, *optional*, defaults to 0.1):
-            The dropout probabilitiy for all fully connected layers in the embeddings, encoder.
+        dropout_p (`float`, *optional*, defaults to 0.0):
+            The dropout probability for all fully connected layers in the embeddings, encoder.
         position_bias_num_buckets (`int`, *optional*, defaults to 512):
             The number of position_bias buckets.
         position_bias_max_distance (`int`, *optional*, defaults to 2048):
             The maximum sequence length that this model might ever be used with. Typically set this to something large
             just in case (e.g., 512 or 1024 or 2048).
-        eps (`float`, *optional*, defaults to 1e-6):
+        eps (`float`, *optional*, defaults to 1e-06):
             The epsilon used by the layer normalization layers.
+        init_std (`float`, *optional*, defaults to 1.0):
+            Initialize parameters with std = init_std.
         prompt_types (`int`, *optional*, defaults to 32):
             The type of prompt.
         prompt_length (`int`, *optional*, defaults to 32):
@@ -65,10 +70,22 @@ class CpmAntConfig(PretrainedConfig):
             The type of segment.
         use_cache (`bool`, *optional*, defaults to `True`):
             Whether to use cache.
-        init_std (`float`, *optional*, defaults to 1.0):
-            Initialize parameters with std = init_std.
+
+    Example:
+
+    ```python
+    >>> from transformers import CpmAntModel, CpmAntConfig
+
+    >>> # Initializing a CPMAnt cpm-ant-10b style configuration
+    >>> configuration = CpmAntConfig()
+
+    >>> # Initializing a model from the cpm-ant-10b style configuration
+    >>> model = CpmAntModel(configuration)
+
+    >>> # Accessing the model configuration
+    >>> configuration = model.config
     ```"""
-    pretrained_config_archive_map = CONFIG_ARCHIVE_MAP
+
     model_type = "cpmant"
 
     def __init__(

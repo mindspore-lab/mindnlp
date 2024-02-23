@@ -123,6 +123,7 @@ def parse_flag_from_env(key, default=False):
     return _value
 
 _run_slow_tests = parse_flag_from_env("RUN_SLOW", default=False)
+_run_too_slow_tests = parse_flag_from_env("RUN_TOO_SLOW", default=False)
 _run_pipeline_tests = parse_flag_from_env("RUN_PIPELINE_TESTS", default=True)
 
 def slow(test_case):
@@ -134,6 +135,15 @@ def slow(test_case):
     """
     return unittest.skipUnless(_run_slow_tests, "test is slow")(test_case)
 
+def tooslow(test_case):
+    """
+    Decorator marking a test as too slow.
+
+    Slow tests are skipped while they're in the process of being fixed. No test should stay tagged as "tooslow" as
+    these will not be tested by the CI.
+
+    """
+    return unittest.skipUnless(_run_too_slow_tests, "test is too slow")(test_case)
 
 def parse_int_from_env(key, default=None):
     try:

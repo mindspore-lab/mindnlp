@@ -29,7 +29,7 @@ import mindspore.common.dtype as mstype
 from mindspore import nn, ops, Tensor, Parameter
 from mindspore.common._stub_tensor import StubTensor
 from mindspore.nn.layer.conv import _Conv, _deconv_output_length
-from mindspore.common.initializer import initializer, Constant, HeNormal, XavierNormal, Normal, HeUniform, XavierUniform, Uniform, _calculate_fan_in_and_fan_out
+from mindspore.common.initializer import initializer, Normal, HeUniform, Uniform, _calculate_fan_in_and_fan_out
 from mindspore import _checkparam as Validator
 from mindspore.ops import functional as F
 from mindspore.ops._primitive_cache import _get_cache_prim
@@ -974,43 +974,3 @@ class GroupNorm_hijack(nn.GroupNorm_original):
         return o
 
 nn.GroupNorm = GroupNorm_hijack
-
-
-def _Parameter_zeros_(self:Parameter) -> Parameter:
-    return self.set_data(Parameter(initializer('zeros', self.shape, self.dtype)))
-Parameter.zeros_ = _Parameter_zeros_
-
-def _Parameter_ones_(self:Parameter) -> Parameter:
-    return self.set_data(Parameter(initializer('ones', self.shape, self.dtype)))
-Parameter.ones_ = _Parameter_ones_
-
-def _Parameter_constant_(self:Parameter, v) -> Parameter:
-    return self.set_data(Parameter(initializer(Constant(v), self.shape, self.dtype)))
-Parameter.constant_ = _Parameter_constant_
-
-def _Parameter_uniform_(self:Parameter, a:float=0.0, b:float=1.0) -> Parameter:
-    s = (b - a) / 2
-    offset = a + s
-    data = Parameter(initializer(Uniform(s), self.shape, self.dtype))
-    return self.set_data(data + mindspore.tensor(offset, dtype=data.dtype))
-Parameter.uniform_ = _Parameter_uniform_
-
-def _Parameter_normal_(self:Parameter, mean:float=0.0, std:float=1.0) -> Parameter:  # pylint: disable=redefined-outer-name
-    return self.set_data(Parameter(initializer(Normal(std, mean), self.shape, self.dtype)))
-Parameter.normal_ = _Parameter_normal_
-
-def _Parameter_xavier_uniform_(self:Parameter, gain:float=1.0) -> Parameter:
-    return self.set_data(Parameter(initializer(XavierUniform(gain), self.shape, self.dtype)))
-Parameter.xavier_uniform_ = _Parameter_xavier_uniform_
-
-def _Parameter_xavier_normal_(self:Parameter, gain:float=1.0) -> Parameter:
-    return self.set_data(Parameter(initializer(XavierNormal(gain), self.shape, self.dtype)))
-Parameter.xavier_normal_ = _Parameter_xavier_normal_
-
-def _Parameter_kaiming_uniform_(self:Parameter, a:float=0, mode:str='fan_in', nonlinearity:str='leaky_relu') -> Parameter:
-    return self.set_data(Parameter(initializer(HeUniform(a, mode, nonlinearity), self.shape, self.dtype)))
-Parameter.kaiming_uniform_ = _Parameter_kaiming_uniform_
-
-def _Parameter_kaiming_normal_(self:Parameter, a:float=0, mode:str='fan_in', nonlinearity:str='leaky_relu') -> Parameter:
-    return self.set_data(Parameter(initializer(HeNormal(a, mode, nonlinearity), self.shape, self.dtype)))
-Parameter.kaiming_normal_ = _Parameter_kaiming_normal_
