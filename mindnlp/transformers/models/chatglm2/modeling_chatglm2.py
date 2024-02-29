@@ -1211,5 +1211,6 @@ __all__ = [
     'CHATGLM2_6B_PRETRAINED_MODEL_ARCHIVE_LIST',
     'ChatGLM2Model',
     'ChatGLM2PreTrainedModel',
-    'ChatGLM2ForConditionalGeneration'
+    'ChatGLM2ForConditionalGeneration',
+    'ChatGLM2ForSequenceClassification'
 ]

@@ -518,7 +518,7 @@ def custom_multinomial(probabilities, num_samples, replacement=False):
         vals = ops.div(ops.log(random_uniform), probabilities + 1e-10)
         _, samples = ops.top_k(vals, num_samples)
 
-    return samples
+    return samples.astype(mstype.int64)
 
 ops.multinomial = custom_multinomial
 

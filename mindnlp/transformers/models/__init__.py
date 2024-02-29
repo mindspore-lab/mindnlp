@@ -34,6 +34,7 @@ from . import (
     ernie_m,
     chatglm,
     chatglm2,
+    chatglm3,
     gemma,
     gpt,
     gpt2,
@@ -84,6 +85,7 @@ from .ernie_m import *
 from .electra import *
 from .chatglm import *
 from .chatglm2 import *
+from .chatglm3 import *
 from .gemma import *
 from .gpt import *
 from .gpt_neo import *
@@ -134,6 +136,7 @@ __all__.extend(ernie_m.__all__)
 __all__.extend(electra.__all__)
 __all__.extend(chatglm.__all__)
 __all__.extend(chatglm2.__all__)
+__all__.extend(chatglm3.__all__)
 __all__.extend(gpt.__all__)
 __all__.extend(gemma.__all__)
 __all__.extend(gpt_neo.__all__)
