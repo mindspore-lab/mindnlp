@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+"""
+Trainer for training tasks.
+"""
 
-"""
-Engine of text.
-"""
-from .trainer import *
-from .train_args import *
-from .utils import *
-from .callbacks import *
+from .base import Trainer
+
+__all__ = ['Trainer']

@@ -53,10 +53,11 @@ from .import_utils import (
     is_pretty_midi_available,
     is_scipy_available,
     is_pyctcdecode_available,
-    is_vision_available,
+    is_safetensors_available,
     is_sentencepiece_available,
     is_tokenizers_available,
     is_pytesseract_available,
+    # is_vision_available
 )
 from .generic import strtobool
 
@@ -210,12 +211,11 @@ def require_pyctcdecode(test_case):
     """
     return unittest.skipUnless(is_pyctcdecode_available(), "test requires pyctcdecode")(test_case)
 
-def require_vision(test_case):
+def require_safetensors(test_case):
     """
-    Decorator marking a test that requires the vision dependencies. These tests are skipped when torchaudio isn't
-    installed.
+    Decorator marking a test that requires safetensors. These tests are skipped when safetensors isn't installed.
     """
-    return unittest.skipUnless(is_vision_available(), "test requires vision")(test_case)
+    return unittest.skipUnless(is_safetensors_available(), "test requires safetensors")(test_case)
 
 def require_pytesseract(test_case):
     """
@@ -1417,3 +1417,21 @@ def check_json_file_has_correct_format(file_path):
                 left_indent = len(lines[1]) - len(lines[1].lstrip())
                 assert left_indent == 2
             assert lines[-1].strip() == "}"
+
+_run_staging = parse_flag_from_env("MINDNLP_CO_STAGING", default=False)
+
+def is_staging_test(test_case):
+    """
+    Decorator marking a test as a staging test.
+
+    Those tests will run using the staging environment of huggingface.co instead of the real model hub.
+    """
+    if not _run_staging:
+        return unittest.skip("test is staging test")(test_case)
+    else:
+        try:
+            import pytest  # We don't need a hard dependency on pytest in the main library
+        except ImportError:
+            return test_case
+        else:
+            return pytest.mark.is_staging_test()(test_case)

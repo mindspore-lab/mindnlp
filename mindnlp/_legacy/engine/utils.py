@@ -12,11 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+"""
+Utils for engine
+"""
+import random
+import numpy as np
 
-"""
-Engine of text.
-"""
-from .trainer import *
-from .train_args import *
-from .utils import *
-from .callbacks import *
+from ...utils import is_mindspore_available
+
+def set_seed(seed: int):
+    """
+    Helper function for reproducible behavior to set the seed in `random`, `numpy`, `torch` and/or `tf` (if installed).
+
+    Args:
+        seed (`int`): The seed to set.
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    if is_mindspore_available():
+        import mindspore
+        mindspore.set_seed(seed)
