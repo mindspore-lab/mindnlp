@@ -64,6 +64,7 @@ from .import_utils import (
     is_pretty_midi_available,
     is_scipy_available,
     is_pyctcdecode_available,
+    is_vision_available
 )
 from .generic import strtobool
 
@@ -196,6 +197,14 @@ def require_pyctcdecode(test_case):
     Decorator marking a test that requires pyctcdecode
     """
     return unittest.skipUnless(is_pyctcdecode_available(), "test requires pyctcdecode")(test_case)
+
+def require_vision(test_case):
+    """
+    Decorator marking a test that requires the vision dependencies. These tests are skipped when torchaudio isn't
+    installed.
+    """
+    return unittest.skipUnless(is_vision_available(), "test requires vision")(test_case)
+
 
 def cmd_exists(cmd):
     return shutil.which(cmd) is not None

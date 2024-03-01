@@ -27,7 +27,7 @@ import sys
 import warnings
 from types import ModuleType
 from collections import OrderedDict
-from functools import wraps
+from functools import wraps, lru_cache
 from typing import Tuple, Union
 import importlib.util
 
@@ -144,6 +144,20 @@ def is_scipy_available():
 def is_jieba_available():
     return _jieba_available
 
+@lru_cache
+def is_vision_available():
+    _pil_available = importlib.util.find_spec("PIL") is not None
+    if _pil_available:
+        try:
+            package_version = importlib.metadata.version("Pillow")
+        except importlib.metadata.PackageNotFoundError:
+            try:
+                package_version = importlib.metadata.version("Pillow-SIMD")
+            except importlib.metadata.PackageNotFoundError:
+                return False
+        logger.debug(f"Detected PIL version {package_version}")
+    return _pil_available
+
 def is_in_notebook():
     try:
         # Test adapted from tqdm.autonotebook: https://github.com/tqdm/tqdm/blob/master/tqdm/autonotebook.py
@@ -259,6 +273,11 @@ JIEBA_IMPORT_ERROR = """
 jieba`. Please note that you may need to restart your runtime after installation.
 """
 
+VISION_IMPORT_ERROR = """
+{0} requires the PIL library but it was not found in your environment. You can install it with pip:
+`pip install pillow`. Please note that you may need to restart your runtime after installation.
+"""
+
 BACKENDS_MAPPING = OrderedDict(
     [
         ("cython", (is_cython_available, CYTHON_IMPORT_ERROR)),
@@ -272,6 +291,8 @@ BACKENDS_MAPPING = OrderedDict(
         ("pretty_midi", (is_pretty_midi_available, PRETTY_MIDI_IMPORT_ERROR)),
         ("pyctcdecode", (is_pyctcdecode_available, PYCTCDECODE_IMPORT_ERROR)),
         ("jieba", (is_jieba_available, JIEBA_IMPORT_ERROR)),
+        ("vision", (is_vision_available, VISION_IMPORT_ERROR)),
+
     ]
 )
 
