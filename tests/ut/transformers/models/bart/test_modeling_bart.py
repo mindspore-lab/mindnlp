@@ -48,8 +48,6 @@ if is_mindspore_available():
     )
     from mindnlp.transformers.models.bart.modeling_bart import BartDecoder, BartEncoder, shift_tokens_right
 
-# mindspore.set_context(pynative_synchronize=True)
-
 def prepare_bart_inputs_dict(
     config,
     input_ids,

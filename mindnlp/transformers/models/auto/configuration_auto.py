@@ -31,7 +31,9 @@ logger = logging.get_logger(__name__)
 CONFIG_MAPPING_NAMES = OrderedDict(
     [
         # Add configs here
-        ("roberta", "RobertaConfig"),
+        ("albert", "AlbertConfig"),
+        ("autoformer", "AutoformerConfig"),
+        ("bark", "BarkConfig"),
         ("bart", "BartConfig"),
         ("bert", "BertConfig"),
         ("bloom", "BloomConfig"),
@@ -52,6 +54,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ('minicpm', 'MiniCPMConfig'),
         ('mt5', 'MT5Config'),
         ("phi", "PhiConfig"),
+        ("roberta", "RobertaConfig"),
         ('t5', 'T5Config'),
         ('wav2vec2', 'Wav2Vec2Config'),
         ('xlm-roberta', 'XLMRobertaConfig'),

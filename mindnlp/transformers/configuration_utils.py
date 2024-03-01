@@ -28,7 +28,7 @@ from typing import Optional, Tuple, Dict, Union, Any, List
 from mindspore import jit_class
 
 from mindnlp.utils import logging, is_mindspore_available
-from mindnlp.configs import HF_URL_BASE, MS_URL_BASE, CONFIG_NAME
+from mindnlp.configs import CONFIG_NAME
 from mindnlp.utils.download import is_remote_url, download_url, cached_file
 
 logger = logging.get_logger(__name__)
@@ -397,9 +397,9 @@ class PretrainedConfig:
         resume_download = kwargs.pop("resume_download", False)
         proxies = kwargs.pop("proxies", None)
         local_files_only = kwargs.pop("local_files_only", False)
-        from_pt = kwargs.pop("from_pt", True) # reuse
         subfolder = kwargs.pop("subfolder", "")
         token = kwargs.pop('token', None)
+        revision = kwargs.pop('revision', 'main')
 
         pretrained_model_name_or_path = str(pretrained_model_name_or_path)
 
@@ -415,7 +415,6 @@ class PretrainedConfig:
 
         else:
             configuration_file = kwargs.pop("_configuration_file", CONFIG_NAME)
-            endpoint = HF_URL_BASE if from_pt else MS_URL_BASE
 
             try:
                 # Load from local folder or from cache or download from model Hub and cache
@@ -427,9 +426,9 @@ class PretrainedConfig:
                     proxies=proxies,
                     resume_download=resume_download,
                     local_files_only=local_files_only,
+                    revision=revision,
                     token=token,
                     subfolder=subfolder,
-                    endpoint=endpoint
                 )
             except EnvironmentError:
                 # Raise any environment error raise by `cached_file`. It will have a helpful error message adapted to

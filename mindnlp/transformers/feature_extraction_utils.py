@@ -27,7 +27,7 @@ from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 
-from mindnlp.configs import FEATURE_EXTRACTOR_NAME, MS_URL_BASE, HF_URL_BASE
+from mindnlp.configs import FEATURE_EXTRACTOR_NAME
 from mindnlp.utils import (
     TensorType,
     cached_file,
@@ -409,7 +409,7 @@ class FeatureExtractionMixin():
         local_files_only = kwargs.pop("local_files_only", False)
         from_pipeline = kwargs.pop("_from_pipeline", None)
         from_auto_class = kwargs.pop("_from_auto", False)
-        from_pt = kwargs.pop("from_pt", False)
+        revision = kwargs.pop('revision', 'main')
 
         user_agent = {"file_type": "feature extractor", "from_auto_class": from_auto_class}
         if from_pipeline is not None:
@@ -418,8 +418,6 @@ class FeatureExtractionMixin():
         if is_offline_mode() and not local_files_only:
             logger.info("Offline mode: forcing local_files_only=True")
             local_files_only = True
-
-        endpoint = HF_URL_BASE if from_pt else MS_URL_BASE
 
         pretrained_model_name_or_path = str(pretrained_model_name_or_path)
         is_local = os.path.isdir(pretrained_model_name_or_path)
@@ -444,7 +442,7 @@ class FeatureExtractionMixin():
                     resume_download=resume_download,
                     local_files_only=local_files_only,
                     user_agent=user_agent,
-                    endpoint=endpoint,
+                    revision=revision,
                 )
             except EnvironmentError:
                 # Raise any environment error raise by `cached_file`. It will have a helpful error message adapted to

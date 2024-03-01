@@ -266,7 +266,14 @@ def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, bac
     if array.dtype == bfloat16:
         logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
         array = array.astype(np.float16)
-    array = np.lib.stride_tricks.as_strided(array, size, stride)
+    if array.dtype not in (np.uint8, np.bool_):
+        array = np.lib.stride_tricks.as_strided(array, size, stride)
+    else:
+        if stride is not None and len(stride) > 1 and stride[0] == 1 and stride[1] > 1:
+            order = "F"
+        else:
+            order = "C"
+        array = array.reshape(size, order=order)
     param = mindspore.Parameter(array, requires_grad=requires_grad)
     return param
 
@@ -297,7 +304,8 @@ dtype_map = {
     "FloatStorage": np.float32,
     'BFloat16Storage': bfloat16,
     'LongStorage': np.int64,
-    'ByteStorage': np.uint8
+    'ByteStorage': np.uint8,
+    'BoolStorage': np.bool_
 }
 
 element_size_map = {
@@ -305,7 +313,8 @@ element_size_map = {
     "FloatStorage": 3,
     'BFloat16Storage': 2,
     'LongStorage': 4,
-    'ByteStorage': 1
+    'ByteStorage': 1,
+    'BoolStorage': 1
 }
 
 def load(f, pickle_module=pickle, *, mmap=None, **pickle_load_args):

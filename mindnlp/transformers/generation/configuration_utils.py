@@ -25,7 +25,7 @@ import os
 import warnings
 from typing import Any, Dict, Optional, Union
 
-from mindnlp.configs import GENERATION_CONFIG_NAME, HF_URL_BASE, MS_URL_BASE
+from mindnlp.configs import GENERATION_CONFIG_NAME
 from mindnlp.utils import logging, cached_file, download_url, is_remote_url
 
 logger = logging.get_logger(__name__)
@@ -452,11 +452,11 @@ class GenerationConfig:
         resume_download = kwargs.pop("resume_download", False)
         proxies = kwargs.pop("proxies", None)
         subfolder = kwargs.pop("subfolder", "")
-        from_pt = kwargs.pop("from_pt", False)
+        revision = kwargs.pop("revision", "main")
 
         config_path = os.path.join(pretrained_model_name, config_file_name)
         config_path = str(config_path)
-        endpoint = HF_URL_BASE if from_pt else MS_URL_BASE
+
         is_local = os.path.exists(config_path)
         if os.path.isfile(os.path.join(subfolder, config_path)):
             # Special case when config_path is a local file
@@ -478,7 +478,7 @@ class GenerationConfig:
                     resume_download=resume_download,
                     local_files_only=local_files_only,
                     subfolder=subfolder,
-                    endpoint=endpoint
+                    revision=revision
                 )
             except EnvironmentError:
                 # Raise any environment error raise by `cached_file`. It will have a helpful error message adapted to

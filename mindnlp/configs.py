@@ -39,7 +39,7 @@ DEFAULT_ROOT = os.path.join(os.getcwd(), ".mindnlp")
 MS_URL_BASE = "https://modelscope.cn/api/v1/models/mindnlp/{}/repo?Revision=master&FilePath={}"
 # for huggingface url
 HF_ENDPOINT = os.environ.get('HF_ENDPOINT', 'https://hf-mirror.com')
-HF_URL_BASE = HF_ENDPOINT + '/{}/resolve/main/{}'
+HF_URL_BASE = HF_ENDPOINT + '/{}/resolve/{}/{}'
 
 ENV_VARS_TRUE_VALUES = {"1", "ON", "YES", "TRUE"}
 MINDNLP_CACHE = os.getenv("MINDNLP_CACHE", DEFAULT_ROOT)

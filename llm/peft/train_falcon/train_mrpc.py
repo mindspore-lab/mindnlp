@@ -143,8 +143,6 @@ def eval_model(model, optimizer, criterion, eval_dataloader):
 
 
 if __name__ == "__main__":
-    # mindspore.set_context(pynative_synchronize=True)
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--save_dir",

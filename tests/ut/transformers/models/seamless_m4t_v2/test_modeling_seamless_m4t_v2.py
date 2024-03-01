@@ -53,8 +53,6 @@ if is_mindspore_available():
 
     from mindnlp.transformers import SeamlessM4TProcessor
 
-# mindspore.set_context(pynative_synchronize=True)
-
 class SeamlessM4Tv2ModelTester:
     def __init__(
         self,

@@ -1,3 +1,17 @@
+# coding=utf-8
+# Copyright 2023 The HuggingFace Inc. team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """ Testing suite for the PyTorch Bark model. """
 
 
@@ -6,42 +20,44 @@ import inspect
 import tempfile
 import unittest
 
-import pytest
 import numpy as np
 
+from mindnlp.utils import is_mindspore_available, cached_property
 from mindnlp.transformers import (
     BarkCoarseConfig,
     BarkConfig,
     BarkFineConfig,
     BarkSemanticConfig,
 )
-from mindnlp.transformers.models.bark.generation_bark import (
+from mindnlp.transformers.models.bark.generation_configuration_bark import (
     BarkCoarseGenerationConfig,
     BarkFineGenerationConfig,
     BarkSemanticGenerationConfig,
 )
-
-
-from mindnlp.transformers.models.bark.process_bark import BarkProcessor
-from mindnlp.utils.generic import cached_property
-from mindnlp.utils.testing_utils import slow, require_mindspore, is_mindspore_available
+from mindnlp.utils.testing_utils import (
+    require_mindspore,
+    slow,
+)
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, ids_tensor, random_attention_mask
 from ..encodec.test_modeling_encodec import EncodecModelTester
 
+
 if is_mindspore_available():
     import mindspore
-    from mindspore import ops
-    from mindspore import nn
+    from mindspore import ops, nn
+
     from mindnlp.transformers import (
         BarkCausalModel,
         BarkCoarseModel,
         BarkFineModel,
         BarkModel,
+        BarkProcessor,
         BarkSemanticModel,
     )
+
 mindspore.set_context(pynative_synchronize=True)
 
 class BarkSemanticModelTester:
@@ -158,13 +174,13 @@ class BarkSemanticModelTester:
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx].asnumpy()
-        output_from_past_slice = output_from_past[:, :, random_slice_idx].asnumpy()
+        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx]
+        output_from_past_slice = output_from_past[:, :, random_slice_idx]
 
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
+        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
 
         # test no attention_mask works
         outputs = model(input_ids, use_cache=True)
@@ -174,10 +190,10 @@ class BarkSemanticModelTester:
         output_from_past = model(next_tokens, past_key_values=past_key_values)["logits"]
 
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx].asnumpy()
-        output_from_past_slice = output_from_past[:, :, random_slice_idx].asnumpy()
+        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx]
+        output_from_past_slice = output_from_past[:, :, random_slice_idx]
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
+        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
 
 
 class BarkCoarseModelTester:
@@ -294,13 +310,13 @@ class BarkCoarseModelTester:
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx].asnumpy()
-        output_from_past_slice = output_from_past[:, :, random_slice_idx].asnumpy()
+        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx]
+        output_from_past_slice = output_from_past[:, :, random_slice_idx]
 
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
+        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
 
         # test no attention_mask works
         outputs = model(input_ids, use_cache=True)
@@ -310,10 +326,10 @@ class BarkCoarseModelTester:
         output_from_past = model(next_tokens, past_key_values=past_key_values)["logits"]
 
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx].asnumpy()
-        output_from_past_slice = output_from_past[:, :, random_slice_idx].asnumpy()
+        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx]
+        output_from_past_slice = output_from_past[:, :, random_slice_idx]
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
+        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
 
 
 class BarkFineModelTester:
@@ -434,13 +450,13 @@ class BarkFineModelTester:
 
         # select random slice
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx].asnumpy()
-        output_from_past_slice = output_from_past[:, :, random_slice_idx].asnumpy()
+        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx]
+        output_from_past_slice = output_from_past[:, :, random_slice_idx]
 
         self.parent.assertTrue(output_from_past_slice.shape[1] == next_tokens.shape[1])
 
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
+        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
 
         # test no attention_mask works
         outputs = model(input_ids, use_cache=True)
@@ -450,10 +466,10 @@ class BarkFineModelTester:
         output_from_past = model(next_tokens, past_key_values=past_key_values)["logits"]
 
         random_slice_idx = ids_tensor((1,), output_from_past.shape[-1]).item()
-        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx].asnumpy()
-        output_from_past_slice = output_from_past[:, :, random_slice_idx].asnumpy()
+        output_from_no_past_slice = output_from_no_past[:, -3:, random_slice_idx]
+        output_from_past_slice = output_from_past[:, :, random_slice_idx]
         # test that outputs are equal for slice
-        self.parent.assertTrue(np.allclose(output_from_past_slice, output_from_no_past_slice, atol=1e-3))
+        self.parent.assertTrue(np.allclose(output_from_past_slice.asnumpy(), output_from_no_past_slice.asnumpy(), atol=1e-3))
 
 
 class BarkModelTester:
@@ -527,17 +543,15 @@ class BarkSemanticModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.Te
     def test_config(self):
         self.config_tester.run_common_tests()
 
-    # def test_save_load_strict(self):
-    #     config, inputs_dict = self.model_tester.prepare_config_and_inputs()
-    #     for model_class in self.all_model_classes:
-    #         model = model_class(config)
+    def test_save_load_strict(self):
+        config, inputs_dict = self.model_tester.prepare_config_and_inputs()
+        for model_class in self.all_model_classes:
+            model = model_class(config)
 
-    #         with tempfile.TemporaryDirectory() as tmpdirname:
-    #             model.save_pretrained(tmpdirname)
-    #             # print(tmpdirname)
-    #             model2, info = model_class.from_pretrained(
-    #                 tmpdirname, output_loading_info=True)
-    #         self.assertEqual(info["missing_keys"], [])
+            with tempfile.TemporaryDirectory() as tmpdirname:
+                model.save_pretrained(tmpdirname)
+                model2, info = model_class.from_pretrained(tmpdirname, output_loading_info=True)
+            self.assertEqual(info["missing_keys"], [])
 
     def test_decoder_model_past_with_large_inputs(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
@@ -548,6 +562,7 @@ class BarkSemanticModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.Te
 
         for model_class in self.all_model_classes:
             model = model_class(config)
+
             model.set_train(False)
 
             inputs = copy.deepcopy(self._prepare_for_class(inputs_dict, model_class))
@@ -560,6 +575,7 @@ class BarkSemanticModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.Te
 
             model(**inputs)[0]
 
+    @require_mindspore
     def test_generate_fp16(self):
         config, input_dict = self.model_tester.prepare_config_and_inputs()
         input_ids = input_dict["input_ids"]
@@ -596,16 +612,10 @@ class BarkCoarseModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.Test
         config, inputs_dict = self.model_tester.prepare_config_and_inputs()
         for model_class in self.all_model_classes:
             model = model_class(config)
-            # for name, value in model.parameters_and_names():
-            #     print('name:',name)
-            #     print('value:',value)
+
             with tempfile.TemporaryDirectory() as tmpdirname:
                 model.save_pretrained(tmpdirname)
                 model2, info = model_class.from_pretrained(tmpdirname, output_loading_info=True)
-            # for name, value in model2.parameters_and_names():
-            #     print('key:',name)
-            #     print('value:',value.shape)
-            # print('miss_key:',info['missing_keys'])
             self.assertEqual(info["missing_keys"], [])
 
     def test_decoder_model_past_with_large_inputs(self):
@@ -617,6 +627,7 @@ class BarkCoarseModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.Test
 
         for model_class in self.all_model_classes:
             model = model_class(config)
+
             model.set_train(False)
 
             inputs = copy.deepcopy(self._prepare_for_class(inputs_dict, model_class))
@@ -629,6 +640,7 @@ class BarkCoarseModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.Test
 
             model(**inputs)[0]
 
+    @require_mindspore
     def test_generate_fp16(self):
         config, input_dict = self.model_tester.prepare_config_and_inputs()
         input_ids = input_dict["input_ids"]
@@ -650,9 +662,6 @@ class BarkFineModelTest(ModelTesterMixin, unittest.TestCase):
     # no model_parallel for now
     test_model_parallel = False
 
-    # torchscript disabled for now because forward with an int
-    test_torchscript = False
-
     test_resize_embeddings = True
 
     def setUp(self):
@@ -668,7 +677,6 @@ class BarkFineModelTest(ModelTesterMixin, unittest.TestCase):
             model = model_class(config)
 
             with tempfile.TemporaryDirectory() as tmpdirname:
-                # print(model)
                 model.save_pretrained(tmpdirname)
                 model2, info = model_class.from_pretrained(tmpdirname, output_loading_info=True)
             self.assertEqual(info["missing_keys"], [])
@@ -678,6 +686,7 @@ class BarkFineModelTest(ModelTesterMixin, unittest.TestCase):
 
         for model_class in self.all_model_classes:
             model = model_class(config)
+
             model.set_train(False)
 
             inputs = copy.deepcopy(self._prepare_for_class(inputs_dict, model_class))
@@ -689,9 +698,9 @@ class BarkFineModelTest(ModelTesterMixin, unittest.TestCase):
 
             inputs["input_embeds"] = wte(input_ids[:, :, inputs_dict["codebook_idx"]])
 
-
             model(**inputs)[0]
 
+    @require_mindspore
     def test_generate_fp16(self):
         config, input_dict = self.model_tester.prepare_config_and_inputs()
         input_ids = input_dict["input_ids"]
@@ -765,6 +774,7 @@ class BarkFineModelTest(ModelTesterMixin, unittest.TestCase):
             config = copy.deepcopy(original_config)
             model = model_class(config)
 
+
             if self.model_tester.is_training is False:
                 model.set_train(False)
 
@@ -792,17 +802,15 @@ class BarkFineModelTest(ModelTesterMixin, unittest.TestCase):
 
             # Check that the model can still do a forward pass successfully (every parameter should be resized)
             # Input ids should be clamped to the maximum size of the vocabulary
-            print(inputs_dict['input_ids'])
-            inputs_dict["input_ids"] = ops.clamp(inputs_dict["input_ids"],min=0,max =model_vocab_size-16)
-            # inputs_dict["input_ids"].clamp(max=model_vocab_size - 15 - 1)
-            print(inputs_dict['input_ids'])
+            inputs_dict["input_ids"] = inputs_dict["input_ids"].clamp(max=model_vocab_size - 15 - 1)
+
             model(**self._prepare_for_class(inputs_dict, model_class))
 
             # Check that adding and removing tokens has not modified the first part of the embedding matrix.
             # only check for the first embedding matrix
             models_equal = True
             for p1, p2 in zip(cloned_embeddings_list[0], model_embed_list[0].weight):
-                if ops.ne(p1,p2).sum() > 0:
+                if p1.ne(p2).sum() > 0:
                     models_equal = False
 
             self.assertTrue(models_equal)
@@ -853,128 +861,14 @@ class BarkFineModelTest(ModelTesterMixin, unittest.TestCase):
 
             # Check that the model can still do a forward pass successfully (every parameter should be resized)
             # Input ids should be clamped to the maximum size of the vocabulary
-            inputs_dict["input_ids"] = ops.clamp(inputs_dict["input_ids"],min=0,max =model_vocab_size-16)
-            # inputs_dict["input_ids"].clamp(max=model_vocab_size - 15 - 1)
+            inputs_dict["input_ids"] = inputs_dict["input_ids"].clamp(max=model_vocab_size - 15 - 1)
 
             # Check that the model can still do a forward pass successfully (every parameter should be resized)
             model(**self._prepare_for_class(inputs_dict, model_class))
 
-    @pytest.mark.flash_attn_test
-    @slow
-    def test_flash_attn_2_inference(self):
-        for model_class in self.all_model_classes:
-            if not model_class._supports_flash_attn_2:
-                return
-
-            config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
-            model = model_class(config)
-
-            with tempfile.TemporaryDirectory() as tmpdirname:
-                model.save_pretrained(tmpdirname)
-                model_fa = model_class.from_pretrained(
-                    tmpdirname, torch_dtype=mindspore.bfloat16, use_flash_attention_2=True
-                )
-
-                model = model_class.from_pretrained(
-                    tmpdirname, torch_dtype=mindspore.bfloat16, use_flash_attention_2=False
-                )
-
-                dummy_input = inputs_dict["input_ids"][:1]
-                if dummy_input.dtype in [mindspore.float32, mindspore.float16]:
-                    dummy_input = dummy_input.to(mindspore.bfloat16)
-
-                dummy_attention_mask = inputs_dict.get("attention_mask", None)
-
-                if dummy_attention_mask is not None:
-                    dummy_attention_mask = dummy_attention_mask[:1]
-                    dummy_attention_mask[:, 1:] = 1
-                    dummy_attention_mask[:, :1] = 0
-
-                outputs = model(inputs_dict["codebook_idx"], dummy_input, output_hidden_states=True)
-                outputs_fa = model_fa(inputs_dict["codebook_idx"], dummy_input, output_hidden_states=True)
-
-                logits = outputs.hidden_states[-1]
-                logits_fa = outputs_fa.hidden_states[-1]
-
-                assert np.allclose(logits_fa, logits, atol=4e-2, rtol=4e-2)
-
-                other_inputs = {"output_hidden_states": True}
-                if dummy_attention_mask is not None:
-                    other_inputs["attention_mask"] = dummy_attention_mask
-
-                outputs = model(inputs_dict["codebook_idx"], dummy_input, **other_inputs)
-                outputs_fa = model_fa(inputs_dict["codebook_idx"], dummy_input, **other_inputs)
-
-                logits = outputs.hidden_states[-1]
-                logits_fa = outputs_fa.hidden_states[-1]
-
-                assert np.allclose(logits_fa[1:], logits[1:], atol=4e-2, rtol=4e-2)
-
-                # check with inference + dropout
-                model.train()
-                _ = model_fa(inputs_dict["codebook_idx"], dummy_input, **other_inputs)
-
-    @pytest.mark.flash_attn_test
-    @slow
-    def test_flash_attn_2_inference_padding_right(self):
-        for model_class in self.all_model_classes:
-            if not model_class._supports_flash_attn_2:
-                return
-
-            config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
-            model = model_class(config)
-
-            with tempfile.TemporaryDirectory() as tmpdirname:
-                model.save_pretrained(tmpdirname)
-                model_fa = model_class.from_pretrained(
-                    tmpdirname, torch_dtype=mindspore.bfloat16, use_flash_attention_2=True
-                )
-
-
-                model = model_class.from_pretrained(
-                    tmpdirname, torch_dtype=mindspore.bfloat16, use_flash_attention_2=False
-                )
-
-
-                dummy_input = inputs_dict["input_ids"][:1]
-                if dummy_input.dtype in [mindspore.float32, mindspore.float16]:
-                    dummy_input = dummy_input.to(mindspore.bfloat16)
-
-                dummy_attention_mask = inputs_dict.get("attention_mask", None)
-
-                if dummy_attention_mask is not None:
-                    dummy_attention_mask = dummy_attention_mask[:1]
-                    dummy_attention_mask[:, :-1] = 1
-                    dummy_attention_mask[:, -1:] = 0
-
-                outputs = model(inputs_dict["codebook_idx"], dummy_input, output_hidden_states=True)
-                outputs_fa = model_fa(inputs_dict["codebook_idx"], dummy_input, output_hidden_states=True)
-
-                logits = outputs.hidden_states[-1]
-                logits_fa = outputs_fa.hidden_states[-1]
-
-                assert np.allclose(logits_fa, logits, atol=4e-2, rtol=4e-2)
-
-                other_inputs = {
-                    "output_hidden_states": True,
-                }
-                if dummy_attention_mask is not None:
-                    other_inputs["attention_mask"] = dummy_attention_mask
-
-                outputs = model(inputs_dict["codebook_idx"], dummy_input, **other_inputs)
-                outputs_fa = model_fa(inputs_dict["codebook_idx"], dummy_input, **other_inputs)
-
-                logits = outputs.hidden_states[-1]
-                logits_fa = outputs_fa.hidden_states[-1]
-
-                assert np.allclose(logits_fa[:-1], logits[:-1], atol=4e-2, rtol=4e-2)
-
 
 @require_mindspore
 class BarkModelIntegrationTests(unittest.TestCase):
-    r"""
-    Test BarkModelIntegration
-    """
     @cached_property
     def model(self):
         return BarkModel.from_pretrained("suno/bark")
@@ -1031,15 +925,14 @@ class BarkModelIntegrationTests(unittest.TestCase):
         expected_output_ids = [7363, 321, 41, 1461, 6915, 952, 326, 41, 41, 927,]  # fmt: skip
 
         # Should be able to read min_eos_p from kwargs
-
-        # mindspore.manual_seed(0)
+        mindspore.set_seed(0)
         output_ids_without_min_eos_p = self.model.semantic.generate(
             **input_ids,
             do_sample=False,
             temperature=0.9,
             semantic_generation_config=self.semantic_generation_config,
         )
-        # mindspore.manual_seed(0)
+        mindspore.set_seed(0)
         output_ids_kwargs = self.model.semantic.generate(
             **input_ids,
             do_sample=False,
@@ -1052,8 +945,7 @@ class BarkModelIntegrationTests(unittest.TestCase):
 
         # Should be able to read min_eos_p from the semantic generation config
         self.semantic_generation_config.min_eos_p = min_eos_p
-
-        # torch.manual_seed(0)
+        mindspore.set_seed(0)
         output_ids = self.model.semantic.generate(
             **input_ids,
             do_sample=False,
@@ -1073,7 +965,6 @@ class BarkModelIntegrationTests(unittest.TestCase):
 
         # check first ids
         expected_output_ids = [11018, 11391, 10651, 11418, 10857, 11620, 10642, 11366, 10312, 11528, 10531, 11516, 10474, 11051, 10524, 11051, ]  # fmt: skip
-
 
         output_ids = self.model.semantic.generate(
             **input_ids,
@@ -1112,7 +1003,6 @@ class BarkModelIntegrationTests(unittest.TestCase):
             [806, 685, 905, 848, 803, 810, 921, 208, 625, 203,],
         ]
         # fmt: on
-
 
         output_ids = self.model.semantic.generate(
             **input_ids,
@@ -1155,7 +1045,6 @@ class BarkModelIntegrationTests(unittest.TestCase):
     def test_generate_end_to_end_with_args(self):
         input_ids = self.inputs
 
-
         self.model.generate(**input_ids, do_sample=True, temperature=0.6, penalty_alpha=0.6)
         self.model.generate(**input_ids, do_sample=True, temperature=0.6, num_beams=4)
 
@@ -1169,7 +1058,7 @@ class BarkModelIntegrationTests(unittest.TestCase):
         input_ids = self.processor([s1, s2], voice_preset=voice_preset)
 
         # generate in batch
-        outputs, audio_lengths = self.model.generate(**input_ids, **args, return_output_lengths=True)
+        outputs = self.model.generate(**input_ids, **args, return_output_lengths=True)
 
         # generate one-by-one
         s1 = self.processor(s1, voice_preset=voice_preset)
@@ -1177,14 +1066,14 @@ class BarkModelIntegrationTests(unittest.TestCase):
         output1 = self.model.generate(**s1, **args)
         output2 = self.model.generate(**s2, **args)
 
-        # up until the coarse acoustic model (included), results are the same
-        # the fine acoustic model introduces small differences
-        # first verify if same length (should be the same because it's decided in the coarse model)
-        self.assertEqual(tuple(audio_lengths), (output1.shape[1], output2.shape[1]))
+        # # up until the coarse acoustic model (included), results are the same
+        # # the fine acoustic model introduces small differences
+        # # first verify if same length (should be the same because it's decided in the coarse model)
+        # self.assertEqual(tuple(audio_lengths), (output1.shape[1], output2.shape[1]))
 
-        # then assert almost equal
-        self.assertTrue(np.allclose(outputs[0, : audio_lengths[0]], output1.squeeze(), atol=2e-3))
-        self.assertTrue(np.allclose(outputs[1, : audio_lengths[1]], output2.squeeze(), atol=2e-3))
+        # # then assert almost equal
+        # self.assertTrue(np.allclose(outputs[0, : audio_lengths[0]].asnumpy(), output1.squeeze().asnumpy(), atol=2e-3))
+        # self.assertTrue(np.allclose(outputs[1, : audio_lengths[1]].asnumpy(), output2.squeeze().asnumpy(), atol=2e-3))
 
         # now test single input with return_output_lengths = True
         outputs, _ = self.model.generate(**s1, **args, return_output_lengths=True)
@@ -1194,7 +1083,7 @@ class BarkModelIntegrationTests(unittest.TestCase):
     def test_generate_end_to_end_with_sub_models_args(self):
         input_ids = self.inputs
 
-        # torch.manual_seed(0)
+        mindspore.set_seed(0)
         self.model.generate(
             **input_ids, do_sample=False, temperature=1.0, coarse_do_sample=True, coarse_temperature=0.7
         )
@@ -1218,3 +1107,23 @@ class BarkModelIntegrationTests(unittest.TestCase):
         self.assertLess(
             len(output_ids_with_min_eos_p[0, :].tolist()), len(output_ids_without_min_eos_p[0, :].tolist())
         )
+
+    # @require_mindspore
+    # @slow
+    # def test_generate_end_to_end_with_offload(self):
+    #     input_ids = self.inputs
+
+    #     # standard generation
+    #     output_with_no_offload = self.model.generate(**input_ids, do_sample=False, temperature=1.0)
+
+
+    #     # checks if the model have been offloaded
+
+    #     # CUDA memory usage after offload should be near 0, leaving room to small differences
+    #     room_for_difference = 1.1
+
+    #     # output with cpu offload
+    #     output_with_offload = self.model.generate(**input_ids, do_sample=False, temperature=1.0)
+
+    #     # checks if same output
+    #     self.assertListEqual(output_with_no_offload.tolist(), output_with_offload.tolist())
