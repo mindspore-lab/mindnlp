@@ -32,6 +32,7 @@ GENERATION_CONFIG_NAME = "generation_config.json"
 TOKENIZER_CONFIG_FILE = "tokenizer_config.json"
 
 FEATURE_EXTRACTOR_NAME = "preprocessor_config.json"
+IMAGE_PROCESSOR_NAME = FEATURE_EXTRACTOR_NAME
 
 DEFAULT_ROOT = os.path.join(os.getcwd(), ".mindnlp")
 # for modelscope models
@@ -49,3 +50,7 @@ REPO_TYPES = [None, REPO_TYPE_MODEL, REPO_TYPE_DATASET]
 
 # Token
 HF_TOKEN = os.environ.get('HF_TOKEN', None)
+
+# Values
+OPENAI_CLIP_MEAN = [0.48145466, 0.4578275, 0.40821073]
+OPENAI_CLIP_STD = [0.26862954, 0.26130258, 0.27577711]

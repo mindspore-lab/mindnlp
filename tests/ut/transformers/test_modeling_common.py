@@ -379,6 +379,7 @@ class ModelTesterMixin:
             base_class_copy.init_weights = _mock_all_init_weights
 
             model = model_class(config)
+
             # check that certain keys didn't get saved with the model
             with tempfile.TemporaryDirectory() as tmpdirname:
                 model.config.save_pretrained(tmpdirname)
@@ -1257,7 +1258,6 @@ class ModelTesterMixin:
                 else:
                     expected_missing = set(model_reloaded._keys_to_ignore_on_load_missing)
 
-                print(missed_missing, expected_missing)
                 self.assertEqual(
                     missed_missing,
                     expected_missing,

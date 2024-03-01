@@ -34,7 +34,7 @@ import re
 import json
 import collections
 from dataclasses import dataclass
-from typing import Union, Optional, Tuple, OrderedDict, Callable, Dict, List
+from typing import Union, Optional, Tuple, Callable, Dict, List
 from contextlib import contextmanager
 from tqdm.autonotebook import tqdm
 
@@ -106,8 +106,11 @@ def set_initialized_submodules(model: nn.Cell, state_dict_keys):
 
     not_initialized_submodules = {}
     for module_name, module in model.cells_and_names():
-        loaded_keys = {k.replace(f"{module_name}.", "") for k in state_dict_keys if k.startswith(f"{module_name}.")}
-        params_keys = {k.replace(f"{module_name}.", "") for k in module.parameters_dict().keys() if k.startswith(f"{module_name}.")}
+        if module_name:
+            loaded_keys = {k.replace(f"{module_name}.", "") for k in state_dict_keys if k.startswith(f"{module_name}.")}
+        else:
+            loaded_keys = set(state_dict_keys)
+        params_keys = {k.replace(f"{module_name}.", "") for k in module.parameters_dict(recurse=False).keys()}
         # NOTE: monkey patching weight_norm
         loaded_keys.update(fix_weight_norm_loaded_keys(loaded_keys))
 
@@ -117,6 +120,7 @@ def set_initialized_submodules(model: nn.Cell, state_dict_keys):
             not_initialized_submodules[module_name] = module
 
     return not_initialized_submodules
+
 
 class CellUtilMixin:
     """
@@ -1157,12 +1161,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
                 if id(param) in param_id_set:
                     # for tied params
-                    if pname_in_net in keys_missing:
-                        keys_missing.remove(pname_in_net)
-
-                    if param_name in keys_missing:
-                        keys_missing.remove(param_name)
-
                     if param_name in keys_unexpected:
                         keys_unexpected.remove(param_name)
                     continue
@@ -1405,14 +1403,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             param_set.add(param_id)
         return total
 
-    def parameters_dict(self, recurse=True):
-        """
-        fix ignore tied weights
-        """
-        param_dict = OrderedDict()
-        for name, param in self.parameters_and_names(expand=recurse):
-            param_dict[name] = param
-        return param_dict
 
     def trainable_params(self, recurse=True):
         """

@@ -20,6 +20,7 @@
 Injection mindspore.nn for MindNLP
 """
 import operator
+from typing import OrderedDict
 from functools import reduce, partial
 import math
 from packaging import version
@@ -931,6 +932,18 @@ def _cells_and_names(self, name_prefix=''):
                 yield ele
 
 nn.Cell.cells_and_names = _cells_and_names
+
+def parameters_dict(self, recurse=True):
+    """
+    fix ignore tied weights
+    """
+    param_dict = OrderedDict()
+    for name, param in self.parameters_and_names(expand=recurse):
+        param_dict[name] = param
+    return param_dict
+
+nn.Cell.parameters_dict = parameters_dict
+
 
 nn.LayerNorm = LayerNorm
 nn.Conv1d = Conv1d
