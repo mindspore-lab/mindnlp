@@ -44,7 +44,6 @@ import numpy as np
 from tokenizers import AddedToken
 from tokenizers import Encoding as EncodingFast
 
-from mindnlp.configs import HF_URL_BASE, MS_URL_BASE
 from mindnlp.utils import (
     ExplicitEnum,
     PaddingStrategy,
@@ -1604,9 +1603,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         resume_download = kwargs.pop("resume_download", False)
         proxies = kwargs.pop("proxies", None)
         subfolder = kwargs.pop("subfolder", None)
-        from_pt = kwargs.pop("from_pt", True)
-
-        endpoint = HF_URL_BASE if from_pt else MS_URL_BASE
+        revision = kwargs.pop("revision", "main")
 
         if is_offline_mode() and not local_files_only:
             logger.info("Offline mode: forcing local_files_only=True")
@@ -1656,7 +1653,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
                     local_files_only=local_files_only,
                     token=token,
                     subfolder=subfolder,
-                    endpoint=endpoint,
+                    revision=revision,
                     _raise_exceptions_for_missing_entries=False,
                     _raise_exceptions_for_connection_errors=False,
                 )
@@ -1689,7 +1686,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
                     local_files_only=local_files_only,
                     token=token,
                     subfolder=subfolder,
-                    endpoint=endpoint,
+                    revision=revision,
                     _raise_exceptions_for_missing_entries=False,
                     _raise_exceptions_for_connection_errors=False,
                 )

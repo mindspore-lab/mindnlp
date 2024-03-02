@@ -7,7 +7,6 @@ import random
 from mindnlp.transformers import AutoTokenizer, AutoModelForSeq2SeqLM, AutoConfig
 from mindnlp.utils.testing_utils import require_mindspore, slow
 
-# mindspore.set_context(pynative_synchronize=True)
 
 def set_random_seed(seed):
     import random

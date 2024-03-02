@@ -556,11 +556,11 @@ def get_tokenizer_config(
         resume_download=resume_download,
         proxies=proxies,
         local_files_only=local_files_only,
+        revision=revision,
         token=token,
         subfolder=subfolder,
         _raise_exceptions_for_missing_entries=False,
         _raise_exceptions_for_connection_errors=False,
-        endpoint=endpoint
     )
     if resolved_config_file is None:
         logger.info("Could not locate the tokenizer configuration file, will try to use the model config instead.")

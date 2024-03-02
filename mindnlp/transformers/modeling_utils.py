@@ -44,7 +44,7 @@ from mindspore import load_checkpoint, save_checkpoint
 from mindspore import nn, ops, Tensor, Parameter
 from mindspore._c_expression import Tensor as Tensor_
 
-from mindnlp.configs import MS_URL_BASE, HF_URL_BASE, PT_WEIGHTS_NAME, WEIGHTS_NAME, WEIGHTS_INDEX_NAME, PT_WEIGHTS_INDEX_NAME, \
+from mindnlp.configs import PT_WEIGHTS_NAME, WEIGHTS_NAME, WEIGHTS_INDEX_NAME, PT_WEIGHTS_INDEX_NAME, \
     SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
 from mindnlp.utils.download import is_remote_url, download_url, cached_file, get_checkpoint_shard_files
 from mindnlp.utils import convert_file_size_to_int, logging, ModelOutput, is_safetensors_available
@@ -811,6 +811,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         variant = kwargs.pop("variant", None)
         ms_dtype = kwargs.pop("ms_dtype", None)
         _ = kwargs.pop('low_cpu_mem_usage', None)
+        revision = kwargs.pop('revision', 'main')
 
         if use_safetensors is None and not is_safetensors_available():
             use_safetensors = False
@@ -822,7 +823,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             config, model_kwargs = cls.config_class.from_pretrained(
                 config_path,
                 *model_args,
-                from_pt=from_pt,
                 cache_dir=cache_dir,
                 return_unused_kwargs=True,
                 force_download=force_download,
@@ -834,7 +834,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         else:
             model_kwargs = kwargs
 
-        endpoint = HF_URL_BASE if from_pt else MS_URL_BASE
         # Load model
         if pretrained_model_name_or_path is not None:
             pretrained_model_name_or_path = str(pretrained_model_name_or_path)
@@ -917,7 +916,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                         "local_files_only": local_files_only,
                         "subfolder": subfolder,
                         "_raise_exceptions_for_missing_entries": False,
-                        'endpoint': endpoint,
+                        'revision': revision,
                         "token": token
                     }
                     # try safetensors
@@ -988,7 +987,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                         "local_files_only": local_files_only,
                         "subfolder": subfolder,
                         "_raise_exceptions_for_missing_entries": False,
-                        'endpoint': endpoint,
                         'token': token
                     }
 
@@ -1042,7 +1040,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 local_files_only=local_files_only,
                 token=token,
                 subfolder=subfolder,
-                endpoint=endpoint
+                revision=revision
             )
 
         if pretrained_model_name_or_path is None and state_dict is None:
@@ -1280,7 +1278,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     proxies=proxies,
                     local_files_only=local_files_only,
                     subfolder=subfolder,
-                    endpoint=endpoint,
+                    revision=revision,
                     **kwargs,
                 )
             except OSError:

@@ -12,29 +12,65 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=missing-class-docstring
 """
 Bark config
 """
 import os
 from typing import Dict, Optional, Union
-from mindspore import log as logger
 
+from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
 from ..auto import CONFIG_MAPPING
 
 
+logger = logging.get_logger(__name__)
+
 
 BARK_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "bark":       "https://huggingface.co/bark/resolve/main/config.json",
-    "bark_small": "https://huggingface.co/bark_small/resolve/main/config.json",
+    "suno/bark-small": "https://huggingface.co/suno/bark-small/resolve/main/config.json",
+    "suno/bark": "https://huggingface.co/suno/bark/resolve/main/config.json",
 }
 
-__all__ = ["BarkSubModelConfig", "BarkConfig", "BarkSemanticConfig", "BarkCoarseConfig", "BarkFineConfig"]
+BARK_SUBMODELCONFIG_START_DOCSTRING = """
+    This is the configuration class to store the configuration of a [`{model}`]. It is used to instantiate the model
+    according to the specified arguments, defining the model architecture. Instantiating a configuration with the
+    defaults will yield a similar configuration to that of the Bark [suno/bark](https://huggingface.co/suno/bark)
+    architecture.
+
+    Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
+    documentation from [`PretrainedConfig`] for more information.
+
+    Args:
+        block_size (`int`, *optional*, defaults to 1024):
+            The maximum sequence length that this model might ever be used with. Typically set this to something large
+            just in case (e.g., 512 or 1024 or 2048).
+        input_vocab_size (`int`, *optional*, defaults to 10_048):
+            Vocabulary size of a Bark sub-model. Defines the number of different tokens that can be represented by the
+            `inputs_ids` passed when calling [`{model}`]. Defaults to 10_048 but should be carefully thought with
+            regards to the chosen sub-model.
+        output_vocab_size (`int`, *optional*, defaults to 10_048):
+            Output vocabulary size of a Bark sub-model. Defines the number of different tokens that can be represented
+            by the: `output_ids` when passing forward a [`{model}`]. Defaults to 10_048 but should be carefully thought
+            with regards to the chosen sub-model.
+        num_layers (`int`, *optional*, defaults to 12):
+            Number of hidden layers in the given sub-model.
+        num_heads (`int`, *optional*, defaults to 12):
+            Number of attention heads for each attention layer in the Transformer architecture.
+        hidden_size (`int`, *optional*, defaults to 768):
+            Dimensionality of the "intermediate" (often named feed-forward) layer in the architecture.
+        dropout (`float`, *optional*, defaults to 0.0):
+            The dropout probability for all fully connected layers in the embeddings, encoder, and pooler.
+        bias (`bool`, *optional*, defaults to `True`):
+            Whether or not to use bias in the linear layers and layer norm layers.
+        initializer_range (`float`, *optional*, defaults to 0.02):
+            The standard deviation of the truncated_normal_initializer for initializing all weight matrices.
+        use_cache (`bool`, *optional*, defaults to `True`):
+            Whether or not the model should return the last key/values attentions (not used by all models).
+"""
+
 
 class BarkSubModelConfig(PretrainedConfig):
-    r"""
-    BarkSubModelConfig
-    """
     model_type = "bark_module"
     keys_to_ignore_at_inference = ["past_key_values"]
 
@@ -53,7 +89,7 @@ class BarkSubModelConfig(PretrainedConfig):
         num_layers=12,
         num_heads=12,
         hidden_size=768,
-        dropout=0.1,
+        dropout=0.0,
         bias=True,  # True: bias in Linears and LayerNorms, like GPT-2. False: a bit better and faster
         initializer_range=0.02,
         use_cache=True,
@@ -85,7 +121,6 @@ class BarkSubModelConfig(PretrainedConfig):
         kwargs["force_download"] = force_download
         kwargs["local_files_only"] = local_files_only
 
-
         config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
 
         # get the config dict if we are loading from Bark
@@ -102,21 +137,14 @@ class BarkSubModelConfig(PretrainedConfig):
 
 
 class BarkSemanticConfig(BarkSubModelConfig):
-    r"""
-    BarkSemanticConfig
-    """
     model_type = "semantic"
 
+
 class BarkCoarseConfig(BarkSubModelConfig):
-    r"""
-    BarkCoarseConfig
-    """
     model_type = "coarse_acoustics"
 
+
 class BarkFineConfig(BarkSubModelConfig):
-    r"""
-    BarkFineConfig
-    """
     model_type = "fine_acoustics"
 
     def __init__(self, tie_word_embeddings=True, n_codes_total=8, n_codes_given=1, **kwargs):
@@ -124,6 +152,7 @@ class BarkFineConfig(BarkSubModelConfig):
         self.n_codes_given = n_codes_given
 
         super().__init__(tie_word_embeddings=tie_word_embeddings, **kwargs)
+
 
 class BarkConfig(PretrainedConfig):
     """
@@ -237,3 +266,12 @@ class BarkConfig(PretrainedConfig):
             codec_config=codec_config.to_dict(),
             **kwargs,
         )
+
+
+__all__ = [
+    "BARK_PRETRAINED_CONFIG_ARCHIVE_MAP",
+    "BarkCoarseConfig",
+    "BarkConfig",
+    "BarkFineConfig",
+    "BarkSemanticConfig",
+]

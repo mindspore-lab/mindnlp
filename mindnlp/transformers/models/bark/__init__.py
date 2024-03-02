@@ -16,12 +16,14 @@
 Encodec Model init
 """
 
-from .import modeling_bark, configuration_bark, generation_bark
+from .import generation_configuration_bark, modeling_bark, configuration_bark, processing_bark
 from .configuration_bark import *
-from .generation_bark import *
+from .generation_configuration_bark import *
 from .modeling_bark import *
+from .processing_bark import *
 
 __all__ = []
 __all__.extend(modeling_bark.__all__)
+__all__.extend(processing_bark.__all__)
 __all__.extend(configuration_bark.__all__)
-# __all__.extend(generation_bark.__all__)
+__all__.extend(generation_configuration_bark.__all__)

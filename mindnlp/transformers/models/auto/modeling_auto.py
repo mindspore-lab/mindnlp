@@ -30,6 +30,9 @@ logger = logging.get_logger(__name__)
 MODEL_MAPPING_NAMES = OrderedDict(
     [
         # Base model mapping
+        ("albert", "AlbertModel"),
+        ("autoformer", "AutoformerModel"),
+        ("bark", "BarkModel"),
         ("bart", "BartModel"),
         ("bert", "BertModel"),
         ("bloom", "BloomModel"),
@@ -62,6 +65,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
 MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
     [
         # Model for pre-training mapping
+        ("albert", "AlbertForPreTraining"),
         ("bert", "BertForPreTraining"),
         ("gpt_pangu", "GPTPanguForCausalLM"),
         ("bloom", "BloomForCausalLM"),
@@ -74,6 +78,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
 MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
     [
         # Model with LM heads mapping
+        ("albert", "AlbertForMaskedLM"),
         ("bert", "BertForMaskedLM"),
         ("bloom", "BloomForCausalLM"),
         ("cpmant", "CpmAntForCausalLM"),
@@ -207,6 +212,7 @@ MODEL_FOR_VISION_2_SEQ_MAPPING_NAMES = OrderedDict(
 MODEL_FOR_MASKED_LM_MAPPING_NAMES = OrderedDict(
     [
         # Model for Masked LM mapping
+        ("albert", "AlbertForMaskedLM"),
         ("bert", "BertForMaskedLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
     ]
@@ -284,6 +290,7 @@ MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING_NAMES = OrderedDict(
 MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
     [
         # Model for Sequence Classification mapping
+        ("albert", "AlbertForSequenceClassification"),
         ("bart", "BartForSequenceClassification"),
         ("bert", "BertForSequenceClassification"),
         ("bloom", "BloomForSequenceClassification"),

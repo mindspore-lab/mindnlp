@@ -47,8 +47,6 @@ if is_mindspore_available():
     from mindnlp.transformers.tokenization_utils import BatchEncoding
     from mindnlp.transformers.models.mbart.modeling_mbart import MBartDecoder, MBartEncoder
 
-mindspore.set_context(pynative_synchronize=True)
-
 def prepare_mbart_inputs_dict(
     config,
     input_ids,

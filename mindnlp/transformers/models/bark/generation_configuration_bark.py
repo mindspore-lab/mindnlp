@@ -1,10 +1,11 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2023 The Suno AI Authors and The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,22 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=missing-class-docstring
 """ BARK model generation configuration"""
-
 import copy
 from typing import Dict
 
-from mindspore import log as logger
+from mindnlp.utils import logging
 from ...generation.configuration_utils import GenerationConfig
 
 
-
+logger = logging.get_logger(__name__)
 
 
 class BarkSemanticGenerationConfig(GenerationConfig):
-    r"""
-    BarkSemanticGenerationConfig
-    """
     model_type = "semantic"
 
     def __init__(
@@ -47,6 +45,7 @@ class BarkSemanticGenerationConfig(GenerationConfig):
         semantic_vocab_size=10_000,
         max_input_semantic_length=256,
         semantic_rate_hz=49.9,
+        min_eos_p=None,
         **kwargs,
     ):
         """Class that holds a generation configuration for [`BarkSemanticModel`].
@@ -89,6 +88,10 @@ class BarkSemanticGenerationConfig(GenerationConfig):
                 Max length of semantic input vector.
             semantic_rate_hz (`float`, *optional*, defaults to 49.9):
                 Semantic rate in Hertz.
+            min_eos_p (`float`, *optional*):
+                Minimum threshold of the probability of the EOS token for it to be sampled. This is an early stopping
+                strategy to mitigate potential unwanted generations at the end of a prompt. The original implementation
+                suggests a default value of 0.2.
         """
         super().__init__(
             temperature=temperature,
@@ -110,12 +113,10 @@ class BarkSemanticGenerationConfig(GenerationConfig):
         self.semantic_vocab_size = semantic_vocab_size
         self.max_input_semantic_length = max_input_semantic_length
         self.semantic_rate_hz = semantic_rate_hz
+        self.min_eos_p = min_eos_p
 
 
 class BarkCoarseGenerationConfig(GenerationConfig):
-    r"""
-    BarkCoarseGenerationConfig
-    """
     model_type = "coarse_acoustics"
 
     def __init__(
@@ -196,9 +197,6 @@ class BarkCoarseGenerationConfig(GenerationConfig):
 
 
 class BarkFineGenerationConfig(GenerationConfig):
-    r"""
-    BarkFineGenerationConfig
-    """
     model_type = "fine_acoustics"
 
     def __init__(
@@ -241,13 +239,8 @@ class BarkFineGenerationConfig(GenerationConfig):
 
 
 class BarkGenerationConfig(GenerationConfig):
-    r"""
-    BarkGenerationConfig
-    """
     model_type = "bark"
     is_composition = True
-
-    # TODO (joao): nested from_dict
 
     def __init__(
         self,
@@ -332,5 +325,8 @@ class BarkGenerationConfig(GenerationConfig):
         output["semantic_config"] = self.semantic_config.to_dict()
         output["coarse_acoustics_config"] = self.coarse_acoustics_config.to_dict()
         output["fine_acoustics_config"] = self.fine_acoustics_config.to_dict()
+
         output["model_type"] = self.__class__.model_type
         return output
+
+__all__ = ['BarkGenerationConfig']

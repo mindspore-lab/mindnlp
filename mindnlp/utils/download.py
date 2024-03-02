@@ -37,7 +37,7 @@ from tqdm.autonotebook import tqdm
 import requests
 from requests.exceptions import ProxyError, SSLError, HTTPError
 
-from mindnlp.configs import DEFAULT_ROOT, ENV_VARS_TRUE_VALUES, MINDNLP_CACHE, REPO_TYPES, MS_URL_BASE, HF_URL_BASE, \
+from mindnlp.configs import DEFAULT_ROOT, ENV_VARS_TRUE_VALUES, MINDNLP_CACHE, REPO_TYPES, HF_URL_BASE, \
     HF_TOKEN
 from .errors import (
     EntryNotFoundError,
@@ -166,6 +166,10 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None,
 
     file_path = os.path.join(path, name)
 
+    # subfolder
+    if '/' in name and not os.path.exists(file_path[:file_path.rfind('/')]):
+        os.makedirs(file_path[:file_path.rfind('/')])
+
     while not (os.path.exists(file_path) and check_md5(file_path, md5sum)):
         if retry_cnt < retry_limit:
             retry_cnt += 1
@@ -275,11 +279,11 @@ def cached_file(
     resume_download: bool = False,
     proxies: Optional[Dict[str, str]] = None,
     local_files_only: bool = False,
+    revision = 'main',
     token = None,
     subfolder: str = "",
     repo_type: Optional[str] = None,
     user_agent: Optional[Union[str, Dict[str, str]]] = None,
-    endpoint: str = HF_URL_BASE,
     _raise_exceptions_for_gated_repo: bool = True,
     _raise_exceptions_for_missing_entries: bool = True,
     _raise_exceptions_for_connection_errors: bool = True,
@@ -386,7 +390,7 @@ def cached_file(
             proxies=proxies,
             resume_download=resume_download,
             local_files_only=local_files_only,
-            endpoint=endpoint,
+            revision=revision,
             token=token
         )
     except GatedRepoError as e:
@@ -410,7 +414,7 @@ def cached_file(
         if not _raise_exceptions_for_missing_entries or not _raise_exceptions_for_connection_errors:
             return None
         raise EnvironmentError(
-            f"We couldn't connect to '{endpoint.format(path_or_repo_id, filename)}' to load this file, couldn't find it in the"
+            f"We couldn't load this file, couldn't find it in the"
             f" cached files and it looks like {path_or_repo_id} is not the path to a directory containing a file named"
             f" {full_filename}.\nCheckout your internet connection or see how to run the library in offline mode at"
         ) from e
@@ -418,8 +422,7 @@ def cached_file(
         if not _raise_exceptions_for_missing_entries:
             return None
         raise EnvironmentError(
-            f"{path_or_repo_id} does not appear to have a file named {full_filename}. Checkout "
-            f"'{endpoint.format(path_or_repo_id, full_filename)}' for available files."
+            f"{path_or_repo_id} does not appear to have a file named {full_filename}."
         ) from e
 
     except HTTPError as err:
@@ -448,8 +451,8 @@ def download(
     proxies: Optional[Dict] = None,
     resume_download: bool = False,
     local_files_only: bool = False,
+    revision: str = 'main',
     token: str = None,
-    endpoint: Optional[str] = None,
 ) -> str:
     """Download a given file if it's not already present in the local cache.
     """
@@ -488,12 +491,9 @@ def download(
     if os.path.exists(pointer_path) and not force_download:
         return pointer_path
 
-    url = build_download_url(repo_id, filename, repo_type=repo_type, endpoint=endpoint)
+    url = build_download_url(repo_id, filename, revision, repo_type=repo_type)
     # check model whether exist
-    # for hf
-    model_url = url[: url.rfind('/')].replace('/resolve/main', '')
-    # for modelscope
-    model_url = model_url.replace('api/v1/', '')
+    model_url = url[: url.rfind(repo_id) + len(repo_id)]
 
     token = HF_TOKEN if not token else token
 
@@ -691,10 +691,10 @@ def get_checkpoint_shard_files(
     proxies=None,
     resume_download=False,
     local_files_only=False,
+    revision='main',
     token=None,
     user_agent=None,
     subfolder="",
-    endpoint=None,
 ):
     """
     For a given model:
@@ -744,7 +744,7 @@ def get_checkpoint_shard_files(
                 local_files_only=local_files_only,
                 user_agent=user_agent,
                 subfolder=subfolder,
-                endpoint=endpoint,
+                revision=revision,
                 token=token
             )
         # We have already dealt with RepositoryNotFoundError and RevisionNotFoundError when getting the index, so
@@ -756,7 +756,7 @@ def get_checkpoint_shard_files(
             ) from exc
         except HTTPError as exc:
             raise EnvironmentError(
-                f"We couldn't connect to '{endpoint}' to load {shard_filename}. You should try"
+                f"We couldn't load {shard_filename}. You should try"
                 " again after checking your internet connection."
             ) from exc
 
@@ -768,13 +768,11 @@ def get_checkpoint_shard_files(
 def build_download_url(
     repo_id: str,
     filename: str,
+    revision: str,
     *,
     subfolder: Optional[str] = None,
     repo_type: Optional[str] = None,
-    endpoint: Optional[str] = None,
 ) -> str:
     """Construct the URL of a file from the given information.
     """
-    if endpoint == MS_URL_BASE:
-        repo_id = repo_id.replace('/', '_')
-    return endpoint.format(repo_id, filename)
+    return HF_URL_BASE.format(repo_id, revision, filename)
