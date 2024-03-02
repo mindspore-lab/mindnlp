@@ -78,16 +78,16 @@ _scipy_available = _is_package_available("scipy")
 
 _pretty_midi_available = importlib.util.find_spec("pretty_midi") is not None
 try:
-    _pretty_midi_version = importlib.metadata.version("pretty_midi")
+    _pretty_midi_version = importlib_metadata.version("pretty_midi")
     logger.debug(f"Successfully imported pretty_midi version {_pretty_midi_version}")
-except importlib.metadata.PackageNotFoundError:
+except importlib_metadata.PackageNotFoundError:
     _pretty_midi_available = False
 
 _essentia_available = importlib.util.find_spec("essentia") is not None
 try:
-    _essentia_version = importlib.metadata.version("essentia")
+    _essentia_version = importlib_metadata.version("essentia")
     logger.debug(f"Successfully imported essentia version {_essentia_version}")
-except importlib.metadata.PackageNotFoundError:
+except importlib_metadata.PackageNotFoundError:
     _essentia_version = False
 
 def is_mindspore_available():
@@ -144,16 +144,16 @@ def is_scipy_available():
 def is_jieba_available():
     return _jieba_available
 
-@lru_cache
+@lru_cache()
 def is_vision_available():
     _pil_available = importlib.util.find_spec("PIL") is not None
     if _pil_available:
         try:
-            package_version = importlib.metadata.version("Pillow")
-        except importlib.metadata.PackageNotFoundError:
+            package_version = importlib_metadata.version("Pillow")
+        except importlib_metadata.PackageNotFoundError:
             try:
-                package_version = importlib.metadata.version("Pillow-SIMD")
-            except importlib.metadata.PackageNotFoundError:
+                package_version = importlib_metadata.version("Pillow-SIMD")
+            except importlib_metadata.PackageNotFoundError:
                 return False
         logger.debug(f"Detected PIL version {package_version}")
     return _pil_available
