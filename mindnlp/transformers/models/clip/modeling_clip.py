@@ -995,7 +995,6 @@ class CLIPModel(CLIPPreTrainedModel):
 
         image_embeds = vision_outputs[1]
         image_embeds = self.visual_projection(image_embeds)
-        print(image_embeds)
 
         text_embeds = text_outputs[1]
         text_embeds = self.text_projection(text_embeds)

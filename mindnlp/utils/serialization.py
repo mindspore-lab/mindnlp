@@ -260,19 +260,17 @@ def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, bac
         size = (1,)
         stride = (1,)
     num_elemets = reduce(operator.mul, size)
-    stride = tuple((s * 4 for s in stride))
     array = storage[storage_offset: storage_offset + num_elemets]
 
     if array.dtype == bfloat16:
         logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
         array = array.astype(np.float16)
-    if array.dtype not in (np.uint8, np.bool_):
+
+    if stride is not None and len(stride) > 1 and stride[0] == 1 and stride[1] > 1:
+        stride = tuple((s * 4 for s in stride))
         array = np.lib.stride_tricks.as_strided(array, size, stride)
     else:
-        if stride is not None and len(stride) > 1 and stride[0] == 1 and stride[1] > 1:
-            order = "F"
-        else:
-            order = "C"
+        order = "C"
         array = array.reshape(size, order=order)
     param = mindspore.Parameter(array, requires_grad=requires_grad)
     return param
