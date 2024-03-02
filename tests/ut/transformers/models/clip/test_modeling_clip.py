@@ -302,11 +302,11 @@ class CLIPTextModelTester:
                 # input_mask[batch_idx, :start_index] = 1
                 # input_mask[batch_idx, start_index:] = 0
                 ops.scatter_nd_update(input_mask,
-                                      ops.stack([ops.full((start_index,), batch_idx), ops.arange(mindspore.tensor(start_index))], axis=1),
-                                      ops.full((start_index,), 1))
+                                      ops.stack([ops.full((int(start_index),), batch_idx), ops.arange(mindspore.tensor(start_index))], axis=1),
+                                      ops.full((int(start_index),), 1))
                 ops.scatter_nd_update(input_mask,
-                                      ops.stack([ops.full((input_mask.shape[1] - start_index,), batch_idx), ops.arange(mindspore.tensor(input_mask.shape[1] - start_index))], axis=1),
-                                      ops.full((input_mask.shape[1] - start_index,), 0))
+                                      ops.stack([ops.full((input_mask.shape[1] - int(start_index),), batch_idx), ops.arange(mindspore.tensor(input_mask.shape[1] - start_index))], axis=1),
+                                      ops.full((input_mask.shape[1] - int(start_index),), 0))
 
 
         config = self.get_config()
