@@ -40,6 +40,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ('chatglm', 'ChatGLMConfig'),
         ("clip", "CLIPConfig"),
         ("clip_vision_model", "CLIPVisionConfig"),
+        ("codegen", "CodeGenConfig"),
         ("cpmant", "CpmAntConfig"),
         ("cpmbee", "CpmBeeConfig"),
         ("encodec","EncodecConfig"),
@@ -595,7 +596,7 @@ class _LazyConfigMapping(OrderedDict):
 
         # Some of the mappings have entries model_type -> config of another model type. In that case we try to grab the
         # object at the top level.
-        transformers_module = importlib.import_module("transformers")
+        transformers_module = importlib.import_module("mindnlp.transformers")
         return getattr(transformers_module, value)
 
     def keys(self):

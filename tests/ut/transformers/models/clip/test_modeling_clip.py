@@ -636,7 +636,6 @@ class CLIPModelIntegrationTest(unittest.TestCase):
         inputs = processor(
             text=["a photo of a cat", "a photo of a dog"], images=image, padding=True, return_tensors="ms"
         )
-        print(inputs)
         # forward pass
         outputs = model(**inputs)
 
@@ -651,5 +650,4 @@ class CLIPModelIntegrationTest(unittest.TestCase):
         )
 
         expected_logits = mindspore.tensor([[24.5701, 19.3049]])
-        print(outputs.logits_per_image)
         self.assertTrue(np.allclose(outputs.logits_per_image.asnumpy(), expected_logits.asnumpy(), atol=1e-3))

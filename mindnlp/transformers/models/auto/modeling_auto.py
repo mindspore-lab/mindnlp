@@ -36,6 +36,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("bart", "BartModel"),
         ("bert", "BertModel"),
         ("bloom", "BloomModel"),
+        ("codegen", "CodeGenModel"),
         ("cpmant", "CpmAntModel"),
         ("cpmbee", "CpmBeeModel"),
         ("chatglm", "ChatGLMModel"),
@@ -81,6 +82,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("albert", "AlbertForMaskedLM"),
         ("bert", "BertForMaskedLM"),
         ("bloom", "BloomForCausalLM"),
+        ("codegen", "CodeGenForCausalLM"),
         ("cpmant", "CpmAntForCausalLM"),
         ("cpmbee", "CpmBeeForCausalLM"),
         ("gpt_pangu", "GPTPanguForCausalLM"),
@@ -96,6 +98,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         # Model for Causal LM mapping
         ("bert", "BertLMHeadModel"),
         ("bloom", "BloomForCausalLM"),
+        ("codegen", "CodeGenForCausalLM"),
         ("cpmant", "CpmAntForCausalLM"),
         ("cpmbee", "CpmBeeForCausalLM"),
         ("gemma", "GemmaForCausalLM"),
