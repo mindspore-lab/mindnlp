@@ -115,6 +115,7 @@ The table below represents the current support in the library for each of those 
 | EnCodec                       | ✅               | ❌             |
 | ERNIE                         | ✅                | ✅             |
 | ERNIEM                        | ✅                | ✅             |
+| ESM                           | ✅                | ✅             |
 | Falcon                        | ✅                | ❌             |
 | OpenAI GPT                    | ✅                | ❌             |
 | OpenAI GPT-2                  | ✅                | ✅             |
@@ -142,6 +143,7 @@ The table below represents the current support in the library for each of those 
 | OPT                           | ✅                | ❌             |
 | Phi2                          | ✅                | ❌             |
 | Pop2piano                     | ✅                | ❌             |
+| Qwen2                         | ✅                | ❌             |
 | RegNet                        | Todo               | ❌             |
 | RoBERTa                       | ✅                | ✅             |
 | RWKV                          | ✅                | ❌             |
