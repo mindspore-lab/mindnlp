@@ -30,6 +30,7 @@ from . import (
     distilbert,
     electra,
     encodec,
+    esm,
     ernie,
     ernie_m,
     chatglm,
@@ -82,6 +83,7 @@ from .cpmbee import *
 from .distilbert import *
 from .ernie import *
 from .ernie_m import *
+from .esm import *
 from .electra import *
 from .chatglm import *
 from .chatglm2 import *
@@ -133,6 +135,7 @@ __all__.extend(cpmbee.__all__)
 __all__.extend(distilbert.__all__)
 __all__.extend(ernie.__all__)
 __all__.extend(ernie_m.__all__)
+__all__.extend(esm.__all__)
 __all__.extend(electra.__all__)
 __all__.extend(chatglm.__all__)
 __all__.extend(chatglm2.__all__)
