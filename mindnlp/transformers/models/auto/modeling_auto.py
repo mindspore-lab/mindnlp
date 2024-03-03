@@ -57,6 +57,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("mistral", "MistralModel"),
         ('minicpm', 'MiniCPMModel'),
         ("phi", "PhiModel"),
+        ("qwen2", "Qwen2Model"),
         ("roberta", "RobertaModel"),
         ("rwkv", "RwkvModel"),
         ("t5", "T5Model"),
@@ -110,6 +111,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("gpt_bigcode", "GPTBigCodeForCausalLM"),
         ('minicpm', 'MiniCPMForCausalLM'),
         ("phi", "PhiForCausalLM"),
+        ("qwen2", "Qwen2ForCausalLM"),
         ("roberta", "RobertaLMHeadModel"),
         ("rwkv", "RwkvForCausalLM"),
         ("xlm-roberta", "XLMRobertaForCausalLM"),
@@ -303,6 +305,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("esm", "EsmForSequenceClassification"),
         ("falcon", "FalconForSequenceClassification"),
         ("phi", "PhiForSequenceClassification"),
+        ("qwen2", "Qwen2ForSequenceClassification"),
         ("xlm-roberta", "XLMRobertaForSequenceClassification"),
         ('minicpm', 'MiniCPMForSequenceClassification')
     ]

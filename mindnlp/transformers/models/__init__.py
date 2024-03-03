@@ -57,6 +57,7 @@ from . import (
     opt,
     phi,
     pop2piano,
+    qwen2,
     roberta,
     rwkv,
     seamless_m4t,
@@ -106,6 +107,7 @@ from .nezha import *
 from .opt import *
 from .gpt_pangu import *
 from .phi import *
+from .qwen2 import *
 from .roberta import *
 from .rwkv import *
 from .t5 import *
@@ -158,6 +160,7 @@ __all__.extend(nezha.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(gpt_pangu.__all__)
 __all__.extend(phi.__all__)
+__all__.extend(qwen2.__all__)
 __all__.extend(roberta.__all__)
 __all__.extend(rwkv.__all__)
 __all__.extend(t5.__all__)
