@@ -16,6 +16,7 @@
 # pylint: disable=invalid-name
 # pylint: disable=missing-function-docstring
 # pylint: disable=no-else-return
+# pylint: disable=bare-except
 """Rigid utils"""
 from __future__ import annotations
 
@@ -25,8 +26,10 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 import numpy as np
 import mindspore
 from mindspore import ops
-from mindspore import scipy as mscipy
-
+try:
+    from mindspore import scipy
+except:
+    import scipy
 
 def rot_matmul(a: mindspore.Tensor, b: mindspore.Tensor) -> mindspore.Tensor:
     """
@@ -195,7 +198,11 @@ def rot_to_quat(rot: mindspore.Tensor) -> mindspore.Tensor:
         ],
     ]
 
-    _, vectors = mscipy.linalg.eigh((1.0 / 3.0) * ops.stack([ops.stack(t, axis=-1) for t in k], axis=-2))
+    try:
+        _, vectors = scipy.linalg.eigh((1.0 / 3.0) * ops.stack([ops.stack(t, axis=-1) for t in k], axis=-2))
+    except:
+        _, vectors = scipy.linalg.eigh((1.0 / 3.0) * ops.stack([ops.stack(t, axis=-1) for t in k], axis=-2).asnumpy())
+        vectors = mindspore.tensor(vectors)
     return vectors[..., -1]
 
 
