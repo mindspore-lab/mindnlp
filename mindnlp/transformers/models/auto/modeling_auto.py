@@ -43,6 +43,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("clip", "CLIPModel"),
         ("clip_vision_model", "CLIPVisionModel"),
         ('encodec','EncodecModel'),
+        ("esm", "EsmModel"),
         ("ernie", "ErnieModel"),
         ("ernie_m", "ErnieMModel"),
         ("falcon", "FalconModel"),
@@ -85,6 +86,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("codegen", "CodeGenForCausalLM"),
         ("cpmant", "CpmAntForCausalLM"),
         ("cpmbee", "CpmBeeForCausalLM"),
+        ("esm", "EsmForMaskedLM"),
         ("gpt_pangu", "GPTPanguForCausalLM"),
         ("roberta", "RobertaForMaskedLM"),
         ("rwkv", "RwkvForCausalLM"),
@@ -217,6 +219,7 @@ MODEL_FOR_MASKED_LM_MAPPING_NAMES = OrderedDict(
         # Model for Masked LM mapping
         ("albert", "AlbertForMaskedLM"),
         ("bert", "BertForMaskedLM"),
+        ("esm", "EsmForMaskedLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
     ]
 )
@@ -297,6 +300,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("bart", "BartForSequenceClassification"),
         ("bert", "BertForSequenceClassification"),
         ("bloom", "BloomForSequenceClassification"),
+        ("esm", "EsmForSequenceClassification"),
         ("falcon", "FalconForSequenceClassification"),
         ("phi", "PhiForSequenceClassification"),
         ("xlm-roberta", "XLMRobertaForSequenceClassification"),
