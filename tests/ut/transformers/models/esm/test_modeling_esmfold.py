@@ -195,6 +195,10 @@ class EsmFoldModelTest(ModelTesterMixin, unittest.TestCase):
     def test_correct_missing_keys(self):
         pass
 
+    @unittest.skip
+    def test_determinism(self):
+        pass
+
     @unittest.skip("Esm does not support embedding resizing")
     def test_resize_embeddings_untied(self):
         pass

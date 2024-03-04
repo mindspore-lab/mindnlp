@@ -1199,7 +1199,7 @@ class EsmCategoricalMixture:
         return ops.gather_elements(nll, -1, true_index.unsqueeze(-1)).squeeze(-1)
 
     def mean(self):
-        return (self.logits.softmax(-1) @ self.v_bins.unsqueeze(1)).squeeze(-1)
+        return (ops.softmax(self.logits, -1) @ self.v_bins.unsqueeze(1)).squeeze(-1)
 
 
 def categorical_lddt(logits, bins=50):
@@ -2008,7 +2008,7 @@ class EsmForProteinFolding(EsmPreTrainedModel):
             esm_s = esm_s * 0
 
         # === preprocessing ===
-        esm_s = ((self.esm_s_combine + 1e-8).softmax(0).unsqueeze(0) @ esm_s).squeeze(2)
+        esm_s = (ops.softmax((self.esm_s_combine + 1e-8), 0).unsqueeze(0) @ esm_s).squeeze(2)
         s_s_0 = self.esm_s_mlp(esm_s)
 
         s_z_0 = s_s_0.new_zeros((B, L, L, cfg.trunk.pairwise_state_dim))
