@@ -607,7 +607,7 @@ class Pop2PianoModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
     @slow
     def test_model_from_pretrained(self):
         for model_name in POP2PIANO_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = Pop2PianoForConditionalGeneration.from_pretrained(model_name, from_pt=True)
+            model = Pop2PianoForConditionalGeneration.from_pretrained(model_name)
             self.assertIsNotNone(model)
 
     def test_pass_with_input_features(self):
@@ -618,7 +618,7 @@ class Pop2PianoModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
                 "extrapolated_beatstep": ops.randint(size=(1, 900), low=0, high=100).type(mindspore.float32),
             }
         )
-        model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
+        model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano")
         model_opts = model.generate(input_features=input_features["input_features"], return_dict_in_generate=True)
 
         self.assertEqual(model_opts.sequences.ndim, 2)
@@ -644,7 +644,7 @@ class Pop2PianoModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestC
                 "attention_mask_extrapolated_beatstep": ops.ones((5, 900), dtype=mindspore.int32),
             }
         )
-        model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
+        model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano")
         model_opts = model.generate(
             input_features=input_features["input_features"],
             attention_mask=input_features["attention_mask"],
@@ -659,7 +659,7 @@ class Pop2PianoModelIntegrationTests(unittest.TestCase):
     @slow
     def test_mel_conditioner_integration(self):
         composer = "composer1"
-        model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
+        model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano")
         input_embeds = ops.ones((10, 100, 512))
 
         composer_value = model.generation_config.composer_to_feature_token[composer]
@@ -690,12 +690,12 @@ class Pop2PianoModelIntegrationTests(unittest.TestCase):
             speech_input1 = np.zeros([1_000_000], dtype=np.float32)
             sampling_rate = 44_100
 
-            processor = Pop2PianoProcessor.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
+            processor = Pop2PianoProcessor.from_pretrained("sweetcocoa/pop2piano")
             input_features = processor.feature_extractor(
                 speech_input1, sampling_rate=sampling_rate, return_tensors="ms"
             )
 
-            model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
+            model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano")
             outputs = model.generate(
                 input_features=input_features["input_features"], return_dict_in_generate=True
             ).sequences
@@ -715,10 +715,10 @@ class Pop2PianoModelIntegrationTests(unittest.TestCase):
         if is_librosa_available() and is_scipy_available() and is_essentia_available() and is_mindspore_available():
             from mindnlp.transformers import Pop2PianoFeatureExtractor, Pop2PianoTokenizer
 
-            model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
+            model = Pop2PianoForConditionalGeneration.from_pretrained("sweetcocoa/pop2piano")
             model.set_train(False)
-            feature_extractor = Pop2PianoFeatureExtractor.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
-            tokenizer = Pop2PianoTokenizer.from_pretrained("sweetcocoa/pop2piano", from_pt=True)
+            feature_extractor = Pop2PianoFeatureExtractor.from_pretrained("sweetcocoa/pop2piano")
+            tokenizer = Pop2PianoTokenizer.from_pretrained("sweetcocoa/pop2piano")
             ds = load_dataset("sweetcocoa/pop2piano_ci", split="test")
 
             output_fe = feature_extractor(

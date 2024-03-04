@@ -69,7 +69,7 @@ def main(args):
                                       auto_load=True)
 
     # Load model
-    model = GraphormerForGraphClassification.from_pretrained("clefourrier/graphormer-base-pcqm4mv2", from_pt=True)
+    model = GraphormerForGraphClassification.from_pretrained("clefourrier/graphormer-base-pcqm4mv2")
 
     # Initiate the optimizer
     optimizer = nn.AdamWeightDecay(model.trainable_params(),

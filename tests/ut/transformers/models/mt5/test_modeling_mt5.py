@@ -38,8 +38,8 @@ class MT5IntegrationTest(unittest.TestCase):
         >>> score = t5_model.score(inputs=["Hello there"], targets=["Hi I am"], vocabulary=vocab)
         """
 
-        model = AutoModelForSeq2SeqLM.from_pretrained("google/mt5-small", return_dict=True, from_pt=True)
-        tokenizer = AutoTokenizer.from_pretrained("google/mt5-small", from_pt=True)
+        model = AutoModelForSeq2SeqLM.from_pretrained("google/mt5-small", return_dict=True)
+        tokenizer = AutoTokenizer.from_pretrained("google/mt5-small")
 
         input_ids = tokenizer("Hello there", return_tensors="ms").input_ids
         labels = tokenizer("Hi I am", return_tensors="ms").input_ids

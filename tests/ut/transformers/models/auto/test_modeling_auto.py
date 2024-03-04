@@ -233,13 +233,13 @@ class AutoModelTest(unittest.TestCase):
 
 
     def test_from_pretrained_identifier(self):
-        model = AutoModelWithLMHead.from_pretrained(SMALL_MODEL_IDENTIFIER, from_pt=True)
+        model = AutoModelWithLMHead.from_pretrained(SMALL_MODEL_IDENTIFIER)
         self.assertIsInstance(model, BertForMaskedLM)
         self.assertEqual(model.num_parameters(), 14410)
         self.assertEqual(model.num_parameters(only_trainable=True), 14410)
 
     def test_from_identifier_from_model_type(self):
-        model = AutoModelWithLMHead.from_pretrained(DUMMY_UNKNOWN_IDENTIFIER, from_pt=True)
+        model = AutoModelWithLMHead.from_pretrained(DUMMY_UNKNOWN_IDENTIFIER)
         self.assertIsInstance(model, RobertaForMaskedLM)
         self.assertEqual(model.num_parameters(), 14410)
         self.assertEqual(model.num_parameters(only_trainable=True), 14410)
@@ -321,7 +321,7 @@ class AutoModelTest(unittest.TestCase):
         with self.assertRaises(
             EnvironmentError,
         ):
-            _ = AutoModel.from_pretrained("hf-internal-testing/config-no-model", from_pt=True)
+            _ = AutoModel.from_pretrained("hf-internal-testing/config-no-model")
 
     # def test_cached_model_has_minimum_calls_to_head(self):
     #     # Make sure we have cached the model.

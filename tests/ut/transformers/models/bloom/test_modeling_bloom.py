@@ -95,7 +95,7 @@ class BloomModelTester:
         self.pad_token_id = vocab_size - 1
 
     def get_large_model_config(self):
-        return BloomConfig.from_pretrained("bigscience/bloom", from_pt=True)
+        return BloomConfig.from_pretrained("bigscience/bloom")
 
     def prepare_config_and_inputs(self, gradient_checkpointing=False):
         input_ids = ids_tensor([self.batch_size, self.seq_length], self.vocab_size)
@@ -386,7 +386,7 @@ class BloomModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
     @slow
     def test_model_from_pretrained(self):
         for model_name in BLOOM_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = BloomModel.from_pretrained(model_name, from_pt=True)
+            model = BloomModel.from_pretrained(model_name)
             self.assertIsNotNone(model)
 
     @slow
@@ -411,9 +411,9 @@ class BloomModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
         # >=1b1 + allow_fp16_reduced_precision_reduction = False  + torch.bmm  ==> PASS
 
         path_560m = "bigscience/bloom-560m"
-        model = BloomForCausalLM.from_pretrained(path_560m, use_cache=True, from_pt=True)
+        model = BloomForCausalLM.from_pretrained(path_560m, use_cache=True)
         model = model.set_train(False)
-        tokenizer = BloomTokenizerFast.from_pretrained(path_560m, from_pt=True)
+        tokenizer = BloomTokenizerFast.from_pretrained(path_560m)
 
         input_sentence = "I enjoy walking with my cute dog"
         # This output has been obtained using fp32 model on the huggingface DGX workstation - NVIDIA A100 GPU
@@ -430,9 +430,9 @@ class BloomModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
     @slow
     def test_batch_generation(self):
         path_560m = "bigscience/bloom-560m"
-        model = BloomForCausalLM.from_pretrained(path_560m, use_cache=True, from_pt=True)
+        model = BloomForCausalLM.from_pretrained(path_560m, use_cache=True)
         model = model.set_train(False)
-        tokenizer = BloomTokenizerFast.from_pretrained(path_560m, padding_side="left", from_pt=True)
+        tokenizer = BloomTokenizerFast.from_pretrained(path_560m, padding_side="left")
 
         input_sentence = ["I enjoy walking with my cute dog", "I enjoy walking with my cute dog"]
 
@@ -449,9 +449,9 @@ class BloomModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
     @slow
     def test_batch_generation_padd(self):
         path_560m = "bigscience/bloom-560m"
-        model = BloomForCausalLM.from_pretrained(path_560m, use_cache=True, from_pt=True)
+        model = BloomForCausalLM.from_pretrained(path_560m, use_cache=True)
         model = model.set_train(False)
-        tokenizer = BloomTokenizerFast.from_pretrained(path_560m, padding_side="left", from_pt=True)
+        tokenizer = BloomTokenizerFast.from_pretrained(path_560m, padding_side="left")
 
         input_sentence = ["I enjoy walking with my cute dog", "Hello my name is"]
         input_sentence_without_pad = "Hello my name is"
@@ -478,9 +478,9 @@ class BloomModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
     def test_batch_generated_text(self):
         path_560m = "bigscience/bloom-560m"
 
-        model = BloomForCausalLM.from_pretrained(path_560m, use_cache=True, from_pt=True)
+        model = BloomForCausalLM.from_pretrained(path_560m, use_cache=True)
         model = model.set_train(False)
-        tokenizer = BloomTokenizerFast.from_pretrained(path_560m, padding_side="left", from_pt=True)
+        tokenizer = BloomTokenizerFast.from_pretrained(path_560m, padding_side="left")
 
         input_sentences = [
             "Hello what is",
@@ -531,7 +531,7 @@ class BloomEmbeddingTest(unittest.TestCase):
     @require_mindspore
     def test_embeddings(self):
         # The config in this checkpoint has `bfloat16` as `torch_dtype` -> model in `bfloat16`
-        model = BloomForCausalLM.from_pretrained(self.path_bigscience_model, ms_dtype="auto", from_pt=True)
+        model = BloomForCausalLM.from_pretrained(self.path_bigscience_model, ms_dtype="auto")
         model.set_train(False)
 
         EMBEDDINGS_DS_BEFORE_LN_BF_16_MEAN = {
@@ -758,7 +758,7 @@ class BloomEmbeddingTest(unittest.TestCase):
 
     @require_mindspore
     def test_hidden_states_transformers(self):
-        model = BloomModel.from_pretrained(self.path_bigscience_model, use_cache=False, ms_dtype="auto", from_pt=True)
+        model = BloomModel.from_pretrained(self.path_bigscience_model, use_cache=False, ms_dtype="auto")
         model.set_train(False)
 
         EXAMPLE_IDS = [3478, 368, 109586, 35433, 2, 77, 132619, 3478, 368, 109586, 35433, 2, 2175, 23714, 73173, 144252, 2, 77, 132619, 3478]  # fmt: skip
@@ -779,7 +779,7 @@ class BloomEmbeddingTest(unittest.TestCase):
 
     @require_mindspore
     def test_logits(self):
-        model = BloomForCausalLM.from_pretrained(self.path_bigscience_model, use_cache=False, ms_dtype="auto", from_pt=True)# load in bf16
+        model = BloomForCausalLM.from_pretrained(self.path_bigscience_model, use_cache=False, ms_dtype="auto")# load in bf16
         model.set_train(False)
 
         EXAMPLE_IDS = [3478, 368, 109586, 35433, 2, 77, 132619, 3478, 368, 109586, 35433, 2, 2175, 23714, 73173, 144252, 2, 77, 132619, 3478]  # fmt: skip

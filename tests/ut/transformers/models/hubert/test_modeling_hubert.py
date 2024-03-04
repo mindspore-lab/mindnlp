@@ -391,7 +391,7 @@ class HubertModelTest(ModelTesterMixin, unittest.TestCase):
 
     @slow
     def test_model_from_pretrained(self):
-        model = HubertModel.from_pretrained("facebook/hubert-base-ls960", from_pt=True)
+        model = HubertModel.from_pretrained("facebook/hubert-base-ls960")
         self.assertIsNotNone(model)
 
 
@@ -491,7 +491,7 @@ class HubertRobustModelTest(ModelTesterMixin, unittest.TestCase):
 
     @slow
     def test_model_from_pretrained(self):
-        model = HubertModel.from_pretrained("facebook/hubert-large-ls960-ft", from_pt=True)
+        model = HubertModel.from_pretrained("facebook/hubert-large-ls960-ft")
         self.assertIsNotNone(model)
 
 
@@ -538,8 +538,8 @@ class HubertModelIntegrationTest(unittest.TestCase):
         return ds[:num_samples]
 
     def test_inference_ctc_batched(self):
-        model = HubertForCTC.from_pretrained("facebook/hubert-large-ls960-ft", from_pt=True).half()
-        processor = Wav2Vec2Processor.from_pretrained("facebook/hubert-large-ls960-ft", from_pt=True, do_lower_case=True)
+        model = HubertForCTC.from_pretrained("facebook/hubert-large-ls960-ft").half()
+        processor = Wav2Vec2Processor.from_pretrained("facebook/hubert-large-ls960-ft", do_lower_case=True)
 
         input_speech = self._load_datasamples(2)
         inputs = processor(input_speech, return_tensors="ms", padding=True)
@@ -560,8 +560,8 @@ class HubertModelIntegrationTest(unittest.TestCase):
 
     def test_inference_keyword_spotting(self):
         # NOTE: 原仓库代码用 float16 的精度也过不了测试 :(
-        model = HubertForSequenceClassification.from_pretrained("superb/hubert-base-superb-ks", from_pt=True)#.half()
-        processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/hubert-base-superb-ks", from_pt=True)
+        model = HubertForSequenceClassification.from_pretrained("superb/hubert-base-superb-ks")#.half()
+        processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/hubert-base-superb-ks")
         input_data = self._load_superb("ks", 4)
         inputs = processor(input_data["speech"], return_tensors="ms", padding=True)
 
@@ -578,8 +578,8 @@ class HubertModelIntegrationTest(unittest.TestCase):
         self.assertTrue(mnp.allclose(predicted_logits, expected_logits, atol=3e-2))
 
     def test_inference_intent_classification(self):
-        model = HubertForSequenceClassification.from_pretrained("superb/hubert-base-superb-ic", from_pt=True).half()
-        processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/hubert-base-superb-ic", from_pt=True)
+        model = HubertForSequenceClassification.from_pretrained("superb/hubert-base-superb-ic").half()
+        processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/hubert-base-superb-ic")
         input_data = self._load_superb("ic", 4)
         inputs = processor(input_data["speech"], return_tensors="ms", padding=True)
 
@@ -609,8 +609,8 @@ class HubertModelIntegrationTest(unittest.TestCase):
 
     def test_inference_speaker_identification(self):
         # NOTE: 原仓库代码用 float16 的精度也过不了测试 :(
-        model = HubertForSequenceClassification.from_pretrained("superb/hubert-base-superb-sid", from_pt=True)#.half()
-        processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/hubert-base-superb-sid", from_pt=True)
+        model = HubertForSequenceClassification.from_pretrained("superb/hubert-base-superb-sid")#.half()
+        processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/hubert-base-superb-sid")
         input_data = self._load_superb("si", 4)
 
         output_logits = []
@@ -632,8 +632,8 @@ class HubertModelIntegrationTest(unittest.TestCase):
         self.assertTrue(mnp.allclose(predicted_logits, expected_logits, atol=10))
 
     def test_inference_emotion_recognition(self):
-        model = HubertForSequenceClassification.from_pretrained("superb/hubert-base-superb-er", from_pt=True).half()
-        processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/hubert-base-superb-er", from_pt=True)
+        model = HubertForSequenceClassification.from_pretrained("superb/hubert-base-superb-er").half()
+        processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/hubert-base-superb-er")
         input_data = self._load_superb("er", 4)
         inputs = processor(input_data["speech"], return_tensors="ms", padding=True)
 
@@ -651,8 +651,8 @@ class HubertModelIntegrationTest(unittest.TestCase):
         self.assertTrue(mnp.allclose(predicted_logits, expected_logits, atol=1e-1))
 
     def test_inference_distilhubert(self):
-        model = HubertModel.from_pretrained("ntu-spml/distilhubert", from_pt=True).half()
-        processor = Wav2Vec2FeatureExtractor.from_pretrained("ntu-spml/distilhubert", from_pt=True)
+        model = HubertModel.from_pretrained("ntu-spml/distilhubert").half()
+        processor = Wav2Vec2FeatureExtractor.from_pretrained("ntu-spml/distilhubert")
 
         # TODO: can't test on batched inputs due to incompatible padding https://github.com/pytorch/fairseq/pull/3572
         input_speech = self._load_datasamples(1)

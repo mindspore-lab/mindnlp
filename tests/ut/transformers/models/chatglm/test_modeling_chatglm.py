@@ -57,23 +57,6 @@ class ChatGLMGenerationTest(unittest.TestCase):
         pass
 
     @slow
-    def test_chat_random_init(self):
-        model, tokenizer = get_model_and_tokenizer_random_init()
-        prompts = ["你好", "介绍一下清华大学", "它创建于哪一年"]
-        history = []
-        set_random_seed(42)
-        expected_responses = [
-            '你好👋！我是人工智能助手 ChatGLM-6B，很高兴见到你，欢迎问我任何问题。',
-            '清华大学是中国著名的综合性研究型大学，位于中国北京市海淀区，创建于 1911 年，前身是清华学堂。作为我国顶尖高等教育机构之一，清华大学在科学研究、工程技术、信息技术、经济管理等领域处于领先地位，也是世界上最著名的工程学府之一。\n\n清华大学拥有世界一流的教学设施和科学研究平台，设有多个学院和研究中心，包括工程学院、自然科学学院、社会科学学院、人文学院、法学院、经济管理学院等。学校拥有众多知名教授和研究团队，其中包括多位院士、国家杰出青年科学基金获得者、长江学者等。\n\n清华大学的本科生招生范围为全国中学毕业生，本科生入学要求严格，考试成绩优秀。同时，清华大学也提供研究生和博士生招生，包括硕士研究生和博士研究生。',
-            '清华大学创建于 1911 年。'
-        ]
-        for (prompt, expected_response) in zip(prompts, expected_responses):
-            response, history = model.chat(tokenizer, prompt, history=history, max_length=20)
-            print(repr(response))
-            break
-            self.assertEquals(expected_response, response)
-
-    @slow
     def test_chat(self):
         model, tokenizer = get_model_and_tokenizer()
         prompts = ["你好", "介绍一下清华大学", "它创建于哪一年"]

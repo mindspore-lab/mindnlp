@@ -79,11 +79,11 @@ class Wav2Vec2TokenizerTest(unittest.TestCase):
 
     def get_tokenizer(self, **kwargs):
         kwargs.update(self.special_tokens_map)
-        return Wav2Vec2Tokenizer.from_pretrained(self.tmpdirname, from_pt=True, **kwargs)
+        return Wav2Vec2Tokenizer.from_pretrained(self.tmpdirname, **kwargs)
 
     def test_tokenizer_decode(self):
         # TODO(PVP) - change to facebook
-        tokenizer = Wav2Vec2Tokenizer.from_pretrained("facebook/wav2vec2-base-960h", from_pt=True)
+        tokenizer = Wav2Vec2Tokenizer.from_pretrained("facebook/wav2vec2-base-960h")
 
         sample_ids = [
             [11, 5, 15, tokenizer.pad_token_id, 15, 8, 98],
@@ -96,7 +96,7 @@ class Wav2Vec2TokenizerTest(unittest.TestCase):
 
     def test_tokenizer_decode_special(self):
         # TODO(PVP) - change to facebook
-        tokenizer = Wav2Vec2Tokenizer.from_pretrained("facebook/wav2vec2-base-960h", from_pt=True)
+        tokenizer = Wav2Vec2Tokenizer.from_pretrained("facebook/wav2vec2-base-960h")
 
         sample_ids = [
             [11, 5, 15, tokenizer.pad_token_id, 15, 8, 98],
@@ -126,7 +126,7 @@ class Wav2Vec2TokenizerTest(unittest.TestCase):
         self.assertEqual(batch_tokens, ["HELLO<unk>", "BYE BYE<unk>"])
 
     def test_tokenizer_decode_added_tokens(self):
-        tokenizer = Wav2Vec2Tokenizer.from_pretrained("facebook/wav2vec2-base-960h", from_pt=True)
+        tokenizer = Wav2Vec2Tokenizer.from_pretrained("facebook/wav2vec2-base-960h")
         tokenizer.add_tokens(["!", "?"])
         tokenizer.add_special_tokens({"cls_token": "$$$"})
 
@@ -242,7 +242,7 @@ class Wav2Vec2TokenizerTest(unittest.TestCase):
 
     def test_save_pretrained(self):
         pretrained_name = list(self.tokenizer_class.pretrained_vocab_files_map["vocab_file"].keys())[0]
-        tokenizer = self.tokenizer_class.from_pretrained(pretrained_name, from_pt=True)
+        tokenizer = self.tokenizer_class.from_pretrained(pretrained_name)
         tmpdirname2 = tempfile.mkdtemp()
 
         tokenizer_files = tokenizer.save_pretrained(tmpdirname2)
@@ -252,7 +252,7 @@ class Wav2Vec2TokenizerTest(unittest.TestCase):
         )
 
         # Checks everything loads correctly in the same way
-        tokenizer_p = self.tokenizer_class.from_pretrained(tmpdirname2, from_pt=True)
+        tokenizer_p = self.tokenizer_class.from_pretrained(tmpdirname2)
 
         # Check special tokens are set accordingly on Rust and Python
         for key in tokenizer.special_tokens_map:
@@ -283,7 +283,7 @@ class Wav2Vec2TokenizerTest(unittest.TestCase):
         before_vocab = tokenizer.get_vocab()
         tokenizer.save_pretrained(tmpdirname)
 
-        after_tokenizer = tokenizer.__class__.from_pretrained(tmpdirname, from_pt=True)
+        after_tokenizer = tokenizer.__class__.from_pretrained(tmpdirname)
         after_tokens = after_tokenizer.decode(sample_ids)
         after_vocab = after_tokenizer.get_vocab()
 
@@ -309,7 +309,7 @@ class Wav2Vec2TokenizerTest(unittest.TestCase):
         before_vocab = tokenizer.get_vocab()
         tokenizer.save_pretrained(tmpdirname)
 
-        after_tokenizer = tokenizer.__class__.from_pretrained(tmpdirname, from_pt=True)
+        after_tokenizer = tokenizer.__class__.from_pretrained(tmpdirname)
         after_tokens = after_tokenizer.decode(sample_ids)
         after_vocab = after_tokenizer.get_vocab()
 
@@ -365,8 +365,8 @@ class Wav2Vec2TokenizerTest(unittest.TestCase):
         # group norm don't have their tokenizer return the
         # attention_mask
         for model_id in WAV_2_VEC_2_PRETRAINED_MODEL_ARCHIVE_LIST:
-            config = Wav2Vec2Config.from_pretrained(model_id, from_pt=True)
-            tokenizer = Wav2Vec2Tokenizer.from_pretrained(model_id, from_pt=True)
+            config = Wav2Vec2Config.from_pretrained(model_id)
+            tokenizer = Wav2Vec2Tokenizer.from_pretrained(model_id)
 
             # only "layer" feature extraction norm should make use of
             # attention_mask
@@ -392,10 +392,10 @@ class Wav2Vec2CTCTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
 
     def get_tokenizer(self, **kwargs):
         kwargs.update(self.special_tokens_map)
-        return Wav2Vec2CTCTokenizer.from_pretrained(self.tmpdirname, from_pt=True, **kwargs)
+        return Wav2Vec2CTCTokenizer.from_pretrained(self.tmpdirname, **kwargs)
 
     def test_tokenizer_add_token_chars(self):
-        tokenizer = self.tokenizer_class.from_pretrained("facebook/wav2vec2-base-960h", from_pt=True)
+        tokenizer = self.tokenizer_class.from_pretrained("facebook/wav2vec2-base-960h")
 
         # check adding a single token
         tokenizer.add_tokens("x")
@@ -411,7 +411,7 @@ class Wav2Vec2CTCTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
         self.assertEqual(token_ids, [19, 33, 7, 4, 35])
 
     def test_tokenizer_add_token_words(self):
-        tokenizer = self.tokenizer_class.from_pretrained("facebook/wav2vec2-base-960h", from_pt=True)
+        tokenizer = self.tokenizer_class.from_pretrained("facebook/wav2vec2-base-960h")
 
         # check adding a single token
         tokenizer.add_tokens("xxx")
@@ -427,7 +427,7 @@ class Wav2Vec2CTCTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
         self.assertEqual(token_ids, [19, 33, 7, 4, 35, 4, 24, 4, 24])
 
     def test_tokenizer_decode(self):
-        tokenizer = self.tokenizer_class.from_pretrained("facebook/wav2vec2-base-960h", from_pt=True)
+        tokenizer = self.tokenizer_class.from_pretrained("facebook/wav2vec2-base-960h")
 
         sample_ids = [
             [11, 5, 15, tokenizer.pad_token_id, 15, 8, 98],
@@ -439,7 +439,7 @@ class Wav2Vec2CTCTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
         self.assertEqual(batch_tokens, ["HELLO<unk>", "BYE BYE<unk>"])
 
     def test_tokenizer_decode_special(self):
-        tokenizer = self.tokenizer_class.from_pretrained("facebook/wav2vec2-base-960h", from_pt=True)
+        tokenizer = self.tokenizer_class.from_pretrained("facebook/wav2vec2-base-960h")
 
         # fmt: off
         sample_ids = [
@@ -458,7 +458,7 @@ class Wav2Vec2CTCTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
         self.assertEqual(batch_tokens, ["HELLO<unk>", "BYE BYE<unk>"])
 
     def test_tokenizer_decode_added_tokens(self):
-        tokenizer = self.tokenizer_class.from_pretrained("facebook/wav2vec2-base-960h", from_pt=True)
+        tokenizer = self.tokenizer_class.from_pretrained("facebook/wav2vec2-base-960h")
         tokenizer.add_tokens(["!", "?"])
         tokenizer.add_special_tokens({"cls_token": "$$$"})
 
@@ -487,7 +487,7 @@ class Wav2Vec2CTCTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
         self.assertEqual(sent, expected_sent)
 
         tokenizer.save_pretrained(os.path.join(self.tmpdirname, "special_tokenizer"))
-        tokenizer = Wav2Vec2CTCTokenizer.from_pretrained(os.path.join(self.tmpdirname, "special_tokenizer"), from_pt=True)
+        tokenizer = Wav2Vec2CTCTokenizer.from_pretrained(os.path.join(self.tmpdirname, "special_tokenizer"))
 
         expected_sent = tokenizer.decode(tokenizer(sent).input_ids, spaces_between_special_tokens=True)
         self.assertEqual(sent, expected_sent)
@@ -644,15 +644,15 @@ class Wav2Vec2CTCTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
         check_list_tuples_equal(outputs_batch, outputs)
 
     def test_offsets_integration(self):
-        tokenizer = self.tokenizer_class.from_pretrained("facebook/wav2vec2-base-960h", from_pt=True)
+        tokenizer = self.tokenizer_class.from_pretrained("facebook/wav2vec2-base-960h")
         # pred_ids correspond to the following code
         # ```
         #        from transformers import AutoTokenizer, AutoFeatureExtractor, AutoModelForCTC
         #        from datasets import load_dataset
         #        import datasets
         #        import torch
-        #        model = AutoModelForCTC.from_pretrained("facebook/wav2vec2-base-960h", from_pt=True)
-        #        feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base-960h", from_pt=True)
+        #        model = AutoModelForCTC.from_pretrained("facebook/wav2vec2-base-960h")
+        #        feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base-960h")
         #
         #        ds = load_dataset("common_voice", "en", split="train", streaming=True)
         #        ds = ds.cast_column("audio", datasets.Audio(sampling_rate=16_000))
@@ -820,14 +820,14 @@ class Wav2Vec2CTCTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
             with open(tempfile_path, "w") as temp_file:
                 json.dump(nested_vocab, temp_file)
 
-            tokenizer = Wav2Vec2CTCTokenizer.from_pretrained(tempdir, from_pt=True, target_lang="eng")
+            tokenizer = Wav2Vec2CTCTokenizer.from_pretrained(tempdir, target_lang="eng")
 
         check_tokenizer(tokenizer)
 
         with tempfile.TemporaryDirectory() as tempdir:
             # should have saved target lang as "ita" since it was last one
             tokenizer.save_pretrained(tempdir)
-            tokenizer = Wav2Vec2CTCTokenizer.from_pretrained(tempdir, from_pt=True)
+            tokenizer = Wav2Vec2CTCTokenizer.from_pretrained(tempdir)
 
             self.assertEqual(tokenizer.target_lang, "ita")
             check_tokenizer(tokenizer, check_ita_first=True)

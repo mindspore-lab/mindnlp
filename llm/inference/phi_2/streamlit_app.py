@@ -4,12 +4,10 @@ from mindnlp.transformers import AutoTokenizer, AutoModelForCausalLM
 # Load the Phi 2 model and tokenizer
 tokenizer = AutoTokenizer.from_pretrained(
     "microsoft/phi-2",
-    from_pt=True
 )
 
 model = AutoModelForCausalLM.from_pretrained(
     "microsoft/phi-2",
-    from_pt=True
 )
 
 # Streamlit UI
