@@ -2,8 +2,8 @@ import os
 import platform
 from mindnlp.transformers import ChatGLM2Tokenizer, ChatGLM2ForConditionalGeneration
 
-tokenizer = ChatGLM2Tokenizer.from_pretrained("THUDM/chatglm2-6b", from_pt=True)
-model = ChatGLM2ForConditionalGeneration.from_pretrained("THUDM/chatglm2-6b", from_pt=True)
+tokenizer = ChatGLM2Tokenizer.from_pretrained("THUDM/chatglm2-6b")
+model = ChatGLM2ForConditionalGeneration.from_pretrained("THUDM/chatglm2-6b")
 model = model.set_train(False)
 
 os_name = platform.system()

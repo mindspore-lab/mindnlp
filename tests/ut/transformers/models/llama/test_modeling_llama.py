@@ -388,9 +388,9 @@ class LlamaModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
         """
         Overwritting the common test as the test is flaky on tiny models
         """
-        model = LlamaForCausalLM.from_pretrained("meta-llama/Llama-2-7b-hf", from_pt=True)
+        model = LlamaForCausalLM.from_pretrained("meta-llama/Llama-2-7b-hf")
 
-        tokenizer = LlamaTokenizer.from_pretrained("meta-llama/Llama-2-7b-hf", from_pt=True)
+        tokenizer = LlamaTokenizer.from_pretrained("meta-llama/Llama-2-7b-hf")
 
         texts = ["hi", "Hello this is a very long sentence"]
 
@@ -529,8 +529,8 @@ end
     @unittest.skip('do not have enough memory.')
     @slow
     def test_model_7b_logits(self):
-        model = LlamaForCausalLM.from_pretrained("codellama/CodeLlama-7b-hf", from_pt=True)
-        tokenizer = CodeLlamaTokenizer.from_pretrained("codellama/CodeLlama-7b-hf", from_pt=True)
+        model = LlamaForCausalLM.from_pretrained("codellama/CodeLlama-7b-hf")
+        tokenizer = CodeLlamaTokenizer.from_pretrained("codellama/CodeLlama-7b-hf")
         # Tokenize and prepare for the model a list of sequences or a list of pairs of sequences.
         # meaning by default this supports passing splitted list of inputs
         processed_text = tokenizer.batch_decode(tokenizer(self.PROMPTS)["input_ids"], add_special_tokens=False)

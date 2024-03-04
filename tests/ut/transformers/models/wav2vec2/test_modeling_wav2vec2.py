@@ -101,7 +101,7 @@ def _test_wav2vec2_with_lm_invalid_pool(in_queue, out_queue, timeout):
             ms.tensor(sample["audio"]["array"]).numpy(), orig_sr=48_000, target_sr=16_000
         )
 
-        model = Wav2Vec2ForCTC.from_pretrained("patrickvonplaten/wav2vec2-large-xlsr-53-spanish-with-lm", from_pt=True)
+        model = Wav2Vec2ForCTC.from_pretrained("patrickvonplaten/wav2vec2-large-xlsr-53-spanish-with-lm")
         processor = Wav2Vec2ProcessorWithLM.from_pretrained("patrickvonplaten/wav2vec2-large-xlsr-53-spanish-with-lm")
 
         input_values = processor(resampled_audio, return_tensors="ms").input_values
@@ -576,11 +576,11 @@ class Wav2Vec2ModelTest(ModelTesterMixin, unittest.TestCase):
 
     def test_mask_feature_prob_ctc(self):
         model = Wav2Vec2ForCTC.from_pretrained(
-            "hf-internal-testing/tiny-random-wav2vec2", from_pt=True, mask_feature_prob=0.2, mask_feature_length=2
+            "hf-internal-testing/tiny-random-wav2vec2", mask_feature_prob=0.2, mask_feature_length=2
         )
         model.set_train(True)
         processor = Wav2Vec2Processor.from_pretrained(
-            "hf-internal-testing/tiny-random-wav2vec2", from_pt=True, return_attention_mask=True
+            "hf-internal-testing/tiny-random-wav2vec2", return_attention_mask=True
         )
 
         batch_duration_in_seconds = [1, 3, 2, 6]
@@ -599,11 +599,11 @@ class Wav2Vec2ModelTest(ModelTesterMixin, unittest.TestCase):
 
     def test_mask_time_prob_ctc(self):
         model = Wav2Vec2ForCTC.from_pretrained(
-            "hf-internal-testing/tiny-random-wav2vec2", from_pt=True, mask_time_prob=0.2, mask_time_length=2
+            "hf-internal-testing/tiny-random-wav2vec2", mask_time_prob=0.2, mask_time_length=2
         )
         model.set_train(True)
         processor = Wav2Vec2Processor.from_pretrained(
-            "hf-internal-testing/tiny-random-wav2vec2", from_pt=True, return_attention_mask=True
+            "hf-internal-testing/tiny-random-wav2vec2", return_attention_mask=True
         )
 
         batch_duration_in_seconds = [1, 3, 2, 6]
@@ -626,7 +626,7 @@ class Wav2Vec2ModelTest(ModelTesterMixin, unittest.TestCase):
 
     @slow
     def test_model_from_pretrained(self):
-        model = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base-960h", from_pt=True)
+        model = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base-960h")
         self.assertIsNotNone(model)
 
 
@@ -794,11 +794,11 @@ class Wav2Vec2RobustModelTest(ModelTesterMixin, unittest.TestCase):
 
     def test_mask_feature_prob_ctc(self):
         model = Wav2Vec2ForCTC.from_pretrained(
-            "hf-internal-testing/tiny-random-wav2vec2", from_pt=True, mask_feature_prob=0.2, mask_feature_length=2
+            "hf-internal-testing/tiny-random-wav2vec2", mask_feature_prob=0.2, mask_feature_length=2
         )
         model.set_train(True)
         processor = Wav2Vec2Processor.from_pretrained(
-            "hf-internal-testing/tiny-random-wav2vec2", from_pt=True, return_attention_mask=True
+            "hf-internal-testing/tiny-random-wav2vec2", return_attention_mask=True
         )
 
         batch_duration_in_seconds = [1, 3, 2, 6]
@@ -817,11 +817,11 @@ class Wav2Vec2RobustModelTest(ModelTesterMixin, unittest.TestCase):
 
     def test_mask_time_prob_ctc(self):
         model = Wav2Vec2ForCTC.from_pretrained(
-            "hf-internal-testing/tiny-random-wav2vec2", from_pt=True, mask_time_prob=0.2, mask_time_length=2
+            "hf-internal-testing/tiny-random-wav2vec2", mask_time_prob=0.2, mask_time_length=2
         )
         model.set_train(True)
         processor = Wav2Vec2Processor.from_pretrained(
-            "hf-internal-testing/tiny-random-wav2vec2", from_pt=True, return_attention_mask=True
+            "hf-internal-testing/tiny-random-wav2vec2", return_attention_mask=True
         )
 
         batch_duration_in_seconds = [1, 3, 2, 6]
@@ -841,7 +841,6 @@ class Wav2Vec2RobustModelTest(ModelTesterMixin, unittest.TestCase):
     def test_mask_time_feature_prob_ctc_single_batch(self):
         model = Wav2Vec2ForCTC.from_pretrained(
             "hf-internal-testing/tiny-random-wav2vec2",
-            from_pt=True,
             mask_time_prob=0.2,
             mask_feature_prob=0.2,
             mask_time_length=2,
@@ -849,7 +848,7 @@ class Wav2Vec2RobustModelTest(ModelTesterMixin, unittest.TestCase):
         )
         model.set_train(True)
         processor = Wav2Vec2Processor.from_pretrained(
-            "hf-internal-testing/tiny-random-wav2vec2", from_pt=True, return_attention_mask=True
+            "hf-internal-testing/tiny-random-wav2vec2", return_attention_mask=True
         )
 
         batch_duration_in_seconds = [6]
@@ -872,7 +871,7 @@ class Wav2Vec2RobustModelTest(ModelTesterMixin, unittest.TestCase):
 
     @unittest.skip(reason="resource url unavailable")
     def test_load_and_set_attn_adapter(self):
-        processor = Wav2Vec2Processor.from_pretrained("hf-internal-testing/tiny-random-wav2vec2", from_pt=True, return_attention_mask=True)
+        processor = Wav2Vec2Processor.from_pretrained("hf-internal-testing/tiny-random-wav2vec2", return_attention_mask=True)
 
         def get_logits(model, input_features):
             batch = processor(
@@ -889,11 +888,11 @@ class Wav2Vec2RobustModelTest(ModelTesterMixin, unittest.TestCase):
 
         input_features = [np.random.random(16_000 * s) for s in [1, 3, 2, 6]]
 
-        model = Wav2Vec2ForCTC.from_pretrained("hf-internal-testing/tiny-random-wav2vec2-adapter", from_pt=True, target_lang="it")
+        model = Wav2Vec2ForCTC.from_pretrained("hf-internal-testing/tiny-random-wav2vec2-adapter", target_lang="it")
 
         logits = get_logits(model, input_features)
 
-        model_2 = Wav2Vec2ForCTC.from_pretrained("hf-internal-testing/tiny-random-wav2vec2-adapter", from_pt=True)
+        model_2 = Wav2Vec2ForCTC.from_pretrained("hf-internal-testing/tiny-random-wav2vec2-adapter")
         model_2.load_adapter("it")
 
         logits_2 = get_logits(model_2, input_features)
@@ -904,7 +903,7 @@ class Wav2Vec2RobustModelTest(ModelTesterMixin, unittest.TestCase):
     # test that loading adapter weights with mismatched vocab sizes can be loaded
     def test_load_target_lang_with_mismatched_size(self):
         processor = Wav2Vec2Processor.from_pretrained(
-            "hf-internal-testing/tiny-random-wav2vec2", from_pt=True, return_attention_mask=True
+            "hf-internal-testing/tiny-random-wav2vec2", return_attention_mask=True
         )
 
         def get_logits(model, input_features):
@@ -922,11 +921,11 @@ class Wav2Vec2RobustModelTest(ModelTesterMixin, unittest.TestCase):
 
         input_features = [np.random.random(16_000 * s) for s in [1, 3, 2, 6]]
 
-        model = Wav2Vec2ForCTC.from_pretrained("hf-internal-testing/tiny-random-wav2vec2-adapter", from_pt=True, target_lang="fr", ignore_mismatched_sizes=True)
+        model = Wav2Vec2ForCTC.from_pretrained("hf-internal-testing/tiny-random-wav2vec2-adapter", target_lang="fr", ignore_mismatched_sizes=True)
 
         logits = get_logits(model, input_features)
 
-        model_2 = Wav2Vec2ForCTC.from_pretrained("hf-internal-testing/tiny-random-wav2vec2-adapter", from_pt=True)
+        model_2 = Wav2Vec2ForCTC.from_pretrained("hf-internal-testing/tiny-random-wav2vec2-adapter")
         model_2.load_adapter("fr")
 
         logits_2 = get_logits(model_2, input_features)
@@ -936,7 +935,7 @@ class Wav2Vec2RobustModelTest(ModelTesterMixin, unittest.TestCase):
     @unittest.skip(reason="no pytorch support")
     def test_load_attn_adapter(self):
         processor = Wav2Vec2Processor.from_pretrained(
-            "hf-internal-testing/tiny-random-wav2vec2", from_pt=True, return_attention_mask=True
+            "hf-internal-testing/tiny-random-wav2vec2", return_attention_mask=True
         )
 
         def get_logits(model, input_features):
@@ -954,7 +953,7 @@ class Wav2Vec2RobustModelTest(ModelTesterMixin, unittest.TestCase):
 
         input_features = [np.random.random(16_000 * s) for s in [1, 3, 2, 6]]
 
-        model = Wav2Vec2ForCTC.from_pretrained("hf-internal-testing/tiny-random-wav2vec2", from_pt=True, adapter_attn_dim=16)
+        model = Wav2Vec2ForCTC.from_pretrained("hf-internal-testing/tiny-random-wav2vec2", adapter_attn_dim=16)
 
         with tempfile.TemporaryDirectory() as tempdir:
             model.save_pretrained(tempdir)
@@ -999,7 +998,7 @@ class Wav2Vec2RobustModelTest(ModelTesterMixin, unittest.TestCase):
 
             self.assertTrue(mnp.allclose(logits, logits_2, atol=1e-3))
 
-        model = Wav2Vec2ForCTC.from_pretrained("hf-internal-testing/tiny-random-wav2vec2-adapter", from_pt=True)
+        model = Wav2Vec2ForCTC.from_pretrained("hf-internal-testing/tiny-random-wav2vec2-adapter")
         logits = get_logits(model, input_features)
 
         model.load_adapter("eng")
@@ -1012,7 +1011,7 @@ class Wav2Vec2RobustModelTest(ModelTesterMixin, unittest.TestCase):
 
     @slow
     def test_model_from_pretrained(self):
-        model = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base-960h", from_pt=True)
+        model = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base-960h")
         self.assertIsNotNone(model)
 
 
@@ -1217,8 +1216,8 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
         return ds[:num_samples]
 
     def test_inference_ctc_normal(self):
-        model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h", from_pt=True)
-        processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h", from_pt=True, do_lower_case=True)
+        model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h")
+        processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h", do_lower_case=True)
         input_speech = self._load_datasamples(1)
 
         input_values = processor(input_speech, return_tensors="ms").input_values
@@ -1231,8 +1230,8 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
         self.assertListEqual(predicted_trans, EXPECTED_TRANSCRIPTIONS)
 
     def test_inference_ctc_normal_batched(self):
-        model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h", from_pt=True)
-        processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h", from_pt=True, do_lower_case=True)
+        model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h")
+        processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h", do_lower_case=True)
 
         input_speech = self._load_datasamples(2)
         inputs = processor(input_speech, return_tensors="ms", padding=True)
@@ -1249,8 +1248,8 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
         self.assertListEqual(predicted_trans, EXPECTED_TRANSCRIPTIONS)
 
     def test_inference_ctc_robust_batched(self):
-        model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-large-960h-lv60-self", from_pt=True)
-        processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-large-960h-lv60-self", from_pt=True, do_lower_case=True)
+        model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-large-960h-lv60-self")
+        processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-large-960h-lv60-self", do_lower_case=True)
 
         input_speech = self._load_datasamples(4)
         inputs = processor(input_speech, return_tensors="ms", padding=True)
@@ -1273,8 +1272,8 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
 
     @unittest.skipIf(ms.get_context('device_target') != "CPU", "cannot make deterministic on GPU")
     def test_inference_integration(self):
-        model = Wav2Vec2ForPreTraining.from_pretrained("facebook/wav2vec2-base", from_pt=True)
-        feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained("facebook/wav2vec2-base", from_pt=True)
+        model = Wav2Vec2ForPreTraining.from_pretrained("facebook/wav2vec2-base")
+        feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained("facebook/wav2vec2-base")
         input_speech = self._load_datasamples(2)
 
         inputs_dict = feature_extractor(input_speech, return_tensors="ms", padding=True)
@@ -1318,9 +1317,9 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
         self.assertTrue(mnp.allclose(cosine_sim_masked, expected_cosine_sim_masked, atol=1e-3))
 
     def test_inference_pretrained(self):
-        model = Wav2Vec2ForPreTraining.from_pretrained("facebook/wav2vec2-base", from_pt=True)
+        model = Wav2Vec2ForPreTraining.from_pretrained("facebook/wav2vec2-base")
         feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
-            "facebook/wav2vec2-base", from_pt=True, return_attention_mask=True
+            "facebook/wav2vec2-base", return_attention_mask=True
         )
         input_speech = self._load_datasamples(2)
 
@@ -1352,7 +1351,7 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
 
         # ... now compare to randomly initialized model
 
-        config = Wav2Vec2Config.from_pretrained("facebook/wav2vec2-base", from_pt=True)
+        config = Wav2Vec2Config.from_pretrained("facebook/wav2vec2-base")
         model_rand = Wav2Vec2ForPreTraining(config)
         outputs_rand = model_rand(
             inputs_dict.input_values,
@@ -1376,7 +1375,6 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
     def test_loss_pretraining(self):
         model = Wav2Vec2ForPreTraining.from_pretrained(
             "facebook/wav2vec2-base",
-            from_pt=True,
             attention_dropout=0.0,
             feat_proj_dropout=0.0,
             hidden_dropout=0.0,
@@ -1385,7 +1383,7 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
         model.set_train(True)
 
         feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
-            "facebook/wav2vec2-base", from_pt=True, return_attention_mask=True
+            "facebook/wav2vec2-base", return_attention_mask=True
         )
         input_speech = self._load_datasamples(2)
 
@@ -1430,8 +1428,8 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
         #self.assertTrue(abs(outputs.loss.item() - expected_loss) < 1e-3)
 
     def test_inference_keyword_spotting(self):
-        model = Wav2Vec2ForSequenceClassification.from_pretrained("superb/wav2vec2-base-superb-ks", from_pt=True)
-        processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/wav2vec2-base-superb-ks", from_pt=True)
+        model = Wav2Vec2ForSequenceClassification.from_pretrained("superb/wav2vec2-base-superb-ks")
+        processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/wav2vec2-base-superb-ks")
         input_data = self._load_superb("ks", 4)
         inputs = processor(input_data["speech"], return_tensors="ms", padding=True)
 
@@ -1448,8 +1446,8 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
         self.assertTrue(mnp.allclose(predicted_logits, expected_logits, atol=1e-2))
 
     def test_inference_intent_classification(self):
-        model = Wav2Vec2ForSequenceClassification.from_pretrained("superb/wav2vec2-base-superb-ic", from_pt=True)
-        processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/wav2vec2-base-superb-ic", from_pt=True)
+        model = Wav2Vec2ForSequenceClassification.from_pretrained("superb/wav2vec2-base-superb-ic")
+        processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/wav2vec2-base-superb-ic")
         input_data = self._load_superb("ic", 4)
         inputs = processor(input_data["speech"], return_tensors="ms", padding=True)
 
@@ -1477,8 +1475,8 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
         self.assertTrue(mnp.allclose(predicted_logits_location, expected_logits_location, atol=1e-2))
 
     def test_inference_speaker_identification(self):
-        model = Wav2Vec2ForSequenceClassification.from_pretrained("superb/wav2vec2-base-superb-sid", from_pt=True)
-        processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/wav2vec2-base-superb-sid", from_pt=True)
+        model = Wav2Vec2ForSequenceClassification.from_pretrained("superb/wav2vec2-base-superb-sid")
+        processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/wav2vec2-base-superb-sid")
         input_data = self._load_superb("si", 4)
 
         output_logits = []
@@ -1497,8 +1495,8 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
         self.assertTrue(mnp.allclose(predicted_logits, expected_logits, atol=1e-2))
 
     def test_inference_emotion_recognition(self):
-        model = Wav2Vec2ForSequenceClassification.from_pretrained("superb/wav2vec2-base-superb-er", from_pt=True)
-        processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/wav2vec2-base-superb-er", from_pt=True)
+        model = Wav2Vec2ForSequenceClassification.from_pretrained("superb/wav2vec2-base-superb-er")
+        processor = Wav2Vec2FeatureExtractor.from_pretrained("superb/wav2vec2-base-superb-er")
         input_data = self._load_superb("er", 4)
         inputs = processor(input_data["speech"], return_tensors="ms", padding=True)
 
@@ -1516,8 +1514,8 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
 
     @unittest.skip("espeak not available on Windows")
     def test_phoneme_recognition(self):
-        model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-lv-60-espeak-cv-ft", from_pt=True)
-        processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-lv-60-espeak-cv-ft", from_pt=True)
+        model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-lv-60-espeak-cv-ft")
+        processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-lv-60-espeak-cv-ft")
 
         input_speech = self._load_datasamples(4)
         inputs = processor(input_speech, return_tensors="ms", padding=True)
@@ -1557,7 +1555,7 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
             ms.tensor(sample["audio"]["array"]).numpy(), orig_sr=48_000, target_sr=16_000
         )
 
-        model = Wav2Vec2ForCTC.from_pretrained("patrickvonplaten/wav2vec2-large-xlsr-53-spanish-with-lm", from_pt=True)
+        model = Wav2Vec2ForCTC.from_pretrained("patrickvonplaten/wav2vec2-large-xlsr-53-spanish-with-lm")
         processor = Wav2Vec2ProcessorWithLM.from_pretrained("patrickvonplaten/wav2vec2-large-xlsr-53-spanish-with-lm")
 
         input_values = processor(resampled_audio, return_tensors="ms").input_values
@@ -1577,7 +1575,7 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
             ms.tensor(sample["audio"]["array"]).numpy(), orig_sr=48_000, target_sr=16_000
         )
 
-        model = Wav2Vec2ForCTC.from_pretrained("patrickvonplaten/wav2vec2-large-xlsr-53-spanish-with-lm", from_pt=True)
+        model = Wav2Vec2ForCTC.from_pretrained("patrickvonplaten/wav2vec2-large-xlsr-53-spanish-with-lm")
         processor = Wav2Vec2ProcessorWithLM.from_pretrained("patrickvonplaten/wav2vec2-large-xlsr-53-spanish-with-lm")
 
         input_values = processor(resampled_audio, return_tensors="ms").input_values
@@ -1606,8 +1604,8 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
         run_test_in_subprocess(test_case=self, target_func=_test_wav2vec2_with_lm_invalid_pool, inputs=None)
 
     def test_inference_diarization(self):
-        model = Wav2Vec2ForAudioFrameClassification.from_pretrained("anton-l/wav2vec2-base-superb-sd", from_pt=True)
-        processor = Wav2Vec2FeatureExtractor.from_pretrained("anton-l/wav2vec2-base-superb-sd", from_pt=True)
+        model = Wav2Vec2ForAudioFrameClassification.from_pretrained("anton-l/wav2vec2-base-superb-sd")
+        processor = Wav2Vec2FeatureExtractor.from_pretrained("anton-l/wav2vec2-base-superb-sd")
         input_data = self._load_superb("sd", 4)
         inputs = processor(input_data["speech"], return_tensors="ms", padding=True, sampling_rate=16_000)
 
@@ -1631,8 +1629,8 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
         self.assertTrue(mnp.allclose(outputs.logits[:, :4], expected_logits, atol=1e-2))
 
     def test_inference_speaker_verification(self):
-        model = Wav2Vec2ForXVector.from_pretrained("anton-l/wav2vec2-base-superb-sv", from_pt=True)
-        processor = Wav2Vec2FeatureExtractor.from_pretrained("anton-l/wav2vec2-base-superb-sv", from_pt=True)
+        model = Wav2Vec2ForXVector.from_pretrained("anton-l/wav2vec2-base-superb-sv")
+        processor = Wav2Vec2FeatureExtractor.from_pretrained("anton-l/wav2vec2-base-superb-sv")
         input_data = self._load_superb("si", 4)
 
         inputs = processor(input_data["speech"], return_tensors="ms", padding=True, sampling_rate=16_000)
@@ -1656,8 +1654,8 @@ class Wav2Vec2ModelIntegrationTest(unittest.TestCase):
     @unittest.skip('no torch support')
     @require_librosa
     def test_inference_mms_1b_all(self):
-        model = Wav2Vec2ForCTC.from_pretrained("facebook/mms-1b-all", from_pt=True)
-        processor = Wav2Vec2Processor.from_pretrained("facebook/mms-1b-all", from_pt=True)
+        model = Wav2Vec2ForCTC.from_pretrained("facebook/mms-1b-all")
+        processor = Wav2Vec2Processor.from_pretrained("facebook/mms-1b-all")
 
         LANG_MAP = {"it": "ita", "es": "spa", "fr": "fra", "en": "eng"}
 

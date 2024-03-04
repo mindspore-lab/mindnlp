@@ -518,8 +518,8 @@ class FalconModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase
 class FalconLanguageGenerationTest(unittest.TestCase):
     @slow
     def test_lm_generate_falcon(self):
-        tokenizer = AutoTokenizer.from_pretrained("Rocketknight1/falcon-rw-1b", from_pt=True)
-        model = FalconForCausalLM.from_pretrained("Rocketknight1/falcon-rw-1b", from_pt=True)
+        tokenizer = AutoTokenizer.from_pretrained("Rocketknight1/falcon-rw-1b")
+        model = FalconForCausalLM.from_pretrained("Rocketknight1/falcon-rw-1b")
         model.set_train(False)
         inputs = tokenizer("My favorite food is", return_tensors="ms")
 
@@ -538,8 +538,8 @@ class FalconLanguageGenerationTest(unittest.TestCase):
             "Rocketknight1/tiny-random-falcon-7b",  
             "Rocketknight1/tiny-random-falcon-40b",
         ]:
-            tokenizer = AutoTokenizer.from_pretrained(repo, from_pt=True)
-            model = FalconForCausalLM.from_pretrained(repo, from_pt=True)
+            tokenizer = AutoTokenizer.from_pretrained(repo)
+            model = FalconForCausalLM.from_pretrained(repo)
             model.set_train(False)
 
             inputs = tokenizer("My favorite food is", return_tensors="ms")
@@ -559,8 +559,8 @@ class FalconLanguageGenerationTest(unittest.TestCase):
             "Rocketknight1/tiny-random-falcon-7b",
             "Rocketknight1/tiny-random-falcon-40b",
         ]:
-            tokenizer = AutoTokenizer.from_pretrained(repo, from_pt=True)
-            model = FalconForCausalLM.from_pretrained(repo, from_pt=True)
+            tokenizer = AutoTokenizer.from_pretrained(repo)
+            model = FalconForCausalLM.from_pretrained(repo)
             model.set_train(False)
             inputs = tokenizer("My favorite food is", return_tensors="ms")
 
@@ -576,12 +576,11 @@ class FalconLanguageGenerationTest(unittest.TestCase):
     @slow
     def test_batched_generation(self):
         tokenizer = AutoTokenizer.from_pretrained(
-            "tiiuae/falcon-7b", padding_side="left", from_pt=True
+            "tiiuae/falcon-7b", padding_side="left"
         )
         tokenizer.pad_token = tokenizer.eos_token
         model = AutoModelForCausalLM.from_pretrained(
             "tiiuae/falcon-7b",
-            from_pt=True,
         )
 
         test_text = "A sequence: 1, 2"  # should generate the rest of the sequence

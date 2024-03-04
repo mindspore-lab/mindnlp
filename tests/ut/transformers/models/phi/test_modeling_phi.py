@@ -363,10 +363,10 @@ class PhiModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
         Overwritting the common test as the test is flaky on tiny models
         """
         model = PhiForCausalLM.from_pretrained(
-            "microsoft/phi-1", from_pt=True
+            "microsoft/phi-1"
         )
 
-        tokenizer = AutoTokenizer.from_pretrained("microsoft/phi-1", from_pt=True)
+        tokenizer = AutoTokenizer.from_pretrained("microsoft/phi-1")
 
         texts = ["hi", "Hello this is a very long sentence"]
 
@@ -389,7 +389,7 @@ class PhiIntegrationTest(unittest.TestCase):
             )
         }
 
-        model = PhiForCausalLM.from_pretrained("microsoft/phi-1", from_pt=True)
+        model = PhiForCausalLM.from_pretrained("microsoft/phi-1")
         model.set_train(False)
 
         output = model(**input_ids).logits
@@ -405,7 +405,7 @@ class PhiIntegrationTest(unittest.TestCase):
             )
         }
 
-        model = PhiForCausalLM.from_pretrained("microsoft/phi-1_5", from_pt=True)
+        model = PhiForCausalLM.from_pretrained("microsoft/phi-1_5")
         model.set_train(False)
 
         output = model(**input_ids).logits
@@ -421,7 +421,7 @@ class PhiIntegrationTest(unittest.TestCase):
             )
         }
 
-        model = PhiForCausalLM.from_pretrained("microsoft/phi-2", from_pt=True)
+        model = PhiForCausalLM.from_pretrained("microsoft/phi-2")
         model.set_train(False)
 
         output = model(**input_ids).logits
@@ -432,8 +432,8 @@ class PhiIntegrationTest(unittest.TestCase):
         self.assertTrue(np.allclose(EXPECTED_OUTPUT.asnumpy(), output[0, :2, :30].asnumpy(), atol=1e-2, rtol=1e-2))
 
     def test_phi_2_generation(self):
-        model = PhiForCausalLM.from_pretrained("microsoft/phi-2", from_pt=True)
-        tokenizer = AutoTokenizer.from_pretrained("microsoft/phi-2", from_pt=True)
+        model = PhiForCausalLM.from_pretrained("microsoft/phi-2")
+        tokenizer = AutoTokenizer.from_pretrained("microsoft/phi-2")
 
         inputs = tokenizer(
             "Can you help me write a formal email to a potential business partner proposing a joint venture?",

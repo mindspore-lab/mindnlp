@@ -377,7 +377,7 @@ class MistralIntegrationTest(unittest.TestCase):
     @slow
     def test_model_7b_logits(self):
         input_ids = [1, 306, 4658, 278, 6593, 310, 2834, 338]
-        model = MistralForCausalLM.from_pretrained("mistralai/Mistral-7B-v0.1", from_pt=True)
+        model = MistralForCausalLM.from_pretrained("mistralai/Mistral-7B-v0.1")
         input_ids = mindspore.tensor([input_ids])
         out = model(input_ids).logits
         # Expected mean on dim = -1
@@ -393,8 +393,8 @@ class MistralIntegrationTest(unittest.TestCase):
     def test_model_7b_generation(self):
         EXPECTED_TEXT_COMPLETION = """My favourite condiment is 100% ketchup. I love it on everything. I’m not a big"""
         prompt = "My favourite condiment is "
-        tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-v0.1", use_fast=False, from_pt=True)
-        model = MistralForCausalLM.from_pretrained("mistralai/Mistral-7B-v0.1", from_pt=True)
+        tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-v0.1", use_fast=False)
+        model = MistralForCausalLM.from_pretrained("mistralai/Mistral-7B-v0.1")
         input_ids = tokenizer.encode(prompt, return_tensors="ms")
 
         # greedy generation outputs

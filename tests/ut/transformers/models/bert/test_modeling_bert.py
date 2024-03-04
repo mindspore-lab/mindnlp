@@ -617,7 +617,7 @@ class BertModelIntegrationTest(MindNLPTestCase):
 
     @slow
     def test_inference_no_head_relative_embedding_key(self):
-        model = BertModel.from_pretrained("zhiheng-huang/bert-base-uncased-embedding-relative-key", from_pt=True)
+        model = BertModel.from_pretrained("zhiheng-huang/bert-base-uncased-embedding-relative-key")
         input_ids = mindspore.tensor([[0, 345, 232, 328, 740, 140, 1695, 69, 6078, 1588, 2]])
         attention_mask = mindspore.tensor([[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
         output = model(input_ids, attention_mask=attention_mask)[0]
@@ -631,7 +631,7 @@ class BertModelIntegrationTest(MindNLPTestCase):
 
     @slow
     def test_inference_no_head_relative_embedding_key_query(self):
-        model = BertModel.from_pretrained("zhiheng-huang/bert-base-uncased-embedding-relative-key-query", from_pt=True)
+        model = BertModel.from_pretrained("zhiheng-huang/bert-base-uncased-embedding-relative-key-query")
         input_ids = mindspore.tensor([[0, 345, 232, 328, 740, 140, 1695, 69, 6078, 1588, 2]])
         attention_mask = mindspore.tensor([[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
         output = model(input_ids, attention_mask=attention_mask)[0]

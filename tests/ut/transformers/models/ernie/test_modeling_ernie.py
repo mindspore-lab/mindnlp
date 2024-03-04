@@ -568,5 +568,5 @@ class ErnieModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
     @slow
     def test_model_from_pretrained(self):
         for model_name in ERNIE_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = ErnieModel.from_pretrained(model_name, from_pt=True)
+            model = ErnieModel.from_pretrained(model_name)
             self.assertIsNotNone(model)

@@ -50,7 +50,7 @@ class AutoConfigTest(unittest.TestCase):
         self.assertIsInstance(config, RobertaConfig)
 
     def test_config_model_type_from_model_identifier(self):
-        config = AutoConfig.from_pretrained(DUMMY_UNKNOWN_IDENTIFIER, from_pt=True)
+        config = AutoConfig.from_pretrained(DUMMY_UNKNOWN_IDENTIFIER)
         self.assertIsInstance(config, RobertaConfig)
 
     def test_config_for_model_str(self):

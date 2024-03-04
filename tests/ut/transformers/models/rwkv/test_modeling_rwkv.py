@@ -89,7 +89,7 @@ class RwkvModelTester:
         self.pad_token_id = vocab_size - 1
 
     def get_large_model_config(self):
-        return RwkvConfig.from_pretrained("sgugger/rwkv-4-pile-7b", from_pt=True)
+        return RwkvConfig.from_pretrained("sgugger/rwkv-4-pile-7b")
 
     def prepare_config_and_inputs(
         self, gradient_checkpointing=False, scale_attn_by_inverse_layer_idx=False, reorder_and_upcast_attn=False
@@ -413,7 +413,7 @@ class RwkvModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
     @slow
     def test_model_from_pretrained(self):
         for model_name in RWKV_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = RwkvModel.from_pretrained(model_name, from_pt=True)
+            model = RwkvModel.from_pretrained(model_name)
             self.assertIsNotNone(model)
 
 
@@ -421,11 +421,11 @@ class RwkvModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase):
 class RWKVIntegrationTests(unittest.TestCase):
     def setUp(self):
         self.model_id = "RWKV/rwkv-4-169m-pile"
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_id, from_pt=True)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
 
     def test_simple_generate(self):
         expected_output = "Hello my name is Jasmine and I am a newbie to the"
-        model = RwkvForCausalLM.from_pretrained(self.model_id, from_pt=True)
+        model = RwkvForCausalLM.from_pretrained(self.model_id)
 
         input_ids = self.tokenizer("Hello my name is", return_tensors="ms").input_ids
         output = model.generate(input_ids, max_new_tokens=10)
@@ -439,7 +439,7 @@ class RWKVIntegrationTests(unittest.TestCase):
         expected_output = "Hello my name is Jasmine and I am a newbie to the"
 
         input_ids = self.tokenizer("Hello my name is", return_tensors="ms").input_ids
-        model = RwkvForCausalLM.from_pretrained(self.model_id, ms_dtype=mindspore.float16, from_pt=True)
+        model = RwkvForCausalLM.from_pretrained(self.model_id, ms_dtype=mindspore.float16)
 
         output = model.generate(input_ids, max_new_tokens=10)
         output_sentence = self.tokenizer.decode(output[0].tolist())

@@ -226,8 +226,8 @@ class Wav2Vec2FeatureExtractionTest(unittest.TestCase):
         # group norm don't have their feature extractor return the
         # attention_mask
         for model_id in WAV_2_VEC_2_PRETRAINED_MODEL_ARCHIVE_LIST:
-            config = Wav2Vec2Config.from_pretrained(model_id, from_pt=True)
-            feat_extract = Wav2Vec2FeatureExtractor.from_pretrained(model_id, from_pt=True)
+            config = Wav2Vec2Config.from_pretrained(model_id)
+            feat_extract = Wav2Vec2FeatureExtractor.from_pretrained(model_id)
 
             # only "layer" feature extraction norm should make use of
             # attention_mask

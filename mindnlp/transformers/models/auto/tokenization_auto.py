@@ -27,7 +27,6 @@ import os
 from collections import OrderedDict
 from typing import Dict, Optional, Union
 
-from mindnlp.configs import MS_URL_BASE, HF_URL_BASE
 from mindnlp.utils import cached_file, is_sentencepiece_available, is_tokenizers_available, logging
 from ...configuration_utils import PretrainedConfig, EncoderDecoderConfig
 from ...tokenization_utils import PreTrainedTokenizer # pylint: disable=cyclic-import
@@ -553,8 +552,7 @@ def get_tokenizer_config(
     tokenizer_config = get_tokenizer_config("tokenizer-test")
     ```"""
 
-    from_pt = kwargs.get('from_pt', False)
-    endpoint = HF_URL_BASE if from_pt else MS_URL_BASE
+    _ = kwargs.get('from_pt', False)
     resolved_config_file = cached_file(
         pretrained_model_name_or_path,
         TOKENIZER_CONFIG_FILE,

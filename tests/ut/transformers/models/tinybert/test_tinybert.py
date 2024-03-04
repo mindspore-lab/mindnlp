@@ -378,8 +378,3 @@ class TestTinyBert(MindNLPTestCase):
     def test_from_pretrained_path(self):
         """test from pretrained"""
         _ = TinyBertModel.from_pretrained('.mindnlp/models/tinybert_6L_zh')
-
-    @pytest.mark.download
-    def test_from_pretrained_from_pt(self):
-        """test from pt"""
-        _ = TinyBertModel.from_pretrained('huawei-noah/tinybert_6L_zh', from_pt=True)

@@ -1037,8 +1037,8 @@ class T5ModelIntegrationTests(unittest.TestCase):
         >>> score = t5_model.score(inputs=["Hello there"], targets=["Hi I am"], vocabulary=vocab)
         """
 
-        model = T5ForConditionalGeneration.from_pretrained("google/t5-v1_1-small", from_pt=True)
-        tokenizer = T5Tokenizer.from_pretrained("google/t5-v1_1-small", from_pt=True)
+        model = T5ForConditionalGeneration.from_pretrained("google/t5-v1_1-small")
+        tokenizer = T5Tokenizer.from_pretrained("google/t5-v1_1-small")
 
         input_ids = tokenizer("Hello there", return_tensors="ms").input_ids
         labels = tokenizer("Hi I am", return_tensors="ms").input_ids
@@ -1060,8 +1060,8 @@ class T5ModelIntegrationTests(unittest.TestCase):
         >>> score = t5_model.score(inputs=["Hello there"], targets=["Hi I am"], vocabulary=vocab)
         """
 
-        model = T5ForConditionalGeneration.from_pretrained("google/byt5-small", from_pt=True)
-        tokenizer = ByT5Tokenizer.from_pretrained("google/byt5-small", from_pt=True)
+        model = T5ForConditionalGeneration.from_pretrained("google/byt5-small")
+        tokenizer = ByT5Tokenizer.from_pretrained("google/byt5-small")
 
         input_ids = tokenizer("Hello there", return_tensors="ms").input_ids
         labels = tokenizer("Hi I am", return_tensors="ms").input_ids
@@ -1400,8 +1400,8 @@ class T5ModelIntegrationTests(unittest.TestCase):
             " up to four years in prison.  Her next court appearance is scheduled for May 18."
         )
         article = "summarize: " + article.strip()
-        t5_tokenizer = AutoTokenizer.from_pretrained("flax-community/t5-base-cnn-dm", from_pt=True)
-        t5_model = T5ForConditionalGeneration.from_pretrained("flax-community/t5-base-cnn-dm", from_pt=True)
+        t5_tokenizer = AutoTokenizer.from_pretrained("flax-community/t5-base-cnn-dm")
+        t5_model = T5ForConditionalGeneration.from_pretrained("flax-community/t5-base-cnn-dm")
         input_ids = t5_tokenizer(
             article, add_special_tokens=False, truncation=True, max_length=512, return_tensors="ms"
         ).input_ids

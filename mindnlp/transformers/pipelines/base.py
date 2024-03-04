@@ -230,8 +230,6 @@ def load_model(
         all_traceback = {}
         for model_class in class_tuple:
             kwargs = model_kwargs.copy()
-            if model.endswith(".bin") or model.endswith(".safetensors") or model.endswith(".pth"):
-                kwargs["from_pt"] = True
             try:
                 model = model_class.from_pretrained(model, **kwargs)
                 model = model.set_train(False)
