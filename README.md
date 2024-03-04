@@ -30,15 +30,19 @@
   mounts of useful datasets.
   * 📝 MindNLP supports NLP tasks such as *language model*, *machine translation*, *question answering*, *sentiment analysis*, *sequence labeling*, *summarization*, etc. You can access them through [examples](./examples/).
   * 🚀 MindNLP currently supports industry-leading Large Language Models (LLMs), including **Llama**, **GLM**, **RWKV**, etc. For support related to large language models, including ***pre-training***, ***fine-tuning***, and **inference** demo examples, you can find them in the ["llm" directory](./llm/).
-  * 🤗 Pretrained models support ***huggingface transformers-like apis***, including **28+** models like **[BERT](./mindnlp/models/bert)**, **[Roberta](./mindnlp/models/roberta)**, **[GPT2](./mindnlp/models/gpt2)**, **[T5](./mindnlp/models/t5)**, etc.
+  * 🤗 Pretrained models support ***huggingface transformers-like apis***, including **60+** models like **[BERT](./mindnlp/transformers/models/bert)**, **[Roberta](./mindnlp/transformers/models/roberta)**, **[GPT2](./mindnlp/transformers/models/gpt2)**, **[T5](./mindnlp/transformers/models/t5)**, etc.
     You can use them easily by following code snippet:
     ```python
-    from mindnlp.models import BertModel
+    from mindnlp.transformers import AutoModel
 
-    model = BertModel.from_pretrained('bert-base-cased')
+    model = AutoModel.from_pretrained('bert-base-cased')
     ```
 
 ### Installation
+
+```bash
+pip install mindnlp
+```
 
 Version Compatibility:
 
@@ -46,7 +50,7 @@ Version Compatibility:
 |-----------------|-------------------|--------------------------|
 | master          | daily build       | >=3.7.5, <=3.9           |
 | 0.1.1           | >=1.8.1, <=2.0.0  | >=3.7.5, <=3.9           |
-| 0.2.0           | >=2.1.0           | >=3.7.5, <=3.9           |
+| 0.2.x           | >=2.1.0           | >=3.8, <=3.9             |
 
 #### Daily build
 
