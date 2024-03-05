@@ -204,10 +204,6 @@ class BarkSelfFlashAttention2(BarkSelfAttention):
     # Copied from transformers.models.llama.modeling_llama.LlamaFlashAttention2.__init__
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        # TODO: Should be removed once Flash Attention for RoCm is bumped to 2.1.
-        # flash_attn<2.1 generates top-left aligned causal mask, while what is needed here is bottom-right alignement, that was made default for flash_attn>=2.1. This attribute is used to handle this difference. Reference: https://github.com/Dao-AILab/flash-attention/releases/tag/v2.1.0.
-        # Beware that with flash_attn<2.1, using q_seqlen != k_seqlen (except for the case q_seqlen == 1) produces a wrong mask (top-left).
         self._flash_attn_uses_top_left_mask = True
 
     def _split_heads(self, tensor, num_heads, attn_head_size):
@@ -229,16 +225,18 @@ class BarkSelfFlashAttention2(BarkSelfAttention):
         tensor = tensor.view(tensor.size()[:-2] + (num_heads * attn_head_size,))
         return tensor
 
-    def forward(
+    def construct(
         self,
         hidden_states,
         attention_mask=None,
         past_key_values=None,
-        head_mask=None,
         use_cache=False,
         output_attentions=False,
     ):
-        batch_size, query_len, _ = hidden_states.size()
+        r"""
+        construct
+        """
+        _, query_len, _ = hidden_states.size()
 
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
         query, key, value = self.att_proj(hidden_states).split(self.embed_dim, dim=2)
@@ -252,8 +250,8 @@ class BarkSelfFlashAttention2(BarkSelfAttention):
             past_key = past_key_values[0].swapaxes(1, 2)
             past_value = past_key_values[1].swapaxes(1, 2)
             # and merge on seq_length
-            key = ops.cat((past_key, key), dim=1)
-            value = ops.cat((past_value, value), dim=1)
+            key = ops.cat((past_key, key), axis=1)
+            value = ops.cat((past_value, value), axis=1)
 
         if use_cache is True:
             #  (batch, head, seq_length, head_features)
@@ -389,7 +387,7 @@ class BarkLayerNorm(nn.Cell):
 
 
     def construct(self, inputs):
-        layer_norm = nn.LayerNorm(self.weight.shape, gamma_init=self.weight, beta_init=self.bias if self.bias!=None else 'zeros', epsilon=1e-5)
+        layer_norm = nn.LayerNorm(self.weight.shape, gamma_init=self.weight, beta_init=self.bias if self.bias is not None else 'zeros', epsilon=1e-5)
         return layer_norm(inputs)
 
 class BarkMLP(nn.Cell):
@@ -671,11 +669,7 @@ class BarkCausalModel(BarkPreTrainedModel):
                 # [bsz, to_seq_length] -> [bsz, 1, 1, to_seq_length]
                 # from_seq_length is 1 to easily broadcast
                 attention_mask = _prepare_4d_attention_mask(attention_mask, input_embeds.dtype, tgt_len=1)
-        
-        # Prepare head mask if needed
-        # 1.0 in head_mask indicate we keep the head
-        # attention_probs has shape bsz x num_heads x N x N
-        # head_mask has shape num_layers x batch x num_heads x N x N
+
         head_mask = self.get_head_mask(head_mask, self.config.num_layers)
 
         hidden_states = self.drop(input_embeds + position_embeds)
@@ -950,11 +944,14 @@ class BarkCoarseModel(BarkCausalModel):
 
         else:
             # shape: (batch_size, 0)
-            class test:
+            class Test:
+                r"""
+                help to decorate zero dirmation martix
+                """
                 def __init__(self) -> None:
                     self.__enable_zero_dim__ = True
-            x_semantic_history = mindspore.Tensor(dtype=mindspore.int64, shape=(batch_size, 0), init= test())
-            x_coarse_history = mindspore.Tensor(dtype=mindspore.int64, shape=(batch_size, 0), init= test())
+            x_semantic_history = mindspore.Tensor(dtype=mindspore.int64, shape=(batch_size, 0), init= Test())
+            x_coarse_history = mindspore.Tensor(dtype=mindspore.int64, shape=(batch_size, 0), init= Test())
 
         return x_semantic_history, x_coarse_history
 
@@ -1078,9 +1075,8 @@ class BarkCoarseModel(BarkCausalModel):
 
         if return_output_lengths:
             return coarse_output, output_lengths
-        
-        return coarse_output
 
+        return coarse_output
 
 class BarkFineModel(BarkPreTrainedModel):
     r"""
@@ -1189,8 +1185,6 @@ class BarkFineModel(BarkPreTrainedModel):
         # Update base model and current model config
         self.config.output_vocab_size = model_embeds[0].weight.shape[0]
         self.config.vocab_size = model_embeds[0].weight.shape[0]
-        self.output_vocab_size = model_embeds[0].weight.shape[0]
-        self.vocab_size = model_embeds[0].weight.shape[0]
 
         # Tie weights again if needed
         self.tie_weights()
@@ -1597,9 +1591,9 @@ class BarkModel(BarkPreTrainedModel):
             output_lengths = [len(sample) for sample in audio]
             audio = nn.utils.rnn.pad_sequence(audio, batch_first=True, padding_value=0)
             return audio, output_lengths
-        
+
         return audio
-     
+
     @classmethod
     def _check_and_enable_flash_attn_2(
         cls,
