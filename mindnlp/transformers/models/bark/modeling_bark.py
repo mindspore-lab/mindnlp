@@ -664,11 +664,10 @@ class BarkCausalModel(BarkPreTrainedModel):
         if attention_mask is not None:
             if batch_size <= 0:
                 raise ValueError("batch_size has to be defined and > 0")
-            else:
-                attention_mask = attention_mask.view(batch_size, -1)
-                # [bsz, to_seq_length] -> [bsz, 1, 1, to_seq_length]
-                # from_seq_length is 1 to easily broadcast
-                attention_mask = _prepare_4d_attention_mask(attention_mask, input_embeds.dtype, tgt_len=1)
+            attention_mask = attention_mask.view(batch_size, -1)
+            # [bsz, to_seq_length] -> [bsz, 1, 1, to_seq_length]
+            # from_seq_length is 1 to easily broadcast
+            attention_mask = _prepare_4d_attention_mask(attention_mask, input_embeds.dtype, tgt_len=1)
 
         head_mask = self.get_head_mask(head_mask, self.config.num_layers)
 
@@ -1265,8 +1264,7 @@ class BarkFineModel(BarkPreTrainedModel):
         if attention_mask is not None:
             if batch_size <= 0:
                 raise ValueError("batch_size has to be defined and > 0")
-            else:
-                attention_mask = _prepare_4d_attention_mask(attention_mask, input_embeds.dtype, tgt_len=1)
+            attention_mask = _prepare_4d_attention_mask(attention_mask, input_embeds.dtype, tgt_len=1)
 
         head_mask = self.get_head_mask(head_mask, self.config.num_layers)
         hidden_states = self.drop(input_embeds + position_embeds)

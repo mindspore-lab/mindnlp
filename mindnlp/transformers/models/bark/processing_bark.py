@@ -118,6 +118,7 @@ class BarkProcessor(ProcessorMixin):
 
         return cls(tokenizer=tokenizer, speaker_embeddings=speaker_embeddings)
 
+    #pylint: disable=C0103
     def save_pretrained(
         self,
         save_directory="/home/luul/bark-small",
