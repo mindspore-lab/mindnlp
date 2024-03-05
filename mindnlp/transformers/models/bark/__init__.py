@@ -15,7 +15,7 @@
 """
 Encodec Model init
 """
-#pylint=R0401
+#pylint: disable=R0401
 from .import generation_configuration_bark, modeling_bark, configuration_bark, processing_bark
 from .configuration_bark import *
 from .generation_configuration_bark import *
