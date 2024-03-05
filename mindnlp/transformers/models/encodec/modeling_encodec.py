@@ -86,15 +86,9 @@ class WeightNorm:
         r"""
         computer methods
         """
-        # print(cell)
-        weight = getattr(cell, self.name)
-        # del cell._params[name]
-        # cell.insert_param_to_cell(self.name + '_g', param= Parameter(norm_except_dim(weight,2,self.dim)))
-        # cell.insert_param_to_cell(self.name + '_v', param= Parameter(weight.data))
-        # weight_g = getattr(cell, self.name + '_g')
-        # weight_v = getattr(cell, self.name + '_v')
-        # self.remove(cell)
-        return _weight_norm(Parameter(norm_except_dim(weight,2,self.dim)), Parameter(weight.data), self.dim)
+        weight_g = getattr(cell, self.name + '_g')
+        weight_v = getattr(cell, self.name + '_v')
+        return _weight_norm(weight_v=weight_v, weight_g=weight_g, dim=self.dim)
 
     def __call__(self, cell: nn.Cell, inputs: Any) -> None:
         setattr(cell, self.name, self.compute_weight(cell))
@@ -123,18 +117,11 @@ class WeightNorm:
 
         weight_fn = WeightNorm(name, dim)
 
-        # weight = getattr(cell, name)
-        # del cell._params[name]
-        # cell.insert_param_to_cell(name + '_g', param= Parameter(norm_except_dim(weight,2,dim)))
-        # cell.insert_param_to_cell(name + '_v', param= Parameter(weight.data))
-        # cell.weight.set_data(Parameter(fn.compute_weight(cell)))
-        setattr(cell, name, Tensor(weight_fn.compute_weight(cell)))
-        # print(fn)
-
-        # hook = ops.HookBackward(hook_f)
-        # fn = hook(fn)
-
-        # recompute weight before every forward()
+        weight = getattr(cell, name)
+        del cell._params[name]
+        cell.insert_param_to_cell(name + '_g', param= Parameter(norm_except_dim(weight,2,dim)))
+        cell.insert_param_to_cell(name + '_v', param= Parameter(weight.data))
+        setattr(cell, name, Parameter(weight_fn.compute_weight(cell)))
         cell.register_forward_pre_hook(weight_fn.wrapper_func(cell, weight_fn.__call__))
         return weight_fn
 
@@ -335,14 +322,12 @@ class EncodecConv1d(nn.Cell):
         r"""
         construct method
         """
-
         kernel_size = self.conv.kernel_size[-1]
         stride = self.conv.stride[0]
         dilation = self.conv.dilation[0]
         kernel_size = (kernel_size - 1) * dilation + 1  # effective kernel size with dilations
         padding_total = kernel_size - stride
         extra_padding = self._get_extra_padding_for_conv1d(hidden_states, kernel_size, stride, padding_total)
-
         if self.causal:
             # Left padding for causal
             hidden_states = self._pad1d(hidden_states, (padding_total, extra_padding), mode=self.pad_mode)
@@ -353,7 +338,6 @@ class EncodecConv1d(nn.Cell):
             hidden_states = self._pad1d(
                 hidden_states, (padding_left, padding_right + extra_padding), mode=self.pad_mode
             )
-
         hidden_states = self.conv(hidden_states)
         if self.norm_type == "time_group_norm":
             #Attention: beause of mindspore can't assistant to besides four diameters input ,so here deal by
@@ -361,7 +345,6 @@ class EncodecConv1d(nn.Cell):
             inputs = hidden_states.unsqueeze(-1)
             hidden_states = self.norm(inputs)
             hidden_states = hidden_states.squeeze(-1)
-
         return hidden_states
 
 class EncodecConvTranspose1d(nn.Cell):
@@ -475,11 +458,12 @@ class EncodecEncoder(nn.Cell):
         super().__init__()
         model = [EncodecConv1d(config, config.audio_channels, config.num_filters, config.kernel_size)]
         scaling = 1
-
+        # tie = 0
         # Downsample to raw audio scale
         for ratio in reversed(config.upsampling_ratios):
             current_scale = scaling * config.num_filters
             # Add residual layers
+            # tie += 1
             for j in range(config.num_residual_layers):
                 model += [EncodecResnetBlock(config, current_scale, [config.dilation_growth_rate**j, 1])]
             # Add downsampling layers
@@ -490,7 +474,6 @@ class EncodecEncoder(nn.Cell):
         model += [EncodecLSTM(config, scaling * config.num_filters)]
         model += [nn.ELU()]
         model += [EncodecConv1d(config, scaling * config.num_filters, config.hidden_size, config.last_kernel_size)]
-
         self.layers = nn.CellList(model)
 
     def construct(self, hidden_states):
@@ -550,19 +533,15 @@ class EncodecEuclideanCodebook(nn.Cell):
         self.cluster_size = Parameter(Tensor(ops.zeros(config.codebook_size)),requires_grad=False)
         self.embed = Parameter(embed,requires_grad=False)
         self.embed_avg = Parameter(ops.deepcopy(embed),requires_grad=False)
-        # self.register_buffer("inited", mindspore.Tensor([True]))
-        # self.register_buffer("cluster_size", ops.zeros(config.codebook_size))
-        # self.register_buffer("embed", embed)
-        # self.register_buffer("embed_avg", embed.clone())
 
     def quantize(self, hidden_states):
         r"""
         quantize method
         """
         embed = self.embed.t()
-        scaled_states = ops.sum(hidden_states.pow(2), dim=1, keepdim=True)
-        dist = -(scaled_states - 2 * hidden_states @ embed + ops.sum(embed.pow(2), dim=0 , keepdim=True))
-        _,embed_ind = dist.max(axis = -1,return_indices = True)
+        scaled_states = hidden_states.pow(2).sum(1, keepdims=True)
+        dist = -(scaled_states - 2 * hidden_states @ embed + embed.pow(2).sum(0, keepdims=True))
+        _,embed_ind = dist.max(axis = -1, return_indices = True)
         return embed_ind
 
     def encode(self, hidden_states):
@@ -582,8 +561,7 @@ class EncodecEuclideanCodebook(nn.Cell):
         r"""
         decode method
         """
-        # quantize = mindspore.ms_function.embedding(self.embed, embed_ind)
-        embedding = nn.Embedding(vocab_size = self.embed.shape[0], embedding_size = self.embed.shape[1])
+        embedding = nn.Embedding(vocab_size= self.embed.shape[0], embedding_size= self.embed.shape[1], padding_idx= -1)
         embedding.weight.set_data(self.embed)
         quantize = embedding(embed_ind)
         return quantize
@@ -670,7 +648,6 @@ class EncodecPreTrainedModel(PreTrainedModel):
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        # print(type(cell.weight))
         if isinstance(cell, nn.Dense):
             cell.weight.set_data(initializer(
                 Normal(sigma=self.config.initializer_range,mean=0.0)))
@@ -679,14 +656,11 @@ class EncodecPreTrainedModel(PreTrainedModel):
                 cell.bias.set_data(initializer('zeros'))
                 # cell.bias.data.zero_()
         elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
-            cell.beta.set_data(initializer('zeros',shape=cell.beta.data.shape))
-            cell.gamma.set_data(initializer('ones',shape=cell.gamma.data.shape))
+            cell.bias.set_data(initializer('zeros',shape=cell.bias.data.shape))
+            cell.weight.set_data(initializer('ones',shape=cell.weight.data.shape))
             #cell.bias.data.zero_()
             #cell.weight.data.fill_(1.0)
         elif isinstance(cell, nn.Conv1d):
-            # print(cell)
-            # print(type(cell.weight))
-            # print(cell.weight.data)
             cell.weight.set_data(initializer(init='HeNormal',shape=cell.weight.shape))
             # nn.init.kaiming_normal_(cell.weight)
             if cell.bias is not None:
@@ -694,11 +668,11 @@ class EncodecPreTrainedModel(PreTrainedModel):
                 cell.bias.set_data(initializer(ops.uniform(cell.bias.shape, Tensor(-k), Tensor(k)), shape=cell.bias.shape))
                 # nn.init.uniform_(cell.bias, a=-k, b=k)
         elif isinstance(cell, nn.Embedding):
-            cell.embedding_table.set_data(initializer(
+            cell.weight.set_data(initializer(
                 Normal(sigma=self.config.initializer_range,mean=0.0)))
             #.normal_(mean=0.0, std=self.config.initializer_range)
             if cell.padding_idx is not None:
-                cell.embedding_table.set_data(initializer('zeros',cell.padding_idx))
+                cell.weight.set_data(initializer('zeros',cell.padding_idx))
         elif isinstance(cell, nn.LSTM):
             for name, param in cell.parameters_and_names():
                 if "weight" in name:
@@ -806,12 +780,11 @@ class EncodecModel(EncodecPreTrainedModel):
             # if the padding is non zero
             input_values = input_values * padding_mask
             mono = ops.sum(input_values, 1, keepdim=True) / input_values.shape[1]
-            scale = ops.pow(mono, 2).mean(axis=-1, keep_dims=True).sqrt() + 1e-8
+            scale = mono.pow(2).mean(axis=-1, keep_dims=True).sqrt() + 1e-8
             input_values = input_values / scale
 
         embeddings = self.encoder(input_values)
         codes = self.quantizer.encode(embeddings, bandwidth)
-
         codes = codes.swapaxes(0, 1)
         return codes, scale
 

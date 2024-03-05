@@ -24,6 +24,6 @@ from .processing_bark import *
 
 __all__ = []
 __all__.extend(modeling_bark.__all__)
-__all__.extend(processing_bark.__all__)
 __all__.extend(configuration_bark.__all__)
 __all__.extend(generation_configuration_bark.__all__)
+__all__.extend(processing_bark.__all__)

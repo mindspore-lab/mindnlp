@@ -12,77 +12,68 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-class-docstring
-# pylint: disable=invalid-name
-# pylint: disable=arguments-renamed
-# pylint: disable=attribute-defined-outside-init
 """
 Bark
 """
 import math
 from typing import Dict, Optional, Tuple, Union
-
 import numpy as np
 import mindspore
-from mindspore import nn, ops, Parameter, Tensor
+from mindspore import ops, nn, Parameter, Tensor
+from mindspore import log as logger
 from mindspore.common.initializer import initializer, Normal
 
 
-from mindnlp.utils import logging
-from mindnlp.modules.functional import finfo
-from ...generation.logits_process import (
-    AlternatingCodebooksLogitsProcessor,
+
+from mindnlp.transformers.generation.logits_process import (
     BarkEosPrioritizerLogitsProcessor,
     SuppressTokensLogitsProcessor,
+    AlternatingCodebooksLogitsProcessor
 )
-from ...modeling_attn_mask_utils import _prepare_4d_attention_mask
-from ...modeling_outputs import CausalLMOutputWithPast, MaskedLMOutput
+from mindnlp.transformers.modeling_attn_mask_utils import _prepare_4d_attention_mask
+
 from ...modeling_utils import PreTrainedModel
 from ..auto import AutoModel
 from .configuration_bark import (
-    BarkCoarseConfig,
     BarkConfig,
-    BarkFineConfig,
-    BarkSemanticConfig,
     BarkSubModelConfig,
+    BarkSemanticConfig,
+    BarkCoarseConfig,
+    BarkFineConfig
 )
+
 from .generation_configuration_bark import (
     BarkCoarseGenerationConfig,
     BarkFineGenerationConfig,
     BarkSemanticGenerationConfig,
 )
 
+from ...modeling_outputs import (
+    CausalLMOutputWithPast,
+    MaskedLMOutput,
+)
 
-logger = logging.get_logger(__name__)
+BARK_PRETRAINED_MODEL_ARCHIVE_MAP = {
+    "bark",
+    "bark_small"
+}
 
-
-_CHECKPOINT_FOR_DOC = "suno/bark-small"
-_CONFIG_FOR_DOC = "BarkConfig"
-
-BARK_PRETRAINED_MODEL_ARCHIVE_LIST = [
-    "suno/bark-small",
-    "suno/bark",
-    # See all Bark models at https://huggingface.co/models?filter=bark
+__all__ = [
+    "BarkModel",
+    "BarkSelfAttention",
+    "BarkMLP",
+    "BarkLayerNorm",
+    "BarkBlock",
+    "BarkCausalModel",
+    "BarkSemanticModel",
+    "BarkCoarseModel",
+    "BarkFineModel"
 ]
 
-
-# Copied from transformers.models.llama.modeling_llama._get_unpad_data
-def _get_unpad_data(attention_mask):
-    seqlens_in_batch = attention_mask.sum(axis=-1, dtype=mindspore.int32)
-    indices = ops.nonzero(attention_mask.flatten()).flatten()
-    max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = ops.pad(ops.cumsum(seqlens_in_batch, axis=0, dtype=mindspore.int32), (1, 0))
-    return (
-        indices,
-        cu_seqlens,
-        max_seqlen_in_batch,
-    )
-
-
 class BarkSelfAttention(nn.Cell):
-    # adapted from GPTNeoSelfAttention and Bark code
-    # BarkSelfAttention can have two attention type, i.e full attention or causal attention
-
+    r"""
+    BarkSelfAttention
+    """
     def __init__(self, config, is_causal=False):
         super().__init__()
 
@@ -109,8 +100,9 @@ class BarkSelfAttention(nn.Cell):
         self.is_causal = is_causal
         if is_causal:
             block_size = config.block_size
-            bias = ops.tril(ops.ones((block_size, block_size), dtype=mindspore.bool_)).view(1, 1, block_size, block_size)
-            self.bias = bias
+            self.bias = Parameter(Tensor(np.tril(np.ones((block_size, block_size))).reshape(
+                (1, 1, block_size, block_size)
+            ), mindspore.bool_), requires_grad=False)
 
     # Copied from transformers.models.gpt_neo.modeling_gpt_neo.GPTNeoSelfAttention._split_heads
     def _split_heads(self, tensor, num_heads, attn_head_size):
@@ -129,23 +121,21 @@ class BarkSelfAttention(nn.Cell):
         # re-assemble all head outputs side by side
         # (batch, num_heads, seq_len, attn_head_size) -> (batch, seq_len, num_heads*attn_head_size)
         tensor = tensor.swapaxes(1, 2)
+        # tensor = tensor.contiguous()
         tensor = tensor.view(tensor.shape[:-2] + (num_heads * attn_head_size,))
-
         return tensor
 
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
         # unlike GPTNeo's SelfAttention, divide by the square root of the dimension of the query and the key
-        attn_weights = ops.matmul(query, key.swapaxes(-1, -2)) * (1.0 / math.sqrt(self.head_dim))
+        attn_weights = ops.matmul(query, key.swapaxes(-1, -2)) * (1.0 / math.sqrt(key.shape[-1]))
 
         if self.is_causal:
             query_length, key_length = query.shape[-2], key.shape[-2]
-
             # fill the upper left part of the attention weights with inf
             attn_weights = attn_weights.masked_fill(
                 self.bias[:, :, key_length - query_length : key_length, :key_length] == 0,
-                finfo(attn_weights.dtype, 'min'),
-            )
-
+                mindspore.tensor(np.finfo(np.float32).min),
+                )
         if attention_mask is not None:
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
@@ -164,6 +154,7 @@ class BarkSelfAttention(nn.Cell):
 
         return attn_output, attn_weights
 
+
     def construct(
         self,
         hidden_states,
@@ -175,7 +166,6 @@ class BarkSelfAttention(nn.Cell):
     ):
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
         query, key, value = self.att_proj(hidden_states).split(self.embed_dim, axis=2)
-
         query = self._split_heads(query, self.num_heads, self.head_dim)
         key = self._split_heads(key, self.num_heads, self.head_dim)
         value = self._split_heads(value, self.num_heads, self.head_dim)
@@ -191,6 +181,7 @@ class BarkSelfAttention(nn.Cell):
         else:
             present = None
 
+
         attn_output, attn_weights = self._attn(query, key, value, attention_mask, head_mask)
 
         attn_output = self._merge_heads(attn_output, self.num_heads, self.head_dim)
@@ -203,34 +194,219 @@ class BarkSelfAttention(nn.Cell):
 
         return outputs
 
+class BarkSelfFlashAttention2(BarkSelfAttention):
+    """
+    Bark flash attention module. This module inherits from `BarkSelfAttention` as the weights of the module stays
+    untouched. The only required change would be on the forward pass where it needs to correctly call the public API of
+    flash attention and deal with padding tokens in case the input contains any of them.
+    """
+
+    # Copied from transformers.models.llama.modeling_llama.LlamaFlashAttention2.__init__
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # TODO: Should be removed once Flash Attention for RoCm is bumped to 2.1.
+        # flash_attn<2.1 generates top-left aligned causal mask, while what is needed here is bottom-right alignement, that was made default for flash_attn>=2.1. This attribute is used to handle this difference. Reference: https://github.com/Dao-AILab/flash-attention/releases/tag/v2.1.0.
+        # Beware that with flash_attn<2.1, using q_seqlen != k_seqlen (except for the case q_seqlen == 1) produces a wrong mask (top-left).
+        self._flash_attn_uses_top_left_mask = True
+
+    def _split_heads(self, tensor, num_heads, attn_head_size):
+        """
+        Splits hidden_size dim into attn_head_size and num_heads
+        """
+        new_shape = tensor.shape[:-1] + (num_heads, attn_head_size)
+        tensor = tensor.view(new_shape)
+        # Flash attention requires the input to have the shape
+        # batch_size x seq_length x head_dim x hidden_dim - (batch, seq_length, head, head_features)
+        return tensor
+
+    def _merge_heads(self, tensor, num_heads, attn_head_size):
+        """
+        Merges attn_head_size dim and num_attn_heads dim into hidden_size
+        """
+        # re-assemble all head outputs side by side
+        # (batch, seq_len, num_heads, attn_head_size) -> (batch, seq_len, num_heads*attn_head_size)
+        tensor = tensor.view(tensor.size()[:-2] + (num_heads * attn_head_size,))
+        return tensor
+
+    def forward(
+        self,
+        hidden_states,
+        attention_mask=None,
+        past_key_values=None,
+        head_mask=None,
+        use_cache=False,
+        output_attentions=False,
+    ):
+        batch_size, query_len, _ = hidden_states.size()
+
+        # calculate query, key, values for all heads in batch and move head forward to be the batch dim
+        query, key, value = self.att_proj(hidden_states).split(self.embed_dim, dim=2)
+
+        query = self._split_heads(query, self.num_heads, self.head_dim)
+        key = self._split_heads(key, self.num_heads, self.head_dim)
+        value = self._split_heads(value, self.num_heads, self.head_dim)
+
+        if past_key_values is not None:
+            # (batch, head, seq_length, head_features) -> (batch, seq_length, head, head_features)
+            past_key = past_key_values[0].swapaxes(1, 2)
+            past_value = past_key_values[1].swapaxes(1, 2)
+            # and merge on seq_length
+            key = ops.cat((past_key, key), dim=1)
+            value = ops.cat((past_value, value), dim=1)
+
+        if use_cache is True:
+            #  (batch, head, seq_length, head_features)
+            present = (key.swapaxes(1, 2), value.swapaxes(1, 2))
+        else:
+            present = None
+
+        attn_output = self._flash_attention_forward(query, key, value, attention_mask, query_len, dropout=self.dropout)
+
+        attn_output = self._merge_heads(attn_output, self.num_heads, self.head_dim)
+        attn_output = self.out_proj(attn_output)
+        attn_output = self.resid_dropout(attn_output)
+
+        outputs = (attn_output, present)
+        if output_attentions:
+            attn_weights = None
+            outputs += (attn_weights,)
+
+        return outputs
+
+    # # Copied from transformers.models.llama.modeling_llama.LlamaFlashAttention2._flash_attention_forward
+    # def _flash_attention_forward(
+    #     self, query_states, key_states, value_states, attention_mask, query_length, dropout=0.0, softmax_scale=None
+    # ):
+    #     """
+    #     Calls the forward method of Flash Attention - if the input hidden states contain at least one padding token
+    #     first unpad the input, then computes the attention scores and pad the final attention scores.
+
+    #     Args:
+    #         query_states (`torch.Tensor`):
+    #             Input query states to be passed to Flash Attention API
+    #         key_states (`torch.Tensor`):
+    #             Input key states to be passed to Flash Attention API
+    #         value_states (`torch.Tensor`):
+    #             Input value states to be passed to Flash Attention API
+    #         attention_mask (`torch.Tensor`):
+    #             The padding mask - corresponds to a tensor of size `(batch_size, seq_len)` where 0 stands for the
+    #             position of padding tokens and 1 for the position of non-padding tokens.
+    #         dropout (`int`, *optional*):
+    #             Attention dropout
+    #         softmax_scale (`float`, *optional*):
+    #             The scaling of QK^T before applying softmax. Default to 1 / sqrt(head_dim)
+    #     """
+    #     if not self._flash_attn_uses_top_left_mask:
+    #         causal = self.is_causal
+    #     else:
+    #         # TODO: Remove the `query_length != 1` check once Flash Attention for RoCm is bumped to 2.1. For details, please see the comment in LlamaFlashAttention2 __init__.
+    #         causal = self.is_causal and query_length != 1
+
+    #     # Contains at least one padding token in the sequence
+    #     if attention_mask is not None:
+    #         batch_size = query_states.shape[0]
+    #         query_states, key_states, value_states, indices_q, cu_seq_lens, max_seq_lens = self._upad_input(
+    #             query_states, key_states, value_states, attention_mask, query_length
+    #         )
+
+    #         cu_seqlens_q, cu_seqlens_k = cu_seq_lens
+    #         max_seqlen_in_batch_q, max_seqlen_in_batch_k = max_seq_lens
+
+    #         attn_output_unpad = flash_attn_varlen_func(
+    #             query_states,
+    #             key_states,
+    #             value_states,
+    #             cu_seqlens_q=cu_seqlens_q,
+    #             cu_seqlens_k=cu_seqlens_k,
+    #             max_seqlen_q=max_seqlen_in_batch_q,
+    #             max_seqlen_k=max_seqlen_in_batch_k,
+    #             dropout_p=dropout,
+    #             softmax_scale=softmax_scale,
+    #             causal=causal,
+    #         )
+
+    #         attn_output = pad_input(attn_output_unpad, indices_q, batch_size, query_length)
+    #     else:
+    #         attn_output = flash_attn_func(
+    #             query_states, key_states, value_states, dropout, softmax_scale=softmax_scale, causal=causal
+    #         )
+
+    #     return attn_output
+
+    # # Copied from transformers.models.llama.modeling_llama.LlamaFlashAttention2._upad_input
+    # def _upad_input(self, query_layer, key_layer, value_layer, attention_mask, query_length):
+    #     indices_k, cu_seqlens_k, max_seqlen_in_batch_k = _get_unpad_data(attention_mask)
+    #     batch_size, kv_seq_len, num_key_value_heads, head_dim = key_layer.shape
+
+    #     key_layer = index_first_axis(
+    #         key_layer.reshape(batch_size * kv_seq_len, num_key_value_heads, head_dim), indices_k
+    #     )
+    #     value_layer = index_first_axis(
+    #         value_layer.reshape(batch_size * kv_seq_len, num_key_value_heads, head_dim), indices_k
+    #     )
+    #     if query_length == kv_seq_len:
+    #         query_layer = index_first_axis(
+    #             query_layer.reshape(batch_size * kv_seq_len, self.num_heads, head_dim), indices_k
+    #         )
+    #         cu_seqlens_q = cu_seqlens_k
+    #         max_seqlen_in_batch_q = max_seqlen_in_batch_k
+    #         indices_q = indices_k
+    #     elif query_length == 1:
+    #         max_seqlen_in_batch_q = 1
+    #         cu_seqlens_q = torch.arange(
+    #             batch_size + 1, dtype=torch.int32, device=query_layer.device
+    #         )  # There is a memcpy here, that is very bad.
+    #         indices_q = cu_seqlens_q[:-1]
+    #         query_layer = query_layer.squeeze(1)
+    #     else:
+    #         # The -q_len: slice assumes left padding.
+    #         attention_mask = attention_mask[:, -query_length:]
+    #         query_layer, indices_q, cu_seqlens_q, max_seqlen_in_batch_q = unpad_input(query_layer, attention_mask)
+
+    #     return (
+    #         query_layer,
+    #         key_layer,
+    #         value_layer,
+    #         indices_q,
+    #         (cu_seqlens_q, cu_seqlens_k),
+    #         (max_seqlen_in_batch_q, max_seqlen_in_batch_k),
+    #     )
+
+
 BARK_ATTENTION_CLASSES = {
     "eager": BarkSelfAttention,
+    "flash_attention_2": BarkSelfFlashAttention2,
 }
-
 
 class BarkLayerNorm(nn.Cell):
     """LayerNorm but with an optional bias. PyTorch doesn't support simply bias=False."""
 
     def __init__(self, hidden_size, bias=True):
         super().__init__()
-        self.weight = Parameter(ops.ones((hidden_size,)))
-        self.bias = Parameter(ops.zeros((hidden_size,))) if bias else ops.zeros((hidden_size,))
-        self.layer_norm = ops.LayerNorm(begin_norm_axis=-1,
-                                        begin_params_axis=-1,
-                                        epsilon=1e-5)
+        self.weight = mindspore.Parameter(ops.ones(hidden_size))
+        self.bias = mindspore.Parameter(ops.zeros(hidden_size)) if bias else None
+
+
     def construct(self, inputs):
-        y, _, _ = self.layer_norm(inputs, self.weight, self.bias)
-        return y
+        layer_norm = nn.LayerNorm(self.weight.shape, gamma_init=self.weight, beta_init=self.bias if self.bias!=None else 'zeros', epsilon=1e-5)
+        return layer_norm(inputs)
 
 class BarkMLP(nn.Cell):
+    r"""
+    BarkMLP
+    """
     def __init__(self, config):
         super().__init__()
         self.in_proj = nn.Dense(config.hidden_size, 4 * config.hidden_size, has_bias=config.bias)
         self.out_proj = nn.Dense(4 * config.hidden_size, config.hidden_size, has_bias=config.bias)
         self.dropout = nn.Dropout(p=config.dropout)
-        self.gelu = nn.GELU(approximate=False)
+        self.gelu = nn.GELU()
 
     def construct(self, hidden_states):
+        r"""
+        BarkMLP construct method
+        """
         hidden_states = self.in_proj(hidden_states)
         hidden_states = self.gelu(hidden_states)
         hidden_states = self.out_proj(hidden_states)
@@ -239,6 +415,9 @@ class BarkMLP(nn.Cell):
 
 
 class BarkBlock(nn.Cell):
+    r"""
+    BarkBlock
+    """
     def __init__(self, config, is_causal=False):
         super().__init__()
 
@@ -249,10 +428,10 @@ class BarkBlock(nn.Cell):
             self.layernorm_1 = BarkLayerNorm(config.hidden_size, bias=config.bias)
             self.layernorm_2 = BarkLayerNorm(config.hidden_size, bias=config.bias)
         else:
-            self.layernorm_1 = nn.LayerNorm(config.hidden_size)
-            self.layernorm_2 = nn.LayerNorm(config.hidden_size)
+            self.layernorm_1 = nn.LayerNorm([config.hidden_size])
+            self.layernorm_2 = nn.LayerNorm([config.hidden_size])
 
-        self.attn = BARK_ATTENTION_CLASSES["eager"](config, is_causal=is_causal)
+        self.attn = BarkSelfAttention(config, is_causal=is_causal)
 
         self.mlp = BarkMLP(config)
 
@@ -265,6 +444,9 @@ class BarkBlock(nn.Cell):
         use_cache=False,
         output_attentions=False,
     ):
+        r"""
+        BarkBlock construct method
+        """
         intermediary_hidden_states = self.layernorm_1(hidden_states)
 
         attn_outputs = self.attn(
@@ -291,7 +473,6 @@ class BarkBlock(nn.Cell):
 
         return outputs  # hidden_states, ((present), attentions)
 
-
 class BarkPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
@@ -300,28 +481,40 @@ class BarkPreTrainedModel(PreTrainedModel):
 
     config_class = BarkConfig
     supports_gradient_checkpointing = False
-
+    _supports_flash_attn_2 = False
     def _init_weights(self, cell):
-        """Initialize the weights"""
-        if isinstance(cell, nn.Dense):
+        """Initialize the weights."""
+        if isinstance(cell, (nn.Dense,)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
-            cell.weight.set_data(initializer(Normal(self.config.initializer_range),
-                                                    cell.weight.shape, cell.weight.dtype))
-            if cell.has_bias:
+            cell.weight.set_data(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
+                                            shape=cell.weight.shape,
+                                            dtype=cell.weight.dtype))
+            if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
-            if cell.padding_idx:
-                weight[cell.padding_idx] = 0
-
-            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
+            embedding_table = initializer(Normal(self.config.initializer_range),
+                                        cell.weight.shape,
+                                        cell.weight.dtype)
+            if cell.padding_idx is not None:
+                embedding_table.data[cell.padding_idx] = 0
+            cell.weight.set_data(embedding_table)
         elif isinstance(cell, nn.LayerNorm):
             cell.weight.set_data(initializer('ones', cell.weight.shape, cell.weight.dtype))
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
+            # cell.gammaParameter.data.zero()
+            # cell.beta.data.fill(1.0)
+
+
+    def _set_gradient_checkpointing(self, cell, value=False):
+        if isinstance(cell, (BarkCausalModel, BarkFineModel, BarkModel)):
+            cell.gradient_checkpointing = value
 
 # GPT2-like autoregressive model
 class BarkCausalModel(BarkPreTrainedModel):
+    r"""
+    BarkCausalModel
+    """
     config_class = BarkSubModelConfig
 
     def __init__(self, config):
@@ -388,7 +581,8 @@ class BarkCausalModel(BarkPreTrainedModel):
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
             position_ids = attention_mask.long().cumsum(-1) - 1
-            position_ids = position_ids.masked_fill(attention_mask == 0, 1)
+            # position_ids = position_ids
+            position_ids.masked_fill(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -input_ids.shape[1] :]
         else:
@@ -411,6 +605,7 @@ class BarkCausalModel(BarkPreTrainedModel):
             "attention_mask": attention_mask,
         }
 
+
     def construct(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
@@ -425,6 +620,9 @@ class BarkCausalModel(BarkPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], CausalLMOutputWithPast]:
+        r"""
+        construct
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -440,9 +638,9 @@ class BarkCausalModel(BarkPreTrainedModel):
             # we want to return the input_embeds in priority so that it is in line with a weird hack
             # of Bark which concatenate two bits of the input_embeds on the first forward pass of the semantic model
             pass
-        elif input_ids is not None:
+        if input_ids is not None:
             input_embeds = self.input_embeds_layer(input_ids)  # token embeddings of shape (b, t, n_embd)
-        elif input_embeds is not None:
+        if input_embeds is not None:
             pass
         else:
             raise ValueError("You have to specify either input_ids or input_embeds")
@@ -459,7 +657,8 @@ class BarkCausalModel(BarkPreTrainedModel):
 
         if position_ids is None:
             position_ids = ops.arange(past_length, seq_length + past_length, dtype=mindspore.int64)
-            position_ids = position_ids.unsqueeze(0)  # shape (1, seq_length)
+            position_ids = position_ids.expand_dims(0).view(-1, seq_length)
+            #position_ids = position_ids.unsqueeze(0)  # shape (1, seq_length)
 
         position_embeds = self.position_embeds_layer(position_ids)  # position embeddings of shape (1, t, n_embd)
 
@@ -467,11 +666,12 @@ class BarkCausalModel(BarkPreTrainedModel):
         if attention_mask is not None:
             if batch_size <= 0:
                 raise ValueError("batch_size has to be defined and > 0")
-            attention_mask = attention_mask.view(batch_size, -1)
-            # [bsz, to_seq_length] -> [bsz, 1, 1, to_seq_length]
-            # from_seq_length is 1 to easily broadcast
-            attention_mask = _prepare_4d_attention_mask(attention_mask, input_embeds.dtype, tgt_len=1)
-
+            else:
+                attention_mask = attention_mask.view(batch_size, -1)
+                # [bsz, to_seq_length] -> [bsz, 1, 1, to_seq_length]
+                # from_seq_length is 1 to easily broadcast
+                attention_mask = _prepare_4d_attention_mask(attention_mask, input_embeds.dtype, tgt_len=1)
+        
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head
         # attention_probs has shape bsz x num_heads x N x N
@@ -496,14 +696,25 @@ class BarkCausalModel(BarkPreTrainedModel):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
-            outputs = block(
-                hidden_states,
-                past_key_values=past_layer_key_values,
-                attention_mask=attention_mask,
-                head_mask=head_mask[i],
-                use_cache=use_cache,
-                output_attentions=output_attentions,
-            )
+            if self.gradient_checkpointing and self.training:
+                outputs = self._gradient_checkpointing_func(
+                    block.__call__,
+                    hidden_states,
+                    None,
+                    attention_mask,
+                    head_mask[i],
+                    use_cache,
+                    output_attentions,
+                )
+            else:
+                outputs = block(
+                    hidden_states,
+                    past_key_values=past_layer_key_values,
+                    attention_mask=attention_mask,
+                    head_mask=head_mask[i],
+                    use_cache=use_cache,
+                    output_attentions=output_attentions,
+                )
 
             hidden_states = outputs[0]
 
@@ -557,8 +768,10 @@ class BarkCausalModel(BarkPreTrainedModel):
             for layer_past in past_key_values
         )
 
-
 class BarkSemanticModel(BarkCausalModel):
+    r"""
+    BarkSemanticModel
+    """
     base_model_prefix = "semantic"
     config_class = BarkSemanticConfig
 
@@ -574,15 +787,15 @@ class BarkSemanticModel(BarkCausalModel):
         Generates text semantic tokens from an input prompt and an additional optional `Bark` speaker prompt.
 
         Args:
-            input_ids (`Optional[mindspore.Tensor]` of shape (batch_size, seq_len), *optional*):
+            input_ids (`Optional[torch.Tensor]` of shape (batch_size, seq_len), *optional*):
                 Input ids, i.e tokenized input sentences. Will be truncated up to
                 semantic_generation_config.max_input_semantic_length tokens. Note that the output audios will be as
                 long as the longest generation among the batch.
             semantic_generation_config (`BarkSemanticGenerationConfig`):
                 Generation config indicating how to generate the semantic tokens.
-            history_prompt (`Optional[Dict[str,mindspore.Tensor]]`, *optional*):
+            history_prompt (`Optional[Dict[str,torch.Tensor]]`, *optional*):
                 Optional `Bark` speaker prompt.
-            attention_mask (`Optional[mindspore.Tensor]`, *optional*):
+            attention_mask (`Optional[torch.Tensor]`, *optional*):
                 Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
 
                 - 1 for tokens that are **not masked**,
@@ -590,7 +803,7 @@ class BarkSemanticModel(BarkCausalModel):
 
                 [What are attention masks?](../glossary#attention-mask)
         Returns:
-            mindspore.Tensor: Output semantic tokens.
+            torch.LongTensor: Output semantic tokens.
         """
         if semantic_generation_config is None:
             raise ValueError("`semantic_generation_config` has to be provided")
@@ -614,13 +827,13 @@ class BarkSemanticModel(BarkCausalModel):
             )
         else:
             semantic_history = mindspore.Tensor(
-                [semantic_generation_config.semantic_pad_token] * max_input_semantic_length, dtype=mindspore.int32
+                [semantic_generation_config.semantic_pad_token] * max_input_semantic_length, dtype=mindspore.int64
             )
 
         semantic_history = ops.repeat_interleave(semantic_history[None], batch_size, axis=0)
 
         infer_array = mindspore.Tensor(
-            [[semantic_generation_config.semantic_infer_token]] * batch_size, dtype=mindspore.int32
+            [[semantic_generation_config.semantic_infer_token]] * batch_size, dtype=mindspore.int64
         )
 
         input_embeds = ops.cat(
@@ -645,7 +858,6 @@ class BarkSemanticModel(BarkCausalModel):
         early_stopping_logits_processor = BarkEosPrioritizerLogitsProcessor(
             eos_token_id=semantic_generation_config.eos_token_id, min_eos_p=min_eos_p
         )
-
         # pass input_ids in order to stay consistent with the transformers generate method even though it is not used
         # (except to get the input seq_len - that's why we keep the first 257 tokens)
         semantic_output = super().generate(
@@ -663,6 +875,9 @@ class BarkSemanticModel(BarkCausalModel):
 
 
 class BarkCoarseModel(BarkCausalModel):
+    r"""
+    BarkCoarseModel
+    """
     base_model_prefix = "coarse_acoustics"
     config_class = BarkCoarseConfig
 
@@ -689,23 +904,23 @@ class BarkCoarseModel(BarkCausalModel):
                 Generation config indicating how to generate the semantic tokens.
             codebook_size (`int`):
                 Codebook channel size, i.e. the size of the output vocabulary per codebook channel.
-            history_prompt (`Optional[Dict[str,mindspore.Tensor]]`):
+            history_prompt (`Optional[Dict[str,torch.Tensor]]`):
                 Optional `Bark` speaker prompt.
         Returns: Returns:
-            `tuple(mindspore.Tensor)`:
-            - **x_semantic_history** (`mindspore.Tensor` -- Processed semantic speaker prompt.
-            - **x_coarse_history** (`mindspore.Tensor`) -- Processed coarse speaker prompt.
+            `tuple(torch.FloatTensor)`:
+            - **x_semantic_history** (`torch.FloatTensor` -- Processed semantic speaker prompt.
+            - **x_coarse_history** (`torch.FloatTensor`) -- Processed coarse speaker prompt.
         """
         if history_prompt is not None:
             x_semantic_history = ops.repeat_interleave(history_prompt["semantic_prompt"][None], batch_size, axis=0)
             # clone to avoid modifying history_prompt.coarse_prompt
-            x_coarse_history = history_prompt["coarse_prompt"].copy()
+            x_coarse_history = history_prompt["coarse_prompt"]
 
             # offset x_coarse_history
             if codebook_size is not None:
-                for n in range(1, x_coarse_history.shape[0]):
+                for i in range(1, x_coarse_history.shape[0]):
                     # offset
-                    x_coarse_history[n, :] += codebook_size * n
+                    x_coarse_history[i, :] += codebook_size * i
 
             # flatten x_coarse_history
             x_coarse_history = ops.swapaxes(x_coarse_history, 0, 1).view(-1)
@@ -728,15 +943,18 @@ class BarkCoarseModel(BarkCausalModel):
 
             n_coarse_hist_provided = int(round(n_semantic_hist_provided * semantic_to_coarse_ratio))
 
-            x_semantic_history = x_semantic_history[:, -n_semantic_hist_provided:].long()
-            x_coarse_history = x_coarse_history[:, -n_coarse_hist_provided:].long()
+            x_semantic_history = x_semantic_history[:, -n_semantic_hist_provided:].astype(mindspore.int64)
+            x_coarse_history = x_coarse_history[:, -n_coarse_hist_provided:]
             # bit of a hack for time alignment (sounds better) - from Bark original implementation
-            x_coarse_history = x_coarse_history[:, :-2]
+            x_coarse_history = x_coarse_history[:, :-2].astype(mindspore.int64)
 
         else:
             # shape: (batch_size, 0)
-            x_semantic_history = mindspore.tensor(mindspore._c_expression.Tensor([[]] * batch_size, mindspore.int64)) # pylint: disable=c-extension-no-member
-            x_coarse_history = mindspore.tensor(mindspore._c_expression.Tensor([[]] * batch_size, mindspore.int64)) # pylint: disable=c-extension-no-member
+            class test:
+                def __init__(self) -> None:
+                    self.__enable_zero_dim__ = True
+            x_semantic_history = mindspore.Tensor(dtype=mindspore.int64, shape=(batch_size, 0), init= test())
+            x_coarse_history = mindspore.Tensor(dtype=mindspore.int64, shape=(batch_size, 0), init= test())
 
         return x_semantic_history, x_coarse_history
 
@@ -749,13 +967,13 @@ class BarkCoarseModel(BarkCausalModel):
         history_prompt: Optional[Dict[str, mindspore.Tensor]] = None,
         return_output_lengths: Optional[bool] = None,
         **kwargs,
-    ) -> Union[mindspore.Tensor, Tuple[mindspore.Tensor, mindspore.Tensor]]:
+    ) -> mindspore.Tensor:
         """
         Generates coarse acoustics tokens from input text semantic tokens and an additional optional `Bark` speaker
         prompt.
 
         Args:
-            semantic_output (`mindspore.Tensor` of shape (batch_size, seq_len), *optional*):
+            semantic_output (`torch.Tensor` of shape (batch_size, seq_len), *optional*):
                 Input text semantic ids, i.e the output of `BarkSemanticModel.generate`.
             semantic_generation_config (`BarkSemanticGenerationConfig`):
                 Generation config indicating how to generate the semantic tokens.
@@ -763,16 +981,10 @@ class BarkCoarseModel(BarkCausalModel):
                 Generation config indicating how to generate the coarse tokens.
             codebook_size (`int`, *optional*, defaults to 1024):
                 Codebook channel size, i.e. the size of the output vocabulary per codebook channel.
-            history_prompt (`Optional[Dict[str,mindspore.Tensor]]`, *optional*):
+            history_prompt (`Optional[Dict[str,torch.Tensor]]`, *optional*):
                 Optional `Bark` speaker prompt.
-            return_output_lengths (`bool`, *optional*):
-                Whether or not to return the output lengths. Useful when batching.
         Returns:
-            By default:
-                mindspore.Tensor: Output coarse acoustics tokens.
-            If `return_output_lengths=True`:
-                `Tuple(mindspore.Tensor, mindspore.Tensor): The output coarse acoustics tokens, and the length of each sample
-                of the batch.
+            torch.LongTensor: Output coarse acoustics tokens.
         """
 
         if semantic_generation_config is None:
@@ -787,11 +999,10 @@ class BarkCoarseModel(BarkCausalModel):
 
         # replace semantic_pad_token (eos_tok and pad_tok here) with coarse_semantic_pad_token i.e the pad_token
         # used in the next model
-        semantic_output = semantic_output.masked_fill(
+        semantic_output.masked_fill(
             semantic_output == semantic_generation_config.semantic_pad_token,
             coarse_generation_config.coarse_semantic_pad_token,
         )
-
         semantic_to_coarse_ratio = (
             coarse_generation_config.coarse_rate_hz
             / semantic_generation_config.semantic_rate_hz
@@ -804,8 +1015,7 @@ class BarkCoarseModel(BarkCausalModel):
             output_lengths * semantic_to_coarse_ratio / coarse_generation_config.n_coarse_codebooks
         )
         output_lengths = ops.round(output_lengths * coarse_generation_config.n_coarse_codebooks).int()
-
-        max_generated_len = ops.max(output_lengths)[0].item()
+        max_generated_len = ops.max(output_lengths)[0]
 
         batch_size = semantic_output.shape[0]
 
@@ -824,14 +1034,11 @@ class BarkCoarseModel(BarkCausalModel):
         n_window_steps = int(np.ceil(max_generated_len / sliding_window_len))
 
         total_generated_len = 0
-
         len_coarse_history = x_coarse.shape[1]
-
         for _ in range(n_window_steps):
             semantic_idx = base_semantic_idx + int(round(total_generated_len / semantic_to_coarse_ratio))
-
             # pad from right side
-            input_coarse = semantic_output[:, int(np.max([0, semantic_idx - max_semantic_history])) :]
+            input_coarse = semantic_output[:, int(np.max([0, semantic_idx - max_semantic_history])):]
             input_coarse = input_coarse[:, :max_coarse_input_length]
             input_coarse = ops.pad(
                 input_coarse,
@@ -839,39 +1046,29 @@ class BarkCoarseModel(BarkCausalModel):
                 "constant",
                 coarse_generation_config.coarse_semantic_pad_token,
             )
+            x_coarse_t = x_coarse if x_coarse.shape[1] == 0 else x_coarse[:, int(-max_coarse_history):]
+            input_coarse = ops.hstack(
+                [
+                    input_coarse,
+                    mindspore.Tensor([[coarse_generation_config.coarse_infer_token]] * batch_size),
+                    x_coarse_t,
+                ]
+            )
 
-            if 0 in x_coarse.shape:
-                input_coarse = ops.hstack(
-                    [
-                        input_coarse,
-                        mindspore.Tensor([[coarse_generation_config.coarse_infer_token]] * batch_size),
-                    ]
-                )
-            else:
-                input_coarse = ops.hstack(
-                    [
-                        input_coarse,
-                        mindspore.Tensor([[coarse_generation_config.coarse_infer_token]] * batch_size),
-                        x_coarse[:, -max_coarse_history:],
-                    ]
-                )
-
-            alternatingLogitsProcessor = AlternatingCodebooksLogitsProcessor(
+            alternatinglogitsprocessor = AlternatingCodebooksLogitsProcessor(
                 input_coarse.shape[1],
                 semantic_generation_config.semantic_vocab_size,
                 codebook_size,
             )
-
             output_coarse = super().generate(
                 input_coarse,
-                logits_processor=[alternatingLogitsProcessor],
+                logits_processor=[alternatinglogitsprocessor],
                 max_new_tokens=min(sliding_window_len, max_generated_len - total_generated_len),
                 generation_config=coarse_generation_config,
                 **kwargs,
             )
 
             input_coarse_len = input_coarse.shape[1]
-
             x_coarse = ops.hstack([x_coarse, output_coarse[:, input_coarse_len:]])
             total_generated_len = x_coarse.shape[1] - len_coarse_history
 
@@ -881,11 +1078,14 @@ class BarkCoarseModel(BarkCausalModel):
 
         if return_output_lengths:
             return coarse_output, output_lengths
-
+        
         return coarse_output
 
 
 class BarkFineModel(BarkPreTrainedModel):
+    r"""
+    BarkFineModel
+    """
     base_model_prefix = "fine_acoustics"
     config_class = BarkFineConfig
     main_input_name = "codebook_idx"
@@ -894,6 +1094,7 @@ class BarkFineModel(BarkPreTrainedModel):
         # non-causal gpt-like model with one embedding layer and one lm_head for each codebook of Encodec
         super().__init__(config)
         self.config = config
+        self._tied_weights_keys = []
 
         # initialize a modified non causal GPT-like model
         # note that for there is one embedding layer and one lm_head for each codebook of Encodec
@@ -906,7 +1107,7 @@ class BarkFineModel(BarkPreTrainedModel):
 
         self.layers = nn.CellList([BarkBlock(config, is_causal=False) for _ in range(config.num_layers)])
 
-        self.layernorm_final = nn.LayerNorm(config.hidden_size)
+        self.layernorm_final = nn.LayerNorm([config.hidden_size])
 
         self.lm_heads = nn.CellList(
             [
@@ -932,9 +1133,9 @@ class BarkFineModel(BarkPreTrainedModel):
         # one lm_head for each codebook
         return self.lm_heads
 
-    def set_output_embeddings(self, new_output_embeddings):
+    def set_output_embeddings(self, new_embeddings):
         # one lm_head for each codebook
-        self.lm_heads = new_output_embeddings
+        self.lm_heads = new_embeddings
 
     def _resize_token_embeddings(self, new_num_tokens, pad_to_multiple_of=None):
         old_embeddings_list = self.get_input_embeddings()
@@ -969,7 +1170,7 @@ class BarkFineModel(BarkPreTrainedModel):
             new_num_tokens (`int`, *optional*):
                 The number of new tokens in the embedding matrix. Increasing the size will add newly initialized
                 vectors at the end. Reducing the size will remove vectors from the end. If not provided or `None`, just
-                returns a pointer to the input tokens `nn.Embedding` module of the model without doing anything.
+                returns a pointer to the input tokens `torch.nn.Embedding` module of the model without doing anything.
             pad_to_multiple_of (`int`, *optional*):
                 If set will pad the embedding matrix to a multiple of the provided value.
 
@@ -979,7 +1180,7 @@ class BarkFineModel(BarkPreTrainedModel):
                 https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html#requirements-tc
 
         Return:
-            `nn.Embedding`: Pointer to the input tokens Embeddings Module of the model.
+            `torch.nn.Embedding`: Pointer to the input tokens Embeddings Module of the model.
         """
         model_embeds = self._resize_token_embeddings(new_num_tokens, pad_to_multiple_of)
         if new_num_tokens is None and pad_to_multiple_of is None:
@@ -999,6 +1200,9 @@ class BarkFineModel(BarkPreTrainedModel):
     def tie_weights(self):
         """
         Tie the weights between the input embeddings list and the output embeddings list.
+
+        If the `torchscript` flag is set in the configuration, can't handle parameter sharing so we are cloning the
+        weights instead.
         """
         if getattr(self.config, "tie_word_embeddings", True):
             self._tied_weights_keys = []
@@ -1010,13 +1214,13 @@ class BarkFineModel(BarkPreTrainedModel):
                 self._tie_or_clone_weights(output_embeddings[i], input_embeddings[i + 1])
                 self._tied_weights_keys.append(f"lm_heads.{i}.weight")
 
-        for module in self.cells():
-            if hasattr(module, "_tie_weights"):
-                module._tie_weights()
+        for cell in self.cells():
+            if hasattr(cell, "_tie_weights"):
+                cell._tie_weights()
 
     def construct(
         self,
-        codebook_idx: int,  # an additionnal idx corresponding to the id of the codebook that will be predicted
+        codebook_idx: int = 4,  # an additionnal idx corresponding to the id of the codebook that will be predicted
         input_ids: Optional[mindspore.Tensor] = None,
         attention_mask: Optional[mindspore.Tensor] = None,
         position_ids: Optional[mindspore.Tensor] = None,
@@ -1027,6 +1231,9 @@ class BarkFineModel(BarkPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple[mindspore.Tensor], MaskedLMOutput]:
+        r"""
+        construct
+        """
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1045,7 +1252,6 @@ class BarkFineModel(BarkPreTrainedModel):
         if input_ids is not None:
             # the input_embeddings are the sum of the j previous codebooks embeddings before
             # the current codebook_idx codebook
-
             # forward the GPT model itself
             input_embeds = [
                 input_embeds_layer(input_ids[:, :, i]).unsqueeze(-1)
@@ -1053,27 +1259,22 @@ class BarkFineModel(BarkPreTrainedModel):
             ]  # token embeddings of shape (b, t, n_embd)
             input_embeds = ops.cat(input_embeds, axis=-1)
             input_embeds = input_embeds[:, :, :, : codebook_idx + 1].sum(axis=-1)
-
         input_shape = input_embeds.shape[:-1]
         batch_size = input_embeds.shape[0]
         seq_length = input_shape[1]
-
+        # device = input_ids.device if input_ids is not None else input_embeds.device
         if position_ids is None:
             position_ids = ops.arange(0, seq_length, dtype=mindspore.int64)
             position_ids = position_ids.unsqueeze(0)  # shape (1, seq_length)
-
         position_embeds = self.position_embeds_layer(position_ids)  # position embeddings of shape (1, t, n_embd)
-
         # Attention mask.
         if attention_mask is not None:
             if batch_size <= 0:
                 raise ValueError("batch_size has to be defined and > 0")
-            # [bsz, to_seq_length] -> [bsz, 1, 1, to_seq_length]
-            # from_seq_length is 1 to easily broadcast
-            attention_mask = _prepare_4d_attention_mask(attention_mask, input_embeds.dtype, tgt_len=1)
+            else:
+                attention_mask = _prepare_4d_attention_mask(attention_mask, input_embeds.dtype, tgt_len=1)
 
         head_mask = self.get_head_mask(head_mask, self.config.num_layers)
-
         hidden_states = self.drop(input_embeds + position_embeds)
         output_shape = input_shape + (hidden_states.shape[-1],)
 
@@ -1083,14 +1284,12 @@ class BarkFineModel(BarkPreTrainedModel):
         for i, block in enumerate(self.layers):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
-
             outputs = block(
                 hidden_states,
                 attention_mask=attention_mask,
                 head_mask=head_mask[i],
                 output_attentions=output_attentions,
             )
-
             hidden_states = outputs[0]
 
             if output_attentions:
@@ -1098,20 +1297,17 @@ class BarkFineModel(BarkPreTrainedModel):
 
         hidden_states = self.layernorm_final(hidden_states)
         hidden_states = hidden_states.view(output_shape)
-
         # Add last hidden state
         if output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)
 
         logits = self.lm_heads[codebook_idx - self.config.n_codes_given](hidden_states)
-
         loss = None
         if labels is not None:
             raise NotImplementedError("Training is not implemented yet")
 
         if not return_dict:
             return tuple(v for v in [None, logits, all_hidden_states, all_self_attentions] if v is not None)
-
         return MaskedLMOutput(
             loss=loss,
             logits=logits,
@@ -1134,7 +1330,7 @@ class BarkFineModel(BarkPreTrainedModel):
         prompt.
 
         Args:
-            coarse_output (`mindspore.Tensor` of shape (batch_size, seq_len)):
+            coarse_output (`torch.Tensor` of shape (batch_size, seq_len)):
                 Input coarse acoustics ids, i.e the output of `BarkCoarseModel.generate`.
             semantic_generation_config (`BarkSemanticGenerationConfig`):
                 Generation config indicating how to generate the semantic tokens.
@@ -1144,10 +1340,10 @@ class BarkFineModel(BarkPreTrainedModel):
                 Generation config indicating how to generate the fine tokens.
             codebook_size (`int`, *optional*, defaults to 1024):
                 Codebook channel size, i.e. the size of the output vocabulary per codebook channel.
-            history_prompt (`Optional[Dict[str,mindspore.Tensor]]`, *optional*):
+            history_prompt (`Optional[Dict[str,torch.Tensor]]`, *optional*):
                 Optional `Bark` speaker prompt.
         Returns:
-            mindspore.Tensor: Output fine acoustics tokens.
+            torch.LongTensor: Output fine acoustics tokens.
         """
         if semantic_generation_config is None:
             raise ValueError("`semantic_generation_config` has to be provided")
@@ -1175,7 +1371,7 @@ class BarkFineModel(BarkPreTrainedModel):
         batch_size = coarse_output.shape[0]
 
         if history_prompt is not None:
-            x_fine_history = ops.repeat_interleave(history_prompt["fine_prompt"].T[None], batch_size, axis=0).astype(mindspore.int64)
+            x_fine_history = ops.repeat_interleave(history_prompt["fine_prompt"].T[None], batch_size, axis=0)
             # swapaxes to get to shape (seq_len, n_fine_codebooks)
         else:
             x_fine_history = None
@@ -1192,7 +1388,7 @@ class BarkFineModel(BarkPreTrainedModel):
 
         # prepend history if available (max max_fine_history_length)
         if x_fine_history is not None:
-            fine_input = ops.cat([x_fine_history[:, -max_fine_history_length:, :], fine_input], axis=1)
+            fine_input = ops.cat([x_fine_history[:, -max_fine_history_length:, :].astype(mindspore.int64), fine_input], axis=1)
 
             # len of the fine_history that has been added to fine_input
             n_history = x_fine_history[:, -max_fine_history_length:, :].shape[1]
@@ -1255,8 +1451,10 @@ class BarkFineModel(BarkPreTrainedModel):
 
         return fine_input
 
-
 class BarkModel(BarkPreTrainedModel):
+    r"""
+    BarkModel
+    """
     config_class = BarkConfig
 
     def __init__(self, config):
@@ -1265,7 +1463,6 @@ class BarkModel(BarkPreTrainedModel):
         self.semantic = BarkSemanticModel(config.semantic_config)
         self.coarse_acoustics = BarkCoarseModel(config.coarse_acoustics_config)
         self.fine_acoustics = BarkFineModel(config.fine_acoustics_config)
-
         self.codec_model = AutoModel.from_config(config.codec_config)
 
         self.config = config
@@ -1275,7 +1472,6 @@ class BarkModel(BarkPreTrainedModel):
 
         fine_output = fine_output.swapaxes(0, 1)
         emb = self.codec_model.quantizer.decode(fine_output)
-
         if output_lengths is not None:
             # encodec uses LSTMs which behaves differently with appended padding
             # decoding with encodec takes around 0.1% of the total generation time
@@ -1299,10 +1495,10 @@ class BarkModel(BarkPreTrainedModel):
         Generates audio from an input prompt and an additional optional `Bark` speaker prompt.
 
         Args:
-            input_ids (`Optional[mindspore.Tensor]` of shape (batch_size, seq_len), *optional*):
+            input_ids (`Optional[torch.Tensor]` of shape (batch_size, seq_len), *optional*):
                 Input ids. Will be truncated up to 256 tokens. Note that the output audios will be as long as the
                 longest generation among the batch.
-            history_prompt (`Optional[Dict[str,mindspore.Tensor]]`, *optional*):
+            history_prompt (`Optional[Dict[str,torch.Tensor]]`, *optional*):
                 Optional `Bark` speaker prompt. Note that for now, this model takes only one speaker prompt per batch.
             kwargs (*optional*): Remaining dictionary of keyword arguments. Keyword arguments are of two types:
 
@@ -1311,15 +1507,9 @@ class BarkModel(BarkPreTrainedModel):
                 semantic, coarse and fine respectively. It has the priority over the keywords without a prefix.
 
                 This means you can, for example, specify a generation strategy for all sub-models except one.
-            return_output_lengths (`bool`, *optional*):
-                Whether or not to return the waveform lengths. Useful when batching.
         Returns:
-            By default:
-                - **audio_waveform** (`mindspore.Tensor` of shape (batch_size, seq_len)): Generated audio waveform.
-            When `return_output_lengths=True`:
-                Returns a tuple made of:
-                - **audio_waveform** (`mindspore.Tensor` of shape (batch_size, seq_len)): Generated audio waveform.
-                - **output_lengths** (`mindspore.Tensor` of shape (batch_size)): The length of each waveform in the batch
+            torch.LongTensor: Output generated audio.
+
         Example:
 
         ```python
@@ -1369,7 +1559,6 @@ class BarkModel(BarkPreTrainedModel):
                     kwargs_coarse[key] = value
                 if key not in kwargs_fine:
                     kwargs_fine[key] = value
-
         # 1. Generate from the semantic model
         semantic_output = self.semantic.generate(
             input_ids,
@@ -1377,7 +1566,6 @@ class BarkModel(BarkPreTrainedModel):
             semantic_generation_config=semantic_generation_config,
             **kwargs_semantic,
         )
-
         # 2. Generate from the coarse model
         coarse_output = self.coarse_acoustics.generate(
             semantic_output,
@@ -1388,13 +1576,11 @@ class BarkModel(BarkPreTrainedModel):
             return_output_lengths=return_output_lengths,
             **kwargs_coarse,
         )
-
         output_lengths = None
         if return_output_lengths:
             coarse_output, output_lengths = coarse_output
             # (batch_size, seq_len*coarse_codebooks) -> (batch_size, seq_len)
             output_lengths = output_lengths // coarse_generation_config.n_coarse_codebooks
-
         # 3. "generate" from the fine model
         output = self.fine_acoustics.generate(
             coarse_output,
@@ -1405,34 +1591,46 @@ class BarkModel(BarkPreTrainedModel):
             codebook_size=self.generation_config.codebook_size,
             **kwargs_fine,
         )
-
-        if getattr(self, "fine_acoustics_hook", None) is not None:
-            # Manually offload fine_acoustics to CPU
-            # and load codec_model to GPU
-            # since bark doesn't use codec_model forward pass
-            self.fine_acoustics_hook.offload()
-            self.codec_model = self.codec_model
-
         # 4. Decode the output and generate audio array
-        audio = self.codec_decode(output, output_lengths)
-
-        if getattr(self, "codec_model_hook", None) is not None:
-            # Offload codec_model to CPU
-            self.codec_model_hook.offload()
-
-        # if return_output_lengths:
-        #     output_lengths = [len(sample) for sample in audio]
-        #     audio = nn.utils.rnn.pad_sequence(audio, batch_first=True, padding_value=0)
-        #     return audio, output_lengths
-
+        audio = self.codec_decode(output, output_lengths=output_lengths)
+        if return_output_lengths:
+            output_lengths = [len(sample) for sample in audio]
+            audio = nn.utils.rnn.pad_sequence(audio, batch_first=True, padding_value=0)
+            return audio, output_lengths
+        
         return audio
+     
+    @classmethod
+    def _check_and_enable_flash_attn_2(
+        cls,
+        config,
+        torch_dtype: Optional[any] = None,
+        device_map: Optional[Union[str, Dict[str, int]]] = None,
+        hard_check_only: bool = False,
+    ):
+        """
+        `_check_and_enable_flash_attn_2` originally don't expand flash attention enabling to the model
+        sub-configurations. We override the original method to make sure that Bark sub-models are using Flash Attention
+        if necessary.
 
-__all__ = [
-    "BARK_PRETRAINED_MODEL_ARCHIVE_LIST",
-    "BarkFineModel",
-    "BarkSemanticModel",
-    "BarkCoarseModel",
-    "BarkModel",
-    "BarkPreTrainedModel",
-    "BarkCausalModel",
-]
+        If you don't know about Flash Attention, check out the official repository of flash attention:
+        https://github.com/Dao-AILab/flash-attention
+
+        For using Flash Attention 1.0 you can do it directly via the `BetterTransformer` API, have a look at this
+        specific section of the documentation to learn more about it:
+        https://huggingface.co/docs/transformers/main/en/perf_infer_gpu_one#decoder-models
+
+        The method checks if the current setup is compatible with Flash Attention as it requires the model to be in
+        half precision and not ran on CPU.
+
+        If all checks pass and `hard_check_only` is False, the method will set the config attribute `_attn_implementation` to "flash_attention_2" so that the model
+        can initialize the correct attention module
+        """
+        config = super()._check_and_enable_flash_attn_2(
+            config, torch_dtype, device_map, hard_check_only=hard_check_only
+        )
+
+        config.semantic_config._attn_implementation = config._attn_implementation
+        config.coarse_acoustics_config._attn_implementation = config._attn_implementation
+        config.fine_acoustics_config._attn_implementation = config._attn_implementation
+        return config

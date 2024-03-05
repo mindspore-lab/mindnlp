@@ -1,11 +1,10 @@
-# coding=utf-8
-# Copyright 2023 The Suno AI Authors and The HuggingFace Inc. team. All rights reserved.
+# Copyright 2022 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,19 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=too-many-function-args
-# pylint: disable=cyclic-import
 """
 Processor class for Bark
 """
+# import json
 import json
 import os
 from typing import Optional
 
 import numpy as np
-
-from mindnlp.utils import logging, cached_file
+from mindnlp.utils import logging
+from mindnlp.utils.download import cached_file
 from ...feature_extraction_utils import BatchFeature
 from ...processing_utils import ProcessorMixin
 from ..auto import AutoTokenizer
@@ -33,7 +30,9 @@ from ..auto import AutoTokenizer
 
 logger = logging.get_logger(__name__)
 
-
+__all__=[
+    "BarkProcessor"
+]
 class BarkProcessor(ProcessorMixin):
     r"""
     Constructs a Bark processor which wraps a text tokenizer and optional Bark voice presets into a single processor.
@@ -49,7 +48,6 @@ class BarkProcessor(ProcessorMixin):
             a list of `voice_preset_names`.
 
     """
-
     tokenizer_class = "AutoTokenizer"
     attributes = ["tokenizer"]
 
@@ -76,7 +74,8 @@ class BarkProcessor(ProcessorMixin):
                 This can be either:
 
                 - a string, the *model id* of a pretrained [`BarkProcessor`] hosted inside a model repo on
-                  huggingface.co.
+                  huggingface.co. Valid model ids can be located at the root-level, like `bert-base-uncased`, or
+                  namespaced under a user or organization name, like `dbmdz/bert-base-german-cased`.
                 - a path to a *directory* containing a processor saved using the [`~BarkProcessor.save_pretrained`]
                   method, e.g., `./my_model_directory/`.
             speaker_embeddings_dict_path (`str`, *optional*, defaults to `"speaker_embeddings_path.json"`):
@@ -91,13 +90,16 @@ class BarkProcessor(ProcessorMixin):
             speaker_embeddings_path = cached_file(
                 pretrained_processor_name_or_path,
                 speaker_embeddings_dict_path,
-                subfolder=kwargs.pop("subfolder", None),
+                subfolder=kwargs.pop("subfolder", ""),
                 cache_dir=kwargs.pop("cache_dir", None),
                 force_download=kwargs.pop("force_download", False),
                 proxies=kwargs.pop("proxies", None),
                 resume_download=kwargs.pop("resume_download", False),
                 local_files_only=kwargs.pop("local_files_only", False),
-                token=kwargs.pop("use_auth_token", None),
+                token=kwargs.pop("token", None),
+                _raise_exceptions_for_gated_repo=False,
+                _raise_exceptions_for_missing_entries=False,
+                _raise_exceptions_for_connection_errors=False,
             )
             if speaker_embeddings_path is None:
                 logger.warning(
@@ -107,7 +109,7 @@ class BarkProcessor(ProcessorMixin):
                 )
                 speaker_embeddings = None
             else:
-                with open(speaker_embeddings_path, encoding='utf-8') as speaker_embeddings_json:
+                with open(speaker_embeddings_path) as speaker_embeddings_json:
                     speaker_embeddings = json.load(speaker_embeddings_json)
         else:
             speaker_embeddings = None
@@ -118,10 +120,9 @@ class BarkProcessor(ProcessorMixin):
 
     def save_pretrained(
         self,
-        save_directory,
+        save_directory="/home/luul/bark-small",
         speaker_embeddings_dict_path="speaker_embeddings_path.json",
         speaker_embeddings_directory="speaker_embeddings",
-        push_to_hub: bool = False,
         **kwargs,
     ):
         """
@@ -168,10 +169,10 @@ class BarkProcessor(ProcessorMixin):
 
                     embeddings_dict[prompt_key] = tmp_dict
 
-            with open(os.path.join(save_directory, speaker_embeddings_dict_path), "w", encoding='utf-8') as fp:
+            with open(os.path.join(save_directory, speaker_embeddings_dict_path), "w") as fp:
                 json.dump(embeddings_dict, fp)
 
-        super().save_pretrained(save_directory, push_to_hub, **kwargs)
+        super().save_pretrained(save_directory, **kwargs)
 
     def _load_voice_preset(self, voice_preset: str = None, **kwargs):
         voice_preset_paths = self.speaker_embeddings[voice_preset]
@@ -186,13 +187,13 @@ class BarkProcessor(ProcessorMixin):
             path = cached_file(
                 self.speaker_embeddings.get("repo_or_path", "/"),
                 voice_preset_paths[key],
-                subfolder=kwargs.pop("subfolder", None),
+                subfolder=kwargs.pop("subfolder", ""),
                 cache_dir=kwargs.pop("cache_dir", None),
                 force_download=kwargs.pop("force_download", False),
                 proxies=kwargs.pop("proxies", None),
                 resume_download=kwargs.pop("resume_download", False),
                 local_files_only=kwargs.pop("local_files_only", False),
-                token=kwargs.pop("use_auth_token", None),
+                token=kwargs.pop("token", None),
             )
             if path is None:
                 raise ValueError(
@@ -285,5 +286,3 @@ class BarkProcessor(ProcessorMixin):
             encoded_text["history_prompt"] = voice_preset
 
         return encoded_text
-
-__all__ = ['BarkProcessor']
