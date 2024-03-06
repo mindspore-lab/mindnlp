@@ -110,7 +110,7 @@ class BarkSelfAttention(nn.Cell):
         if is_causal:
             block_size = config.block_size
             bias = ops.tril(ops.ones((block_size, block_size), dtype=mindspore.bool_)).view(1, 1, block_size, block_size)
-            self.bias = bias
+            self.bias = Parameter(bias, requires_grad=False)
 
     # Copied from transformers.models.gpt_neo.modeling_gpt_neo.GPTNeoSelfAttention._split_heads
     def _split_heads(self, tensor, num_heads, attn_head_size):
