@@ -40,17 +40,13 @@
 
 ### Installation
 
+#### Install from Pypi
+
+You can install the official version of MindNLP which uploaded to pypi.
+
 ```bash
 pip install mindnlp
 ```
-
-Version Compatibility:
-
-| MindNLP version | MindSpore version | Supported Python version |
-|-----------------|-------------------|--------------------------|
-| master          | daily build       | >=3.7.5, <=3.9           |
-| 0.1.1           | >=1.8.1, <=2.0.0  | >=3.7.5, <=3.9           |
-| 0.2.x           | >=2.1.0           | >=3.8, <=3.9             |
 
 #### Daily build
 
@@ -68,6 +64,13 @@ cd mindnlp
 bash scripts/build_and_reinstall.sh
 ```
 
+#### Version Compatibility
+
+| MindNLP version | MindSpore version | Supported Python version |
+|-----------------|-------------------|--------------------------|
+| master          | daily build       | >=3.7.5, <=3.9           |
+| 0.1.1           | >=1.8.1, <=2.0.0  | >=3.7.5, <=3.9           |
+| 0.2.x           | >=2.1.0           | >=3.8, <=3.9             |
 
 ### Introduction
 
@@ -153,6 +156,7 @@ The table below represents the current support in the library for each of those 
 | RWKV                          | ✅                | ❌             |
 | SeamlessM4T                   | ✅                | ❌             |
 | SeamlessM4Tv2                 | ✅                | ❌             |
+| StarCoder                     | ✅                | ❌             |
 | T5                            | ✅                | ❌             |
 | Timesformer                   | TODO              | ❌             |
 | Tinybert                      | ✅                | ❌             |
