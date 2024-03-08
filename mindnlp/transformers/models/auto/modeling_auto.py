@@ -60,6 +60,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("qwen2", "Qwen2Model"),
         ("roberta", "RobertaModel"),
         ("rwkv", "RwkvModel"),
+        ("starcoder2", "Starcoder2Model"),
         ("t5", "T5Model"),
         ("xlm-roberta", "XLMRobertaModel"),
     ]
@@ -114,6 +115,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("qwen2", "Qwen2ForCausalLM"),
         ("roberta", "RobertaLMHeadModel"),
         ("rwkv", "RwkvForCausalLM"),
+        ("starcoder2", "Starcoder2ForCausalLM"),
         ("xlm-roberta", "XLMRobertaForCausalLM"),
     ]
 )
@@ -304,10 +306,11 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("bloom", "BloomForSequenceClassification"),
         ("esm", "EsmForSequenceClassification"),
         ("falcon", "FalconForSequenceClassification"),
+        ('minicpm', 'MiniCPMForSequenceClassification'),
         ("phi", "PhiForSequenceClassification"),
         ("qwen2", "Qwen2ForSequenceClassification"),
         ("xlm-roberta", "XLMRobertaForSequenceClassification"),
-        ('minicpm', 'MiniCPMForSequenceClassification')
+        ("starcoder2", "Starcoder2ForSequenceClassification"),
     ]
 )
 
