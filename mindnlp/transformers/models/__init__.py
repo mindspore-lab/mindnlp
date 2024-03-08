@@ -21,6 +21,7 @@ from . import (
     bark,
     bart,
     bert,
+    big_bird,
     bloom,
     clip,
     codegen,
@@ -75,6 +76,7 @@ from .auto import *
 from .bark import *
 from .bart import *
 from .bert import *
+from .big_bird import *
 from .bloom import *
 from .clip import *
 from .codegen import *
@@ -128,6 +130,7 @@ __all__.extend(albert.__all__)
 __all__.extend(auto.__all__)
 __all__.extend(bart.__all__)
 __all__.extend(bert.__all__)
+__all__.extend(big_bird.__all__)
 __all__.extend(bloom.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
