@@ -13,10 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # pylint: disable=invalid-name
-# pylint: disable=no-else-raise
-# pylint: disable=unused-argument
 # pylint: disable=too-many-lines
 # pylint: disable=too-many-locals
+# pylint: disable=unused-argument
 # pylint: disable=arguments-renamed
 # pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
@@ -2068,7 +2067,8 @@ class BigBirdModel(BigBirdPreTrainedModel):
             raise ValueError(
                 "You cannot specify both input_ids and inputs_embeds at the same time"
             )
-        elif input_ids is not None:
+
+        if input_ids is not None:
             self.warn_if_padding_and_no_attention_mask(input_ids, attention_mask)
             input_shape = input_ids.shape
         elif inputs_embeds is not None:

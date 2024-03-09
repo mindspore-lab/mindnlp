@@ -12,8 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the PyTorch BigBird model. """
-
+# pylint: disable=invalid-name
+# pylint: disable=unused-argument
+# pylint: disable=unused-variable
+# pylint: disable=ungrouped-imports
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+""" Testing suite for the Mindspore BigBird model. """
 import unittest
 import numpy as np
 
@@ -30,9 +35,6 @@ from ...test_modeling_common import (
     ids_tensor,
     random_attention_mask,
 )
-
-# from ...test_pipeline_mixin import PipelineTesterMixin
-
 
 if is_mindspore_available():
     import mindspore
@@ -723,8 +725,8 @@ class BigBirdModelTest(ModelTesterMixin, unittest.TestCase):
 
     def test_model_various_attn_type(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-        for type in ["original_full", "block_sparse"]:
-            config_and_inputs[0].attention_type = type
+        for type_iterable in ["original_full", "block_sparse"]:
+            config_and_inputs[0].attention_type = type_iterable
             self.model_tester.create_and_check_model(*config_and_inputs)
 
     def test_fast_integration(self):
@@ -810,10 +812,9 @@ class BigBirdModelTest(ModelTesterMixin, unittest.TestCase):
         # an effort was done to return `attention_probs` (yet to be verified).
         if name.startswith("outputs.attentions"):
             return
-        else:
-            super().check_pt_flax_outputs(
-                fx_outputs, pt_outputs, model_class, tol, name, attributes
-            )
+        super().check_pt_flax_outputs(
+            fx_outputs, pt_outputs, model_class, tol, name, attributes
+        )
 
 
 @require_mindspore
