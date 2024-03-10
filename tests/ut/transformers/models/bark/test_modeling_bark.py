@@ -58,7 +58,7 @@ if is_mindspore_available():
         BarkSemanticModel,
     )
 
-mindspore.set_context(pynative_synchronize=True)
+# mindspore.set_context(pynative_synchronize=True)
 
 class BarkSemanticModelTester:
     def __init__(

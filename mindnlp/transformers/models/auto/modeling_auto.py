@@ -35,6 +35,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("bark", "BarkModel"),
         ("bart", "BartModel"),
         ("bert", "BertModel"),
+        ("big_bird", "BigBirdModel"),
         ("bloom", "BloomModel"),
         ("codegen", "CodeGenModel"),
         ("cpmant", "CpmAntModel"),
@@ -71,11 +72,12 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         # Model for pre-training mapping
         ("albert", "AlbertForPreTraining"),
         ("bert", "BertForPreTraining"),
-        ("gpt_pangu", "GPTPanguForCausalLM"),
+        ("big_bird", "BigBirdForPreTraining"),
         ("bloom", "BloomForCausalLM"),
+        ("gpt_pangu", "GPTPanguForCausalLM"),
+        ('minicpm', 'MiniCPMForCausalLM'),
         ("rwkv", "RwkvForCausalLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
-        ('minicpm', 'MiniCPMForCausalLM')
     ]
 )
 
@@ -84,6 +86,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         # Model with LM heads mapping
         ("albert", "AlbertForMaskedLM"),
         ("bert", "BertForMaskedLM"),
+        ("big_bird", "BigBirdForMaskedLM"),
         ("bloom", "BloomForCausalLM"),
         ("codegen", "CodeGenForCausalLM"),
         ("cpmant", "CpmAntForCausalLM"),
@@ -101,6 +104,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
     [
         # Model for Causal LM mapping
         ("bert", "BertLMHeadModel"),
+        ("big_bird", "BigBirdForCausalLM"),
         ("bloom", "BloomForCausalLM"),
         ("codegen", "CodeGenForCausalLM"),
         ("cpmant", "CpmAntForCausalLM"),
@@ -223,6 +227,7 @@ MODEL_FOR_MASKED_LM_MAPPING_NAMES = OrderedDict(
         # Model for Masked LM mapping
         ("albert", "AlbertForMaskedLM"),
         ("bert", "BertForMaskedLM"),
+        ("big_bird", "BigBirdForMaskedLM"),
         ("esm", "EsmForMaskedLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
     ]
@@ -303,6 +308,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("albert", "AlbertForSequenceClassification"),
         ("bart", "BartForSequenceClassification"),
         ("bert", "BertForSequenceClassification"),
+        ("big_bird", "BigBirdForSequenceClassification"),
         ("bloom", "BloomForSequenceClassification"),
         ("esm", "EsmForSequenceClassification"),
         ("falcon", "FalconForSequenceClassification"),
