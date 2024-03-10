@@ -12,12 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=invalid-name
-# pylint: disable=unused-argument
-# pylint: disable=unused-variable
-# pylint: disable=ungrouped-imports
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
 """ Testing suite for the Mindspore BigBird model. """
 import unittest
 import numpy as np
@@ -55,6 +49,7 @@ if is_mindspore_available():
         BIG_BIRD_PRETRAINED_MODEL_ARCHIVE_LIST,
     )
 
+# mindspore.set_context(pynative_synchronize=True)
 
 class BigBirdModelTester:
     def __init__(
@@ -219,7 +214,7 @@ class BigBirdModelTester:
         choice_labels,
     ):
         model = BigBirdModel(config=config)
-        # model.to(torch_device)
+
         model.set_train(False)
         result = model(
             input_ids, attention_mask=input_mask, token_type_ids=token_type_ids
@@ -242,7 +237,7 @@ class BigBirdModelTester:
         choice_labels,
     ):
         model = BigBirdForPreTraining(config=config)
-        # model.to(torch_device)
+
         model.set_train(False)
         result = model(
             input_ids,
@@ -273,7 +268,7 @@ class BigBirdModelTester:
     ):
         config.add_cross_attention = True
         model = BigBirdModel(config)
-        # model.to(torch_device)
+
         model.set_train(False)
         result = model(
             input_ids,
@@ -309,7 +304,7 @@ class BigBirdModelTester:
         encoder_attention_mask,
     ):
         model = BigBirdForCausalLM(config=config)
-        # model.to(torch_device)
+
         model.set_train(False)
         result = model(
             input_ids,
@@ -332,7 +327,7 @@ class BigBirdModelTester:
         choice_labels,
     ):
         model = BigBirdForMaskedLM(config=config)
-        # model.to(torch_device)
+
         model.set_train(False)
         result = model(
             input_ids,
@@ -359,7 +354,7 @@ class BigBirdModelTester:
         config.is_decoder = True
         config.add_cross_attention = True
         model = BigBirdForCausalLM(config=config)
-        # model.to(torch_device)
+
         model.set_train(False)
 
         # first forward pass
@@ -423,7 +418,7 @@ class BigBirdModelTester:
         choice_labels,
     ):
         model = BigBirdForQuestionAnswering(config=config)
-        # model.to(torch_device)
+
         model.set_train(False)
         result = model(
             input_ids,
@@ -451,7 +446,7 @@ class BigBirdModelTester:
     ):
         config.num_labels = self.num_labels
         model = BigBirdForSequenceClassification(config)
-        # model.to(torch_device)
+
         model.set_train(False)
         result = model(
             input_ids,
@@ -473,7 +468,7 @@ class BigBirdModelTester:
     ):
         config.num_labels = self.num_labels
         model = BigBirdForTokenClassification(config=config)
-        # model.to(torch_device)
+
         model.set_train(False)
         result = model(
             input_ids,
@@ -497,7 +492,7 @@ class BigBirdModelTester:
     ):
         config.num_choices = self.num_choices
         model = BigBirdForMultipleChoice(config=config)
-        # model.to(torch_device)
+
         model.set_train(False)
         multiple_choice_inputs_ids = (
             input_ids.unsqueeze(1).expand(-1, self.num_choices, -1).contiguous()
@@ -547,7 +542,7 @@ class BigBirdModelTester:
         choice_labels,
     ):
         model = BigBirdModel(config)
-        # model.to(torch_device)
+
         model.set_train(False)
         result = model(input_ids)
         self.parent.assertEqual(
@@ -566,7 +561,7 @@ class BigBirdModelTester:
         choice_labels,
     ):
         model = BigBirdModel(config)
-        # model.to(torch_device)
+
         model.set_train(False)
         result = model(input_ids)
         self.parent.assertEqual(
@@ -720,7 +715,7 @@ class BigBirdModelTest(ModelTesterMixin, unittest.TestCase):
     @slow
     def test_model_from_pretrained(self):
         for model_name in BIG_BIRD_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = BigBirdForPreTraining.from_pretrained(model_name, from_pt=True)
+            model = BigBirdForPreTraining.from_pretrained(model_name)
             self.assertIsNotNone(model)
 
     def test_model_various_attn_type(self):
@@ -728,47 +723,6 @@ class BigBirdModelTest(ModelTesterMixin, unittest.TestCase):
         for type_iterable in ["original_full", "block_sparse"]:
             config_and_inputs[0].attention_type = type_iterable
             self.model_tester.create_and_check_model(*config_and_inputs)
-
-    def test_fast_integration(self):
-        # fmt: off
-        input_ids = mindspore.tensor(
-            [[6, 117, 33, 36, 70, 22, 63, 31, 71, 72, 88, 58, 109, 49, 48, 116, 92, 6, 19, 95, 118, 100, 80, 111, 93, 2,
-              31, 84, 26, 5, 6, 82, 46, 96, 109, 4, 39, 19, 109, 13, 92, 31, 36, 90, 111, 18, 75, 6, 56, 74, 16, 42, 56,
-              92, 69, 108, 127, 81, 82, 41, 106, 19, 44, 24, 82, 121, 120, 65, 36, 26, 72, 13, 36, 98, 43, 64, 8, 53,
-              100, 92, 51, 122, 66, 17, 61, 50, 104, 127, 26, 35, 94, 23, 110, 71, 80, 67, 109, 111, 44, 19, 51, 41, 86,
-              71, 76, 44, 18, 68, 44, 77, 107, 81, 98, 126, 100, 2, 49, 98, 84, 39, 23, 98, 52, 46, 10, 82, 121, 73],
-             [6, 117, 33, 36, 70, 22, 63, 31, 71, 72, 88, 58, 109, 49, 48, 116, 92, 6, 19, 95, 118, 100, 80, 111, 93, 2,
-              31, 84, 26, 5, 6, 82, 46, 96, 109, 4, 39, 19, 109, 13, 92, 31, 36, 90, 111, 18, 75, 6, 56, 74, 16, 42, 56,
-              92, 69, 108, 127, 81, 82, 41, 106, 19, 44, 24, 82, 121, 120, 65, 36, 26, 72, 13, 36, 98, 43, 64, 8, 53,
-              100, 92, 51, 12, 66, 17, 61, 50, 104, 127, 26, 35, 94, 23, 110, 71, 80, 67, 109, 111, 44, 19, 51, 41, 86,
-              71, 76, 28, 18, 68, 44, 77, 107, 81, 98, 126, 100, 2, 49, 18, 84, 39, 23, 98, 52, 46, 10, 82, 121, 73]],
-            # noqa: E231
-            dtype=mindspore.int64,
-        )
-        # fmt: on
-        input_ids = input_ids % self.model_tester.vocab_size
-        input_ids[1] = input_ids[1] - 1
-
-        attention_mask = ops.ones(input_ids.shape)
-        attention_mask[:, :-10] = 0
-
-        config, _, _, _, _, _, _ = self.model_tester.prepare_config_and_inputs()
-        # torch.manual_seed(0)
-        mindspore.set_seed(0)
-        model = BigBirdModel(config).set_train(False)
-
-        # with torch.no_grad():
-        hidden_states = model(
-            input_ids, attention_mask=attention_mask
-        ).last_hidden_state
-
-        self.assertTrue(
-            np.allclose(
-                hidden_states[0, 0, :5].asnumpy(),
-                mindspore.tensor([1.4825, 0.0774, 0.8226, -0.2962, -0.9593]).asnumpy(),
-                atol=1e-3,
-            )
-        )
 
     def test_auto_padding(self):
         self.model_tester.seq_length = 241
@@ -779,43 +733,6 @@ class BigBirdModelTest(ModelTesterMixin, unittest.TestCase):
         self.model_tester.seq_length = 9
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_for_change_to_full_attn(*config_and_inputs)
-
-    @unittest.skip(
-        reason="This architecure seem to not compute gradients properly when using GC, check: https://github.com/huggingface/transformers/pull/27124"
-    )
-    def test_training_gradient_checkpointing(self):
-        pass
-
-    @unittest.skip(
-        reason="This architecure seem to not compute gradients properly when using GC, check: https://github.com/huggingface/transformers/pull/27124"
-    )
-    def test_training_gradient_checkpointing_use_reentrant(self):
-        pass
-
-    @unittest.skip(
-        reason="This architecure seem to not compute gradients properly when using GC, check: https://github.com/huggingface/transformers/pull/27124"
-    )
-    def test_training_gradient_checkpointing_use_reentrant_false(self):
-        pass
-
-    # overwrite from common in order to skip the check on `attentions`
-    def check_pt_flax_outputs(
-        self,
-        fx_outputs,
-        pt_outputs,
-        model_class,
-        tol=1e-5,
-        name="outputs",
-        attributes=None,
-    ):
-        # `bigbird_block_sparse_attention` in `FlaxBigBird` returns `attention_probs = None`, while in PyTorch version,
-        # an effort was done to return `attention_probs` (yet to be verified).
-        if name.startswith("outputs.attentions"):
-            return
-        super().check_pt_flax_outputs(
-            fx_outputs, pt_outputs, model_class, tol, name, attributes
-        )
-
 
 @require_mindspore
 @slow
@@ -839,9 +756,8 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
 
     def test_inference_block_sparse_pretraining(self):
         model = BigBirdForPreTraining.from_pretrained(
-            "google/bigbird-roberta-base", attention_type="block_sparse", from_pt=True
+            "google/bigbird-roberta-base", attention_type="block_sparse"
         )
-        # model.to(torch_device)
 
         input_ids = mindspore.tensor(
             [[20920, 232, 328, 1437] * 1024], dtype=mindspore.int64
@@ -882,9 +798,9 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
 
     def test_inference_full_pretraining(self):
         model = BigBirdForPreTraining.from_pretrained(
-            "google/bigbird-roberta-base", attention_type="original_full", from_pt=True
+            "google/bigbird-roberta-base", attention_type="original_full"
         )
-        # model.to(torch_device)
+
 
         input_ids = mindspore.tensor(
             [[20920, 232, 328, 1437] * 512], dtype=mindspore.int64
@@ -937,7 +853,7 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
             block_size=16,
             from_pt=True,
         )
-        # model.to(torch_device)
+
         model.set_train(False)
         config = model.config
 
@@ -1003,7 +919,7 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
             block_size=16,
             from_pt=True,
         )
-        # model.to(torch_device)
+
         model.set_train(False)
         config = model.config
 
@@ -1209,7 +1125,7 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
 
     def test_tokenizer_inference(self):
         tokenizer = BigBirdTokenizer.from_pretrained(
-            "google/bigbird-roberta-base", from_pt=True
+            "google/bigbird-roberta-base"
         )
         model = BigBirdModel.from_pretrained(
             "google/bigbird-roberta-base",
@@ -1218,7 +1134,7 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
             block_size=16,
             from_pt=True,
         )
-        # model.to(torch_device)
+
 
         text = [
             "Transformer-based models are unable to process long sequences due to their self-attention operation,"
@@ -1269,7 +1185,7 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
 
     def test_inference_question_answering(self):
         tokenizer = BigBirdTokenizer.from_pretrained(
-            "google/bigbird-base-trivia-itc", from_pt=True
+            "google/bigbird-base-trivia-itc"
         )
         model = BigBirdForQuestionAnswering.from_pretrained(
             "google/bigbird-base-trivia-itc",
@@ -1278,7 +1194,7 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
             num_random_blocks=3,
             from_pt=True,
         )
-        # model.to(torch_device)
+
 
         context = (
             "The BigBird model was proposed in Big Bird: Transformers for Longer Sequences by Zaheer, Manzil and"
@@ -1301,7 +1217,7 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
             question,
             [context, context],
             padding=True,
-            return_tensors="pt",
+            return_tensors="ms",
             add_special_tokens=True,
             max_length=256,
             truncation=True,
@@ -1331,10 +1247,8 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
               -10.2460, -15.7198, -14.2078, -12.8477, -11.4861, -16.1017, -11.8900, -16.4488, -13.2959, -10.3980,
               -15.4874, -10.3539, -16.8263, -10.9973, -17.0344, -9.2751, -10.1196, -13.8907, -12.1025, -13.0628,
               -12.8530, -13.8173]],  # noqa: E321
-
         )
         # fmt: on
-
         self.assertTrue(
             np.allclose(
                 start_logits[:, 64:96].asnumpy(),
@@ -1362,15 +1276,15 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
 
     def test_fill_mask(self):
         tokenizer = BigBirdTokenizer.from_pretrained(
-            "google/bigbird-roberta-base", from_pt=True
+            "google/bigbird-roberta-base"
         )
         model = BigBirdForMaskedLM.from_pretrained(
-            "google/bigbird-roberta-base", from_pt=True
+            "google/bigbird-roberta-base"
         )
-        # model.to(torch_device)
+
 
         input_ids = tokenizer(
-            "The goal of life is [MASK] .", return_tensors="pt"
+            "The goal of life is [MASK] .", return_tensors="ms"
         ).input_ids
         logits = model(input_ids).logits
 
@@ -1386,7 +1300,7 @@ class BigBirdModelIntegrationTest(unittest.TestCase):
             block_size=16,
             from_pt=True,
         )
-        # model.to(torch_device)
+
         model.set_train(False)
 
         input_ids = mindspore.tensor(
