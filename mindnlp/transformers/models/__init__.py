@@ -53,6 +53,7 @@ from . import (
     megatron_bert,
     minicpm,
     mistral,
+    mixtral,
     mobilebert,
     nezha,
     opt,
@@ -109,6 +110,7 @@ from .mbart import *
 from .megatron_bert import *
 from .minicpm import *
 from .mistral import *
+from .mixtral import *
 from .mobilebert import *
 from .nezha import *
 from .opt import *
@@ -165,6 +167,7 @@ __all__.extend(mbart.__all__)
 __all__.extend(megatron_bert.__all__)
 __all__.extend(minicpm.__all__)
 __all__.extend(mistral.__all__)
+__all__.extend(mixtral.__all__)
 __all__.extend(mobilebert.__all__)
 __all__.extend(nezha.__all__)
 __all__.extend(opt.__all__)
