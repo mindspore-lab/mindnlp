@@ -1,9 +1,26 @@
+# Copyright 2024 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+# pylint: disable=missing-function-docstring
+# pylint: disable=missing-class-docstring
+# pylint: disable=no-else-return
+# pylint: disable=arguments-renamed
+""" Text2Text Generation Pipeline"""
 import enum
 import warnings
-
-from .base import Pipeline
-
 from mindnlp.utils import logging
+from .base import Pipeline
 
 from ..tokenization_utils_base import TruncationStrategy
 
@@ -79,9 +96,10 @@ class Text2TextGenerationPipeline(Pipeline):
             return_type = ReturnType.TENSORS if return_tensors else ReturnType.TEXT
         if return_type is not None:
             postprocess_params["return_type"] = return_type
-
         if clean_up_tokenization_spaces is not None:
             postprocess_params["clean_up_tokenization_spaces"] = clean_up_tokenization_spaces
+        if return_text is not None:
+            postprocess_params["return_type"] = ReturnType.TEXT if return_text else ReturnType.TENSORS
 
         if stop_sequence is not None:
             stop_sequence_ids = self.tokenizer.encode(stop_sequence, add_special_tokens=False)
@@ -98,6 +116,17 @@ class Text2TextGenerationPipeline(Pipeline):
         """
         Checks whether there might be something wrong with given input with regard to the model.
         """
+        if input_length < min_length:
+            logger.warning(
+                f"Your min_length is set to {min_length}, but you input_length is only {input_length}. You might "
+                "consider decreasing min_length manually, e.g. summarizer('...', min_length=10)"
+            )
+        if input_length > max_length:
+            logger.warning(
+                f"Your max_length is set to {max_length}, but you input_length is only {input_length}. You might "
+                "consider increasing max_length manually, e.g. summarizer('...', max_length=400)"
+            )
+
         return True
 
     def _parse_and_tokenize(self, *args, truncation):
@@ -247,9 +276,11 @@ class SummarizationPipeline(Text2TextGenerationPipeline):
             - **summary_token_ids** (`torch.Tensor` or `tf.Tensor`, present when `return_tensors=True`) -- The token
               ids of the summary.
         """
-        return super().__call__(*args, **kwargs)
+        result = super().__call__(*args, **kwargs)
 
-    def check_inputs(self, input_length: int, min_length: int, max_length: int) :
+        return result
+
+    def check_inputs(self, input_length: int, min_length: int, max_length: int):
         """
         Checks whether there might be something wrong with given input with regard to the model.
         """
@@ -348,4 +379,5 @@ class TranslationPipeline(Text2TextGenerationPipeline):
             - **translation_token_ids** (`torch.Tensor` or `tf.Tensor`, present when `return_tensors=True`) -- The
               token ids of the translation.
         """
-        return super().__call__(*args, **kwargs)
+        result = super().__call__(*args, **kwargs)
+        return result
