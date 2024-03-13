@@ -249,7 +249,7 @@ class SummarizationPipeline(Text2TextGenerationPipeline):
         """
         return super().__call__(*args, **kwargs)
 
-    def check_inputs(self, input_length: int, min_length: int, max_length: int) -> bool:
+    def check_inputs(self, input_length: int, min_length: int, max_length: int) :
         """
         Checks whether there might be something wrong with given input with regard to the model.
         """
