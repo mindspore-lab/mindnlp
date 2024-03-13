@@ -22,9 +22,9 @@ class Text2TextGenerationPipeline(Pipeline):
     Example:
 
     ```python
-    >>> from transformers import pipeline
+    >>> from mindnlp.transformers import pipeline
 
-    >>> generator = pipeline(model="mrm8488/t5-base-finetuned-question-generation-ap")
+    >>> generator = pipeline("text2text-generation", model="t5-base")
     >>> generator(
     ...     "answer: Manuel context: Manuel has created RuPERTa-base with the support of HF-Transformers and Google"
     ... )
