@@ -54,7 +54,7 @@ from .base import (
 )
 from .text_classification import TextClassificationPipeline
 from .text_generation import TextGenerationPipeline
-
+from .text2text_generation import Text2TextGenerationPipeline
 
 
 from ..models.auto.modeling_auto import (
@@ -67,7 +67,7 @@ from ..models.auto.modeling_auto import (
     # AutoModelForMaskGeneration,
     # AutoModelForObjectDetection,
     # AutoModelForQuestionAnswering,
-    # AutoModelForSeq2SeqLM,
+    AutoModelForSeq2SeqLM,
     AutoModelForSequenceClassification,
     # AutoModelForSpeechSeq2Seq,
     # AutoModelForTableQuestionAnswering,
@@ -118,6 +118,16 @@ SUPPORTED_TASKS = {
         },
         "type": "text",
     },
+    "text2text-generation": {
+        "impl": Text2TextGenerationPipeline,
+        "ms": (AutoModelForSeq2SeqLM,),
+        "defult": {
+            "model": {
+                "ms": ("t5-base", "686f1db"),
+            },
+        },
+        "type": "text",
+    }
 }
 
 NO_FEATURE_EXTRACTOR_TASKS = set()
@@ -557,6 +567,7 @@ __all__ = [
     'Pipeline',
     'PipelineDataFormat',
     'TextClassificationPipeline',
+    'Text2TextGenerationPipeline',
     'TextGenerationPipeline',
     'pipeline',
 ]
