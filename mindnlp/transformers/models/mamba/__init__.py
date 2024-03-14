@@ -15,10 +15,12 @@
 """
 Mamba Model.
 """
-from . import modeling_mamba, configuration_mamba
+from . import modeling_mamba, configuration_mamba, modeling_graph_mamba
 from .modeling_mamba import *
 from .configuration_mamba import *
+from .modeling_graph_mamba import *
 
 __all__ = []
 __all__.extend(modeling_mamba.__all__)
 __all__.extend(configuration_mamba.__all__)
+__all__.extend(modeling_graph_mamba.__all__)
