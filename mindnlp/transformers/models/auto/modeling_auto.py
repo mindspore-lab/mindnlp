@@ -54,6 +54,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("gpt2", "GPT2Model"),
         ("gpt_pangu", "GPTPanguModel"),
         ("longformer", "LongformerModel"),
+        ("mamba", "MambaModel"),
         ('mbart','MBartModel'),
         ('minicpm', 'MiniCPMModel'),
         ("mistral", "MistralModel"),
@@ -76,6 +77,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("big_bird", "BigBirdForPreTraining"),
         ("bloom", "BloomForCausalLM"),
         ("gpt_pangu", "GPTPanguForCausalLM"),
+        ("mamba", "MambaForCausalLM"),
         ('minicpm', 'MiniCPMForCausalLM'),
         ("rwkv", "RwkvForCausalLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
@@ -94,10 +96,11 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("cpmbee", "CpmBeeForCausalLM"),
         ("esm", "EsmForMaskedLM"),
         ("gpt_pangu", "GPTPanguForCausalLM"),
+        ("mamba", "MambaForCausalLM"),
+        ('minicpm', 'MiniCPMForCausalLM'),
         ("roberta", "RobertaForMaskedLM"),
         ("rwkv", "RwkvForCausalLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
-        ('minicpm', 'MiniCPMForCausalLM')
     ]
 )
 
@@ -115,6 +118,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("gpt_pangu", "GPTPanguForCausalLM"),
         ("falcon", "FalconForCausalLM"),
         ("gpt_bigcode", "GPTBigCodeForCausalLM"),
+        ("mamba", "MambaForCausalLM"),
         ('minicpm', 'MiniCPMForCausalLM'),
         ("mistral", "MistralForCausalLM"),
         ("mixtral", "MixtralForCausalLM"),
