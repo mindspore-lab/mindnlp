@@ -53,13 +53,14 @@ from .base import (
     load_model,
 )
 from .text_classification import TextClassificationPipeline
+from .text_generation import TextGenerationPipeline
 
 
 
 from ..models.auto.modeling_auto import (
     # AutoModel,
     # AutoModelForAudioClassification,
-    # AutoModelForCausalLM,
+    AutoModelForCausalLM,
     # AutoModelForCTC,
     # AutoModelForDocumentQuestionAnswering,
     # AutoModelForMaskedLM,
@@ -103,6 +104,16 @@ SUPPORTED_TASKS = {
         "default": {
             "model": {
                 "ms": ("distilbert-base-uncased-finetuned-sst-2-english", "af0f99b"),
+            },
+        },
+        "type": "text",
+    },
+    "text-generation": {
+        "impl": TextGenerationPipeline,
+        "ms": (AutoModelForCausalLM,),
+        "default": {
+            "model": {
+                "ms": ("gpt-2", "6c0e608"),
             },
         },
         "type": "text",
@@ -546,5 +557,6 @@ __all__ = [
     'Pipeline',
     'PipelineDataFormat',
     'TextClassificationPipeline',
+    'TextGenerationPipeline',
     'pipeline',
 ]
