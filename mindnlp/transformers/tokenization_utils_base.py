@@ -1477,16 +1477,15 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
                     return_tensors=return_tensors,
                     **tokenizer_kwargs,
                 )
-            else:
-                return self.encode(
-                    rendered,
-                    padding=padding,
-                    truncation=truncation,
-                    max_length=max_length,
-                    add_special_tokens=False,
-                    return_tensors=return_tensors,
-                    **tokenizer_kwargs,
-                )
+            return self.encode(
+                rendered,
+                padding=padding,
+                truncation=truncation,
+                max_length=max_length,
+                add_special_tokens=False,
+                return_tensors=return_tensors,
+                **tokenizer_kwargs,
+            )
         return rendered
 
     @lru_cache(128)
