@@ -140,10 +140,12 @@ The table below represents the current support in the library for each of those 
 | LongT5                        | ✅                | ❌             |
 | LUKE                          | ✅                | ❌             |
 | MaskFormer                    | ✅                | ❌             |
+| Mamba                         | ✅                | ❌             |
 | mBART-50                      | ✅                | ❌             |
 | Megatron-BERT                 | ✅                | ❌             |
 | Megatron-GPT2                 | ✅                | ❌             |
 | Mistral                       | ✅                | ❌             |
+| Mixtral                       | ✅                | ❌             |
 | MobileBERT                    | ✅                | ❌             |
 | Moss                          | ✅                | ❌             |
 | Nezha                         | ✅                | ❌             |

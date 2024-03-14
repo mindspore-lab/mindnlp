@@ -18,6 +18,7 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-many-return-statements
 # pylint: disable=unspecified-encoding
+# pylint: disable=try-except-raise
 """
 Download functions
 """
@@ -30,6 +31,7 @@ import json
 import types
 import functools
 import tempfile
+import time
 from typing import Union, Optional, Dict, Any
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -185,21 +187,28 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None,
             raise GatedRepoError('You should have authorization to access the model.')
         if status == 429:
             raise HTTPError('Too many requests.')
-        tmp_file_path = file_path + "_tmp"
-        total_size = req.headers.get("content-length")
-        with open(tmp_file_path, "wb") as file:
-            if total_size:
-                with tqdm(
-                    total=int(total_size), unit="B", unit_scale=True, unit_divisor=1024
-                ) as pbar:
+        try:
+            tmp_file_path = file_path + "_tmp"
+            total_size = req.headers.get("content-length")
+            with open(tmp_file_path, "wb") as file:
+                if total_size:
+                    with tqdm(
+                        total=int(total_size), unit="B", unit_scale=True, unit_divisor=1024
+                    ) as pbar:
+                        for chunk in req.iter_content(chunk_size=1024):
+                            file.write(chunk)
+                            pbar.update(len(chunk))
+                else:
                     for chunk in req.iter_content(chunk_size=1024):
-                        file.write(chunk)
-                        pbar.update(len(chunk))
-            else:
-                for chunk in req.iter_content(chunk_size=1024):
-                    if chunk:
-                        file.write(chunk)
-        shutil.move(tmp_file_path, file_path)
+                        if chunk:
+                            file.write(chunk)
+            shutil.move(tmp_file_path, file_path)
+        except requests.exceptions.RequestException as e:
+            if retry_cnt >= retry_limit:
+                raise
+            print(f"Failed to download: {e}")
+            print(f"Retrying... (attempt {retry_cnt}/{retry_limit})")
+            time.sleep(1)  # Add a small delay before retrying
 
     return file_path
 
@@ -508,16 +517,13 @@ def download(
         if req.status_code >= 400:
             raise RepositoryNotFoundError(f"Can not found model: {repo_id}")
         pointer_path = http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies, headers=headers)
-    except (requests.exceptions.SSLError, requests.exceptions.ProxyError):
-        # Actually raise for those subclasses of ConnectionError
-        raise
-    except (
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
-    ):
+    except (requests.exceptions.SSLError,
+            requests.exceptions.ProxyError,
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout):
         # Otherwise, our Internet connection is down.
         # etag is None
-        return None
+        raise
 
     return pointer_path
 

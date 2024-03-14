@@ -1405,6 +1405,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         truncation: bool = False,
         max_length: Optional[int] = None,
         return_tensors: Optional[Union[str, TensorType]] = None,
+        return_dict: bool = False,
         **tokenizer_kwargs,
     ) -> Union[str, List[int]]:
         """
@@ -1466,12 +1467,23 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         if padding is True:
             padding = "max_length"  # There's only one sequence here, so "longest" makes no sense
         if tokenize:
+            if return_dict:
+                return self(
+                    rendered,
+                    padding=padding,
+                    truncation=truncation,
+                    max_length=max_length,
+                    add_special_tokens=False,
+                    return_tensors=return_tensors,
+                    **tokenizer_kwargs,
+                )
+
             return self.encode(
                 rendered,
-                add_special_tokens=False,
                 padding=padding,
                 truncation=truncation,
                 max_length=max_length,
+                add_special_tokens=False,
                 return_tensors=return_tensors,
                 **tokenizer_kwargs,
             )
