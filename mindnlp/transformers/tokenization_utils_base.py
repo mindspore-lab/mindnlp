@@ -1477,6 +1477,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
                     return_tensors=return_tensors,
                     **tokenizer_kwargs,
                 )
+
             return self.encode(
                 rendered,
                 padding=padding,
