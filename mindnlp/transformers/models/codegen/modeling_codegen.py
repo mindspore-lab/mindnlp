@@ -65,6 +65,7 @@ def create_sinusoidal_positions(num_pos: int, dim: int) -> mindspore.Tensor:
 
 
 # Copied from transformers.models.gptj.modeling_gptj.rotate_every_two
+@mindspore.jit
 def rotate_every_two(x: mindspore.Tensor) -> mindspore.Tensor:
     x1 = x[:, :, :, ::2]
     x2 = x[:, :, :, 1::2]
