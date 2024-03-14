@@ -49,6 +49,7 @@ from . import (
     llama,
     longformer,
     luke,
+    mamba,
     mbart,
     megatron_bert,
     minicpm,
@@ -106,6 +107,7 @@ from .hubert import *
 from .llama import *
 from .longformer import *
 from .luke import *
+from .mamba import *
 from .mbart import *
 from .megatron_bert import *
 from .minicpm import *
@@ -163,6 +165,7 @@ __all__.extend(hubert.__all__)
 __all__.extend(llama.__all__)
 __all__.extend(longformer.__all__)
 __all__.extend(luke.__all__)
+__all__.extend(mamba.__all__)
 __all__.extend(mbart.__all__)
 __all__.extend(megatron_bert.__all__)
 __all__.extend(minicpm.__all__)

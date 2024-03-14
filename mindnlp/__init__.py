@@ -17,6 +17,7 @@
 MindNLP library.
 """
 import os
+import platform
 if os.environ.get('HF_ENDPOINT', None) is None:
     os.environ["HF_ENDPOINT"] = 'https://hf-mirror.com'
 os.environ["MS_DEV_FORCE_ACL"] = '1'
@@ -31,5 +32,8 @@ from mindnlp.vocab import Vocab
 
 if mindspore.get_context('device_target') == 'Ascend':
     mindspore.set_context(ascend_config={"jit_compile": False})
+
+if platform.system() in ("Windows", "Darwin"):
+    mindspore.set_context(pynative_synchronize=True)
 
 __all__ = ['ms_jit', 'load_dataset', 'Workflow', 'Vocab']

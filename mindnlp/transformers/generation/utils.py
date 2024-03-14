@@ -43,7 +43,7 @@ from easydict import EasyDict
 import mindspore
 from mindspore import ops
 
-from mindnlp.utils import ModelOutput, logging, ExplicitEnum
+from mindnlp.utils import ModelOutput, logging, ExplicitEnum, no_grad
 from .configuration_utils import GenerationConfig
 from ..modeling_outputs import CausalLMOutputWithPast, Seq2SeqLMOutput
 
@@ -1207,6 +1207,7 @@ class GenerationMixin:
 
         return model_kwargs
 
+    @no_grad
     def generate(
         self,
         inputs: Optional[mindspore.Tensor] = None,

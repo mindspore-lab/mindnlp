@@ -27,6 +27,7 @@ from contextlib import ExitStack
 
 import numpy as np
 import mindspore
+from mindspore.common.api import _pynative_executor
 from mindnlp.configs import DEFAULT_DTYPE
 from .import_utils import is_mindspore_available
 
@@ -332,3 +333,12 @@ class ContextManagers:
 
     def __exit__(self, *args, **kwargs):
         self.stack.__exit__(*args, **kwargs)
+
+def no_grad(func):
+    """no grad wrapper"""
+    def wrapper(*args, **kwargs):
+        _pynative_executor.set_enable_grad(False)
+        outputs = func(*args, **kwargs)
+        _pynative_executor.set_enable_grad(True)
+        return outputs
+    return wrapper
