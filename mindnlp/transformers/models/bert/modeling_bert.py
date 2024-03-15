@@ -22,6 +22,9 @@
 # pylint: disable=R1714
 # pylint: disable=W0237
 # pylint: disable=W0613
+# pylint: disable=missing-class-docstring
+# pylint: disable=bare-except
+# pylint: disable=ungrouped-imports
 
 """MindNLP bert model"""
 import math
@@ -48,11 +51,16 @@ from ...modeling_outputs import (
     SequenceClassifierOutput,
     TokenClassifierOutput,
 )
-
-from mindspore.hypercomplex.dual.dual_operators import Dense
-from mindspore.hypercomplex.utils import to_2channel, get_x_and_y
-from mindspore.hypercomplex.dual.dual_functions import matmul
 from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
+
+try:
+    from mindspore.hypercomplex.dual.dual_operators import Dense
+    from mindspore.hypercomplex.utils import to_2channel, get_x_and_y
+    from mindspore.hypercomplex.dual.dual_functions import matmul
+except:
+    from mindnlp._legacy.hypercomplex.dual import Dense
+    from mindnlp._legacy.hypercomplex.utils import to_2channel, get_x_and_y
+    from mindnlp._legacy.hypercomplex.dual.dual_functions import matmul
 
 logger = logging.get_logger(__name__)
 
@@ -1592,7 +1600,7 @@ class BertDualSelfAttention(nn.Cell):
 
         hidden_states_r = hidden_states[:,:,:self.config.hidden_size//2]
         hidden_states_d = hidden_states[:,:,self.config.hidden_size//2:]
-        
+
         new_hidden_states = to_2channel(hidden_states_r, hidden_states_d)
         mixed_query_layer = self.query(new_hidden_states)
 
@@ -1600,14 +1608,14 @@ class BertDualSelfAttention(nn.Cell):
 
         if is_cross_attention or past_key_value is not None:
             raise NotImplementedError("This functionality is not implemented.")
-        else:
-            mixed_key_layer = self.key(new_hidden_states)
 
-            key_layer = self.transpose_for_scores(mixed_key_layer)
-            
-            mixed_value_layer = self.value(new_hidden_states)
-            
-            value_layer = self.transpose_for_scores(mixed_value_layer)
+        mixed_key_layer = self.key(new_hidden_states)
+
+        key_layer = self.transpose_for_scores(mixed_key_layer)
+
+        mixed_value_layer = self.value(new_hidden_states)
+
+        value_layer = self.transpose_for_scores(mixed_value_layer)
 
         query_layer = self.transpose_for_scores(mixed_query_layer)
 
@@ -1619,27 +1627,27 @@ class BertDualSelfAttention(nn.Cell):
         if attention_mask is not None:
             # Apply the attention mask is (precomputed for all layers in BertModel forward() function)
             attention_scores = attention_scores + attention_mask
-        
+
         attention_scores_r, attention_scores_i = get_x_and_y(attention_scores)
         attention_scores_r = ops.softmax(attention_scores_r, axis=-1)
         attention_scores_i = ops.softmax(attention_scores_i, axis=-1)
-        
+
         p_attn = to_2channel(attention_scores_r, attention_scores_i)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
         if self.dropout is not None:
             p_attn = self.dropout(p_attn)
-        
+
         context_layer = matmul(p_attn, value_layer)
-        
+
         context_layer_r, context_layer_i = get_x_and_y(context_layer)
         context_layer = ops.cat([context_layer_r, context_layer_i], -1)
 
         context_layer = context_layer.transpose(0, 2, 1, 3)
         new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(new_context_layer_shape)
-        outputs = (context_layer, attention_probs) if output_attentions else (context_layer,)
+        outputs = (context_layer, p_attn) if output_attentions else (context_layer,)
 
         return outputs
 
@@ -1654,7 +1662,7 @@ class BertDualSelfOutput(nn.Cell):
     def construct(self, hidden_states, input_tensor):
         hidden_states_r = hidden_states[:,:,:self.hidden_size//2]
         hidden_states_d = hidden_states[:,:,self.hidden_size//2:]
-        
+
         hidden_states = to_2channel(hidden_states_r, hidden_states_d)
         hidden_states = self.dense(hidden_states)
         hidden_states_r, hidden_states_d = get_x_and_y(hidden_states)
@@ -1953,7 +1961,6 @@ class BertDualModel(BertPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-   
     def construct(
         self,
         input_ids: Optional[mindspore.Tensor] = None,
