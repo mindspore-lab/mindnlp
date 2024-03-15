@@ -19,6 +19,7 @@
 # pylint: disable=broad-exception-caught
 # pylint: disable=unused-argument
 # pylint: disable=unbalanced-tuple-unpacking
+# pylint: disable=invalid-name
 """question answering pipeline."""
 
 import warnings

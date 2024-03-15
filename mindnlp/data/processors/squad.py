@@ -21,6 +21,7 @@
 # pylint: disable=global-variable-undefined
 # pylint: disable=dangerous-default-value
 # pylint: disable=redefined-outer-name
+# pylint: disable=invalid-name
 
 from functools import partial
 from multiprocessing import Pool, cpu_count
