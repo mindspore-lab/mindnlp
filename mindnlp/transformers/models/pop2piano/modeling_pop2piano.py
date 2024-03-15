@@ -58,7 +58,7 @@ class Pop2PianoLayerNorm(nn.Cell):
         Construct a layernorm module in the Pop2Piano style. No bias and no subtraction of mean.
         """
         super().__init__()
-        self.weight = Parameter(ops.ones(hidden_size))
+        self.weight = Parameter(initializer('zeros', (hidden_size,), mindspore.float32), 'weight')
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):

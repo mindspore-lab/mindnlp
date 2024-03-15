@@ -420,7 +420,7 @@ class MixtralSparseMoeBlock(nn.Cell):
 
         routing_weights = ops.softmax(router_logits, axis=1, dtype=mindspore.float32)
         routing_weights, selected_experts = ops.topk(routing_weights, self.top_k, dim=-1)
-        routing_weights /= routing_weights.sum(axis=-1, keepdims=True)
+        routing_weights = routing_weights / routing_weights.sum(axis=-1, keepdims=True)
         # we cast back to the input dtype
         routing_weights = routing_weights.to(hidden_states.dtype)
 

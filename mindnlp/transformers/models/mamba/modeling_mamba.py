@@ -105,7 +105,10 @@ class MambaMixer(nn.Cell):
             ssm_state = cache_params.ssm_states[self.layer_idx]
             if cache_params.seqlen_offset > 0:
                 conv_state = cache_params.conv_states[self.layer_idx]                   # [batch, intermediate_size, conv_kernel_size]
-                conv_state = ops.roll(conv_state, shifts=-1, dims=-1)
+                if mindspore.get_context('device_target') == 'GPU':
+                    conv_state = ops.roll(conv_state, shifts=-1, dims=-1)
+                else:
+                    conv_state = mindspore.numpy.roll(conv_state, shift=-1, axis=-1)
                 conv_state[:, :, -1] = hidden_states[:, :, 0]
                 cache_params.conv_states[self.layer_idx] = conv_state
                 hidden_states = ops.sum(conv_state * self.conv1d.weight[:, 0, :], dim=-1)
