@@ -796,7 +796,7 @@ class DistilBertForQuestionAnswering(DistilBertPreTrainedModel):
 
         hidden_states = self.dropout(hidden_states)  # (bs, max_query_len, dim)
         logits = self.qa_outputs(hidden_states)  # (bs, max_query_len, 2)
-        start_logits, end_logits = logits.split(1, dim=-1)
+        start_logits, end_logits = logits.split(1, axis=-1)
         start_logits = start_logits.squeeze(-1)  # (bs, max_query_len)
         end_logits = end_logits.squeeze(-1)  # (bs, max_query_len)
 

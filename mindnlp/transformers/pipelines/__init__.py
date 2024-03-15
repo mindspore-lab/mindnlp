@@ -55,7 +55,7 @@ from .base import (
 from .text_classification import TextClassificationPipeline
 from .text_generation import TextGenerationPipeline
 from .text2text_generation import Text2TextGenerationPipeline
-
+from .question_answering import QuestionAnsweringPipeline
 
 from ..models.auto.modeling_auto import (
     # AutoModel,
@@ -66,7 +66,7 @@ from ..models.auto.modeling_auto import (
     # AutoModelForMaskedLM,
     # AutoModelForMaskGeneration,
     # AutoModelForObjectDetection,
-    # AutoModelForQuestionAnswering,
+    AutoModelForQuestionAnswering,
     AutoModelForSeq2SeqLM,
     AutoModelForSequenceClassification,
     # AutoModelForSpeechSeq2Seq,
@@ -127,7 +127,18 @@ SUPPORTED_TASKS = {
             },
         },
         "type": "text",
-    }
+    },
+    "question-answering": {
+        "impl": QuestionAnsweringPipeline,
+        "ms": (AutoModelForQuestionAnswering,),
+        "default": {
+            "model": {
+                "ms": ("distilbert/distilbert-base-cased-distilled-squad", "626af31"),
+            },
+        },
+        "type": "text",
+    },
+
 }
 
 NO_FEATURE_EXTRACTOR_TASKS = set()
@@ -569,5 +580,6 @@ __all__ = [
     'TextClassificationPipeline',
     'Text2TextGenerationPipeline',
     'TextGenerationPipeline',
+    'QuestionAnsweringPipeline',
     'pipeline',
 ]
