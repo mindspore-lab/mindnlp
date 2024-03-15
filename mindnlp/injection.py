@@ -192,8 +192,7 @@ def _ones(*size, dtype=None):
         dtype = mindspore.float32
     if isinstance(size[0], tuple):
         size = size[0]
-    ones_ = _get_cache_prim(ops.Ones)()
-    return ones_(size, dtype)
+    return ops.fill(dtype, size, 1)
 
 ops.ones = _ones
 
@@ -202,8 +201,7 @@ def _zeros(*size, dtype=None):
         dtype = mindspore.float32
     if isinstance(size[0], tuple):
         size = size[0]
-    zeros_ = _get_cache_prim(ops.Zeros)()
-    return zeros_(size, dtype)
+    return ops.fill(dtype, size, 0)
 
 ops.zeros = _zeros
 
@@ -416,6 +414,7 @@ def new_repeat_interleave(input, repeats, axis=None):
         repeats = repeats.asnumpy().tolist()
     output = old_repeat(input, repeats, axis)
     return output
+
 ops.repeat_interleave = bool_io_patch_decorator(new_repeat_interleave)
 def _repeat_interleave(self, repeats, dim):
     return old_repeat(self, repeats, axis=dim)
