@@ -118,6 +118,7 @@ The table below represents the current support in the library for each of those 
 | CPM-Ant                       | ✅                | ❌             |
 | CPM-Bee                       | ✅                | ❌             |
 | MiniCPM                       | ✅                | ❌             |
+| Deberta                       | ✅                | ❌             |
 | Electra                       | TODO               | ❌             |
 | EnCodec                       | ✅               | ❌             |
 | ERNIE                         | ✅                | ✅             |
