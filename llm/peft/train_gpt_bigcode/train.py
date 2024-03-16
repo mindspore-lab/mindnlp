@@ -27,7 +27,7 @@ SAVE_DIR = "peft-lora-santaCoder/"
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--num_epochs", type=int, default=2)
-    parser.add_argument("--model_path", type=str, default="gpt_bigcode-santacoder")
+    parser.add_argument("--model_path", type=str, default="bigcode/gpt_bigcode-santacoder")
     parser.add_argument("--dataset_name", type=str, default="smangrul/hf-stack-v1")
     parser.add_argument("--subset", type=str, default="data")
     parser.add_argument("--split", type=str, default="train")
