@@ -14,3 +14,10 @@
 """
 Layoutlm Model.
 """
+from . import configuration_layoutlm, modeling_layoutlm
+from .configuration_layoutlm import *
+from .modeling_layoutlm import *
+
+__all__ = []
+__all__.extend(modeling_layoutlm.__all__)
+__all__.extend(configuration_layoutlm.__all__)
