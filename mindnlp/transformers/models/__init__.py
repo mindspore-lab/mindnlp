@@ -28,6 +28,7 @@ from . import (
     cpm,
     cpmant,
     cpmbee,
+    deberta,
     distilbert,
     electra,
     encodec,
@@ -87,6 +88,7 @@ from .codegen import *
 from .cpm import *
 from .cpmant import *
 from .cpmbee import *
+from .deberta import *
 from .distilbert import *
 from .electra import *
 from .encodec import *
@@ -146,6 +148,7 @@ __all__.extend(codegen.__all__)
 __all__.extend(cpm.__all__)
 __all__.extend(cpmant.__all__)
 __all__.extend(cpmbee.__all__)
+__all__.extend(deberta.__all__)
 __all__.extend(distilbert.__all__)
 __all__.extend(encodec.__all__)
 __all__.extend(ernie.__all__)
