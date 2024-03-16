@@ -7,10 +7,10 @@
 """
 LayoutLM Models config
 """
-from ...configuration_utils import PretrainedConfig
 from mindnlp.utils import logging
+from ...configuration_utils import PretrainedConfig
 
-logger = logging.get_logger(__name__)   
+logger = logging.get_logger(__name__)
 
 LAYOUTLM_PRETRAINED_CONFIG_ARCHIVE_MAP = {
     "microsoft/layoutlm-base-uncased": (

@@ -12,12 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=C0103
+# pylint: disable=C0116
+# pylint: disable=R1725
+# pylint: disable=R1720
+# pylint: disable=R1714
+# pylint: disable=W0237
+# pylint: disable=W0613
+
 """ MindSpore LayoutLM model."""
 
 
 import math
-import numpy as np
 from typing import Optional, Tuple, Union
+import numpy as np
 import mindspore
 from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
@@ -69,7 +77,7 @@ class LayoutLMEmbeddings(nn.Cell):
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
         self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to((1, -1))
-        
+
 
     def construct(
         self,
@@ -126,8 +134,9 @@ class LayoutLMEmbeddings(nn.Cell):
         return embeddings
 
 
-# Copied from transformers.models.bert.modeling_bert.BertSelfAttention with Bert->LayoutLM
 class LayoutLMSelfAttention(nn.Cell):
+    """Copied from transformers.models.bert.modeling_bert.BertSelfAttention with Bert->LayoutLM"""
+
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -259,8 +268,9 @@ class LayoutLMSelfAttention(nn.Cell):
         return outputs
 
 
-# Copied from transformers.models.bert.modeling_bert.BertSelfOutput with Bert->LayoutLM
 class LayoutLMSelfOutput(nn.Cell):
+    """Copied from transformers.models.bert.modeling_bert.BertSelfOutput with Bert->LayoutLM"""
+
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -274,8 +284,9 @@ class LayoutLMSelfOutput(nn.Cell):
         return hidden_states
 
 
-# Copied from transformers.models.bert.modeling_bert.BertAttention with Bert->LayoutLM
 class LayoutLMAttention(nn.Cell):
+    """Copied from transformers.models.bert.modeling_bert.BertAttention with Bert->LayoutLM"""
+
     def __init__(self, config, position_embedding_type=None):
         super().__init__()
         self.self = LayoutLMSelfAttention(config, position_embedding_type=position_embedding_type)
@@ -324,8 +335,9 @@ class LayoutLMAttention(nn.Cell):
         return outputs
 
 
-# Copied from transformers.models.bert.modeling_bert.BertIntermediate
 class LayoutLMIntermediate(nn.Cell):
+    """Copied from transformers.models.bert.modeling_bert.BertIntermediate"""
+
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
@@ -340,8 +352,9 @@ class LayoutLMIntermediate(nn.Cell):
         return hidden_states
 
 
-# Copied from transformers.models.bert.modeling_bert.BertOutput with Bert->LayoutLM
 class LayoutLMOutput(nn.Cell):
+    """Copied from transformers.models.bert.modeling_bert.BertOutput with Bert->LayoutLM"""
+
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
@@ -355,8 +368,9 @@ class LayoutLMOutput(nn.Cell):
         return hidden_states
 
 
-# Copied from transformers.models.bert.modeling_bert.BertLayer with Bert->LayoutLM
 class LayoutLMLayer(nn.Cell):
+    """Copied from transformers.models.bert.modeling_bert.BertLayer with Bert->LayoutLM"""
+
     def __init__(self, config):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -442,8 +456,9 @@ class LayoutLMLayer(nn.Cell):
         return layer_output
 
 
-# Copied from transformers.models.bert.modeling_bert.BertEncoder with Bert->LayoutLM
 class LayoutLMEncoder(nn.Cell):
+    """Copied from transformers.models.bert.modeling_bert.BertEncoder with Bert->LayoutLM"""
+
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -524,8 +539,9 @@ class LayoutLMEncoder(nn.Cell):
         )
 
 
-# Copied from transformers.models.bert.modeling_bert.BertPooler
 class LayoutLMPooler(nn.Cell):
+    """Copied from transformers.models.bert.modeling_bert.BertPooler"""
+
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -540,8 +556,9 @@ class LayoutLMPooler(nn.Cell):
         return pooled_output
 
 
-# Copied from transformers.models.bert.modeling_bert.BertPredictionHeadTransform with Bert->LayoutLM
 class LayoutLMPredictionHeadTransform(nn.Cell):
+    """Copied from transformers.models.bert.modeling_bert.BertPredictionHeadTransform with Bert->LayoutLM"""
+
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -558,8 +575,9 @@ class LayoutLMPredictionHeadTransform(nn.Cell):
         return hidden_states
 
 
-# Copied from transformers.models.bert.modeling_bert.BertLMPredictionHead with Bert->LayoutLM
 class LayoutLMLMPredictionHead(nn.Cell):
+    """Copied from transformers.models.bert.modeling_bert.BertLMPredictionHead with Bert->LayoutLM"""
+
     def __init__(self, config):
         super().__init__()
         self.transform = LayoutLMPredictionHeadTransform(config)
@@ -579,8 +597,9 @@ class LayoutLMLMPredictionHead(nn.Cell):
         return hidden_states
 
 
-# Copied from transformers.models.bert.modeling_bert.BertOnlyMLMHead with Bert->LayoutLM
 class LayoutLMOnlyMLMHead(nn.Cell):
+    """Copied from transformers.models.bert.modeling_bert.BertOnlyMLMHead with Bert->LayoutLM"""
+
     def __init__(self, config):
         super().__init__()
         self.predictions = LayoutLMLMPredictionHead(config)
@@ -622,6 +641,8 @@ class LayoutLMPreTrainedModel(PreTrainedModel):
 
 
 class LayoutLMModel(LayoutLMPreTrainedModel):
+    """LayoutLM Model"""
+
     def __init__(self, config):
         super(LayoutLMModel, self).__init__(config)
         self.config = config
@@ -767,6 +788,8 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
 
 
 class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
+    """LayoutLMForMaskedLM Model"""
+
     _tied_weights_keys = ["cls.predictions.decoder.bias", "cls.predictions.decoder.weight"]
 
     def __init__(self, config):
@@ -888,6 +911,8 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
 
 
 class LayoutLMForSequenceClassification(LayoutLMPreTrainedModel):
+    """LayoutLMForSequenceClassification Model"""
+
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1012,6 +1037,8 @@ class LayoutLMForSequenceClassification(LayoutLMPreTrainedModel):
 
 
 class LayoutLMForTokenClassification(LayoutLMPreTrainedModel):
+    """LayoutLMForTokenClassification Model"""
+
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1119,6 +1146,8 @@ class LayoutLMForTokenClassification(LayoutLMPreTrainedModel):
 
 
 class LayoutLMForQuestionAnswering(LayoutLMPreTrainedModel):
+    """LayoutLMForQuestionAnswering Model"""
+
     def __init__(self, config, has_visual_segment_embedding=True):
         super().__init__(config)
         self.num_labels = config.num_labels
