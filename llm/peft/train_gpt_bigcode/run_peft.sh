@@ -1,7 +1,7 @@
 export HF_ENDPOINT=https://hf-mirror.com
 
 python train.py \
-    --model_path "gpt_bigcode-santacoder" \
+    --model_path "bigcode/gpt_bigcode-santacoder" \
     --dataset_name "smangrul/hf-stack-v1" \
     --subset "data" \
     --data_column "content" \
@@ -14,9 +14,6 @@ python train.py \
     --lr_scheduler_type "cosine" \
     --weight_decay 0.01 \
     --num_warmup_steps 30 \
-    --eval_freq 100 \
-    --save_freq 100 \
-    --log_freq 25 \
     --num_workers 4 \
     --bf16 \
     --no_fp16 \
@@ -32,6 +29,3 @@ python train.py \
     --use_nested_quant \
     --bnb_4bit_compute_dtype "bfloat16" \
     --num_epochs 10
-
-
-1021919
