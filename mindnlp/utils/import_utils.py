@@ -17,6 +17,7 @@
 # pylint: disable=logging-fstring-interpolation
 # pylint: disable=inconsistent-return-statements
 # pylint: disable=wrong-import-position
+# pylint: disable=invalid-name
 """
 Import utilities: Utilities related to imports and our lazy inits.
 """
@@ -26,7 +27,7 @@ import sys
 import warnings
 from types import ModuleType
 from collections import OrderedDict
-from functools import wraps
+from functools import wraps, lru_cache
 from typing import Tuple, Union
 import importlib.util
 
@@ -64,12 +65,30 @@ _pytest_available = _is_package_available("pytest")
 _datasets_available = _is_package_available("datasets")
 _sentencepiece_available = _is_package_available("sentencepiece")
 _tokenizers_available = _is_package_available("tokenizers")
+_pyctcdecode_available = _is_package_available("pyctcdecode")
 _safetensors_available = _is_package_available("safetensors")
 _modelscope_available = _is_package_available("modelscope")
+_jieba_available = _is_package_available("jieba")
 _mindspore_version, _mindspore_available = _is_package_available(
     "mindspore", return_version=True
 )
 
+_librosa_available = _is_package_available("librosa")
+_scipy_available = _is_package_available("scipy")
+
+_pretty_midi_available = importlib.util.find_spec("pretty_midi") is not None
+try:
+    _pretty_midi_version = importlib_metadata.version("pretty_midi")
+    logger.debug(f"Successfully imported pretty_midi version {_pretty_midi_version}")
+except importlib_metadata.PackageNotFoundError:
+    _pretty_midi_available = False
+
+_essentia_available = importlib.util.find_spec("essentia") is not None
+try:
+    _essentia_version = importlib_metadata.version("essentia")
+    logger.debug(f"Successfully imported essentia version {_essentia_version}")
+except importlib_metadata.PackageNotFoundError:
+    _essentia_version = False
 
 def is_mindspore_available():
     return _mindspore_available
@@ -104,10 +123,40 @@ def is_protobuf_available():
         return False
     return importlib.util.find_spec("google.protobuf") is not None
 
-
 def is_pytest_available():
     return _pytest_available
 
+def is_pretty_midi_available():
+    return _pretty_midi_available
+
+def is_librosa_available():
+    return _librosa_available
+
+def is_essentia_available():
+    return _essentia_available
+
+def is_pyctcdecode_available():
+    return _pyctcdecode_available
+
+def is_scipy_available():
+    return _scipy_available
+
+def is_jieba_available():
+    return _jieba_available
+
+@lru_cache()
+def is_vision_available():
+    _pil_available = importlib.util.find_spec("PIL") is not None
+    if _pil_available:
+        try:
+            package_version = importlib_metadata.version("Pillow")
+        except importlib_metadata.PackageNotFoundError:
+            try:
+                package_version = importlib_metadata.version("Pillow-SIMD")
+            except importlib_metadata.PackageNotFoundError:
+                return False
+        logger.debug(f"Detected PIL version {package_version}")
+    return _pil_available
 
 def is_in_notebook():
     try:
@@ -190,6 +239,45 @@ installation page: https://www.mindspore.cn/install/ and follow the ones that ma
 Please note that you may need to restart your runtime after installation.
 """
 
+LIBROSA_IMPORT_ERROR = """
+{0} requires thes librosa library. But that was not found in your environment. You can install them with pip:
+`pip install librosa`
+Please note that you may need to restart your runtime after installation.
+"""
+
+ESSENTIA_IMPORT_ERROR = """
+{0} requires essentia library. But that was not found in your environment. You can install them with pip:
+`pip install essentia==2.1b6.dev1034`
+Please note that you may need to restart your runtime after installation.
+"""
+
+SCIPY_IMPORT_ERROR = """
+{0} requires the scipy library but it was not found in your environment. You can install it with pip:
+`pip install scipy`. Please note that you may need to restart your runtime after installation.
+"""
+
+PRETTY_MIDI_IMPORT_ERROR = """
+{0} requires thes pretty_midi library. But that was not found in your environment. You can install them with pip:
+`pip install pretty_midi`
+Please note that you may need to restart your runtime after installation.
+"""
+
+# docstyle-ignore
+PYCTCDECODE_IMPORT_ERROR = """
+{0} requires the pyctcdecode library but it was not found in your environment. You can install it with pip:
+`pip install pyctcdecode`. Please note that you may need to restart your runtime after installation.
+"""
+
+JIEBA_IMPORT_ERROR = """
+{0} requires the jieba library but it was not found in your environment. You can install it with pip: `pip install
+jieba`. Please note that you may need to restart your runtime after installation.
+"""
+
+VISION_IMPORT_ERROR = """
+{0} requires the PIL library but it was not found in your environment. You can install it with pip:
+`pip install pillow`. Please note that you may need to restart your runtime after installation.
+"""
+
 BACKENDS_MAPPING = OrderedDict(
     [
         ("cython", (is_cython_available, CYTHON_IMPORT_ERROR)),
@@ -197,6 +285,14 @@ BACKENDS_MAPPING = OrderedDict(
         ("protobuf", (is_protobuf_available, PROTOBUF_IMPORT_ERROR)),
         ("sentencepiece", (is_sentencepiece_available, SENTENCEPIECE_IMPORT_ERROR)),
         ("tokenizers", (is_tokenizers_available, TOKENIZERS_IMPORT_ERROR)),
+        ("librosa", (is_librosa_available, LIBROSA_IMPORT_ERROR)),
+        ("essentia", (is_essentia_available, ESSENTIA_IMPORT_ERROR)),
+        ("scipy", (is_scipy_available, SCIPY_IMPORT_ERROR)),
+        ("pretty_midi", (is_pretty_midi_available, PRETTY_MIDI_IMPORT_ERROR)),
+        ("pyctcdecode", (is_pyctcdecode_available, PYCTCDECODE_IMPORT_ERROR)),
+        ("jieba", (is_jieba_available, JIEBA_IMPORT_ERROR)),
+        ("vision", (is_vision_available, VISION_IMPORT_ERROR)),
+
     ]
 )
 
@@ -255,7 +351,7 @@ def direct_transformers_import(path: str, file="__init__.py") -> ModuleType:
     Returns:
         `ModuleType`: The resulting imported module
     """
-    name = "transformers"
+    name = "mindnlp.transformers"
     location = os.path.join(path, file)
     spec = importlib.util.spec_from_file_location(
         name, location, submodule_search_locations=[path]

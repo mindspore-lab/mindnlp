@@ -31,17 +31,43 @@ logger = logging.get_logger(__name__)
 CONFIG_MAPPING_NAMES = OrderedDict(
     [
         # Add configs here
-        ("roberta", "RobertaConfig"),
+        ("albert", "AlbertConfig"),
+        ("autoformer", "AutoformerConfig"),
+        ("bark", "BarkConfig"),
         ("bart", "BartConfig"),
         ("bert", "BertConfig"),
-        ("gpt2", "GPT2Config"),
-        ('mt5', 'MT5Config'),
-        ('t5', 'T5Config'),
+        ("big_bird", "BigBirdConfig"),
+        ("bloom", "BloomConfig"),
         ('chatglm', 'ChatGLMConfig'),
-        ('gpt_bigcode', 'GPTBigCodeConfig'),
-        ("falcon", "FalconConfig"),
+        ("clip", "CLIPConfig"),
+        ("clip_vision_model", "CLIPVisionConfig"),
+        ("codegen", "CodeGenConfig"),
+        ("cpmant", "CpmAntConfig"),
+        ("cpmbee", "CpmBeeConfig"),
+        ("deberta", "DebertaConfig"),
+        ("distilbert","DistilBertConfig"),
         ("encodec","EncodecConfig"),
-        ("mbart","MBartConfig")
+        ("esm", "EsmConfig"),
+        ("falcon", "FalconConfig"),
+        ("gemma", "GemmaConfig"),
+        ("gpt2", "GPT2Config"),
+        ('gpt_bigcode', 'GPTBigCodeConfig'),
+        ("gpt_pangu", "GPTPanguConfig"),
+        ('hubert', 'HubertConfig'),
+        ("mamba", "MambaConfig"),
+        ("mbart","MBartConfig"),
+        ('minicpm', 'MiniCPMConfig'),
+        ("mistral", "MistralConfig"),
+        ("mixtral", "MixtralConfig"),
+        ('mt5', 'MT5Config'),
+        ("phi", "PhiConfig"),
+        ("qwen2", "Qwen2Config"),
+        ("reformer", "ReformerConfig"),
+        ("roberta", "RobertaConfig"),
+        ("starcoder2", "Starcoder2Config"),
+        ('t5', 'T5Config'),
+        ('wav2vec2', 'Wav2Vec2Config'),
+        ('xlm-roberta', 'XLMRobertaConfig'),
     ]
 )
 
@@ -81,6 +107,7 @@ CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
         ("convnext", "CONVNEXT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("convnextv2", "CONVNEXTV2_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("cpmant", "CPMANT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
+        ("cpmbee", "CPMBEE_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("ctrl", "CTRL_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("cvt", "CVT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("data2vec-audio", "DATA2VEC_AUDIO_PRETRAINED_CONFIG_ARCHIVE_MAP"),
@@ -113,6 +140,7 @@ CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
         ("fsmt", "FSMT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("funnel", "FUNNEL_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("fuyu", "FUYU_PRETRAINED_CONFIG_ARCHIVE_MAP"),
+        ("gemma", "GEMMA_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("git", "GIT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("glpn", "GLPN_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("gpt2", "GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP"),
@@ -120,6 +148,7 @@ CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
         ("gpt_neo", "GPT_NEO_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("gpt_neox", "GPT_NEOX_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("gpt_neox_japanese", "GPT_NEOX_JAPANESE_PRETRAINED_CONFIG_ARCHIVE_MAP"),
+        ("gpt_pangu", "GPTPANGU_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("gptj", "GPTJ_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("gptsan-japanese", "GPTSAN_JAPANESE_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("graphormer", "GRAPHORMER_PRETRAINED_CONFIG_ARCHIVE_MAP"),
@@ -144,6 +173,7 @@ CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
         ("luke", "LUKE_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("lxmert", "LXMERT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("m2m_100", "M2M_100_PRETRAINED_CONFIG_ARCHIVE_MAP"),
+        ("mamba", "MAMBA_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("markuplm", "MARKUPLM_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("mask2former", "MASK2FORMER_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("maskformer", "MASKFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP"),
@@ -153,6 +183,7 @@ CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
         ("megatron-bert", "MEGATRON_BERT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("mgp-str", "MGP_STR_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("mistral", "MISTRAL_PRETRAINED_CONFIG_ARCHIVE_MAP"),
+        ("mixtral", "MIXTRAL_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("mobilenet_v1", "MOBILENET_V1_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("mobilenet_v2", "MOBILENET_V2_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("mobilevit", "MOBILEVIT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
@@ -176,6 +207,7 @@ CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
         ("pegasus_x", "PEGASUS_X_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("perceiver", "PERCEIVER_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("persimmon", "PERSIMMON_PRETRAINED_CONFIG_ARCHIVE_MAP"),
+        ("phi", "PHI_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("pix2struct", "PIX2STRUCT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("plbart", "PLBART_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("poolformer", "POOLFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP"),
@@ -183,6 +215,7 @@ CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
         ("prophetnet", "PROPHETNET_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("pvt", "PVT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("qdqbert", "QDQBERT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
+        ("qwen2", "QWEN2_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("realm", "REALM_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("regnet", "REGNET_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("rembert", "REMBERT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
@@ -203,6 +236,7 @@ CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
         ("speecht5", "SPEECHT5_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("splinter", "SPLINTER_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("squeezebert", "SQUEEZEBERT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
+        ("starcoder2", "STARCODER2_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("swiftformer", "SWIFTFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("swin", "SWIN_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("swin2sr", "SWIN2SR_PRETRAINED_CONFIG_ARCHIVE_MAP"),
@@ -280,6 +314,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("chatglm", "ChatGLM"),
         ("clap", "CLAP"),
         ("clip", "CLIP"),
+        ("clip_vision_model", "CLIPVisionModel"),
         ("clipseg", "CLIPSeg"),
         ("code_llama", "CodeLlama"),
         ("codegen", "CodeGen"),
@@ -289,6 +324,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("convnextv2", "ConvNeXTV2"),
         ("cpm", "CPM"),
         ("cpmant", "CPM-Ant"),
+        ("cpmbee", "CPM-Bee"),
         ("ctrl", "CTRL"),
         ("cvt", "CvT"),
         ("data2vec-audio", "Data2VecAudio"),
@@ -328,6 +364,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("fsmt", "FairSeq Machine-Translation"),
         ("funnel", "Funnel Transformer"),
         ("fuyu", "Fuyu"),
+        ("gemma", "Gemma"),
         ("git", "GIT"),
         ("glpn", "GLPN"),
         ("gpt-sw3", "GPT-Sw3"),
@@ -336,6 +373,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("gpt_neo", "GPT Neo"),
         ("gpt_neox", "GPT NeoX"),
         ("gpt_neox_japanese", "GPT NeoX Japanese"),
+        ("gpt_pangu", "GPTPangu"),
         ("gptj", "GPT-J"),
         ("gptsan-japanese", "GPTSAN-japanese"),
         ("graphormer", "Graphormer"),
@@ -363,6 +401,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("luke", "LUKE"),
         ("lxmert", "LXMERT"),
         ("m2m_100", "M2M100"),
+        ("mamba", "Mamba"),
         ("marian", "Marian"),
         ("markuplm", "MarkupLM"),
         ("mask2former", "Mask2Former"),
@@ -376,7 +415,9 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("megatron-bert", "Megatron-BERT"),
         ("megatron_gpt2", "Megatron-GPT2"),
         ("mgp-str", "MGP-STR"),
+        ("minicpm", "MiniCPM"),
         ("mistral", "Mistral"),
+        ("mixtral", "Mixtral"),
         ("mluke", "mLUKE"),
         ("mms", "MMS"),
         ("mobilebert", "MobileBERT"),
@@ -406,6 +447,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("pegasus_x", "PEGASUS-X"),
         ("perceiver", "Perceiver"),
         ("persimmon", "Persimmon"),
+        ("phi", "Phi"),
         ("phobert", "PhoBERT"),
         ("pix2struct", "Pix2Struct"),
         ("plbart", "PLBart"),
@@ -414,6 +456,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("prophetnet", "ProphetNet"),
         ("pvt", "PVT"),
         ("qdqbert", "QDQBert"),
+        ("qwen2", "Qwen2"),
         ("rag", "RAG"),
         ("realm", "REALM"),
         ("reformer", "Reformer"),
@@ -437,6 +480,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("speecht5", "SpeechT5"),
         ("splinter", "Splinter"),
         ("squeezebert", "SqueezeBERT"),
+        ("starcoder2", "Starcoder2"),
         ("swiftformer", "SwiftFormer"),
         ("swin", "Swin Transformer"),
         ("swin2sr", "Swin2SR"),
@@ -514,6 +558,7 @@ SPECIAL_MODEL_TYPE_TO_MODULE_NAME = OrderedDict(
         ("donut-swin", "donut"),
         ("kosmos-2", "kosmos2"),
         ("maskformer-swin", "maskformer"),
+        ("clip_vision_model", "clip"),
         ("xclip", "x_clip"),
     ]
 )
@@ -568,7 +613,7 @@ class _LazyConfigMapping(OrderedDict):
 
         # Some of the mappings have entries model_type -> config of another model type. In that case we try to grab the
         # object at the top level.
-        transformers_module = importlib.import_module("transformers")
+        transformers_module = importlib.import_module("mindnlp.transformers")
         return getattr(transformers_module, value)
 
     def keys(self):
@@ -837,7 +882,7 @@ class AutoConfig:
         # Fallback: use pattern matching on the string.
         # We go from longer names to shorter names to catch roberta before bert (for instance)
         for pattern in sorted(CONFIG_MAPPING.keys(), key=len, reverse=True):
-            if pattern in str(pretrained_model_name_or_path):
+            if pattern in str(pretrained_model_name_or_path).lower():
                 return CONFIG_MAPPING[pattern].from_dict(config_dict, **unused_kwargs)
 
         raise ValueError(

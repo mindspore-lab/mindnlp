@@ -899,7 +899,8 @@ class MSUIEM(MSErnieMForInformationExtraction):
             end_loss = ops.binary_cross_entropy(end_prob, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
-        return (total_loss, start_prob, end_prob) + result[1:]
+        output = (start_prob, end_prob) + result[1:]
+        return ((total_loss,) + output) if total_loss is not None else output
 
 __all__ = [
     "ERNIE_M_PRETRAINED_MODEL_ARCHIVE_LIST",

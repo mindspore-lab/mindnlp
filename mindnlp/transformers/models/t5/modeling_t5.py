@@ -72,7 +72,7 @@ class T5LayerNorm(nn.Cell):
         Construct a layernorm module in the T5 style. No bias and no subtraction of mean.
         """
         super().__init__()
-        self.weight = Parameter(ops.ones(hidden_size), 'weight')
+        self.weight = Parameter(initializer('zeros', (hidden_size,), mindspore.float32), 'weight')
         self.variance_epsilon = eps
 
     def construct(self, hidden_states):
@@ -329,7 +329,6 @@ class T5Attention(nn.Cell):
         scores = ops.matmul(
             query_states, key_states.swapaxes(3, 2)
         )  # equivalent of torch.einsum("bnqd,bnkd->bnqk", query_states, key_states), compatible with onnx op>9
-
         if position_bias is None:
             if not self.has_relative_attention_bias:
                 position_bias = ops.zeros(

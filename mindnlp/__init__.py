@@ -29,7 +29,4 @@ from mindnlp.dataset import load_dataset
 from mindnlp.workflow.workflow import Workflow
 from mindnlp.vocab import Vocab
 
-if mindspore.get_context('device_target') == 'Ascend':
-    mindspore.set_context(ascend_config={"jit_compile": False})
-
 __all__ = ['ms_jit', 'load_dataset', 'Workflow', 'Vocab']

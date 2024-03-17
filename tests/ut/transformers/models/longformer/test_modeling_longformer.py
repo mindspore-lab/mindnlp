@@ -530,7 +530,7 @@ class LongformerModelIntegrationTest(unittest.TestCase):
         self.assertTrue(ops.isinf(hid_states_4).sum().item() == 12)
 
     def test_layer_local_attn(self):
-        model = LongformerModel.from_pretrained("patrickvonplaten/longformer-random-tiny", from_pt=True)
+        model = LongformerModel.from_pretrained("patrickvonplaten/longformer-random-tiny")
         model.set_train(False)
         layer = model.encoder.layer[0].attention.self
         hidden_states = self._get_hidden_states()
@@ -563,7 +563,7 @@ class LongformerModelIntegrationTest(unittest.TestCase):
         )
 
     def test_layer_global_attn(self):
-        model = LongformerModel.from_pretrained("patrickvonplaten/longformer-random-tiny", from_pt=True)
+        model = LongformerModel.from_pretrained("patrickvonplaten/longformer-random-tiny")
         model.set_train(False)
         layer = model.encoder.layer[0].attention.self
         hidden_states = ops.cat([self._get_hidden_states(), self._get_hidden_states() - 0.5], axis=0)
@@ -612,7 +612,7 @@ class LongformerModelIntegrationTest(unittest.TestCase):
         )
 
     def test_layer_attn_probs(self):
-        model = LongformerModel.from_pretrained("patrickvonplaten/longformer-random-tiny", from_pt=True)
+        model = LongformerModel.from_pretrained("patrickvonplaten/longformer-random-tiny")
         model.set_train(False)
         layer = model.encoder.layer[0].attention.self
         hidden_states = ops.cat([self._get_hidden_states(), self._get_hidden_states() - 0.5], axis=0)
@@ -697,7 +697,7 @@ class LongformerModelIntegrationTest(unittest.TestCase):
 
     @slow
     def test_inference_no_head(self):
-        model = LongformerModel.from_pretrained("allenai/longformer-base-4096", from_pt=True)
+        model = LongformerModel.from_pretrained("allenai/longformer-base-4096")
 
 
         # 'Hello world!'
@@ -713,7 +713,7 @@ class LongformerModelIntegrationTest(unittest.TestCase):
 
     @slow
     def test_inference_no_head_long(self):
-        model = LongformerModel.from_pretrained("allenai/longformer-base-4096", from_pt=True)
+        model = LongformerModel.from_pretrained("allenai/longformer-base-4096")
 
 
         # 'Hello world! ' repeated 1000 times
@@ -734,7 +734,7 @@ class LongformerModelIntegrationTest(unittest.TestCase):
 
     @slow
     def test_inference_masked_lm_long(self):
-        model = LongformerForMaskedLM.from_pretrained("allenai/longformer-base-4096", from_pt=True)
+        model = LongformerForMaskedLM.from_pretrained("allenai/longformer-base-4096")
 
 
         # 'Hello world! ' repeated 1000 times

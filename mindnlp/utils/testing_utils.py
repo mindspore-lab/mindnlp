@@ -21,6 +21,9 @@
 # pylint: disable=unused-argument
 # pylint: disable=pointless-string-statement
 # pylint: disable=too-many-return-statements
+# pylint: disable=too-many-ancestors
+# pylint: disable=no-else-return
+# pylint: disable=import-outside-toplevel
 """Utils for test cases."""
 import collections
 import contextlib
@@ -40,20 +43,30 @@ import time
 import unittest
 import asyncio
 from collections.abc import Mapping
+from collections import defaultdict
+
 from io import StringIO
 from pathlib import Path
 from typing import Callable, Dict, Iterable, Iterator, List, Optional, Union
 from unittest import mock
-import numpy as np
+from unittest.mock import patch
 
-import huggingface_hub
-import requests
+import urllib3
+import numpy as np
 
 from mindnlp.utils import logging as mindnlp_logging
 
 from .import_utils import (
     is_pytest_available,
     is_mindspore_available,
+    is_essentia_available,
+    is_librosa_available,
+    is_pretty_midi_available,
+    is_scipy_available,
+    is_pyctcdecode_available,
+    is_vision_available,
+    is_sentencepiece_available,
+    is_tokenizers_available
 )
 from .generic import strtobool
 
@@ -82,6 +95,20 @@ if is_mindspore_available():
 DUMMY_UNKNOWN_IDENTIFIER = "julien-c/dummy-unknown"
 SMALL_MODEL_IDENTIFIER = "julien-c/bert-xsmall-dummy"
 
+def is_pipeline_test(test_case):
+    """
+    Decorator marking a test as a pipeline test. If RUN_PIPELINE_TESTS is set to a falsy value, those tests will be
+    skipped.
+    """
+    if not _run_pipeline_tests:
+        return unittest.skip("test is pipeline test")(test_case)
+    else:
+        try:
+            import pytest  # We don't need a hard dependency on pytest in the main library
+        except ImportError:
+            return test_case
+        else:
+            return pytest.mark.is_pipeline_test()(test_case)
 
 def parse_flag_from_env(key, default=False):
     try:
@@ -99,6 +126,8 @@ def parse_flag_from_env(key, default=False):
     return _value
 
 _run_slow_tests = parse_flag_from_env("RUN_SLOW", default=False)
+_run_too_slow_tests = parse_flag_from_env("RUN_TOO_SLOW", default=False)
+_run_pipeline_tests = parse_flag_from_env("RUN_PIPELINE_TESTS", default=True)
 
 def slow(test_case):
     """
@@ -109,6 +138,15 @@ def slow(test_case):
     """
     return unittest.skipUnless(_run_slow_tests, "test is slow")(test_case)
 
+def tooslow(test_case):
+    """
+    Decorator marking a test as too slow.
+
+    Slow tests are skipped while they're in the process of being fixed. No test should stay tagged as "tooslow" as
+    these will not be tested by the CI.
+
+    """
+    return unittest.skipUnless(_run_too_slow_tests, "test is too slow")(test_case)
 
 def parse_int_from_env(key, default=None):
     try:
@@ -122,6 +160,17 @@ def parse_int_from_env(key, default=None):
             raise ValueError(f"If set, {key} must be a int.") from exc
     return _value
 
+def require_tokenizers(test_case):
+    """
+    Decorator marking a test that requires 🤗 Tokenizers. These tests are skipped when 🤗 Tokenizers isn't installed.
+    """
+    return unittest.skipUnless(is_tokenizers_available(), "test requires tokenizers")(test_case)
+
+def require_sentencepiece(test_case):
+    """
+    Decorator marking a test that requires SentencePiece. These tests are skipped when SentencePiece isn't installed.
+    """
+    return unittest.skipUnless(is_sentencepiece_available(), "test requires SentencePiece")(test_case)
 
 def require_mindspore(test_case):
     """
@@ -131,6 +180,44 @@ def require_mindspore(test_case):
 
     """
     return unittest.skipUnless(is_mindspore_available(), "test requires MindSpore")(test_case)
+
+def require_librosa(test_case):
+    """
+    Decorator marking a test that requires librosa
+    """
+    return unittest.skipUnless(is_librosa_available(), "test requires librosa")(test_case)
+
+def require_essentia(test_case):
+    """
+    Decorator marking a test that requires essentia
+    """
+    return unittest.skipUnless(is_essentia_available(), "test requires essentia")(test_case)
+
+def require_pretty_midi(test_case):
+    """
+    Decorator marking a test that requires pretty_midi
+    """
+    return unittest.skipUnless(is_pretty_midi_available(), "test requires pretty_midi")(test_case)
+
+def require_scipy(test_case):
+    """
+    Decorator marking a test that requires Scipy. These tests are skipped when SentencePiece isn't installed.
+    """
+    return unittest.skipUnless(is_scipy_available(), "test requires Scipy")(test_case)
+
+def require_pyctcdecode(test_case):
+    """
+    Decorator marking a test that requires pyctcdecode
+    """
+    return unittest.skipUnless(is_pyctcdecode_available(), "test requires pyctcdecode")(test_case)
+
+def require_vision(test_case):
+    """
+    Decorator marking a test that requires the vision dependencies. These tests are skipped when torchaudio isn't
+    installed.
+    """
+    return unittest.skipUnless(is_vision_available(), "test requires vision")(test_case)
+
 
 def cmd_exists(cmd):
     return shutil.which(cmd) is not None
@@ -1002,33 +1089,40 @@ def run_command(command: List[str], return_stdout=False):
 class RequestCounter:
     """
     Helper class that will count all requests made online.
+
+    Might not be robust if urllib3 changes its logging format but should be good enough for us.
+
+    Usage:
+    ```py
+    with RequestCounter() as counter:
+        _ = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
+    assert counter["GET"] == 0
+    assert counter["HEAD"] == 1
+    assert counter.total_calls == 1
+    ```
     """
 
     def __enter__(self):
-        self.head_request_count = 0
-        self.get_request_count = 0
-        self.other_request_count = 0
-
-        # Mock `get_session` to count HTTP calls.
-        self.old_get_session = huggingface_hub.utils._http.get_session
-        self.session = requests.Session()
-        self.session.request = self.new_request
-        huggingface_hub.utils._http.get_session = lambda: self.session
+        self._counter = defaultdict(int)
+        self.patcher = patch.object(urllib3.connectionpool.log, "debug", wraps=urllib3.connectionpool.log.debug)
+        self.mock = self.patcher.start()
         return self
 
-    def __exit__(self, *args, **kwargs):
-        huggingface_hub.utils._http.get_session = self.old_get_session
+    def __exit__(self, *args, **kwargs) -> None:
+        for call in self.mock.call_args_list:
+            log = call.args[0] % call.args[1:]
+            for method in ("HEAD", "GET", "POST", "PUT", "DELETE", "CONNECT", "OPTIONS", "TRACE", "PATCH"):
+                if method in log:
+                    self._counter[method] += 1
+                    break
+        self.patcher.stop()
 
-    def new_request(self, method, **kwargs):
-        if method == "GET":
-            self.get_request_count += 1
-        elif method == "HEAD":
-            self.head_request_count += 1
-        else:
-            self.other_request_count += 1
+    def __getitem__(self, key: str) -> int:
+        return self._counter[key]
 
-        return requests.request(method=method, **kwargs, timeout=5)
-
+    @property
+    def total_calls(self) -> int:
+        return sum(self._counter.values())
 
 def is_flaky(max_attempts: int = 5, wait_before_retry: Optional[float] = None, description: Optional[str] = None):
     """

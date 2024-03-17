@@ -15,6 +15,7 @@
 # pylint: disable=missing-module-docstring
 # pylint: disable=invalid-name
 # pylint: disable=consider-using-enumerate
+# pylint: disable=arguments-renamed
 """
 Cache utils.
 """
@@ -22,6 +23,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import mindspore
 from mindspore import ops
+from .configuration_utils import PretrainedConfig
 
 class Cache:
     """
@@ -335,3 +337,98 @@ class SinkCache(Cache):
         for layer_idx in range(len(self.key_cache)):
             self.key_cache[layer_idx] = self.key_cache[layer_idx].index_select(0, beam_idx)
             self.value_cache[layer_idx] = self.value_cache[layer_idx].index_select(0, beam_idx)
+
+class StaticCache(Cache):
+    """
+    Static Cache class to be used with `torch.compile(model)`.
+
+    Parameters:
+        config (`PretrainedConfig):
+            The configuration file defining the `max_position_embeddings`, `hidden_size` and `num_attention_heads`
+            required to initialize the static cache.
+        max_batch_size (`int`):
+            The maximum batch size with which the model will be used.
+        max_cache_len (`int`):
+            The maximum sequence length with which the model will be used.
+        device (`torch.device`):
+            The device on which the cache should be initialized. Should be the same as the layer.
+        dtype (*optional*, defaults to `torch.float32`):
+            The default `dtype` to use when initializing the layer.
+    """
+
+    def __init__(self, config: PretrainedConfig, max_batch_size: int, max_cache_len: int, dtype=None) -> None:
+        super().__init__()
+        self.max_batch_size = max_batch_size
+        self.max_cache_len = config.max_position_embeddings if max_cache_len is None else max_cache_len
+        # Some model define a custom `head_dim` != config.hidden_size // config.num_attention_heads
+        self.head_dim = (
+            config.head_dim if hasattr(config, "head_dim") else config.hidden_size // config.num_attention_heads
+        )
+
+        self.dtype = dtype if dtype is not None else mindspore.float32
+        self.num_key_value_heads = (
+            config.num_attention_heads if config.num_key_value_heads is None else config.num_key_value_heads
+        )
+
+        cache_shape = (max_batch_size, self.num_key_value_heads, self.max_cache_len, self.head_dim)
+        self.key_cache: mindspore.Tensor = ops.zeros(cache_shape, dtype=self.dtype)
+        self.value_cache: mindspore.Tensor = ops.zeros(cache_shape, dtype=self.dtype)
+
+    def update(
+        self,
+        key_states: mindspore.Tensor,
+        value_states: mindspore.Tensor,
+        layer_idx: int,
+        cache_kwargs: Optional[Dict[str, Any]] = None,
+    ) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
+        """
+        Updates the cache with the new `key_states` and `value_states` for the layer `layer_idx`.
+        It is VERY important to index using a tensor, otherwise you introduce a copy to the device.
+
+        Parameters:
+            key_states (`mindspore.Tensor`):
+                The new key states to cache.
+            value_states (`mindspore.Tensor`):
+                The new value states to cache.
+            layer_idx (`int`):
+                The index of the layer to cache the states for. Kept for backward compatibility
+            cache_kwargs (`Dict[str, Any]`, `optional`):
+                Additional arguments for the cache subclass. The `StaticCache` just needs the `q_len`
+                to know how much of the cache it should overwrite.
+
+        Return:
+            A tuple containing the updated key and value states.
+        """
+        new_cache_positions = cache_kwargs.get("cache_position")
+        k_out = self.key_cache
+        v_out = self.value_cache
+
+        k_out[:, :, new_cache_positions] = key_states
+        v_out[:, :, new_cache_positions] = value_states
+
+        return k_out, v_out
+
+    def get_seq_length(self, layer_idx: Optional[int] = 0) -> int:
+        """Returns the sequence length of the cached states that were seen by the model. `layer_idx` kept for BC"""
+        # TODO: Fix once the stateful `int` bug in PyTorch is fixed.
+        raise ValueError(
+            "get_seq_length is not implemented for StaticCache. Please refer to https://github.com/huggingface/transformers/pull/29114."
+        )
+
+    def get_usable_length(self, new_sequence_length=None, layer_idx: Optional[int] = 0) -> int:
+        raise ValueError(
+            "get_seq_length is not implemented for StaticCache. Please refer to https://github.com/huggingface/transformers/pull/29114."
+        )
+
+    def get_max_length(self) -> Optional[int]:
+        """Returns the maximum sequence length of the cached states. DynamicCache does not have a maximum length."""
+        return self.max_cache_len
+
+    def reorder_cache(self, beam_idx: mindspore.Tensor):
+        """Reorders the cache for beam search, given the selected beam indices."""
+        self.key_cache = self.key_cache.index_select(0, beam_idx)
+        self.value_cache = self.value_cache.index_select(0, beam_idx)
+
+    def to_legacy_cache(self):
+        """Dummy function for BC. We have to keep it because otherwise the call in the forward of models will break it"""
+        return None

@@ -17,13 +17,15 @@
 """
 Codegen Model init
 """
-from . import codegen, codegen_config, tokenization_codegen
+from . import configuration_codegen, modeling_codegen, tokenization_codegen, tokenization_codegen_fast
 
-from .codegen import *
-from .codegen_config import *
+from .modeling_codegen import *
+from .configuration_codegen import *
 from .tokenization_codegen import *
+from .tokenization_codegen_fast import *
 
 __all__ = []
-__all__.extend(codegen.__all__)
-__all__.extend(codegen_config.__all__)
+__all__.extend(modeling_codegen.__all__)
+__all__.extend(configuration_codegen.__all__)
 __all__.extend(tokenization_codegen.__all__)
+__all__.extend(tokenization_codegen_fast.__all__)

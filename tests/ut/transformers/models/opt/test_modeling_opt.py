@@ -352,7 +352,7 @@ def _long_tensor(tok_lst):
 class OPTModelIntegrationTests(unittest.TestCase):
     @slow
     def test_inference_no_head(self):
-        model = OPTModel.from_pretrained("facebook/opt-350m", from_pt=True)
+        model = OPTModel.from_pretrained("facebook/opt-350m")
         input_ids = _long_tensor([[0, 31414, 232, 328, 740, 1140, 12695, 69, 46078, 1588, 2]])
         output = model(input_ids=input_ids).last_hidden_state
 
@@ -378,14 +378,14 @@ class OPTEmbeddingsTest(unittest.TestCase):
 
     def test_load_model(self):
         try:
-            _ = OPTForCausalLM.from_pretrained(self.path_model, from_pt=True)
+            _ = OPTForCausalLM.from_pretrained(self.path_model)
         except BaseException:
             self.fail("Failed loading model")
 
     def test_logits(self):
-        model = OPTForCausalLM.from_pretrained(self.path_model, from_pt=True)
+        model = OPTForCausalLM.from_pretrained(self.path_model)
         model = model.set_train(False)
-        tokenizer = GPT2Tokenizer.from_pretrained(self.path_model, from_pt=True)
+        tokenizer = GPT2Tokenizer.from_pretrained(self.path_model)
 
         prompts = [
             "Today is a beautiful day and I want to",
@@ -430,8 +430,8 @@ class OPTGenerationTest(unittest.TestCase):
         ]
 
         predicted_outputs = []
-        tokenizer = GPT2Tokenizer.from_pretrained(model_id, from_pt=True)
-        model = OPTForCausalLM.from_pretrained(model_id, from_pt=True)
+        tokenizer = GPT2Tokenizer.from_pretrained(model_id)
+        model = OPTForCausalLM.from_pretrained(model_id)
 
         for prompt in self.prompts:
             input_ids = tokenizer(prompt, return_tensors="ms").input_ids
@@ -446,8 +446,8 @@ class OPTGenerationTest(unittest.TestCase):
     def test_batch_generation(self):
         model_id = "facebook/opt-350m"
 
-        tokenizer = GPT2Tokenizer.from_pretrained(model_id, from_pt=True)
-        model = OPTForCausalLM.from_pretrained(model_id, from_pt=True)
+        tokenizer = GPT2Tokenizer.from_pretrained(model_id)
+        model = OPTForCausalLM.from_pretrained(model_id)
         model
 
         tokenizer.padding_side = "left"
@@ -495,8 +495,8 @@ class OPTGenerationTest(unittest.TestCase):
         ]
 
         predicted_outputs = []
-        tokenizer = GPT2Tokenizer.from_pretrained(model_id, from_pt=True)
-        model = OPTForCausalLM.from_pretrained(model_id, from_pt=True)
+        tokenizer = GPT2Tokenizer.from_pretrained(model_id)
+        model = OPTForCausalLM.from_pretrained(model_id)
 
         for prompt in self.prompts:
             input_ids = tokenizer(prompt, return_tensors="ms").input_ids
@@ -514,9 +514,9 @@ class OPTGenerationTest(unittest.TestCase):
         # therefore not using a tiny model, but the smallest model the problem was seen with which is opt-1.3b.
         # please refer to this github thread: https://github.com/huggingface/transformers/pull/17437 for more details
         model_name = "facebook/opt-1.3b"
-        tokenizer = GPT2Tokenizer.from_pretrained(model_name, use_fast=False, padding_side="left", from_pt=True)
+        tokenizer = GPT2Tokenizer.from_pretrained(model_name, use_fast=False, padding_side="left")
 
-        model = OPTForCausalLM.from_pretrained(model_name, ms_dtype=mindspore.float16, use_cache=True, from_pt=True)
+        model = OPTForCausalLM.from_pretrained(model_name, ms_dtype=mindspore.float16, use_cache=True)
         model = model.set_train(False)
 
         batch = tokenizer(["Who are you?", "Joe Biden is the president of"], padding=True, return_tensors="ms")
@@ -537,8 +537,8 @@ class OPTGenerationTest(unittest.TestCase):
             "there?"
         )
 
-        opt_tokenizer = GPT2Tokenizer.from_pretrained("facebook/opt-1.3b", from_pt=True)
-        opt_model = OPTForCausalLM.from_pretrained("facebook/opt-1.3b", from_pt=True)
+        opt_tokenizer = GPT2Tokenizer.from_pretrained("facebook/opt-1.3b")
+        opt_model = OPTForCausalLM.from_pretrained("facebook/opt-1.3b")
         input_ids = opt_tokenizer(article, return_tensors="ms").input_ids
 
         outputs = opt_model.generate(input_ids, penalty_alpha=0.6, top_k=5, max_length=256)

@@ -305,7 +305,7 @@ class ErnieMModelTest(ModelTesterMixin, unittest.TestCase):
 class ErnieMModelIntegrationTest(unittest.TestCase):
     @slow
     def test_inference_model(self):
-        model = ErnieMModel.from_pretrained("susnato/ernie-m-base_pytorch", from_pt=True)
+        model = ErnieMModel.from_pretrained("susnato/ernie-m-base_pytorch")
         model.set_train(False)
         input_ids = mindspore.tensor([[0, 1, 2, 3, 4, 5]])
         output = model(input_ids)[0]

@@ -1306,3 +1306,41 @@ class WhisperTimeStampLogitsProcessor(LogitsProcessor):
                 scores[k, : self.timestamp_begin] = -float("inf")
 
         return scores
+
+class BarkEosPrioritizerLogitsProcessor(LogitsProcessor):
+    r"""This processor ensures that the EOS token is selected if its probability is greater than the `min_eos_p`.
+
+    <Tip warning={true}>
+
+    This logits processor is exclusively compatible with
+    [Bark](https://huggingface.co/docs/transformers/en/model_doc/bark). See the model documentation for examples.
+
+    </Tip>
+
+    Args:
+        eos_token_id (`Union[int, List[int]]`):
+            The id of the *end-of-sequence* token. Optionally, use a list to set multiple *end-of-sequence* tokens.
+        min_eos_p (`float`, *optional*):
+            Minimum end of speech threshold.
+    """
+
+    def __init__(self, eos_token_id: Union[int, List[int]], min_eos_p: float):
+        if isinstance(eos_token_id, int):
+            eos_token_id = [eos_token_id]
+        self.eos_token_id = eos_token_id
+        if min_eos_p is not None and min_eos_p <= 0:
+            raise ValueError(f"`min_eos_p` has to be a positive float, but is {min_eos_p}")
+        self.min_eos_p = min_eos_p
+
+    def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
+        if self.min_eos_p:
+            probs = ops.softmax(scores.float(), axis=-1)
+            # create scores full of -inf except for the eos_token_id
+            early_stop_scores = ops.ones_like(scores) * -float("inf")
+            early_stop_scores[:, self.eos_token_id] = scores[:, self.eos_token_id]
+
+            do_early_stop = probs[:, self.eos_token_id] > self.min_eos_p
+            do_early_stop = ops.any(do_early_stop, axis=1, keep_dims=True)
+            scores = ops.where(do_early_stop, early_stop_scores, scores)
+
+        return scores

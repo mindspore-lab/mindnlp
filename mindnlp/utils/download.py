@@ -18,6 +18,7 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-many-return-statements
 # pylint: disable=unspecified-encoding
+# pylint: disable=try-except-raise
 """
 Download functions
 """
@@ -30,6 +31,7 @@ import json
 import types
 import functools
 import tempfile
+import time
 from typing import Union, Optional, Dict, Any
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -37,7 +39,8 @@ from tqdm.autonotebook import tqdm
 import requests
 from requests.exceptions import ProxyError, SSLError, HTTPError
 
-from mindnlp.configs import DEFAULT_ROOT, ENV_VARS_TRUE_VALUES, MINDNLP_CACHE, REPO_TYPES, MS_URL_BASE
+from mindnlp.configs import DEFAULT_ROOT, ENV_VARS_TRUE_VALUES, MINDNLP_CACHE, REPO_TYPES, HF_URL_BASE, \
+    HF_TOKEN
 from .errors import (
     EntryNotFoundError,
     LocalEntryNotFoundError,
@@ -126,7 +129,7 @@ ca
     return cache_dir
 
 
-def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None):
+def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None, headers=None):
     r"""
     Download from given url, save to path.
 
@@ -165,14 +168,17 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None)
 
     file_path = os.path.join(path, name)
 
+    # subfolder
+    if '/' in name and not os.path.exists(file_path[:file_path.rfind('/')]):
+        os.makedirs(file_path[:file_path.rfind('/')])
+
     while not (os.path.exists(file_path) and check_md5(file_path, md5sum)):
         if retry_cnt < retry_limit:
             retry_cnt += 1
         else:
             raise HTTPError(
                 f"Download from {url} failed. " "Retry limit reached")
-
-        req = requests.get(url, stream=True, timeout=10, proxies=proxies)
+        req = requests.get(url, stream=True, timeout=10, proxies=proxies, headers=headers)
 
         status = req.status_code
         if status == 404:
@@ -181,21 +187,28 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None)
             raise GatedRepoError('You should have authorization to access the model.')
         if status == 429:
             raise HTTPError('Too many requests.')
-        tmp_file_path = file_path + "_tmp"
-        total_size = req.headers.get("content-length")
-        with open(tmp_file_path, "wb") as file:
-            if total_size:
-                with tqdm(
-                    total=int(total_size), unit="B", unit_scale=True, unit_divisor=1024
-                ) as pbar:
+        try:
+            tmp_file_path = file_path + "_tmp"
+            total_size = req.headers.get("content-length")
+            with open(tmp_file_path, "wb") as file:
+                if total_size:
+                    with tqdm(
+                        total=int(total_size), unit="B", unit_scale=True, unit_divisor=1024
+                    ) as pbar:
+                        for chunk in req.iter_content(chunk_size=1024):
+                            file.write(chunk)
+                            pbar.update(len(chunk))
+                else:
                     for chunk in req.iter_content(chunk_size=1024):
-                        file.write(chunk)
-                        pbar.update(len(chunk))
-            else:
-                for chunk in req.iter_content(chunk_size=1024):
-                    if chunk:
-                        file.write(chunk)
-        shutil.move(tmp_file_path, file_path)
+                        if chunk:
+                            file.write(chunk)
+            shutil.move(tmp_file_path, file_path)
+        except requests.exceptions.RequestException as e:
+            if retry_cnt >= retry_limit:
+                raise
+            print(f"Failed to download: {e}")
+            print(f"Retrying... (attempt {retry_cnt}/{retry_limit})")
+            time.sleep(1)  # Add a small delay before retrying
 
     return file_path
 
@@ -275,10 +288,12 @@ def cached_file(
     resume_download: bool = False,
     proxies: Optional[Dict[str, str]] = None,
     local_files_only: bool = False,
+    revision = 'main',
+    token = None,
     subfolder: str = "",
     repo_type: Optional[str] = None,
     user_agent: Optional[Union[str, Dict[str, str]]] = None,
-    endpoint: str = None,
+    _raise_exceptions_for_gated_repo: bool = True,
     _raise_exceptions_for_missing_entries: bool = True,
     _raise_exceptions_for_connection_errors: bool = True,
 ):
@@ -384,13 +399,17 @@ def cached_file(
             proxies=proxies,
             resume_download=resume_download,
             local_files_only=local_files_only,
-            endpoint=endpoint
+            revision=revision,
+            token=token
         )
     except GatedRepoError as e:
         if not _raise_exceptions_for_missing_entries:
             return None
+        if resolved_file is not None or not _raise_exceptions_for_gated_repo:
+            return resolved_file
         raise EnvironmentError(
-            f"{path_or_repo_id} does not appear to have authorization to access."
+            "You are trying to access a gated repo.\nMake sure to have access to it at "
+            f"https://huggingface.co/{path_or_repo_id}.\n{str(e)}"
         ) from e
     except RepositoryNotFoundError as e:
         raise EnvironmentError(
@@ -404,7 +423,7 @@ def cached_file(
         if not _raise_exceptions_for_missing_entries or not _raise_exceptions_for_connection_errors:
             return None
         raise EnvironmentError(
-            f"We couldn't connect to '{endpoint.format(path_or_repo_id, filename)}' to load this file, couldn't find it in the"
+            f"We couldn't load this file, couldn't find it in the"
             f" cached files and it looks like {path_or_repo_id} is not the path to a directory containing a file named"
             f" {full_filename}.\nCheckout your internet connection or see how to run the library in offline mode at"
         ) from e
@@ -412,8 +431,7 @@ def cached_file(
         if not _raise_exceptions_for_missing_entries:
             return None
         raise EnvironmentError(
-            f"{path_or_repo_id} does not appear to have a file named {full_filename}. Checkout "
-            f"'{endpoint.format(path_or_repo_id, full_filename)}' for available files."
+            f"{path_or_repo_id} does not appear to have a file named {full_filename}."
         ) from e
 
     except HTTPError as err:
@@ -442,7 +460,8 @@ def download(
     proxies: Optional[Dict] = None,
     resume_download: bool = False,
     local_files_only: bool = False,
-    endpoint: Optional[str] = None,
+    revision: str = 'main',
+    token: str = None,
 ) -> str:
     """Download a given file if it's not already present in the local cache.
     """
@@ -481,28 +500,30 @@ def download(
     if os.path.exists(pointer_path) and not force_download:
         return pointer_path
 
-    url = build_download_url(repo_id, filename, repo_type=repo_type, endpoint=endpoint)
+    url = build_download_url(repo_id, filename, revision, repo_type=repo_type)
     # check model whether exist
-    # for hf
-    model_url = url[: url.rfind('/')].replace('/resolve/main', '')
-    # for modelscope
-    model_url = model_url.replace('api/v1/', '')
+    model_url = url[: url.rfind(repo_id) + len(repo_id)]
+
+    token = HF_TOKEN if not token else token
+
+    headers = None
+    if token:
+        headers = {
+            'authorization': f"Bearer {token}"
+        }
 
     try:
-        req = requests.head(model_url, timeout=3, proxies=proxies)
+        req = requests.head(model_url, timeout=3, proxies=proxies, headers=headers)
         if req.status_code >= 400:
             raise RepositoryNotFoundError(f"Can not found model: {repo_id}")
-        pointer_path = http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies)
-    except (requests.exceptions.SSLError, requests.exceptions.ProxyError):
-        # Actually raise for those subclasses of ConnectionError
-        raise
-    except (
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
-    ):
+        pointer_path = http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies, headers=headers)
+    except (requests.exceptions.SSLError,
+            requests.exceptions.ProxyError,
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout):
         # Otherwise, our Internet connection is down.
         # etag is None
-        return None
+        raise
 
     return pointer_path
 
@@ -676,9 +697,10 @@ def get_checkpoint_shard_files(
     proxies=None,
     resume_download=False,
     local_files_only=False,
+    revision='main',
+    token=None,
     user_agent=None,
     subfolder="",
-    endpoint=None,
 ):
     """
     For a given model:
@@ -728,7 +750,8 @@ def get_checkpoint_shard_files(
                 local_files_only=local_files_only,
                 user_agent=user_agent,
                 subfolder=subfolder,
-                endpoint=endpoint
+                revision=revision,
+                token=token
             )
         # We have already dealt with RepositoryNotFoundError and RevisionNotFoundError when getting the index, so
         # we don't have to catch them here.
@@ -739,7 +762,7 @@ def get_checkpoint_shard_files(
             ) from exc
         except HTTPError as exc:
             raise EnvironmentError(
-                f"We couldn't connect to '{endpoint}' to load {shard_filename}. You should try"
+                f"We couldn't load {shard_filename}. You should try"
                 " again after checking your internet connection."
             ) from exc
 
@@ -751,13 +774,11 @@ def get_checkpoint_shard_files(
 def build_download_url(
     repo_id: str,
     filename: str,
+    revision: str,
     *,
     subfolder: Optional[str] = None,
     repo_type: Optional[str] = None,
-    endpoint: Optional[str] = None,
 ) -> str:
     """Construct the URL of a file from the given information.
     """
-    if endpoint == MS_URL_BASE:
-        repo_id = repo_id.replace('/', '_')
-    return endpoint.format(repo_id, filename)
+    return HF_URL_BASE.format(repo_id, revision, filename)

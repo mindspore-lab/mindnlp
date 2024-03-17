@@ -15,11 +15,19 @@
 """
 CLIP Model
 """
-from . import clip_config, clip
+from . import configuration_clip, image_processing_clip, modeling_clip, processing_clip, tokenization_clip, tokenization_clip_fast
 
-from .clip import *
-from .clip_config import *
+from .configuration_clip import *
+from .image_processing_clip import *
+from .modeling_clip import *
+from .processing_clip import *
+from .tokenization_clip import *
+from .tokenization_clip_fast import *
 
 __all__ = []
-__all__.extend(clip.__all__)
-__all__.extend(clip_config.__all__)
+__all__.extend(configuration_clip.__all__)
+__all__.extend(image_processing_clip.__all__)
+__all__.extend(modeling_clip.__all__)
+__all__.extend(processing_clip.__all__)
+__all__.extend(tokenization_clip.__all__)
+__all__.extend(tokenization_clip_fast.__all__)

@@ -256,23 +256,35 @@ class _open_zipfile_reader(_opener):
         super().__init__(PyTorchFileReader(name_or_buffer))
 
 def _rebuild_tensor_v2(storage, storage_offset, size, stride, requires_grad, backward_hooks, metadata=None):
+    if size == ():
+        size = (1,)
+        stride = (1,)
     num_elemets = reduce(operator.mul, size)
     array = storage[storage_offset: storage_offset + num_elemets]
-    array = array.reshape(size)
+
     if array.dtype == bfloat16:
         logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
         array = array.astype(np.float16)
-    return mindspore.Parameter(array, requires_grad=requires_grad)
+
+    if stride is not None and len(stride) > 1 and stride[0] == 1 and stride[1] > 1:
+        stride = tuple((s * 4 for s in stride))
+        array = np.lib.stride_tricks.as_strided(array, size, stride)
+    else:
+        order = "C"
+        array = array.reshape(size, order=order)
+    param = mindspore.Parameter(array, requires_grad=requires_grad)
+    return param
 
 @dataclass
 class FakeParameter:
     storage: np.ndarray = None
     storage_offset: int = None
     size: tuple = None
+    stride: tuple = None
     requires_grad: bool = None
 
 def _rebuild_tensor_legacy(storage, storage_offset, size, stride, requires_grad, backward_hooks, metadata=None):
-    return FakeParameter(storage, storage_offset, size, requires_grad)
+    return FakeParameter(storage, storage_offset, size, stride, requires_grad)
 
 def _maybe_decode_ascii(bytes_str: Union[bytes, str]) -> str:
     # When using encoding='bytes' in Py3, some **internal** keys stored as
@@ -290,14 +302,18 @@ dtype_map = {
     "HalfStorage": np.float16,
     "FloatStorage": np.float32,
     'BFloat16Storage': bfloat16,
-    'LongStorage': np.int64
+    'LongStorage': np.int64,
+    'ByteStorage': np.uint8,
+    'BoolStorage': np.bool_
 }
 
 element_size_map = {
     "HalfStorage": 2,
     "FloatStorage": 3,
     'BFloat16Storage': 2,
-    'LongStorage': 4
+    'LongStorage': 4,
+    'ByteStorage': 1,
+    'BoolStorage': 1
 }
 
 def load(f, pickle_module=pickle, *, mmap=None, **pickle_load_args):
@@ -447,7 +463,14 @@ def _legacy_load(f, pickle_module, **pickle_load_args):
     for k, v in result.items():
         num_elemets = reduce(operator.mul, v.size)
         array = v.storage[v.storage_offset: v.storage_offset + num_elemets]
-        array = array.reshape(v.size)
+        stride = v.stride
+        size = v.size
+        if stride is not None and len(stride) > 1 and stride[0] == 1 and stride[1] > 1:
+            stride = tuple((s * 4 for s in stride))
+            array = np.lib.stride_tricks.as_strided(array, size, stride)
+        else:
+            order = "C"
+            array = array.reshape(size, order=order)
         if array.dtype == bfloat16:
             logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
             array = array.astype(np.float16)
@@ -503,7 +526,6 @@ def _load(zip_file, pickle_module, overall_storage=None, pickle_file='data.pkl',
             array = np.memmap(overall_storage, dtype=dtype_map[storage_type], offset=zip_file.open_record(name)._fileobj.tell(), shape=(numel,))
         else:
             array = np.frombuffer(zip_file.read_record(name), dtype_map[storage_type])
-
         loaded_storages[name] = array
         return array
 

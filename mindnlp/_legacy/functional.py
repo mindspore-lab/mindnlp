@@ -1474,12 +1474,17 @@ def einsum(equation, *operands):
 
     curr_op = 0
     found_ell = False
+    ell_skip = 0
     for i, label in enumerate(lhs):
         if label == ' ':
             continue
         if label == '.':
+            if ell_skip != 0:
+                ell_skip -= 1
+                continue
             assert not found_ell, f"einsum(): found {curr_op} for operand for which an ellipsis was already found"
             assert i + 2 < len(lhs) and lhs[i + 1] == '.', f"einsum(): found {curr_op} for operand that is not part of any ellipsis"
+            ell_skip = 2
             op_labels[curr_op].append(ELLIPSIS)
             found_ell = True
         elif label == ',':
@@ -1542,12 +1547,17 @@ def einsum(equation, *operands):
                 perm_index += 1
     else:
         rhs = equation[arrow_pos + 2:]
+        ell_skip = 0
         for i, label in enumerate(rhs):
             if label == ' ':
                 continue
             if label == '.':
+                if ell_skip != 0:
+                    ell_skip -= 1
+                    continue
                 assert not found_ell, "einsum(): found \'.\' for output but an ellipsis (...) was already found"
                 assert i + 2 < len(rhs) and rhs[i + 1] == '.', "einsum(): found \'.\' for output that is not part of any ellipsis (...)"
+                ell_skip = 2
                 ell_index = perm_index
                 perm_index += ell_num_dim
                 found_ell = True

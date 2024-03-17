@@ -53,8 +53,6 @@ if is_mindspore_available():
 
     from mindnlp.transformers import SeamlessM4TProcessor
 
-# mindspore.set_context(pynative_synchronize=True)
-
 class SeamlessM4Tv2ModelTester:
     def __init__(
         self,
@@ -401,7 +399,7 @@ class SeamlessM4Tv2ModelWithSpeechInputTest(ModelTesterMixin, unittest.TestCase)
     @slow
     def test_model_from_pretrained(self):
         for model_name in SEAMLESS_M4T_V2_PRETRAINED_MODEL_ARCHIVE_LIST:
-            model = SeamlessM4Tv2Model.from_pretrained(model_name, from_pt=True)
+            model = SeamlessM4Tv2Model.from_pretrained(model_name)
             self.assertIsNotNone(model)
 
     def _get_input_ids_and_config(self, batch_size=2):
@@ -665,7 +663,7 @@ class SeamlessM4Tv2ModelWithTextInputTest(ModelTesterMixin, GenerationTesterMixi
     @slow
     def test_model_from_pretrained(self):
         for model_name in SEAMLESS_M4T_V2_PRETRAINED_MODEL_ARCHIVE_LIST:
-            model = SeamlessM4Tv2Model.from_pretrained(model_name, from_pt=True)
+            model = SeamlessM4Tv2Model.from_pretrained(model_name)
             self.assertIsNotNone(model)
 
     def test_initialization(self):
@@ -1010,7 +1008,7 @@ class SeamlessM4Tv2ModelIntegrationTest(unittest.TestCase):
 
     @cached_property
     def processor(self):
-        return SeamlessM4TProcessor.from_pretrained(self.repo_id, from_pt=True)
+        return SeamlessM4TProcessor.from_pretrained(self.repo_id)
 
     @cached_property
     def input_text(self):
@@ -1038,8 +1036,8 @@ class SeamlessM4Tv2ModelIntegrationTest(unittest.TestCase):
 
     def factory_test_task(self, class1, class2, inputs, class1_kwargs, class2_kwargs):
         # half-precision loading to limit GPU usage
-        model1 = class1.from_pretrained(self.repo_id, ms_dtype=mindspore.float16, from_pt=True)
-        model2 = class2.from_pretrained(self.repo_id, ms_dtype=mindspore.float16, from_pt=True)
+        model1 = class1.from_pretrained(self.repo_id, ms_dtype=mindspore.float16)
+        model2 = class2.from_pretrained(self.repo_id, ms_dtype=mindspore.float16)
 
         set_seed(0)
         output_1 = model1.generate(**inputs, **class1_kwargs)
@@ -1055,7 +1053,7 @@ class SeamlessM4Tv2ModelIntegrationTest(unittest.TestCase):
 
     @slow
     def test_to_eng_text(self):
-        model = SeamlessM4Tv2Model.from_pretrained(self.repo_id, from_pt=True)
+        model = SeamlessM4Tv2Model.from_pretrained(self.repo_id)
 
         # test text - tgt lang: eng
 
@@ -1089,7 +1087,7 @@ class SeamlessM4Tv2ModelIntegrationTest(unittest.TestCase):
     @slow
     @unittest.skip(reason="Equivalence is broken since a new update")
     def test_to_swh_text(self):
-        model = SeamlessM4Tv2Model.from_pretrained(self.repo_id, from_pt=True)
+        model = SeamlessM4Tv2Model.from_pretrained(self.repo_id)
 
         # test text - tgt lang: swh
 
@@ -1123,7 +1121,7 @@ class SeamlessM4Tv2ModelIntegrationTest(unittest.TestCase):
 
     @slow
     def test_to_rus_speech(self):
-        model = SeamlessM4Tv2Model.from_pretrained(self.repo_id, from_pt=True)
+        model = SeamlessM4Tv2Model.from_pretrained(self.repo_id)
 
         # test audio - tgt lang: rus
 

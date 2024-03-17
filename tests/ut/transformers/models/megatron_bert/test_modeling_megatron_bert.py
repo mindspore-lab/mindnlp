@@ -370,7 +370,7 @@ class MegatronBertModelIntegrationTests(unittest.TestCase):
         directory = "nvidia/megatron-bert-uncased-345m"
         if "MYDIR" in os.environ:
             directory = os.path.join(os.environ["MYDIR"], directory)
-        model = MegatronBertModel.from_pretrained(directory, from_pt=True)
+        model = MegatronBertModel.from_pretrained(directory)
 
         model.half()
         input_ids = _long_tensor([[101, 7110, 1005, 1056, 2023, 11333, 17413, 1029, 102]])

@@ -20,6 +20,7 @@
 Injection mindspore.nn for MindNLP
 """
 import operator
+from typing import OrderedDict
 from functools import reduce, partial
 import math
 from packaging import version
@@ -31,6 +32,7 @@ from mindspore.common._stub_tensor import StubTensor
 from mindspore.nn.layer.conv import _Conv, _deconv_output_length
 from mindspore.common.initializer import initializer, Normal, HeUniform, Uniform, _calculate_fan_in_and_fan_out
 from mindspore import _checkparam as Validator
+from mindspore.ops import functional as F
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp._legacy.functional import einsum
 
@@ -60,14 +62,13 @@ def fp16_patch_decorator(func):
     """fp16 patch on ascend"""
     def wrapper(*args, **kwargs):
         if GLOBAL_FP16_PATCH:
-            has_fp32 = any(bool(isinstance(arg, Tensor) and arg.dtype == mstype.float32) for arg in args)
             args = (arg.astype(mstype.float16) if arg is not None and isinstance(arg, Tensor) \
                     else arg for arg in args)
-            kwargs = {k: (v.astype(mstype.float16) if v is not None and isinstance(v, Tensor) else v) \
-                      for k, v in kwargs.items()}
-            result = func(*args, **kwargs)
-            if has_fp32:
-                result = result.astype(mstype.float32)
+            new_kwargs = {}
+            for k, v in kwargs.items():
+                new_kwargs[k] = v.astype(mstype.float16) if v is not None and isinstance(v, Tensor) else v
+            result = func(*args, **new_kwargs)
+            result = result.astype(mstype.float32)
             return result
         return func(*args, **kwargs)
 
@@ -191,8 +192,7 @@ def _ones(*size, dtype=None):
         dtype = mindspore.float32
     if isinstance(size[0], tuple):
         size = size[0]
-    ones_ = _get_cache_prim(ops.Ones)()
-    return ones_(size, dtype)
+    return ops.fill(dtype, size, 1)
 
 ops.ones = _ones
 
@@ -201,8 +201,7 @@ def _zeros(*size, dtype=None):
         dtype = mindspore.float32
     if isinstance(size[0], tuple):
         size = size[0]
-    zeros_ = _get_cache_prim(ops.Zeros)()
-    return zeros_(size, dtype)
+    return ops.fill(dtype, size, 0)
 
 ops.zeros = _zeros
 
@@ -415,6 +414,7 @@ def new_repeat_interleave(input, repeats, axis=None):
         repeats = repeats.asnumpy().tolist()
     output = old_repeat(input, repeats, axis)
     return output
+
 ops.repeat_interleave = bool_io_patch_decorator(new_repeat_interleave)
 def _repeat_interleave(self, repeats, dim):
     return old_repeat(self, repeats, axis=dim)
@@ -483,6 +483,16 @@ if DEVICE_TARGET == 'Ascend':
     ops.cat = bool_patch_decorator(ops.cat)
     ops.concat = bool_patch_decorator(ops.concat)
 
+def randperm(n, seed=0, offset=0, dtype=mstype.int64):
+    """randperm"""
+    if DEVICE_TARGET == 'CPU':
+        randperm_v2_op = _get_cache_prim(ops.RandpermV2)(seed, offset, dtype)
+        return randperm_v2_op(n)
+    randperm_op = _get_cache_prim(ops.Randperm)(max_length=n, dtype=dtype)
+    return randperm_op(mindspore.tensor([n]))
+
+ops.randperm = randperm
+
 # GPU only
 def custom_multinomial(probabilities, num_samples, replacement=False):
     """custom multinomial"""
@@ -505,10 +515,10 @@ def custom_multinomial(probabilities, num_samples, replacement=False):
         if n_dist != 1:
             random_uniform = random_uniform.reshape(n_dist, probabilities.shape[-1])
 
-        vals = ops.div(ops.log(random_uniform), probabilities + 1e-6)
+        vals = ops.div(ops.log(random_uniform), probabilities + 1e-10)
         _, samples = ops.top_k(vals, num_samples)
 
-    return samples
+    return samples.astype(mstype.int64)
 
 ops.multinomial = custom_multinomial
 
@@ -552,6 +562,12 @@ class Dense(nn.Cell):
                 x = x.reshape(out_shape)
             return x
         return ops.dense(x, self.weight, self.bias)
+
+    def extend_repr(self):
+        s = f'input_channels={self.in_channels}, output_channels={self.out_channels}'
+        if self.has_bias:
+            s += f', has_bias={self.has_bias}'
+        return s
 
 class Embedding(nn.Cell):
     """patched Embedding"""
@@ -728,11 +744,14 @@ class LayerNorm(nn.Cell):
                  gamma_init='ones',
                  beta_init='zeros',
                  epsilon=1e-5,
+                 eps=None,
                  dtype=mstype.float32,
                  elementwise_affine=True
                  ):
         """Initialize LayerNorm."""
         super().__init__()
+        if isinstance(normalized_shape, int):
+            normalized_shape = [normalized_shape]
         if not isinstance(normalized_shape, (tuple, list)):
             raise TypeError(f"For '{self.cls_name}', the type of 'normalized_shape' must be tuple[int] or list[int], "
                             f"but got {normalized_shape} and the type is {type(normalized_shape)}.")
@@ -741,10 +760,15 @@ class LayerNorm(nn.Cell):
                 f"Expected normalized_shape to be at least 1-dimensional, i.e., containing at "
                 f"least one element, but got normalized_shape = {normalized_shape}"
             )
+
         self.normalized_shape = normalized_shape
         self.begin_norm_axis = begin_norm_axis
         self.begin_params_axis = begin_params_axis
-        self.epsilon = epsilon
+        if eps and epsilon == 1e-5:
+            self.epsilon = eps
+        else:
+            self.epsilon = epsilon
+
         self.weight = Parameter(initializer(
             gamma_init, normalized_shape, dtype=dtype), name="weight")
         self.bias = Parameter(initializer(
@@ -845,12 +869,38 @@ class BatchNorm1d(nn.Cell):
                f'weight={self.weight}, bias={self.bias}, running_mean={self.running_mean}, running_var={self.running_var}'
 
 
-def half(self):
+def _half(self):
     """patched nn.Cell.half"""
-    # self.to_float(mindspore.float16)
+    self.to_float(mindspore.float16)
+    for _, param in self.parameters_and_names():
+        if param.dtype in (mindspore.float16, mindspore.float32, mindspore.bfloat16):
+            param.set_dtype(mindspore.float16)
     return self
 
-nn.Cell.half = half
+nn.Cell.half = _half
+
+def _float(self):
+    """patched nn.Cell.float"""
+    self.to_float(mindspore.float32)
+    for _, param in self.parameters_and_names():
+        if param.dtype in (mindspore.float16, mindspore.float32, mindspore.bfloat16):
+            param.set_dtype(mindspore.float32)
+    return self
+
+nn.Cell.float = _float
+
+
+if not LESS_MS_2_2:
+    def _bfloat16(self):
+        """patched nn.Cell.bfloat16"""
+        self.to_float(mindspore.bfloat16)
+        for _, param in self.parameters_and_names():
+            if param.dtype in (mindspore.float16, mindspore.float32, mindspore.bfloat16):
+                param.set_dtype(mindspore.bfloat16)
+        return self
+
+    nn.Cell.bfloat16 = _bfloat16
+
 
 def _check_cell_flags_in_pynative(self):
     pass
@@ -882,9 +932,57 @@ def _cells_and_names(self, name_prefix=''):
 
 nn.Cell.cells_and_names = _cells_and_names
 
+def parameters_dict(self, recurse=True):
+    """
+    fix ignore tied weights
+    """
+    param_dict = OrderedDict()
+    for name, param in self.parameters_and_names(expand=recurse):
+        param_dict[name] = param
+    return param_dict
+
+nn.Cell.parameters_dict = parameters_dict
+
+
 nn.LayerNorm = LayerNorm
 nn.Conv1d = Conv1d
 nn.Conv1dTranspose = Conv1dTranspose
 nn.Embedding = Embedding
 nn.Dense = Dense
 nn.BatchNorm1d = BatchNorm1d
+
+
+nn.GroupNorm_original = nn.GroupNorm
+
+class GroupNorm_hijack(nn.GroupNorm_original):
+    r"""
+    Group Normalization over a mini-batch of inputs.
+    """
+
+    def __init__(self, num_groups, num_channels, eps=0.00001, affine=True, gamma_init='ones', beta_init='zeros', dtype=mstype.float32):
+        super().__init__(num_groups, num_channels, eps, affine, gamma_init, beta_init, dtype)
+        self.weight = self.gamma
+        self.bias = self.beta
+        del self.gamma
+        del self.beta
+
+    def _cal_output(self, x):
+        batch, channel, height, width = F.shape(x)
+        self._channel_check(channel, self.num_channels, self.cls_name)
+        x = F.reshape(x, (batch, self.num_groups, -1))
+        mean = self.reduce_mean(x, 2)
+        var = F.div(self.reduce_sum(F.square(F.sub(x, mean)), 2), (channel * height * width / self.num_groups))
+        std = self.sqrt(var + self.eps)     # pylint: disable=redefined-outer-name
+        x = F.div(F.sub(x, mean), std)
+        x = F.reshape(x, (batch, channel, height, width))
+        output = F.add(x * F.reshape(self.weight, (-1, 1, 1)), F.reshape(self.bias, (-1, 1, 1)))
+        return output
+
+    def construct(self, x:Tensor) -> Tensor:
+        is_3d_tensor = len(x.shape) == 3        # support 3D tensors [B, C, L]
+        if is_3d_tensor: x = x.unsqueeze(-1)    # pylint: disable=multiple-statements
+        o = super().construct(x)
+        if is_3d_tensor: o = o.squeeze(-1)      # pylint: disable=multiple-statements
+        return o
+
+nn.GroupNorm = GroupNorm_hijack

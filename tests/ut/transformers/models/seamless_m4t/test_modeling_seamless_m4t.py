@@ -52,8 +52,6 @@ if is_mindspore_available():
 
     from mindnlp.transformers import SeamlessM4TProcessor
 
-mindspore.set_context(pynative_synchronize=True)
-
 class SeamlessM4TModelTester:
     def __init__(
         self,
@@ -383,7 +381,7 @@ class SeamlessM4TModelWithSpeechInputTest(ModelTesterMixin, unittest.TestCase):
     @slow
     def test_model_from_pretrained(self):
         for model_name in SEAMLESS_M4T_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = SeamlessM4TModel.from_pretrained(model_name, from_pt=True)
+            model = SeamlessM4TModel.from_pretrained(model_name)
             self.assertIsNotNone(model)
 
     def _get_input_ids_and_config(self, batch_size=2):
@@ -663,7 +661,7 @@ class SeamlessM4TModelWithTextInputTest(
     @slow
     def test_model_from_pretrained(self):
         for model_name in SEAMLESS_M4T_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = SeamlessM4TModel.from_pretrained(model_name, from_pt=True)
+            model = SeamlessM4TModel.from_pretrained(model_name)
             self.assertIsNotNone(model)
 
     def test_initialization(self):
@@ -966,7 +964,7 @@ class SeamlessM4TModelIntegrationTest(unittest.TestCase):
 
     @cached_property
     def processor(self):
-        return SeamlessM4TProcessor.from_pretrained(self.repo_id, from_pt=True)
+        return SeamlessM4TProcessor.from_pretrained(self.repo_id)
 
     @cached_property
     def input_text(self):
@@ -994,8 +992,8 @@ class SeamlessM4TModelIntegrationTest(unittest.TestCase):
         return self.processor(audios=[input_features.tolist()], sampling_rate=sampling_rate, return_tensors="ms")
 
     def factory_test_task(self, class1, class2, inputs, class1_kwargs, class2_kwargs):
-        model1 = class1.from_pretrained(self.repo_id, from_pt=True)
-        model2 = class2.from_pretrained(self.repo_id, from_pt=True)
+        model1 = class1.from_pretrained(self.repo_id)
+        model2 = class2.from_pretrained(self.repo_id)
         set_seed(0)
         output_1 = model1.generate(**inputs, **class1_kwargs)
         set_seed(0)
@@ -1010,7 +1008,7 @@ class SeamlessM4TModelIntegrationTest(unittest.TestCase):
 
     @slow
     def test_to_eng_text(self):
-        model = SeamlessM4TModel.from_pretrained(self.repo_id, from_pt=True)
+        model = SeamlessM4TModel.from_pretrained(self.repo_id)
 
         # test text - tgt lang: eng
 
@@ -1038,7 +1036,7 @@ class SeamlessM4TModelIntegrationTest(unittest.TestCase):
 
     @slow
     def test_to_swh_text(self):
-        model = SeamlessM4TModel.from_pretrained(self.repo_id, from_pt=True)
+        model = SeamlessM4TModel.from_pretrained(self.repo_id)
 
         # test text - tgt lang: swh
 
@@ -1065,7 +1063,7 @@ class SeamlessM4TModelIntegrationTest(unittest.TestCase):
 
     @slow
     def test_to_rus_speech(self):
-        model = SeamlessM4TModel.from_pretrained(self.repo_id, from_pt=True)
+        model = SeamlessM4TModel.from_pretrained(self.repo_id)
         # test audio - tgt lang: rus
 
         expected_text_tokens = [3, 256147, 1197, 73565, 3413, 537, 233331, 248075, 3]  # fmt: skip

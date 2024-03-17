@@ -48,8 +48,6 @@ if is_mindspore_available():
     )
     from mindnlp.transformers.models.bart.modeling_bart import BartDecoder, BartEncoder, shift_tokens_right
 
-# mindspore.set_context(pynative_synchronize=True)
-
 def prepare_bart_inputs_dict(
     config,
     input_ids,
@@ -371,7 +369,7 @@ class BartHeadTests(unittest.TestCase):
 
     @slow
     def test_tokenization(self):
-        tokenizer = BartTokenizer.from_pretrained("facebook/bart-large", from_pt=True)
+        tokenizer = BartTokenizer.from_pretrained("facebook/bart-large")
         examples = [" Hello world", " DomDramg"]  # need leading spaces for equality
         fairseq_results = [
             mindspore.tensor([0, 20920, 232, 2]),
@@ -539,11 +537,11 @@ class FastIntegrationTests(unittest.TestCase):
 
     @cached_property
     def tok(self):
-        return BartTokenizer.from_pretrained("facebook/bart-large", from_pt=True)
+        return BartTokenizer.from_pretrained("facebook/bart-large")
 
     @cached_property
     def xsum_1_1_model(self):
-        return BartForConditionalGeneration.from_pretrained("sshleifer/distilbart-xsum-1-1", from_pt=True)
+        return BartForConditionalGeneration.from_pretrained("sshleifer/distilbart-xsum-1-1")
 
     def test_xsum_1_1_generation(self):
         hf = self.xsum_1_1_model
@@ -856,11 +854,11 @@ class FastIntegrationTests(unittest.TestCase):
 class BartModelIntegrationTests(unittest.TestCase):
     @cached_property
     def default_tokenizer(self):
-        return BartTokenizer.from_pretrained("facebook/bart-large", from_pt=True)
+        return BartTokenizer.from_pretrained("facebook/bart-large")
 
     @slow
     def test_inference_no_head(self):
-        model = BartModel.from_pretrained("facebook/bart-large", from_pt=True)
+        model = BartModel.from_pretrained("facebook/bart-large")
         input_ids = _long_tensor([[0, 31414, 232, 328, 740, 1140, 12695, 69, 46078, 1588, 2]])
         attention_mask = input_ids.ne(model.config.pad_token_id)
         output = model(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state
@@ -892,7 +890,7 @@ class BartModelIntegrationTests(unittest.TestCase):
         example_b = [0, 31414, 232, 328, 740, 1140, 69, 46078, 1588, 2, 1]
         input_ids = _long_tensor([[0, 31414, 232, 328, 740, 1140, 12695, 69, 46078, 1588, 2], example_b])
 
-        model = AutoModelForSequenceClassification.from_pretrained("facebook/bart-large-mnli", from_pt=True)
+        model = AutoModelForSequenceClassification.from_pretrained("facebook/bart-large-mnli")
         # eval called in from_pre
         attention_mask = input_ids.ne(model.config.pad_token_id)
         # Test that model hasn't changed
@@ -914,7 +912,7 @@ class BartModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_xsum_summarization_same_as_fairseq(self):
-        model = BartForConditionalGeneration.from_pretrained("facebook/bart-large-xsum", from_pt=True)
+        model = BartForConditionalGeneration.from_pretrained("facebook/bart-large-xsum")
         tok = self.default_tokenizer
 
         PGE_ARTICLE = """ PG&E stated it scheduled the blackouts in response to forecasts for high winds amid dry conditions. The aim is to reduce the risk of wildfires. Nearly 800 thousand customers were scheduled to be affected by the shutoffs which were expected to last through at least midday tomorrow."""
@@ -950,15 +948,15 @@ class BartModelIntegrationTests(unittest.TestCase):
         self.assertEqual(EXPECTED_SUMMARY, decoded[0])
 
     def test_xsum_config_generation_params(self):
-        config = BartConfig.from_pretrained("facebook/bart-large-xsum", from_pt=True)
+        config = BartConfig.from_pretrained("facebook/bart-large-xsum")
         expected_params = {"num_beams": 6, "do_sample": False, "early_stopping": True, "length_penalty": 1.0}
         config_params = {k: getattr(config, k, "MISSING") for k, v in expected_params.items()}
         self.assertDictEqual(expected_params, config_params)
 
     @slow
     def test_cnn_summarization_same_as_fairseq(self):
-        hf = BartForConditionalGeneration.from_pretrained("facebook/bart-large-cnn", from_pt=True)
-        tok = BartTokenizer.from_pretrained("facebook/bart-large", from_pt=True)
+        hf = BartForConditionalGeneration.from_pretrained("facebook/bart-large-cnn")
+        tok = BartTokenizer.from_pretrained("facebook/bart-large")
 
         FRANCE_ARTICLE = (  # @noq
             " Marseille, France (CNN)The French prosecutor leading an investigation into the crash of Germanwings"
@@ -1219,8 +1217,8 @@ class BartModelIntegrationTests(unittest.TestCase):
             " native Pakistan after an investigation by the Joint Terrorism Task Force. If convicted, Barrientos faces"
             " up to four years in prison.  Her next court appearance is scheduled for May 18."
         )
-        bart_tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn", from_pt=True)
-        bart_model = BartForConditionalGeneration.from_pretrained("facebook/bart-large-cnn", from_pt=True)
+        bart_tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
+        bart_model = BartForConditionalGeneration.from_pretrained("facebook/bart-large-cnn")
         input_ids = bart_tokenizer(
             article, add_special_tokens=False, truncation=True, max_length=512, return_tensors="ms"
         ).input_ids
@@ -1240,7 +1238,7 @@ class BartModelIntegrationTests(unittest.TestCase):
 
     @slow
     def test_decoder_attention_mask(self):
-        model = BartForConditionalGeneration.from_pretrained("facebook/bart-large", forced_bos_token_id=0, from_pt=True)
+        model = BartForConditionalGeneration.from_pretrained("facebook/bart-large", forced_bos_token_id=0)
         tokenizer = self.default_tokenizer
         sentence = "UN Chief Says There Is No <mask> in Syria"
         input_ids = tokenizer(sentence, return_tensors="ms").input_ids

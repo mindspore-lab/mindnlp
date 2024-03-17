@@ -444,7 +444,8 @@ class MBartPreTrainedModel(PreTrainedModel):
             cell.weight.set_data(initializer(Normal(self.config.init_std),
                                                cell.weight.shape, cell.weight.dtype))
             if cell.bias is not None:
-                cell.bias.set_data(ops.zeros_like(cell.bias))
+                cell.bias.set_data(initializer('zeros',
+                                               cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
             cell.weight.set_data(initializer(Normal(
                 sigma=std, mean=0.0), cell.weight.shape, cell.weight.dtype))

@@ -86,15 +86,9 @@ class WeightNorm:
         r"""
         computer methods
         """
-        # print(cell)
-        weight = getattr(cell, self.name)
-        # del cell._params[name]
-        # cell.insert_param_to_cell(self.name + '_g', param= Parameter(norm_except_dim(weight,2,self.dim)))
-        # cell.insert_param_to_cell(self.name + '_v', param= Parameter(weight.data))
-        # weight_g = getattr(cell, self.name + '_g')
-        # weight_v = getattr(cell, self.name + '_v')
-        # self.remove(cell)
-        return _weight_norm(Parameter(norm_except_dim(weight,2,self.dim)), Parameter(weight.data), self.dim)
+        weight_g = getattr(cell, self.name + '_g')
+        weight_v = getattr(cell, self.name + '_v')
+        return _weight_norm(weight_v=weight_v, weight_g=weight_g, dim=self.dim)
 
     def __call__(self, cell: nn.Cell, inputs: Any) -> None:
         setattr(cell, self.name, self.compute_weight(cell))
@@ -123,18 +117,11 @@ class WeightNorm:
 
         weight_fn = WeightNorm(name, dim)
 
-        # weight = getattr(cell, name)
-        # del cell._params[name]
-        # cell.insert_param_to_cell(name + '_g', param= Parameter(norm_except_dim(weight,2,dim)))
-        # cell.insert_param_to_cell(name + '_v', param= Parameter(weight.data))
-        # cell.weight.set_data(Parameter(fn.compute_weight(cell)))
-        setattr(cell, name, Tensor(weight_fn.compute_weight(cell)))
-        # print(fn)
-
-        # hook = ops.HookBackward(hook_f)
-        # fn = hook(fn)
-
-        # recompute weight before every forward()
+        weight = getattr(cell, name)
+        del cell._params[name]
+        cell.insert_param_to_cell(name + '_g', param= Parameter(norm_except_dim(weight,2,dim)))
+        cell.insert_param_to_cell(name + '_v', param= Parameter(weight.data))
+        setattr(cell, name, Parameter(weight_fn.compute_weight(cell)))
         cell.register_forward_pre_hook(weight_fn.wrapper_func(cell, weight_fn.__call__))
         return weight_fn
 

@@ -27,7 +27,6 @@ import os
 from collections import OrderedDict
 from typing import Dict, Optional, Union
 
-from mindnlp.configs import MS_URL_BASE, HF_URL_BASE
 from mindnlp.utils import cached_file, is_sentencepiece_available, is_tokenizers_available, logging
 from ...configuration_utils import PretrainedConfig, EncoderDecoderConfig
 from ...tokenization_utils import PreTrainedTokenizer # pylint: disable=cyclic-import
@@ -57,7 +56,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
                 "AlbertTokenizerFast" if is_tokenizers_available() else None,
             ),
         ),
-        ("align", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
+        # ("align", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
         ("bark", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
         ("bart", ("BartTokenizer", "BartTokenizerFast")),
         (
@@ -137,8 +136,9 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ),
         ),
         ("cpmant", ("CpmAntTokenizer", None)),
+        ("cpmbee", ("CpmBeeTokenizer", None)),
         ("ctrl", ("CTRLTokenizer", None)),
-        ("data2vec-audio", ("Wav2Vec2CTCTokenizer", None)),
+        #("data2vec-audio", ("Wav2Vec2CTCTokenizer", None)),
         ("data2vec-text", ("RobertaTokenizer", "RobertaTokenizerFast" if is_tokenizers_available() else None)),
         ("deberta", ("DebertaTokenizer", "DebertaTokenizerFast" if is_tokenizers_available() else None)),
         (
@@ -165,6 +165,13 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("fnet", ("FNetTokenizer", "FNetTokenizerFast" if is_tokenizers_available() else None)),
         ("fsmt", ("FSMTTokenizer", None)),
         ("funnel", ("FunnelTokenizer", "FunnelTokenizerFast" if is_tokenizers_available() else None)),
+        (
+            "gemma",
+            (
+                "GemmaTokenizer" if is_sentencepiece_available() else None,
+                "GemmaTokenizerFast" if is_tokenizers_available() else None,
+            ),
+        ),
         ("git", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
         ("gpt-sw3", ("GPTSw3Tokenizer" if is_sentencepiece_available() else None, None)),
         ("gpt2", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
@@ -178,16 +185,16 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("herbert", ("HerbertTokenizer", "HerbertTokenizerFast" if is_tokenizers_available() else None)),
         ("hubert", ("Wav2Vec2CTCTokenizer", None)),
         ("ibert", ("RobertaTokenizer", "RobertaTokenizerFast" if is_tokenizers_available() else None)),
-        ("idefics", (None, "LlamaTokenizerFast" if is_tokenizers_available() else None)),
+        # ("idefics", (None, "LlamaTokenizerFast" if is_tokenizers_available() else None)),
         ("instructblip", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
         ("jukebox", ("JukeboxTokenizer", None)),
-        (
-            "kosmos-2",
-            (
-                "XLMRobertaTokenizer" if is_sentencepiece_available() else None,
-                "XLMRobertaTokenizerFast" if is_tokenizers_available() else None,
-            ),
-        ),
+        # (
+        #     "kosmos-2",
+        #     (
+        #         "XLMRobertaTokenizer" if is_sentencepiece_available() else None,
+        #         "XLMRobertaTokenizerFast" if is_tokenizers_available() else None,
+        #     ),
+        # ),
         ("layoutlm", ("LayoutLMTokenizer", "LayoutLMTokenizerFast" if is_tokenizers_available() else None)),
         ("layoutlmv2", ("LayoutLMv2Tokenizer", "LayoutLMv2TokenizerFast" if is_tokenizers_available() else None)),
         ("layoutlmv3", ("LayoutLMv3Tokenizer", "LayoutLMv3TokenizerFast" if is_tokenizers_available() else None)),
@@ -212,6 +219,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("luke", ("LukeTokenizer", None)),
         ("lxmert", ("LxmertTokenizer", "LxmertTokenizerFast" if is_tokenizers_available() else None)),
         ("m2m_100", ("M2M100Tokenizer" if is_sentencepiece_available() else None, None)),
+        ("mamba", (None, "GPTNeoXTokenizerFast" if is_tokenizers_available() else None)),
         ("marian", ("MarianTokenizer" if is_sentencepiece_available() else None, None)),
         (
             "mbart",
@@ -232,6 +240,13 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("mgp-str", ("MgpstrTokenizer", None)),
         (
             "mistral",
+            (
+                "LlamaTokenizer" if is_sentencepiece_available() else None,
+                "LlamaTokenizerFast" if is_tokenizers_available() else None,
+            ),
+        ),
+        (
+            "mixtral",
             (
                 "LlamaTokenizer" if is_sentencepiece_available() else None,
                 "LlamaTokenizerFast" if is_tokenizers_available() else None,
@@ -277,6 +292,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("opt", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
         ("owlv2", ("CLIPTokenizer", "CLIPTokenizerFast" if is_tokenizers_available() else None)),
         ("owlvit", ("CLIPTokenizer", "CLIPTokenizerFast" if is_tokenizers_available() else None)),
+        ("gpt_pangu", ("GPTPanguTokenizer", None)),
         (
             "pegasus",
             (
@@ -305,11 +321,19 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
                 "LlamaTokenizerFast" if is_tokenizers_available() else None,
             ),
         ),
+        ("phi", ("CodeGenTokenizer", "CodeGenTokenizerFast" if is_tokenizers_available() else None)),
         ("phobert", ("PhobertTokenizer", None)),
         # ("pix2struct", ("T5Tokenizer", "T5TokenizerFast" if is_tokenizers_available() else None)),
         ("plbart", ("PLBartTokenizer" if is_sentencepiece_available() else None, None)),
         ("prophetnet", ("ProphetNetTokenizer", None)),
         ("qdqbert", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
+        (
+            "qwen2",
+            (
+                "Qwen2Tokenizer",
+                "Qwen2TokenizerFast" if is_tokenizers_available() else None,
+            ),
+        ),
         ("rag", ("RagTokenizer", None)),
         ("realm", ("RealmTokenizer", "RealmTokenizerFast" if is_tokenizers_available() else None)),
         (
@@ -357,6 +381,7 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         #         "T5TokenizerFast" if is_tokenizers_available() else None,
         #     ),
         # ),
+        ("starcoder2", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
         (
             "t5",
             (
@@ -536,8 +561,7 @@ def get_tokenizer_config(
     tokenizer_config = get_tokenizer_config("tokenizer-test")
     ```"""
 
-    from_pt = kwargs.get('from_pt', False)
-    endpoint = HF_URL_BASE if from_pt else MS_URL_BASE
+    _ = kwargs.get('from_pt', False)
     resolved_config_file = cached_file(
         pretrained_model_name_or_path,
         TOKENIZER_CONFIG_FILE,
@@ -546,10 +570,11 @@ def get_tokenizer_config(
         resume_download=resume_download,
         proxies=proxies,
         local_files_only=local_files_only,
+        revision=revision,
+        token=token,
         subfolder=subfolder,
         _raise_exceptions_for_missing_entries=False,
         _raise_exceptions_for_connection_errors=False,
-        endpoint=endpoint
     )
     if resolved_config_file is None:
         logger.info("Could not locate the tokenizer configuration file, will try to use the model config instead.")

@@ -459,15 +459,14 @@ class GraphormerModelTest(ModelTesterMixin, unittest.TestCase):
     @slow
     def test_model_from_pretrained(self):
         for model_name in GRAPHORMER_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            model = GraphormerForGraphClassification.from_pretrained(model_name, from_pt=True)
+            model = GraphormerForGraphClassification.from_pretrained(model_name)
             self.assertIsNotNone(model)
 
 @require_mindspore
 class GraphormerModelIntegrationTest(unittest.TestCase):
     @slow
     def test_inference_graph_classification(self):
-        model = GraphormerForGraphClassification.from_pretrained("clefourrier/graphormer-base-pcqm4mv2",
-                                                                 from_pt=True)
+        model = GraphormerForGraphClassification.from_pretrained("clefourrier/graphormer-base-pcqm4mv2")
 
         # Actual real graph data from the MUTAG dataset
         # fmt: off

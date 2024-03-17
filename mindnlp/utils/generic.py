@@ -22,10 +22,12 @@ Generic utils.
 from enum import Enum
 from collections import OrderedDict, UserDict
 from dataclasses import fields
-from typing import Any, Tuple
+from typing import Any, Tuple, ContextManager, List
+from contextlib import ExitStack
 
 import numpy as np
 import mindspore
+from mindspore.common.api import _pynative_executor
 from mindnlp.configs import DEFAULT_DTYPE
 from .import_utils import is_mindspore_available
 
@@ -314,3 +316,29 @@ def to_numpy(obj):
             return framework_to_numpy[framework](obj)
 
     return obj
+
+class ContextManagers:
+    """
+    Wrapper for `contextlib.ExitStack` which enters a collection of context managers. Adaptation of `ContextManagers`
+    in the `fastcore` library.
+    """
+
+    def __init__(self, context_managers: List[ContextManager]):
+        self.context_managers = context_managers
+        self.stack = ExitStack()
+
+    def __enter__(self):
+        for context_manager in self.context_managers:
+            self.stack.enter_context(context_manager)
+
+    def __exit__(self, *args, **kwargs):
+        self.stack.__exit__(*args, **kwargs)
+
+def no_grad(func):
+    """no grad wrapper"""
+    def wrapper(*args, **kwargs):
+        _pynative_executor.set_enable_grad(False)
+        outputs = func(*args, **kwargs)
+        _pynative_executor.set_enable_grad(True)
+        return outputs
+    return wrapper

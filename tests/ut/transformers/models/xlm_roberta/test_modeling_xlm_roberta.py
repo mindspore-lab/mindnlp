@@ -28,7 +28,7 @@ class XLMRobertaModelIntegrationTest(MindNLPTestCase):
     @pytest.mark.download
     def test_xlm_roberta_base(self):
         """test_xlm_roberta_base"""
-        model = XLMRobertaModel.from_pretrained("xlm-roberta-base", from_pt=True)
+        model = XLMRobertaModel.from_pretrained("xlm-roberta-base")
         input_ids = mindspore.tensor([[0, 581, 10269, 83, 99942, 136, 60742, 23, 70, 80583, 18276, 2]])
         # The dog is cute and lives in the garden house
 
@@ -44,7 +44,7 @@ class XLMRobertaModelIntegrationTest(MindNLPTestCase):
     @pytest.mark.download
     def test_xlm_roberta_large(self):
         """test_xlm_roberta_large"""
-        model = XLMRobertaModel.from_pretrained("xlm-roberta-large", from_pt=True)
+        model = XLMRobertaModel.from_pretrained("xlm-roberta-large")
         input_ids = mindspore.tensor([[0, 581, 10269, 83, 99942, 136, 60742, 23, 70, 80583, 18276, 2]])
         # The dog is cute and lives in the garden house
 

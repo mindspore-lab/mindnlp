@@ -30,23 +30,23 @@
   mounts of useful datasets.
   * 📝 MindNLP supports NLP tasks such as *language model*, *machine translation*, *question answering*, *sentiment analysis*, *sequence labeling*, *summarization*, etc. You can access them through [examples](./examples/).
   * 🚀 MindNLP currently supports industry-leading Large Language Models (LLMs), including **Llama**, **GLM**, **RWKV**, etc. For support related to large language models, including ***pre-training***, ***fine-tuning***, and **inference** demo examples, you can find them in the ["llm" directory](./llm/).
-  * 🤗 Pretrained models support ***huggingface transformers-like apis***, including **28+** models like **[BERT](./mindnlp/models/bert)**, **[Roberta](./mindnlp/models/roberta)**, **[GPT2](./mindnlp/models/gpt2)**, **[T5](./mindnlp/models/t5)**, etc.
+  * 🤗 Pretrained models support ***huggingface transformers-like apis***, including **60+** models like **[BERT](./mindnlp/transformers/models/bert)**, **[Roberta](./mindnlp/transformers/models/roberta)**, **[GPT2](./mindnlp/transformers/models/gpt2)**, **[T5](./mindnlp/transformers/models/t5)**, etc.
     You can use them easily by following code snippet:
     ```python
-    from mindnlp.models import BertModel
+    from mindnlp.transformers import AutoModel
 
-    model = BertModel.from_pretrained('bert-base-cased')
+    model = AutoModel.from_pretrained('bert-base-cased')
     ```
 
 ### Installation
 
-Version Compatibility:
+#### Install from Pypi
 
-| MindNLP version | MindSpore version | Supported Python version |
-|-----------------|-------------------|--------------------------|
-| master          | daily build       | >=3.7.5, <=3.9           |
-| 0.1.1           | >=1.8.1, <=2.0.0  | >=3.7.5, <=3.9           |
-| 0.2.0           | >=2.1.0           | >=3.7.5, <=3.9           |
+You can install the official version of MindNLP which uploaded to pypi.
+
+```bash
+pip install mindnlp
+```
 
 #### Daily build
 
@@ -64,6 +64,13 @@ cd mindnlp
 bash scripts/build_and_reinstall.sh
 ```
 
+#### Version Compatibility
+
+| MindNLP version | MindSpore version | Supported Python version |
+|-----------------|-------------------|--------------------------|
+| master          | daily build       | >=3.7.5, <=3.9           |
+| 0.1.1           | >=1.8.1, <=2.0.0  | >=3.7.5, <=3.9           |
+| 0.2.x           | >=2.1.0           | >=3.8, <=3.9             |
 
 ### Introduction
 
@@ -110,17 +117,23 @@ The table below represents the current support in the library for each of those 
 | CPM                           | ✅                | ❌             |
 | CPM-Ant                       | ✅                | ❌             |
 | CPM-Bee                       | ✅                | ❌             |
+| MiniCPM                       | ✅                | ❌             |
+| Deberta                       | ✅                | ❌             |
+| Electra                       | TODO               | ❌             |
 | EnCodec                       | ✅               | ❌             |
 | ERNIE                         | ✅                | ✅             |
 | ERNIEM                        | ✅                | ✅             |
+| ESM                           | ✅                | ✅             |
 | Falcon                        | ✅                | ❌             |
-| GLM                           | ✅                | ❌             |
 | OpenAI GPT                    | ✅                | ❌             |
 | OpenAI GPT-2                  | ✅                | ✅             |
+| Gemma                         | ✅                | ❌             |
 | GPT Neo                       | ✅                | ❌             |
 | GPT NeoX                      | TODO              | ❌             |
+| GPT Pangu                     | ✅                | ❌             |
 | GPTBigCode                    | ✅                | ❌             |
 | Graphormer                    | ✅                | ❌             |
+| Hubert                        | ✅                | ❌             |
 | Llama                         | ✅                | ❌             |
 | Llama2                        | ✅                | ❌             |
 | CodeLlama                     | ✅                | ❌             |
@@ -128,22 +141,29 @@ The table below represents the current support in the library for each of those 
 | LongT5                        | ✅                | ❌             |
 | LUKE                          | ✅                | ❌             |
 | MaskFormer                    | ✅                | ❌             |
+| Mamba                         | ✅                | ❌             |
 | mBART-50                      | ✅                | ❌             |
 | Megatron-BERT                 | ✅                | ❌             |
 | Megatron-GPT2                 | ✅                | ❌             |
+| Mistral                       | ✅                | ❌             |
+| Mixtral                       | ✅                | ❌             |
 | MobileBERT                    | ✅                | ❌             |
 | Moss                          | ✅                | ❌             |
 | Nezha                         | ✅                | ❌             |
 | OPT                           | ✅                | ❌             |
-| Pangu                         | ✅                | ❌             |
-| Pop2piano                     | Todo              | ❌             |
+| Phi2                          | ✅                | ❌             |
+| Pop2piano                     | ✅                | ❌             |
+| Qwen2                         | ✅                | ❌             |
+| RegNet                        | Todo               | ❌             |
 | RoBERTa                       | ✅                | ✅             |
 | RWKV                          | ✅                | ❌             |
 | SeamlessM4T                   | ✅                | ❌             |
 | SeamlessM4Tv2                 | ✅                | ❌             |
+| StarCoder                     | ✅                | ❌             |
 | T5                            | ✅                | ❌             |
-| TimeSformer                   | TODO              | ❌             |
+| Timesformer                   | TODO              | ❌             |
 | Tinybert                      | ✅                | ❌             |
+| wav2vec                       | ✅                | ❌             |
 | Whisper                       | ✅                | ❌             |
 | XLM                           | ✅                | ❌             |
 | XLM-RoBERTa                   | ✅                | ❌             |

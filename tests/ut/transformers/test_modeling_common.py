@@ -379,6 +379,7 @@ class ModelTesterMixin:
             base_class_copy.init_weights = _mock_all_init_weights
 
             model = model_class(config)
+
             # check that certain keys didn't get saved with the model
             with tempfile.TemporaryDirectory() as tmpdirname:
                 model.config.save_pretrained(tmpdirname)
@@ -483,7 +484,6 @@ class ModelTesterMixin:
             model = model_class(config)
 
             model.set_train(False)
-
             outputs = model(**self._prepare_for_class(inputs_dict, model_class))
             attentions = outputs.encoder_attentions if config.is_encoder_decoder else outputs.attentions
             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
@@ -1190,6 +1190,7 @@ class ModelTesterMixin:
             ptrs = collections.defaultdict(list)
             for name, tensor in model_tied.parameters_dict().items():
                 ptrs[id(tensor)].append(name)
+
             # These are all the pointers of shared tensors.
             tied_params = [names for _, names in ptrs.items() if len(names) > 1]
             tied_weight_keys = model_tied._tied_weights_keys if model_tied._tied_weights_keys is not None else []

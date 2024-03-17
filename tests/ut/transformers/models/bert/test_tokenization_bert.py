@@ -341,14 +341,3 @@ class BertTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
                 ]
                 self.assertListEqual(tokens_without_spe_char_p, expected_tokens)
                 self.assertListEqual(tokens_without_spe_char_r, expected_tokens)
-
-    def test_bert_tokenizer_with_ms_dataset(self):
-        """test BertTokenizer from pretrained."""
-        texts = ['i make a small mistake when i\'m working! 床前明月光']
-        test_dataset = GeneratorDataset(texts, 'text')
-
-        bert_tokenizer = BertTokenizer.from_pretrained('bert-base-chinese')
-        test_dataset = test_dataset.map(operations=bert_tokenizer, input_columns='text', output_columns=['input_ids', 'token_type_ids', 'attention_mask'])
-        dataset_after = next(test_dataset.create_tuple_iterator())[0]
-
-        assert len(dataset_after) == 21

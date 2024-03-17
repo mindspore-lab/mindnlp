@@ -38,6 +38,7 @@ ACT2CLS = {
     'gelu': (nn.GELU, {"approximate": False}),
     'gelu_new': nn.GELU,
     'gelu_approximate': nn.GELU,
+    'gelu_pytorch_tanh': nn.GELU,
     "swish": nn.SiLU,  # MindSpore的SiLU激活函数是Swish函数
     "gelu_10": nn.GELU,  # MindSpore的GELU激活函数不支持设置最大值和最小值
     "gelu_fast": nn.FastGelu,

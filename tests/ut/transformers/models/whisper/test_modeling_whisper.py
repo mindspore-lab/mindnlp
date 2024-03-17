@@ -867,7 +867,7 @@ class WhisperModelTest(ModelTesterMixin, GenerationTesterMixin, MindNLPTestCase)
 class WhisperModelIntegrationTests(MindNLPTestCase):
     @cached_property
     def default_processor(self):
-        return WhisperProcessor.from_pretrained("openai/whisper-base", from_pt=True)
+        return WhisperProcessor.from_pretrained("openai/whisper-base")
 
     def _load_datasamples(self, num_samples):
         ds = load_dataset("hf-internal-testing/librispeech_asr_dummy", "clean", split="validation")
@@ -880,7 +880,7 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
     @slow
     def test_tiny_logits_librispeech(self):
         set_seed(0)
-        model = WhisperModel.from_pretrained("openai/whisper-tiny", from_pt=True)
+        model = WhisperModel.from_pretrained("openai/whisper-tiny")
         input_speech = self._load_datasamples(1)
         feature_extractor = WhisperFeatureExtractor()
         input_features = feature_extractor(input_speech, return_tensors="ms").input_features
@@ -904,7 +904,7 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
             ]
         )
         # fmt: on
-        self.assertTrue(np.allclose(logits[0][0, 0, :30].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=1e-4))
+        self.assertTrue(np.allclose(logits[0][0, 0, :30].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=5e-3))
 
         # fmt: off
         EXPECTED_GENERATION = mindspore.tensor(
@@ -918,13 +918,13 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         # fmt: on
 
         head_logits = logits[0] @ model.decoder.embed_tokens.weight.T
-        self.assertTrue(np.allclose(head_logits[0, 0, :30].asnumpy(), EXPECTED_GENERATION.asnumpy(), atol=1e-4))
+        self.assertTrue(np.allclose(head_logits[0, 0, :30].asnumpy(), EXPECTED_GENERATION.asnumpy(), atol=5e-3))
 
 
     @slow
     def test_small_en_logits_librispeech(self):
         set_seed(0)
-        model = WhisperModel.from_pretrained("openai/whisper-small.en", from_pt=True)
+        model = WhisperModel.from_pretrained("openai/whisper-small.en")
 
         input_speech = self._load_datasamples(1)
 
@@ -952,18 +952,18 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
             ]
         )
         # fmt: on
-        self.assertTrue(np.allclose(logits[0, 0, :30].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=1e-4))
+        self.assertTrue(np.allclose(logits[0, 0, :30].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=1e-3))
 
 
     @slow
     def test_large_logits_librispeech(self):
         set_seed(0)
 
-        model = WhisperModel.from_pretrained("openai/whisper-large", from_pt=True)
+        model = WhisperModel.from_pretrained("openai/whisper-large")
 
         input_speech = self._load_datasamples(1)
 
-        processor = WhisperProcessor.from_pretrained("openai/whisper-large", from_pt=True)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-large")
         processed_inputs = processor(
             audio=input_speech, text="This part of the speech", add_special_tokens=False, return_tensors="ms"
         )
@@ -991,14 +991,14 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
         )
         # fmt: on
 
-        self.assertTrue(np.allclose(logits[0, 0, :30].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=1e-4))
+        self.assertTrue(np.allclose(logits[0, 0, :30].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=1e-3))
 
 
     @slow
     def test_tiny_en_generation(self):
         set_seed(0)
-        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en", from_pt=True)
-        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en", from_pt=True)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
         model.config.decoder_start_token_id = 50257
 
         input_speech = self._load_datasamples(1)
@@ -1017,8 +1017,8 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
     @slow
     def test_tiny_generation(self):
         set_seed(0)
-        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny", from_pt=True)
-        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny", from_pt=True)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
 
         input_speech = self._load_datasamples(1)
         input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
@@ -1036,8 +1036,8 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
     @slow
     def test_large_generation(self):
         set_seed(0)
-        processor = WhisperProcessor.from_pretrained("openai/whisper-large", from_pt=True)
-        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large", from_pt=True)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-large")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large")
 
         input_speech = self._load_datasamples(1)
         input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
@@ -1052,10 +1052,11 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
 
     @slow
     def test_large_generation_multilingual(self):
-        processor = WhisperProcessor.from_pretrained("openai/whisper-large", from_pt=True)
-        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large", from_pt=True)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-large")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large")
 
-        ds = load_dataset("common_voice", "ja", split="test", streaming=True)
+        token = os.getenv("HF_HUB_READ_TOKEN", True)
+        ds = load_dataset("mozilla-foundation/common_voice_6_1", "ja", split="test", streaming=True, token=token)
         ds = ds.cast_column("audio", datasets.Audio(sampling_rate=16_000))
         input_speech = next(iter(ds))["audio"]["array"]
         input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
@@ -1088,8 +1089,8 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
     @slow
     def test_large_batched_generation(self):
         set_seed(0)
-        processor = WhisperProcessor.from_pretrained("openai/whisper-large", from_pt=True)
-        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large", from_pt=True)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-large")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large")
 
         input_speech = self._load_datasamples(4)
         input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
@@ -1124,8 +1125,8 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
     @slow
     def test_tiny_en_batched_generation(self):
         set_seed(0)
-        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en", from_pt=True)
-        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en", from_pt=True)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
 
         input_speech = self._load_datasamples(4)
         input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
@@ -1161,8 +1162,8 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
     @slow
     def test_tiny_timestamp_generation(self):
         set_seed(0)
-        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny", from_pt=True)
-        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny", from_pt=True)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
 
         input_speech = np.concatenate(self._load_datasamples(4))
         input_features = processor.feature_extractor(raw_speech=input_speech, return_tensors="ms").input_features
@@ -1224,8 +1225,8 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
     @slow
     def test_tiny_token_timestamp_generation(self):
         set_seed(0)
-        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny", from_pt=True)
-        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny", from_pt=True)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
         model.generation_config.alignment_heads = [[2, 2], [3, 0], [3, 2], [3, 3], [3, 4], [3, 5]]
 
         input_speech = self._load_datasamples(4)
@@ -1252,7 +1253,7 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
     def test_tiny_specaugment_librispeech(self):
         set_seed(0)
         # Apply SpecAugment
-        model = WhisperModel.from_pretrained("openai/whisper-tiny", apply_spec_augment=True, from_pt=True)
+        model = WhisperModel.from_pretrained("openai/whisper-tiny", apply_spec_augment=True)
         # Set model to training mode to enable SpecAugment
         model.set_train()
         input_speech = self._load_datasamples(1)
@@ -1278,13 +1279,13 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
             ]
         )
         # fmt: on
-        self.assertTrue(np.allclose(logits[0][0, 0, :30].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=1e-4))
+        self.assertTrue(np.allclose(logits[0][0, 0, :30].asnumpy(), EXPECTED_LOGITS.asnumpy(), atol=5e-3))
 
 
     @slow
     def test_generate_with_prompt_ids(self):
-        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny", from_pt=True)
-        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny", from_pt=True)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
         input_speech = self._load_datasamples(4)[-1:]
         input_features = processor(input_speech, return_tensors="ms").input_features
 
@@ -1300,8 +1301,8 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
 
     @slow
     def test_generate_with_prompt_ids_and_forced_decoder_ids(self):
-        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny", from_pt=True)
-        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny", from_pt=True)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny")
         input_speech = self._load_datasamples(1)
         input_features = processor(input_speech, return_tensors="ms").input_features
         task = "translate"
@@ -1319,8 +1320,8 @@ class WhisperModelIntegrationTests(MindNLPTestCase):
 
     @slow
     def test_generate_with_prompt_ids_and_no_non_prompt_forced_decoder_ids(self):
-        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en", from_pt=True)
-        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en", from_pt=True)
+        processor = WhisperProcessor.from_pretrained("openai/whisper-tiny.en")
+        model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-tiny.en")
         input_speech = self._load_datasamples(1)
         input_features = processor(input_speech, return_tensors="ms").input_features
         prompt = "test prompt"

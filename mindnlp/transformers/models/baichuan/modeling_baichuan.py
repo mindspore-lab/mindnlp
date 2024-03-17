@@ -19,12 +19,17 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=arguments-renamed
 # pylint: disable=attribute-defined-outside-init
+# pylint: disable=redefined-builtin
 """
 MindSpore BaiChuan Model
 """
 
 import math
 from typing import List, Optional, Tuple, Union
+from queue import Queue
+from threading import Thread
+
+
 import numpy as np
 import mindspore
 from mindspore import Tensor, Parameter
@@ -34,6 +39,7 @@ from mindspore import dtype as mstype
 from mindnlp.utils import logging
 
 from .configuration_baichuan import BaiChuanConfig
+from ...generation.utils import GenerationConfig
 from ...modeling_utils import PreTrainedModel
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -43,6 +49,82 @@ from ...modeling_outputs import (
 
 logger = logging.get_logger(__name__)
 
+
+def build_chat_input(model, tokenizer, messages: List[dict], max_new_tokens: int=0):
+    def _parse_messages(messages, split_role="user"):
+        system, rounds = "", []
+        round = []
+        for i, message in enumerate(messages):
+            if message["role"] == "system":
+                assert i == 0
+                system = message["content"]
+                continue
+            if message["role"] == split_role and round:
+                rounds.append(round)
+                round = []
+            round.append(message)
+        if round:
+            rounds.append(round)
+        return system, rounds
+
+    max_new_tokens = max_new_tokens or model.generation_config.max_new_tokens
+    max_input_tokens = model.config.model_max_length - max_new_tokens
+    system, rounds = _parse_messages(messages, split_role="user")
+    system_tokens = tokenizer.encode(system)
+    max_history_tokens = max_input_tokens - len(system_tokens)
+
+    history_tokens = []
+    for round in rounds[::-1]:
+        round_tokens = []
+        for message in round:
+            if message["role"] == "user":
+                round_tokens.append(model.generation_config.user_token_id)
+            else:
+                round_tokens.append(model.generation_config.assistant_token_id)
+            round_tokens.extend(tokenizer.encode(message["content"]))
+        if len(history_tokens) == 0 or len(history_tokens) + len(round_tokens) <= max_history_tokens:
+            history_tokens = round_tokens + history_tokens  # concat left
+            if len(history_tokens) < max_history_tokens:
+                continue
+        break
+
+    input_tokens = system_tokens + history_tokens
+    if messages[-1]["role"] != "assistant":
+        input_tokens.append(model.generation_config.assistant_token_id)
+    input_tokens = input_tokens[-max_input_tokens:]  # truncate left
+    return mindspore.tensor([input_tokens])
+
+
+class TextIterStreamer:
+    def __init__(self, tokenizer, skip_prompt=False, skip_special_tokens=False):
+        self.tokenizer = tokenizer
+        self.skip_prompt = skip_prompt
+        self.skip_special_tokens = skip_special_tokens
+        self.tokens = []
+        self.text_queue = Queue()
+        self.next_tokens_are_prompt = True
+
+    def put(self, value):
+        if self.skip_prompt and self.next_tokens_are_prompt:
+            self.next_tokens_are_prompt = False
+        else:
+            if len(value.shape) > 1:
+                value = value[0]
+            self.tokens.extend(value.tolist())
+            self.text_queue.put(
+                self.tokenizer.decode(self.tokens, skip_special_tokens=self.skip_special_tokens))
+
+    def end(self):
+        self.text_queue.put(None)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        value = self.text_queue.get()
+        if value is None:
+            raise StopIteration()
+        return value
 
 # Copied from transformers.models.bart.modeling_bart._make_causal_mask
 def _make_causal_mask(
@@ -110,7 +192,7 @@ def _gen_alibi_mask(n_head, max_pos):
         (n_head, -1, -1))
     alibi = alibi.view(n_head, 1, max_pos)
     alibi_mask = ops.triu(
-        _fill_with_neg_inf(ops.zeros([max_pos, max_pos])), 1
+        _fill_with_neg_inf(ops.zeros((max_pos, max_pos))), 1
     )
     alibi_mask = alibi_mask.unsqueeze(0) + alibi
     return alibi_mask
@@ -262,12 +344,9 @@ class Attention(nn.Cell):
         proj = self.W_pack(hidden_states)
         m = nn.Unflatten(-1, (3, self.hidden_size))
         proj = m(proj).unsqueeze(0).swapaxes(0, -2).squeeze(-2)
-        query_states = proj[0].view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1,
-                                                                                        2)  # batch_size x source_len x hidden_size
-        key_states = proj[1].view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1,
-                                                                                      2)  # batch_size x target_len x head_size
-        value_states = proj[2].view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1,
-                                                                                        2)  # batch_size x source_len x hidden_size
+        query_states = proj[0].view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)  # batch_size x source_len x hidden_size
+        key_states = proj[1].view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)  # batch_size x target_len x head_size
+        value_states = proj[2].view(bsz, q_len, self.num_heads, self.head_dim).swapaxes(1, 2)  # batch_size x source_len x hidden_size
 
         kv_seq_len = key_states.shape[-2]
         if past_key_value is not None:
@@ -284,7 +363,6 @@ class Attention(nn.Cell):
         past_key_value = (key_states, value_states) if use_cache else None
 
         attn_weights = ops.matmul(query_states, key_states.swapaxes(2, 3)) / math.sqrt(self.head_dim)
-
         if attn_weights.shape != (bsz, self.num_heads, q_len, kv_seq_len):
             raise ValueError(
                 f"Attention weights should be of size {(bsz, self.num_heads, q_len, kv_seq_len)}, but is"
@@ -376,7 +454,7 @@ class BaiChuanAttention(nn.Cell):
                     attention_mask = attention_mask[:, :, -1:, :]
                 else:
                     attention_mask = attention_mask[:, -1:, :]
-            attn_weights = attn_weights + attention_mask
+            attn_weights = attn_weights + attention_mask.astype(attn_weights.dtype)
             attn_weights = ops.maximum(attn_weights, mindspore.tensor(np.finfo(mindspore.dtype_to_nptype(attn_weights.dtype)).min))
 
         attn_weights = ops.softmax(attn_weights, axis=-1)
@@ -980,6 +1058,24 @@ class BaiChuanForCausalLM(BaiChuanPreTrainedModel):
             reordered_past += (tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),)
         return reordered_past
 
+    def chat(self, tokenizer, messages: List[dict], stream=False,
+             generation_config: Optional[GenerationConfig]=None):
+        generation_config = generation_config or self.generation_config
+        input_ids = build_chat_input(self, tokenizer, messages, generation_config.max_new_tokens)
+        if stream:
+            streamer = TextIterStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+            Thread(target=self.generate, kwargs={
+                                                    "inputs": input_ids,
+                                                    "streamer": streamer,
+                                                    "generation_config": generation_config
+                                                }
+            ).start()
+            return streamer
+
+        outputs = self.generate(input_ids, generation_config=generation_config)
+        response = tokenizer.decode(outputs[0][len(input_ids[0]):], skip_special_tokens=True)
+        return response
+
 
 __all__ = [
     "BaiChuanPreTrainedModel",
@@ -987,4 +1083,3 @@ __all__ = [
     "BaiChuan13bModel",
     "BaiChuanForCausalLM"
 ]
- 

@@ -28,7 +28,7 @@ from typing import Optional, Tuple, Dict, Union, Any, List
 from mindspore import jit_class
 
 from mindnlp.utils import logging, is_mindspore_available
-from mindnlp.configs import HF_URL_BASE, MS_URL_BASE, CONFIG_NAME
+from mindnlp.configs import CONFIG_NAME
 from mindnlp.utils.download import is_remote_url, download_url, cached_file
 
 logger = logging.get_logger(__name__)
@@ -397,8 +397,9 @@ class PretrainedConfig:
         resume_download = kwargs.pop("resume_download", False)
         proxies = kwargs.pop("proxies", None)
         local_files_only = kwargs.pop("local_files_only", False)
-        from_pt = kwargs.pop("from_pt", False) # reuse
         subfolder = kwargs.pop("subfolder", "")
+        token = kwargs.pop('token', None)
+        revision = kwargs.pop('revision', 'main')
 
         pretrained_model_name_or_path = str(pretrained_model_name_or_path)
 
@@ -414,7 +415,6 @@ class PretrainedConfig:
 
         else:
             configuration_file = kwargs.pop("_configuration_file", CONFIG_NAME)
-            endpoint = HF_URL_BASE if from_pt else MS_URL_BASE
 
             try:
                 # Load from local folder or from cache or download from model Hub and cache
@@ -426,8 +426,9 @@ class PretrainedConfig:
                     proxies=proxies,
                     resume_download=resume_download,
                     local_files_only=local_files_only,
+                    revision=revision,
+                    token=token,
                     subfolder=subfolder,
-                    endpoint=endpoint
                 )
             except EnvironmentError:
                 # Raise any environment error raise by `cached_file`. It will have a helpful error message adapted to
@@ -464,11 +465,54 @@ class PretrainedConfig:
             text = reader.read()
         return json.loads(text)
 
-    def to_dict(self):
-        """Serializes this instance to a Python dictionary."""
+    def dict_ms_dtype_to_str(self, d: Dict[str, Any]) -> None:
+        """
+        Checks whether the passed dictionary and its nested dicts have a *torch_dtype* key and if it's not None,
+        converts torch.dtype to a string of just the type. For example, `torch.float32` get converted into *"float32"*
+        string, which can then be stored in the json format.
+        """
+        if d.get("ms_dtype", None) is not None and not isinstance(d["ms_dtype"], str):
+            d["ms_dtype"] = str(d["ms_dtype"]).lower()
+        for value in d.values():
+            if isinstance(value, dict):
+                self.dict_ms_dtype_to_str(value)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Serializes this instance to a Python dictionary.
+
+        Returns:
+            `Dict[str, Any]`: Dictionary of all the attributes that make up this configuration instance.
+        """
         output = copy.deepcopy(self.__dict__)
         if hasattr(self.__class__, "model_type"):
             output["model_type"] = self.__class__.model_type
+        if "_auto_class" in output:
+            del output["_auto_class"]
+        if "_commit_hash" in output:
+            del output["_commit_hash"]
+        if "_attn_implementation_internal" in output:
+            del output["_attn_implementation_internal"]
+
+        for key, value in output.items():
+            # Deal with nested configs like CLIP
+            if isinstance(value, PretrainedConfig):
+                value = value.to_dict()
+
+            output[key] = value
+
+        if hasattr(self, "quantization_config"):
+            output["quantization_config"] = (
+                self.quantization_config.to_dict()
+                if not isinstance(self.quantization_config, dict)
+                else self.quantization_config
+            )
+
+            # pop the `_pre_quantization_dtype` as torch.dtypes are not serializable.
+            _ = output.pop("_pre_quantization_dtype", None)
+
+        self.dict_ms_dtype_to_str(output)
+
         return output
 
     def to_diff_dict(self) -> Dict[str, Any]:
@@ -528,6 +572,7 @@ class PretrainedConfig:
             config_dict = self.to_diff_dict()
         else:
             config_dict = self.to_dict()
+
         return json.dumps(config_dict, indent=2, sort_keys=True) + "\n"
 
     def to_file(self, save_path):

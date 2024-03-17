@@ -14,12 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""CPM models"""
-from . import cpm_ant, cpm_ant_config
+"""CPM model"""
+from . import tokenization_cpm, tokenization_cpm_fast
 
-from .cpm_ant import *
-from .cpm_ant_config import *
+from .tokenization_cpm import *
+from .tokenization_cpm_fast import *
 
 __all__ = []
-__all__.extend(cpm_ant.__all__)
-__all__.extend(cpm_ant_config.__all__)
+__all__.extend(tokenization_cpm.__all__)
+__all__.extend(tokenization_cpm_fast.__all__)

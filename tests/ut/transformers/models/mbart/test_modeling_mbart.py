@@ -47,7 +47,6 @@ if is_mindspore_available():
     from mindnlp.transformers.tokenization_utils import BatchEncoding
     from mindnlp.transformers.models.mbart.modeling_mbart import MBartDecoder, MBartEncoder
 
-
 def prepare_mbart_inputs_dict(
     config,
     input_ids,
@@ -399,13 +398,13 @@ class AbstractSeq2SeqIntegrationTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.tokenizer = AutoTokenizer.from_pretrained(cls.checkpoint_name, use_fast=False, from_pt=True)
+        cls.tokenizer = AutoTokenizer.from_pretrained(cls.checkpoint_name, use_fast=False)
         return cls
 
     @cached_property
     def model(self):
         """Only load the model if needed."""
-        model = MBartForConditionalGeneration.from_pretrained(self.checkpoint_name, from_pt=True)
+        model = MBartForConditionalGeneration.from_pretrained(self.checkpoint_name)
         model = model.half()
         return model
 
@@ -446,9 +445,8 @@ class MBartEnroIntegrationTest(AbstractSeq2SeqIntegrationTest):
         mbart_models = ["facebook/mbart-large-en-ro"]
         expected = {"scale_embedding": True, "output_past": True}
         for name in mbart_models:
-            config = MBartConfig.from_pretrained(name, from_pt=True)
+            config = MBartConfig.from_pretrained(name)
             for k, v in expected.items():
-                # print("kvtest: ",k, v, getattr(config, k))
                 try:
                     self.assertEqual(v, getattr(config, k))
                 except AssertionError as e:

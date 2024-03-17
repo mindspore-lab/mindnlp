@@ -44,7 +44,6 @@ import numpy as np
 from tokenizers import AddedToken
 from tokenizers import Encoding as EncodingFast
 
-from mindnlp.configs import HF_URL_BASE, MS_URL_BASE
 from mindnlp.utils import (
     ExplicitEnum,
     PaddingStrategy,
@@ -658,9 +657,10 @@ class BatchEncoding(UserDict):
             def as_tensor(value, dtype=None):
                 if isinstance(value, list) and isinstance(value[0], np.ndarray):
                     return mindspore.tensor(np.array(value), dtype)
+                if isinstance(value, np.ndarray) and value.shape == (0,):
+                    return mindspore.tensor(mindspore._c_expression.Tensor(value, dtype)) # pylint: disable=c-extension-no-member
                 return mindspore.tensor(value, dtype)
         else:
-
             def as_tensor(value, dtype=None):
                 if isinstance(value, (list, tuple)) and isinstance(value[0], (list, tuple, np.ndarray)):
                     value_lens = [len(val) for val in value]
@@ -676,7 +676,6 @@ class BatchEncoding(UserDict):
             try:
                 if prepend_batch_axis:
                     value = [value]
-
                 if not is_tensor(value):
                     tensor = as_tensor(value)
 
@@ -1406,6 +1405,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         truncation: bool = False,
         max_length: Optional[int] = None,
         return_tensors: Optional[Union[str, TensorType]] = None,
+        return_dict: bool = False,
         **tokenizer_kwargs,
     ) -> Union[str, List[int]]:
         """
@@ -1467,12 +1467,23 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         if padding is True:
             padding = "max_length"  # There's only one sequence here, so "longest" makes no sense
         if tokenize:
+            if return_dict:
+                return self(
+                    rendered,
+                    padding=padding,
+                    truncation=truncation,
+                    max_length=max_length,
+                    add_special_tokens=False,
+                    return_tensors=return_tensors,
+                    **tokenizer_kwargs,
+                )
+
             return self.encode(
                 rendered,
-                add_special_tokens=False,
                 padding=padding,
                 truncation=truncation,
                 max_length=max_length,
+                add_special_tokens=False,
                 return_tensors=return_tensors,
                 **tokenizer_kwargs,
             )
@@ -1522,6 +1533,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         cache_dir: Optional[Union[str, os.PathLike]] = None,
         force_download: bool = False,
         local_files_only: bool = False,
+        token: str = None,
         **kwargs,
     ):
         r"""
@@ -1603,9 +1615,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         resume_download = kwargs.pop("resume_download", False)
         proxies = kwargs.pop("proxies", None)
         subfolder = kwargs.pop("subfolder", None)
-        from_pt = kwargs.pop("from_pt", False)
-
-        endpoint = HF_URL_BASE if from_pt else MS_URL_BASE
+        revision = kwargs.pop("revision", "main")
 
         if is_offline_mode() and not local_files_only:
             logger.info("Offline mode: forcing local_files_only=True")
@@ -1653,8 +1663,9 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
                     resume_download=resume_download,
                     proxies=proxies,
                     local_files_only=local_files_only,
+                    token=token,
                     subfolder=subfolder,
-                    endpoint=endpoint,
+                    revision=revision,
                     _raise_exceptions_for_missing_entries=False,
                     _raise_exceptions_for_connection_errors=False,
                 )
@@ -1685,8 +1696,9 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
                     proxies=proxies,
                     resume_download=resume_download,
                     local_files_only=local_files_only,
+                    token=token,
                     subfolder=subfolder,
-                    endpoint=endpoint,
+                    revision=revision,
                     _raise_exceptions_for_missing_entries=False,
                     _raise_exceptions_for_connection_errors=False,
                 )
@@ -2439,7 +2451,6 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
             "return_length": return_length,
             "verbose": verbose,
         }
-        for_ms_ds = False
         all_kwargs.update(kwargs)
         if text is None and text_target is None:
             raise ValueError("You need to specify either `text` or `text_target`.")
@@ -2451,8 +2462,6 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
                     text_pair = str(text_pair)
                 elif isinstance(text_pair, list):
                     text_pair = [str(t) for t in text_pair]
-                return_tensors = 'np'
-                for_ms_ds = True
             # The context manager will send the inputs as normal texts and not text_target, but we shouldn't change the
             # input mode in this case.
             if not self._in_target_context_manager:
@@ -2465,12 +2474,6 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         self._switch_to_input_mode()
 
         if text_target is None:
-            if for_ms_ds:
-                return_data = ()
-                for key in self.model_input_names:
-                    if key in encodings:
-                        return_data += (encodings[key],)
-                return return_data
             return encodings
         if text is None:
             return target_encodings

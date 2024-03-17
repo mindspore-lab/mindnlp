@@ -110,9 +110,15 @@ class AttentionMaskConverter:
 
         # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
         expanded_attn_mask = self._expand_mask(attention_mask_2d, dtype, tgt_len=input_shape[-1])
-        expanded_4d_mask = expanded_attn_mask if causal_4d_mask is None else expanded_attn_mask + causal_4d_mask
+
+        if causal_4d_mask is not None:
+            expanded_attn_mask = causal_4d_mask.masked_fill(expanded_attn_mask.bool(), np.finfo(mindspore.dtype_to_nptype(dtype)).min)
+
+        # expanded_attn_mask + causal_4d_mask can cause some overflow
+        expanded_4d_mask = expanded_attn_mask
 
         return expanded_4d_mask
+
 
     @staticmethod
     def _make_causal_mask(
@@ -170,11 +176,11 @@ def _prepare_4d_causal_attention_mask(
     `(batch_size, key_value_length)`
 
     Args:
-        attention_mask (`mindspore.Tensor` or `None`):
+        attention_mask (`torch.Tensor` or `None`):
             A 2D attention mask of shape `(batch_size, key_value_length)`
         input_shape (`tuple(int)` or `list(int)` or `torch.Size`):
             The input shape should be a tuple that defines `(batch_size, query_length)`.
-        inputs_embeds (`mindspore.Tensor`):
+        inputs_embeds (`torch.Tensor`):
             The embedded inputs as a torch Tensor.
         past_key_values_length (`int`):
             The length of the key value cache.
@@ -186,14 +192,24 @@ def _prepare_4d_causal_attention_mask(
     key_value_length = input_shape[-1] + past_key_values_length
 
     # 4d mask is passed through the layers
-    if attention_mask is not None:
+    if attention_mask is not None and len(attention_mask.shape) == 2:
         attention_mask = attn_mask_converter.to_4d(
-            attention_mask, input_shape[-1], key_value_length, dtype=inputs_embeds.dtype
+            attention_mask, input_shape[-1], key_value_length=key_value_length, dtype=inputs_embeds.dtype
+        )
+    elif attention_mask is not None and len(attention_mask.shape) == 4:
+        expected_shape = (input_shape[0], 1, input_shape[1], key_value_length)
+        if tuple(attention_mask.shape) != expected_shape:
+            raise ValueError(
+                f"Incorrect 4D attention_mask shape: {tuple(attention_mask.shape)}; expected: {expected_shape}."
+            )
+        # if the 4D mask has correct shape - invert it and fill with negative infinity
+        inverted_mask = 1.0 - attention_mask
+        attention_mask = inverted_mask.masked_fill(
+            inverted_mask.to(mindspore.bool_), np.finfo(mindspore.dtype_to_nptype(inputs_embeds.dtype)).min
         )
     else:
         attention_mask = attn_mask_converter.to_causal_4d(
-            input_shape[0], input_shape[-1], key_value_length, dtype=inputs_embeds.dtype
-        )
+            input_shape[0], input_shape[-1], key_value_length, dtype=inputs_embeds.dtype)
 
     return attention_mask
 
