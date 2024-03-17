@@ -63,6 +63,7 @@ from . import (
     phi,
     pop2piano,
     qwen2,
+    reformer,
     roberta,
     rwkv,
     seamless_m4t,
@@ -123,6 +124,7 @@ from .opt import *
 from .phi import *
 from .pop2piano import *
 from .qwen2 import *
+from .reformer import *
 from .roberta import *
 from .rwkv import *
 from .seamless_m4t import *
@@ -183,6 +185,7 @@ __all__.extend(opt.__all__)
 __all__.extend(phi.__all__)
 __all__.extend(pop2piano.__all__)
 __all__.extend(qwen2.__all__)
+__all__.extend(reformer.__all__)
 __all__.extend(roberta.__all__)
 __all__.extend(rwkv.__all__)
 __all__.extend(seamless_m4t.__all__)

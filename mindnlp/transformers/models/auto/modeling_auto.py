@@ -62,6 +62,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("mixtral", "MixtralModel"),
         ("phi", "PhiModel"),
         ("qwen2", "Qwen2Model"),
+        ("reformer", "ReformerModel"),
         ("roberta", "RobertaModel"),
         ("rwkv", "RwkvModel"),
         ("starcoder2", "Starcoder2Model"),
@@ -101,6 +102,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("gpt_pangu", "GPTPanguForCausalLM"),
         ("mamba", "MambaForCausalLM"),
         ('minicpm', 'MiniCPMForCausalLM'),
+        ("reformer", "ReformerModelWithLMHead"),
         ("roberta", "RobertaForMaskedLM"),
         ("rwkv", "RwkvForCausalLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
@@ -127,6 +129,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("mixtral", "MixtralForCausalLM"),
         ("phi", "PhiForCausalLM"),
         ("qwen2", "Qwen2ForCausalLM"),
+        ("reformer", "ReformerModelWithLMHead"),
         ("roberta", "RobertaLMHeadModel"),
         ("rwkv", "RwkvForCausalLM"),
         ("starcoder2", "Starcoder2ForCausalLM"),
@@ -240,6 +243,7 @@ MODEL_FOR_MASKED_LM_MAPPING_NAMES = OrderedDict(
         ("big_bird", "BigBirdForMaskedLM"),
         ("deberta", "DebertaForMaskedLM"),
         ("esm", "EsmForMaskedLM"),
+        ("reformer", "ReformerForMaskedLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
     ]
 )
@@ -329,8 +333,9 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("mixtral", "MixtralForSequenceClassification"),
         ("phi", "PhiForSequenceClassification"),
         ("qwen2", "Qwen2ForSequenceClassification"),
-        ("xlm-roberta", "XLMRobertaForSequenceClassification"),
+        ("reformer", "ReformerForSequenceClassification"),
         ("starcoder2", "Starcoder2ForSequenceClassification"),
+        ("xlm-roberta", "XLMRobertaForSequenceClassification"),
     ]
 )
 
