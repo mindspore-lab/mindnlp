@@ -62,6 +62,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ('mt5', 'MT5Config'),
         ("phi", "PhiConfig"),
         ("qwen2", "Qwen2Config"),
+        ("reformer", "ReformerConfig"),
         ("roberta", "RobertaConfig"),
         ("starcoder2", "Starcoder2Config"),
         ('t5', 'T5Config'),

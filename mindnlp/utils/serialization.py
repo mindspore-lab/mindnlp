@@ -280,10 +280,11 @@ class FakeParameter:
     storage: np.ndarray = None
     storage_offset: int = None
     size: tuple = None
+    stride: tuple = None
     requires_grad: bool = None
 
 def _rebuild_tensor_legacy(storage, storage_offset, size, stride, requires_grad, backward_hooks, metadata=None):
-    return FakeParameter(storage, storage_offset, size, requires_grad)
+    return FakeParameter(storage, storage_offset, size, stride, requires_grad)
 
 def _maybe_decode_ascii(bytes_str: Union[bytes, str]) -> str:
     # When using encoding='bytes' in Py3, some **internal** keys stored as
@@ -462,7 +463,14 @@ def _legacy_load(f, pickle_module, **pickle_load_args):
     for k, v in result.items():
         num_elemets = reduce(operator.mul, v.size)
         array = v.storage[v.storage_offset: v.storage_offset + num_elemets]
-        array = array.reshape(v.size)
+        stride = v.stride
+        size = v.size
+        if stride is not None and len(stride) > 1 and stride[0] == 1 and stride[1] > 1:
+            stride = tuple((s * 4 for s in stride))
+            array = np.lib.stride_tricks.as_strided(array, size, stride)
+        else:
+            order = "C"
+            array = array.reshape(size, order=order)
         if array.dtype == bfloat16:
             logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
             array = array.astype(np.float16)
