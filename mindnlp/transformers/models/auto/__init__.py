@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ============================================================================
 """ Auto class."""
 
 from mindnlp.utils import (
@@ -28,6 +29,9 @@ from .configuration_auto import (
 )
 
 from .tokenization_auto import TOKENIZER_MAPPING, AutoTokenizer
+from .feature_extraction_auto import FEATURE_EXTRACTOR_MAPPING, AutoFeatureExtractor
+from .image_processing_auto import IMAGE_PROCESSOR_MAPPING, AutoImageProcessor
+from .processing_auto import PROCESSOR_MAPPING, AutoProcessor
 
 
 from .modeling_auto import (
@@ -106,6 +110,9 @@ __all__ = [
     'AutoConfig',
     'TOKENIZER_MAPPING',
     'AutoTokenizer',
+    "FEATURE_EXTRACTOR_MAPPING", "AutoFeatureExtractor",
+    "IMAGE_PROCESSOR_MAPPING", "AutoImageProcessor",
+    "PROCESSOR_MAPPING", "AutoProcessor",
     'MODEL_FOR_AUDIO_FRAME_CLASSIFICATION_MAPPING',
     'MODEL_FOR_AUDIO_XVECTOR_MAPPING',
     'MODEL_FOR_BACKBONE_MAPPING',

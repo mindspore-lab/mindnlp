@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ============================================================================
 # pylint: disable=C0115
 
 """ Auto Model class."""
@@ -67,6 +68,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("rwkv", "RwkvModel"),
         ("starcoder2", "Starcoder2Model"),
         ("t5", "T5Model"),
+        ("whisper", "WhisperModel"),
         ("xlm-roberta", "XLMRobertaModel"),
     ]
 )
@@ -105,6 +107,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("reformer", "ReformerModelWithLMHead"),
         ("roberta", "RobertaForMaskedLM"),
         ("rwkv", "RwkvForCausalLM"),
+        ("whisper", "WhisperForConditionalGeneration"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
     ]
 )
@@ -133,6 +136,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("roberta", "RobertaLMHeadModel"),
         ("rwkv", "RwkvForCausalLM"),
         ("starcoder2", "Starcoder2ForCausalLM"),
+        ("whisper", "WhisperForCausalLM"),
         ("xlm-roberta", "XLMRobertaForCausalLM"),
     ]
 )
