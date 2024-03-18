@@ -45,7 +45,6 @@ if is_mindspore_available():
         ReformerTokenizer,
     )
 
-mindspore.set_context(pynative_synchronize=True)
 
 class ReformerModelTester:
     def __init__(
@@ -275,8 +274,8 @@ class ReformerModelTester:
             [half_input_ids, ids_tensor((self.batch_size, half_seq_len), self.vocab_size)],
             axis=-1,
         )
-        input_ids_roll = ops.roll(input_ids_roll, roll, dims=-1)
-        attn_mask_roll = ops.roll(attn_mask, roll, dims=-1)
+        input_ids_roll = mindspore.numpy.roll(input_ids_roll, roll, axis=-1)
+        attn_mask_roll = mindspore.numpy.roll(attn_mask, roll, axis=-1)
 
         output_padded = model(input_ids_padded, attention_mask=attn_mask)[0][:, :half_seq_len]
         output_padded_rolled = model(input_ids_roll, attention_mask=attn_mask_roll)[0][:, roll : half_seq_len + roll]

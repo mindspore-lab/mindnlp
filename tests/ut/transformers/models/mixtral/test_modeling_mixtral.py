@@ -37,7 +37,6 @@ if is_mindspore_available():
 
     from mindnlp.transformers import MixtralForCausalLM, MixtralForSequenceClassification, MixtralModel
 
-# mindspore.set_context(pynative_synchronize=True)
 
 class MixtralModelTester:
     # Copied from tests.models.mistral.test_modeling_mistral.MistralModelTester.__init__
