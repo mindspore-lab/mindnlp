@@ -56,12 +56,13 @@ from .text_classification import TextClassificationPipeline
 from .text_generation import TextGenerationPipeline
 from .text2text_generation import Text2TextGenerationPipeline
 from .question_answering import QuestionAnsweringPipeline
+from .automatic_speech_recognition import AutomaticSpeechRecognitionPipeline
 
 from ..models.auto.modeling_auto import (
     # AutoModel,
     # AutoModelForAudioClassification,
     AutoModelForCausalLM,
-    # AutoModelForCTC,
+    AutoModelForCTC,
     # AutoModelForDocumentQuestionAnswering,
     # AutoModelForMaskedLM,
     # AutoModelForMaskGeneration,
@@ -69,7 +70,7 @@ from ..models.auto.modeling_auto import (
     AutoModelForQuestionAnswering,
     AutoModelForSeq2SeqLM,
     AutoModelForSequenceClassification,
-    # AutoModelForSpeechSeq2Seq,
+    AutoModelForSpeechSeq2Seq,
     # AutoModelForTableQuestionAnswering,
     # AutoModelForTextToSpectrogram,
     # AutoModelForTextToWaveform,
@@ -98,6 +99,12 @@ TASK_ALIASES = {
 }
 
 SUPPORTED_TASKS = {
+    "automatic-speech-recognition": {
+        "impl": AutomaticSpeechRecognitionPipeline,
+        "ms": (AutoModelForCTC, AutoModelForSpeechSeq2Seq),
+        "default": {"model": {"ms": ("facebook/wav2vec2-base-960h", "55bb623")}},
+        "type": "multimodal",
+    },
     "text-classification": {
         "impl": TextClassificationPipeline,
         "ms": (AutoModelForSequenceClassification,),
