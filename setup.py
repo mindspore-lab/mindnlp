@@ -125,7 +125,8 @@ setup(
         'regex',
         'easydict',
         'safetensors',
-        'ml_dtypes'
+        'ml_dtypes',
+        'pyctcdecode'
     ],
     classifiers=[
         'License :: OSI Approved :: Apache Software License'

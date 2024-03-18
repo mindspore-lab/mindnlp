@@ -33,6 +33,7 @@ TOKENIZER_CONFIG_FILE = "tokenizer_config.json"
 
 FEATURE_EXTRACTOR_NAME = "preprocessor_config.json"
 IMAGE_PROCESSOR_NAME = FEATURE_EXTRACTOR_NAME
+PROCESSOR_NAME = "processor_config.json"
 
 DEFAULT_ROOT = os.path.join(os.getcwd(), ".mindnlp")
 # for modelscope models
