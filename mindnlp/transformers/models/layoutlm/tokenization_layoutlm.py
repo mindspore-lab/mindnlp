@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=C0103
 # pylint: disable=R0205
 # pylint: disable=R0916
 # pylint: disable=R1716
