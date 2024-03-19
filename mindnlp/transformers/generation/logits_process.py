@@ -1302,7 +1302,7 @@ class WhisperTimeStampLogitsProcessor(LogitsProcessor):
         for k in range(input_ids.shape[0]):
             timestamp_logprob = logprobs[k, self.timestamp_begin :].logsumexp(axis=-1)
             max_text_token_logprob = logprobs[k, : self.timestamp_begin].max()
-            if timestamp_logprob > max_text_token_logprob:
+            if not ops.isnan(timestamp_logprob) and timestamp_logprob > max_text_token_logprob:
                 scores[k, : self.timestamp_begin] = -float("inf")
 
         return scores
