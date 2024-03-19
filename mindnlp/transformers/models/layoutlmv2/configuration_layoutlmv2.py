@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """ LayoutLMv2 model configuration"""
-from mindnlp.utils import is_detectron2_available, logging
+from mindnlp.utils import  logging
 from ...configuration_utils import PretrainedConfig
 
 logger = logging.get_logger(__name__)

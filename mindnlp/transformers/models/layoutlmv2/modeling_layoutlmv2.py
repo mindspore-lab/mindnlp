@@ -30,7 +30,7 @@ from mindspore import nn, Tensor, ops, Parameter
 from mindspore.common.initializer import Normal, initializer, Constant
 from mindspore.nn import CrossEntropyLoss, BCEWithLogitsLoss, MSELoss
 
-from mindnlp.utils import is_detectron2_available, logging, requires_backends
+from mindnlp.utils import logging, requires_backends
 from .visual_backbone import build_resnet_fpn_backbone, read_config
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -846,7 +846,8 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         if attention_mask is None:
             attention_mask = ops.ones(input_shape)
 
-        visual_attention_mask = ops.ones(tuple(visual_shape), dtype=mindspore.int64)
+        visual_attention_mask = ops.ones(tuple(visual_shape), dtype=mindspore.float32)
+        attention_mask = attention_mask.astype(visual_attention_mask.dtype)
         final_attention_mask = ops.cat([attention_mask, visual_attention_mask], axis=1)
 
         if token_type_ids is None:
@@ -860,6 +861,7 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         visual_position_ids = mindspore.Tensor(np.arange(0, visual_shape[1])).broadcast_to(
             (input_shape[0], visual_shape[1])
         )
+        position_ids = position_ids.astype(visual_position_ids.dtype)
         final_position_ids = ops.cat([position_ids, visual_position_ids], axis=1)
 
         if bbox is None:

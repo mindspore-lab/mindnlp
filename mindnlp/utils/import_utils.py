@@ -69,6 +69,7 @@ _pyctcdecode_available = _is_package_available("pyctcdecode")
 _safetensors_available = _is_package_available("safetensors")
 _modelscope_available = _is_package_available("modelscope")
 _jieba_available = _is_package_available("jieba")
+_pytesseract_available = _is_package_available("pytesseract")
 _mindspore_version, _mindspore_available = _is_package_available(
     "mindspore", return_version=True
 )
@@ -143,6 +144,9 @@ def is_scipy_available():
 
 def is_jieba_available():
     return _jieba_available
+
+def is_pytesseract_available():
+    return _pytesseract_available
 
 @lru_cache()
 def is_vision_available():
