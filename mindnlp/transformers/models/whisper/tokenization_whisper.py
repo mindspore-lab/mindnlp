@@ -539,7 +539,7 @@ class WhisperTokenizer(PreTrainedTokenizer):
         outputs = [[]]
         for token in token_ids:
             if token >= timestamp_begin:
-                timestamp = f"<|{(token - timestamp_begin) * time_precision:.2f}|>"
+                timestamp = f"<|{(token.asnumpy() - timestamp_begin) * time_precision:.2f}|>"
                 outputs.append(timestamp)
                 outputs.append([])
             else:
