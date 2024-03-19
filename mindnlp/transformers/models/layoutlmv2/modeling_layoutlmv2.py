@@ -499,28 +499,6 @@ class LayoutLMv2PreTrainedModel(PreTrainedModel):
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
-# def my_convert_sync_batchnorm(module, process_group=None):
-#     # same as `nn.modules.SyncBatchNorm.convert_sync_batchnorm` but allowing converting from `detectron2.layers.FrozenBatchNorm2d`
-#     if isinstance(module, _BatchNorm):
-#         return nn.modules.SyncBatchNorm.convert_sync_batchnorm(module, process_group)
-#     module_output = module
-#     if isinstance(module, detectron2.layers.FrozenBatchNorm2d):
-#         module_output = SyncBatchNorm(
-#             num_features=module.num_features,
-#             epsilon=module.eps,
-#             affine=True,
-#             track_running_stats=True,
-#             process_group=process_group,
-#         )
-#         module_output.weight = Parameter(module.weight)
-#         module_output.bias = Parameter(module.bias)
-#         module_output.running_mean = module.running_mean
-#         module_output.running_var = module.running_var
-#         module_output.num_batches_tracked = mindspore.tensor(0, dtype=mindspore.int64)
-#     for name, child in module.named_children():
-#         module_output.add_module(name, my_convert_sync_batchnorm(child, process_group))
-#     del module
-#     return module_output
 
 
 class LayoutLMv2VisualBackbone(nn.Cell):
@@ -563,27 +541,6 @@ class LayoutLMv2VisualBackbone(nn.Cell):
         features = self.pool(features).flatten(start_axis=2).swapaxes(1, 2).contiguous()
         return features
 
-    # def synchronize_batch_norm(self):
-    #     if not (
-    #             torch.distributed.is_available()
-    #             and torch.distributed.is_initialized()
-    #             and torch.distributed.get_rank() > -1
-    #     ):
-    #         raise RuntimeError("Make sure torch.distributed is set up properly.")
-    #
-    #     self_rank = torch.distributed.get_rank()
-    #     node_size = torch.cuda.device_count()
-    #     world_size = torch.distributed.get_world_size()
-    #     if not (world_size % node_size == 0):
-    #         raise RuntimeError("Make sure the number of processes can be divided by the number of nodes")
-    #
-    #     node_global_ranks = [list(range(i * node_size, (i + 1) * node_size)) for i in range(world_size // node_size)]
-    #     sync_bn_groups = [
-    #         torch.distributed.new_group(ranks=node_global_ranks[i]) for i in range(world_size // node_size)
-    #     ]
-    #     node_rank = self_rank // node_size
-    #
-    #     self.backbone = my_convert_sync_batchnorm(self.backbone, process_group=sync_bn_groups[node_rank])
 
 
 LAYOUTLMV2_START_DOCSTRING = r"""
@@ -727,6 +684,7 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         return embeddings
 
     def _calc_img_embeddings(self, image, bbox, position_ids):
+        # use_image_info = self.use_visual_backbone and image is not None
         use_image_info = image is not None
         position_embeddings = self.embeddings.position_embeddings(position_ids)
         spatial_position_embeddings = self.embeddings._calc_spatial_position_embeddings(
