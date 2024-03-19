@@ -48,6 +48,7 @@ from . import (
     graphormer,
     hubert,
     layoutlm,
+    layoutlmv2,
     llama,
     longformer,
     luke,
@@ -109,6 +110,7 @@ from .gpt2 import *
 from .graphormer import *
 from .hubert import *
 from .layoutlm import *
+from .layoutlmv2 import *
 from .llama import *
 from .longformer import *
 from .luke import *
@@ -170,6 +172,7 @@ __all__.extend(gpt2.__all__)
 __all__.extend(graphormer.__all__)
 __all__.extend(hubert.__all__)
 __all__.extend(layoutlm.__all__)
+__all__.extend(layoutlmv2.__all__)
 __all__.extend(llama.__all__)
 __all__.extend(longformer.__all__)
 __all__.extend(luke.__all__)

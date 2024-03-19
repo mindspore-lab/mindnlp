@@ -1,0 +1,37 @@
+MODEL:
+  BACKBONE:
+    FREEZE_AT: 2
+    DEPTH: 101
+    NORM: BN
+    NUM_GROUPS: 32
+    WIDTH_PER_GROUP: 8
+    STEM_IN_CHANNELS: 3
+    STEM_OUT_CHANNELS: 64
+    RES2_OUT_CHANNELS: 256
+    STRIDE_IN_1X1: False
+    RES5_DILATION: 1
+    NAME: resnet101
+    PRETRAINED: True
+    NUM_CLASSES: 1000
+    OUT_FEATURES:
+      - res2
+      - res3
+      - res4
+      - res5
+  FPN:
+    FUSE_TYPE: sum
+    IN_FEATURES:
+      - res2
+      - res3
+      - res4
+      - res5
+    NORM: ''
+    OUT_CHANNELS: 256
+  PIXEL_MEAN:
+    - 103.53
+    - 116.28
+    - 123.675
+  PIXEL_STD:
+    - 57.375
+    - 57.12
+    - 58.395
