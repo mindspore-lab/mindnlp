@@ -1,3 +1,24 @@
+# Copyright 2024 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+# pylint: disable=superfluous-parens
+# pylint: disable=invalid-name
+# pylint: disable=consider-using-f-string
+# pylint: disable=too-many-return-statements
+"""audio io"""
 import collections
 import io
 import struct
@@ -688,9 +709,8 @@ def read(file, offset=0.0, duration=None):
                         stacklevel=2,
                     )
                     break
-                else:
-                    raise ValueError("Unexpected end of file.")
-            elif len(chunk) < 4:
+                raise ValueError("Unexpected end of file.")
+            if len(chunk) < 4:
                 msg = f"Incomplete chunk ID: {repr(chunk)}"
                 # If we have the data, ignore the broken chunk
                 if fmt_chunk_received and data_chunk_received:
@@ -702,7 +722,7 @@ def read(file, offset=0.0, duration=None):
                 fmt_chunk_received = True
                 fmt_chunk_info = _fmt_chunk(file_to_read, endian)
                 format_tag, channels, samplerate = fmt_chunk_info[0:3]
-                bytes_per_second, block_align, bit_depth = fmt_chunk_info[3:6]
+                _, block_align, bit_depth = fmt_chunk_info[3:6]
 
             elif chunk == b"data":
                 data_chunk_received = True
@@ -803,7 +823,7 @@ def write(file, data, sr):
 
     fs = sr
 
-    if data.dtype == "float64" or data.dtype == "float16":
+    if data.dtype in ('float64', 'float16'):
         data = data.astype(np.float32)
 
     try:
@@ -842,7 +862,7 @@ def write(file, data, sr):
             block_align,
             bit_depth,
         )
-        if not (dkind == "i" or dkind == "u"):
+        if not dkind in ('i', 'u'):
             # add cbSize field for non-PCM files
             fmt_chunk_data += b"\x00\x00"
 
@@ -850,7 +870,7 @@ def write(file, data, sr):
         header_data += fmt_chunk_data
 
         # fact chunk (non-PCM files)
-        if not (dkind == "i" or dkind == "u"):
+        if not dkind in ('i', 'u'):
             header_data += b"fact"
             header_data += struct.pack("<II", 4, data.shape[0])
 
@@ -890,18 +910,17 @@ def pin_memory(data):
     string_classes = (str, bytes)
     if isinstance(data, np.ndarray):
         return data.pin_memory()
-    elif isinstance(data, string_classes):
+    if isinstance(data, string_classes):
         return data
-    elif isinstance(data, collections.abc.Mapping):
+    if isinstance(data, collections.abc.Mapping):
         return {k: pin_memory(sample) for k, sample in data.items()}
-    elif isinstance(data, tuple) and hasattr(data, "_fields"):  # namedtuple
+    if isinstance(data, tuple) and hasattr(data, "_fields"):  # namedtuple
         return type(data)(*(pin_memory(sample) for sample in data))
-    elif isinstance(data, collections.abc.Sequence):
+    if isinstance(data, collections.abc.Sequence):
         return [pin_memory(sample) for sample in data]
-    elif hasattr(data, "pin_memory"):
+    if hasattr(data, "pin_memory"):
         return data.pin_memory()
-    else:
-        return data
+    return data
 
 
 def recursive_to(data, *args, **kwargs):
@@ -911,15 +930,14 @@ def recursive_to(data, *args, **kwargs):
     """
     if isinstance(data, np.ndarray):
         return data.to(*args, **kwargs)
-    elif isinstance(data, collections.abc.Mapping):
+    if isinstance(data, collections.abc.Mapping):
         return {k: recursive_to(sample, *args, **kwargs) for k, sample in data.items()}
-    elif isinstance(data, tuple) and hasattr(data, "_fields"):  # namedtuple
+    if isinstance(data, tuple) and hasattr(data, "_fields"):  # namedtuple
         return type(data)(*(recursive_to(sample, *args, **kwargs) for sample in data))
-    elif isinstance(data, collections.abc.Sequence):
+    if isinstance(data, collections.abc.Sequence):
         return [recursive_to(sample, *args, **kwargs) for sample in data]
-    elif hasattr(data, "to"):
+    if hasattr(data, "to"):
         return data.to(*args, **kwargs)
     # What should be done with unknown data?
     # For now, just return as they are
-    else:
-        return data
+    return data
