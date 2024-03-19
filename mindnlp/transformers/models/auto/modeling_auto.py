@@ -37,6 +37,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("bart", "BartModel"),
         ("bert", "BertModel"),
         ("big_bird", "BigBirdModel"),
+        ("biogpt", "BioGptModel"),
         ("bloom", "BloomModel"),
         ("codegen", "CodeGenModel"),
         ("cpmant", "CpmAntModel"),
@@ -117,6 +118,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         # Model for Causal LM mapping
         ("bert", "BertLMHeadModel"),
         ("big_bird", "BigBirdForCausalLM"),
+        ("biogpt", "BioGptForCausalLM"),
         ("bloom", "BloomForCausalLM"),
         ("codegen", "CodeGenForCausalLM"),
         ("cpmant", "CpmAntForCausalLM"),
@@ -328,6 +330,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("bart", "BartForSequenceClassification"),
         ("bert", "BertForSequenceClassification"),
         ("big_bird", "BigBirdForSequenceClassification"),
+        ("biogpt", "BioGptForSequenceClassification"),
         ("bloom", "BloomForSequenceClassification"),
         ("deberta", "DebertaForSequenceClassification"),
         ("esm", "EsmForSequenceClassification"),
