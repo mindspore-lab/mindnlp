@@ -32,6 +32,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
     [
         # Base model mapping
         ("albert", "AlbertModel"),
+        ("align", "AlignModel"),
         ("autoformer", "AutoformerModel"),
         ("bark", "BarkModel"),
         ("bart", "BartModel"),

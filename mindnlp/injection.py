@@ -960,6 +960,7 @@ nn.Conv1dTranspose = Conv1dTranspose
 nn.Embedding = Embedding
 nn.Dense = Dense
 nn.BatchNorm1d = BatchNorm1d
+nn.BatchNorm2d = BatchNorm1d
 
 
 nn.GroupNorm_original = nn.GroupNorm
