@@ -17,6 +17,7 @@ Models init
 """
 from . import (
     albert,
+    align,
     auto,
     bark,
     bart,
@@ -31,6 +32,7 @@ from . import (
     cpmbee,
     deberta,
     distilbert,
+    efficientnet,
     electra,
     encodec,
     esm,
@@ -80,6 +82,7 @@ from . import (
 )
 
 from .albert import *
+from .align import *
 from .auto import *
 from .bark import *
 from .bart import *
@@ -94,6 +97,7 @@ from .cpmant import *
 from .cpmbee import *
 from .deberta import *
 from .distilbert import *
+from .efficientnet import *
 from .electra import *
 from .encodec import *
 from .esm import *
@@ -143,6 +147,7 @@ from .xlm_roberta import *
 
 __all__ = []
 __all__.extend(albert.__all__)
+__all__.extend(align.__all__)
 __all__.extend(auto.__all__)
 __all__.extend(bart.__all__)
 __all__.extend(bark.__all__)
@@ -157,11 +162,12 @@ __all__.extend(cpmant.__all__)
 __all__.extend(cpmbee.__all__)
 __all__.extend(deberta.__all__)
 __all__.extend(distilbert.__all__)
+__all__.extend(efficientnet.__all__)
+__all__.extend(electra.__all__)
 __all__.extend(encodec.__all__)
 __all__.extend(ernie.__all__)
 __all__.extend(ernie_m.__all__)
 __all__.extend(esm.__all__)
-__all__.extend(electra.__all__)
 __all__.extend(chatglm.__all__)
 __all__.extend(chatglm2.__all__)
 __all__.extend(chatglm3.__all__)

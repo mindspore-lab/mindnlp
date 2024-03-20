@@ -33,6 +33,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
     [
         # Add configs here
         ("albert", "AlbertConfig"),
+        ("align", "AlignConfig"),
         ("autoformer", "AutoformerConfig"),
         ("bark", "BarkConfig"),
         ("bart", "BartConfig"),
