@@ -18,7 +18,10 @@ Models init
 from . import (
     albert,
     align,
+    altclip,
+    audio_spectrogram_transformer,
     auto,
+    autoformer,
     bark,
     bart,
     bert,
@@ -83,7 +86,10 @@ from . import (
 
 from .albert import *
 from .align import *
+from .altclip import *
+from .audio_spectrogram_transformer import *
 from .auto import *
+from .autoformer import *
 from .bark import *
 from .bart import *
 from .bert import *
@@ -148,7 +154,10 @@ from .xlm_roberta import *
 __all__ = []
 __all__.extend(albert.__all__)
 __all__.extend(align.__all__)
+__all__.extend(altclip.__all__)
+__all__.extend(audio_spectrogram_transformer.__all__)
 __all__.extend(auto.__all__)
+__all__.extend(autoformer.__all__)
 __all__.extend(bart.__all__)
 __all__.extend(bark.__all__)
 __all__.extend(bert.__all__)
