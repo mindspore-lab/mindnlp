@@ -13,12 +13,12 @@
 # limitations under the License.
 # ============================================================================
 """Align model."""
-from . import configuration_align, modeling_align, processing_align
-from .configuration_align import *
-from .modeling_align import *
-from .processing_align import *
+from . import configuration_altclip, modeling_altclip, processing_altclip
+from .configuration_altclip import *
+from .modeling_altclip import *
+from .processing_altclip import *
 
 __all__ = []
-__all__.extend(configuration_align.__all__)
-__all__.extend(modeling_align.__all__)
-__all__.extend(processing_align.__all__)
+__all__.extend(configuration_altclip.__all__)
+__all__.extend(modeling_altclip.__all__)
+__all__.extend(processing_altclip.__all__)

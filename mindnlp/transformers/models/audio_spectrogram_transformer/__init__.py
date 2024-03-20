@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Align model."""
-from . import configuration_align, modeling_align, processing_align
-from .configuration_align import *
-from .modeling_align import *
-from .processing_align import *
+"""Audio Spectrgram Transformer model."""
+from . import configuration_audio_spectrogram_transformer, feature_extraction_audio_spectrogram_transformer, modeling_audio_spectrogram_transformer
+from .configuration_audio_spectrogram_transformer import *
+from .feature_extraction_audio_spectrogram_transformer import *
+from .modeling_audio_spectrogram_transformer import *
 
 __all__ = []
-__all__.extend(configuration_align.__all__)
-__all__.extend(modeling_align.__all__)
-__all__.extend(processing_align.__all__)
+__all__.extend(configuration_audio_spectrogram_transformer.__all__)
+__all__.extend(feature_extraction_audio_spectrogram_transformer.__all__)
+__all__.extend(modeling_audio_spectrogram_transformer.__all__)
