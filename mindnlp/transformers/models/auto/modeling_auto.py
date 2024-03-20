@@ -333,6 +333,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("biogpt", "BioGptForSequenceClassification"),
         ("bloom", "BloomForSequenceClassification"),
         ("deberta", "DebertaForSequenceClassification"),
+        ("distilbert", "DistilBertForSequenceClassification"),
         ("esm", "EsmForSequenceClassification"),
         ("falcon", "FalconForSequenceClassification"),
         ('minicpm', 'MiniCPMForSequenceClassification'),
