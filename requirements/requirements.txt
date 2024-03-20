@@ -19,3 +19,4 @@ cython
 jieba
 pretty_midi
 scipy
+pyctcdecode

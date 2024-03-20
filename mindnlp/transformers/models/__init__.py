@@ -22,6 +22,7 @@ from . import (
     bart,
     bert,
     big_bird,
+    biogpt,
     bloom,
     clip,
     codegen,
@@ -72,6 +73,7 @@ from . import (
     t5,
     tinybert,
     wav2vec2,
+    wav2vec2_with_lm,
     whisper,
     xlm,
     xlm_roberta,
@@ -83,6 +85,7 @@ from .bark import *
 from .bart import *
 from .bert import *
 from .big_bird import *
+from .biogpt import *
 from .bloom import *
 from .clip import *
 from .codegen import *
@@ -132,10 +135,11 @@ from .seamless_m4t_v2 import *
 from .starcoder2 import *
 from .tinybert import *
 from .t5 import *
-from .xlm import *
-from .xlm_roberta import *
 from .whisper import *
 from .wav2vec2 import *
+from .wav2vec2_with_lm import *
+from .xlm import *
+from .xlm_roberta import *
 
 __all__ = []
 __all__.extend(albert.__all__)
@@ -144,6 +148,7 @@ __all__.extend(bart.__all__)
 __all__.extend(bark.__all__)
 __all__.extend(bert.__all__)
 __all__.extend(big_bird.__all__)
+__all__.extend(biogpt.__all__)
 __all__.extend(bloom.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
@@ -193,7 +198,8 @@ __all__.extend(seamless_m4t_v2.__all__)
 __all__.extend(starcoder2.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(t5.__all__)
-__all__.extend(xlm.__all__)
-__all__.extend(xlm_roberta.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
+__all__.extend(wav2vec2_with_lm.__all__)
+__all__.extend(xlm.__all__)
+__all__.extend(xlm_roberta.__all__)

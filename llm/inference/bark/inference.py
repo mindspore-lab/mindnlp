@@ -2,7 +2,6 @@ import scipy
 import mindspore
 from IPython.display import Audio
 from mindnlp.transformers.models.bark import BarkModel, BarkProcessor
-mindspore.set_context(pynative_synchronize=True, device_target="CPU")
 
 
 voice_preset = None

@@ -49,7 +49,6 @@ if is_mindspore_available():
         BIG_BIRD_PRETRAINED_MODEL_ARCHIVE_LIST,
     )
 
-# mindspore.set_context(pynative_synchronize=True)
 
 class BigBirdModelTester:
     def __init__(

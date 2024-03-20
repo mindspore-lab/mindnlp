@@ -75,6 +75,7 @@ _mindspore_version, _mindspore_available = _is_package_available(
 
 _librosa_available = _is_package_available("librosa")
 _scipy_available = _is_package_available("scipy")
+_sacremoses_available = _is_package_available("sacremoses")
 
 _pretty_midi_available = importlib.util.find_spec("pretty_midi") is not None
 try:
@@ -89,6 +90,9 @@ try:
     logger.debug(f"Successfully imported essentia version {_essentia_version}")
 except importlib_metadata.PackageNotFoundError:
     _essentia_version = False
+
+def is_sacremoses_available():
+    return _sacremoses_available
 
 def is_mindspore_available():
     return _mindspore_available
@@ -280,6 +284,7 @@ VISION_IMPORT_ERROR = """
 
 BACKENDS_MAPPING = OrderedDict(
     [
+        ("mindspore", (is_mindspore_available, MINDSPORE_IMPORT_ERROR)),
         ("cython", (is_cython_available, CYTHON_IMPORT_ERROR)),
         ("datasets", (is_datasets_available, DATASETS_IMPORT_ERROR)),
         ("protobuf", (is_protobuf_available, PROTOBUF_IMPORT_ERROR)),
