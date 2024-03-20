@@ -46,7 +46,7 @@ class BasicStem(nn.Cell):
         self.max_pool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1, pad_mode="pad")
 
     def construct(self, x):
-        x = self.conv1(x)
+        # x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
         x = self.max_pool(x)

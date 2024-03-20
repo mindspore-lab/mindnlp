@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """ LayoutLMv2 model configuration"""
-from mindnlp.utils import  logging
+from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
 
 logger = logging.get_logger(__name__)
@@ -24,8 +24,8 @@ LAYOUTLMV2_PRETRAINED_CONFIG_ARCHIVE_MAP = {
     # See all LayoutLMv2 models at https://huggingface.co/models?filter=layoutlmv2
 }
 
-# soft dependency
 
+# soft dependency
 
 
 class LayoutLMv2Config(PretrainedConfig):
@@ -142,7 +142,7 @@ class LayoutLMv2Config(PretrainedConfig):
             has_relative_attention_bias=True,
             has_spatial_attention_bias=True,
             has_visual_segment_embedding=False,
-            detectron2_config_args=None,
+            use_visual_backbone=True,
             **kwargs,
     ):
         super().__init__(
@@ -174,6 +174,7 @@ class LayoutLMv2Config(PretrainedConfig):
         self.has_relative_attention_bias = has_relative_attention_bias
         self.has_spatial_attention_bias = has_spatial_attention_bias
         self.has_visual_segment_embedding = has_visual_segment_embedding
+        self.use_visual_backbone = use_visual_backbone
 
     @classmethod
     def get_default_detectron2_config(self):
@@ -205,7 +206,6 @@ class LayoutLMv2Config(PretrainedConfig):
             "MODEL.RESNETS.WIDTH_PER_GROUP": 8,
             "MODEL.RESNETS.STRIDE_IN_1X1": False,
         }
-
 
 
 __all__ = ["LAYOUTLMV2_PRETRAINED_CONFIG_ARCHIVE_MAP", "LayoutLMv2Config"]

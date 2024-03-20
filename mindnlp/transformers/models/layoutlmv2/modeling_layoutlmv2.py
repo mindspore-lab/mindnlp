@@ -499,16 +499,9 @@ class LayoutLMv2PreTrainedModel(PreTrainedModel):
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
-
-
 class LayoutLMv2VisualBackbone(nn.Cell):
     def __init__(self, config):
-        super().__init__()
-        # self.cfg = config.get_detectron2_config()
-        # meta_arch = self.cfg.MODEL.META_ARCHITECTURE
-        # model = META_ARCH_REGISTRY.get(meta_arch)(self.cfg)
-        # assert isinstance(model.backbone, detectron2.modeling.backbone.FPN)
-        # self.backbone = model.backbone
+        super(LayoutLMv2VisualBackbone, self).__init__()
         self.cfg = read_config()
         self.backbone = build_resnet_fpn_backbone(self.cfg)
 
@@ -517,30 +510,58 @@ class LayoutLMv2VisualBackbone(nn.Cell):
                 "cfg.model.pixel_mean is not equal with cfg.model.pixel_std."
             )
         num_channels = len(self.cfg.MODEL.PIXEL_MEAN)
+
         self.pixel_mean = Parameter(
-            mindspore.Tensor(self.cfg.MODEL.PIXEL_MEAN).reshape((num_channels, 1, 1)),
+            ms.Tensor(self.cfg.MODEL.PIXEL_MEAN).reshape((num_channels, 1, 1)),
             name="pixel_mean",
             requires_grad=False,
         )
         self.pixel_std = Parameter(
-            mindspore.Tensor(self.cfg.MODEL.PIXEL_STD).reshape((num_channels, 1, 1)),
+            ms.Tensor(self.cfg.MODEL.PIXEL_STD).reshape((num_channels, 1, 1)),
             name="pixel_std",
             requires_grad=False,
         )
-        self.out_feature_key = "p2"
-        # are_deterministic_algorithms_enabled is disabled here
-        self.pool = nn.AdaptiveAvgPool2d(tuple(config.image_feature_pool_shape[:2]))
-        if len(config.image_feature_pool_shape) == 2:
-            config.image_feature_pool_shape.append(self.backbone.output_shape()[self.out_feature_key].channels)
-        assert self.backbone.output_shape()[self.out_feature_key].channels == config.image_feature_pool_shape[2]
 
-    def construct(self, images):
-        images_input = ((images if ops.is_tensor(images) else images.tensor) - self.pixel_mean) / self.pixel_std
-        features = self.backbone(images_input)
-        features = features[self.out_feature_key]
-        features = self.pool(features).flatten(start_axis=2).swapaxes(1, 2).contiguous()
+        self.out_feature_key = "p2"
+        self.pool_shape = tuple(config.image_feature_pool_shape[:2])  # (7,7)
+        if len(config.image_feature_pool_shape) == 2:
+            config.image_feature_pool_shape.append(
+                self.backbone.output_shape()[self.out_feature_key].channels
+            )
+
+        input_shape = (224, 224)
+        outsize = config.image_feature_pool_shape[0]  # (7,7)
+        insize = (input_shape[0] + 4 - 1) // 4
+        shape_info = self.backbone.output_shape()[self.out_feature_key]
+        channels = shape_info.channels
+        stride = insize // outsize
+        kernel = insize - (outsize - 1) * stride
+
+        self.weight = ms.Tensor(np.ones([channels, 1, kernel, kernel]), dtype=ms.float32) / (kernel * kernel)
+        self.conv2d = ops.Conv2D(channels, kernel, stride=stride, group=channels)
+
+    def pool(self, features):
+        """
+        To enhance performance, customize the AdaptiveAvgPool2d layer
+        """
+        features = self.conv2d(features, self.weight)
         return features
 
+    def freeze(self):
+        """
+        Freeze parameters
+        """
+        for param in self.trainable_params():
+            param.requires_grad = False
+
+    def construct(self, images):
+        images_input = (images - self.pixel_mean) / self.pixel_std
+        features = self.backbone(images_input)
+        for item in features:
+            if item[0] == self.out_feature_key:
+                features = item[1]
+        features = self.pool(features)
+        return features.flatten(start_dim=2).transpose(0, 2, 1)
 
 
 LAYOUTLMV2_START_DOCSTRING = r"""
@@ -636,10 +657,11 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         mindspore.set_context(pynative_synchronize=True)
         self.config = config
         self.has_visual_segment_embedding = config.has_visual_segment_embedding
+        self.use_visual_backbone = config.use_visual_backbone
         self.embeddings = LayoutLMv2Embeddings(config)
-
-        self.visual = LayoutLMv2VisualBackbone(config)
-        self.visual_proj = nn.Dense(config.image_feature_pool_shape[-1], config.hidden_size)
+        if self.use_visual_backbone is True:
+            self.visual = LayoutLMv2VisualBackbone(config)
+            self.visual_proj = nn.Dense(config.image_feature_pool_shape[-1], config.hidden_size)
         if self.has_visual_segment_embedding:
             self.visual_segment_embedding = Parameter(nn.Embedding(1, config.hidden_size).weight[0])
         self.visual_LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
@@ -684,8 +706,7 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
         return embeddings
 
     def _calc_img_embeddings(self, image, bbox, position_ids):
-        # use_image_info = self.use_visual_backbone and image is not None
-        use_image_info = image is not None
+        use_image_info = self.use_visual_backbone and image is not None
         position_embeddings = self.embeddings.position_embeddings(position_ids)
         spatial_position_embeddings = self.embeddings._calc_spatial_position_embeddings(
             bbox
