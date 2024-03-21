@@ -16,6 +16,8 @@
 # pylint: disable=missing-class-docstring
 # pylint: disable=no-else-return
 # pylint: disable=arguments-renamed
+# pylint: disable=broad-exception-caught
+"Zero Shot Classification Pipeline"
 import inspect
 from typing import List, Union
 
@@ -47,9 +49,9 @@ class ZeroShotClassificationArgumentHandler(ArgumentHandler):
         if hypothesis_template.format(labels[0]) == hypothesis_template:
             raise ValueError(
                 (
-                    'The provided hypothesis_template "{}" was not able to be formatted with the target labels. '
-                    "Make sure the passed template includes formatting syntax such as {{}} where the label should go."
-                ).format(hypothesis_template)
+                    f'The provided hypothesis_template "{hypothesis_template}" was not able to be formatted with the target labels. '
+                    f'Make sure the passed template includes formatting syntax such as {{}} where the label should go.'
+                )
             )
 
         if isinstance(sequences, str):
@@ -121,7 +123,7 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         return -1
 
     def _parse_and_tokenize(
-        self, sequence_pairs, padding=True, add_special_tokens=True, truncation=TruncationStrategy.ONLY_FIRST, **kwargs
+        self, sequence_pairs, padding=True, add_special_tokens=True, truncation=TruncationStrategy.ONLY_FIRST
     ):
         """
         Parse arguments and tokenize only_first so that hypothesis (label) is not truncated
@@ -142,8 +144,8 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
                 padding=padding,
                 truncation=truncation,
             )
-        except Exception as e:
-            if "too short" in str(e):
+        except Exception as exception:
+            if "too short" in str(exception):
                 # tokenizers might yell that we want to truncate
                 # to a value that is not even reached by the input.
                 # In that case we don't want to truncate.
@@ -158,7 +160,7 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
                     truncation=TruncationStrategy.DO_NOT_TRUNCATE,
                 )
             else:
-                raise e
+                raise exception
 
         return inputs
 
@@ -261,9 +263,9 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
         sequences = [outputs["sequence"] for outputs in model_outputs]
         logits = np.concatenate([output["logits"].numpy() for output in model_outputs])
         num_examples = logits.shape[0]
-        n = len(candidate_labels)
-        num_sequences = num_examples // n
-        reshaped_outputs = logits.reshape((num_sequences, n, -1))
+        num_candidates = len(candidate_labels)
+        num_sequences = num_examples // num_candidates
+        reshaped_outputs = logits.reshape((num_sequences, num_candidates, -1))
 
         if multi_label or len(candidate_labels) == 1:
             # softmax over the entailment vs. contradiction dim for each label independently
