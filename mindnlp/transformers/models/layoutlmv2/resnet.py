@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
+import mindspore
 import numpy as np
 
 from mindspore import nn
@@ -27,6 +28,7 @@ class BasicStem(nn.Cell):
                 See :func:`layers.get_norm` for supported format.
         """
         super().__init__()
+
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.stride = 4
@@ -46,7 +48,7 @@ class BasicStem(nn.Cell):
         self.max_pool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1, pad_mode="pad")
 
     def construct(self, x):
-        # x = self.conv1(x)
+        x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
         x = self.max_pool(x)

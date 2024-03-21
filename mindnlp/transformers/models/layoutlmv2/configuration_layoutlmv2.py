@@ -135,7 +135,6 @@ class LayoutLMv2Config(PretrainedConfig):
             fast_qkv=True,
             max_rel_2d_pos=256,
             rel_2d_pos_bins=64,
-            convert_sync_batchnorm=True,
             image_feature_pool_shape=[7, 7, 256],
             coordinate_size=128,
             shape_size=128,
@@ -167,7 +166,6 @@ class LayoutLMv2Config(PretrainedConfig):
         self.fast_qkv = fast_qkv
         self.max_rel_2d_pos = max_rel_2d_pos
         self.rel_2d_pos_bins = rel_2d_pos_bins
-        self.convert_sync_batchnorm = convert_sync_batchnorm
         self.image_feature_pool_shape = image_feature_pool_shape
         self.coordinate_size = coordinate_size
         self.shape_size = shape_size
@@ -175,37 +173,6 @@ class LayoutLMv2Config(PretrainedConfig):
         self.has_spatial_attention_bias = has_spatial_attention_bias
         self.has_visual_segment_embedding = has_visual_segment_embedding
         self.use_visual_backbone = use_visual_backbone
-
-    @classmethod
-    def get_default_detectron2_config(self):
-        return {
-            "MODEL.MASK_ON": True,
-            "MODEL.PIXEL_STD": [57.375, 57.120, 58.395],
-            "MODEL.BACKBONE.NAME": "build_resnet_fpn_backbone",
-            "MODEL.FPN.IN_FEATURES": ["res2", "res3", "res4", "res5"],
-            "MODEL.ANCHOR_GENERATOR.SIZES": [[32], [64], [128], [256], [512]],
-            "MODEL.RPN.IN_FEATURES": ["p2", "p3", "p4", "p5", "p6"],
-            "MODEL.RPN.PRE_NMS_TOPK_TRAIN": 2000,
-            "MODEL.RPN.PRE_NMS_TOPK_TEST": 1000,
-            "MODEL.RPN.POST_NMS_TOPK_TRAIN": 1000,
-            "MODEL.POST_NMS_TOPK_TEST": 1000,
-            "MODEL.ROI_HEADS.NAME": "StandardROIHeads",
-            "MODEL.ROI_HEADS.NUM_CLASSES": 5,
-            "MODEL.ROI_HEADS.IN_FEATURES": ["p2", "p3", "p4", "p5"],
-            "MODEL.ROI_BOX_HEAD.NAME": "FastRCNNConvFCHead",
-            "MODEL.ROI_BOX_HEAD.NUM_FC": 2,
-            "MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION": 14,
-            "MODEL.ROI_MASK_HEAD.NAME": "MaskRCNNConvUpsampleHead",
-            "MODEL.ROI_MASK_HEAD.NUM_CONV": 4,
-            "MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION": 7,
-            "MODEL.RESNETS.DEPTH": 101,
-            "MODEL.RESNETS.SIZES": [[32], [64], [128], [256], [512]],
-            "MODEL.RESNETS.ASPECT_RATIOS": [[0.5, 1.0, 2.0]],
-            "MODEL.RESNETS.OUT_FEATURES": ["res2", "res3", "res4", "res5"],
-            "MODEL.RESNETS.NUM_GROUPS": 32,
-            "MODEL.RESNETS.WIDTH_PER_GROUP": 8,
-            "MODEL.RESNETS.STRIDE_IN_1X1": False,
-        }
 
 
 __all__ = ["LAYOUTLMV2_PRETRAINED_CONFIG_ARCHIVE_MAP", "LayoutLMv2Config"]

@@ -502,6 +502,7 @@ class LayoutLMv2PreTrainedModel(PreTrainedModel):
 class LayoutLMv2VisualBackbone(nn.Cell):
     def __init__(self, config):
         super(LayoutLMv2VisualBackbone, self).__init__()
+        mindspore.set_context(pynative_synchronize=True)
         self.cfg = read_config()
         self.backbone = build_resnet_fpn_backbone(self.cfg)
 
