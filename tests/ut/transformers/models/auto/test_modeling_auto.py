@@ -24,7 +24,7 @@ import pytest
 
 from mindnlp.transformers import BertConfig, GPT2Model
 from mindnlp.transformers.models.auto.configuration_auto import CONFIG_MAPPING
-from mindnlp.utils import is_mindspore_available
+from mindnlp.utils import is_mindspore_available, is_safetensors_available
 from mindnlp.utils.testing_utils import (
     DUMMY_UNKNOWN_IDENTIFIER,
     SMALL_MODEL_IDENTIFIER,
@@ -103,7 +103,7 @@ class AutoModelTest(unittest.TestCase):
             self.assertEqual(len(loading_info["missing_keys"]), 0)
             # When using PyTorch checkpoint, the expected value is `8`. With `safetensors` checkpoint (if it is
             # installed), the expected value becomes `7`.
-            EXPECTED_NUM_OF_UNEXPECTED_KEYS = 8
+            EXPECTED_NUM_OF_UNEXPECTED_KEYS = 7 if is_safetensors_available() else 8
             self.assertEqual(len(loading_info["unexpected_keys"]), EXPECTED_NUM_OF_UNEXPECTED_KEYS)
             # self.assertEqual(len(loading_info["mismatched_keys"]), 0)
             # self.assertEqual(len(loading_info["error_msgs"]), 0)
