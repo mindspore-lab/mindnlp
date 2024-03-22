@@ -4,6 +4,16 @@
   "build": {
     dockerfile: "Dockerfile",
   },
+  "runArgs": [
+    "-it",
+    "--runtime=nvidia",
+    "-v",
+    "/dev/shm:/dev/shm",
+    "--network=host",
+  ],
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash"
+  },
   "remoteUser": "root",
   // claws: use this option to run as root in container, else you can not save file because the project is in /root
   "containerUser": "root"
