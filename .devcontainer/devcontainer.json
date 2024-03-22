@@ -1,4 +1,10 @@
 // Info https://containers.dev/implementors/json_reference/
 {
   "name": "mindnlp-container",
+  "build": {
+    dockerfile: "Dockerfile",
+  },
+  "remoteUser": "root",
+  // claws: use this option to run as root in container, else you can not save file because the project is in /root
+  "containerUser": "root"
 }
