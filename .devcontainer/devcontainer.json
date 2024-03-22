@@ -9,7 +9,6 @@
     "--runtime=nvidia",
     "-v",
     "/dev/shm:/dev/shm",
-    "--network=host",
   ],
   "settings": {
     "terminal.integrated.shell.linux": "/bin/bash"
