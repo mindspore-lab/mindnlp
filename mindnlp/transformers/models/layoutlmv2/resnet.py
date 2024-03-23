@@ -1,7 +1,24 @@
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+# pylint: disable=invalid-name
+
+"""
+ResNet implementation with MindSpore.
+"""
 from dataclasses import dataclass
 from typing import Optional
 
-import mindspore
 import numpy as np
 
 from mindspore import nn
@@ -9,6 +26,13 @@ from mindspore import nn
 
 @dataclass
 class ShapeSpec:
+    """
+    Attributes:
+        channels (int): number of channels
+        height (int): height of the feature map
+        width (int): width of the feature map
+        stride (int): stride of the feature map
+    """
     channels: Optional[int] = None
     height: Optional[int] = None
     width: Optional[int] = None
@@ -61,7 +85,7 @@ class BasicBlock(nn.Cell):
     with two 3x3 conv layers and a projection shortcut if needed.
     """
 
-    def __init__(self, in_channels, out_channels, *, stride=1, norm="BN"):
+    def __init__(self, in_channels, out_channels, *, stride=1):
         """
         Args:
             in_channels (int): Number of input channels.
@@ -260,11 +284,7 @@ class ResNet(nn.Cell):
         self.stage_names, self.stages = [], []
 
         if out_features is not None:
-            # Avoid keeping unused layers in this module. They consume extra memory
-            # and may cause allreduce to fail
-            num_stages = max(
-                [{"res2": 1, "res3": 2, "res4": 3, "res5": 4}.get(f, 0) for f in out_features]
-            )
+            num_stages = max({'res2': 1, 'res3': 2, 'res4': 3, 'res5': 4}.get(f, 0) for f in out_features)
             stages = stages[:num_stages]
         for i, blocks in enumerate(stages):
             assert len(blocks) > 0, len(blocks)
@@ -323,6 +343,11 @@ class ResNet(nn.Cell):
         return outputs
 
     def output_shape(self):
+        """
+        Returns:
+            dict[str->ShapeSpec]: a dict from feature map names to
+                :class:`ShapeSpec` instances.
+        """
         return {
             name: ShapeSpec(
                 channels=self._out_feature_channels[name], stride=self._out_feature_strides[name]
@@ -439,6 +464,10 @@ class ResNet(nn.Cell):
 
 
 def build_resnet_backbone(cfg):
+    """
+    Args:
+        cfg (CfgNode): configurations
+    """
     stem = BasicStem(
         in_channels=cfg.MODEL.BACKBONE.STEM_IN_CHANNELS,
         out_channels=cfg.MODEL.BACKBONE.STEM_OUT_CHANNELS,
@@ -456,7 +485,7 @@ def build_resnet_backbone(cfg):
     stride_in_1x1 = cfg.MODEL.BACKBONE.STRIDE_IN_1X1
     res5_dilation = cfg.MODEL.BACKBONE.RES5_DILATION
     # fmt: on
-    assert res5_dilation in {1, 2}, "res5_dilation cannot be {}.".format(res5_dilation)
+    assert res5_dilation in {1, 2}, f"res5_dilation cannot be {res5_dilation}."
 
     num_blocks_per_stage = {
         18: [2, 2, 2, 2],

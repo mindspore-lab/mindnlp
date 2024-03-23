@@ -12,6 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=W0237
+# pylint: disable=W0102
+# pylint: disable=W0222
+# pylint: disable=C0103
+# pylint: disable=R1702
 """
 Fast tokenization class for LayoutLMv2. It overwrites 2 methods of the slow tokenizer class, namely _batch_encode_plus
 and _encode_plus, in which the Rust tokenizer is used.
@@ -19,9 +24,8 @@ and _encode_plus, in which the Rust tokenizer is used.
 
 import json
 from typing import Dict, List, Optional, Tuple, Union
-
-from mindnlp.utils import logging
 from tokenizers import normalizers
+from mindnlp.utils import logging
 
 from ...tokenization_utils_base import (
     BatchEncoding,
@@ -36,8 +40,6 @@ from ...tokenization_utils_base import (
 from ...tokenization_utils_fast import PreTrainedTokenizerFast
 
 from .tokenization_layoutlmv2 import (
-    LAYOUTLMV2_ENCODE_KWARGS_DOCSTRING,
-    LAYOUTLMV2_ENCODE_PLUS_ADDITIONAL_KWARGS_DOCSTRING,
     LayoutLMv2Tokenizer,
 )
 
@@ -221,21 +223,18 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
             if isinstance(t, str):
                 # Strings are fine
                 return True
-            elif isinstance(t, (list, tuple)):
+            if isinstance(t, (list, tuple)):
                 # List are fine as long as they are...
                 if len(t) == 0:
                     # ... empty
                     return True
-                elif isinstance(t[0], str):
+                if isinstance(t[0], str):
                     # ... list of strings
                     return True
-                elif isinstance(t[0], (list, tuple)):
+                if isinstance(t[0], (list, tuple)):
                     # ... list with an empty list or with a list of strings
                     return len(t[0]) == 0 or isinstance(t[0][0], str)
-                else:
-                    return False
-            else:
-                return False
+            return False
 
         if text_pair is not None:
             # in case text + text_pair are provided, text = questions, text_pair = words
@@ -301,28 +300,28 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
                 verbose=verbose,
                 **kwargs,
             )
-        else:
-            return self.encode_plus(
-                text=text,
-                text_pair=text_pair,
-                boxes=boxes,
-                word_labels=word_labels,
-                add_special_tokens=add_special_tokens,
-                padding=padding,
-                truncation=truncation,
-                max_length=max_length,
-                stride=stride,
-                pad_to_multiple_of=pad_to_multiple_of,
-                return_tensors=return_tensors,
-                return_token_type_ids=return_token_type_ids,
-                return_attention_mask=return_attention_mask,
-                return_overflowing_tokens=return_overflowing_tokens,
-                return_special_tokens_mask=return_special_tokens_mask,
-                return_offsets_mapping=return_offsets_mapping,
-                return_length=return_length,
-                verbose=verbose,
-                **kwargs,
-            )
+
+        return self.encode_plus(
+            text=text,
+            text_pair=text_pair,
+            boxes=boxes,
+            word_labels=word_labels,
+            add_special_tokens=add_special_tokens,
+            padding=padding,
+            truncation=truncation,
+            max_length=max_length,
+            stride=stride,
+            pad_to_multiple_of=pad_to_multiple_of,
+            return_tensors=return_tensors,
+            return_token_type_ids=return_token_type_ids,
+            return_attention_mask=return_attention_mask,
+            return_overflowing_tokens=return_overflowing_tokens,
+            return_special_tokens_mask=return_special_tokens_mask,
+            return_offsets_mapping=return_offsets_mapping,
+            return_length=return_length,
+            verbose=verbose,
+            **kwargs,
+        )
 
     def batch_encode_plus(
             self,
@@ -555,7 +554,7 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
             else:
                 original_index = batch_index
             token_boxes_example = []
-            for id, sequence_id, word_id in zip(
+            for token_id, sequence_id, word_id in zip(
                     sanitized_tokens["input_ids"][batch_index],
                     sanitized_encodings[batch_index].sequence_ids,
                     sanitized_encodings[batch_index].word_ids,
@@ -566,11 +565,11 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
                     else:
                         token_boxes_example.append(boxes[original_index][word_id])
                 else:
-                    if id == self.cls_token_id:
+                    if token_id == self.cls_token_id:
                         token_boxes_example.append(self.cls_token_box)
-                    elif id == self.sep_token_id:
+                    elif token_id == self.sep_token_id:
                         token_boxes_example.append(self.sep_token_box)
-                    elif id == self.pad_token_id:
+                    elif token_id == self.pad_token_id:
                         token_boxes_example.append(self.pad_token_box)
                     else:
                         raise ValueError("Id not recognized")
@@ -587,7 +586,7 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
                 else:
                     original_index = batch_index
                 labels_example = []
-                for id, offset, word_id in zip(
+                for token_id, offset, word_id in zip(
                         sanitized_tokens["input_ids"][batch_index],
                         sanitized_tokens["offset_mapping"][batch_index],
                         sanitized_encodings[batch_index].word_ids,

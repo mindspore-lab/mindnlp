@@ -12,6 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=W0237
+# pylint: disable=W0102
+# pylint: disable=signature-differs
+# pylint: disable=C0103
+# pylint: disable=R0916
 """Tokenization class for LayoutLMv2."""
 
 import collections
@@ -190,6 +195,15 @@ table = dict.fromkeys(i for i in range(sys.maxunicode) if unicodedata.category(c
 
 
 def subfinder(mylist, pattern):
+    """
+    Args:
+        mylist: A list in which to search for the pattern.
+        pattern: A list that we are trying to find in mylist.
+
+    Returns:
+        The first matching pattern found in mylist and its starting index.
+        If no match is found, returns None and 0.
+    """
     matches = []
     indices = []
     for idx, i in enumerate(range(len(mylist))):
@@ -198,8 +212,7 @@ def subfinder(mylist, pattern):
             indices.append(idx)
     if matches:
         return matches[0], indices[0]
-    else:
-        return None, 0
+    return None, 0
 
 
 class LayoutLMv2Tokenizer(PreTrainedTokenizer):
@@ -295,6 +308,9 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
 
     @property
     def do_lower_case(self):
+        """
+        Whether or not to lowercase the input when tokenizing.
+        """
         return self.basic_tokenizer.do_lower_case
 
     @property
@@ -472,21 +488,18 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
             if isinstance(t, str):
                 # Strings are fine
                 return True
-            elif isinstance(t, (list, tuple)):
+            if isinstance(t, (list, tuple)):
                 # List are fine as long as they are...
                 if len(t) == 0:
                     # ... empty
                     return True
-                elif isinstance(t[0], str):
+                if isinstance(t[0], str):
                     # ... list of strings
                     return True
-                elif isinstance(t[0], (list, tuple)):
+                if isinstance(t[0], (list, tuple)):
                     # ... list with an empty list or with a list of strings
                     return len(t[0]) == 0 or isinstance(t[0][0], str)
-                else:
-                    return False
-            else:
-                return False
+            return False
 
         if text_pair is not None:
             # in case text + text_pair are provided, text = questions, text_pair = words
@@ -552,28 +565,28 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
                 verbose=verbose,
                 **kwargs,
             )
-        else:
-            return self.encode_plus(
-                text=text,
-                text_pair=text_pair,
-                boxes=boxes,
-                word_labels=word_labels,
-                add_special_tokens=add_special_tokens,
-                padding=padding,
-                truncation=truncation,
-                max_length=max_length,
-                stride=stride,
-                pad_to_multiple_of=pad_to_multiple_of,
-                return_tensors=return_tensors,
-                return_token_type_ids=return_token_type_ids,
-                return_attention_mask=return_attention_mask,
-                return_overflowing_tokens=return_overflowing_tokens,
-                return_special_tokens_mask=return_special_tokens_mask,
-                return_offsets_mapping=return_offsets_mapping,
-                return_length=return_length,
-                verbose=verbose,
-                **kwargs,
-            )
+
+        return self.encode_plus(
+            text=text,
+            text_pair=text_pair,
+            boxes=boxes,
+            word_labels=word_labels,
+            add_special_tokens=add_special_tokens,
+            padding=padding,
+            truncation=truncation,
+            max_length=max_length,
+            stride=stride,
+            pad_to_multiple_of=pad_to_multiple_of,
+            return_tensors=return_tensors,
+            return_token_type_ids=return_token_type_ids,
+            return_attention_mask=return_attention_mask,
+            return_overflowing_tokens=return_overflowing_tokens,
+            return_special_tokens_mask=return_special_tokens_mask,
+            return_offsets_mapping=return_offsets_mapping,
+            return_length=return_length,
+            verbose=verbose,
+            **kwargs,
+        )
 
     def batch_encode_plus(
             self,
@@ -1343,7 +1356,7 @@ class LayoutLMv2Tokenizer(PreTrainedTokenizer):
 
 
 # Copied from transformers.models.bert.tokenization_bert.BasicTokenizer
-class BasicTokenizer(object):
+class BasicTokenizer:
     """
     Constructs a BasicTokenizer that will run basic tokenization (punctuation splitting, lower casing, etc.).
 
@@ -1477,14 +1490,14 @@ class BasicTokenizer(object):
         # space-separated words, so they are not treated specially and handled
         # like the all of the other languages.
         if (
-                (cp >= 0x4E00 and cp <= 0x9FFF)
-                or (cp >= 0x3400 and cp <= 0x4DBF)  #
-                or (cp >= 0x20000 and cp <= 0x2A6DF)  #
-                or (cp >= 0x2A700 and cp <= 0x2B73F)  #
-                or (cp >= 0x2B740 and cp <= 0x2B81F)  #
-                or (cp >= 0x2B820 and cp <= 0x2CEAF)  #
-                or (cp >= 0xF900 and cp <= 0xFAFF)
-                or (cp >= 0x2F800 and cp <= 0x2FA1F)  #
+                (0x4E00 <= cp <= 0x9FFF)
+                or (0x3400 <= cp <= 0x4DBF)  #
+                or (0x20000 <= cp <= 0x2A6DF)  #
+                or (0x2A700 <= cp <= 0x2B73F)  #
+                or (0x2B740 <= cp <= 0x2B81F)  #
+                or (0x2B820 <= cp <= 0x2CEAF)  #
+                or (0xF900 <= cp <= 0xFAFF)
+                or (0x2F800 <= cp <= 0x2FA1F)  #
         ):  #
             return True
 
@@ -1505,7 +1518,7 @@ class BasicTokenizer(object):
 
 
 # Copied from transformers.models.bert.tokenization_bert.WordpieceTokenizer
-class WordpieceTokenizer(object):
+class WordpieceTokenizer:
     """Runs WordPiece tokenization."""
 
     def __init__(self, vocab, unk_token, max_input_chars_per_word=100):

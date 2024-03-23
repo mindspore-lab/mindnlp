@@ -12,12 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=C0103
 """Image processor class for LayoutLMv2."""
 
 from typing import Dict, Optional, Union
 
 import numpy as np
-from mindnlp.utils import is_vision_available,  logging, TensorType, requires_backends
+from mindnlp.utils import is_vision_available, logging, TensorType, requires_backends
 from mindnlp.utils.import_utils import is_pytesseract_available
 
 from ...image_processing_utils import BaseImageProcessor, BatchFeature, get_size_dict
@@ -45,6 +46,15 @@ logger = logging.get_logger(__name__)
 
 
 def normalize_box(box, width, height):
+    """
+
+    Args:
+        box:
+        width:
+        height:
+
+    Returns:
+    """
     return [
         int(1000 * (box[0] / width)),
         int(1000 * (box[1] / height)),

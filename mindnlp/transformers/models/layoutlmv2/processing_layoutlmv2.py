@@ -154,6 +154,15 @@ class LayoutLMv2Processor(ProcessorMixin):
         return encoded_inputs
 
     def get_overflowing_images(self, images, overflow_to_sample_mapping):
+        """
+
+        Args:
+            images: List of images
+            overflow_to_sample_mapping: List of indices of samples that have overflowing tokens
+
+        Returns:
+            List of images that correspond to samples with overflowing tokens
+        """
         # in case there's an overflow, ensure each `input_ids` sample is mapped to its corresponding image
         images_with_overflow = []
         for sample_idx in overflow_to_sample_mapping:
@@ -187,6 +196,9 @@ class LayoutLMv2Processor(ProcessorMixin):
 
     @property
     def feature_extractor_class(self):
+        """
+        Deprecated property, will be removed in v5. Use `image_processor_class` instead.
+        """
         warnings.warn(
             "`feature_extractor_class` is deprecated and will be removed in v5. Use `image_processor_class` instead.",
             FutureWarning,
@@ -195,6 +207,9 @@ class LayoutLMv2Processor(ProcessorMixin):
 
     @property
     def feature_extractor(self):
+        """
+        Deprecated property, will be removed in v5. Use `image_processor` instead.
+        """
         warnings.warn(
             "`feature_extractor` is deprecated and will be removed in v5. Use `image_processor` instead.",
             FutureWarning,

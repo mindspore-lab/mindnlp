@@ -1,3 +1,22 @@
+# coding=utf-8
+# Copyright 2021 The HuggingFace Inc. team.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# pylint: disable=C0103
+"""
+visual backbone
+"""
+
 import math
 import os
 
@@ -11,14 +30,23 @@ from .resnet import ShapeSpec, build_resnet_backbone
 
 
 def read_config():
+    """
+    Returns:
+        Dict: config data
+    """
     curr_dir = os.path.dirname(os.path.abspath(__file__))
-    with open(os.path.join(curr_dir, 'visual_backbone.yaml'), 'r') as file:
+    with open(os.path.join(curr_dir, 'visual_backbone.yaml'), 'r', encoding='utf-8') as file:
         data = yaml.safe_load(file)
         data = Dict(data)
     return data
 
 
 def build_resnet_fpn_backbone(cfg):
+    """
+
+    Args:
+        cfg (Dict): config data
+    """
     bottom_up = build_resnet_backbone(cfg)
     in_features = cfg.MODEL.FPN.IN_FEATURES
     out_channels = cfg.MODEL.FPN.OUT_CHANNELS
@@ -34,6 +62,11 @@ def build_resnet_fpn_backbone(cfg):
 
 
 class LastLevelMaxPool(nn.Cell):
+    """
+    Returns:
+        List: max pool result
+    """
+
     def __init__(self):
         super().__init__()
         self.num_levels = 1
@@ -44,6 +77,20 @@ class LastLevelMaxPool(nn.Cell):
 
 
 class FPN(nn.Cell):
+    """
+
+    Args:
+        bottom_up (Cell): bottom up network
+        in_features (List): input features
+        out_channels (int): output channels
+        norm (str): normalization
+        top_block (Cell): top block
+        fuse_type (str): fuse type
+        square_pad (int): square pad
+
+    Returns:
+    """
+
     def __init__(self,
                  bottom_up,
                  in_features,
@@ -52,7 +99,7 @@ class FPN(nn.Cell):
                  top_block=None,
                  fuse_type="sum",
                  square_pad=0):
-        super(FPN, self).__init__()
+        super().__init__()
         assert in_features, in_features
 
         input_shapes = bottom_up.output_shape()
@@ -78,10 +125,10 @@ class FPN(nn.Cell):
         self.in_features = tuple(in_features)
         self.bottom_up = bottom_up
 
-        self._out_feature_strides = {"p{}".format(int(math.log2(s))): s for s in strides}
+        self._out_feature_strides = {f"p{int(math.log2(s))}": s for s in strides}
         if self.top_block is not None:
             for s in range(stage, stage + self.top_block.num_levels):
-                self._out_feature_strides["p{}".format(s + 1)] = 2 ** (s + 1)
+                self._out_feature_strides[f"p{s + 1}"] = 2 ** (s + 1)
 
         self._out_features = list(self._out_feature_strides.keys())
         self._out_feature_channels = {k: out_channels for k in self._out_features}
@@ -91,13 +138,22 @@ class FPN(nn.Cell):
 
     @property
     def size_divisibility(self):
+        """
+        Returns:
+        """
         return self._size_divisibility
 
     @property
     def padding_constraints(self):
+        """
+        Returns:
+        """
         return {"square_size": self._square_pad}
 
     def output_shape(self):
+        """
+        Returns:
+        """
         return {
             name: ShapeSpec(
                 channels=self._out_feature_channels[name], stride=self._out_feature_strides[name]
@@ -118,7 +174,7 @@ class FPN(nn.Cell):
                 features = self.in_features[-idx - 1]
                 features = bottom_up_features[features]
                 old_shape = list(prev_features.shape)[2:]
-                new_size = tuple([2 * i for i in old_shape])
+                new_size = tuple(2 * i for i in old_shape)
                 top_down_features = ops.ResizeNearestNeighbor(size=new_size)(prev_features)
                 lateral_features = lateral_conv(features)
                 prev_features = lateral_features + top_down_features
@@ -134,4 +190,4 @@ class FPN(nn.Cell):
 
         assert len(self._out_features) == len(results)
 
-        return tuple([(f, res) for f, res in zip(self._out_features, results)])
+        return tuple((f, res) for f, res in zip(self._out_features, results))

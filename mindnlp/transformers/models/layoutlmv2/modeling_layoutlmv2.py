@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2021 Microsoft Research The HuggingFace Inc. team. All rights reserved.
+# Copyright 2018 The Microsoft Research Asia LayoutLM Team Authors and the HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,25 +12,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" PyTorch LayoutLMv2 model."""
+# pylint: disable=C0103
+# pylint: disable=C0116
+# pylint: disable=R1725
+# pylint: disable=R1720
+# pylint: disable=R1714
+# pylint: disable=W0237
+# pylint: disable=W0613
+""" Mindnlp LayoutLMv2 model."""
 
 import math
-from abc import abstractmethod
 from typing import Optional, Tuple, Union
 
 import mindspore
-import mindspore as ms
 import numpy as np
-# from detectron2.modeling.backbone.fpn import build_resnet_fpn_backbone
-from mindspore.nn.layer.normalization import _BatchNorm
-from mindspore.ops.operations._inner_ops import SyncBatchNorm
-
-from mindnlp.transformers.ms_utils import apply_chunking_to_forward
-from mindspore import nn, Tensor, ops, Parameter
+from mindspore import nn, ops, Parameter, Tensor
 from mindspore.common.initializer import Normal, initializer, Constant
 from mindspore.nn import CrossEntropyLoss, BCEWithLogitsLoss, MSELoss
 
-from mindnlp.utils import logging, requires_backends
+from mindnlp.transformers.ms_utils import apply_chunking_to_forward
+from mindnlp.utils import logging
 from .visual_backbone import build_resnet_fpn_backbone, read_config
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -43,11 +44,6 @@ from ...modeling_outputs import (
 from ...modeling_utils import PreTrainedModel
 from .configuration_layoutlmv2 import LayoutLMv2Config
 
-# soft dependency
-# if is_detectron2_available():
-#     import detectron2
-#     from detectron2.modeling import META_ARCH_REGISTRY
-
 logger = logging.get_logger(__name__)
 
 _CHECKPOINT_FOR_DOC = "microsoft/layoutlmv2-base-uncased"
@@ -56,7 +52,6 @@ _CONFIG_FOR_DOC = "LayoutLMv2Config"
 LAYOUTLMV2_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "microsoft/layoutlmv2-base-uncased",
     "microsoft/layoutlmv2-large-uncased",
-    # See all LayoutLMv2 models at https://huggingface.co/models?filter=layoutlmv2
 ]
 
 
@@ -112,6 +107,10 @@ class LayoutLMv2Embeddings(nn.Cell):
 
 
 class LayoutLMv2SelfAttention(nn.Cell):
+    """
+    LayoutLMv2SelfAttention is the self-attention layer for LayoutLMv2. It is based on the implementation of
+    """
+
     def __init__(self, config):
         super().__init__()
         if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
@@ -184,7 +183,8 @@ class LayoutLMv2SelfAttention(nn.Cell):
         if self.has_spatial_attention_bias:
             attention_scores += rel_2d_pos
         attention_scores = ops.masked_fill(
-            attention_scores.astype(ms.float32), ops.stop_gradient(attention_mask.astype(ms.bool_)), float("-1e10")
+            attention_scores.astype(mindspore.float32), ops.stop_gradient(attention_mask.astype(mindspore.bool_)),
+            float("-1e10")
         )
         attention_probs = ops.softmax(attention_scores, axis=-1, dtype=mindspore.float32).type_as(value_layer)
         # This is actually dropping out entire tokens to attend to, which might
@@ -205,6 +205,10 @@ class LayoutLMv2SelfAttention(nn.Cell):
 
 
 class LayoutLMv2Attention(nn.Cell):
+    """
+    LayoutLMv2Attention is the attention layer for LayoutLMv2. It is based on the implementation of
+    """
+
     def __init__(self, config):
         super().__init__()
         self.self = LayoutLMv2SelfAttention(config)
@@ -233,6 +237,10 @@ class LayoutLMv2Attention(nn.Cell):
 
 
 class LayoutLMv2SelfOutput(nn.Cell):
+    """
+    LayoutLMv2SelfOutput is the output layer for LayoutLMv2Attention. It is based on the implementation of BertSelfOutput.
+    """
+
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -248,6 +256,10 @@ class LayoutLMv2SelfOutput(nn.Cell):
 
 # Copied from transformers.models.bert.modeling_bert.BertIntermediate with Bert->LayoutLMv2
 class LayoutLMv2Intermediate(nn.Cell):
+    """
+    LayoutLMv2Intermediate is a simple feedforward network. It is based on the implementation of BertIntermediate.
+    """
+
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
@@ -264,6 +276,10 @@ class LayoutLMv2Intermediate(nn.Cell):
 
 # Copied from transformers.models.bert.modeling_bert.BertOutput with Bert->LayoutLM
 class LayoutLMv2Output(nn.Cell):
+    """
+    LayoutLMv2Output is the output layer for LayoutLMv2Intermediate. It is based on the implementation of BertOutput.
+    """
+
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
@@ -278,6 +294,10 @@ class LayoutLMv2Output(nn.Cell):
 
 
 class LayoutLMv2Layer(nn.Cell):
+    """
+    LayoutLMv2Layer is made up of self-attention and feedforward network. It is based on the implementation of BertLayer.
+    """
+
     def __init__(self, config):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -326,7 +346,7 @@ def relative_position_bucket(
     ret = 0
     if bidirectional:
         num_buckets //= 2
-        ret += (relative_position > 0).astype(ms.int64) * num_buckets
+        ret += (relative_position > 0).astype(mindspore.int64) * num_buckets
         n = ops.abs(relative_position)
     else:
         n = ops.maximum(
@@ -339,8 +359,9 @@ def relative_position_bucket(
 
     # The other half of the buckets are for logarithmically bigger bins in positions up to max_distance
     val_if_large = max_exact + (
-            ops.log(n.astype(ms.float32) / max_exact) / math.log(max_distance / max_exact) * (num_buckets - max_exact)
-    ).astype(ms.int64)
+            ops.log(n.astype(mindspore.float32) / max_exact) / math.log(max_distance / max_exact) * (
+            num_buckets - max_exact)
+    ).astype(mindspore.int64)
 
     val_if_large = ops.minimum(
         val_if_large, ops.full_like(val_if_large, num_buckets - 1)
@@ -351,6 +372,10 @@ def relative_position_bucket(
 
 
 class LayoutLMv2Encoder(nn.Cell):
+    """
+    LayoutLMv2Encoder is a stack of LayoutLMv2Layer. It is based on the implementation of BertEncoder.
+    """
+
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -500,6 +525,10 @@ class LayoutLMv2PreTrainedModel(PreTrainedModel):
 
 
 class LayoutLMv2VisualBackbone(nn.Cell):
+    """
+    LayoutLMv2VisualBackbone is a visual backbone for LayoutLMv2. It is based on the implementation of VisualBackboneBase.
+    """
+
     def __init__(self, config):
         super(LayoutLMv2VisualBackbone, self).__init__()
         mindspore.set_context(pynative_synchronize=True)
@@ -513,12 +542,12 @@ class LayoutLMv2VisualBackbone(nn.Cell):
         num_channels = len(self.cfg.MODEL.PIXEL_MEAN)
 
         self.pixel_mean = Parameter(
-            ms.Tensor(self.cfg.MODEL.PIXEL_MEAN).reshape((num_channels, 1, 1)),
+            mindspore.Tensor(self.cfg.MODEL.PIXEL_MEAN).reshape((num_channels, 1, 1)),
             name="pixel_mean",
             requires_grad=False,
         )
         self.pixel_std = Parameter(
-            ms.Tensor(self.cfg.MODEL.PIXEL_STD).reshape((num_channels, 1, 1)),
+            mindspore.Tensor(self.cfg.MODEL.PIXEL_STD).reshape((num_channels, 1, 1)),
             name="pixel_std",
             requires_grad=False,
         )
@@ -538,7 +567,8 @@ class LayoutLMv2VisualBackbone(nn.Cell):
         stride = insize // outsize
         kernel = insize - (outsize - 1) * stride
 
-        self.weight = ms.Tensor(np.ones([channels, 1, kernel, kernel]), dtype=ms.float32) / (kernel * kernel)
+        self.weight = mindspore.Tensor(np.ones([channels, 1, kernel, kernel]), dtype=mindspore.float32) / (
+                kernel * kernel)
         self.conv2d = ops.Conv2D(channels, kernel, stride=stride, group=channels)
 
     def pool(self, features):
@@ -637,6 +667,10 @@ LAYOUTLMV2_INPUTS_DOCSTRING = r"""
 
 
 class LayoutLMv2Pooler(nn.Cell):
+    """
+    LayoutLMv2Pooler is a simple feedforward network. It is based on the implementation of BertPooler.
+    """
+
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
@@ -652,6 +686,10 @@ class LayoutLMv2Pooler(nn.Cell):
 
 
 class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
+    """
+    LayoutLMv2Model is a LayoutLMv2 model with a visual backbone. It is based on the implementation of LayoutLMv2Model.
+    """
+
     def __init__(self, config):
         super().__init__(config)
         mindspore.set_context(pynative_synchronize=True)
@@ -873,7 +911,8 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
                 head_mask = head_mask.broadcast_to(self.config.num_hidden_layers, -1, -1, -1, -1)
             elif head_mask.dim() == 2:
                 head_mask = head_mask.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
-            head_mask = head_mask.to(dtype=next(self.parameters()).dtype)
+            head_mask_dtype = next(iter(self.parameters_dict().items()))[1].dtype
+            head_mask = head_mask.to(dtype=head_mask_dtype)
         else:
             head_mask = [None] * self.config.num_hidden_layers
 
@@ -902,6 +941,11 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
 
 
 class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
+    """
+    LayoutLMv2ForSequenceClassification is a LayoutLMv2 model with a sequence classification head on top (a linear
+    layer on top of the pooled output) It is based on the implementation of LayoutLMv2ForSequenceClassification.
+    """
+
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1052,7 +1096,7 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
                 loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1).astype(mindspore.int32))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
@@ -1069,6 +1113,10 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
 
 
 class LayoutLMv2ForTokenClassification(LayoutLMv2PreTrainedModel):
+    """
+    LayoutLMv2ForTokenClassification is a LayoutLMv2 model with a token classification head. It is based on the implementation of LayoutLMv2ForTokenClassification.
+    """
+
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -1175,7 +1223,7 @@ class LayoutLMv2ForTokenClassification(LayoutLMv2PreTrainedModel):
         loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()
-            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1).astype(mindspore.int32))
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1190,6 +1238,11 @@ class LayoutLMv2ForTokenClassification(LayoutLMv2PreTrainedModel):
 
 
 class LayoutLMv2ForQuestionAnswering(LayoutLMv2PreTrainedModel):
+    """
+
+    LayoutLMv2ForQuestionAnswering is a LayoutLMv2 model with a question answering head. It is based on the implementation of LayoutLMv2ForQuestionAnswering.
+    """
+
     def __init__(self, config, has_visual_segment_embedding=True):
         super().__init__(config)
         self.num_labels = config.num_labels
