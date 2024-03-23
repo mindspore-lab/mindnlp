@@ -653,7 +653,6 @@ class LayoutLMv2Pooler(nn.Cell):
 
 class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
     def __init__(self, config):
-        # requires_backends(self, "detectron2")
         super().__init__(config)
         mindspore.set_context(pynative_synchronize=True)
         self.config = config
@@ -985,13 +984,11 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
 
         visual_shape = list(input_shape)
         visual_shape[1] = self.config.image_feature_pool_shape[0] * self.config.image_feature_pool_shape[1]
-        visual_shape = ops.Size(visual_shape)
         final_shape = list(input_shape)
         final_shape[1] += visual_shape[1]
-        final_shape = ops.Size(final_shape)
 
         visual_bbox = self.layoutlmv2._calc_visual_bbox(
-            self.config.image_feature_pool_shape, bbox, device, final_shape
+            self.config.image_feature_pool_shape, bbox, final_shape
         )
 
         visual_position_ids = ops.arange(0, visual_shape[1], dtype=mindspore.int64).repeat(
@@ -1316,12 +1313,14 @@ class LayoutLMv2ForQuestionAnswering(LayoutLMv2PreTrainedModel):
             if len(end_positions.shape) > 1:
                 end_positions = end_positions.squeeze(-1)
             # sometimes the start/end positions are outside our model inputs, we ignore these terms
-            ignored_index = start_logits.size(1)
+            ignored_index = start_logits.shape[1]
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
             loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+            start_positions = start_positions.astype(mindspore.int32)
             start_loss = loss_fct(start_logits, start_positions)
+            end_positions = end_positions.astype(mindspore.int32)
             end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 

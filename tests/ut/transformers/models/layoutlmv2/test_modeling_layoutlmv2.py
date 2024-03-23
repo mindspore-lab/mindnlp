@@ -21,7 +21,7 @@ import numpy as np
 
 from mindnlp.utils.testing_utils import slow
 from mindspore import ops, Tensor
-
+from mindspore.ops import functional as F
 from mindnlp.utils import is_mindspore_available, require_mindspore
 
 from ...test_configuration_common import ConfigTester
@@ -76,6 +76,19 @@ class ImageList:
         """
         size = self.image_sizes[idx]
         return self.tensor[idx, ..., : size[0], : size[1]]
+
+    def astype(self, dtype) -> "ImageList":
+        """
+        Returns a new ImageList with the tensor converted to the specified data type.
+
+        Args:
+            dtype: The desired data type.
+
+        Returns:
+            A new ImageList object with the tensor of the specified data type.
+        """
+        new_tensor = self.tensor.astype(dtype)
+        return ImageList(new_tensor, self.image_sizes)
 
     @staticmethod
     def from_tensors(
@@ -217,10 +230,7 @@ class LayoutLMv2ModelTester:
                     bbox[i, j, 2] = bbox[i, j, 0]
                     bbox[i, j, 0] = t
 
-        image = ImageList(
-            ops.zeros(self.batch_size, self.num_channels),
-            self.image_size,
-        )
+        image = ImageList(ops.randn((2, 3, 224, 224)), image_sizes=[(224, 224), (224, 224)]).tensor
 
         input_mask = None
         if self.use_input_mask:
@@ -235,7 +245,12 @@ class LayoutLMv2ModelTester:
         if self.use_labels:
             sequence_labels = ids_tensor([self.batch_size], self.type_sequence_label_size)
             token_labels = ids_tensor([self.batch_size, self.seq_length], self.num_labels)
-
+            # use smaller resnet backbone to make tests faster
+        custom_config = {
+            "MODEL.RESNETS.DEPTH": 18,
+            "MODEL.RESNETS.RES2_OUT_CHANNELS": 64,
+            "MODEL.RESNETS.NUM_GROUPS": 1
+        }
         config = LayoutLMv2Config(
             vocab_size=self.vocab_size,
             hidden_size=self.hidden_size,
@@ -252,12 +267,8 @@ class LayoutLMv2ModelTester:
             image_feature_pool_shape=self.image_feature_pool_shape,
             coordinate_size=self.coordinate_size,
             shape_size=self.shape_size,
+            custom_config=custom_config
         )
-
-        # use smaller resnet backbone to make tests faster
-        config.detectron2_config_args["MODEL.RESNETS.DEPTH"] = 18
-        config.detectron2_config_args["MODEL.RESNETS.RES2_OUT_CHANNELS"] = 64
-        config.detectron2_config_args["MODEL.RESNETS.NUM_GROUPS"] = 1
 
         return config, input_ids, bbox, image, token_type_ids, input_mask, sequence_labels, token_labels
 
@@ -265,7 +276,7 @@ class LayoutLMv2ModelTester:
             self, config, input_ids, bbox, image, token_type_ids, input_mask, sequence_labels, token_labels
     ):
         model = LayoutLMv2Model(config=config)
-        model.eval()
+        model.set_train(False)
 
         result = model(input_ids, bbox=bbox, image=image, attention_mask=input_mask, token_type_ids=token_type_ids)
         result = model(input_ids, bbox=bbox, image=image, token_type_ids=token_type_ids)
@@ -282,7 +293,7 @@ class LayoutLMv2ModelTester:
         config.num_labels = self.num_labels
         model = LayoutLMv2ForSequenceClassification(config)
 
-        model.eval()
+        model.set_train(False)
         result = model(
             input_ids,
             bbox=bbox,
@@ -298,7 +309,7 @@ class LayoutLMv2ModelTester:
     ):
         config.num_labels = self.num_labels
         model = LayoutLMv2ForTokenClassification(config=config)
-        model.eval()
+        model.set_train(False)
         result = model(
             input_ids,
             bbox=bbox,
@@ -313,7 +324,7 @@ class LayoutLMv2ModelTester:
             self, config, input_ids, bbox, image, token_type_ids, input_mask, sequence_labels, token_labels
     ):
         model = LayoutLMv2ForQuestionAnswering(config=config)
-        model.eval()
+        model.set_train(False)
         result = model(
             input_ids,
             bbox=bbox,
@@ -348,254 +359,230 @@ class LayoutLMv2ModelTester:
         return config, inputs_dict
 
 
-#
-# @require_mindspore
-# class LayoutLMv2ModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase):
-#     test_pruning = False
-#     test_torchscript = True
-#     test_mismatched_shapes = False
-#
-#     all_model_classes = (
-#         (
-#             LayoutLMv2Model,
-#             LayoutLMv2ForSequenceClassification,
-#             LayoutLMv2ForTokenClassification,
-#             LayoutLMv2ForQuestionAnswering,
-#         )
-#         if is_torch_available()
-#         else ()
-#     )
-#     pipeline_model_mapping = (
-#         {"document-question-answering": LayoutLMv2ForQuestionAnswering, "feature-extraction": LayoutLMv2Model}
-#         if is_torch_available()
-#         else {}
-#     )
-#
-#     def setUp(self):
-#         self.model_tester = LayoutLMv2ModelTester(self)
-#         self.config_tester = ConfigTester(self, config_class=LayoutLMv2Config, hidden_size=37)
-#
-#     def test_config(self):
-#         self.config_tester.run_common_tests()
-#
-#     def test_model(self):
-#         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-#         self.model_tester.create_and_check_model(*config_and_inputs)
-#
-#     @require_torch_multi_gpu
-#     @unittest.skip(
-#         reason=(
-#                 "LayoutLMV2 and its dependency `detectron2` have some layers using `add_module` which doesn't work well"
-#                 " with `nn.DataParallel`"
-#         )
-#     )
-#     def test_multi_gpu_data_parallel_forward(self):
-#         pass
-#
-#     def test_model_various_embeddings(self):
-#         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-#         for type in ["absolute", "relative_key", "relative_key_query"]:
-#             config_and_inputs[0].position_embedding_type = type
-#             self.model_tester.create_and_check_model(*config_and_inputs)
-#
-#     def test_for_sequence_classification(self):
-#         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-#         self.model_tester.create_and_check_for_sequence_classification(*config_and_inputs)
-#
-#     def test_for_token_classification(self):
-#         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-#         self.model_tester.create_and_check_for_token_classification(*config_and_inputs)
-#
-#     def test_for_question_answering(self):
-#         config_and_inputs = self.model_tester.prepare_config_and_inputs()
-#         self.model_tester.create_and_check_for_question_answering(*config_and_inputs)
-#
-#     def test_attention_outputs(self):
-#         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
-#         config.return_dict = True
-#
-#         # LayoutLMv2 has a different expected sequence length
-#         expected_seq_len = (
-#                 self.model_tester.seq_length
-#                 + self.model_tester.image_feature_pool_shape[0] * self.model_tester.image_feature_pool_shape[1]
-#         )
-#
-#         for model_class in self.all_model_classes:
-#             inputs_dict["output_attentions"] = True
-#             inputs_dict["output_hidden_states"] = False
-#             config.return_dict = True
-#             model = model_class(config)
-#             model.to(torch_device)
-#             model.eval()
-#             with torch.no_grad():
-#                 outputs = model(**self._prepare_for_class(inputs_dict, model_class))
-#             attentions = outputs.attentions
-#             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
-#
-#             # check that output_attentions also work using config
-#             del inputs_dict["output_attentions"]
-#             config.output_attentions = True
-#             model = model_class(config)
-#             model.to(torch_device)
-#             model.eval()
-#             with torch.no_grad():
-#                 outputs = model(**self._prepare_for_class(inputs_dict, model_class))
-#             attentions = outputs.attentions
-#             self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
-#
-#             self.assertListEqual(
-#                 list(attentions[0].shape[-3:]),
-#                 [self.model_tester.num_attention_heads, expected_seq_len, expected_seq_len],
-#             )
-#             out_len = len(outputs)
-#
-#             # Check attention is always last and order is fine
-#             inputs_dict["output_attentions"] = True
-#             inputs_dict["output_hidden_states"] = True
-#             model = model_class(config)
-#             model.to(torch_device)
-#             model.eval()
-#             with torch.no_grad():
-#                 outputs = model(**self._prepare_for_class(inputs_dict, model_class))
-#
-#             if hasattr(self.model_tester, "num_hidden_states_types"):
-#                 added_hidden_states = self.model_tester.num_hidden_states_types
-#             else:
-#                 added_hidden_states = 1
-#             self.assertEqual(out_len + added_hidden_states, len(outputs))
-#
-#             self_attentions = outputs.attentions
-#
-#             self.assertEqual(len(self_attentions), self.model_tester.num_hidden_layers)
-#             self.assertListEqual(
-#                 list(self_attentions[0].shape[-3:]),
-#                 [self.model_tester.num_attention_heads, expected_seq_len, expected_seq_len],
-#             )
-#
-#     def test_hidden_states_output(self):
-#         def check_hidden_states_output(inputs_dict, config, model_class):
-#             model = model_class(config)
-#             model.to(torch_device)
-#             model.eval()
-#
-#             with torch.no_grad():
-#                 outputs = model(**self._prepare_for_class(inputs_dict, model_class))
-#
-#             hidden_states = outputs.hidden_states
-#
-#             expected_num_layers = getattr(
-#                 self.model_tester, "expected_num_hidden_layers", self.model_tester.num_hidden_layers + 1
-#             )
-#             self.assertEqual(len(hidden_states), expected_num_layers)
-#
-#             # LayoutLMv2 has a different expected sequence length
-#             expected_seq_len = (
-#                     self.model_tester.seq_length
-#                     + self.model_tester.image_feature_pool_shape[0] * self.model_tester.image_feature_pool_shape[1]
-#             )
-#
-#             self.assertListEqual(
-#                 list(hidden_states[0].shape[-2:]),
-#                 [expected_seq_len, self.model_tester.hidden_size],
-#             )
-#
-#         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
-#
-#         for model_class in self.all_model_classes:
-#             inputs_dict["output_hidden_states"] = True
-#             check_hidden_states_output(inputs_dict, config, model_class)
-#
-#             # check that output_hidden_states also work using config
-#             del inputs_dict["output_hidden_states"]
-#             config.output_hidden_states = True
-#
-#             check_hidden_states_output(inputs_dict, config, model_class)
-#
-#     @unittest.skip("We cannot configure detectron2 to output a smaller backbone")
-#     def test_model_is_small(self):
-#         pass
-#
-#     @slow
-#     def test_model_from_pretrained(self):
-#         for model_name in LAYOUTLMV2_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-#             model = LayoutLMv2Model.from_pretrained(model_name)
-#             self.assertIsNotNone(model)
-#
-#     def test_initialization(self):
-#         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
-#
-#         configs_no_init = _config_zero_init(config)
-#         for model_class in self.all_model_classes:
-#             model = model_class(config=configs_no_init)
-#             for name, param in model.named_parameters():
-#                 if "backbone" in name or "visual_segment_embedding" in name:
-#                     continue
-#
-#                 if param.requires_grad:
-#                     self.assertIn(
-#                         ((param.data.mean() * 1e9).round() / 1e9).item(),
-#                         [0.0, 1.0],
-#                         msg=f"Parameter {name} of model {model_class} seems not properly initialized",
-#                     )
-#
-#     def test_batching_equivalence(self):
-#         def equivalence(tensor1, tensor2):
-#             return 1.0 - F.cosine_similarity(tensor1.float().flatten(), tensor2.float().flatten(), dim=0, eps=0)
-#
-#         def recursive_check(batched_object, single_row_object, model_name, key):
-#             if isinstance(batched_object, (list, tuple)):
-#                 for batched_object_value, single_row_object_value in zip(batched_object, single_row_object):
-#                     recursive_check(batched_object_value, single_row_object_value, model_name, key)
-#             elif batched_object is None:
-#                 return
-#             else:
-#                 batched_row = batched_object[:1]
-#                 self.assertFalse(
-#                     torch.isnan(batched_row).any(), f"Batched output has `nan` in {model_name} for key={key}"
-#                 )
-#                 self.assertFalse(
-#                     torch.isinf(batched_row).any(), f"Batched output has `inf` in {model_name} for key={key}"
-#                 )
-#                 self.assertFalse(
-#                     torch.isnan(single_row_object).any(), f"Single row output has `nan` in {model_name} for key={key}"
-#                 )
-#                 self.assertFalse(
-#                     torch.isinf(single_row_object).any(), f"Single row output has `inf` in {model_name} for key={key}"
-#                 )
-#                 self.assertTrue(
-#                     (equivalence(batched_row, single_row_object)) <= 1e-03,
-#                     msg=(
-#                         f"Batched and Single row outputs are not equal in {model_name} for key={key}. "
-#                         f"Difference={equivalence(batched_row, single_row_object)}."
-#                     ),
-#                 )
-#
-#         config, batched_input = self.model_tester.prepare_config_and_inputs_for_common()
-#
-#         for model_class in self.all_model_classes:
-#             config.output_hidden_states = True
-#
-#             model_name = model_class.__name__
-#             batched_input_prepared = self._prepare_for_class(batched_input, model_class)
-#             model = model_class(config).to(torch_device).eval()
-#             batch_size = self.model_tester.batch_size
-#
-#             single_row_input = {}
-#             for key, value in batched_input_prepared.items():
-#                 if isinstance(value, mindspore.Tensor) and value.shape[0] % batch_size == 0:
-#                     single_batch_shape = value.shape[0] // batch_size
-#                     single_row_input[key] = value[:single_batch_shape]
-#                 elif hasattr(value, "tensor"):
-#                     # layoutlmv2uses ImageList intead of pixel values (needs for torchscript)
-#                     single_row_input[key] = value.tensor[:single_batch_shape]
-#
-#             with torch.no_grad():
-#                 model_batched_output = model(**batched_input_prepared)
-#                 model_row_output = model(**single_row_input)
-#
-#             for key in model_batched_output:
-#                 recursive_check(model_batched_output[key], model_row_output[key], model_name, key)
-#
+@require_mindspore
+class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
+    test_pruning = False
+    test_mismatched_shapes = False
+
+    all_model_classes = (
+        (
+            LayoutLMv2Model,
+            LayoutLMv2ForSequenceClassification,
+            LayoutLMv2ForTokenClassification,
+            LayoutLMv2ForQuestionAnswering,
+        )
+    )
+    pipeline_model_mapping = (
+        {"document-question-answering": LayoutLMv2ForQuestionAnswering, "feature-extraction": LayoutLMv2Model}
+    )
+
+    def setUp(self):
+        self.model_tester = LayoutLMv2ModelTester(self)
+        self.config_tester = ConfigTester(self, config_class=LayoutLMv2Config, hidden_size=37)
+
+    def test_config(self):
+        self.config_tester.run_common_tests()
+
+    def test_model(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_model(*config_and_inputs)
+
+    def test_model_various_embeddings(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        for type in ["absolute", "relative_key", "relative_key_query"]:
+            config_and_inputs[0].position_embedding_type = type
+            self.model_tester.create_and_check_model(*config_and_inputs)
+
+    def test_for_sequence_classification(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_for_sequence_classification(*config_and_inputs)
+
+    def test_for_token_classification(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_for_token_classification(*config_and_inputs)
+
+    def test_for_question_answering(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_for_question_answering(*config_and_inputs)
+
+    def test_attention_outputs(self):
+        config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
+        config.return_dict = True
+
+        # LayoutLMv2 has a different expected sequence length
+        expected_seq_len = (
+                self.model_tester.seq_length
+                + self.model_tester.image_feature_pool_shape[0] * self.model_tester.image_feature_pool_shape[1]
+        )
+
+        for model_class in self.all_model_classes:
+            inputs_dict["output_attentions"] = True
+            inputs_dict["output_hidden_states"] = False
+            config.return_dict = True
+            model = model_class(config)
+
+            model.set_train(False)
+
+            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            attentions = outputs.attentions
+            self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
+
+            # check that output_attentions also work using config
+            del inputs_dict["output_attentions"]
+            config.output_attentions = True
+            model = model_class(config)
+            model.set_train(False)
+
+            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+            attentions = outputs.attentions
+            self.assertEqual(len(attentions), self.model_tester.num_hidden_layers)
+
+            self.assertListEqual(
+                list(attentions[0].shape[-3:]),
+                [self.model_tester.num_attention_heads, expected_seq_len, expected_seq_len],
+            )
+            out_len = len(outputs)
+
+            # Check attention is always last and order is fine
+            inputs_dict["output_attentions"] = True
+            inputs_dict["output_hidden_states"] = True
+            model = model_class(config)
+            model.set_train(False)
+
+            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+
+            if hasattr(self.model_tester, "num_hidden_states_types"):
+                added_hidden_states = self.model_tester.num_hidden_states_types
+            else:
+                added_hidden_states = 1
+            self.assertEqual(out_len + added_hidden_states, len(outputs))
+
+            self_attentions = outputs.attentions
+
+            self.assertEqual(len(self_attentions), self.model_tester.num_hidden_layers)
+            self.assertListEqual(
+                list(self_attentions[0].shape[-3:]),
+                [self.model_tester.num_attention_heads, expected_seq_len, expected_seq_len],
+            )
+
+    def test_hidden_states_output(self):
+        def check_hidden_states_output(inputs_dict, config, model_class):
+            model = model_class(config)
+
+            model.set_train(False)
+
+            outputs = model(**self._prepare_for_class(inputs_dict, model_class))
+
+            hidden_states = outputs.hidden_states
+
+            expected_num_layers = getattr(
+                self.model_tester, "expected_num_hidden_layers", self.model_tester.num_hidden_layers + 1
+            )
+            self.assertEqual(len(hidden_states), expected_num_layers)
+
+            # LayoutLMv2 has a different expected sequence length
+            expected_seq_len = (
+                    self.model_tester.seq_length
+                    + self.model_tester.image_feature_pool_shape[0] * self.model_tester.image_feature_pool_shape[1]
+            )
+
+            self.assertListEqual(
+                list(hidden_states[0].shape[-2:]),
+                [expected_seq_len, self.model_tester.hidden_size],
+            )
+
+        config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
+
+        for model_class in self.all_model_classes:
+            inputs_dict["output_hidden_states"] = True
+            check_hidden_states_output(inputs_dict, config, model_class)
+
+            # check that output_hidden_states also work using config
+            del inputs_dict["output_hidden_states"]
+            config.output_hidden_states = True
+
+            check_hidden_states_output(inputs_dict, config, model_class)
+
+    @slow
+    def test_model_from_pretrained(self):
+        for model_name in LAYOUTLMV2_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
+            model = LayoutLMv2Model.from_pretrained(model_name)
+            self.assertIsNotNone(model)
+
+    def test_initialization(self):
+        config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
+
+        configs_no_init = _config_zero_init(config)
+        for model_class in self.all_model_classes:
+            model = model_class(config=configs_no_init)
+            for name, param in model.parameters_dict().items():
+                if "backbone" in name or "visual_segment_embedding" in name:
+                    continue
+
+                if param.requires_grad:
+                    self.assertIn(
+                        ((param.data.mean() * 1e9).round() / 1e9).item(),
+                        [0.0, 1.0],
+                        msg=f"Parameter {name} of model {model_class} seems not properly initialized",
+                    )
+
+    def test_batching_equivalence(self):
+        def equivalence(tensor1, tensor2):
+            return 1.0 - F.cosine_similarity(tensor1.float().flatten(), tensor2.float().flatten(), dim=0, eps=0)
+
+        def recursive_check(batched_object, single_row_object, model_name, key):
+            if isinstance(batched_object, (list, tuple)):
+                for batched_object_value, single_row_object_value in zip(batched_object, single_row_object):
+                    recursive_check(batched_object_value, single_row_object_value, model_name, key)
+            elif batched_object is None:
+                return
+            else:
+                batched_row = batched_object[:1]
+                self.assertFalse(
+                    ops.isnan(batched_row).any(), f"Batched output has `nan` in {model_name} for key={key}"
+                )
+                self.assertFalse(
+                    ops.isinf(batched_row).any(), f"Batched output has `inf` in {model_name} for key={key}"
+                )
+                self.assertFalse(
+                    ops.isnan(single_row_object).any(), f"Single row output has `nan` in {model_name} for key={key}"
+                )
+                self.assertFalse(
+                    ops.isinf(single_row_object).any(), f"Single row output has `inf` in {model_name} for key={key}"
+                )
+                self.assertTrue(
+                    (equivalence(batched_row, single_row_object)) <= 1e-03,
+                    msg=(
+                        f"Batched and Single row outputs are not equal in {model_name} for key={key}. "
+                        f"Difference={equivalence(batched_row, single_row_object)}."
+                    ),
+                )
+
+        config, batched_input = self.model_tester.prepare_config_and_inputs_for_common()
+
+        for model_class in self.all_model_classes:
+            config.output_hidden_states = True
+
+            model_name = model_class.__name__
+            batched_input_prepared = self._prepare_for_class(batched_input, model_class)
+            model = model_class(config).set_train(False)
+            batch_size = self.model_tester.batch_size
+
+            single_row_input = {}
+            for key, value in batched_input_prepared.items():
+                if isinstance(value, mindspore.Tensor) and value.shape[0] % batch_size == 0:
+                    single_batch_shape = value.shape[0] // batch_size
+                    single_row_input[key] = value[:single_batch_shape]
+                elif hasattr(value, "tensor"):
+                    # layoutlmv2uses ImageList intead of pixel values (needs for torchscript)
+                    single_row_input[key] = value.tensor[:single_batch_shape]
+
+            model_batched_output = model(**batched_input_prepared)
+            model_row_output = model(**single_row_input)
+
+            for key in model_batched_output:
+                recursive_check(model_batched_output[key], model_row_output[key], model_name, key)
+
 
 def prepare_layoutlmv2_batch_inputs():
     # Here we prepare a batch of 2 sequences to test a LayoutLMv2 forward pass on:
@@ -633,7 +620,7 @@ def prepare_layoutlmv2_batch_inputs():
 
 @require_mindspore
 class LayoutLMv2ModelIntegrationTest(unittest.TestCase):
-    # @slow
+    @slow
     def test_inference_no_head(self):
         model = LayoutLMv2Model.from_pretrained("microsoft/layoutlmv2-base-uncased")
 

@@ -142,6 +142,7 @@ class LayoutLMv2Config(PretrainedConfig):
             has_spatial_attention_bias=True,
             has_visual_segment_embedding=False,
             use_visual_backbone=True,
+            custom_config=None,
             **kwargs,
     ):
         super().__init__(
@@ -173,6 +174,9 @@ class LayoutLMv2Config(PretrainedConfig):
         self.has_spatial_attention_bias = has_spatial_attention_bias
         self.has_visual_segment_embedding = has_visual_segment_embedding
         self.use_visual_backbone = use_visual_backbone
+        if custom_config is not None:
+            for key, value in custom_config.items():
+                setattr(self, key, value)  # 将自定义配置添加到类的属性中
 
 
 __all__ = ["LAYOUTLMV2_PRETRAINED_CONFIG_ARCHIVE_MAP", "LayoutLMv2Config"]

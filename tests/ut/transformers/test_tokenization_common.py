@@ -28,7 +28,7 @@ from collections import OrderedDict
 from itertools import takewhile
 from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
 
-from parameterized import parameterized
+
 
 from mindnlp.transformers import (
     AlbertTokenizer,
@@ -656,7 +656,7 @@ class TokenizerTesterMixin:
                 self.assertListEqual(getattr(tokenizer, "additional_special_tokens"), [token_to_test_setters])
                 self.assertListEqual(getattr(tokenizer, "additional_special_tokens_ids"), [token_id_to_test_setters])
 
-    @parameterized.expand([(True,), (False,)])
+
     def test_tokenizers_special_tokens_properties_unset(self, verbose):
         tokenizers = self.get_tokenizers(verbose=verbose)
         for tokenizer in tokenizers:
