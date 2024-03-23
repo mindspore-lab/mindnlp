@@ -27,8 +27,6 @@ from typing import Optional, Union
 
 from mindnlp import transformers
 from mindnlp.utils import logging
-import mindnlp.transformers.models.auto as auto_module
-
 
 logger = logging.get_logger(__name__)
 
@@ -210,7 +208,7 @@ class ProcessorMixin:
         if not isinstance(auto_class, str):
             auto_class = auto_class.__name__
 
-        if not hasattr(auto_module, auto_class):
+        if not hasattr(transformers.models.auto, auto_class):
             raise ValueError(f"{auto_class} is not a valid auto class.")
 
         cls._auto_class = auto_class

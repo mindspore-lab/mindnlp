@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ============================================================================
 # pylint: disable=C0116
 # pylint: disable=C0103
 """ Auto Config class."""
@@ -31,11 +32,15 @@ CONFIG_MAPPING_NAMES = OrderedDict(
     [
         # Add configs here
         ("albert", "AlbertConfig"),
+        ("align", "AlignConfig"),
+        ("altclip", "AltCLIPConfig"),
+        ("audio-spectrogram-transformer", "ASTConfig"),
         ("autoformer", "AutoformerConfig"),
         ("bark", "BarkConfig"),
         ("bart", "BartConfig"),
         ("bert", "BertConfig"),
         ("big_bird", "BigBirdConfig"),
+        ("biogpt", "BioGptConfig"),
         ("bloom", "BloomConfig"),
         ('chatglm', 'ChatGLMConfig'),
         ("clip", "CLIPConfig"),
@@ -66,6 +71,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("starcoder2", "Starcoder2Config"),
         ('t5', 'T5Config'),
         ('wav2vec2', 'Wav2Vec2Config'),
+        ("whisper", "WhisperConfig"),
         ('xlm-roberta', 'XLMRobertaConfig'),
         ("layoutlmv2", "LayoutLMv2Config"),
     ]

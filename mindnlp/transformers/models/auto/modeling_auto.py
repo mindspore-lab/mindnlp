@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ============================================================================
 # pylint: disable=C0115
 
 """ Auto Model class."""
@@ -31,11 +32,15 @@ MODEL_MAPPING_NAMES = OrderedDict(
     [
         # Base model mapping
         ("albert", "AlbertModel"),
+        ("align", "AlignModel"),
+        ("altclip", "AltCLIPModel"),
+        ("audio-spectrogram-transformer", "ASTModel"),
         ("autoformer", "AutoformerModel"),
         ("bark", "BarkModel"),
         ("bart", "BartModel"),
         ("bert", "BertModel"),
         ("big_bird", "BigBirdModel"),
+        ("biogpt", "BioGptModel"),
         ("bloom", "BloomModel"),
         ("codegen", "CodeGenModel"),
         ("cpmant", "CpmAntModel"),
@@ -68,6 +73,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("rwkv", "RwkvModel"),
         ("starcoder2", "Starcoder2Model"),
         ("t5", "T5Model"),
+        ("whisper", "WhisperModel"),
         ("xlm-roberta", "XLMRobertaModel"),
     ]
 )
@@ -106,6 +112,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("reformer", "ReformerModelWithLMHead"),
         ("roberta", "RobertaForMaskedLM"),
         ("rwkv", "RwkvForCausalLM"),
+        ("whisper", "WhisperForConditionalGeneration"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
     ]
 )
@@ -115,6 +122,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         # Model for Causal LM mapping
         ("bert", "BertLMHeadModel"),
         ("big_bird", "BigBirdForCausalLM"),
+        ("biogpt", "BioGptForCausalLM"),
         ("bloom", "BloomForCausalLM"),
         ("codegen", "CodeGenForCausalLM"),
         ("cpmant", "CpmAntForCausalLM"),
@@ -134,6 +142,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("roberta", "RobertaLMHeadModel"),
         ("rwkv", "RwkvForCausalLM"),
         ("starcoder2", "Starcoder2ForCausalLM"),
+        ("whisper", "WhisperForCausalLM"),
         ("xlm-roberta", "XLMRobertaForCausalLM"),
     ]
 )
@@ -325,8 +334,10 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("bart", "BartForSequenceClassification"),
         ("bert", "BertForSequenceClassification"),
         ("big_bird", "BigBirdForSequenceClassification"),
+        ("biogpt", "BioGptForSequenceClassification"),
         ("bloom", "BloomForSequenceClassification"),
         ("deberta", "DebertaForSequenceClassification"),
+        ("distilbert", "DistilBertForSequenceClassification"),
         ("esm", "EsmForSequenceClassification"),
         ("falcon", "FalconForSequenceClassification"),
         ("layoutlmv2", "LayoutLMv2ForSequenceClassification"),

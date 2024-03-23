@@ -15,14 +15,13 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
 # pylint: disable=broad-exception-caught
-# pylint: disable=missing-module-docstring
 # pylint: disable=redefined-outer-name
 # pylint: disable=consider-using-enumerate
 # pylint: disable=global-variable-undefined
 # pylint: disable=dangerous-default-value
 # pylint: disable=redefined-outer-name
 # pylint: disable=invalid-name
-
+"""squad."""
 from functools import partial
 from multiprocessing import Pool, cpu_count
 

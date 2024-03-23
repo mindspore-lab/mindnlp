@@ -239,6 +239,12 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("megatron-bert", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
         ("mgp-str", ("MgpstrTokenizer", None)),
         (
+            "minicpm",
+            (
+                "LlamaTokenizer" if is_sentencepiece_available() else None,
+                "LlamaTokenizerFast" if is_tokenizers_available() else None,
+            ),
+        ),        (
             "mistral",
             (
                 "LlamaTokenizer" if is_sentencepiece_available() else None,

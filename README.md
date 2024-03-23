@@ -100,6 +100,9 @@ The table below represents the current support in the library for each of those 
 | Model                         | Pynative support    | Graph Support |
 |-------------------------------|---------------------|---------------|
 | ALBERT                        | ✅                | ✅             |
+| ALIGN	                        | ✅                | ❌             |
+| AltCLIP	                    | ✅                | ❌             |
+| Audio Spectrogram Transformer	| ✅                | ❌             |
 | Autoformer                    | ✅ (Inference only)| ❌             |
 | BaiChuan                      | ✅                | ❌             |
 | Bark                          | ✅                | ❌             |
@@ -154,6 +157,7 @@ The table below represents the current support in the library for each of those 
 | Phi2                          | ✅                | ❌             |
 | Pop2piano                     | ✅                | ❌             |
 | Qwen2                         | ✅                | ❌             |
+| Reformer                      | ✅                | ❌             |
 | RegNet                        | Todo               | ❌             |
 | RoBERTa                       | ✅                | ✅             |
 | RWKV                          | ✅                | ❌             |

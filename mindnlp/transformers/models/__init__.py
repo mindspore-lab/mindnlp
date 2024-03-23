@@ -17,11 +17,16 @@ Models init
 """
 from . import (
     albert,
+    align,
+    altclip,
+    audio_spectrogram_transformer,
     auto,
+    autoformer,
     bark,
     bart,
     bert,
     big_bird,
+    biogpt,
     bloom,
     clip,
     codegen,
@@ -30,6 +35,7 @@ from . import (
     cpmbee,
     deberta,
     distilbert,
+    efficientnet,
     electra,
     encodec,
     esm,
@@ -73,17 +79,23 @@ from . import (
     t5,
     tinybert,
     wav2vec2,
+    wav2vec2_with_lm,
     whisper,
     xlm,
     xlm_roberta,
 )
 
 from .albert import *
+from .align import *
+from .altclip import *
+from .audio_spectrogram_transformer import *
 from .auto import *
+from .autoformer import *
 from .bark import *
 from .bart import *
 from .bert import *
 from .big_bird import *
+from .biogpt import *
 from .bloom import *
 from .clip import *
 from .codegen import *
@@ -92,6 +104,7 @@ from .cpmant import *
 from .cpmbee import *
 from .deberta import *
 from .distilbert import *
+from .efficientnet import *
 from .electra import *
 from .encodec import *
 from .esm import *
@@ -134,18 +147,24 @@ from .seamless_m4t_v2 import *
 from .starcoder2 import *
 from .tinybert import *
 from .t5 import *
-from .xlm import *
-from .xlm_roberta import *
 from .whisper import *
 from .wav2vec2 import *
+from .wav2vec2_with_lm import *
+from .xlm import *
+from .xlm_roberta import *
 
 __all__ = []
 __all__.extend(albert.__all__)
+__all__.extend(align.__all__)
+__all__.extend(altclip.__all__)
+__all__.extend(audio_spectrogram_transformer.__all__)
 __all__.extend(auto.__all__)
+__all__.extend(autoformer.__all__)
 __all__.extend(bart.__all__)
 __all__.extend(bark.__all__)
 __all__.extend(bert.__all__)
 __all__.extend(big_bird.__all__)
+__all__.extend(biogpt.__all__)
 __all__.extend(bloom.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
@@ -154,11 +173,12 @@ __all__.extend(cpmant.__all__)
 __all__.extend(cpmbee.__all__)
 __all__.extend(deberta.__all__)
 __all__.extend(distilbert.__all__)
+__all__.extend(efficientnet.__all__)
+__all__.extend(electra.__all__)
 __all__.extend(encodec.__all__)
 __all__.extend(ernie.__all__)
 __all__.extend(ernie_m.__all__)
 __all__.extend(esm.__all__)
-__all__.extend(electra.__all__)
 __all__.extend(chatglm.__all__)
 __all__.extend(chatglm2.__all__)
 __all__.extend(chatglm3.__all__)
@@ -196,7 +216,8 @@ __all__.extend(seamless_m4t_v2.__all__)
 __all__.extend(starcoder2.__all__)
 __all__.extend(tinybert.__all__)
 __all__.extend(t5.__all__)
-__all__.extend(xlm.__all__)
-__all__.extend(xlm_roberta.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
+__all__.extend(wav2vec2_with_lm.__all__)
+__all__.extend(xlm.__all__)
+__all__.extend(xlm_roberta.__all__)
