@@ -14,6 +14,8 @@
 # limitations under the License.
 # pylint: disable=W0102
 """ LayoutLMv2 model configuration"""
+from addict import Dict
+
 from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
 
@@ -143,7 +145,7 @@ class LayoutLMv2Config(PretrainedConfig):
             has_spatial_attention_bias=True,
             has_visual_segment_embedding=False,
             use_visual_backbone=True,
-            custom_config=None,
+            visual_backbone_config_args=None,
             **kwargs,
     ):
         super().__init__(
@@ -175,9 +177,44 @@ class LayoutLMv2Config(PretrainedConfig):
         self.has_spatial_attention_bias = has_spatial_attention_bias
         self.has_visual_segment_embedding = has_visual_segment_embedding
         self.use_visual_backbone = use_visual_backbone
-        if custom_config is not None:
-            for key, value in custom_config.items():
-                setattr(self, key, value)  # 将自定义配置添加到类的属性中
+        self.visual_backbone_config_args = (
+            visual_backbone_config_args if visual_backbone_config_args is not None else self.get_default_visual_backbone_config_args()
+        )
+
+    @classmethod
+    def get_default_visual_backbone_config_args(cls):
+        """
+        Returns:
+            Dict: Default configuration arguments for the visual backbone.
+        """
+        return Dict({
+            "MODEL": {
+                "BACKBONE": {
+                    "FREEZE_AT": 2,
+                    "DEPTH": 101,
+                    "NORM": "BN",
+                    "NUM_GROUPS": 32,
+                    "WIDTH_PER_GROUP": 8,
+                    "STEM_IN_CHANNELS": 3,
+                    "STEM_OUT_CHANNELS": 64,
+                    "RES2_OUT_CHANNELS": 256,
+                    "STRIDE_IN_1X1": False,
+                    "RES5_DILATION": 1,
+                    "NAME": "resnet101",
+                    "PRETRAINED": True,
+                    "NUM_CLASSES": 1000,
+                    "OUT_FEATURES": ["res2", "res3", "res4", "res5"]
+                },
+                "FPN": {
+                    "FUSE_TYPE": "sum",
+                    "IN_FEATURES": ["res2", "res3", "res4", "res5"],
+                    "NORM": "",
+                    "OUT_CHANNELS": 256
+                },
+                "PIXEL_MEAN": [103.53, 116.28, 123.675],
+                "PIXEL_STD": [57.375, 57.12, 58.395]
+            }
+        })
 
 
 __all__ = ["LAYOUTLMV2_PRETRAINED_CONFIG_ARCHIVE_MAP", "LayoutLMv2Config"]

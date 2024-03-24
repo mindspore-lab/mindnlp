@@ -19,6 +19,7 @@
 # pylint: disable=R1714
 # pylint: disable=W0237
 # pylint: disable=W0613
+# pylint: disable=E0401
 """ Mindnlp LayoutLMv2 model."""
 
 import math
@@ -32,7 +33,8 @@ from mindspore.nn import CrossEntropyLoss, BCEWithLogitsLoss, MSELoss
 
 from mindnlp.transformers.ms_utils import apply_chunking_to_forward
 from mindnlp.utils import logging
-from .visual_backbone import build_resnet_fpn_backbone, read_config
+from mindnlp.utils.import_utils import is_mindocr_available
+
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BaseModelOutput,
@@ -43,6 +45,9 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from .configuration_layoutlmv2 import LayoutLMv2Config
+
+if is_mindocr_available():
+    from mindocr.models.backbones.layoutxlm.visual_backbone import build_resnet_fpn_backbone
 
 logger = logging.get_logger(__name__)
 
@@ -532,7 +537,7 @@ class LayoutLMv2VisualBackbone(nn.Cell):
     def __init__(self, config):
         super(LayoutLMv2VisualBackbone, self).__init__()
         mindspore.set_context(pynative_synchronize=True)
-        self.cfg = read_config()
+        self.cfg = config.visual_backbone_config_args
         self.backbone = build_resnet_fpn_backbone(self.cfg)
 
         if len(self.cfg.MODEL.PIXEL_MEAN) != len(self.cfg.MODEL.PIXEL_STD):

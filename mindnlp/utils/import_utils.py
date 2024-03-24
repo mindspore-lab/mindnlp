@@ -44,7 +44,7 @@ logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def _is_package_available(
-    pkg_name: str, return_version: bool = False
+        pkg_name: str, return_version: bool = False
 ) -> Union[Tuple[bool, str], bool]:
     # Check we're not importing a "pkg_name" directory somewhere but the actual library by trying to grab the version
     package_exists = importlib.util.find_spec(pkg_name) is not None
@@ -70,6 +70,7 @@ _safetensors_available = _is_package_available("safetensors")
 _modelscope_available = _is_package_available("modelscope")
 _jieba_available = _is_package_available("jieba")
 _pytesseract_available = _is_package_available("pytesseract")
+_mindocr_available = _is_package_available("mindocr")
 _mindspore_version, _mindspore_available = _is_package_available(
     "mindspore", return_version=True
 )
@@ -92,8 +93,10 @@ try:
 except importlib_metadata.PackageNotFoundError:
     _essentia_version = False
 
+
 def is_sacremoses_available():
     return _sacremoses_available
+
 
 def is_mindspore_available():
     return _mindspore_available
@@ -114,43 +117,60 @@ def is_sentencepiece_available():
 def is_tokenizers_available():
     return _tokenizers_available
 
+
 def is_safetensors_available():
     return _safetensors_available
+
 
 def is_modelscope_available():
     return _modelscope_available
 
+
 def is_cython_available():
     return importlib.util.find_spec("pyximport") is not None
+
 
 def is_protobuf_available():
     if importlib.util.find_spec("google") is None:
         return False
     return importlib.util.find_spec("google.protobuf") is not None
 
+
 def is_pytest_available():
     return _pytest_available
+
 
 def is_pretty_midi_available():
     return _pretty_midi_available
 
+
 def is_librosa_available():
     return _librosa_available
+
 
 def is_essentia_available():
     return _essentia_available
 
+
 def is_pyctcdecode_available():
     return _pyctcdecode_available
+
 
 def is_scipy_available():
     return _scipy_available
 
+
 def is_jieba_available():
     return _jieba_available
 
+
 def is_pytesseract_available():
     return _pytesseract_available
+
+
+def is_mindocr_available():
+    return _mindocr_available
+
 
 @lru_cache()
 def is_vision_available():
@@ -166,6 +186,7 @@ def is_vision_available():
         logger.debug(f"Detected PIL version {package_version}")
     return _pil_available
 
+
 def is_in_notebook():
     try:
         # Test adapted from tqdm.autonotebook: https://github.com/tqdm/tqdm/blob/master/tqdm/autonotebook.py
@@ -175,8 +196,8 @@ def is_in_notebook():
         if "VSCODE_PID" in os.environ:
             raise ImportError("vscode")
         if (
-            "DATABRICKS_RUNTIME_VERSION" in os.environ
-            and os.environ["DATABRICKS_RUNTIME_VERSION"] < "11.0"
+                "DATABRICKS_RUNTIME_VERSION" in os.environ
+                and os.environ["DATABRICKS_RUNTIME_VERSION"] < "11.0"
         ):
             # Databricks Runtime 11.0 and above uses IPython kernel by default so it should be compatible with Jupyter notebook
             # https://docs.microsoft.com/en-us/azure/databricks/notebooks/ipython-kernel
@@ -185,6 +206,7 @@ def is_in_notebook():
         return importlib.util.find_spec("IPython") is not None
     except (AttributeError, ImportError, KeyError):
         return False
+
 
 # docstyle-ignore
 CYTHON_IMPORT_ERROR = """
@@ -209,7 +231,6 @@ working directory, python may try to import this instead of the 🤗 Datasets li
 that python file if that's the case. Please note that you may need to restart your runtime after installation.
 """
 
-
 # docstyle-ignore
 TOKENIZERS_IMPORT_ERROR = """
 {0} requires the 🤗 Tokenizers library but it was not found in your environment. You can install it with:
@@ -223,7 +244,6 @@ In a notebook or a colab, you can install it by executing a cell with
 Please note that you may need to restart your runtime after installation.
 """
 
-
 # docstyle-ignore
 SENTENCEPIECE_IMPORT_ERROR = """
 {0} requires the SentencePiece library but it was not found in your environment. Checkout the instructions on the
@@ -231,14 +251,12 @@ installation page of its repo: https://github.com/google/sentencepiece#installat
 that match your environment. Please note that you may need to restart your runtime after installation.
 """
 
-
 # docstyle-ignore
 PROTOBUF_IMPORT_ERROR = """
 {0} requires the protobuf library but it was not found in your environment. Checkout the instructions on the
 installation page of its repo: https://github.com/protocolbuffers/protobuf/tree/master/python#installation and follow the ones
 that match your environment. Please note that you may need to restart your runtime after installation.
 """
-
 
 # docstyle-ignore
 MINDSPORE_IMPORT_ERROR = """
