@@ -57,6 +57,7 @@ from .text_generation import TextGenerationPipeline
 from .text2text_generation import Text2TextGenerationPipeline
 from .question_answering import QuestionAnsweringPipeline
 from .automatic_speech_recognition import AutomaticSpeechRecognitionPipeline
+from .zero_shot_classification import ZeroShotClassificationArgumentHandler, ZeroShotClassificationPipeline
 
 from ..models.auto.modeling_auto import (
     # AutoModel,
@@ -141,6 +142,19 @@ SUPPORTED_TASKS = {
         "default": {
             "model": {
                 "ms": ("distilbert/distilbert-base-cased-distilled-squad", "626af31"),
+            },
+        },
+        "type": "text",
+    },
+    "zero-shot-classification": {
+        "impl": ZeroShotClassificationPipeline,
+        "ms": (AutoModelForSequenceClassification,),
+        "default": {
+            "model": {
+                "ms": ("facebook/bart-large-mnli", "c626438"),
+            },
+            "config": {
+                "ms": ("facebook/bart-large-mnli", "c626438"),
             },
         },
         "type": "text",
@@ -588,5 +602,6 @@ __all__ = [
     'Text2TextGenerationPipeline',
     'TextGenerationPipeline',
     'QuestionAnsweringPipeline',
+    'ZeroShotClassificationPipeline',
     'pipeline',
 ]
