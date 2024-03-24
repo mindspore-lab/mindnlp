@@ -20,3 +20,4 @@ jieba
 pretty_midi
 scipy
 pyctcdecode
+addict
