@@ -145,7 +145,7 @@ class LayoutLMv2Config(PretrainedConfig):
             has_spatial_attention_bias=True,
             has_visual_segment_embedding=False,
             use_visual_backbone=True,
-            visual_backbone_config_args=None,
+            detectron2_config_args=None,
             **kwargs,
     ):
         super().__init__(
@@ -178,7 +178,7 @@ class LayoutLMv2Config(PretrainedConfig):
         self.has_visual_segment_embedding = has_visual_segment_embedding
         self.use_visual_backbone = use_visual_backbone
         self.visual_backbone_config_args = (
-            visual_backbone_config_args if visual_backbone_config_args is not None else self.get_default_visual_backbone_config_args()
+            detectron2_config_args if detectron2_config_args is not None else self.get_default_visual_backbone_config_args()
         )
 
     @classmethod
