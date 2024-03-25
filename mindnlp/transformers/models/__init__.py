@@ -32,6 +32,7 @@ from . import (
     bert_generation,
     bert_japanese,
     bertweet,
+    bge_m3,
     big_bird,
     biogpt,
     bloom,
@@ -109,6 +110,7 @@ from .bert import *
 from .bert_generation import *
 from .bert_japanese import *
 from .bertweet import *
+from .bge_m3 import *
 from .big_bird import *
 from .biogpt import *
 from .bloom import *
@@ -186,6 +188,7 @@ __all__.extend(bert.__all__)
 __all__.extend(bert_generation.__all__)
 __all__.extend(bert_japanese.__all__)
 __all__.extend(bertweet.__all__)
+__all__.extend(bge_m3.__all__)
 __all__.extend(big_bird.__all__)
 __all__.extend(biogpt.__all__)
 __all__.extend(bloom.__all__)

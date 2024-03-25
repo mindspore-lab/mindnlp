@@ -72,6 +72,14 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
                 "BigBirdTokenizerFast" if is_tokenizers_available() else None,
             ),
         ),
+        (
+            "bge-m3",
+            (
+                "XLMRobertaTokenizer" if is_sentencepiece_available() else None,
+                "XLMRobertaTokenizerFast" if is_tokenizers_available() else None,
+            ),
+        ),
+
         ("bigbird_pegasus", ("PegasusTokenizer", "PegasusTokenizerFast" if is_tokenizers_available() else None)),
         ("biogpt", ("BioGptTokenizer", None)),
         ("blenderbot", ("BlenderbotTokenizer", "BlenderbotTokenizerFast")),
