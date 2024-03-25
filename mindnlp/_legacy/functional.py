@@ -12,16 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=C0103
-# pylint: disable=W0622
-# pylint: disable=E1123
-# pylint: disable=E1120
-# pylint: disable=missing-function-docstring
-# pylint: disable=consider-using-enumerate
-# pylint: disable=unused-argument
-# pylint: disable=too-many-branches
-# pylint: disable=too-many-statements
-
+# pylint: disable=unexpected-keyword-arg
+# pylint: disable=no-value-for-parameter
 """Custom functional api for legacy mindspore"""
 import builtins
 from math import pi
@@ -683,7 +675,7 @@ def argmax(input, dim=None, keepdim=False):
     return out
 
 
-def full(size, fill_value, *, dtype=None):  # pylint: disable=redefined-outer-name
+def full(size, fill_value, *, dtype=None):
     """
     Create a Tensor of the specified shape and fill it with the specified value.
 
@@ -726,14 +718,12 @@ def full(size, fill_value, *, dtype=None):  # pylint: disable=redefined-outer-na
     fill_ = _get_cache_prim(ops.Fill)()
     return fill_(dtype, size, fill_value)
 
-
 def arange(start=0, end=None, step=1, *, dtype=None):
     """inner arange"""
     res = Tensor(np.arange(start, end, step))
     if dtype is not None:
         res = res.astype(dtype)
     return res
-
 
 def where(condition, x, y):
     r"""
@@ -827,7 +817,7 @@ def _calc_broadcast_shape(cond_shape, x_shape, y_shape):
     return tuple(converted_shape)
 
 
-def broadcast_to(input, shape):  # pylint: disable=redefined-outer-name
+def broadcast_to(input, shape):
     """
     Broadcasts input tensor to a given shape. The dim of input shape must be smaller
     than or equal to that of target shape. Suppose input shape is :math:`(x_1, x_2, ..., x_m)`,

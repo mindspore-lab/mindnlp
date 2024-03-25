@@ -13,12 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-# pylint: disable=redefined-builtin
-# pylint: disable=unused-argument
-# pylint: disable=invalid-name
-# pylint: disable=unexpected-keyword-arg
 """ MindSpore DeBERTa model."""
 
 from collections.abc import Sequence
@@ -985,7 +979,7 @@ class DebertaPredictionHeadTransform(nn.Cell):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
-        self.LayerNorm = nn.LayerNorm(self.embedding_size, eps=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(self.embedding_size, epsilon=config.layer_norm_eps)
 
     def construct(self, hidden_states):
         hidden_states = self.dense(hidden_states)

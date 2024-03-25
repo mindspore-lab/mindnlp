@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=inconsistent-return-statements
 """ Tokenization classes for Big Bird model."""
 import os
 from shutil import copyfile

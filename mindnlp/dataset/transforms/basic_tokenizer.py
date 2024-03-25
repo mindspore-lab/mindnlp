@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=import-outside-toplevel
-# pylint: disable=c-extension-no-member
-# pylint: disable=invalid-name
-# pylint: disable=too-many-boolean-expressions
 """
 BasicTokenizer
 """

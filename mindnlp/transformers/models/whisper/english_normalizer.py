@@ -13,12 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
-# pylint: disable=too-many-branches
-# pylint: disable=redefined-builtin
-# pylint: disable=too-many-statements
-# pylint: disable=invalid-name
 """English normalizer."""
 import re
 import unicodedata

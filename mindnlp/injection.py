@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=global-statement
-# pylint: disable=redefined-builtin
-# pylint: disable=invalid-name
-# pylint: disable=unused-argument
 """
 Injection mindspore.nn for MindNLP
 """
@@ -963,9 +959,9 @@ nn.BatchNorm1d = BatchNorm1d
 nn.BatchNorm2d = BatchNorm1d
 
 
-nn.GroupNorm_original = nn.GroupNorm
+GroupNorm_original = nn.GroupNorm
 
-class GroupNorm_hijack(nn.GroupNorm_original):
+class GroupNorm_hijack(GroupNorm_original):
     r"""
     Group Normalization over a mini-batch of inputs.
     """
@@ -983,17 +979,19 @@ class GroupNorm_hijack(nn.GroupNorm_original):
         x = F.reshape(x, (batch, self.num_groups, -1))
         mean = self.reduce_mean(x, 2)
         var = F.div(self.reduce_sum(F.square(F.sub(x, mean)), 2), (channel * height * width / self.num_groups))
-        std = self.sqrt(var + self.eps)     # pylint: disable=redefined-outer-name
-        x = F.div(F.sub(x, mean), std)
+        std_ = self.sqrt(var + self.eps)
+        x = F.div(F.sub(x, mean), std_)
         x = F.reshape(x, (batch, channel, height, width))
         output = F.add(x * F.reshape(self.weight, (-1, 1, 1)), F.reshape(self.bias, (-1, 1, 1)))
         return output
 
     def construct(self, x:Tensor) -> Tensor:
         is_3d_tensor = len(x.shape) == 3        # support 3D tensors [B, C, L]
-        if is_3d_tensor: x = x.unsqueeze(-1)    # pylint: disable=multiple-statements
+        if is_3d_tensor:
+            x = x.unsqueeze(-1)
         o = super().construct(x)
-        if is_3d_tensor: o = o.squeeze(-1)      # pylint: disable=multiple-statements
+        if is_3d_tensor:
+            o = o.squeeze(-1)
         return o
 
 nn.GroupNorm = GroupNorm_hijack

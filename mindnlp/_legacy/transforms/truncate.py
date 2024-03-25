@@ -13,10 +13,6 @@
 # limitations under the License.
 # ============================================================================
 
-# pylint: disable=import-outside-toplevel
-# pylint: disable=c-extension-no-member
-# pylint: disable=invalid-name
-# pylint: disable=too-many-boolean-expressions
 """
 Transforms to process sequence
 """

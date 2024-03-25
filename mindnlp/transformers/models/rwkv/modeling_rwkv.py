@@ -14,11 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=C0103
-# pylint: disable=C0415
-# pylint: disable=W0613
-# pylint: disable=W0223
-# pylint: disable=invalid-unary-operand-type
 
 """MindSpore RWKV model."""
 

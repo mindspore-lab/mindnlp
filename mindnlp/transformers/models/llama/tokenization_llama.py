@@ -17,10 +17,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=invalid-name
-# pylint: disable=missing-function-docstring
-# pylint: disable=unused-argument
-# pylint: disable=inconsistent-return-statements
 """Tokenization classes for LLaMA."""
 import os
 from shutil import copyfile

@@ -14,16 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=global-statement
-# pylint: disable=global-variable-not-assigned
-# pylint: disable=attribute-defined-outside-init
-# pylint: disable=inconsistent-return-statements
-# pylint: disable=missing-function-docstring
-# pylint: disable=invalid-envvar-default
-# pylint: disable=unspecified-encoding
-# pylint: disable=use-maxsplit-arg
-# pylint: disable=logging-fstring-interpolation
 """ Logging utilities."""
 
 import functools
@@ -77,7 +67,7 @@ def _get_default_logging_level():
 
 
 def _get_library_name() -> str:
-    return __name__.split(".")[0]
+    return __name__.split(".")[0] # pylint: disable=use-maxsplit-arg
 
 
 def _get_library_root_logger() -> logging.Logger:
@@ -313,7 +303,7 @@ def warning_advice(self, *args, **kwargs):
     This method is identical to `logger.warning()`, but if env var TRANSFORMERS_NO_ADVISORY_WARNINGS=1 is set, this
     warning will not be printed
     """
-    no_advisory_warnings = os.getenv("NO_ADVISORY_WARNINGS", False)
+    no_advisory_warnings = os.getenv("NO_ADVISORY_WARNINGS", False) # pylint: disable=invalid-envvar-default
     if no_advisory_warnings:
         return
     self.warning(*args, **kwargs)
@@ -340,7 +330,7 @@ logging.Logger.warning_once = warning_once
 class EmptyTqdm:
     """Dummy tqdm which doesn't do anything."""
 
-    def __init__(self, *args, **kwargs):  # pylint: disable=unused-argument
+    def __init__(self, *args, **kwargs):
         self._iterator = args[0] if args else None
 
     def __iter__(self):
@@ -349,9 +339,8 @@ class EmptyTqdm:
     def __getattr__(self, _):
         """Return empty function."""
 
-        def empty_fn(*args, **kwargs):  # pylint: disable=unused-argument
+        def empty_fn(*args, **kwargs):
             return
-
         return empty_fn
 
     def __enter__(self):
@@ -382,7 +371,7 @@ tqdm = _tqdm_cls()
 
 def is_progress_bar_enabled() -> bool:
     """Return a boolean indicating whether tqdm progress bars are enabled."""
-    global _tqdm_active
+    global _tqdm_active # pylint: disable=global-variable-not-assigned
     return bool(_tqdm_active)
 
 

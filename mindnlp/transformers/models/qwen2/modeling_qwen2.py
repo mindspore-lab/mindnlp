@@ -18,11 +18,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-# pylint: disable=invalid-unary-operand-type
-# pylint: disable=invalid-name
-# pylint: disable=arguments-renamed
 """ MindSpore Qwen2 model."""
 import math
 from typing import List, Optional, Tuple, Union

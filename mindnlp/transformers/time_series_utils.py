@@ -37,7 +37,7 @@ class AffineTransformed(TransformedDistribution):
     # todo 
     '''
 
-    def __init__(self, base_distribution: Distribution, loc=None, scale=None, event_dim=0):  # pylint: disable=unused-argument
+    def __init__(self, base_distribution: Distribution, loc=None, scale=None, event_dim=0):
         self.scale = 1.0 if scale is None else scale
         self.loc = 0.0 if loc is None else loc
         super().__init__(AffineTransform(shift=self.loc, scale=self.scale), base_distribution)
@@ -167,7 +167,7 @@ class DistributionOutput:
         raise NotImplementedError()
 
     @staticmethod
-    def squareplus(x: mindspore.Tensor) -> mindspore.Tensor:  # pylint: disable=invalid-name
+    def squareplus(x: mindspore.Tensor) -> mindspore.Tensor:
         r"""
         Helper to map inputs to the positive orthant by applying the square-plus operation. Reference:
         https://twitter.com/jon_barron/status/1387167648669048833
@@ -203,39 +203,3 @@ class NormalOutput(DistributionOutput):
     def domain_map(cls, loc: mindspore.Tensor, scale: mindspore.Tensor):
         scale = cls.squareplus(scale).clamp_min(np.finfo(mindspore.dtype_to_nptype(scale.dtype)).eps)
         return loc.squeeze(-1), scale.squeeze(-1)
-
-# pylint: disable=pointless-string-statement
-"""
-class NegativeBinomialOutput(DistributionOutput):
-    
-    #Negative Binomial distribution output class.
-    
-
-    args_dim: Dict[str, int] = {"total_count": 1, "logits": 1}
-    distribution_class: type = NegativeBinomial
-
-    @classmethod
-    def domain_map(cls, total_count: mindspore.Tensor, logits: mindspore.Tensor):
-        total_count = cls.squareplus(total_count)
-        return total_count.squeeze(-1), logits.squeeze(-1)
-
-    def _base_distribution(self, distr_args) -> Distribution:
-        total_count, logits = distr_args
-        #if self.dim == 1:
-        return self.distribution_class(total_count=total_count, logits=logits)
-        #return Independent(self.distribution_class(total_count=total_count, logits=logits), 1)
-
-    # Overwrites the parent class method. We cannot scale using the affine
-    # transformation since negative binomial should return integers. Instead
-    # we scale the parameters.
-    def distribution(
-        self, distr_args, loc: Optional[mindspore.Tensor] = None, scale: Optional[mindspore.Tensor] = None
-    ) -> Distribution:
-        total_count, logits = distr_args
-
-        if scale is not None:
-            # See scaling property of Gamma.
-            logits += scale.log()
-
-        return self._base_distribution((total_count, logits))
-"""

@@ -13,10 +13,9 @@
 # limitations under the License.
 # ============================================================================
 """MindNLP MindSpore Utils"""
-# pylint: disable=C0412
-# pylint: disable=C0103
 
 import inspect
+from typing import Union, Optional, List, Tuple
 
 import mindspore
 from mindspore import nn, ops, Parameter
@@ -190,7 +189,7 @@ def apply_chunking_to_forward(forward_fn, chunk_size, chunk_axis, *input_tensors
 
 def zero_init(cls, *args, **kwargs):
     """init zeros to speed up initialize stage."""
-    for k in kwargs.keys():# pylint: disable=consider-iterating-dictionary
+    for k in kwargs.keys():
         if 'init' in k:
             kwargs.pop(k)
     init_signature = inspect.signature(cls.__init__)
@@ -198,6 +197,17 @@ def zero_init(cls, *args, **kwargs):
     for param_name in init_params.keys():
         if 'init' in param_name:
             kwargs[param_name] = 'zeros'
-    def _reset_parameters(self): pass # pylint: disable=multiple-statements, unused-argument
+    def _reset_parameters(self):
+        pass
     cls.reset_parameters = _reset_parameters
     return cls(*args, **kwargs)
+
+def meshgrid(
+    *tensors: Union[mindspore.Tensor, List[mindspore.Tensor]], indexing: Optional[str] = None
+) -> Tuple[mindspore.Tensor, ...]:
+    """
+    Wrapper around torch.meshgrid to avoid warning messages about the introduced `indexing` argument.
+
+    Reference: https://pytorch.org/docs/1.13/generated/torch.meshgrid.html
+    """
+    return ops.meshgrid(*list(*tensors), indexing=indexing)

@@ -12,8 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=too-many-locals
-# pylint: disable=dangerous-default-value
 """ SeamlessM4T model configuration"""
 
 from mindnlp.utils import logging

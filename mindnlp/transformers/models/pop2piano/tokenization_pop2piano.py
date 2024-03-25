@@ -14,15 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=arguments-renamed
-# pylint: disable=invalid-unary-operand-type
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
-# pylint: disable=consider-using-enumerate
-# pylint: disable=consider-using-generator
-# pylint: disable=unspecified-encoding
-# pylint: disable=signature-differs
 """Tokenization class for Pop2Piano."""
 
 import json
@@ -265,7 +256,7 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
 
         current_idx = start_idx
         current_velocity = 0
-        note_onsets_ready = [None for i in range(sum([k.endswith("NOTE") for k in self.encoder.keys()]) + 1)]
+        note_onsets_ready = [None for i in range(sum(k.endswith("NOTE") for k in self.encoder.keys()) + 1)]
         notes = []
         for token_type, number in words:
             if token_type == "TOKEN_SPECIAL":

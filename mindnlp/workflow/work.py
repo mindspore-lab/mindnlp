@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=no-member
-# pylint: disable=unexpected-keyword-arg
-# pylint: disable=no-value-for-parameter
 """
 The meta classs of work in Workflow.
 """
@@ -26,7 +23,6 @@ import os
 from abc import abstractmethod
 
 from mindnlp.configs import DEFAULT_ROOT
-from mindnlp.utils import cached_file
 from mindnlp.workflow.utils import cut_chinese_sent
 
 
@@ -120,8 +116,6 @@ class Work(metaclass=abc.ABCMeta):
             downloaded = True
             if not os.path.exists(path=path):
                 downloaded = False
-            if not downloaded:
-                cached_file(filename=file_name, cache_dir=cache_dir, url=url, md5sum=md5)
 
     def _check_predictor_type(self):
         """

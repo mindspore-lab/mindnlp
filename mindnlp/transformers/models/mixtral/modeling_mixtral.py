@@ -18,11 +18,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-function-docstring
-# pylint: disable=invalid-unary-operand-type
-# pylint: disable=arguments-renamed
-# pylint: disable=invalid-name
-# pylint: disable=missing-class-docstring
 """ MindSpore Mixtral model."""
 import math
 from typing import List, Optional, Tuple, Union

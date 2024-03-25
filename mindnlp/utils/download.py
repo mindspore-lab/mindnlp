@@ -12,13 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=unused-argument
-# pylint: disable=simplifiable-if-expression
-# pylint: disable=missing-function-docstring
-# pylint: disable=too-many-return-statements
-# pylint: disable=unspecified-encoding
-# pylint: disable=try-except-raise
 """
 Download functions
 """
@@ -50,12 +43,12 @@ from .errors import (
 )
 from . import logging
 
-logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
+logger = logging.get_logger(__name__)
 
 _CACHED_NO_EXIST = object()
 _CACHED_NO_EXIST_T = Any
 
-_is_offline_mode = True if os.environ.get("TRANSFORMERS_OFFLINE", "0").upper() in ENV_VARS_TRUE_VALUES else False
+_is_offline_mode = os.environ.get("MINDNLP_OFFLINE", "0").upper() in ENV_VARS_TRUE_VALUES
 
 def is_offline_mode():
     return _is_offline_mode

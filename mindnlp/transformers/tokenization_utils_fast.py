@@ -14,10 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-function-docstring
-# pylint: disable=invalid-name
-# pylint: disable=unexpected-keyword-arg
-# pylint: disable=unused-argument
 """
  Tokenization classes for fast tokenizers (provided by HuggingFace's tokenizers library). For slow (python) tokenizers
  see tokenization_utils.py

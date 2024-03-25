@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=C0116
-# pylint: disable=C0103
 """ Auto Config class."""
 import importlib
 import re
@@ -24,8 +22,7 @@ from typing import List, Union
 
 from mindnlp.configs import CONFIG_NAME
 from mindnlp.utils import logging
-from mindnlp.transformers.configuration_utils import PretrainedConfig  # pylint: disable=R0401
-
+from mindnlp.transformers.configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 CONFIG_MAPPING_NAMES = OrderedDict(
@@ -38,6 +35,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("autoformer", "AutoformerConfig"),
         ("bark", "BarkConfig"),
         ("bart", "BartConfig"),
+        ("beit", "BeitConfig"),
         ("bert", "BertConfig"),
         ("big_bird", "BigBirdConfig"),
         ("biogpt", "BioGptConfig"),

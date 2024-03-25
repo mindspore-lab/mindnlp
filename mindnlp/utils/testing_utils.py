@@ -12,18 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=missing-function-docstring
-# pylint: disable=unspecified-encoding
-# pylint: disable=attribute-defined-outside-init
-# pylint: disable=broad-exception-caught
-# pylint: disable=expression-not-assigned
-# pylint: disable=unused-argument
-# pylint: disable=pointless-string-statement
-# pylint: disable=too-many-return-statements
-# pylint: disable=too-many-ancestors
-# pylint: disable=no-else-return
-# pylint: disable=import-outside-toplevel
 """Utils for test cases."""
 import collections
 import contextlib
@@ -764,11 +752,13 @@ def mockenv_context(*remove, **update):
 
     try:
         env.update(update)
-        [env.pop(k, None) for k in remove]
+        for k in remove:
+            env.pop(k, None)
         yield
     finally:
         env.update(update_after)
-        [env.pop(k) for k in remove_after]
+        for k in remove_after:
+            env.pop(k)
 
 
 # --- pytest conf functions --- #
@@ -1203,14 +1193,12 @@ def run_test_in_subprocess(test_case, target_func, inputs=None, timeout=None):
         test_case.fail(f'{results["error"]}')
 
 
-"""
-The following contains utils to run the documentation tests without having to overwrite any files.
+# The following contains utils to run the documentation tests without having to overwrite any files.
 
-The `preprocess_string` function adds `# doctest: +IGNORE_RESULT` markers on the fly anywhere a `load_dataset` call is
-made as a print would otherwise fail the corresonding line.
+# The `preprocess_string` function adds `# doctest: +IGNORE_RESULT` markers on the fly anywhere a `load_dataset` call is
+# made as a print would otherwise fail the corresonding line.
 
-To skip cuda tests, make sure to call `SKIP_CUDA_DOCTEST=1 pytest --doctest-modules <path_to_files_to_test>
-"""
+# To skip cuda tests, make sure to call `SKIP_CUDA_DOCTEST=1 pytest --doctest-modules <path_to_files_to_test>
 
 
 def preprocess_string(string, skip_cuda_tests):

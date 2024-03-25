@@ -13,8 +13,6 @@
 # limitations under the License.
 # ============================================================================
 """Sequence-to-vector basic model"""
-# pylint: disable=abstract-method
-# pylint: disable=arguments-differ
 from mindspore import ops
 from mindnlp._legacy.nn import Dropout
 from .base_model import BaseModel

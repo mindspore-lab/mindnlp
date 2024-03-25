@@ -15,10 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=C0415
-# pylint: disable=C0103
-# pylint: disable=W0237
-# pylint: disable=W0613
 
 """MindSpore XLM-RoBERTa model."""
 import math

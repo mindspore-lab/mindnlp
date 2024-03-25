@@ -12,14 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=invalid-name
-# pylint: disable=missing-function-docstring
-# pylint: disable=too-many-nested-blocks
-# pylint: disable=too-many-boolean-expressions
-# pylint: disable=chained-comparison
-# pylint: disable=logging-fstring-interpolation
-# pylint: disable=dangerous-default-value
-# pylint: disable=unused-argument
+# ============================================================================
 """
  Tokenization classes for python tokenizers. For fast tokenizers (provided by HuggingFace's tokenizers library) see
  tokenization_utils_fast.py

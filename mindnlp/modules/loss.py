@@ -12,10 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=arguments-differ
-# pylint: disable=C0412
 """Losses"""
-
 import numpy as np
 import mindspore
 from mindspore import nn, ops, Tensor
