@@ -58,13 +58,14 @@ from .text2text_generation import Text2TextGenerationPipeline
 from .question_answering import QuestionAnsweringPipeline
 from .automatic_speech_recognition import AutomaticSpeechRecognitionPipeline
 from .zero_shot_classification import ZeroShotClassificationArgumentHandler, ZeroShotClassificationPipeline
+from .document_question_answering import DocumentQuestionAnsweringPipeline
 
 from ..models.auto.modeling_auto import (
     # AutoModel,
     # AutoModelForAudioClassification,
     AutoModelForCausalLM,
     AutoModelForCTC,
-    # AutoModelForDocumentQuestionAnswering,
+    AutoModelForDocumentQuestionAnswering,
     # AutoModelForMaskedLM,
     # AutoModelForMaskGeneration,
     # AutoModelForObjectDetection,
@@ -158,6 +159,14 @@ SUPPORTED_TASKS = {
             },
         },
         "type": "text",
+    },
+    "document-question-answering": {
+        "impl": DocumentQuestionAnsweringPipeline,
+        "ms": (AutoModelForDocumentQuestionAnswering,),
+        "default": {
+            "model": {"ms": ("layoutlm-document-qa", "52e01b3")},
+        },
+        "type": "multimodal",
     },
 
 }
@@ -603,5 +612,6 @@ __all__ = [
     'TextGenerationPipeline',
     'QuestionAnsweringPipeline',
     'ZeroShotClassificationPipeline',
+    'DocumentQuestionAnsweringPipeline',
     'pipeline',
 ]
