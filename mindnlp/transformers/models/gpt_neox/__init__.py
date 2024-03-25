@@ -15,9 +15,14 @@
 """
 GPT NeoX Models init
 """
-from . import tokenization_gpt_neox_fast
 
+from . import configuration_gpt_neox, tokenization_gpt_neox_fast, modeling_gpt_neox
+from .modeling_gpt_neox import *
+from .configuration_gpt_neox import *
 from .tokenization_gpt_neox_fast import *
 
+
 __all__ = []
+__all__.extend(modeling_gpt_neox.__all__)
+__all__.extend(configuration_gpt_neox.__all__)
 __all__.extend(tokenization_gpt_neox_fast.__all__)
