@@ -12,15 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
-# pylint: disable=broad-exception-caught
 # pylint: disable=redefined-outer-name
-# pylint: disable=consider-using-enumerate
-# pylint: disable=global-variable-undefined
-# pylint: disable=dangerous-default-value
-# pylint: disable=redefined-outer-name
-# pylint: disable=invalid-name
 """squad."""
 from functools import partial
 from multiprocessing import Pool, cpu_count
@@ -307,7 +299,7 @@ def squad_convert_example_to_features(
 
 
 def squad_convert_example_to_features_init(tokenizer_for_convert: PreTrainedTokenizerBase):
-    global tokenizer
+    global tokenizer # pylint: disable=global-variable-undefined
     tokenizer = tokenizer_for_convert
 
 

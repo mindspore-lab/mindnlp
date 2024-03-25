@@ -12,11 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=W0237
-# pylint: disable=W0102
-# pylint: disable=W0222
-# pylint: disable=C0103
-# pylint: disable=R1702
 """
 Fast tokenization class for LayoutLMv2. It overwrites 2 methods of the slow tokenizer class, namely _batch_encode_plus
 and _encode_plus, in which the Rust tokenizer is used.

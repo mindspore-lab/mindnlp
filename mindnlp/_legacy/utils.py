@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=W0702
 """"legacy utils"""
 import numpy as np
 
@@ -22,7 +21,7 @@ from mindspore.train.serialization import _parse_ckpt_proto, \
 
 try:
     from mindspore.train.serialization import _load_mapparameter as _load_map_parameter
-except:
+except: # pylint: disable=bare-except
     from mindspore.train.serialization import _load_map_parameter
 
 from mindnlp.utils import logging

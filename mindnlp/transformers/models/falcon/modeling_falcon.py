@@ -18,7 +18,6 @@
 Falcon model
 """
 
-# pylint: disable=C0103
 
 
 import math

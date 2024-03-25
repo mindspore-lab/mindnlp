@@ -13,7 +13,6 @@
 # limitations under the License.
 # ============================================================================
 """RNN encoder modules"""
-# pylint: disable=abstract-method
 
 from mindnlp.abc import EncoderBase
 from mindnlp.modules.rnns import _RNNBase

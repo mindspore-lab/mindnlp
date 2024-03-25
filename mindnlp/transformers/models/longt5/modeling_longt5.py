@@ -12,11 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=arguments-renamed
-# pylint: disable=invalid-unary-operand-type
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
 """
 MindSpore LongT5 model
 """

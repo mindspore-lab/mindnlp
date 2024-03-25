@@ -13,19 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=inconsistent-return-statements
-# pylint: disable=wrong-import-order
 """ Tokenization classes for XLM-RoBERTa model."""
-
-
 import os
 from shutil import copyfile
 from typing import List, Optional, Tuple
 
+from mindnlp.utils import is_sentencepiece_available, logging
 from ...tokenization_utils import AddedToken
 from ...tokenization_utils_fast import PreTrainedTokenizerFast
-from mindnlp.utils import is_sentencepiece_available, logging
 
 
 if is_sentencepiece_available():

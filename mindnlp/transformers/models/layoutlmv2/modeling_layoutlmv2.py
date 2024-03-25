@@ -12,14 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=C0103
-# pylint: disable=C0116
-# pylint: disable=R1725
-# pylint: disable=R1720
-# pylint: disable=R1714
-# pylint: disable=W0237
-# pylint: disable=W0613
-# pylint: disable=E0401
 """ Mindnlp LayoutLMv2 model."""
 
 import math
@@ -48,6 +40,9 @@ from .configuration_layoutlmv2 import LayoutLMv2Config
 
 if is_mindocr_available():
     from mindocr.models.backbones.layoutxlm.visual_backbone import build_resnet_fpn_backbone
+else:
+    raise RuntimeError('LayoutLMv2 requires `mindocr` dependency, please install mindocr by following command:\n'
+                       '`pip install mindocr`')
 
 logger = logging.get_logger(__name__)
 
@@ -201,7 +196,7 @@ class LayoutLMv2SelfAttention(nn.Cell):
             attention_probs = attention_probs * head_mask
 
         context_layer = ops.matmul(attention_probs, value_layer)
-        context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
+        context_layer = context_layer.permute(0, 2, 1, 3)
         new_context_layer_shape = context_layer.shape[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
 
@@ -410,7 +405,6 @@ class LayoutLMv2Encoder(nn.Cell):
             max_distance=self.max_rel_pos,
         )
         rel_pos = self.rel_pos_bias.weight.t()[rel_pos].permute(0, 3, 1, 2)
-        rel_pos = rel_pos.contiguous()
         return rel_pos
 
     def _calculate_2d_position_embeddings(self, bbox):
@@ -430,8 +424,6 @@ class LayoutLMv2Encoder(nn.Cell):
         )
         rel_pos_x = self.rel_pos_x_bias.weight.t()[rel_pos_x].permute(0, 3, 1, 2)
         rel_pos_y = self.rel_pos_y_bias.weight.t()[rel_pos_y].permute(0, 3, 1, 2)
-        rel_pos_x = rel_pos_x.contiguous()
-        rel_pos_y = rel_pos_y.contiguous()
         rel_2d_pos = rel_pos_x + rel_pos_y
         return rel_2d_pos
 
@@ -536,8 +528,7 @@ class LayoutLMv2VisualBackbone(nn.Cell):
 
     def __init__(self, config):
         super(LayoutLMv2VisualBackbone, self).__init__()
-        mindspore.set_context(pynative_synchronize=True)
-        self.cfg = config.get_visual_backbone_config()
+        self.cfg = config.visual_backbone_config_args
         self.backbone = build_resnet_fpn_backbone(self.cfg)
 
         if len(self.cfg.MODEL.PIXEL_MEAN) != len(self.cfg.MODEL.PIXEL_STD):
@@ -697,7 +688,6 @@ class LayoutLMv2Model(LayoutLMv2PreTrainedModel):
 
     def __init__(self, config):
         super().__init__(config)
-        mindspore.set_context(pynative_synchronize=True)
         self.config = config
         self.has_visual_segment_embedding = config.has_visual_segment_embedding
         self.use_visual_backbone = config.use_visual_backbone
@@ -1088,7 +1078,7 @@ class LayoutLMv2ForSequenceClassification(LayoutLMv2PreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and labels.dtype in (mindspore.int64, mindspore.int32):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1360,8 +1350,8 @@ class LayoutLMv2ForQuestionAnswering(LayoutLMv2PreTrainedModel):
 
         logits = self.qa_outputs(sequence_output)
         start_logits, end_logits = logits.split(1, axis=-1)
-        start_logits = start_logits.squeeze(-1).contiguous()
-        end_logits = end_logits.squeeze(-1).contiguous()
+        start_logits = start_logits.squeeze(-1)
+        end_logits = end_logits.squeeze(-1)
 
         total_loss = None
         if start_positions is not None and end_positions is not None:

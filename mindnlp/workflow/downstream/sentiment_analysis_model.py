@@ -15,7 +15,6 @@
 
 """ Sentiment Analysis Model """
 
-# pylint: disable=arguments-differ
 
 from mindspore import nn
 from mindnlp.transformers import BertModel

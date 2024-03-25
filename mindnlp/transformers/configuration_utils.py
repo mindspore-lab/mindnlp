@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=C0103
-# pylint: disable=W1203
-# pylint: disable=W0613
-# pylint: disable=C0415
 """
 Pretrained config.
 """

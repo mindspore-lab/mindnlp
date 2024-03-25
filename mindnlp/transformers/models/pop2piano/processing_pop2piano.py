@@ -14,13 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=arguments-renamed
-# pylint: disable=invalid-unary-operand-type
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
-# pylint: disable=cyclic-import
-# pylint: disable=no-value-for-parameter
 """ Processor class for Pop2Piano. """
 import os
 from typing import List, Optional, Union
@@ -50,9 +43,6 @@ class Pop2PianoProcessor(ProcessorMixin):
     attributes = ["feature_extractor", "tokenizer"]
     feature_extractor_class = "Pop2PianoFeatureExtractor"
     tokenizer_class = "Pop2PianoTokenizer"
-
-    def __init__(self, feature_extractor, tokenizer):
-        super().__init__(feature_extractor, tokenizer)
 
     def __call__(
         self,

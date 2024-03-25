@@ -21,8 +21,9 @@ import re
 import warnings
 from typing import Union
 from mindspore.dataset import TextBaseDataset
-from mindnlp.configs import DEFAULT_ROOT
-from mindnlp.utils.download import get_from_cache
+
+from ..configs import DEFAULT_ROOT
+from ..utils.download import get_from_cache
 
 class Vocab:
     r"""
@@ -217,8 +218,6 @@ class Vocab:
             ...                                 special_first=True)
             >>> dataset = dataset.map(operations=text.Lookup(vocab, "<unk>"), input_columns=["text"])
         """
-
-        # pylint: disable=protected-access
         if not isinstance(dataset, TextBaseDataset):
             raise ValueError('dataset must be subclass of TextBaseDataset.')
 

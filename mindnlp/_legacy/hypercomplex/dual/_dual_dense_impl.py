@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=arguments-renamed
 """Dual Dense Implementation"""
 from typing import Tuple
 

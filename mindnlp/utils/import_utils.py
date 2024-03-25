@@ -13,11 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-function-docstring
-# pylint: disable=logging-fstring-interpolation
-# pylint: disable=inconsistent-return-statements
-# pylint: disable=wrong-import-position
-# pylint: disable=invalid-name
 """
 Import utilities: Utilities related to imports and our lazy inits.
 """
@@ -30,6 +25,7 @@ from collections import OrderedDict
 from functools import wraps, lru_cache
 from typing import Tuple, Union
 import importlib.util
+from . import logging
 
 if sys.version_info >= (3, 8):
     # For Python 3.8 and later
@@ -38,10 +34,8 @@ else:
     # For Python versions earlier than 3.8
     import importlib_metadata
 
-from . import logging
 
-logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
-
+logger = logging.get_logger(__name__)
 
 def _is_package_available(
         pkg_name: str, return_version: bool = False

@@ -13,11 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-# pylint: disable=unused-argument
-# pylint: disable=arguments-renamed
-# pylint: disable=invalid-name
 """ MindSpore Whisper model."""
 
 import math

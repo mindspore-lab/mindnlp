@@ -12,9 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=W0102
 """ LayoutLMv2 model configuration"""
-from addict import Dict
+from easydict import EasyDict
 
 from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
@@ -177,16 +176,9 @@ class LayoutLMv2Config(PretrainedConfig):
         self.has_spatial_attention_bias = has_spatial_attention_bias
         self.has_visual_segment_embedding = has_visual_segment_embedding
         self.use_visual_backbone = use_visual_backbone
-
-        if detectron2_config_args is None:
-            detectron2_config_args = {}
-        default_detectron2_config_args = self.get_default_visual_backbone_config_args()
-        # Make sure that the required parameters are passed into mindocr.
-        for key, value in default_detectron2_config_args.items():
-            if key not in detectron2_config_args:
-                detectron2_config_args[key] = value
-
-        self.detectron2_config_args = detectron2_config_args
+        self.visual_backbone_config_args = (
+            detectron2_config_args if detectron2_config_args is not None else self.get_default_visual_backbone_config_args()
+        )
 
     @classmethod
     def get_default_visual_backbone_config_args(cls):
@@ -194,48 +186,34 @@ class LayoutLMv2Config(PretrainedConfig):
         Returns:
             Dict: Default configuration arguments for the visual backbone.
         """
-        return {
-            "MODEL.BACKBONE.FREEZE_AT": 2,
-            "MODEL.BACKBONE.DEPTH": 101,
-            "MODEL.BACKBONE.NORM": "BN",
-            "MODEL.BACKBONE.NUM_GROUPS": 32,
-            "MODEL.BACKBONE.WIDTH_PER_GROUP": 8,
-            "MODEL.BACKBONE.STEM_IN_CHANNELS": 3,
-            "MODEL.BACKBONE.STEM_OUT_CHANNELS": 64,
-            "MODEL.BACKBONE.RES2_OUT_CHANNELS": 256,
-            "MODEL.BACKBONE.STRIDE_IN_1X1": False,
-            "MODEL.BACKBONE.RES5_DILATION": 1,
-            "MODEL.BACKBONE.NAME": "resnet101",
-            "MODEL.BACKBONE.PRETRAINED": True,
-            "MODEL.BACKBONE.NUM_CLASSES": 1000,
-            "MODEL.BACKBONE.OUT_FEATURES": ["res2", "res3", "res4", "res5"],
-            "MODEL.FPN.FUSE_TYPE": "sum",
-            "MODEL.FPN.IN_FEATURES": ["res2", "res3", "res4", "res5"],
-            "MODEL.FPN.NORM": "",
-            "MODEL.FPN.OUT_CHANNELS": 256,
-            "MODEL.PIXEL_MEAN": [103.53, 116.28, 123.675],
-            "MODEL.PIXEL_STD": [57.375, 57.12, 58.395]
-        }
-
-    def get_visual_backbone_config(self):
-        """
-        Returns:
-            Dict: Configuration arguments for the visual backbone.
-        """
-        nested_config = {}
-
-        for key, value in self.detectron2_config_args.items():
-            parts = key.split('.')
-            current_level = nested_config
-
-            for part in parts[:-1]:
-                if part not in current_level:
-                    current_level[part] = {}
-                current_level = current_level[part]
-
-            current_level[parts[-1]] = value
-
-        return Dict(nested_config)
+        return EasyDict({
+            "MODEL": {
+                "BACKBONE": {
+                    "FREEZE_AT": 2,
+                    "DEPTH": 101,
+                    "NORM": "BN",
+                    "NUM_GROUPS": 32,
+                    "WIDTH_PER_GROUP": 8,
+                    "STEM_IN_CHANNELS": 3,
+                    "STEM_OUT_CHANNELS": 64,
+                    "RES2_OUT_CHANNELS": 256,
+                    "STRIDE_IN_1X1": False,
+                    "RES5_DILATION": 1,
+                    "NAME": "resnet101",
+                    "PRETRAINED": True,
+                    "NUM_CLASSES": 1000,
+                    "OUT_FEATURES": ["res2", "res3", "res4", "res5"]
+                },
+                "FPN": {
+                    "FUSE_TYPE": "sum",
+                    "IN_FEATURES": ["res2", "res3", "res4", "res5"],
+                    "NORM": "",
+                    "OUT_CHANNELS": 256
+                },
+                "PIXEL_MEAN": [103.53, 116.28, 123.675],
+                "PIXEL_STD": [57.375, 57.12, 58.395]
+            }
+        })
 
 
 __all__ = ["LAYOUTLMV2_PRETRAINED_CONFIG_ARCHIVE_MAP", "LayoutLMv2Config"]
