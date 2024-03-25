@@ -124,7 +124,7 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
         outputs = dqa_pipeline(image=image, question=question, words=words, boxes=boxes, top_k=2)
         self.assertEqual(outputs, [])
 
-    # @slow
+    @slow
     @require_mindspore
     @require_pytesseract
     def test_large_model_pt(self):
@@ -276,7 +276,7 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
             ],
         )
 
-    # @slow
+    @slow
     @require_mindspore
     @require_pytesseract
     @require_vision
@@ -329,7 +329,7 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
             ],
         )
 
-    # @slow
+    @slow
     @require_mindspore
     def test_large_model_pt_donut(self):
         dqa_pipeline = pipeline(
