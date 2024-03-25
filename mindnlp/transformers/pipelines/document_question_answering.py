@@ -11,7 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+# pylint: disable=missing-function-docstring
+# pylint: disable=(missing-class-docstring
+# pylint: disable=invalid-name
+# pylint: disable=unbalanced-tuple-unpacking
+# pylint: disable=unused-argument
+# pylint: disable=unexpected-keyword-arg
+# pylint: disable=arguments-renamed
+"""
+document-question-answering
+"""
 import re
 from typing import List, Optional, Tuple, Union
 
@@ -348,7 +357,7 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
 
     def preprocess(
             self,
-            input,
+            inputs,
             padding="do_not_pad",
             doc_stride=None,
             max_seq_len=None,
@@ -367,8 +376,8 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
 
         image = None
         image_features = {}
-        if input.get("image", None) is not None:
-            image = load_image(input["image"], timeout=timeout)
+        if inputs.get("image", None) is not None:
+            image = load_image(inputs["image"], timeout=timeout)
             if self.image_processor is not None:
                 image_features.update(self.image_processor(images=image, return_tensors='ms'))
             elif self.feature_extractor is not None:
@@ -378,9 +387,9 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
 
         words, boxes = None, None
         if not self.model_type == ModelType.VisionEncoderDecoder:
-            if "word_boxes" in input:
-                words = [x[0] for x in input["word_boxes"]]
-                boxes = [x[1] for x in input["word_boxes"]]
+            if "word_boxes" in inputs:
+                words = [x[0] for x in inputs["word_boxes"]]
+                boxes = [x[1] for x in inputs["word_boxes"]]
             elif "words" in image_features and "boxes" in image_features:
                 words = image_features.pop("words")[0]
                 boxes = image_features.pop("boxes")[0]
@@ -405,7 +414,7 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
             )
 
         if self.model_type == ModelType.VisionEncoderDecoder:
-            task_prompt = f'<s_docvqa><s_question>{input["question"]}</s_question><s_answer>'
+            task_prompt = f'<s_docvqa><s_question>{inputs["question"]}</s_question><s_answer>'
             # Adapted from https://huggingface.co/spaces/nielsr/donut-docvqa/blob/main/app.py
             encoding = {
                 "inputs": image_features["pixel_values"],
@@ -425,11 +434,11 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
         else:
             tokenizer_kwargs = {}
             if self.model_type == ModelType.LayoutLM:
-                tokenizer_kwargs["text"] = input["question"].split()
+                tokenizer_kwargs["text"] = inputs["question"].split()
                 tokenizer_kwargs["text_pair"] = words
                 tokenizer_kwargs["is_split_into_words"] = True
             else:
-                tokenizer_kwargs["text"] = [input["question"]]
+                tokenizer_kwargs["text"] = [inputs["question"]]
                 tokenizer_kwargs["text_pair"] = [words]
                 tokenizer_kwargs["boxes"] = [boxes]
 
@@ -442,8 +451,6 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
                 return_overflowing_tokens=True,
                 **tokenizer_kwargs,
             )
-            # TODO: check why slower `LayoutLMTokenizer` and `LayoutLMv2Tokenizer` don't have this key in outputs
-            # FIXME: ydshieh and/or Narsil
             encoding.pop("overflow_to_sample_mapping", None)  # We do not use this
 
             num_spans = len(encoding["input_ids"])

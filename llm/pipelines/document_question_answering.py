@@ -13,6 +13,7 @@ outputs = dqa_pipeline(image=image_url, question=question, top_k=2)
 
 print(outputs)
 
+
 # 示例 2: 使用LayoutLM模型和自定义图像处理
 from PIL import Image
 import pytesseract
