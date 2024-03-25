@@ -177,10 +177,11 @@ class LayoutLMv2Config(PretrainedConfig):
         self.has_spatial_attention_bias = has_spatial_attention_bias
         self.has_visual_segment_embedding = has_visual_segment_embedding
         self.use_visual_backbone = use_visual_backbone
+
         if detectron2_config_args is None:
             detectron2_config_args = {}
         default_detectron2_config_args = self.get_default_visual_backbone_config_args()
-
+        # Make sure that the required parameters are passed into mindocr.
         for key, value in default_detectron2_config_args.items():
             if key not in detectron2_config_args:
                 detectron2_config_args[key] = value
