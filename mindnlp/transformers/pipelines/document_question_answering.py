@@ -22,6 +22,7 @@ from mindnlp.transformers.models.auto.modeling_auto import MODEL_FOR_DOCUMENT_QU
 from mindnlp.transformers.pipelines.base import ChunkPipeline
 
 from mindnlp.utils import is_vision_available, ExplicitEnum, logging
+from ...utils.import_utils import is_pytesseract_available
 
 if is_vision_available():
     from PIL import Image

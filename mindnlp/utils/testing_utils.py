@@ -66,7 +66,7 @@ from .import_utils import (
     is_pyctcdecode_available,
     is_vision_available,
     is_sentencepiece_available,
-    is_tokenizers_available
+    is_tokenizers_available, is_pytesseract_available
 )
 from .generic import strtobool
 
@@ -217,6 +217,12 @@ def require_vision(test_case):
     installed.
     """
     return unittest.skipUnless(is_vision_available(), "test requires vision")(test_case)
+
+def require_pytesseract(test_case):
+    """
+    Decorator marking a test that requires pytesseract
+    """
+    return unittest.skipUnless(is_pytesseract_available(), "test requires pytesseract")(test_case)
 
 
 def cmd_exists(cmd):

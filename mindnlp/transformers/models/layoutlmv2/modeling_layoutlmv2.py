@@ -537,7 +537,7 @@ class LayoutLMv2VisualBackbone(nn.Cell):
     def __init__(self, config):
         super(LayoutLMv2VisualBackbone, self).__init__()
         mindspore.set_context(pynative_synchronize=True)
-        self.cfg = config.visual_backbone_config_args
+        self.cfg = config.get_visual_backbone_config()
         self.backbone = build_resnet_fpn_backbone(self.cfg)
 
         if len(self.cfg.MODEL.PIXEL_MEAN) != len(self.cfg.MODEL.PIXEL_STD):
