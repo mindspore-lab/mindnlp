@@ -25,6 +25,8 @@ from collections import OrderedDict
 from functools import wraps, lru_cache
 from typing import Tuple, Union
 import importlib.util
+from packaging import version
+
 from . import logging
 
 if sys.version_info >= (3, 8):
@@ -68,6 +70,7 @@ _mindocr_available = _is_package_available("mindocr")
 _mindspore_version, _mindspore_available = _is_package_available(
     "mindspore", return_version=True
 )
+_sudachipy_available, _sudachipy_version = _is_package_available("sudachipy", return_version=True)
 
 _librosa_available = _is_package_available("librosa")
 _scipy_available = _is_package_available("scipy")
@@ -87,6 +90,21 @@ try:
 except importlib_metadata.PackageNotFoundError:
     _essentia_version = False
 
+def is_sudachi_available():
+    return _sudachipy_available
+
+
+def get_sudachi_version():
+    return _sudachipy_version
+
+
+def is_sudachi_projection_available():
+    if not is_sudachi_available():
+        return False
+
+    # NOTE: We require sudachipy>=0.6.8 to use projection option in sudachi_kwargs for the constructor of BertJapaneseTokenizer.
+    # - `projection` option is not supported in sudachipy<0.6.8, see https://github.com/WorksApplications/sudachi.rs/issues/230
+    return version.parse(_sudachipy_version) >= version.parse("0.6.8")
 
 def is_sacremoses_available():
     return _sacremoses_available

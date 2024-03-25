@@ -39,6 +39,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("bart", "BartModel"),
         ("beit", "BeitModel"),
         ("bert", "BertModel"),
+        ("bert-generation", "BertGenerationEncoder"),
         ("big_bird", "BigBirdModel"),
         ("biogpt", "BioGptModel"),
         ("bloom", "BloomModel"),
@@ -120,7 +121,9 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
 MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
     [
         # Model for Causal LM mapping
+        ("bart", "BartForCausalLM"),
         ("bert", "BertLMHeadModel"),
+        ("bert-generation", "BertGenerationDecoder"),
         ("big_bird", "BigBirdForCausalLM"),
         ("biogpt", "BioGptForCausalLM"),
         ("bloom", "BloomForCausalLM"),
