@@ -12,11 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=W0237
-# pylint: disable=W0102
-# pylint: disable=signature-differs
-# pylint: disable=C0103
-# pylint: disable=R0916
 """Tokenization class for LayoutLMv2."""
 
 import collections

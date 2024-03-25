@@ -12,22 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=W0613
-# pylint: disable=W0611
-# pylint: disable=R0911
-# pylint: disable=R0912
-# pylint: disable=R0915
-# pylint: disable=E1123
-# pylint: disable=E1121
-# pylint: disable=R1710
-# pylint: disable=R1705
-# pylint: disable=E1102
-# pylint: disable=W1203
-# pylint: disable=C0302
-# pylint: disable=C0123
-# pylint: disable=too-many-locals
-# pylint: disable=consider-using-enumerate
-
+# pylint: disable=not-callable
 """
 Generation mixin.
 """

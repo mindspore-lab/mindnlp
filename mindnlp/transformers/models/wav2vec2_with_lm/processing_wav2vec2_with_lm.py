@@ -13,13 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=line-too-long
-# pylint: disable=import-outside-toplevel
-# pylint: disable=unbalanced-tuple-unpacking
-# pylint: disable=missing-function-docstring
-# pylint: disable=import-outside-toplevel
-# pylint: disable=invalid-name
-# pylint: disable=not-an-iterable
 """
 Speech processor class for Wav2Vec2
 """
@@ -151,7 +144,7 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
         requires_backends(cls, "pyctcdecode")
         from pyctcdecode import BeamSearchDecoderCTC
 
-        feature_extractor, tokenizer = super()._get_arguments_from_pretrained(pretrained_model_name_or_path, **kwargs)
+        feature_extractor, tokenizer = super()._get_arguments_from_pretrained(pretrained_model_name_or_path, **kwargs) # pylint: disable=unbalanced-tuple-unpacking
 
         if os.path.isdir(pretrained_model_name_or_path) or os.path.isfile(pretrained_model_name_or_path):
             decoder = BeamSearchDecoderCTC.load_from_dir(pretrained_model_name_or_path)
@@ -569,7 +562,10 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
         >>> # compare word offsets with audio `en_train_0/common_voice_en_19121553.mp3` online on the dataset viewer:
         >>> # https://huggingface.co/datasets/mozilla-foundation/common_voice_11_0/viewer/en
         >>> word_offsets[:4]
-        [{'word': 'THE', 'start_time': 0.68, 'end_time': 0.78}, {'word': 'TRACK', 'start_time': 0.88, 'end_time': 1.1}, {'word': 'APPEARS', 'start_time': 1.18, 'end_time': 1.66}, {'word': 'ON', 'start_time': 1.86, 'end_time': 1.92}]
+        [{'word': 'THE', 'start_time': 0.68, 'end_time': 0.78},
+         {'word': 'TRACK', 'start_time': 0.88, 'end_time': 1.1},
+         {'word': 'APPEARS', 'start_time': 1.18, 'end_time': 1.66},
+         {'word': 'ON', 'start_time': 1.86, 'end_time': 1.92}]
         ```"""
 
         from pyctcdecode.constants import (

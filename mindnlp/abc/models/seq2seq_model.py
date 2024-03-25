@@ -13,8 +13,6 @@
 # limitations under the License.
 # ============================================================================
 """Sequence-to-sequence basic model"""
-# pylint: disable=abstract-method
-# pylint: disable=arguments-differ
 from .base_model import BaseModel
 
 

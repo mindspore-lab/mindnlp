@@ -14,15 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-# pylint: disable=invalid-unary-operand-type
-# pylint: disable=unused-argument
-# pylint: disable=arguments-renamed
-# pylint: disable=attribute-defined-outside-init
-# pylint: disable=unexpected-keyword-arg
-# pylint: disable=unused-variable
 """MindSpore REFORMER model."""
 
 import sys
@@ -1263,7 +1254,7 @@ class ReformerAttention(nn.Cell):
         self.layer_id = layer_id
         self.attn_layers = config.attn_layers
 
-        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
         if len(set(self.attn_layers)) == 1 and self.attn_layers[0] == "lsh":
             self.self_attention = LSHSelfAttention(config)
@@ -1387,7 +1378,7 @@ class ChunkReformerFeedForward(nn.Cell):
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
 
-        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.dense = ReformerFeedForwardDense(config)
         self.output = ReformerFeedForwardOutput(config)
 
@@ -1679,7 +1670,7 @@ class ReformerEncoder(nn.Cell):
         self.layers = nn.CellList([ReformerLayer(config, i) for i in range(config.num_hidden_layers)])
         # Reformer is using Rev Nets, thus last layer outputs are concatenated and
         # Layer Norm is done over 2 * hidden_size
-        self.layer_norm = nn.LayerNorm(2 * config.hidden_size, eps=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(2 * config.hidden_size, epsilon=config.layer_norm_eps)
 
     def construct(
         self,

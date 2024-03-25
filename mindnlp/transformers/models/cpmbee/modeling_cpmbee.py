@@ -13,13 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-class-docstring
-# pylint: disable=invalid-name
-# pylint: disable=missing-function-docstring
-# pylint: disable=unexpected-keyword-arg
-# pylint: disable=arguments-renamed
-# pylint: disable=unused-argument
-# pylint: disable=unsubscriptable-object
 """ MindSpore CpmBee model."""
 import copy
 import math
@@ -551,7 +544,7 @@ class CpmBeeOutput(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
@@ -2046,7 +2039,7 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
                     p[path[-1]] = text
                 else:
                     data["<ans>"] = text
-            for ans_id in range(len(answer_placeholders)): # pylint: disable=consider-using-enumerate
+            for ans_id in range(len(answer_placeholders)):
                 if (ans_id + 1) not in ans_result_map:
                     path = answer_placeholders[ans_id]
                     p = data["<ans>"]
@@ -2055,7 +2048,7 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
                     p[path[-1]] = None
         return data_list
 
-__all__ = __all__ = [
+__all__ = [
     "CPMBEE_PRETRAINED_MODEL_ARCHIVE_LIST",
     "CpmBeeForCausalLM",
     "CpmBeeModel",

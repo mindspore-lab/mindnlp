@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=missing-function-docstring
 """ mT5 model configuration"""
 from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig

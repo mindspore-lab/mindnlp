@@ -12,14 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-# pylint: disable=invalid-name
-# pylint: disable=unused-argument
-# pylint: disable=unused-variable
-# pylint: disable=attribute-defined-outside-init
-# pylint: disable=no-else-raise
-# pylint: disable=broad-exception-caught
 """ Mindspore Wav2Vec2 model. """
 
 import math
@@ -1186,7 +1178,7 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
         if self.config.adapter_attn_dim is None:
             raise ValueError(f"Cannot load_adapter for {target_lang} if `config.adapter_attn_dim` is not defined.")
 
-        if target_lang == self.target_lang and not force_load:  # pylint: disable=access-member-before-definition
+        if target_lang == self.target_lang and not force_load: # pylint: disable=access-member-before-definition
             logger.warning(f"Adapter weights are already set to {target_lang}.")
             return
 
@@ -1228,8 +1220,8 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
                     cache_dir=cache_dir,
                 )
 
-                state_dict = safe_load_file(weight_path)    # pylint: disable=undefined-variable
-
+                # state_dict = safe_load_file(weight_path)
+                state_dict = None
             except EnvironmentError:
                 if use_safetensors:
                     # Raise any environment error raise by `cached_file`. It will have a helpful error message adapted

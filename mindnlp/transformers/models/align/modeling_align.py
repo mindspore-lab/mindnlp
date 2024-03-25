@@ -13,13 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=consider-using-dict-items
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
-# pylint: disable=invalid-name
-# pylint: disable=simplifiable-if-expression
 # pylint: disable=unexpected-keyword-arg
-# pylint: disable=arguments-renamed
 """ MindSpore ALIGN model."""
 
 import math
@@ -431,7 +425,7 @@ class AlignVisionBlock(nn.Cell):
     ):
         super().__init__()
         self.expand_ratio = expand_ratio
-        self.expand = True if self.expand_ratio != 1 else False
+        self.expand = self.expand_ratio != 1
         expand_in_dim = in_dim * expand_ratio
 
         if self.expand:
@@ -501,10 +495,10 @@ class AlignVisionEncoder(nn.Cell):
             expand_ratio = config.expand_ratios[i]
 
             for j in range(round_repeats(config.num_block_repeats[i])):
-                id_skip = True if j == 0 else False
+                id_skip = j == 0
                 stride = 1 if j > 0 else stride
                 in_dim = out_dim if j > 0 else in_dim
-                adjust_padding = False if curr_block_num in config.depthwise_padding else True
+                adjust_padding = not curr_block_num in config.depthwise_padding
                 drop_rate = config.drop_connect_rate * curr_block_num / num_blocks
 
                 block = AlignVisionBlock(

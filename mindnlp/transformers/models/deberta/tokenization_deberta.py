@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=inconsistent-return-statements
-# pylint: disable=missing-function-docstring
 """ Tokenization class for model DeBERTa."""
 
 import json

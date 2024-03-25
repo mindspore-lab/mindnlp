@@ -12,9 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=W0102
 """ LayoutLMv2 model configuration"""
-from addict import Dict
+from easydict import EasyDict
 
 from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
@@ -187,7 +186,7 @@ class LayoutLMv2Config(PretrainedConfig):
         Returns:
             Dict: Default configuration arguments for the visual backbone.
         """
-        return Dict({
+        return EasyDict({
             "MODEL": {
                 "BACKBONE": {
                     "FREEZE_AT": 2,

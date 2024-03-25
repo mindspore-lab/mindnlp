@@ -12,16 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
-# pylint: disable=invalid-name
-# pylint: disable=unused-variable
-# pylint: disable=unused-argument
-# pylint: disable=global-statement
-# pylint: disable=unspecified-encoding
-# pylint: disable=eval-used
-# pylint: disable=attribute-defined-outside-init
-# pylint: disable=import-outside-toplevel
 """
 Serialization utils
 """

@@ -12,12 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-# pylint: disable=superfluous-parens
-# pylint: disable=invalid-name
-# pylint: disable=consider-using-f-string
-# pylint: disable=too-many-return-statements
 """audio io"""
 import collections
 import io
@@ -691,7 +685,7 @@ def read(file, offset=0.0, duration=None):
         # [8, 12) type
         str3 = file_to_read.read(4)
         if str3 != b"WAVE":
-            raise (f"Not a WAV file. RIFF form type is {repr(str3)}.")
+            raise f"Not a WAV file. RIFF form type is {repr(str3)}."
 
         fmt_chunk_received = False
         data_chunk_received = False

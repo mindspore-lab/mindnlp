@@ -13,10 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
-# pylint: disable=unexpected-keyword-arg
-# pylint: disable=arguments-renamed
 """ MindSpore CLIP model."""
 
 
@@ -150,8 +146,7 @@ class CLIPOutput(ModelOutput):
     def to_tuple(self) -> Tuple[Any]:
         return tuple(
             self[k] if k not in ["text_model_output", "vision_model_output"] else getattr(self, k).to_tuple()
-            for k in self.keys() # pylint: disable=consider-using-dict-items
-        )
+            for k in self.keys()         )
 
 
 class CLIPVisionEmbeddings(nn.Cell):
@@ -344,9 +339,9 @@ class CLIPEncoderLayer(nn.Cell):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = CLIPAttention(config)
-        self.layer_norm1 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
         self.mlp = CLIPMLP(config)
-        self.layer_norm2 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
 
     def construct(
         self,
@@ -556,7 +551,7 @@ class CLIPTextTransformer(nn.Cell):
         embed_dim = config.hidden_size
         self.embeddings = CLIPTextEmbeddings(config)
         self.encoder = CLIPEncoder(config)
-        self.final_layer_norm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
+        self.final_layer_norm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
 
         # For `pooled_output` computation
         self.eos_token_id = config.eos_token_id
@@ -704,9 +699,9 @@ class CLIPVisionTransformer(nn.Cell):
         embed_dim = config.hidden_size
 
         self.embeddings = CLIPVisionEmbeddings(config)
-        self.pre_layrnorm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
+        self.pre_layrnorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
         self.encoder = CLIPEncoder(config)
-        self.post_layernorm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
+        self.post_layernorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
 
     def construct(
         self,

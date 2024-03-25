@@ -13,10 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=missing-function-docstring
-# pylint: disable=unused-argument
-# pylint: disable=superfluous-parens
 """loss"""
 from typing import Dict, Optional, Tuple
 

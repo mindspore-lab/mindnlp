@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=W0613
-# pylint: disable=invalid-name
-# pylint: disable=invalid-sequence-index
-# pylint: disable=invalid-unary-operand-type
 
 """
 Logits process

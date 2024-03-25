@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=C0103
 """nn wraper operators for half precision cast."""
 
 from mindspore import nn, ops

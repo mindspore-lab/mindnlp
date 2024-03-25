@@ -12,15 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=too-many-lines
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-# pylint: disable=invalid-name
-# pylint: disable=too-many-function-args
-# pylint: disable=no-else-raise
-# pylint: disable=unused-argument
-# pylint: disable=arguments-renamed
-# pylint: disable=redefined-builtin
 """ MindSpore SeamlessM4T model."""
 import copy
 import math
@@ -260,7 +251,7 @@ class SeamlessM4TConformerRelPositionalEmbedding(nn.Cell):
         self.max_len = config.max_source_positions
         self.d_model = config.hidden_size
         self.pe = None
-        self.extend_pe(mindspore.tensor(0.0).expand(1, self.max_len))
+        self.extend_pe(mindspore.tensor(0.0).expand(1, self.max_len)) # pylint: disable=too-many-function-args
 
     def extend_pe(self, x):
         # Reset the positional encodings
@@ -857,7 +848,6 @@ class SeamlessM4TSinusoidalPositionalEmbedding(nn.Cell):
         if hasattr(self, "weights"):
             # in forward put the weights on the correct dtype of the param
             emb_weights = emb_weights.to(dtype=self.weights.dtype) # pylint: disable=access-member-before-definition
-
         self.weights = emb_weights
 
     @staticmethod

@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=consider-using-f-string
-# pylint: disable=unnecessary-comprehension
-# pylint: disable=no-else-return
 """ MindSpore ChatGLM model on Graph mode. """
 
 import copy
@@ -876,7 +872,7 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
                         [[mask_position, seq_length - context_length] for mask_position, context_length in
                          zip(mask_positions, context_lengths)], dtype=mindspore.int64).unsqueeze(-1)
                 else:
-                    position_ids = mindspore.Tensor([mask_position for mask_position in mask_positions], dtype=mindspore.int64).unsqueeze(-1)
+                    position_ids = mindspore.Tensor(mask_positions, dtype=mindspore.int64).unsqueeze(-1)
 
             if past is None:
                 past = past_key_values

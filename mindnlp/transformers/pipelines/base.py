@@ -13,13 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-function-docstring
-# pylint: disable=invalid-name
-# pylint: disable=no-else-return
-# pylint: disable=no-else-raise
-# pylint: disable=unspecified-encoding
-# pylint: disable=redefined-builtin
-# pylint: disable=missing-class-docstring
 """pipeline base"""
 
 import csv

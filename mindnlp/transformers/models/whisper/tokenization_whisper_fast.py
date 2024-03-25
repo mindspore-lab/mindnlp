@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-function-docstring
-# pylint: disable=invalid-name
-# pylint: disable=consider-using-f-string
 """Tokenization classes for Whisper."""
 import json
 import os

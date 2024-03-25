@@ -13,14 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=missing-class-docstring
 # pylint: disable=unexpected-keyword-arg
-# pylint: disable=missing-class-docstring
-# pylint: disable=arguments-renamed
-# pylint: disable=missing-function-docstring
-# pylint: disable=unused-argument
-# pylint: disable=invalid-unary-operand-type
 """ MindSpore Phi model."""
 
 import math

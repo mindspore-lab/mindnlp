@@ -12,12 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
-# pylint: disable=invalid-name
+# ============================================================================
 # pylint: disable=import-outside-toplevel
-# pylint: disable=no-name-in-module
-# pylint: disable=assignment-from-none
 """
 Utilities to convert slow tokenizers in their fast tokenizers counterparts.
 
@@ -539,7 +535,7 @@ class SpmConverter(Converter):
             tokenizer.pre_tokenizer = pre_tokenizer
 
         tokenizer.decoder = self.decoder(replacement, add_prefix_space)
-        post_processor = self.post_processor()
+        post_processor = self.post_processor() # pylint: disable=assignment-from-none
         if post_processor:
             tokenizer.post_processor = post_processor
 

@@ -12,11 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=consider-using-f-string
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
-# pylint: disable=invalid-name
-# pylint: disable=unused-argument
 """ChatGLM3 Tokenizer"""
 import os
 import re
@@ -36,7 +31,6 @@ class SPTokenizer:
         # reload tokenizer
         assert os.path.isfile(model_path), model_path
         self.sp_model = SentencePieceProcessor(model_file=model_path) # pylint: disable=unexpected-keyword-arg
-
         # BOS / EOS token IDs
         self.n_words: int = self.sp_model.vocab_size()
         self.bos_id: int = self.sp_model.bos_id()

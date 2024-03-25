@@ -13,8 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=invalid-name
-# pylint: disable=attribute-defined-outside-init
 """Fast Tokenization classes for MBart."""
 
 import os
@@ -30,7 +28,6 @@ from ...tokenization_utils_fast import PreTrainedTokenizerFast
 if is_sentencepiece_available():
     from .tokenization_mbart import MBartTokenizer
 else:
-# pylint: disable=C0103
     MBartTokenizer = None
 
 logger = logging.get_logger(__name__)
