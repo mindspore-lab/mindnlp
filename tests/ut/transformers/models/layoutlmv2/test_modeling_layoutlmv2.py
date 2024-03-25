@@ -19,10 +19,10 @@ from typing import *
 
 import numpy as np
 
-from mindnlp.utils.testing_utils import slow
+from mindnlp.utils.testing_utils import slow, require_mindocr
 from mindspore import ops, Tensor
 from mindspore.ops import functional as F
-from mindnlp.utils import is_mindspore_available, require_mindspore
+from mindnlp.utils import require_mindspore
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, _config_zero_init, ids_tensor, random_attention_mask
@@ -359,6 +359,7 @@ class LayoutLMv2ModelTester:
         return config, inputs_dict
 
 
+@require_mindocr
 @require_mindspore
 class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
     test_pruning = False
@@ -617,7 +618,7 @@ def prepare_layoutlmv2_batch_inputs():
 
     return input_ids, bbox, image, attention_mask, token_type_ids
 
-
+@require_mindocr
 @require_mindspore
 class LayoutLMv2ModelIntegrationTest(unittest.TestCase):
     @slow
