@@ -29,6 +29,9 @@ from . import (
     bartpho,
     beit,
     bert,
+    bert_generation,
+    bert_japanese,
+    bertweet,
     big_bird,
     biogpt,
     bloom,
@@ -103,6 +106,9 @@ from .barthez import *
 from .bartpho import *
 from .beit import *
 from .bert import *
+from .bert_generation import *
+from .bert_japanese import *
+from .bertweet import *
 from .big_bird import *
 from .biogpt import *
 from .bloom import *
@@ -177,6 +183,9 @@ __all__.extend(barthez.__all__)
 __all__.extend(bartpho.__all__)
 __all__.extend(beit.__all__)
 __all__.extend(bert.__all__)
+__all__.extend(bert_generation.__all__)
+__all__.extend(bert_japanese.__all__)
+__all__.extend(bertweet.__all__)
 __all__.extend(big_bird.__all__)
 __all__.extend(biogpt.__all__)
 __all__.extend(bloom.__all__)

@@ -37,6 +37,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("bart", "BartConfig"),
         ("beit", "BeitConfig"),
         ("bert", "BertConfig"),
+        ("bert-generation", "BertGenerationConfig"),
         ("big_bird", "BigBirdConfig"),
         ("biogpt", "BioGptConfig"),
         ("bloom", "BloomConfig"),
