@@ -13,13 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=missing-function-docstring
-# pylint: disable=chained-comparison
-# pylint: disable=too-many-boolean-expressions
-# pylint: disable=consider-using-f-string
-# pylint: disable=inconsistent-return-statements
-# pylint: disable=import-outside-toplevel
 """Tokenization classes for CLIP."""
 
 import json

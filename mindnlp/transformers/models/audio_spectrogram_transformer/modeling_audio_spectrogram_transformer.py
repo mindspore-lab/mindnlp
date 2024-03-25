@@ -13,11 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
-# pylint: disable=invalid-name
-# pylint: disable=unexpected-keyword-arg
-# pylint: disable=unused-argument
 """ MindSpore Audio Spectrogram Transformer (AST) model."""
 
 import math
@@ -287,8 +282,8 @@ class ASTLayer(nn.Cell):
         self.attention = ASTAttention(config)
         self.intermediate = ASTIntermediate(config)
         self.output = ASTOutput(config)
-        self.layernorm_before = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
-        self.layernorm_after = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layernorm_before = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.layernorm_after = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
     def construct(
         self,
@@ -403,7 +398,7 @@ class ASTModel(ASTPreTrainedModel):
         self.embeddings = ASTEmbeddings(config)
         self.encoder = ASTEncoder(config)
 
-        self.layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -471,7 +466,7 @@ class ASTModel(ASTPreTrainedModel):
 class ASTMLPHead(nn.Cell):
     def __init__(self, config: ASTConfig):
         super().__init__()
-        self.layernorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.dense = nn.Dense(config.hidden_size, config.num_labels) if config.num_labels > 0 else nn.Identity()
 
     def construct(self, hidden_state):

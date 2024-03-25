@@ -12,13 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=too-many-lines
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
-# pylint: disable=unused-argument
-# pylint: disable=redefined-builtin
-# pylint: disable=arguments-renamed
-# pylint: disable=no-else-raise
 """ MindSpore SeamlessM4Tv2 model."""
 
 
@@ -792,7 +785,6 @@ class SeamlessM4Tv2SinusoidalPositionalEmbedding(nn.Cell):
         if hasattr(self, "weights"):
             # in forward put the weights on the correct dtype of the param
             emb_weights = emb_weights.to(self.weights.dtype) # pylint: disable=access-member-before-definition
-
         self.weights = emb_weights
 
     @staticmethod

@@ -13,10 +13,6 @@
 # limitations under the License.
 # ============================================================================
 """PEFT model."""
-# pylint: disable=E0602  # Import outside toplevel
-# pylint: disable=R1705  # Unnecessary "else" after "return"
-# pylint: disable=W0613  # unused kwargs
-# pylint: disable=C0415  # Undefined variable
 import os
 import warnings
 import inspect
@@ -141,8 +137,7 @@ class PeftModel(nn.Cell):
                     - A path to a directory containing a Lora configuration file saved using the `save_pretrained`
                       method (`./my_lora_config_directory/`).
         """
-        from .mapping import MODEL_TYPE_TO_PEFT_MODEL_MAPPING, PEFT_TYPE_TO_CONFIG_MAPPING  # pylint: disable=R0401
-
+        from .mapping import MODEL_TYPE_TO_PEFT_MODEL_MAPPING, PEFT_TYPE_TO_CONFIG_MAPPING
         # load peft config
         config = PEFT_TYPE_TO_CONFIG_MAPPING[
             PeftConfig.from_pretrained(model_id, subfolder=kwargs.get("subfolder", None)).peft_type

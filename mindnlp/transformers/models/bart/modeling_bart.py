@@ -14,11 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=arguments-renamed
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-# pylint: disable=redefined-builtin
-# pylint: disable=signature-differs
 """ MindSpore BART model."""
 import copy
 import math

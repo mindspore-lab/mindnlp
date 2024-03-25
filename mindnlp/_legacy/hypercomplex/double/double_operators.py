@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=super-with-arguments
 """Double operators"""
 import numbers
 from typing import Union

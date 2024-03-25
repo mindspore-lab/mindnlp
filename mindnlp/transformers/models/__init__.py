@@ -22,12 +22,17 @@ from . import (
     audio_spectrogram_transformer,
     auto,
     autoformer,
+    baichuan,
     bark,
     bart,
+    barthez,
+    bartpho,
+    beit,
     bert,
     big_bird,
     biogpt,
     bloom,
+    byt5,
     clip,
     codegen,
     cpm,
@@ -91,12 +96,17 @@ from .altclip import *
 from .audio_spectrogram_transformer import *
 from .auto import *
 from .autoformer import *
+from .baichuan import *
 from .bark import *
 from .bart import *
+from .barthez import *
+from .bartpho import *
+from .beit import *
 from .bert import *
 from .big_bird import *
 from .biogpt import *
 from .bloom import *
+from .byt5 import *
 from .clip import *
 from .codegen import *
 from .cpm import *
@@ -160,12 +170,17 @@ __all__.extend(altclip.__all__)
 __all__.extend(audio_spectrogram_transformer.__all__)
 __all__.extend(auto.__all__)
 __all__.extend(autoformer.__all__)
-__all__.extend(bart.__all__)
+__all__.extend(baichuan.__all__)
 __all__.extend(bark.__all__)
+__all__.extend(bart.__all__)
+__all__.extend(barthez.__all__)
+__all__.extend(bartpho.__all__)
+__all__.extend(beit.__all__)
 __all__.extend(bert.__all__)
 __all__.extend(big_bird.__all__)
 __all__.extend(biogpt.__all__)
 __all__.extend(bloom.__all__)
+__all__.extend(byt5.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cpm.__all__)

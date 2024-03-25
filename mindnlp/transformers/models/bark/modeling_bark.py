@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-class-docstring
-# pylint: disable=invalid-name
-# pylint: disable=arguments-renamed
-# pylint: disable=attribute-defined-outside-init
 """
 Bark
 """
@@ -735,9 +731,8 @@ class BarkCoarseModel(BarkCausalModel):
 
         else:
             # shape: (batch_size, 0)
-            x_semantic_history = mindspore.tensor(mindspore._c_expression.Tensor([[]] * batch_size, mindspore.int64)) # pylint: disable=c-extension-no-member
-            x_coarse_history = mindspore.tensor(mindspore._c_expression.Tensor([[]] * batch_size, mindspore.int64)) # pylint: disable=c-extension-no-member
-
+            x_semantic_history = mindspore.tensor(mindspore._c_expression.Tensor([[]] * batch_size, mindspore.int64))
+            x_coarse_history = mindspore.tensor(mindspore._c_expression.Tensor([[]] * batch_size, mindspore.int64))
         return x_semantic_history, x_coarse_history
 
     def generate(

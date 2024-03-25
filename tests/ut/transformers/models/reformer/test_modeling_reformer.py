@@ -474,7 +474,7 @@ class ReformerModelTester:
         outputs_without_cache = model(input_ids)["logits"][:, -1]
 
         # select random slice idx
-        random_slice_idx = ops.randint(0, outputs_without_cache.shape[-1], (1, 1)).item()
+        random_slice_idx = ops.randint(0, outputs_without_cache.shape[-1], (1,)).item()
 
         # outputs should be similar within range
         self.parent.assertTrue(

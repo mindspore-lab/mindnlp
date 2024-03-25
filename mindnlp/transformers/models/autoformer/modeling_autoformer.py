@@ -14,7 +14,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=redefined-builtin
 """MindNLP Autoformer model."""
 
 import math
@@ -309,8 +308,7 @@ class AutoformerNOPScaler(nn.Cell):
         self.keepdim = config.keepdim if hasattr(config, "keepdim") else True
 
     def construct(
-        self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor  # pylint: disable=unused-argument
-    ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
+        self, data: mindspore.Tensor, observed_indicator: mindspore.Tensor      ) -> Tuple[mindspore.Tensor, mindspore.Tensor, mindspore.Tensor]:
         scale = ops.ones_like(data).mean(axis=self.dim, keepdims=self.keepdim)
         loc = ops.zeros_like(data).mean(
             axis=self.dim, keepdims=self.keepdim)

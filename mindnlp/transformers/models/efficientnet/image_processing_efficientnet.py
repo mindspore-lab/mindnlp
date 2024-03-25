@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=arguments-renamed
 """Image processor class for EfficientNet."""
 
 from typing import Dict, List, Optional, Union

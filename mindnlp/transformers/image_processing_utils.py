@@ -13,10 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=no-else-return
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-# pylint: disable=invalid-name
 """image processing utils"""
 import copy
 import json
@@ -489,8 +485,7 @@ class ImageProcessingMixin:
         if not isinstance(auto_class, str):
             auto_class = auto_class.__name__
 
-        import mindnlp.transformers.models.auto as auto_module # pylint: disable=import-outside-toplevel
-
+        import mindnlp.transformers.models.auto as auto_module
         if not hasattr(auto_module, auto_class):
             raise ValueError(f"{auto_class} is not a valid auto class.")
 

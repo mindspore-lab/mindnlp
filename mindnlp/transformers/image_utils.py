@@ -13,11 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-# pylint: disable=no-else-return
-# pylint: disable=too-many-boolean-expressions
-# pylint: disable=invalid-name
 
 """image utils"""
 import base64
@@ -523,8 +518,7 @@ class ImageFeatureExtractionMixin:
             if not isinstance(std, np.ndarray):
                 std = np.array(std).astype(image.dtype)
         elif is_mindspore_tensor(image):
-            import mindspore # pylint: disable=import-outside-toplevel
-
+            import mindspore
             if not isinstance(mean, mindspore.Tensor):
                 mean = mindspore.tensor(mean)
             if not isinstance(std, mindspore.Tensor):
@@ -640,8 +634,7 @@ class ImageFeatureExtractionMixin:
             return image.crop((left, top, right, bottom))
 
         # Check if image is in (n_channels, height, width) or (height, width, n_channels) format
-        channel_first = True if image.shape[0] in [1, 3] else False # pylint: disable=simplifiable-if-expression
-
+        channel_first = image.shape[0] in [1, 3]
         # Transpose (height, width, n_channels) format images
         if not channel_first:
             if isinstance(image, np.ndarray):

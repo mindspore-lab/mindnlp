@@ -12,11 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=arguments-renamed
-# pylint: disable=no-else-return
-# pylint: disable=inconsistent-return-statements
-# pylint: disable=not-an-iterable
-# pylint: disable=invalid-name
 """Tokenization class for Wav2Vec2."""
 
 import json
@@ -754,8 +749,7 @@ class Wav2Vec2Tokenizer(PreTrainedTokenizer):
     def word_delimiter_token_id(self, value):
         self._word_delimiter_token = self.convert_tokens_to_ids(value)
 
-    def __call__(   # pylint: disable=signature-differs
-        self,
+    def __call__(           self,
         raw_speech: Union[np.ndarray, List[float], List[np.ndarray], List[List[float]]],
         padding: Union[bool, str, PaddingStrategy] = False,
         max_length: Optional[int] = None,

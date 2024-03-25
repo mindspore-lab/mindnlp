@@ -14,13 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-class-docstring
-# pylint: disable=invalid-name
-# pylint: disable=missing-function-docstring
-# pylint: disable=unused-argument
-# pylint: disable=attribute-defined-outside-init
-# pylint: disable=arguments-renamed
-# pylint: disable=invalid-unary-operand-type
 """ MindSpore Gemma model."""
 import math
 import warnings

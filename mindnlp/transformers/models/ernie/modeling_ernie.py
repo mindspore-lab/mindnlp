@@ -14,11 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
-# pylint: disable=arguments-renamed
-# pylint: disable=unused-argument
 """MindSpore ERNIE model."""
 
 

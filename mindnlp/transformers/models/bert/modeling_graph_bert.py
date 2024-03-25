@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=C0415
-# pylint: disable=W0223
-# pylint: disable=E0401
-# pylint: disable=C0103
 
 """MindNLP bert model"""
 import mindspore.common.dtype as mstype

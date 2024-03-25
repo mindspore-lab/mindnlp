@@ -13,11 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-# pylint: disable=invalid-name
-# pylint: disable=unexpected-keyword-arg
-# pylint: disable=arguments-renamed
 """ MindSpore ESM model."""
 
 import math
@@ -174,7 +169,7 @@ class EsmEmbeddings(nn.Cell):
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
 
         if config.emb_layer_norm_before:
-            self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+            self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         else:
             self.layer_norm = None
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
@@ -409,7 +404,7 @@ class EsmAttention(nn.Cell):
         self.self = EsmSelfAttention(config)
         self.output = EsmSelfOutput(config)
         self.pruned_heads = set()
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
     def prune_heads(self, heads):
         if len(heads) == 0:
@@ -492,7 +487,7 @@ class EsmLayer(nn.Cell):
             self.crossattention = EsmAttention(config)
         self.intermediate = EsmIntermediate(config)
         self.output = EsmOutput(config)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
     def construct(
         self,
@@ -569,7 +564,7 @@ class EsmEncoder(nn.Cell):
         super().__init__()
         self.config = config
         self.layer = nn.CellList([EsmLayer(config) for _ in range(config.num_hidden_layers)])
-        self.emb_layer_norm_after = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.emb_layer_norm_after = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.gradient_checkpointing = False
 
     def construct(
@@ -959,7 +954,7 @@ class EsmLMHead(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.layer_norm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
         self.decoder = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
         self.bias = Parameter(ops.zeros(config.vocab_size))

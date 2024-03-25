@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=too-many-function-args
-# pylint: disable=cyclic-import
 """
 Processor class for Bark
 """
@@ -121,7 +118,6 @@ class BarkProcessor(ProcessorMixin):
         save_directory,
         speaker_embeddings_dict_path="speaker_embeddings_path.json",
         speaker_embeddings_directory="speaker_embeddings",
-        push_to_hub: bool = False,
         **kwargs,
     ):
         """
@@ -137,10 +133,6 @@ class BarkProcessor(ProcessorMixin):
                 exists, and that will be located in `pretrained_model_name_or_path/speaker_embeddings_directory`.
             speaker_embeddings_directory (`str`, *optional*, defaults to `"speaker_embeddings/"`):
                 The name of the folder in which the speaker_embeddings arrays will be saved.
-            push_to_hub (`bool`, *optional*, defaults to `False`):
-                Whether or not to push your model to the Hugging Face model hub after saving it. You can specify the
-                repository you want to push to with `repo_id` (will default to the name of `save_directory` in your
-                namespace).
             kwargs:
                 Additional key word arguments passed along to the [`~utils.PushToHubMixin.push_to_hub`] method.
         """
@@ -171,7 +163,7 @@ class BarkProcessor(ProcessorMixin):
             with open(os.path.join(save_directory, speaker_embeddings_dict_path), "w", encoding='utf-8') as fp:
                 json.dump(embeddings_dict, fp)
 
-        super().save_pretrained(save_directory, push_to_hub, **kwargs)
+        super().save_pretrained(save_directory, **kwargs)
 
     def _load_voice_preset(self, voice_preset: str = None, **kwargs):
         voice_preset_paths = self.speaker_embeddings[voice_preset]

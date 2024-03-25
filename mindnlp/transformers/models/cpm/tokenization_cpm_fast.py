@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=dangerous-default-value
-# pylint: disable=import-outside-toplevel
-# pylint: disable=inconsistent-return-statements
 """Tokenization classes."""
 import os
 from shutil import copyfile

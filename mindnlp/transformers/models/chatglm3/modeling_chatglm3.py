@@ -12,12 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
-# pylint: disable=unused-argument
-# pylint: disable=invalid-name
-# pylint: disable=consider-using-f-string
-# pylint: disable=arguments-renamed
 """ MindSpore ChatGLM3 model. """
 
 import copy
@@ -61,7 +55,7 @@ class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
                 history.append({"role": "assistant", "metadata": metadata, "content": content})
                 if history[0]["role"] == "system" and "tools" in history[0]:
                     content = "\n".join(content.split("\n")[1:-1])
-                    parameters = eval(content) # pylint: disable=eval-used
+                    parameters = eval(content)
                     content = {"name": metadata.strip(), "parameters": parameters}
                 else:
                     content = {"name": metadata.strip(), "content": content}

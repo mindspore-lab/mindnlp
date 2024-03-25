@@ -12,12 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=missing-function-docstring
-# pylint: disable=too-many-nested-blocks
-# pylint: disable=consider-using-enumerate
-# pylint: disable=wrong-import-position
-# pylint: disable=arguments-renamed
 """ASR pipeline"""
 from collections import defaultdict
 from typing import TYPE_CHECKING, Dict, Optional, Union
@@ -32,6 +26,7 @@ from mindnlp.utils import logging
 from .audio_utils import ffmpeg_read
 from .base import ChunkPipeline
 from ..tokenization_utils import PreTrainedTokenizer
+from ..models.auto.modeling_auto import MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING_NAMES
 
 
 if TYPE_CHECKING:
@@ -43,7 +38,6 @@ if TYPE_CHECKING:
 logger = logging.get_logger(__name__)
 
 
-from ..models.auto.modeling_auto import MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING_NAMES
 
 
 def rescale_stride(stride, ratio):

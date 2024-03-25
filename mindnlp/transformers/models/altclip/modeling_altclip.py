@@ -13,13 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=line-too-long
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-# pylint: disable=consider-using-dict-items
-# pylint: disable=invalid-name
-# pylint: disable=unexpected-keyword-arg
-# pylint: disable=arguments-renamed
 """ MindSpore AltCLIP model."""
 import math
 from dataclasses import dataclass
@@ -119,7 +112,7 @@ class AltRobertaEmbeddings(nn.Cell):
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
@@ -330,7 +323,7 @@ class AltRobertaSelfOutput(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
@@ -411,7 +404,7 @@ class AltRobertaOutput(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: mindspore.Tensor, input_tensor: mindspore.Tensor) -> mindspore.Tensor:
@@ -745,9 +738,9 @@ class AltCLIPEncoderLayer(nn.Cell):
         super().__init__()
         self.embed_dim = config.hidden_size
         self.self_attn = AltCLIPAttention(config)
-        self.layer_norm1 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
+        self.layer_norm1 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
         self.mlp = AltCLIPMLP(config)
-        self.layer_norm2 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
+        self.layer_norm2 = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_eps)
 
     def construct(
         self,
@@ -994,7 +987,6 @@ class AltCLIPPreTrainedModel(PreTrainedModel):
             cell.bias.set_data(initializer('zeros', cell.bias.shape, cell.bias.dtype))
 
 
-# Copied from transformers.models.clip.modeling_clip.CLIPVisionTransformer with CLIPVisionTransformer->AltCLIPVisionTransformer,CLIPVisionConfig->AltCLIPVisionConfig,CLIPVisionEmbeddings->AltCLIPVisionEmbeddings,CLIPEncoder->AltCLIPEncoder,CLIP_VISION_INPUTS_DOCSTRING->ALTCLIP_VISION_INPUTS_DOCSTRING
 class AltCLIPVisionTransformer(nn.Cell):
     def __init__(self, config: AltCLIPVisionConfig):
         super().__init__()
@@ -1002,9 +994,9 @@ class AltCLIPVisionTransformer(nn.Cell):
         embed_dim = config.hidden_size
 
         self.embeddings = AltCLIPVisionEmbeddings(config)
-        self.pre_layrnorm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
+        self.pre_layrnorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
         self.encoder = AltCLIPEncoder(config)
-        self.post_layernorm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps)
+        self.post_layernorm = nn.LayerNorm(embed_dim, epsilon=config.layer_norm_eps)
 
     def construct(
         self,
@@ -1286,7 +1278,7 @@ class AltCLIPTextModel(AltCLIPPreTrainedModel):
         super().__init__(config)
         self.roberta = AltRobertaModel(config, add_pooling_layer=False)
         self.transformation = nn.Dense(config.hidden_size, config.project_dim)
-        self.pre_LN = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.pre_LN = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.post_init()
 
     def get_input_embeddings(self) -> nn.Cell:
