@@ -212,6 +212,12 @@ def require_pytesseract(test_case):
     """
     return unittest.skipUnless(is_pytesseract_available(), "test requires pytesseract")(test_case)
 
+def require_mindocr(test_case):
+    """
+    Decorator marking a test that requires MindOCR
+    """
+    return unittest.skipUnless(is_mindocr_available(), "test requires MindOCR")(test_case)
+
 
 def cmd_exists(cmd):
     return shutil.which(cmd) is not None
