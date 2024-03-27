@@ -808,5 +808,4 @@ class LayoutLMv2TokenizerFast(PreTrainedTokenizerFast):
         return tuple(files)
 
 
-__all__ = ["VOCAB_FILES_NAMES", "PRETRAINED_VOCAB_FILES_MAP", "PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES",
-           "PRETRAINED_INIT_CONFIGURATION", "LayoutLMv2TokenizerFast"]
+__all__ = ["LayoutLMv2TokenizerFast"]

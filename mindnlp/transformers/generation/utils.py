@@ -23,7 +23,7 @@ import logging
 from dataclasses import dataclass
 from typing import Optional, List, Callable, Dict, Any, Tuple, Union
 
-from easydict import EasyDict
+from addict import Dict as ADDict
 
 import mindspore
 from mindspore import ops
@@ -2700,7 +2700,7 @@ class GenerationMixin:
                 continue  # don't waste resources running the code we don't need
 
             if type(outputs) is dict:
-                outputs = EasyDict(**outputs)
+                outputs = ADDict(**outputs)
 
             next_token_logits = outputs.logits[:, -1, :]
             # pre-process distribution

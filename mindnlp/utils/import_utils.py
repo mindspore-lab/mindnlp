@@ -66,7 +66,6 @@ _safetensors_available = _is_package_available("safetensors")
 _modelscope_available = _is_package_available("modelscope")
 _jieba_available = _is_package_available("jieba")
 _pytesseract_available = _is_package_available("pytesseract")
-_mindocr_available = _is_package_available("mindocr")
 _mindspore_version, _mindspore_available = _is_package_available(
     "mindspore", return_version=True
 )
@@ -178,10 +177,6 @@ def is_jieba_available():
 
 def is_pytesseract_available():
     return _pytesseract_available
-
-
-def is_mindocr_available():
-    return _mindocr_available
 
 
 @lru_cache()

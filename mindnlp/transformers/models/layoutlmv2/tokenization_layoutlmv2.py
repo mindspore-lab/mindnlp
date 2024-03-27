@@ -1570,18 +1570,4 @@ class WordpieceTokenizer:
         return output_tokens
 
 
-__all__ = [
-    "VOCAB_FILES_NAMES",
-    "PRETRAINED_VOCAB_FILES_MAP",
-    "PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES",
-    "PRETRAINED_INIT_CONFIGURATION",
-    "LAYOUTLMV2_ENCODE_KWARGS_DOCSTRING",
-    "LAYOUTLMV2_ENCODE_PLUS_ADDITIONAL_KWARGS_DOCSTRING",
-    "load_vocab",
-    "whitespace_tokenize",
-    "table",
-    "subfinder",
-    "LayoutLMv2Tokenizer",
-    "BasicTokenizer",
-    "WordpieceTokenizer"
-]
+__all__ = ["LayoutLMv2Tokenizer"]

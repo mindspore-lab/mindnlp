@@ -25,7 +25,6 @@ from mindspore.nn import CrossEntropyLoss, BCEWithLogitsLoss, MSELoss
 
 from mindnlp.transformers.ms_utils import apply_chunking_to_forward
 from mindnlp.utils import logging
-from mindnlp.utils.import_utils import is_mindocr_available
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -37,12 +36,7 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from .configuration_layoutlmv2 import LayoutLMv2Config
-
-if is_mindocr_available():
-    from mindocr.models.backbones.layoutxlm.visual_backbone import build_resnet_fpn_backbone
-else:
-    raise RuntimeError('LayoutLMv2 requires `mindocr` dependency, please install mindocr by following command:\n'
-                       '`pip install mindocr`')
+from .visual_backbone import build_resnet_fpn_backbone
 
 logger = logging.get_logger(__name__)
 
@@ -72,13 +66,8 @@ class LayoutLMv2Embeddings(nn.Cell):
         self.LayerNorm = nn.LayerNorm([config.hidden_size], epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
-        self.position_ids = Parameter(
-            mindspore.Tensor(np.arange(0, config.max_position_embeddings)).broadcast_to(
-                (1, -1)
-            ),
-            name="position_ids",
-            requires_grad=False,
-        )
+        self.position_ids = mindspore.Tensor(np.arange(0, config.max_position_embeddings)).broadcast_to(
+                (1, -1))
 
     def _calc_spatial_position_embeddings(self, bbox):
         try:
@@ -500,6 +489,7 @@ class LayoutLMv2PreTrainedModel(PreTrainedModel):
     models.
     """
 
+    _keys_to_ignore_on_load_unexpected = ['num_batches_tracked']
     config_class = LayoutLMv2Config
     pretrained_model_archive_map = LAYOUTLMV2_PRETRAINED_MODEL_ARCHIVE_LIST
     base_model_prefix = "layoutlmv2"
@@ -589,77 +579,6 @@ class LayoutLMv2VisualBackbone(nn.Cell):
                 features = item[1]
         features = self.pool(features)
         return features.flatten(start_dim=2).transpose(0, 2, 1)
-
-
-LAYOUTLMV2_START_DOCSTRING = r"""
-    This model is a PyTorch [torch.nn.Cell](https://pytorch.org/docs/stable/nn.html#torch.nn.Cell) sub-class. Use
-    it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage and
-    behavior.
-
-    Parameters:
-        config ([`LayoutLMv2Config`]): Model configuration class with all the parameters of the model.
-            Initializing with a config file does not load the weights associated with the model, only the
-            configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-"""
-
-LAYOUTLMV2_INPUTS_DOCSTRING = r"""
-    Args:
-        input_ids (`torch.LongTensor` of shape `{0}`):
-            Indices of input sequence tokens in the vocabulary.
-
-            Indices can be obtained using [`AutoTokenizer`]. See [`PreTrainedTokenizer.encode`] and
-            [`PreTrainedTokenizer.__call__`] for details.
-
-            [What are input IDs?](../glossary#input-ids)
-
-        bbox (`torch.LongTensor` of shape `({0}, 4)`, *optional*):
-            Bounding boxes of each input sequence tokens. Selected in the range `[0,
-            config.max_2d_position_embeddings-1]`. Each bounding box should be a normalized version in (x0, y0, x1, y1)
-            format, where (x0, y0) corresponds to the position of the upper left corner in the bounding box, and (x1,
-            y1) represents the position of the lower right corner.
-
-        image (`torch.FloatTensor` of shape `(batch_size, num_channels, height, width)` or `detectron.structures.ImageList` whose `tensors` is of shape `(batch_size, num_channels, height, width)`):
-            Batch of document images.
-
-        attention_mask (`torch.FloatTensor` of shape `{0}`, *optional*):
-            Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
-
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-
-            [What are attention masks?](../glossary#attention-mask)
-        token_type_ids (`torch.LongTensor` of shape `{0}`, *optional*):
-            Segment token indices to indicate first and second portions of the inputs. Indices are selected in `[0,
-            1]`:
-
-            - 0 corresponds to a *sentence A* token,
-            - 1 corresponds to a *sentence B* token.
-
-            [What are token type IDs?](../glossary#token-type-ids)
-        position_ids (`torch.LongTensor` of shape `{0}`, *optional*):
-            Indices of positions of each input sequence tokens in the position embeddings. Selected in the range `[0,
-            config.max_position_embeddings - 1]`.
-
-            [What are position IDs?](../glossary#position-ids)
-        head_mask (`torch.FloatTensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
-            Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
-
-            - 1 indicates the head is **not masked**,
-            - 0 indicates the head is **masked**.
-
-        inputs_embeds (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`, *optional*):
-            Optionally, instead of passing `input_ids` you can choose to directly pass an embedded representation. This
-            is useful if you want more control over how to convert *input_ids* indices into associated vectors than the
-            model's internal embedding lookup matrix.
-        output_attentions (`bool`, *optional*):
-            Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
-            tensors for more detail.
-        output_hidden_states (`bool`, *optional*):
-            Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
-            more detail.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-"""
 
 
 class LayoutLMv2Pooler(nn.Cell):
@@ -1386,25 +1305,11 @@ class LayoutLMv2ForQuestionAnswering(LayoutLMv2PreTrainedModel):
 
 
 __all__ = [
-    "_CHECKPOINT_FOR_DOC",
-    "_CONFIG_FOR_DOC",
     "LAYOUTLMV2_PRETRAINED_MODEL_ARCHIVE_LIST",
-    "LayoutLMv2Embeddings",
-    "LayoutLMv2SelfAttention",
-    "LayoutLMv2Attention",
-    "LayoutLMv2SelfOutput",
-    "LayoutLMv2Intermediate",
-    "LayoutLMv2Output",
-    "LayoutLMv2Layer",
-    "relative_position_bucket",
-    "LayoutLMv2Encoder",
-    "LayoutLMv2PreTrainedModel",
-    "LayoutLMv2VisualBackbone",
-    "LAYOUTLMV2_START_DOCSTRING",
-    "LAYOUTLMV2_INPUTS_DOCSTRING",
-    "LayoutLMv2Pooler",
-    "LayoutLMv2Model",
+    "LayoutLMv2ForQuestionAnswering",
     "LayoutLMv2ForSequenceClassification",
     "LayoutLMv2ForTokenClassification",
-    "LayoutLMv2ForQuestionAnswering"
+    "LayoutLMv2Layer",
+    "LayoutLMv2Model",
+    "LayoutLMv2PreTrainedModel",
 ]
