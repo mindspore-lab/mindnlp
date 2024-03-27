@@ -22,12 +22,21 @@ from . import (
     audio_spectrogram_transformer,
     auto,
     autoformer,
+    baichuan,
     bark,
     bart,
+    barthez,
+    bartpho,
+    beit,
     bert,
+    bert_generation,
+    bert_japanese,
+    bertweet,
+    bge_m3,
     big_bird,
     biogpt,
     bloom,
+    byt5,
     clip,
     codegen,
     cpm,
@@ -54,6 +63,7 @@ from . import (
     graphormer,
     hubert,
     layoutlm,
+    layoutlmv2,
     llama,
     longformer,
     luke,
@@ -64,6 +74,7 @@ from . import (
     mistral,
     mixtral,
     mobilebert,
+    musicgen,
     nezha,
     opt,
     phi,
@@ -90,12 +101,21 @@ from .altclip import *
 from .audio_spectrogram_transformer import *
 from .auto import *
 from .autoformer import *
+from .baichuan import *
 from .bark import *
 from .bart import *
+from .barthez import *
+from .bartpho import *
+from .beit import *
 from .bert import *
+from .bert_generation import *
+from .bert_japanese import *
+from .bertweet import *
+from .bge_m3 import *
 from .big_bird import *
 from .biogpt import *
 from .bloom import *
+from .byt5 import *
 from .clip import *
 from .codegen import *
 from .cpm import *
@@ -122,6 +142,7 @@ from .gpt2 import *
 from .graphormer import *
 from .hubert import *
 from .layoutlm import *
+from .layoutlmv2 import *
 from .llama import *
 from .longformer import *
 from .luke import *
@@ -132,6 +153,7 @@ from .minicpm import *
 from .mistral import *
 from .mixtral import *
 from .mobilebert import *
+from .musicgen import *
 from .nezha import *
 from .opt import *
 from .phi import *
@@ -158,12 +180,21 @@ __all__.extend(altclip.__all__)
 __all__.extend(audio_spectrogram_transformer.__all__)
 __all__.extend(auto.__all__)
 __all__.extend(autoformer.__all__)
-__all__.extend(bart.__all__)
+__all__.extend(baichuan.__all__)
 __all__.extend(bark.__all__)
+__all__.extend(bart.__all__)
+__all__.extend(barthez.__all__)
+__all__.extend(bartpho.__all__)
+__all__.extend(beit.__all__)
 __all__.extend(bert.__all__)
+__all__.extend(bert_generation.__all__)
+__all__.extend(bert_japanese.__all__)
+__all__.extend(bertweet.__all__)
+__all__.extend(bge_m3.__all__)
 __all__.extend(big_bird.__all__)
 __all__.extend(biogpt.__all__)
 __all__.extend(bloom.__all__)
+__all__.extend(byt5.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(cpm.__all__)
@@ -190,6 +221,7 @@ __all__.extend(gpt2.__all__)
 __all__.extend(graphormer.__all__)
 __all__.extend(hubert.__all__)
 __all__.extend(layoutlm.__all__)
+__all__.extend(layoutlmv2.__all__)
 __all__.extend(llama.__all__)
 __all__.extend(longformer.__all__)
 __all__.extend(luke.__all__)
@@ -200,6 +232,7 @@ __all__.extend(minicpm.__all__)
 __all__.extend(mistral.__all__)
 __all__.extend(mixtral.__all__)
 __all__.extend(mobilebert.__all__)
+__all__.extend(musicgen.__all__)
 __all__.extend(nezha.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(phi.__all__)

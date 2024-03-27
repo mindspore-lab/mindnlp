@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=missing-function-docstring
-# pylint: disable=consider-using-f-string
 """Constants used in AlphaFold."""
 
 import collections
@@ -391,7 +388,7 @@ def map_structure_with_atom_order(in_list: list, first_call: bool = True) -> lis
     # Maps strings in a nested list structure to their corresponding index in atom_order
     if first_call:
         in_list = copy.deepcopy(in_list)
-    for i in range(len(in_list)): # pylint: disable=consider-using-enumerate
+    for i in range(len(in_list)):
         if isinstance(in_list[i], list):
             in_list[i] = map_structure_with_atom_order(in_list[i], first_call=False)
         elif isinstance(in_list[i], str):

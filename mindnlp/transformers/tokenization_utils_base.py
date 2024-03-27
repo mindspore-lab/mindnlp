@@ -12,16 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=too-many-lines
+# ============================================================================
 # pylint: disable=import-outside-toplevel
-# pylint: disable=invalid-name
-# pylint: disable=logging-fstring-interpolation
-# pylint: disable=missing-function-docstring
-# pylint: disable=redefined-argument-from-local
-# pylint: disable=unused-argument
-# pylint: disable=too-many-branches
-# pylint: disable=consider-iterating-dictionary
-# pylint: disable=inconsistent-return-statements
 """
 Base classes common to both the slow and the fast tokenization classes: PreTrainedTokenizerBase (host all the user
 fronting encoding methods) Special token mixing (host the special tokens logic) and BatchEncoding (wrap the dictionary
@@ -658,7 +650,7 @@ class BatchEncoding(UserDict):
                 if isinstance(value, list) and isinstance(value[0], np.ndarray):
                     return mindspore.tensor(np.array(value), dtype)
                 if isinstance(value, np.ndarray) and value.shape == (0,):
-                    return mindspore.tensor(mindspore._c_expression.Tensor(value, dtype)) # pylint: disable=c-extension-no-member
+                    return mindspore.tensor(mindspore._c_expression.Tensor(value, dtype))
                 return mindspore.tensor(value, dtype)
         else:
             def as_tensor(value, dtype=None):
@@ -1937,7 +1929,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         for key in cls.SPECIAL_TOKENS_ATTRIBUTES & init_kwargs.keys():
             if added_tokens_map and init_kwargs[key] is not None:
                 if key != "additional_special_tokens":
-                    init_kwargs[key] = added_tokens_map.get(init_kwargs[key], init_kwargs[key])
+                    init_kwargs[key] = added_tokens_map.get(str(init_kwargs[key]), init_kwargs[key])
 
         init_kwargs["added_tokens_decoder"] = added_tokens_decoder
         # convert {'__type': 'AddedToken', 'content': '<ent>', 'lstrip': False, 'normalized': True, ...} to AddedTokens

@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,16 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=W0614
-# pylint: disable=W0401
 """
-Models folder compatible
+Bart hez Model.
 """
-from . import transformers
-from .transformers import *
-from .utils import logging
+from . import tokenization_barthez, tokenization_barthez_fast
 
-logger = logging.get_logger(__name__)
-logger.warning('`mindnlp.models` will be deprecated, please use `mindspore.transformers` instead.')
+from .tokenization_barthez import *
+from .tokenization_barthez_fast import *
 
-__all__ = transformers.__all__
+__all__ = []
+__all__.extend(tokenization_barthez.__all__)
+__all__.extend(tokenization_barthez_fast.__all__)

@@ -16,7 +16,7 @@
 Ernie Model init
 """
 
-from .import modeling_encodec, configuration_encodec
+from .import modeling_encodec, configuration_encodec, feature_extraction_encodec
 from .configuration_encodec import *
 from .modeling_encodec import *
 from .feature_extraction_encodec import *
@@ -24,3 +24,4 @@ from .feature_extraction_encodec import *
 __all__ = []
 __all__.extend(modeling_encodec.__all__)
 __all__.extend(configuration_encodec.__all__)
+__all__.extend(feature_extraction_encodec.__all__)

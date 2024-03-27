@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=dangerous-default-value
-# pylint: disable=invalid-name
-# pylint: disable=inconsistent-return-statements
 """ Tokenization class for model Reformer."""
 
 

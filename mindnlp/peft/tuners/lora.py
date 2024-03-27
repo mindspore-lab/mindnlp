@@ -12,14 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=C0103
-# pylint: disable=R1705
-# pylint: disable=R1702
-# pylint: disable=W0631
-# pylint: disable=W0613
-# pylint: disable=E1111
-# pylint: disable=W1401
-# pylint: disable=W0237
 """Lora."""
 import math
 import re
@@ -206,7 +198,7 @@ class LoraModel(BaseTuner):
 
                 for pattern in layers_pattern:
                     layer_index = re.match(f".*.{pattern}\.(\d+)\.*", key)
-                    if layer_index is not None:  # pylint: disable=R1723
+                    if layer_index is not None:
                         layer_index = int(layer_index.group(1))
                         if isinstance(lora_config.layers_to_transform, int):
                             target_module_found = layer_index == lora_config.layers_to_transform
@@ -308,7 +300,7 @@ class LoraModel(BaseTuner):
             config = {k: v.value if isinstance(v, Enum) else v for k, v in asdict(value).items()}
             if inference:
                 config["inference_mode"] = True
-        config_dict[key] = config
+        config_dict[key] = config # pylint: disable=undefined-loop-variable
         return config
 
     def _set_adapter_layers(self, enabled=True):
@@ -480,7 +472,6 @@ class LoraModel(BaseTuner):
         ):
         """"""
         # TODO: support loaded_in_8bit & loaded_in_4bit later, just pop now.
-        # pylint: disable=W0612
         loaded_in_8bit = kwargs.pop("loaded_in_8bit", False)
         loaded_in_4bit = kwargs.pop("loaded_in_4bit", False)
         bias = kwargs.pop("bias", False)
@@ -650,7 +641,6 @@ class LoraLayer(BaseTunerLayer):
         """
         reset lora parameters.
         """
-        # pylint: disable=C0201
         if adapter_name in self.lora_A.keys():
             self.lora_A[adapter_name].weight.set_data(initializer(
                 HeUniform(negative_slope=math.sqrt(5)),

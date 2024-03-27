@@ -13,14 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=too-many-nested-blocks
-# pylint: disable=too-many-branches
-# pylint: disable=invalid-name
-# pylint: disable=missing-function-docstring
-# pylint: disable=consider-using-f-string
-# pylint: disable=arguments-renamed
-# pylint: disable=inconsistent-return-statements
-# pylint: disable=not-an-iterable
 """Tokenization classes for Whisper."""
 import json
 import os

@@ -12,12 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=consider-using-generator
-# pylint: disable=cell-var-from-loop
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-# pylint: disable=unidiomatic-typecheck
 """Chunk utils"""
 import logging
 import math
@@ -234,7 +228,7 @@ def chunk_layer(
         raise ValueError("Must provide at least one input")
 
     initial_dims = [shape[:no_batch_dims] for shape in _fetch_dims(inputs)]
-    orig_batch_dims = tuple([max(s) for s in zip(*initial_dims)])
+    orig_batch_dims = tuple(max(s) for s in zip(*initial_dims))
 
     def _prep_inputs(t: mindspore.Tensor) -> mindspore.Tensor:
         if not low_mem:
@@ -288,7 +282,7 @@ def chunk_layer(
             def assign(d1: dict, d2: dict) -> None:
                 for k, v in d1.items():
                     if isinstance(v, dict):
-                        assign(v, d2[k])
+                        assign(v, d2[k]) # pylint: disable=cell-var-from-loop
                     else:
                         if _add_into_out:
                             v[i : i + chunk_size] += d2[k]

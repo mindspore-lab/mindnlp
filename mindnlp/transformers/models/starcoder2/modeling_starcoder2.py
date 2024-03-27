@@ -18,13 +18,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===========================================================================
-# pylint: disable=missing-class-docstring
-# pylint: disable=invalid-name
-# pylint: disable=unused-argument
-# pylint: disable=unexpected-keyword-arg
-# pylint: disable=arguments-renamed
-# pylint: disable=missing-function-docstring
-# pylint: disable=invalid-unary-operand-type
 """ MindSpore Starcoder2 model."""
 import math
 import warnings
@@ -308,8 +301,8 @@ class Starcoder2DecoderLayer(nn.Cell):
 
         self.mlp = Starcoder2MLP(config)
 
-        self.input_layernorm = nn.LayerNorm(config.hidden_size, eps=config.norm_epsilon)
-        self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, eps=config.norm_epsilon)
+        self.input_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.norm_epsilon)
+        self.post_attention_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.norm_epsilon)
 
     # Copied from transformers.models.mistral.modeling_mistral.MistralDecoderLayer.forward
     def construct(
@@ -411,7 +404,7 @@ class Starcoder2Model(Starcoder2PreTrainedModel):
             [Starcoder2DecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
         # self._attn_implementation = config._attn_implementation
-        self.norm = nn.LayerNorm(config.hidden_size, eps=config.norm_epsilon)
+        self.norm = nn.LayerNorm(config.hidden_size, epsilon=config.norm_epsilon)
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()

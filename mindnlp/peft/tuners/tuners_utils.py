@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=W0107
 """
 BaseTuner class and BaseTunerLayer class.
 """
@@ -113,7 +112,7 @@ class BaseTuner(nn.Cell):
             model_config (`str`):
                 The transformers model config, that config should contain the `model_type` key.
         """
-        pass
+        return None
 
     @staticmethod
     def _check_target_module_exists(peft_config: PeftConfig, key: str) -> bool:
@@ -127,7 +126,6 @@ class BaseTuner(nn.Cell):
             key (`str`):
                 The module's key name.
         """
-        pass
 
     def _create_and_replace(
         self,
@@ -158,7 +156,6 @@ class BaseTuner(nn.Cell):
             **optionnal_kwargs (`dict`):
                 The optional keyword arguments to pass to deal with particular cases (e.g. 8bit, 4bit quantization)
         """
-        pass
 
     def _mark_only_adapters_as_trainable(self):
         r"""
@@ -167,8 +164,6 @@ class BaseTuner(nn.Cell):
 
         Check `peft.tuners.lora.LoraModel._mark_only_adapters_as_trainable` for an example.
         """
-        pass
-
 
     def _check_new_adapter_config(self, config: PeftConfig) -> None:
         """
@@ -177,7 +172,6 @@ class BaseTuner(nn.Cell):
         Raise a ValueError if there is something wrong with the config or if it conflicts with existing adapters.
 
         """
-        pass
 
     # def add_adapter(self, adapter_name, config=None):
     #     """add adapter"""
@@ -224,8 +218,7 @@ class BaseTuner(nn.Cell):
         if hasattr(model_config, "to_dict"):
             model_config = model_config.to_dict()
 
-        peft_config = self._prepare_adapter_config(peft_config, model_config) # pylint: disable=E1111
-
+        peft_config = self._prepare_adapter_config(peft_config, model_config) # pylint: disable=assignment-from-none
         for key in key_list:
             if not self._check_target_module_exists(peft_config, key):
                 continue

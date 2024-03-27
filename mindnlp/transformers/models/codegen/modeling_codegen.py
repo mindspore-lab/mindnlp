@@ -13,10 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-function-docstring
-# pylint: disable=invalid-name
-# pylint: disable=missing-class-docstring
-# pylint: disable=unexpected-keyword-arg
 """ MindSpore CodeGen model."""
 
 from typing import Optional, Tuple, Union
@@ -270,7 +266,7 @@ class CodeGenBlock(nn.Cell):
     def __init__(self, config):
         super().__init__()
         inner_dim = config.n_inner if config.n_inner is not None else 4 * config.n_embd
-        self.ln_1 = nn.LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
+        self.ln_1 = nn.LayerNorm(config.n_embd, epsilon=config.layer_norm_epsilon)
         self.attn = CodeGenAttention(config)
         self.mlp = CodeGenMLP(inner_dim, config)
 
@@ -348,7 +344,7 @@ class CodeGenModel(CodeGenPreTrainedModel):
         self.wte = nn.Embedding(config.vocab_size, self.embed_dim)
         self.drop = nn.Dropout(p=config.embd_pdrop)
         self.h = nn.CellList([CodeGenBlock(config) for _ in range(config.n_layer)])
-        self.ln_f = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_epsilon)
+        self.ln_f = nn.LayerNorm(self.embed_dim, epsilon=config.layer_norm_epsilon)
         self.rotary_dim = min(config.rotary_dim, config.n_ctx // config.num_attention_heads)
 
         self.gradient_checkpointing = False

@@ -12,14 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
-# pylint: disable=no-else-return
-# pylint: disable=arguments-renamed
-# pylint: disable=broad-exception-caught
-# pylint: disable=unused-argument
-# pylint: disable=unbalanced-tuple-unpacking
-# pylint: disable=invalid-name
 """question answering pipeline."""
 
 import warnings
@@ -91,7 +83,7 @@ def decode_spans(
         idx = np.argpartition(-scores_flat, topk)[0:topk]
         idx_sort = idx[np.argsort(-scores_flat[idx])]
 
-    starts, ends = np.unravel_index(idx_sort, candidates.shape)[1:]
+    starts, ends = np.unravel_index(idx_sort, candidates.shape)[1:] # pylint: disable=unbalanced-tuple-unpacking
     desired_spans = np.isin(starts, undesired_tokens.nonzero()) & np.isin(ends, undesired_tokens.nonzero())
     starts = starts[desired_spans]
     ends = ends[desired_spans]

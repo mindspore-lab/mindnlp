@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=C0116
-# pylint: disable=C2801
 """Factory function to build auto-model classes."""
 import copy
 import importlib

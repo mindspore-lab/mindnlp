@@ -102,8 +102,7 @@ def quant_noise(module: nn.Cell, q_noise: float, block_size: int):
                 raise AssertionError("Kernel size must be a multiple of block size")
 
     def _forward_pre_hook(mod, input_var):
-        # pylint: disable=unused-argument
-        # no noise for evaluation
+                # no noise for evaluation
         if mod.training:
             if not is_conv:
                 # gather weight and sizes

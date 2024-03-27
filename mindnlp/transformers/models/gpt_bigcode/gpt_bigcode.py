@@ -16,8 +16,6 @@
 # limitations under the License.
 # ============================================================================
 """MindNLP gpt_bigcode model"""
-# pylint: disable=C0415
-# pylint: disable=C0103
 
 import math
 from typing import List, Optional, Tuple, Union

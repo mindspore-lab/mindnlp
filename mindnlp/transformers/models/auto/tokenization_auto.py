@@ -12,12 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=C0116
-# pylint: disable=W0612
-# pylint: disable=E0213
-# pylint: disable=W0613
-# pylint: disable=W1203
-# pylint: disable=c0103
 
 """ Auto Tokenizer class."""
 
@@ -29,8 +23,8 @@ from typing import Dict, Optional, Union
 
 from mindnlp.utils import cached_file, is_sentencepiece_available, is_tokenizers_available, logging
 from ...configuration_utils import PretrainedConfig, EncoderDecoderConfig
-from ...tokenization_utils import PreTrainedTokenizer # pylint: disable=cyclic-import
-from ...tokenization_utils_base import TOKENIZER_CONFIG_FILE # pylint: disable=cyclic-import
+from ...tokenization_utils import PreTrainedTokenizer
+from ...tokenization_utils_base import TOKENIZER_CONFIG_FILE
 from .auto_factory import _LazyAutoMapping
 from .configuration_auto import (
     CONFIG_MAPPING_NAMES,
@@ -43,7 +37,7 @@ from .configuration_auto import (
 logger = logging.get_logger(__name__)
 
 if is_tokenizers_available():
-    from ...tokenization_utils_fast import PreTrainedTokenizerFast # pylint: disable=cyclic-import
+    from ...tokenization_utils_fast import PreTrainedTokenizerFast
 else:
     PreTrainedTokenizerFast = None
 
@@ -78,6 +72,14 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
                 "BigBirdTokenizerFast" if is_tokenizers_available() else None,
             ),
         ),
+        (
+            "bge-m3",
+            (
+                "XLMRobertaTokenizer" if is_sentencepiece_available() else None,
+                "XLMRobertaTokenizerFast" if is_tokenizers_available() else None,
+            ),
+        ),
+
         ("bigbird_pegasus", ("PegasusTokenizer", "PegasusTokenizerFast" if is_tokenizers_available() else None)),
         ("biogpt", ("BioGptTokenizer", None)),
         ("blenderbot", ("BlenderbotTokenizer", "BlenderbotTokenizerFast")),
@@ -774,7 +776,7 @@ class AutoTokenizer:
             f"Model type should be one of {', '.join(c.__name__ for c in TOKENIZER_MAPPING.keys())}."
         )
 
-    def register(config_class, slow_tokenizer_class=None, fast_tokenizer_class=None, exist_ok=False):
+    def register(config_class, slow_tokenizer_class=None, fast_tokenizer_class=None, exist_ok=False): # pylint: disable=no-self-argument
         """
         Register a new tokenizer in this mapping.
 

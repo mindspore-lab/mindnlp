@@ -27,9 +27,7 @@ if is_cython_available():
     import pyximport
 
     pyximport.install(setup_args={"include_dirs": np.get_include()})
-    # pylint: disable=no-name-in-module
-    # pylint: disable=cyclic-import
-    from . import algos_graphormer  # noqa E402
+    from . import algos_graphormer  # pylint: disable=no-name-in-module
 
 
 def convert_to_single_emb(node_feature, offset: int = 512):
@@ -108,7 +106,7 @@ class GraphormerDataCollator:
                              "input_edges",
                              "out_degree",
                              "labels"]
-    # pylint: disable=invalid-name
+
     def __call__(self, edge_index, edge_attr, y, num_nodes, node_feat, batch_info):
         features = []
         num_features = len(edge_index)

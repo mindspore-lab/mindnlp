@@ -15,7 +15,6 @@
 """
 RNN Decoder modules
 """
-# pylint: disable=abstract-method
 
 from mindspore import nn
 from mindspore import ops

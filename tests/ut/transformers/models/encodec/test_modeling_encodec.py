@@ -206,104 +206,6 @@ class EncodecModelTest(ModelTesterMixin, unittest.TestCase):
         """
 
     @unittest.skip("The EncodecModel is not transformers based, thus it does not have the usual `attention` logic")
-    def test_torchscript_output_attentions(self):
-        r""" 
-        skip 
-        """
-
-    @unittest.skip("The EncodecModel is not transformers based, thus it does not have the usual `hidden_states` logic")
-    def test_torchscript_output_hidden_state(self):
-        r""" 
-        skip 
-        """
-
-    def _create_and_check_torchscript(self, config, inputs_dict):
-        if not self.test_torchscript:
-            return
-
-        configs_no_init = _config_zero_init(config)  # To be sure we have no Nan
-        configs_no_init.torchscript = True
-        configs_no_init.return_dict = False
-        for model_class in self.all_model_classes:
-            model = model_class(config=configs_no_init)
-            model.set_train(False)
-            inputs = self._prepare_for_class(inputs_dict, model_class)
-
-            main_input_name = model_class.main_input_name
-
-            try:
-                main_input = inputs[main_input_name]
-                model(main_input)
-                traced_model = mindspore.jit.trace(model, main_input)
-            except RuntimeError:
-                self.fail("Couldn't trace module.")
-
-            with tempfile.TemporaryDirectory() as tmp_dir_name:
-                pt_file_name = os.path.join(tmp_dir_name, "traced_model.pt")
-
-                try:
-                    mindspore.jit.save(traced_model, pt_file_name)
-                except Exception:
-                    self.fail("Couldn't save module.")
-
-                try:
-                    loaded_model = mindspore.jit.load(pt_file_name)
-                except Exception:
-                    self.fail("Couldn't load module.")
-
-            model.set_train(False)
-
-            loaded_model.set_train(False)
-
-            model_state_dict = model.state_dict()
-            loaded_model_state_dict = loaded_model.state_dict()
-
-            non_persistent_buffers = {}
-            for key in loaded_model_state_dict.keys():
-                if key not in model_state_dict.keys():
-                    non_persistent_buffers[key] = loaded_model_state_dict[key]
-
-            loaded_model_state_dict = {
-                key: value for key, value in loaded_model_state_dict.items() if key not in non_persistent_buffers
-            }
-            self.assertEqual(set(model_state_dict.keys()), set(loaded_model_state_dict.keys()))
-
-            model_buffers = list(model.buffers())
-            for non_persistent_buffer in non_persistent_buffers.values():
-                found_buffer = False
-                for i, model_buffer in enumerate(model_buffers):
-                    if np.equal(non_persistent_buffer, model_buffer):
-                        found_buffer = True
-                        break
-
-                self.assertTrue(found_buffer)
-                model_buffers.pop(i)
-
-            model_buffers = list(model.buffers())
-            for non_persistent_buffer in non_persistent_buffers.values():
-                found_buffer = False
-                for i, model_buffer in enumerate(model_buffers):
-                    if np.equal(non_persistent_buffer, model_buffer):
-                        found_buffer = True
-                        break
-
-                self.assertTrue(found_buffer)
-                model_buffers.pop(i)
-
-            models_equal = True
-            for layer_name, p1 in model_state_dict.items():
-                if layer_name in loaded_model_state_dict:
-                    p2 = loaded_model_state_dict[layer_name]
-                    if p1.data.ne(p2.data).sum() > 0:
-                        models_equal = False
-
-            self.assertTrue(models_equal)
-
-            # Avoid memory leak. Without this, each call increase RAM usage by ~20MB.
-            # (Even with this call, there are still memory leak by ~0.04MB)
-            self.clear_torch_jit_class_registry()
-
-    @unittest.skip("The EncodecModel is not transformers based, thus it does not have the usual `attention` logic")
     def test_attention_outputs(self):
         pass
 
@@ -464,7 +366,7 @@ class EncodecIntegrationTest(unittest.TestCase):
     r"""
     Test Encodec Integration
     """
-    def test_Integration_24kHz(self):
+    def test_integration_24kHz(self):
         r"""
         24KHz
         """
@@ -488,7 +390,7 @@ class EncodecIntegrationTest(unittest.TestCase):
         inputs = processor(
             raw_audio=audio_sample,
             sampling_rate=processor.sampling_rate,
-            return_tensors="pt",
+            return_tensors="ms",
         )
 
         for bandwidth, expected_rmse in expected_rmse.items():
@@ -508,7 +410,7 @@ class EncodecIntegrationTest(unittest.TestCase):
             )[-1]
 
             # make sure forward and decode gives same result
-            self.assertTrue(np.allclose(input_values_dec, input_values_enc_dec, atol=1e-3))
+            self.assertTrue(np.allclose(input_values_dec.asnumpy(), input_values_enc_dec.asnumpy(), atol=1e-3))
 
             # make sure shape matches
             self.assertTrue(inputs["input_values"].shape == input_values_enc_dec.shape)
@@ -519,9 +421,10 @@ class EncodecIntegrationTest(unittest.TestCase):
             # make sure audios are more or less equal
             # the RMSE of two random gaussian noise vectors with ~N(0, 1) is around 1.0
             rmse = compute_rmse(arr, arr_enc_dec)
+            print(rmse, expected_rmse)
             self.assertTrue(rmse < expected_rmse)
 
-    def test_Integration_48kHz(self):
+    def test_integration_48kHz(self):
         r"""
         48KHz test
         """
@@ -546,7 +449,7 @@ class EncodecIntegrationTest(unittest.TestCase):
         # transform mono to stereo
         audio_sample = np.array([audio_sample, audio_sample])
 
-        inputs = processor(raw_audio=audio_sample, sampling_rate=processor.sampling_rate, return_tensors="pt")
+        inputs = processor(raw_audio=audio_sample, sampling_rate=processor.sampling_rate, return_tensors="ms")
 
         for bandwidth, expected_rmse in expected_rmse.items():
 
@@ -609,7 +512,7 @@ class EncodecIntegrationTest(unittest.TestCase):
             for audio_sample in librispeech_dummy[-2:]["audio"]
         ]
 
-        inputs = processor(raw_audio=audio_samples, sampling_rate=processor.sampling_rate, return_tensors="pt")
+        inputs = processor(raw_audio=audio_samples, sampling_rate=processor.sampling_rate, return_tensors="ms")
         input_values = inputs["input_values"]
         for bandwidth, expected_rmse in expected_rmse.items():
             # use max bandwith for best possible reconstruction

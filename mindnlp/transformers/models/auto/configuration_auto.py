@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=C0116
-# pylint: disable=C0103
 """ Auto Config class."""
 import importlib
 import re
@@ -24,9 +22,7 @@ from typing import List, Union
 
 from mindnlp.configs import CONFIG_NAME
 from mindnlp.utils import logging
-from mindnlp.transformers.configuration_utils import PretrainedConfig # pylint: disable=R0401
-
-
+from mindnlp.transformers.configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 CONFIG_MAPPING_NAMES = OrderedDict(
@@ -39,7 +35,10 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("autoformer", "AutoformerConfig"),
         ("bark", "BarkConfig"),
         ("bart", "BartConfig"),
+        ("beit", "BeitConfig"),
         ("bert", "BertConfig"),
+        ("bert-generation", "BertGenerationConfig"),
+        ("bge-m3", "BgeM3Config"),
         ("big_bird", "BigBirdConfig"),
         ("biogpt", "BioGptConfig"),
         ("bloom", "BloomConfig"),
@@ -50,8 +49,8 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("cpmant", "CpmAntConfig"),
         ("cpmbee", "CpmBeeConfig"),
         ("deberta", "DebertaConfig"),
-        ("distilbert","DistilBertConfig"),
-        ("encodec","EncodecConfig"),
+        ("distilbert", "DistilBertConfig"),
+        ("encodec", "EncodecConfig"),
         ("esm", "EsmConfig"),
         ("falcon", "FalconConfig"),
         ("gemma", "GemmaConfig"),
@@ -60,10 +59,11 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("gpt_pangu", "GPTPanguConfig"),
         ('hubert', 'HubertConfig'),
         ("mamba", "MambaConfig"),
-        ("mbart","MBartConfig"),
+        ("mbart", "MBartConfig"),
         ('minicpm', 'MiniCPMConfig'),
         ("mistral", "MistralConfig"),
         ("mixtral", "MixtralConfig"),
+        ("musicgen", "MusicgenConfig"),
         ('mt5', 'MT5Config'),
         ("phi", "PhiConfig"),
         ("qwen2", "Qwen2Config"),
@@ -74,6 +74,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ('wav2vec2', 'Wav2Vec2Config'),
         ("whisper", "WhisperConfig"),
         ('xlm-roberta', 'XLMRobertaConfig'),
+        ("layoutlmv2", "LayoutLMv2Config"),
     ]
 )
 
@@ -301,6 +302,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("bert-generation", "Bert Generation"),
         ("bert-japanese", "BertJapanese"),
         ("bertweet", "BERTweet"),
+        ("bge-m3", "BgeM3"),
         ("big_bird", "BigBird"),
         ("bigbird_pegasus", "BigBird-Pegasus"),
         ("biogpt", "BioGpt"),

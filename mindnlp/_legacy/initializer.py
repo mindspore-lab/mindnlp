@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=W0702
-
 """"Classes and functions for Initializer"""
 
 import math
@@ -21,7 +19,7 @@ import numpy as np
 from mindspore.common.initializer import Initializer, _calculate_fan_in_and_fan_out, _assignment
 try:
     from mindspore._c_expression import random_normal as _random_normal
-except:
+except: # pylint: disable=bare-except
     from mindspore._c_expression import _random_normal
 
 def _numpy_seed():

@@ -14,10 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-function-docstring
-# pylint: disable=arguments-renamed
-# pylint: disable=unused-argument
-# pylint: disable=invalid-name
 """Beam search"""
 from abc import ABC
 from collections import UserDict

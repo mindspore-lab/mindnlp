@@ -20,3 +20,6 @@ jieba
 pretty_midi
 scipy
 pyctcdecode
+mindocr
+pytesseract
+essentia

@@ -13,18 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=import-outside-toplevel
-# pylint: disable=invalid-name
-# pylint: disable=assignment-from-none
-# pylint: disable=logging-fstring-interpolation
-# pylint: disable=too-many-branches
-# pylint: disable=too-many-statements
-# pylint: disable=too-many-boolean-expressions
-# pylint: disable=unused-argument
-# pylint: disable=attribute-defined-outside-init
-# pylint: disable=self-cls-assignment
-# pylint: disable=no-name-in-module
-# pylint: disable=global-statement
 """
 Abstract class for Pretrained models.
 """
@@ -42,7 +30,7 @@ import numpy as np
 import mindspore
 from mindspore import load_checkpoint, save_checkpoint
 from mindspore import nn, ops, Tensor, Parameter
-from mindspore._c_expression import Tensor as Tensor_
+from mindspore._c_expression import Tensor as Tensor_ # pylint: disable=no-name-in-module
 
 from mindnlp.configs import PT_WEIGHTS_NAME, WEIGHTS_NAME, WEIGHTS_INDEX_NAME, PT_WEIGHTS_INDEX_NAME, \
     SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
@@ -465,14 +453,14 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         otherwise you cannot
         """
         if getattr(self.config, "tie_word_embeddings", True):
-            output_embeddings = self.get_output_embeddings()
+            output_embeddings = self.get_output_embeddings() # pylint: disable=assignment-from-none
             if output_embeddings is not None:
                 self._tie_or_clone_weights(
                     output_embeddings, self.get_input_embeddings())
 
         if getattr(self.config, "is_encoder_decoder", False) and getattr(self.config, "tie_encoder_decoder", False):
             if hasattr(self, self.base_model_prefix):
-                self = getattr(self, self.base_model_prefix)
+                self = getattr(self, self.base_model_prefix) # pylint: disable=self-cls-assignment
             self._tie_encoder_decoder_weights(
                 self.encoder, self.decoder, self.base_model_prefix)
 
@@ -620,7 +608,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             new_num_tokens = new_embeddings.weight.shape[0]
         # if word embeddings are not tied, make sure that lm head is resized as well
         if self.get_output_embeddings() is not None and not self.config.tie_word_embeddings:
-            old_lm_head = self.get_output_embeddings()
+            old_lm_head = self.get_output_embeddings() # pylint: disable=assignment-from-none
             new_lm_head = self._get_resized_lm_head(
                 old_lm_head, new_num_tokens)
             self.set_output_embeddings(new_lm_head)
@@ -784,8 +772,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         return cls.from_pretrained(pretrained_model_name_or_path, args, kwargs)
 
     @classmethod
-    def from_pretrained(    # pylint: disable=too-many-locals
-        cls,
+    def from_pretrained(            cls,
         pretrained_model_name_or_path: Optional[Union[str, os.PathLike]],
         *model_args,
         config: Optional[Union[PretrainedConfig, str, os.PathLike]] = None,
@@ -1013,6 +1000,12 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
         config.name_or_path = pretrained_model_name_or_path
         # Instantiate model.
+
+        config_dict = config.to_dict()
+
+        dtype_group = {key: getattr(config, key).ms_dtype for key in config_dict.keys() \
+                       if isinstance(config_dict[key], dict) and 'ms_dtype' in config_dict[key]}
+
         if ms_dtype is None or ms_dtype == 'auto':
             ms_dtype = config.ms_dtype
 
@@ -1100,7 +1093,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     non_missing_keys.append(key)
             return non_missing_keys
 
-        def load_param_into_net(model: nn.Cell, param_dict: dict, prefix: str):
+        def load_param_into_net(model: nn.Cell, param_dict: dict, prefix: str, dtype_group: dict = None):
             state_dict_keys = list(param_dict.keys())
             keep_in_fp32_modules = model._keep_in_fp32_modules
             keys_unexpected = list(param_dict.keys())
@@ -1129,6 +1122,12 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
                 new_param = param_dict.pop(param_name, None)
 
+                module_dtype = None
+                for m_name, m_dtype in dtype_group.items():
+                    if m_name in param_name:
+                        module_dtype = m_dtype
+                        break
+
                 if new_param is not None:
                     use_replace = False
                     if new_param.shape != param.shape:
@@ -1143,6 +1142,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     if use_keep_in_fp32_modules and \
                         any(module_to_keep_in_fp32 in pname_in_net.split(".") for module_to_keep_in_fp32 in keep_in_fp32_modules):
                         new_param = new_param.astype(mindspore.float32)
+                    elif module_dtype and param.dtype in (mindspore.float32, mindspore.float16):
+                        new_param = new_param.astype(module_dtype)
                     elif ms_dtype and param.dtype in (mindspore.float32, mindspore.float16):
                         new_param = new_param.astype(ms_dtype)
 
@@ -1179,7 +1180,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 all_keys_unexpected = []
                 for name in tqdm(converted_filenames, desc="Loading checkpoint shards"):
                     state_dict = load_ckpt(name)
-                    keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
+                    keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix, dtype_group)
                     all_keys_unexpected.extend(keys_unexpected)
                     del state_dict
                     gc.collect()
@@ -1187,10 +1188,10 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             else:
                 state_dict = load_ckpt(resolved_archive_file)
                 loaded_keys = list(state_dict.keys())
-                all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
+                all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix, dtype_group)
         else:
             loaded_keys = list(state_dict.keys())
-            all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
+            all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix, dtype_group)
 
         loaded_add_keys = []
         for group in tied_params:

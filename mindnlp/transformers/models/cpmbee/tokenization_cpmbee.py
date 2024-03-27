@@ -13,19 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-class-docstring
-# pylint: disable=invalid-name
-# pylint: disable=missing-function-docstring
-# pylint: disable=consider-using-generator
-# pylint: disable=arguments-renamed
-# pylint: disable=inconsistent-return-statements
-# pylint: disable=unused-argument
-# pylint: disable=no-else-return
-# pylint: disable=consider-using-f-string
-# pylint: disable=consider-iterating-dictionary
-# pylint: disable=no-else-continue
-# pylint: disable=arguments-out-of-order
-# pylint: disable=dangerous-default-value
 """Tokenization classes for CpmBee."""
 import json
 import os
@@ -169,7 +156,7 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
 
         self.decoder = {v: k for k, v in self.encoder.items()}
 
-        self._max_word_len = max([len(x) for x in self.encoder.keys()])
+        self._max_word_len = max(len(x) for x in self.encoder.keys())
         self.cpmbee_special_tokens = {k: v for k, v in self.encoder.items() if k.startswith("<") and k.endswith(">")}
 
         self.ext_table: Dict[int, str] = {}
@@ -305,8 +292,7 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
         for token in output_tokens:
             if not token:
                 continue
-            else:
-                skipped_tokens.append(token)
+            skipped_tokens.append(token)
 
         return skipped_tokens
 
@@ -562,7 +548,7 @@ class CpmBeeTokenizer(PreTrainedTokenizer):
                     batch_outputs[key] = []
                 batch_outputs[key].append(value)
 
-        max_length = max([len(item) for item in batch_outputs[self.model_input_names[0]]])
+        max_length = max(len(item) for item in batch_outputs[self.model_input_names[0]])
         batch_size = len(batch_outputs[self.model_input_names[0]])
         for i in range(batch_size):
             inputs = {k: v[i] for k, v in batch_outputs.items()}

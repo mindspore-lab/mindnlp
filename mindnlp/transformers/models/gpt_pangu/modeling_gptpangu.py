@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=missing-class-docstring
 """MindSpore PanguAlpha GPT2 Model"""
 
 from typing import Tuple

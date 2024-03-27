@@ -12,15 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=invalid-name
-# pylint: disable=missing-function-docstring
-# pylint: disable=superfluous-parens
-# pylint: disable=anomalous-backslash-in-string
-# pylint: disable=missing-class-docstring
-# pylint: disable=consider-using-f-string
-# pylint: disable=unused-argument
-# pylint: disable=no-else-return
-# pylint: disable=unnecessary-comprehension
 """ MindSpore ChatGLM model. """
 
 import math
@@ -910,7 +901,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
                         [[mask_position, seq_length - context_length] for mask_position, context_length in
                          zip(mask_positions, context_lengths)], dtype=mindspore.int64).unsqueeze(-1)
                 else:
-                    position_ids = mindspore.tensor([mask_position for mask_position in mask_positions], dtype=mindspore.int64).unsqueeze(-1)
+                    position_ids = mindspore.tensor(mask_positions, dtype=mindspore.int64).unsqueeze(-1)
 
             if past is None:
                 past = past_key_values

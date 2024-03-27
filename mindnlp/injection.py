@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=global-statement
-# pylint: disable=redefined-builtin
-# pylint: disable=invalid-name
-# pylint: disable=unused-argument
 """
 Injection mindspore.nn for MindNLP
 """
@@ -628,17 +624,15 @@ class Conv1d(_Conv):
             raise ValueError(f"The argument 'group' should be divisible by 'in_channels' " \
                              f"and 'out_channels', but got group:{group}, in_channels:{in_channels}, " \
                              f"out_channels:{out_channels}.")
-        stride = (1, stride)
-        dilation = (1, dilation)
 
         super().__init__(
             in_channels,
             out_channels,
             (kernel_size,),
-            stride,
+            (1, stride),
             pad_mode,
             padding,
-            dilation,
+            (1, dilation),
             group,
             has_bias,
             None,
@@ -654,6 +648,9 @@ class Conv1d(_Conv):
                                stride=self.stride,
                                dilation=self.dilation,
                                group=self.group)
+
+        self.stride = (stride,)
+        self.dilation = (dilation,)
 
     def construct(self, x):
         x = x.expand_dims(2)
@@ -688,28 +685,23 @@ class Conv1dTranspose(_Conv):
         Validator.check_int(stride, 1, Validator.GE, 'stride', self.cls_name)
         Validator.check_non_negative_int(padding, 'padding', self.cls_name)
         Validator.check_int(dilation, 1, Validator.GE, 'dilation', self.cls_name)
-        kernel_size = (1, kernel_size,)
-        stride = (1, stride,)
-
-        dilation = (1, dilation,)
         # out_channels and in_channels swap.
         # cause Conv2DBackpropInput's out_channel refers to Conv2D's out_channel,
         # then Conv1dTranspose's out_channel refers to Conv2DBackpropInput's in_channel.
         super().__init__(
             in_channels,
             out_channels,
-            (kernel_size[1],),
-            stride,
+            (kernel_size,),
+            (1, stride,),
             pad_mode,
             padding,
-            dilation,
+            (1, dilation,),
             group,
             has_bias,
             None,
             None,
             transposed=True,
             dtype=dtype)
-        self.kernel_size = kernel_size
         self.padding = (0, 0, padding, padding)
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -717,24 +709,28 @@ class Conv1dTranspose(_Conv):
         self.is_valid = self.pad_mode == 'valid'
         self.is_same = self.pad_mode == 'same'
         self.is_pad = self.pad_mode == 'pad'
+
+        self.kernel_size = (kernel_size,)
+        self.stride = (stride,)
+        self.dilation = (dilation,)
         # cause Conv2DBackpropInput's out_channel refers to Conv2D's out_channel.
         self.conv2d_transpose = ops.Conv2DBackpropInput(out_channel=in_channels,
-                                                      kernel_size=kernel_size,
+                                                      kernel_size=(1, kernel_size,),
                                                       mode=1,
                                                       pad_mode=pad_mode,
                                                       pad=self.padding,
-                                                      stride=stride,
-                                                      dilation=dilation,
+                                                      stride=(1, stride,),
+                                                      dilation=(1, dilation,),
                                                       group=group)
 
     def construct(self, x):
         x = x.expand_dims(2)
         n, _, h, w = x.shape
 
-        h_out = _deconv_output_length(self.is_valid, self.is_same, self.is_pad, h, self.kernel_size[0],
-                                      self.stride[0], self.dilation[0], self.padding[0] + self.padding[1])
-        w_out = _deconv_output_length(self.is_valid, self.is_same, self.is_pad, w, self.kernel_size[1],
-                                      self.stride[1], self.dilation[1], self.padding[2] + self.padding[3])
+        h_out = _deconv_output_length(self.is_valid, self.is_same, self.is_pad, h, 1,
+                                      1, 1, self.padding[0] + self.padding[1])
+        w_out = _deconv_output_length(self.is_valid, self.is_same, self.is_pad, w, self.kernel_size[0],
+                                      self.stride[0], self.dilation[0], self.padding[2] + self.padding[3])
         output = self.conv2d_transpose(x, self.weight.expand_dims(2), (n, self.out_channels, h_out, w_out))
         if self.has_bias:
             output = ops.bias_add(output, self.bias)
@@ -963,17 +959,17 @@ nn.BatchNorm1d = BatchNorm1d
 nn.BatchNorm2d = BatchNorm1d
 
 
-nn.GroupNorm_original = nn.GroupNorm
+GroupNorm_original = nn.GroupNorm
 
-class GroupNorm_hijack(nn.GroupNorm_original):
+class GroupNorm_hijack(GroupNorm_original):
     r"""
     Group Normalization over a mini-batch of inputs.
     """
 
     def __init__(self, num_groups, num_channels, eps=0.00001, affine=True, gamma_init='ones', beta_init='zeros', dtype=mstype.float32):
         super().__init__(num_groups, num_channels, eps, affine, gamma_init, beta_init, dtype)
-        self.weight = self.gamma
-        self.bias = self.beta
+        self.weight = Parameter(self.gamma.data, name='weight')
+        self.bias = Parameter(self.beta.data, name='bias')
         del self.gamma
         del self.beta
 
@@ -983,17 +979,19 @@ class GroupNorm_hijack(nn.GroupNorm_original):
         x = F.reshape(x, (batch, self.num_groups, -1))
         mean = self.reduce_mean(x, 2)
         var = F.div(self.reduce_sum(F.square(F.sub(x, mean)), 2), (channel * height * width / self.num_groups))
-        std = self.sqrt(var + self.eps)     # pylint: disable=redefined-outer-name
-        x = F.div(F.sub(x, mean), std)
+        std_ = self.sqrt(var + self.eps)
+        x = F.div(F.sub(x, mean), std_)
         x = F.reshape(x, (batch, channel, height, width))
         output = F.add(x * F.reshape(self.weight, (-1, 1, 1)), F.reshape(self.bias, (-1, 1, 1)))
         return output
 
     def construct(self, x:Tensor) -> Tensor:
         is_3d_tensor = len(x.shape) == 3        # support 3D tensors [B, C, L]
-        if is_3d_tensor: x = x.unsqueeze(-1)    # pylint: disable=multiple-statements
+        if is_3d_tensor:
+            x = x.unsqueeze(-1)
         o = super().construct(x)
-        if is_3d_tensor: o = o.squeeze(-1)      # pylint: disable=multiple-statements
+        if is_3d_tensor:
+            o = o.squeeze(-1)
         return o
 
 nn.GroupNorm = GroupNorm_hijack

@@ -18,13 +18,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
-# pylint: disable=invalid-name
-# pylint: disable=redefined-builtin
-# pylint: disable=consider-using-generator
-# pylint: disable=unused-argument
-# pylint: disable=invalid-unary-operand-type
 """ MindSpore MiniCPM model."""
 import re
 import math
@@ -405,7 +398,7 @@ class MiniCPMAttention(nn.Cell):
         if self.config.pretraining_tp > 1:
             attn_output = attn_output.split(self.hidden_size // self.config.pretraining_tp, axis=2)
             o_proj_slices = self.o_proj.weight.split(self.hidden_size // self.config.pretraining_tp, axis=1)
-            attn_output = sum([ops.dense(attn_output[i], o_proj_slices[i]) for i in range(self.config.pretraining_tp)])
+            attn_output = sum(ops.dense(attn_output[i], o_proj_slices[i]) for i in range(self.config.pretraining_tp))
         else:
             attn_output = self.o_proj(attn_output)
 

@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=consider-using-f-string
-# pylint: disable=no-else-return
-# pylint: disable=invalid-name
 """image transforms"""
 import warnings
 from typing import Iterable, List, Optional, Tuple, Union

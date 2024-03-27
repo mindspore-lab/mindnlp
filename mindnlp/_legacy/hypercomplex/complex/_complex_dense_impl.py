@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=arguments-renamed
-# pylint: disable=invalid-name
 """complex dense implementation"""
 from typing import Tuple
 
