@@ -1,223 +1,40 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# coding=utf-8
+# Copyright 2023 Meta Platforms, Inc. and affiliates, and the HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
-"""
-Encodec Model
-"""
+""" MindSpore EnCodec model."""
+
 import math
 from dataclasses import dataclass
-from typing import Any, List, Optional, Union, Tuple
-
+from typing import List, Optional, Tuple, Union
 
 import mindspore
-from mindspore import nn, Tensor, Parameter, ops
-from mindspore import log as logger
-from mindspore import numpy as np
-from mindspore.common.initializer import initializer, Normal
+from mindspore import nn, ops
+from mindspore.common.initializer import initializer, Normal, Uniform
 
+from mindnlp.utils import ModelOutput, logging
+from mindnlp.modules.weight_norm import weight_norm
+from mindnlp.modules.functional import embedding
 from ...modeling_utils import PreTrainedModel
-
-from ...modeling_outputs import (
-    ModelOutput
-)
-
 from .configuration_encodec import EncodecConfig
 
-__all__ = [
-    "EncodecModel",
-    "EncodecConv1d",
-    "EncodecConvTranspose1d",
-    "EncodecLSTM",
-    "EncodecResnetBlock",
-]
 
-ENCODEC_PRETRAINED_MODEL_ARCHIVE_LIST = [
-    "encodec_24khz",
-    "encodec_48khz",
-    # See all EnCodec models at https://huggingface.co/models?filter=encodec
-]
-
-def norm_except_dim(weight_v, pows, dim):
-    r"""
-    calculte g/||weight_v|| * weight_v method 
-    """
-    if dim == -1:
-        return np.norm(weight_v, pows)
-    if dim == 0:
-        output_size = (weight_v.shape[0],) + (1,) * (weight_v.ndim - 1)
-        return np.norm(weight_v.view((weight_v.shape[0], -1)), pows, 1).view(output_size)
-    if dim == (weight_v.ndim - 1):
-        output_size = (1,) * (weight_v.ndim - 1) + (weight_v.shape[weight_v.ndim - 1])
-        return np.norm(weight_v.view((-1, weight_v.shape[weight_v.ndim - 1])), pows, 0).view(output_size)
-    return norm_except_dim(weight_v.swapaxes(0, dim), pows, dim).swapaxes(0, dim)
-
-def _weight_norm(weight_v, weight_g, dim):
-    r"""
-    calculte weight_g/||weight_v|| * weight_v method 
-    """
-    return weight_v * (weight_g / norm_except_dim(weight_v, 2, dim))
-
-class WeightNorm:
-    r"""
-    Weight Normalization from https://arxiv.org/abs/1602.07868
-    """
-    name: str
-    dim: int
-
-    def __init__(self, name: str, dim: int) -> None:
-        if dim is None:
-            dim = -1
-        self.name = name
-        self.dim = dim
-
-    # TODO Make return type more specific
-    def compute_weight(self, cell: nn.Cell) -> Any:
-        r"""
-        computer methods
-        """
-        weight_g = getattr(cell, self.name + '_g')
-        weight_v = getattr(cell, self.name + '_v')
-        return _weight_norm(weight_v=weight_v, weight_g=weight_g, dim=self.dim)
-
-    def __call__(self, cell: nn.Cell, inputs: Any) -> None:
-        setattr(cell, self.name, self.compute_weight(cell))
-
-    def wrapper_func(self, cell, func):
-        r"""
-        wrapper_func where used to transpose cell_id to cell
-        """
-        def new_func(_, inputs):
-            nonlocal cell
-            return func(cell, inputs)
-        return new_func
-
-    @staticmethod
-    def apply(cell: nn.Cell, name: str, dim: int) -> 'WeightNorm':
-        r"""
-        construct methods
-        """
-        # warnings.warn("torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.")
-        for hook in cell._forward_pre_hook.values():
-            if isinstance(hook, WeightNorm) and hook.name == name:
-                raise RuntimeError(f"Cannot register two weight_norm hooks on the same parameter {name}")
-
-        if dim is None:
-            dim = -1
-
-        weight_fn = WeightNorm(name, dim)
-
-        weight = getattr(cell, name)
-        del cell._params[name]
-        cell.insert_param_to_cell(name + '_g', param= Parameter(norm_except_dim(weight,2,dim)))
-        cell.insert_param_to_cell(name + '_v', param= Parameter(weight.data))
-        setattr(cell, name, Parameter(weight_fn.compute_weight(cell)))
-        cell.register_forward_pre_hook(weight_fn.wrapper_func(cell, weight_fn.__call__))
-        return weight_fn
-
-    def remove(self, cell: nn.Cell) -> None:
-        r"""
-        remove weight bias
-        """
-        weight = self.compute_weight(cell)
-        delattr(cell, self.name)
-        del cell._parameters[self.name + '_g']
-        del cell._parameters[self.name + '_v']
-        setattr(cell, self.name, Parameter(weight.data))
-
-def weight_norm(cell: nn.Cell, name: str = 'weight', dim: int = 0) -> nn.Cell:
-    r"""Applies weight normalization to a parameter in the given cell.
-
-    .. math::
-         \mathbf{w} = g \dfrac{\mathbf{v}}{\|\mathbf{v}\|}
-
-    Weight normalization is a reparameterization that decouples the magnitude
-    of a weight tensor from its direction. This replaces the parameter specified
-    by :attr:`name` (e.g. ``'weight'``) with two parameters: one specifying the magnitude
-    (e.g. ``'weight_g'``) and one specifying the direction (e.g. ``'weight_v'``).
-    Weight normalization is implemented via a hook that recomputes the weight
-    tensor from the magnitude and direction before every :meth:`~cell.forward`
-    call.
-
-    By default, with ``dim=0``, the norm is computed independently per output
-    channel/plane. To compute a norm over the entire weight tensor, use
-    ``dim=None``.
-
-    See https://arxiv.org/abs/1602.07868
-
-    .. warning::
-
-        This function is deprecated.  Use :func:`torch.nn.utils.parametrizations.weight_norm`
-        which uses the modern parametrization API.  The new ``weight_norm`` is compatible
-        with ``state_dict`` generated from old ``weight_norm``.
-
-        Migration guide:
-
-        * The magnitude (``weight_g``) and direction (``weight_v``) are now expressed
-          as ``parametrizations.weight.original0`` and ``parametrizations.weight.original1``
-          respectively.  If this is bothering you, please comment on
-          https://github.com/pytorch/pytorch/issues/102999
-
-        * To remove the weight normalization reparametrization, use
-          :func:`torch.nn.utils.parametrize.remove_parametrizations`.
-
-        * The weight is no longer recomputed once at cell forward; instead, it will
-          be recomputed on every access.  To restore the old behavior, use
-          :func:`torch.nn.utils.parametrize.cached` before invoking the cell
-          in question.
-
-    Args:
-        cell (cell): containing cell
-        name (str, optional): name of weight parameter
-        dim (int, optional): dimension over which to compute the norm
-
-    Returns:
-        The original cell with the weight norm hook
-
-    Example::
-
-        >>> m = weight_norm(nn.Linear(20, 40), name='weight')
-        >>> m
-        Linear(in_features=20, out_features=40, bias=True)
-        >>> m.weight_g.size()
-        torch.Size([40, 1])
-        >>> m.weight_v.size()
-        torch.Size([40, 20])
-
-    """
-    WeightNorm.apply(cell, name, dim)
-    return cell
+logger = logging.get_logger(__name__)
 
 
+# General docstring
+_CONFIG_FOR_DOC = "EncodecConfig"
 
-def remove_weight_norm(cell: nn.Cell, name: str = 'weight') -> nn.Cell:
-    r"""Removes the weight normalization reparameterization from a cell.
-
-    Args:
-        cell (cell): containing cell
-        name (str, optional): name of weight parameter
-
-    Example:
-        >>> m = weight_norm(nn.Linear(20, 40))
-        >>> remove_weight_norm(m)
-    """
-    for k, hook in cell._forward_pre_hook.items():
-        if isinstance(hook, WeightNorm) and hook.name == name:
-            hook.remove(cell)
-            del cell._forward_pre_hook[k]
-            return cell
-
-    raise ValueError(f"weight_norm of '{name}' not found in {cell}")
 
 @dataclass
 class EncodecOutput(ModelOutput):
@@ -225,7 +42,7 @@ class EncodecOutput(ModelOutput):
     Args:
         audio_codes (`mindspore.Tensor`  of shape `(batch_size, nb_chunks, chunk_length)`, *optional*):
             Discret code embeddings computed using `model.encode`.
-        audio_values (`mindspore.Tensor` of shape `(batch_size, sequence_length)`, *optional*)
+        audio_values (`torch.FlaotTensor` of shape `(batch_size, sequence_length)`, *optional*)
             Decoded audio values, obtained using the decoder part of Encodec.
     """
 
@@ -246,6 +63,7 @@ class EncodecEncoderOutput(ModelOutput):
     audio_codes: mindspore.Tensor = None
     audio_scales: mindspore.Tensor = None
 
+
 @dataclass
 class EncodecDecoderOutput(ModelOutput):
     """
@@ -255,6 +73,7 @@ class EncodecDecoderOutput(ModelOutput):
     """
 
     audio_values: mindspore.Tensor = None
+
 
 class EncodecConv1d(nn.Cell):
     """Conv1d with asymmetric or causal padding and normalization."""
@@ -279,12 +98,9 @@ class EncodecConv1d(nn.Cell):
                 f" (kernel_size={kernel_size} stride={stride}, dilation={dilation})."
             )
 
-        self.conv = nn.Conv1d(in_channels, out_channels, kernel_size, stride, dilation=dilation,has_bias=True,pad_mode='valid')
+        self.conv = nn.Conv1d(in_channels, out_channels, kernel_size, stride, dilation=dilation, pad_mode='valid', has_bias=True)
         if self.norm_type == "weight_norm":
-            # self.conv.weight.set_data(initializer(init='HeNormal',shape=self.conv.weight.shape))
-            self.conv = weight_norm(self.conv)
-            # self.conv.weight.set_data(initializer(init='HeNormal',shape=self.conv.weight.shape))
-
+            setattr(self, 'conv', weight_norm(self.conv))
         elif self.norm_type == "time_group_norm":
             self.norm = nn.GroupNorm(1, out_channels)
 
@@ -300,10 +116,9 @@ class EncodecConv1d(nn.Cell):
 
     @staticmethod
     def _pad1d(hidden_states: mindspore.Tensor, paddings: Tuple[int, int], mode: str = "zero", value: float = 0.0):
-        """Tiny wrapper around mindspore.ops.pad, just to allow for reflect padding on small input.
+        """Tiny wrapper around torch.ops.pad, just to allow for reflect padding on small input.
         If this is the case, we insert extra 0 padding to the right before the reflection happens.
         """
-
         length = hidden_states.shape[-1]
         padding_left, padding_right = paddings
         if mode != "reflect":
@@ -314,16 +129,16 @@ class EncodecConv1d(nn.Cell):
         if length <= max_pad:
             extra_pad = max_pad - length + 1
             hidden_states = ops.pad(hidden_states, (0, extra_pad))
-        padded = ops.pad(hidden_states, paddings, mode)
+        if mode != 'reflect':
+            padded = ops.pad(hidden_states, paddings, mode, value)
+        else:
+            padded = ops.pad(hidden_states, paddings, mode)
+
         end = padded.shape[-1] - extra_pad
         return padded[..., :end]
 
     def construct(self, hidden_states):
-        r"""
-        construct method
-        """
-
-        kernel_size = self.conv.kernel_size[-1]
+        kernel_size = self.conv.kernel_size[0]
         stride = self.conv.stride[0]
         dilation = self.conv.dilation[0]
         kernel_size = (kernel_size - 1) * dilation + 1  # effective kernel size with dilations
@@ -343,13 +158,10 @@ class EncodecConv1d(nn.Cell):
 
         hidden_states = self.conv(hidden_states)
         if self.norm_type == "time_group_norm":
-            #Attention: beause of mindspore can't assistant to besides four diameters input ,so here deal by
-            #sepecial method
-            inputs = hidden_states.unsqueeze(-1)
-            hidden_states = self.norm(inputs)
-            hidden_states = hidden_states.squeeze(-1)
+            hidden_states = self.norm(hidden_states)
 
         return hidden_states
+
 
 class EncodecConvTranspose1d(nn.Cell):
     """ConvTranspose1d with asymmetric or causal padding and normalization."""
@@ -373,20 +185,15 @@ class EncodecConvTranspose1d(nn.Cell):
         if not (self.causal or self.trim_right_ratio == 1.0):
             raise ValueError("`trim_right_ratio` != 1.0 only makes sense for causal convolutions")
 
-
     def construct(self, hidden_states):
-        r"""
-        construct method
-        """
-        kernel_size = self.conv.kernel_size[-1]
-        stride = self.conv.stride[-1]
+        kernel_size = self.conv.kernel_size[0]
+        stride = self.conv.stride[0]
         padding_total = kernel_size - stride
 
         hidden_states = self.conv(hidden_states)
+
         if self.norm_type == "time_group_norm":
-            inputs = hidden_states.unsqueeze(-1)
-            hidden_states = self.norm(inputs)
-            hidden_states = hidden_states.squeeze(-1)
+            hidden_states = self.norm(hidden_states)
 
         # We will only trim fixed padding. Extra padding from `pad_for_conv1d` would be
         # removed at the very end, when keeping only the right length for the output,
@@ -400,13 +207,13 @@ class EncodecConvTranspose1d(nn.Cell):
             # Asymmetric padding required for odd strides
             padding_right = padding_total // 2
 
-
         padding_left = padding_total - padding_right
 
         # unpad
         end = hidden_states.shape[-1] - padding_right
         hidden_states = hidden_states[..., padding_left:end]
         return hidden_states
+
 
 class EncodecLSTM(nn.Cell):
     """
@@ -422,6 +229,7 @@ class EncodecLSTM(nn.Cell):
         hidden_states = self.lstm(hidden_states)[0] + hidden_states
         hidden_states = hidden_states.permute(1, 2, 0)
         return hidden_states
+
 
 class EncodecResnetBlock(nn.Cell):
     """
@@ -452,6 +260,7 @@ class EncodecResnetBlock(nn.Cell):
         residual = hidden_states
         for layer in self.block:
             hidden_states = layer(hidden_states)
+
         return self.shortcut(residual) + hidden_states
 
 
@@ -481,12 +290,10 @@ class EncodecEncoder(nn.Cell):
         self.layers = nn.CellList(model)
 
     def construct(self, hidden_states):
-        r"""
-        construct method
-        """
         for layer in self.layers:
             hidden_states = layer(hidden_states)
         return hidden_states
+
 
 class EncodecDecoder(nn.Cell):
     """SEANet decoder as used by EnCodec."""
@@ -517,45 +324,33 @@ class EncodecDecoder(nn.Cell):
         self.layers = nn.CellList(model)
 
     def construct(self, hidden_states):
-        r"""
-        construct method
-        """
         for layer in self.layers:
             hidden_states = layer(hidden_states)
         return hidden_states
+
 
 class EncodecEuclideanCodebook(nn.Cell):
     """Codebook with Euclidean distance."""
 
     def __init__(self, config: EncodecConfig):
         super().__init__()
-        embed = ops.zeros((config.codebook_size, config.codebook_dim))
+        embed = mindspore.Parameter(ops.zeros(config.codebook_size, config.codebook_dim), requires_grad=False)
 
         self.codebook_size = config.codebook_size
 
-        self.inited = Parameter(Tensor([True], dtype=mindspore.float32),requires_grad=False)
-        self.cluster_size = Parameter(Tensor(ops.zeros(config.codebook_size)),requires_grad=False)
-        self.embed = Parameter(embed,requires_grad=False)
-        self.embed_avg = Parameter(ops.deepcopy(embed),requires_grad=False)
-        # self.register_buffer("inited", mindspore.Tensor([True]))
-        # self.register_buffer("cluster_size", ops.zeros(config.codebook_size))
-        # self.register_buffer("embed", embed)
-        # self.register_buffer("embed_avg", embed.clone())
+        self.inited = mindspore.Parameter([True], requires_grad=False)
+        self.cluster_size = mindspore.Parameter(ops.zeros(config.codebook_size), requires_grad=False)
+        self.embed = embed
+        self.embed_avg = embed.clone()
 
     def quantize(self, hidden_states):
-        r"""
-        quantize method
-        """
         embed = self.embed.t()
-        scaled_states = ops.sum(hidden_states.pow(2), dim=1, keepdim=True)
-        dist = -(scaled_states - 2 * hidden_states @ embed + ops.sum(embed.pow(2), dim=0 , keepdim=True))
-        _,embed_ind = dist.max(axis = -1,return_indices = True)
+        scaled_states = hidden_states.pow(2).sum(1, keepdims=True)
+        dist = -(scaled_states - 2 * hidden_states @ embed + embed.pow(2).sum(0, keepdims=True))
+        embed_ind = dist.max(axis=-1, return_indices=True)[1]
         return embed_ind
 
     def encode(self, hidden_states):
-        r"""
-        encode method
-        """
         shape = hidden_states.shape
         # pre-process
         hidden_states = hidden_states.reshape((-1, shape[-1]))
@@ -566,13 +361,7 @@ class EncodecEuclideanCodebook(nn.Cell):
         return embed_ind
 
     def decode(self, embed_ind):
-        r"""
-        decode method
-        """
-        # quantize = mindspore.ms_function.embedding(self.embed, embed_ind)
-        embedding = nn.Embedding(vocab_size = self.embed.shape[0], embedding_size = self.embed.shape[1])
-        embedding.weight.set_data(self.embed)
-        quantize = embedding(embed_ind)
+        quantize = embedding(embed_ind, self.embed)
         return quantize
 
 
@@ -586,20 +375,15 @@ class EncodecVectorQuantization(nn.Cell):
         self.codebook = EncodecEuclideanCodebook(config)
 
     def encode(self, hidden_states):
-        r"""
-        encode method
-        """
         hidden_states = hidden_states.permute(0, 2, 1)
         embed_in = self.codebook.encode(hidden_states)
         return embed_in
 
     def decode(self, embed_ind):
-        r"""
-        decode method
-        """
         quantize = self.codebook.decode(embed_ind)
         quantize = quantize.permute(0, 2, 1)
         return quantize
+
 
 class EncodecResidualVectorQuantizer(nn.Cell):
     """Residual Vector Quantizer."""
@@ -644,6 +428,7 @@ class EncodecResidualVectorQuantizer(nn.Cell):
             quantized_out = quantized_out + quantized
         return quantized_out
 
+
 class EncodecPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
@@ -653,32 +438,22 @@ class EncodecPreTrainedModel(PreTrainedModel):
     config_class = EncodecConfig
     base_model_prefix = "encodec"
     main_input_name = "input_values"
-    supports_gradient_checkpointing = True
 
     def _init_weights(self, cell):
         """Initialize the weights"""
-        # print(type(cell.weight))
         if isinstance(cell, nn.Dense):
             cell.weight.set_data(initializer(
-                Normal(sigma=self.config.initializer_range,mean=0.0)))
-            #cell.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+                Normal(sigma=self.config.initializer_range, mean=0.0)))
             if cell.bias is not None:
                 cell.bias.set_data(initializer('zeros'))
-                # cell.bias.data.zero_()
         elif isinstance(cell, (nn.LayerNorm, nn.GroupNorm)):
-            cell.beta.set_data(initializer('zeros',shape=cell.beta.data.shape))
-            cell.gamma.set_data(initializer('ones',shape=cell.gamma.data.shape))
-            #cell.bias.data.zero_()
-            #cell.weight.data.fill_(1.0)
+            cell.beta.set_data(initializer('zeros', shape=cell.beta.data.shape))
+            cell.gamma.set_data(initializer('ones', shape=cell.gamma.data.shape))
         elif isinstance(cell, nn.Conv1d):
-            # print(cell)
-            # print(type(cell.weight))
-            # print(cell.weight.data)
-            cell.weight.set_data(initializer(init='HeNormal',shape=cell.weight.shape))
-            # nn.init.kaiming_normal_(cell.weight)
+            cell.weight.set_data(initializer('he_normal',shape=cell.weight.shape))
             if cell.bias is not None:
                 k = math.sqrt(cell.group / (cell.in_channels * cell.kernel_size[0]))
-                cell.bias.set_data(initializer(ops.uniform(cell.bias.shape, Tensor(-k), Tensor(k)), shape=cell.bias.shape))
+                cell.bias.set_data(initializer(Uniform(k), shape=cell.bias.shape))
                 # nn.init.uniform_(cell.bias, a=-k, b=k)
         elif isinstance(cell, nn.Embedding):
             cell.embedding_table.set_data(initializer(
@@ -695,58 +470,8 @@ class EncodecPreTrainedModel(PreTrainedModel):
                     param.set_data(initializer('zeros',shape=param.shape))
                     # nn.init.constant_(param, 0.0)
 
-    def _set_gradient_checkpointing(self, cell, value=False):
-        if isinstance(cell, (EncodecEncoder, EncodecDecoder)):
-            cell.gradient_checkpointing = value
-
-
 
 class EncodecModel(EncodecPreTrainedModel):
-    r"""
-    This model inherits from [`PreTrainedModel`]. Check the superclass documentation for the generic methods the
-    library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
-    etc.)
-
-    This model is also a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) subclass.
-    Use it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage
-    and behavior.
-
-    Parameters:
-        config ([`EncodecConfig`]):
-            Model configuration class with all the parameters of the model. Initializing with a config file does not
-            load the weights associated with the model, only the configuration. Check out the
-            [`~PreTrainedModel.from_pretrained`] method to load the model weights.
-    Args:
-        input_values (`torch.FloatTensor` of shape `(batch_size, channels, sequence_length)`, *optional*):
-            Raw audio input converted to Float and padded to the approriate length in order to be encoded using chunks
-            of length self.chunk_length and a stride of `config.chunk_stride`.
-        padding_mask (`torch.BoolTensor` of shape `(batch_size, channels, sequence_length)`, *optional*):
-            Mask to avoid computing scaling factors on padding token indices (can we avoid computing conv on these+).
-            Mask values selected in `[0, 1]`:
-
-            - 1 for tokens that are **not masked**,
-            - 0 for tokens that are **masked**.
-
-            <Tip warning={true}>
-
-             `padding_mask` should always be passed, unless the input was truncated or not padded. This is because in
-             order to process tensors effectively, the input audio should be padded so that `input_length % stride =
-             step` with `step = chunk_length-stride`. This ensures that all chunks are of the same shape
-
-            </Tip>
-
-        bandwidth (`float`, *optional*):
-            The target bandwidth. Must be one of `config.target_bandwidths`. If `None`, uses the smallest possible
-            bandwidth. bandwidth is represented as a thousandth of what it is, e.g. 6kbps bandwidth is represented as
-            `bandwidth == 6.0`
-        audio_codes (`torch.FloatTensor`  of shape `(batch_size, nb_chunks, chunk_length)`, *optional*):
-            Discret code embeddings computed using `model.encode`.
-        audio_scales (`torch.Tensor` of shape `(batch_size, nb_chunks)`, *optional*):
-            Scaling factor for each `audio_codes` input.
-        return_dict (`bool`, *optional*):
-            Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
-    """
-
     def __init__(self, config: EncodecConfig):
         super().__init__(config)
         self.config = config
@@ -764,15 +489,9 @@ class EncodecModel(EncodecPreTrainedModel):
         self.post_init()
 
     def get_encoder(self):
-        r"""
-        get_encoder method
-        """
         return self.encoder
 
     def get_decoder(self):
-        r"""
-        get_decoder method
-        """
         return self.decoder
 
     def _encode_frame(
@@ -793,12 +512,11 @@ class EncodecModel(EncodecPreTrainedModel):
             # if the padding is non zero
             input_values = input_values * padding_mask
             mono = ops.sum(input_values, 1, keepdim=True) / input_values.shape[1]
-            scale = ops.pow(mono, 2).mean(axis=-1, keep_dims=True).sqrt() + 1e-8
+            scale = mono.pow(2).mean(axis=-1, keep_dims=True).sqrt() + 1e-8
             input_values = input_values / scale
 
         embeddings = self.encoder(input_values)
         codes = self.quantizer.encode(embeddings, bandwidth)
-
         codes = codes.swapaxes(0, 1)
         return codes, scale
 
@@ -903,11 +621,11 @@ class EncodecModel(EncodecPreTrainedModel):
         total_size = stride * (len(frames) - 1) + frames[-1].shape[-1]
 
         frame_length = frames[0].shape[-1]
-        time_vec = ops.linspace(Tensor(0, dtype=dtype), 1, frame_length + 2)[1:-1]
+        time_vec = ops.linspace(0, 1, frame_length + 2).to(dtype)[1:-1]
         weight = 0.5 - (time_vec - 0.5).abs()
 
         sum_weight = ops.zeros(total_size, dtype=dtype)
-        out = ops.zeros((*shape, total_size), dtype=dtype)
+        out = ops.zeros(*shape, total_size, dtype=dtype)
         offset: int = 0
 
         for frame in frames:
@@ -943,7 +661,7 @@ class EncodecModel(EncodecPreTrainedModel):
         trimmed.
 
         Args:
-            audio_codes (`mindspore.FloatTensor`  of shape `(batch_size, nb_chunks, chunk_length)`, *optional*):
+            audio_codes (`mindspore.Tensor`  of shape `(batch_size, nb_chunks, chunk_length)`, *optional*):
                 Discret code embeddings computed using `model.encode`.
             audio_scales (`mindspore.Tensor` of shape `(batch_size, nb_chunks)`, *optional*):
                 Scaling factor for each `audio_codes` input.
@@ -976,7 +694,6 @@ class EncodecModel(EncodecPreTrainedModel):
         if not return_dict:
             return (audio_values,)
         return EncodecDecoderOutput(audio_values)
-
 
     def construct(
         self,
@@ -1028,3 +745,8 @@ class EncodecModel(EncodecPreTrainedModel):
             return (audio_codes, audio_values)
 
         return EncodecOutput(audio_codes=audio_codes, audio_values=audio_values)
+
+__all__ =  [
+    "EncodecModel",
+    "EncodecPreTrainedModel",
+]

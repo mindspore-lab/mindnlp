@@ -1,4 +1,4 @@
-# Copyright 2022 Huawei Technologies Co., Ltd
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,15 +13,14 @@
 # limitations under the License.
 # ============================================================================
 """
-Ernie Model init
+MusicGen Model init
 """
-
-from .import modeling_encodec, configuration_encodec, feature_extraction_encodec
-from .configuration_encodec import *
-from .modeling_encodec import *
-from .feature_extraction_encodec import *
+from . import configuration_musicgen, modeling_musicgen, processing_musicgen
+from .configuration_musicgen import *
+from .modeling_musicgen import *
+from .processing_musicgen import *
 
 __all__ = []
-__all__.extend(modeling_encodec.__all__)
-__all__.extend(configuration_encodec.__all__)
-__all__.extend(feature_extraction_encodec.__all__)
+__all__.extend(configuration_musicgen.__all__)
+__all__.extend(modeling_musicgen.__all__)
+__all__.extend(processing_musicgen.__all__)
