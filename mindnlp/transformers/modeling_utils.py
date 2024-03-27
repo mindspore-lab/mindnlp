@@ -1000,6 +1000,12 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
         config.name_or_path = pretrained_model_name_or_path
         # Instantiate model.
+
+        config_dict = config.to_dict()
+
+        dtype_group = {key: getattr(config, key).ms_dtype for key in config_dict.keys() \
+                       if isinstance(config_dict[key], dict) and 'ms_dtype' in config_dict[key]}
+
         if ms_dtype is None or ms_dtype == 'auto':
             ms_dtype = config.ms_dtype
 
@@ -1087,7 +1093,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     non_missing_keys.append(key)
             return non_missing_keys
 
-        def load_param_into_net(model: nn.Cell, param_dict: dict, prefix: str):
+        def load_param_into_net(model: nn.Cell, param_dict: dict, prefix: str, dtype_group: dict = None):
             state_dict_keys = list(param_dict.keys())
             keep_in_fp32_modules = model._keep_in_fp32_modules
             keys_unexpected = list(param_dict.keys())
@@ -1116,6 +1122,12 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
                 new_param = param_dict.pop(param_name, None)
 
+                module_dtype = None
+                for m_name, m_dtype in dtype_group.items():
+                    if m_name in param_name:
+                        module_dtype = m_dtype
+                        break
+
                 if new_param is not None:
                     use_replace = False
                     if new_param.shape != param.shape:
@@ -1130,6 +1142,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     if use_keep_in_fp32_modules and \
                         any(module_to_keep_in_fp32 in pname_in_net.split(".") for module_to_keep_in_fp32 in keep_in_fp32_modules):
                         new_param = new_param.astype(mindspore.float32)
+                    elif module_dtype and param.dtype in (mindspore.float32, mindspore.float16):
+                        new_param = new_param.astype(module_dtype)
                     elif ms_dtype and param.dtype in (mindspore.float32, mindspore.float16):
                         new_param = new_param.astype(ms_dtype)
 
@@ -1166,7 +1180,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 all_keys_unexpected = []
                 for name in tqdm(converted_filenames, desc="Loading checkpoint shards"):
                     state_dict = load_ckpt(name)
-                    keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
+                    keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix, dtype_group)
                     all_keys_unexpected.extend(keys_unexpected)
                     del state_dict
                     gc.collect()
@@ -1174,10 +1188,10 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
             else:
                 state_dict = load_ckpt(resolved_archive_file)
                 loaded_keys = list(state_dict.keys())
-                all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
+                all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix, dtype_group)
         else:
             loaded_keys = list(state_dict.keys())
-            all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix)
+            all_keys_unexpected, keys_missing = load_param_into_net(model, state_dict, cls.base_model_prefix, dtype_group)
 
         loaded_add_keys = []
         for group in tied_params:

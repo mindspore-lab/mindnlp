@@ -140,6 +140,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ('minicpm', 'MiniCPMForCausalLM'),
         ("mistral", "MistralForCausalLM"),
         ("mixtral", "MixtralForCausalLM"),
+        ("musicgen", "MusicgenForCausalLM"),
         ("phi", "PhiForCausalLM"),
         ("qwen2", "Qwen2ForCausalLM"),
         ("reformer", "ReformerModelWithLMHead"),

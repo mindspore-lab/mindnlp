@@ -74,6 +74,7 @@ from . import (
     mistral,
     mixtral,
     mobilebert,
+    musicgen,
     nezha,
     opt,
     phi,
@@ -152,6 +153,7 @@ from .minicpm import *
 from .mistral import *
 from .mixtral import *
 from .mobilebert import *
+from .musicgen import *
 from .nezha import *
 from .opt import *
 from .phi import *
@@ -230,6 +232,7 @@ __all__.extend(minicpm.__all__)
 __all__.extend(mistral.__all__)
 __all__.extend(mixtral.__all__)
 __all__.extend(mobilebert.__all__)
+__all__.extend(musicgen.__all__)
 __all__.extend(nezha.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(phi.__all__)

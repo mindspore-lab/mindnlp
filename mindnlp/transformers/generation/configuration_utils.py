@@ -122,11 +122,6 @@ class GenerationConfig:
         # Validate the values of the attributes
         self.validate(is_init=True)
 
-    def set_from_model_config(self, value:bool):
-        """set _from_model_config"""
-        assert isinstance(value, bool), "value must be of type bool"
-        self._from_model_config = value
-
     def update(self, **kwargs):
         """
         Updates attributes of this class instance with attributes from `kwargs` if they match existing atributtes,
@@ -172,10 +167,10 @@ class GenerationConfig:
         if "_commit_hash" in kwargs and "_commit_hash" in config_dict:
             kwargs["_commit_hash"] = config_dict["_commit_hash"]
 
-        config = cls(**config_dict)
+        config = cls(**{**config_dict, **kwargs})
         unused_kwargs = config.update(**kwargs)
 
-        # logger.info(f"Generate config {config}")
+        logger.info(f"Generate config {config}")
         if return_unused_kwargs:
             return config, unused_kwargs
         return config
@@ -194,8 +189,8 @@ class GenerationConfig:
             [`GenerationConfig`]: The configuration object instantiated from those parameters.
         """
         config_dict = model_config.to_dict()
-        config = cls.from_dict(config_dict, return_unused_kwargs=False)
-
+        config_dict.pop("_from_model_config", None)
+        config = cls.from_dict(config_dict, return_unused_kwargs=False, _from_model_config=True)
         # Special case: some models have generation attributes set in the decoder. Use them if still unset in the
         # generation config.
         for decoder_name in ("decoder", "generator"):
@@ -206,7 +201,6 @@ class GenerationConfig:
                     if attr in decoder_config and getattr(config, attr) == getattr(default_generation_config, attr):
                         setattr(config, attr, decoder_config[attr])
 
-        config.set_from_model_config(True)
         return config
 
     def validate(self, is_init=False):

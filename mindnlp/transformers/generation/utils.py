@@ -75,6 +75,97 @@ from .stopping_criteria import (
 
 logger = logging.get_logger(__name__)
 
+@dataclass
+class GenerateDecoderOnlyOutput(ModelOutput):
+    """
+    Outputs of decoder-only generation models, when using non-beam methods.
+
+    Args:
+        sequences (`mindspore.Tensor` of shape `(batch_size, sequence_length)`):
+            The generated sequences. The second dimension (sequence_length) is either equal to `max_length` or shorter
+            if all batches finished early due to the `eos_token_id`.
+        scores (`tuple(mindspore.Tensor)` *optional*, returned when `output_scores=True` is passed or when `config.output_scores=True`):
+            Processed prediction scores of the language modeling head (scores for each vocabulary token before SoftMax)
+            at each generation step. Tuple of `mindspore.Tensor` with up to `max_new_tokens` elements (one element for
+            each generated token), with each tensor of shape `(batch_size, config.vocab_size)`.
+        logits (`tuple(mindspore.Tensor)` *optional*, returned when `output_logits=True` is passed or when `config.output_logits=True`):
+            Unprocessed prediction scores of the language modeling head (scores for each vocabulary token before SoftMax)
+            at each generation step. Tuple of `mindspore.Tensor` with up to `max_new_tokens` elements (one element for
+            each generated token), with each tensor of shape `(batch_size, config.vocab_size)`.
+        attentions (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `output_attentions=True` is passed or `config.output_attentions=True`):
+            Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
+            `mindspore.Tensor` of shape `(batch_size, num_heads, generated_length, sequence_length)`.
+        hidden_states (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
+            `mindspore.Tensor` of shape `(batch_size, generated_length, hidden_size)`.
+        past_key_values (`tuple(tuple(mindspore.Tensor)))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+            NOTE: some models have a different `past_key_values` format, confirm with the model's documentation.
+            Usually a Tuple (one element for each layer of the decoder) of tuples (two elements, key tensor and value
+            tensor). The first Tuple is of length `config.n_layers`, with each tuple having 2 tensors of shape
+            `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and optionally if
+            `config.is_encoder_decoder=True` 2 additional tensors of shape `(batch_size, num_heads,
+            encoder_sequence_length, embed_size_per_head)`.
+    """
+
+    sequences: mindspore.Tensor = None
+    scores: Optional[Tuple[mindspore.Tensor]] = None
+    logits: Optional[Tuple[mindspore.Tensor]] = None
+    attentions: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
+    hidden_states: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
+    past_key_values: Optional[Tuple[Tuple[Tuple[mindspore.Tensor]]]] = None
+
+
+@dataclass
+class GenerateEncoderDecoderOutput(ModelOutput):
+    """
+    Outputs of encoder-decoder generation models, when using non-beam methods.
+
+    Args:
+        sequences (`mindspore.Tensor` of shape `(batch_size*num_return_sequences, sequence_length)`):
+            The generated sequences. The second dimension (sequence_length) is either equal to `max_length` or shorter
+            if all batches finished early due to the `eos_token_id`.
+        scores (`tuple(mindspore.Tensor)` *optional*, returned when `output_scores=True` is passed or when `config.output_scores=True`):
+            Processed prediction scores of the language modeling head (scores for each vocabulary token before SoftMax)
+            at each generation step. Tuple of `mindspore.Tensor` with up to `max_new_tokens` elements (one element for
+            each generated token), with each tensor of shape `(batch_size, config.vocab_size)`.
+        logits (`tuple(mindspore.Tensor)` *optional*, returned when `output_logits=True` is passed or when `config.output_logits=True`):
+            Unprocessed prediction scores of the language modeling head (scores for each vocabulary token before SoftMax)
+            at each generation step. Tuple of `mindspore.Tensor` with up to `max_new_tokens` elements (one element for
+            each generated token), with each tensor of shape `(batch_size, config.vocab_size)`.
+        encoder_attentions (`tuple(mindspore.Tensor)`, *optional*, returned when `output_attentions=True` is passed or `config.output_attentions=True`):
+            Tuple of `mindspore.Tensor` (one for each layer of the decoder) of shape `(batch_size, num_heads,
+            sequence_length, sequence_length)`.
+        encoder_hidden_states (`tuple(mindspore.Tensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `mindspore.Tensor` (one for the output of the embeddings + one for the output of each layer) of
+            shape `(batch_size, sequence_length, hidden_size)`.
+        decoder_attentions (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `output_attentions=True` is passed or `config.output_attentions=True`):
+            Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
+            `mindspore.Tensor` of shape `(batch_size, num_heads, generated_length, sequence_length)`.
+        cross_attentions (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `output_attentions=True` is passed or `config.output_attentions=True`):
+            Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
+            `mindspore.Tensor` of shape `(batch_size, num_heads, generated_length, sequence_length)`.
+        decoder_hidden_states (`tuple(tuple(mindspore.Tensor))`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
+            `mindspore.Tensor` of shape `(batch_size, generated_length, hidden_size)`.
+        past_key_values (`tuple(tuple(mindspore.Tensor)))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+            NOTE: some models have a different `past_key_values` format, confirm with the model's documentation.
+            Usually a Tuple (one element for each layer of the decoder) of tuples (two elements, key tensor and value
+            tensor). The first Tuple is of length `config.n_layers`, with each tuple having 2 tensors of shape
+            `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and optionally if
+            `config.is_encoder_decoder=True` 2 additional tensors of shape `(batch_size, num_heads,
+            encoder_sequence_length, embed_size_per_head)`.
+    """
+
+    sequences: mindspore.Tensor = None
+    scores: Optional[Tuple[mindspore.Tensor]] = None
+    logits: Optional[Tuple[mindspore.Tensor]] = None
+    encoder_attentions: Optional[Tuple[mindspore.Tensor]] = None
+    encoder_hidden_states: Optional[Tuple[mindspore.Tensor]] = None
+    decoder_attentions: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
+    cross_attentions: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
+    decoder_hidden_states: Optional[Tuple[Tuple[mindspore.Tensor]]] = None
+    past_key_values: Optional[Tuple[Tuple[Tuple[mindspore.Tensor]]]] = None
+
 
 @dataclass
 class SampleDecoderOnlyOutput(ModelOutput):
@@ -692,7 +783,7 @@ class GenerationMixin:
         batch_size: int,
         model_input_name: str,
         model_kwargs: Dict[str, mindspore.Tensor],
-        decoder_start_token_id: int = None,
+        decoder_start_token_id: Union[int, List[int]] = None,
         bos_token_id: int = None,
     ) -> Tuple[mindspore.Tensor, Dict[str, mindspore.Tensor]]:
         """Prepares `decoder_input_ids` for generation with encoder-decoder models"""
@@ -707,16 +798,35 @@ class GenerationMixin:
 
         # 2. Encoder-decoder models expect the `decoder_input_ids` to start with a special token. Let's ensure that.
         decoder_start_token_id = self._get_decoder_start_token_id(decoder_start_token_id, bos_token_id)
-        decoder_input_ids_start = ops.ones((batch_size, 1), dtype=mindspore.int64) * decoder_start_token_id
+        if isinstance(decoder_start_token_id, list):
+            if len(decoder_start_token_id) != batch_size:
+                raise ValueError(
+                    f"`decoder_start_token_id` expcted to have length {batch_size} but got {len(decoder_start_token_id)}"
+                )
+            decoder_input_ids_start = mindspore.tensor(decoder_start_token_id, dtype=mindspore.int64)
+            decoder_input_ids_start = decoder_input_ids_start.view(-1, 1)
+        else:
+            decoder_input_ids_start = (
+                ops.ones((batch_size, 1), dtype=mindspore.int64) * decoder_start_token_id
+            )
+
         # no user input -> use decoder_start_token_id as decoder_input_ids
         if decoder_input_ids is None:
             decoder_input_ids = decoder_input_ids_start
         # exception: Donut checkpoints have task-specific decoder starts and don't expect a BOS token
         elif self.config.model_type == "vision-encoder-decoder" and "donut" in self.name_or_path.lower():
             pass
+        elif self.config.model_type in ["whisper"]:
+            pass
         # user input but doesn't start with decoder_start_token_id -> prepend decoder_start_token_id (and adjust
         # decoder_attention_mask if provided)
-        elif (decoder_input_ids[:, 0] != decoder_start_token_id).all().item():
+        elif (
+            isinstance(decoder_start_token_id, int)
+            and (decoder_input_ids[:, 0] != decoder_start_token_id).all().item()
+        ) or (
+            isinstance(decoder_start_token_id, mindspore.Tensor)
+            and (decoder_input_ids[:, 0] != decoder_start_token_id[:, 0]).all().item()
+        ):
             decoder_input_ids = ops.cat([decoder_input_ids_start, decoder_input_ids], axis=-1)
             if "decoder_attention_mask" in model_kwargs:
                 decoder_attention_mask = model_kwargs["decoder_attention_mask"]
@@ -727,7 +837,6 @@ class GenerationMixin:
                 model_kwargs["decoder_attention_mask"] = decoder_attention_mask
 
         return decoder_input_ids, model_kwargs
-
 
     def _get_decoder_start_token_id(self, decoder_start_token_id: int = None, bos_token_id: int = None) -> int:
         decoder_start_token_id = (
