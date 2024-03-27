@@ -123,7 +123,7 @@ setup(
         'tokenizers',
         'sentencepiece',
         'regex',
-        'easydict',
+        'addict',
         'safetensors',
         'ml_dtypes',
         'pyctcdecode'

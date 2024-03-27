@@ -15,7 +15,7 @@ sacremoses
 librosa
 soundfile
 tokenizers
-easydict
+addict
 safetensors
 ml_dtypes
 cython
