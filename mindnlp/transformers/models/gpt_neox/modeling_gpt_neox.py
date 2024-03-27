@@ -1067,14 +1067,6 @@ class GPTNeoXForQuestionAnswering(GPTNeoXPreTrainedModel):
 
 __all__ = [
     "GPTNeoXPreTrainedModel",
-    "GPTNeoXAttention",
-    "attention_mask_func",
-    "GPTNeoXRotaryEmbedding",
-    "GPTNeoXLinearScalingRotaryEmbedding",
-    "GPTNeoXDynamicNTKScalingRotaryEmbedding",
-    "rotate_half",
-    "apply_rotary_pos_emb",
-    "GPTNeoXMLP",
     "GPTNeoXLayer",
     "GPTNeoXModel",
     "GPTNeoXForCausalLM",
