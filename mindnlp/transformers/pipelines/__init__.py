@@ -20,7 +20,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from pathlib import Path
 
 import requests
-from easydict import EasyDict
+from addict import Dict as ADDict
 
 from mindnlp.configs import HF_ENDPOINT
 from mindnlp.utils import (
@@ -211,7 +211,7 @@ def model_info(
         params["blobs"] = True
     r = requests.get(path, timeout=timeout, params=params)
     data = r.json()
-    return EasyDict(**data)
+    return ADDict(**data)
 
 def get_task(model: str) -> str:
     if is_offline_mode():
