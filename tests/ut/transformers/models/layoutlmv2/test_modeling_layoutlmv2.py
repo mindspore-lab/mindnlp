@@ -19,7 +19,7 @@ from typing import *
 
 import numpy as np
 
-from mindnlp.utils.testing_utils import slow, require_mindocr
+from mindnlp.utils.testing_utils import slow
 from mindspore import ops, Tensor
 from mindspore.ops import functional as F
 from mindnlp.utils import require_mindspore
@@ -359,7 +359,6 @@ class LayoutLMv2ModelTester:
         return config, inputs_dict
 
 
-@require_mindocr
 @require_mindspore
 class LayoutLMv2ModelTest(ModelTesterMixin, unittest.TestCase):
     test_pruning = False
@@ -618,7 +617,6 @@ def prepare_layoutlmv2_batch_inputs():
 
     return input_ids, bbox, image, attention_mask, token_type_ids
 
-@require_mindocr
 @require_mindspore
 class LayoutLMv2ModelIntegrationTest(unittest.TestCase):
     @slow
@@ -649,5 +647,5 @@ class LayoutLMv2ModelIntegrationTest(unittest.TestCase):
             np.allclose(outputs.last_hidden_state[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
 
         # verify the pooled output
-        expected_shape = ops.Size((2, model.config.hidden_size))
+        expected_shape = (2, model.config.hidden_size)
         self.assertEqual(outputs.pooler_output.shape, expected_shape)

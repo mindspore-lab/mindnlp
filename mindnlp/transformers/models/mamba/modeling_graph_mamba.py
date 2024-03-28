@@ -17,7 +17,7 @@
 
 import math
 from typing import Any, Dict, List, Optional, Tuple, Union
-from easydict import EasyDict
+from addict import Dict as ADDict
 
 import mindspore
 from mindspore import nn, ops, Parameter
@@ -281,7 +281,7 @@ class MSMambaPreTrainedModel(PreTrainedModel):
     def __call__(self, *args, **kwargs):
         outputs = super().__call__(*args, **kwargs)
         if isinstance(outputs, dict):
-            return EasyDict(outputs)
+            return ADDict(outputs)
         return outputs
 
 class MSMambaModel(MSMambaPreTrainedModel):

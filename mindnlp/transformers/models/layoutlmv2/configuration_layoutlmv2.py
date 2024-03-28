@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """ LayoutLMv2 model configuration"""
-from easydict import EasyDict
+from addict import Dict
 
 from mindnlp.utils import logging
 from ...configuration_utils import PretrainedConfig
@@ -186,7 +186,7 @@ class LayoutLMv2Config(PretrainedConfig):
         Returns:
             Dict: Default configuration arguments for the visual backbone.
         """
-        return EasyDict({
+        return Dict({
             "MODEL": {
                 "BACKBONE": {
                     "FREEZE_AT": 2,

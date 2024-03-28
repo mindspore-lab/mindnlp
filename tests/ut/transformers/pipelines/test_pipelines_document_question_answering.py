@@ -20,7 +20,7 @@ from mindnlp.transformers import MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING, 
 from mindnlp.transformers.pipelines.document_question_answering import apply_tesseract
 
 from mindnlp.utils.testing_utils import is_pipeline_test, require_vision, slow, \
-    nested_simplify, require_pytesseract, require_mindocr
+    nested_simplify, require_pytesseract
 
 from mindnlp.utils import is_vision_available, require_mindspore
 
@@ -50,7 +50,6 @@ INVOICE_URL = (
 
 @is_pipeline_test
 @require_mindspore
-@require_mindocr
 @require_vision
 class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
     model_mapping = MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING
