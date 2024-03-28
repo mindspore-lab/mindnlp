@@ -34,6 +34,7 @@ from . import (
     bertweet,
     bge_m3,
     big_bird,
+    bigbird_pegasus,
     biogpt,
     bloom,
     byt5,
@@ -77,6 +78,7 @@ from . import (
     musicgen,
     nezha,
     opt,
+    pegasus,
     phi,
     pop2piano,
     qwen2,
@@ -113,6 +115,7 @@ from .bert_japanese import *
 from .bertweet import *
 from .bge_m3 import *
 from .big_bird import *
+from .bigbird_pegasus import *
 from .biogpt import *
 from .bloom import *
 from .byt5 import *
@@ -156,6 +159,7 @@ from .mobilebert import *
 from .musicgen import *
 from .nezha import *
 from .opt import *
+from .pegasus import *
 from .phi import *
 from .pop2piano import *
 from .qwen2 import *
@@ -192,6 +196,7 @@ __all__.extend(bert_japanese.__all__)
 __all__.extend(bertweet.__all__)
 __all__.extend(bge_m3.__all__)
 __all__.extend(big_bird.__all__)
+__all__.extend(bigbird_pegasus.__all__)
 __all__.extend(biogpt.__all__)
 __all__.extend(bloom.__all__)
 __all__.extend(byt5.__all__)
@@ -235,6 +240,7 @@ __all__.extend(mobilebert.__all__)
 __all__.extend(musicgen.__all__)
 __all__.extend(nezha.__all__)
 __all__.extend(opt.__all__)
+__all__.extend(pegasus.__all__)
 __all__.extend(phi.__all__)
 __all__.extend(pop2piano.__all__)
 __all__.extend(qwen2.__all__)

@@ -866,7 +866,10 @@ class GenerationMixin:
         def _expand_dict_for_generation(dict_to_expand):
             for key in dict_to_expand:
                 if dict_to_expand[key] is not None and isinstance(dict_to_expand[key], mindspore.Tensor):
-                    dict_to_expand[key] = dict_to_expand[key].repeat_interleave(expand_size, dim=0)
+                    if dict_to_expand[key].dtype == mindspore.bool_:
+                        dict_to_expand[key] = dict_to_expand[key].to(mindspore.int32).repeat_interleave(expand_size, dim=0).to(mindspore.bool_)
+                    else:
+                        dict_to_expand[key] = dict_to_expand[key].repeat_interleave(expand_size, dim=0)
             return dict_to_expand
 
         if input_ids is not None:

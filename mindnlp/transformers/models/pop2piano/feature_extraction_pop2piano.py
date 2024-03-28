@@ -35,8 +35,8 @@ from ....utils import (
 
 
 if is_essentia_available():
-    import essentia
-    import essentia.standard
+    import essentia # pylint: disable=import-error
+    import essentia.standard # pylint: disable=import-error
 
 if is_librosa_available():
     import librosa
