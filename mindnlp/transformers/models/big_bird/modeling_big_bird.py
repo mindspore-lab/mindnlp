@@ -51,7 +51,7 @@ BIG_BIRD_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "google/bigbird-roberta-base",
     "google/bigbird-roberta-large",
     "google/bigbird-base-trivia-itc",
-    # See all BigBird models at https://huggingface.co/models?filter=big_bird
+    # See all BigBird models at https://hf-mirror.com/models?filter=big_bird
 ]
 
 

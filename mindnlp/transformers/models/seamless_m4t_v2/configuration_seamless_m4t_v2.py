@@ -21,7 +21,7 @@ from ...configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 SEAMLESS_M4T_V2_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "": "https://huggingface.co//resolve/main/config.json",
+    "": "https://hf-mirror.com//resolve/main/config.json",
 }
 
 
@@ -30,7 +30,7 @@ class SeamlessM4Tv2Config(PretrainedConfig):
     This is the configuration class to store the configuration of a [`~SeamlessM4Tv2Model`]. It is used to instantiate
     an SeamlessM4Tv2 model according to the specified arguments, defining the model architecture. Instantiating a
     configuration with the defaults will yield a similar configuration to that of the SeamlessM4Tv2
-    [""](https://huggingface.co/"") architecture.
+    [""](https://hf-mirror.com/"") architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

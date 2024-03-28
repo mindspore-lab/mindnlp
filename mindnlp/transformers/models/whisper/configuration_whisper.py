@@ -56,7 +56,7 @@ class WhisperConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`WhisperModel`]. It is used to instantiate a
     Whisper model according to the specified arguments, defining the model architecture. Instantiating a configuration
     with the defaults will yield a similar configuration to that of the Whisper
-    [openai/whisper-tiny](https://huggingface.co/openai/whisper-tiny) architecture.
+    [openai/whisper-tiny](https://hf-mirror.com/openai/whisper-tiny) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

@@ -22,8 +22,8 @@ logger = logging.get_logger(__name__)
 
 
 GPT_NEOX_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "EleutherAI/gpt-neox-20b": "https://huggingface.co/EleutherAI/gpt-neox-20b/resolve/main/config.json",
-    # See all GPTNeoX models at https://huggingface.co/models?filter=gpt_neox
+    "EleutherAI/gpt-neox-20b": "https://hf-mirror.com/EleutherAI/gpt-neox-20b/resolve/main/config.json",
+    # See all GPTNeoX models at https://hf-mirror.com/models?filter=gpt_neox
 }
 
 

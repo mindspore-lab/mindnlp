@@ -31,9 +31,9 @@ VOCAB_FILES_NAMES = {
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "microsoft/biogpt": "https://huggingface.co/microsoft/biogpt/resolve/main/vocab.json",
+        "microsoft/biogpt": "https://hf-mirror.com/microsoft/biogpt/resolve/main/vocab.json",
     },
-    "merges_file": {"microsoft/biogpt": "https://huggingface.co/microsoft/biogpt/resolve/main/merges.txt"},
+    "merges_file": {"microsoft/biogpt": "https://hf-mirror.com/microsoft/biogpt/resolve/main/merges.txt"},
 }
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {

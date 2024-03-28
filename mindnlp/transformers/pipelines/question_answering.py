@@ -229,7 +229,7 @@ class QuestionAnsweringPipeline(ChunkPipeline):
 
     The models that this pipeline can use are models that have been fine-tuned on a question answering task. See the
     up-to-date list of available models on
-    [huggingface.co/models](https://huggingface.co/models?filter=question-answering).
+    [hf-mirror.com/models](https://hf-mirror.com/models?filter=question-answering).
     """
 
     default_input_names = "question,context"

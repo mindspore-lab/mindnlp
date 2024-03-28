@@ -57,7 +57,7 @@ T5_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "t5-large",
     "t5-3b",
     "t5-11b",
-    # See all T5 models at https://huggingface.co/models?filter=t5
+    # See all T5 models at https://hf-mirror.com/models?filter=t5
 ]
 
 class T5LayerNorm(nn.Cell):

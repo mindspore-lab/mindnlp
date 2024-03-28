@@ -21,7 +21,7 @@ from ...configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 MEGATRON_BERT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    # See all MEGATRON_BERT models at https://huggingface.co/models?filter=bert
+    # See all MEGATRON_BERT models at https://hf-mirror.com/models?filter=bert
 }
 
 
@@ -30,7 +30,7 @@ class MegatronBertConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`MegatronBertModel`]. It is used to instantiate a
     MEGATRON_BERT model according to the specified arguments, defining the model architecture. Instantiating a
     configuration with the defaults will yield a similar configuration to that of the MEGATRON_BERT
-    [nvidia/megatron-bert-uncased-345m](https://huggingface.co/nvidia/megatron-bert-uncased-345m) architecture.
+    [nvidia/megatron-bert-uncased-345m](https://hf-mirror.com/nvidia/megatron-bert-uncased-345m) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

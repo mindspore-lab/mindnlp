@@ -30,7 +30,7 @@ class GemmaConfig(PretrainedConfig):
     model according to the specified arguments, defining the model architecture. Instantiating a configuration with the
     defaults will yield a similar configuration to that of the Gemma-7B.
 
-    e.g. [google/gemma-7b](https://huggingface.co/google/gemma-7b)
+    e.g. [google/gemma-7b](https://hf-mirror.com/google/gemma-7b)
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

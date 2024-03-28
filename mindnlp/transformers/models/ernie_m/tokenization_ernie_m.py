@@ -40,12 +40,12 @@ RESOURCE_FILES_NAMES = {
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "ernie-m-base": "https://huggingface.co/susnato/ernie-m-base_pytorch/blob/main/vocab.txt",
-        "ernie-m-large": "https://huggingface.co/susnato/ernie-m-base_pytorch/blob/main/vocab.txt",
+        "ernie-m-base": "https://hf-mirror.com/susnato/ernie-m-base_pytorch/blob/main/vocab.txt",
+        "ernie-m-large": "https://hf-mirror.com/susnato/ernie-m-base_pytorch/blob/main/vocab.txt",
     },
     "sentencepiece_model_file": {
-        "ernie-m-base": "https://huggingface.co/susnato/ernie-m-base_pytorch/blob/main/sentencepiece.bpe.model",
-        "ernie-m-large": "https://huggingface.co/susnato/ernie-m-base_pytorch/blob/main/sentencepiece.bpe.model",
+        "ernie-m-base": "https://hf-mirror.com/susnato/ernie-m-base_pytorch/blob/main/sentencepiece.bpe.model",
+        "ernie-m-large": "https://hf-mirror.com/susnato/ernie-m-base_pytorch/blob/main/sentencepiece.bpe.model",
     },
 }
 

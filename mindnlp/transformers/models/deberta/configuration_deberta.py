@@ -21,12 +21,12 @@ from ...configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 DEBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "microsoft/deberta-base": "https://huggingface.co/microsoft/deberta-base/resolve/main/config.json",
-    "microsoft/deberta-large": "https://huggingface.co/microsoft/deberta-large/resolve/main/config.json",
-    "microsoft/deberta-xlarge": "https://huggingface.co/microsoft/deberta-xlarge/resolve/main/config.json",
-    "microsoft/deberta-base-mnli": "https://huggingface.co/microsoft/deberta-base-mnli/resolve/main/config.json",
-    "microsoft/deberta-large-mnli": "https://huggingface.co/microsoft/deberta-large-mnli/resolve/main/config.json",
-    "microsoft/deberta-xlarge-mnli": "https://huggingface.co/microsoft/deberta-xlarge-mnli/resolve/main/config.json",
+    "microsoft/deberta-base": "https://hf-mirror.com/microsoft/deberta-base/resolve/main/config.json",
+    "microsoft/deberta-large": "https://hf-mirror.com/microsoft/deberta-large/resolve/main/config.json",
+    "microsoft/deberta-xlarge": "https://hf-mirror.com/microsoft/deberta-xlarge/resolve/main/config.json",
+    "microsoft/deberta-base-mnli": "https://hf-mirror.com/microsoft/deberta-base-mnli/resolve/main/config.json",
+    "microsoft/deberta-large-mnli": "https://hf-mirror.com/microsoft/deberta-large-mnli/resolve/main/config.json",
+    "microsoft/deberta-xlarge-mnli": "https://hf-mirror.com/microsoft/deberta-xlarge-mnli/resolve/main/config.json",
 }
 
 
@@ -35,7 +35,7 @@ class DebertaConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`DebertaModel`] or a [`TFDebertaModel`]. It is
     used to instantiate a DeBERTa model according to the specified arguments, defining the model architecture.
     Instantiating a configuration with the defaults will yield a similar configuration to that of the DeBERTa
-    [microsoft/deberta-base](https://huggingface.co/microsoft/deberta-base) architecture.
+    [microsoft/deberta-base](https://hf-mirror.com/microsoft/deberta-base) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

@@ -29,7 +29,7 @@ class XLMRobertaConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`XLMRobertaModel`] or a [`TFXLMRobertaModel`]. It
     is used to instantiate a XLM-RoBERTa model according to the specified arguments, defining the model architecture.
     Instantiating a configuration with the defaults will yield a similar configuration to that of the XLMRoBERTa
-    [xlm-roberta-base](https://huggingface.co/xlm-roberta-base) architecture.
+    [xlm-roberta-base](https://hf-mirror.com/xlm-roberta-base) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

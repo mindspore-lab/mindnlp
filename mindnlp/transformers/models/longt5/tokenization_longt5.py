@@ -42,10 +42,10 @@ VOCAB_FILES_NAMES = {"vocab_file": "spiece.model"}
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "google/long-t5-local-base": "https://huggingface.co/google/long-t5-local-base/blob/main/config.json",
-        "google/long-t5-local-large": "https://huggingface.co/google/long-t5-local-large/blob/main/config.json",
-        "google/long-t5-tglobal-base": "https://huggingface.co/google/long-t5-tglobal-base/blob/main/config.json",
-        "google/long-t5-tglobal-large": "https://huggingface.co/google/long-t5-tglobal-large/blob/main/config.json",
+        "google/long-t5-local-base": "https://hf-mirror.com/google/long-t5-local-base/blob/main/config.json",
+        "google/long-t5-local-large": "https://hf-mirror.com/google/long-t5-local-large/blob/main/config.json",
+        "google/long-t5-tglobal-base": "https://hf-mirror.com/google/long-t5-tglobal-base/blob/main/config.json",
+        "google/long-t5-tglobal-large": "https://hf-mirror.com/google/long-t5-tglobal-large/blob/main/config.json",
    }
 }
 

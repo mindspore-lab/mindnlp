@@ -21,8 +21,8 @@ from ...configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 MBART_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "facebook/mbart-large-cc25": "https://huggingface.co/facebook/mbart-large-cc25/resolve/main/config.json",
-    # See all MBART models at https://huggingface.co/models?filter=mbart
+    "facebook/mbart-large-cc25": "https://hf-mirror.com/facebook/mbart-large-cc25/resolve/main/config.json",
+    # See all MBART models at https://hf-mirror.com/models?filter=mbart
 }
 
 

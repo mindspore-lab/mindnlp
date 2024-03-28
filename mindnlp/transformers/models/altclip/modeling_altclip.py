@@ -44,7 +44,7 @@ _CONFIG_FOR_DOC = "AltCLIPConfig"
 
 ALTCLIP_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "BAAI/AltCLIP",
-    # See all AltCLIP models at https://huggingface.co/models?filter=altclip
+    # See all AltCLIP models at https://hf-mirror.com/models?filter=altclip
 ]
 
 # contrastive loss function, adapted from

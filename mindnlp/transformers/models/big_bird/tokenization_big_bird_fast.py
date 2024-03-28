@@ -32,23 +32,23 @@ VOCAB_FILES_NAMES = {"vocab_file": "spiece.model", "tokenizer_file": "tokenizer.
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "google/bigbird-roberta-base": "https://huggingface.co/google/bigbird-roberta-base/resolve/main/spiece.model",
+        "google/bigbird-roberta-base": "https://hf-mirror.com/google/bigbird-roberta-base/resolve/main/spiece.model",
         "google/bigbird-roberta-large": (
-            "https://huggingface.co/google/bigbird-roberta-large/resolve/main/spiece.model"
+            "https://hf-mirror.com/google/bigbird-roberta-large/resolve/main/spiece.model"
         ),
         "google/bigbird-base-trivia-itc": (
-            "https://huggingface.co/google/bigbird-base-trivia-itc/resolve/main/spiece.model"
+            "https://hf-mirror.com/google/bigbird-base-trivia-itc/resolve/main/spiece.model"
         ),
     },
     "tokenizer_file": {
         "google/bigbird-roberta-base": (
-            "https://huggingface.co/google/bigbird-roberta-base/resolve/main/tokenizer.json"
+            "https://hf-mirror.com/google/bigbird-roberta-base/resolve/main/tokenizer.json"
         ),
         "google/bigbird-roberta-large": (
-            "https://huggingface.co/google/bigbird-roberta-large/resolve/main/tokenizer.json"
+            "https://hf-mirror.com/google/bigbird-roberta-large/resolve/main/tokenizer.json"
         ),
         "google/bigbird-base-trivia-itc": (
-            "https://huggingface.co/google/bigbird-base-trivia-itc/resolve/main/tokenizer.json"
+            "https://hf-mirror.com/google/bigbird-base-trivia-itc/resolve/main/tokenizer.json"
         ),
     },
 }
@@ -66,7 +66,7 @@ SPIECE_UNDERLINE = "▁"
 class BigBirdTokenizerFast(PreTrainedTokenizerFast):
     """
     Construct a "fast" BigBird tokenizer (backed by HuggingFace's *tokenizers* library). Based on
-    [Unigram](https://huggingface.co/docs/tokenizers/python/latest/components.html?highlight=unigram#models). This
+    [Unigram](https://hf-mirror.com/docs/tokenizers/python/latest/components.html?highlight=unigram#models). This
     tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. Users should refer to
     this superclass for more information regarding those methods
 

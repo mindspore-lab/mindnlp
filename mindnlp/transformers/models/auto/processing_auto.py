@@ -156,7 +156,7 @@ class AutoProcessor:
                 This can be either:
 
                 - a string, the *model id* of a pretrained feature_extractor hosted inside a model repo on
-                  huggingface.co.
+                  hf-mirror.com.
                 - a path to a *directory* containing a processor files saved using the `save_pretrained()` method,
                   e.g., `./my_model_directory/`.
             cache_dir (`str` or `os.PathLike`, *optional*):
@@ -176,7 +176,7 @@ class AutoProcessor:
                 when running `huggingface-cli login` (stored in `~/.huggingface`).
             revision (`str`, *optional*, defaults to `"main"`):
                 The specific model version to use. It can be a branch name, a tag name, or a commit id, since we use a
-                git-based system for storing models and other artifacts on huggingface.co, so `revision` can be any
+                git-based system for storing models and other artifacts on hf-mirror.com, so `revision` can be any
                 identifier allowed by git.
             return_unused_kwargs (`bool`, *optional*, defaults to `False`):
                 If `False`, then this function returns just the final feature extractor object. If `True`, then this
@@ -203,7 +203,7 @@ class AutoProcessor:
         ```python
         >>> from transformers import AutoProcessor
 
-        >>> # Download processor from huggingface.co and cache.
+        >>> # Download processor from hf-mirror.com and cache.
         >>> processor = AutoProcessor.from_pretrained("facebook/wav2vec2-base-960h")
 
         >>> # If processor files are in a directory (e.g. processor was saved using *save_pretrained('./test/saved_model/')*)

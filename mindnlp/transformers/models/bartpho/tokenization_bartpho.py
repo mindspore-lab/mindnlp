@@ -33,10 +33,10 @@ VOCAB_FILES_NAMES = {"vocab_file": "sentencepiece.bpe.model", "monolingual_vocab
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "vinai/bartpho-syllable": "https://huggingface.co/vinai/bartpho-syllable/resolve/main/sentencepiece.bpe.model",
+        "vinai/bartpho-syllable": "https://hf-mirror.com/vinai/bartpho-syllable/resolve/main/sentencepiece.bpe.model",
     },
     "monolingual_vocab_file": {
-        "vinai/bartpho-syllable": "https://huggingface.co/vinai/bartpho-syllable/resolve/main/dict.txt",
+        "vinai/bartpho-syllable": "https://hf-mirror.com/vinai/bartpho-syllable/resolve/main/dict.txt",
     },
 }
 

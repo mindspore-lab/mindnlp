@@ -46,7 +46,7 @@ OPT_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "facebook/opt-6.7b",
     "facebook/opt-13b",
     "facebook/opt-30b",
-    # See all OPT models at https://huggingface.co/models?filter=opt
+    # See all OPT models at https://hf-mirror.com/models?filter=opt
 ]
 
 

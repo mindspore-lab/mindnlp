@@ -28,8 +28,8 @@ __all__ = [
 logger = logging.get_logger(__name__)
 
 HUBERT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "facebook/hubert-base-ls960": "https://huggingface.co/facebook/hubert-base-ls960/resolve/main/config.json",
-    # See all Hubert models at https://huggingface.co/models?filter=hubert
+    "facebook/hubert-base-ls960": "https://hf-mirror.com/facebook/hubert-base-ls960/resolve/main/config.json",
+    # See all Hubert models at https://hf-mirror.com/models?filter=hubert
 }
 
 
@@ -38,7 +38,7 @@ class HubertConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`HubertModel`]. It is used to instantiate an
     Hubert model according to the specified arguments, defining the model architecture. Instantiating a configuration
     with the defaults will yield a similar configuration to that of the Hubert
-    [facebook/hubert-base-ls960](https://huggingface.co/facebook/hubert-base-ls960) architecture.
+    [facebook/hubert-base-ls960](https://hf-mirror.com/facebook/hubert-base-ls960) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

@@ -47,7 +47,7 @@ ERNIE_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "nghuyong/ernie-3.0-nano-zh",
     "nghuyong/ernie-gram-zh",
     "nghuyong/ernie-health-zh",
-    # See all ERNIE models at https://huggingface.co/models?filter=ernie
+    # See all ERNIE models at https://hf-mirror.com/models?filter=ernie
 ]
 
 

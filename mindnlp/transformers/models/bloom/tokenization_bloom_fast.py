@@ -31,13 +31,13 @@ VOCAB_FILES_NAMES = {"tokenizer_file": "tokenizer.json"}
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "tokenizer_file": {
-        "bigscience/tokenizer": "https://huggingface.co/bigscience/tokenizer/blob/main/tokenizer.json",
-        "bigscience/bloom-560m": "https://huggingface.co/bigscience/bloom-560m/blob/main/tokenizer.json",
-        "bigscience/bloom-1b1": "https://huggingface.co/bigscience/bloom-1b1/blob/main/tokenizer.json",
-        "bigscience/bloom-1b7": "https://huggingface.co/bigscience/bloom-1b7/blob/main/tokenizer.json",
-        "bigscience/bloom-3b": "https://huggingface.co/bigscience/bloom-3b/blob/main/tokenizer.json",
-        "bigscience/bloom-7b1": "https://huggingface.co/bigscience/bloom-7b1/blob/main/tokenizer.json",
-        "bigscience/bloom": "https://huggingface.co/bigscience/bloom/blob/main/tokenizer.json",
+        "bigscience/tokenizer": "https://hf-mirror.com/bigscience/tokenizer/blob/main/tokenizer.json",
+        "bigscience/bloom-560m": "https://hf-mirror.com/bigscience/bloom-560m/blob/main/tokenizer.json",
+        "bigscience/bloom-1b1": "https://hf-mirror.com/bigscience/bloom-1b1/blob/main/tokenizer.json",
+        "bigscience/bloom-1b7": "https://hf-mirror.com/bigscience/bloom-1b7/blob/main/tokenizer.json",
+        "bigscience/bloom-3b": "https://hf-mirror.com/bigscience/bloom-3b/blob/main/tokenizer.json",
+        "bigscience/bloom-7b1": "https://hf-mirror.com/bigscience/bloom-7b1/blob/main/tokenizer.json",
+        "bigscience/bloom": "https://hf-mirror.com/bigscience/bloom/blob/main/tokenizer.json",
     },
 }
 
@@ -174,7 +174,7 @@ class BloomTokenizerFast(PreTrainedTokenizerFast):
             "\nNo chat template is defined for this tokenizer - using the default template "
             f"for the {self.__class__.__name__} class. If the default is not appropriate for "
             "your model, please set `tokenizer.chat_template` to an appropriate template. "
-            "See https://huggingface.co/docs/transformers/main/chat_templating for more information.\n"
+            "See https://hf-mirror.com/docs/transformers/main/chat_templating for more information.\n"
         )
         return "{% for message in messages %}" "{{ message.content }}{{ eos_token }}" "{% endfor %}"
 

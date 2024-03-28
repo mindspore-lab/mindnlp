@@ -110,9 +110,9 @@ class GatedRepoError(RepositoryNotFoundError):
     (...)
     huggingface_hub.utils._errors.GatedRepoError: 403 Client Error. (Request ID: ViT1Bf7O_026LGSQuVqfa)
 
-    Cannot access gated repo for url https://huggingface.co/api/models/ardent-figment/gated-model.
+    Cannot access gated repo for url https://hf-mirror.com/api/models/ardent-figment/gated-model.
     Access to model ardent-figment/gated-model is restricted and you are not in the authorized list.
-    Visit https://huggingface.co/ardent-figment/gated-model to ask for access.
+    Visit https://hf-mirror.com/ardent-figment/gated-model to ask for access.
     ```
     """
 
@@ -129,7 +129,7 @@ class EntryNotFoundError(MSHTTPError):
     (...)
     huggingface_hub.utils._errors.EntryNotFoundError: 404 Client Error. (Request ID: 53pNl6M0MxsnG5Sw8JA6x)
 
-    Entry Not Found for url: https://huggingface.co/bert-base-cased/resolve/main/%3Cnon-existent-file%3E.
+    Entry Not Found for url: https://hf-mirror.com/bert-base-cased/resolve/main/%3Cnon-existent-file%3E.
     ```
     """
 

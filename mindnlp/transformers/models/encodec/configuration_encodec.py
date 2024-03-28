@@ -26,8 +26,8 @@ from ...configuration_utils import PretrainedConfig
 
 
 ENCODEC_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "encodec_24khz": "https://huggingface.co/encodec_24khz/resolve/main/config.json",
-    "encodec_48khz": "https://huggingface.co/encodec_48khz/resolve/main/config.json",
+    "encodec_24khz": "https://hf-mirror.com/encodec_24khz/resolve/main/config.json",
+    "encodec_48khz": "https://hf-mirror.com/encodec_48khz/resolve/main/config.json",
 }
 
 __all__ = ["EncodecConfig"]
@@ -38,7 +38,7 @@ class EncodecConfig(PretrainedConfig):
     This is the configuration class to store the configuration of an [`EncodecModel`]. It is used to instantiate a
     Encodec model according to the specified arguments, defining the model architecture. Instantiating a configuration
     with the defaults will yield a similar configuration to that of the
-    [facebook/encodec_24khz](https://huggingface.co/facebook/encodec_24khz) architecture.
+    [facebook/encodec_24khz](https://hf-mirror.com/facebook/encodec_24khz) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

@@ -300,7 +300,7 @@ def load_image(image: Union[str, "PIL.Image.Image"], timeout: Optional[float] = 
     if isinstance(image, str):
         if image.startswith("http://") or image.startswith("https://"):
             # We need to actually check for a real protocol, otherwise it's impossible to use a local file
-            # like http_huggingface_co.png
+            # like http_hf-mirror.com.png
             image = PIL.Image.open(requests.get(image, stream=True, timeout=timeout).raw)
         elif os.path.isfile(image):
             image = PIL.Image.open(image)

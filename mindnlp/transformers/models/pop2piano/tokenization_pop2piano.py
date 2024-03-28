@@ -38,7 +38,7 @@ VOCAB_FILES_NAMES = {
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab": {
-        "sweetcocoa/pop2piano": "https://huggingface.co/sweetcocoa/pop2piano/blob/main/vocab.json",
+        "sweetcocoa/pop2piano": "https://hf-mirror.com/sweetcocoa/pop2piano/blob/main/vocab.json",
     },
 }
 

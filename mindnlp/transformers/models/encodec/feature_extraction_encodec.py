@@ -33,7 +33,7 @@ class EncodecFeatureExtractor(SequenceFeatureExtractor):
     most of the main methods. Users should refer to this superclass for more information regarding those methods.
 
     Instantiating a feature extractor with the defaults will yield a similar configuration to that of the
-    [facebook/encodec_24khz](https://huggingface.co/facebook/encodec_24khz) architecture.
+    [facebook/encodec_24khz](https://hf-mirror.com/facebook/encodec_24khz) architecture.
 
     Args:
         feature_size (`int`, *optional*, defaults to 1):

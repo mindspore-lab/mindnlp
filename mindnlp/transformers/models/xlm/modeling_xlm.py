@@ -57,7 +57,7 @@ XLM_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "xlm-clm-ende-1024",
     "xlm-mlm-17-1280",
     "xlm-mlm-100-1280",
-    # See all XLM models at https://huggingface.co/models?filter=xlm
+    # See all XLM models at https://hf-mirror.com/models?filter=xlm
 ]
 
 

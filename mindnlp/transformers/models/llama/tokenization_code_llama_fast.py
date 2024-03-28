@@ -63,12 +63,12 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
     If you want to change the `bos_token` or the `eos_token`, make sure to specify them when initializing the model, or
     call `tokenizer.update_post_processor()` to make sure that the post-processing is correctly done (otherwise the
     values of the first token and final token of an encoded sequence will not be correct). For more details, checkout
-    [post-processors] (https://huggingface.co/docs/tokenizers/api/post-processors) documentation.
+    [post-processors] (https://hf-mirror.com/docs/tokenizers/api/post-processors) documentation.
 
 
     This tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. Users should
     refer to this superclass for more information regarding those methods. The default configuration match that of
-    [codellama/CodeLlama-7b-Instruct-hf](https://huggingface.co/codellama/CodeLlama-7b-Instruct-hf/blob/main/tokenizer_config.json)
+    [codellama/CodeLlama-7b-Instruct-hf](https://hf-mirror.com/codellama/CodeLlama-7b-Instruct-hf/blob/main/tokenizer_config.json)
     which supports prompt infilling.
 
     Args:
@@ -370,7 +370,7 @@ class CodeLlamaTokenizerFast(PreTrainedTokenizerFast):
             "\nNo chat template is defined for this tokenizer - using the default template "
             f"for the {self.__class__.__name__} class. If the default is not appropriate for "
             "your model, please set `tokenizer.chat_template` to an appropriate template. "
-            "See https://huggingface.co/docs/transformers/main/chat_templating for more information.\n"
+            "See https://hf-mirror.com/docs/transformers/main/chat_templating for more information.\n"
         )
         template = (
             "{% if messages[0]['role'] == 'system' %}"

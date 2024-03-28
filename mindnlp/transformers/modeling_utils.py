@@ -1056,7 +1056,6 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     origin_state_dict = load_file(resolved_archive_file)
                     if use_fp16:
                         logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
-
                     state_dict = {k: Parameter(v.astype(np.float32).astype(usage_dtype)) for k, v in origin_state_dict.items()}
                 else:
                     state_dict = load(resolved_archive_file)
@@ -1198,9 +1197,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         for group in tied_params:
             missing_in_group = [k for k in keys_missing if k in group]
             if len(missing_in_group) > 0 and len(missing_in_group) < len(group):
-                loaded_add_keys = [k for k in keys_missing if k in missing_in_group]
+                loaded_add_keys.extend([k for k in keys_missing if k in missing_in_group])
                 keys_missing = [k for k in keys_missing if k not in missing_in_group]
-
         if cls._keys_to_ignore_on_load_missing is not None:
             for pat in cls._keys_to_ignore_on_load_missing:
                 keys_missing = [k for k in keys_missing if re.search(pat, k) is None]

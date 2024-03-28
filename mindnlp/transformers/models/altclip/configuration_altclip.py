@@ -23,8 +23,8 @@ from ...configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 ALTCLIP_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "BAAI/AltCLIP": "https://huggingface.co/BAAI/AltCLIP/resolve/main/config.json",
-    # See all AltCLIP models at https://huggingface.co/models?filter=altclip
+    "BAAI/AltCLIP": "https://hf-mirror.com/BAAI/AltCLIP/resolve/main/config.json",
+    # See all AltCLIP models at https://hf-mirror.com/models?filter=altclip
 }
 
 
@@ -33,7 +33,7 @@ class AltCLIPTextConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`AltCLIPTextModel`]. It is used to instantiate a
     AltCLIP text model according to the specified arguments, defining the model architecture. Instantiating a
     configuration with the defaults will yield a similar configuration to that of the AltCLIP
-    [BAAI/AltCLIP](https://huggingface.co/BAAI/AltCLIP) architecture.
+    [BAAI/AltCLIP](https://hf-mirror.com/BAAI/AltCLIP) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -151,7 +151,7 @@ class AltCLIPVisionConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`AltCLIPModel`]. It is used to instantiate an
     AltCLIP model according to the specified arguments, defining the model architecture. Instantiating a configuration
     with the defaults will yield a similar configuration to that of the AltCLIP
-    [BAAI/AltCLIP](https://huggingface.co/BAAI/AltCLIP) architecture.
+    [BAAI/AltCLIP](https://hf-mirror.com/BAAI/AltCLIP) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -259,7 +259,7 @@ class AltCLIPConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`AltCLIPModel`]. It is used to instantiate an
     AltCLIP model according to the specified arguments, defining the model architecture. Instantiating a configuration
     with the defaults will yield a similar configuration to that of the AltCLIP
-    [BAAI/AltCLIP](https://huggingface.co/BAAI/AltCLIP) architecture.
+    [BAAI/AltCLIP](https://hf-mirror.com/BAAI/AltCLIP) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

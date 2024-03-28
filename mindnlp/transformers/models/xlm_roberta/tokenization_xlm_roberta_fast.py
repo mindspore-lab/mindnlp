@@ -35,35 +35,35 @@ VOCAB_FILES_NAMES = {"vocab_file": "sentencepiece.bpe.model", "tokenizer_file": 
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "xlm-roberta-base": "https://huggingface.co/xlm-roberta-base/resolve/main/sentencepiece.bpe.model",
-        "xlm-roberta-large": "https://huggingface.co/xlm-roberta-large/resolve/main/sentencepiece.bpe.model",
+        "xlm-roberta-base": "https://hf-mirror.com/xlm-roberta-base/resolve/main/sentencepiece.bpe.model",
+        "xlm-roberta-large": "https://hf-mirror.com/xlm-roberta-large/resolve/main/sentencepiece.bpe.model",
         "xlm-roberta-large-finetuned-conll02-dutch": (
-            "https://huggingface.co/xlm-roberta-large-finetuned-conll02-dutch/resolve/main/sentencepiece.bpe.model"
+            "https://hf-mirror.com/xlm-roberta-large-finetuned-conll02-dutch/resolve/main/sentencepiece.bpe.model"
         ),
         "xlm-roberta-large-finetuned-conll02-spanish": (
-            "https://huggingface.co/xlm-roberta-large-finetuned-conll02-spanish/resolve/main/sentencepiece.bpe.model"
+            "https://hf-mirror.com/xlm-roberta-large-finetuned-conll02-spanish/resolve/main/sentencepiece.bpe.model"
         ),
         "xlm-roberta-large-finetuned-conll03-english": (
-            "https://huggingface.co/xlm-roberta-large-finetuned-conll03-english/resolve/main/sentencepiece.bpe.model"
+            "https://hf-mirror.com/xlm-roberta-large-finetuned-conll03-english/resolve/main/sentencepiece.bpe.model"
         ),
         "xlm-roberta-large-finetuned-conll03-german": (
-            "https://huggingface.co/xlm-roberta-large-finetuned-conll03-german/resolve/main/sentencepiece.bpe.model"
+            "https://hf-mirror.com/xlm-roberta-large-finetuned-conll03-german/resolve/main/sentencepiece.bpe.model"
         ),
     },
     "tokenizer_file": {
-        "xlm-roberta-base": "https://huggingface.co/xlm-roberta-base/resolve/main/tokenizer.json",
-        "xlm-roberta-large": "https://huggingface.co/xlm-roberta-large/resolve/main/tokenizer.json",
+        "xlm-roberta-base": "https://hf-mirror.com/xlm-roberta-base/resolve/main/tokenizer.json",
+        "xlm-roberta-large": "https://hf-mirror.com/xlm-roberta-large/resolve/main/tokenizer.json",
         "xlm-roberta-large-finetuned-conll02-dutch": (
-            "https://huggingface.co/xlm-roberta-large-finetuned-conll02-dutch/resolve/main/tokenizer.json"
+            "https://hf-mirror.com/xlm-roberta-large-finetuned-conll02-dutch/resolve/main/tokenizer.json"
         ),
         "xlm-roberta-large-finetuned-conll02-spanish": (
-            "https://huggingface.co/xlm-roberta-large-finetuned-conll02-spanish/resolve/main/tokenizer.json"
+            "https://hf-mirror.com/xlm-roberta-large-finetuned-conll02-spanish/resolve/main/tokenizer.json"
         ),
         "xlm-roberta-large-finetuned-conll03-english": (
-            "https://huggingface.co/xlm-roberta-large-finetuned-conll03-english/resolve/main/tokenizer.json"
+            "https://hf-mirror.com/xlm-roberta-large-finetuned-conll03-english/resolve/main/tokenizer.json"
         ),
         "xlm-roberta-large-finetuned-conll03-german": (
-            "https://huggingface.co/xlm-roberta-large-finetuned-conll03-german/resolve/main/tokenizer.json"
+            "https://hf-mirror.com/xlm-roberta-large-finetuned-conll03-german/resolve/main/tokenizer.json"
         ),
     },
 }
@@ -82,7 +82,7 @@ class XLMRobertaTokenizerFast(PreTrainedTokenizerFast):
     """
     Construct a "fast" XLM-RoBERTa tokenizer (backed by HuggingFace's *tokenizers* library). Adapted from
     [`RobertaTokenizer`] and [`XLNetTokenizer`]. Based on
-    [BPE](https://huggingface.co/docs/tokenizers/python/latest/components.html?highlight=BPE#models).
+    [BPE](https://hf-mirror.com/docs/tokenizers/python/latest/components.html?highlight=BPE#models).
 
     This tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. Users should
     refer to this superclass for more information regarding those methods.

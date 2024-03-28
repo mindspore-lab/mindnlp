@@ -20,16 +20,16 @@ from ...configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 XLM_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "xlm-mlm-en-2048": "https://huggingface.co/xlm-mlm-en-2048/resolve/main/config.json",
-    "xlm-mlm-ende-1024": "https://huggingface.co/xlm-mlm-ende-1024/resolve/main/config.json",
-    "xlm-mlm-enfr-1024": "https://huggingface.co/xlm-mlm-enfr-1024/resolve/main/config.json",
-    "xlm-mlm-enro-1024": "https://huggingface.co/xlm-mlm-enro-1024/resolve/main/config.json",
-    "xlm-mlm-tlm-xnli15-1024": "https://huggingface.co/xlm-mlm-tlm-xnli15-1024/resolve/main/config.json",
-    "xlm-mlm-xnli15-1024": "https://huggingface.co/xlm-mlm-xnli15-1024/resolve/main/config.json",
-    "xlm-clm-enfr-1024": "https://huggingface.co/xlm-clm-enfr-1024/resolve/main/config.json",
-    "xlm-clm-ende-1024": "https://huggingface.co/xlm-clm-ende-1024/resolve/main/config.json",
-    "xlm-mlm-17-1280": "https://huggingface.co/xlm-mlm-17-1280/resolve/main/config.json",
-    "xlm-mlm-100-1280": "https://huggingface.co/xlm-mlm-100-1280/resolve/main/config.json",
+    "xlm-mlm-en-2048": "https://hf-mirror.com/xlm-mlm-en-2048/resolve/main/config.json",
+    "xlm-mlm-ende-1024": "https://hf-mirror.com/xlm-mlm-ende-1024/resolve/main/config.json",
+    "xlm-mlm-enfr-1024": "https://hf-mirror.com/xlm-mlm-enfr-1024/resolve/main/config.json",
+    "xlm-mlm-enro-1024": "https://hf-mirror.com/xlm-mlm-enro-1024/resolve/main/config.json",
+    "xlm-mlm-tlm-xnli15-1024": "https://hf-mirror.com/xlm-mlm-tlm-xnli15-1024/resolve/main/config.json",
+    "xlm-mlm-xnli15-1024": "https://hf-mirror.com/xlm-mlm-xnli15-1024/resolve/main/config.json",
+    "xlm-clm-enfr-1024": "https://hf-mirror.com/xlm-clm-enfr-1024/resolve/main/config.json",
+    "xlm-clm-ende-1024": "https://hf-mirror.com/xlm-clm-ende-1024/resolve/main/config.json",
+    "xlm-mlm-17-1280": "https://hf-mirror.com/xlm-mlm-17-1280/resolve/main/config.json",
+    "xlm-mlm-100-1280": "https://hf-mirror.com/xlm-mlm-100-1280/resolve/main/config.json",
 }
 
 
@@ -38,7 +38,7 @@ class XLMConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`XLMModel`] or a [`TFXLMModel`]. It is used to
     instantiate a XLM model according to the specified arguments, defining the model architecture. Instantiating a
     configuration with the defaults will yield a similar configuration to that of the
-    [xlm-mlm-en-2048](https://huggingface.co/xlm-mlm-en-2048) architecture.
+    [xlm-mlm-en-2048](https://hf-mirror.com/xlm-mlm-en-2048) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -71,7 +71,7 @@ class XLMConfig(PretrainedConfig):
             The number of languages the model handles. Set to 1 for monolingual models.
         use_lang_emb (`bool`, *optional*, defaults to `True`)
             Whether to use language embeddings. Some models use additional language embeddings, see [the multilingual
-            models page](http://huggingface.co/transformers/multilingual.html#xlm-language-embeddings) for information
+            models page](http://hf-mirror.com/transformers/multilingual.html#xlm-language-embeddings) for information
             on how to use them.
         max_position_embeddings (`int`, *optional*, defaults to 512):
             The maximum sequence length that this model might ever be used with. Typically set this to something large

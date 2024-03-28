@@ -98,7 +98,7 @@ class ZeroShotClassificationPipeline(ChunkPipeline):
 
     The models that this pipeline can use are models that have been fine-tuned on an NLI task.
     See the up-to-date list
-    of available models on [huggingface.co/models](https://huggingface.co/models?search=nli).
+    of available models on [hf-mirror.com/models](https://hf-mirror.com/models?search=nli).
     """
 
     def __init__(self, *args, args_parser=ZeroShotClassificationArgumentHandler(), **kwargs):

@@ -26,8 +26,8 @@ logger = logging.get_logger(__name__)
 
 # TODO Update this
 ESM_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "facebook/esm-1b": "https://huggingface.co/facebook/esm-1b/resolve/main/config.json",
-    # See all ESM models at https://huggingface.co/models?filter=esm
+    "facebook/esm-1b": "https://hf-mirror.com/facebook/esm-1b/resolve/main/config.json",
+    # See all ESM models at https://hf-mirror.com/models?filter=esm
 }
 
 
@@ -36,7 +36,7 @@ class EsmConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`ESMModel`]. It is used to instantiate a ESM model
     according to the specified arguments, defining the model architecture. Instantiating a configuration with the
     defaults will yield a similar configuration to that of the ESM
-    [facebook/esm-1b](https://huggingface.co/facebook/esm-1b) architecture.
+    [facebook/esm-1b](https://hf-mirror.com/facebook/esm-1b) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

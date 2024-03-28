@@ -40,7 +40,7 @@ logger = logging.get_logger(__name__)
 
 OPENAI_GPT_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "openai-gpt",
-    # See all OpenAI GPT models at https://huggingface.co/models?filter=openai-gpt
+    # See all OpenAI GPT models at https://hf-mirror.com/models?filter=openai-gpt
 ]
 
 

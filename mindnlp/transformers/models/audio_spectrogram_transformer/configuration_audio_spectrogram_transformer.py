@@ -24,7 +24,7 @@ logger = logging.get_logger(__name__)
 
 AUDIO_SPECTROGRAM_TRANSFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP = {
     "MIT/ast-finetuned-audioset-10-10-0.4593": (
-        "https://huggingface.co/MIT/ast-finetuned-audioset-10-10-0.4593/resolve/main/config.json"
+        "https://hf-mirror.com/MIT/ast-finetuned-audioset-10-10-0.4593/resolve/main/config.json"
     ),
 }
 
@@ -34,7 +34,7 @@ class ASTConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`ASTModel`]. It is used to instantiate an AST
     model according to the specified arguments, defining the model architecture. Instantiating a configuration with the
     defaults will yield a similar configuration to that of the AST
-    [MIT/ast-finetuned-audioset-10-10-0.4593](https://huggingface.co/MIT/ast-finetuned-audioset-10-10-0.4593)
+    [MIT/ast-finetuned-audioset-10-10-0.4593](https://hf-mirror.com/MIT/ast-finetuned-audioset-10-10-0.4593)
     architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the

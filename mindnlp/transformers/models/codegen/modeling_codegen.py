@@ -49,7 +49,7 @@ CODEGEN_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "Salesforce/codegen-16B-nl",
     "Salesforce/codegen-16B-multi",
     "Salesforce/codegen-16B-mono",
-    # See all CodeGen models at https://huggingface.co/models?filter=codegen
+    # See all CodeGen models at https://hf-mirror.com/models?filter=codegen
 ]
 
 

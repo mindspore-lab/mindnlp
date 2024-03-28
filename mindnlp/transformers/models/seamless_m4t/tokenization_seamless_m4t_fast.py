@@ -39,10 +39,10 @@ VOCAB_FILES_NAMES = {"vocab_file": "sentencepiece.bpe.model", "tokenizer_file": 
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "facebook/hf-seamless-m4t-medium": "https://huggingface.co/facebook/hf-seamless-m4t-medium/resolve/main/vocab.txt",
+        "facebook/hf-seamless-m4t-medium": "https://hf-mirror.com/facebook/hf-seamless-m4t-medium/resolve/main/vocab.txt",
     },
     "tokenizer_file": {
-        "facebook/hf-seamless-m4t-medium": "https://huggingface.co/facebook/hf-seamless-m4t-medium/resolve/main/tokenizer.json",
+        "facebook/hf-seamless-m4t-medium": "https://hf-mirror.com/facebook/hf-seamless-m4t-medium/resolve/main/tokenizer.json",
     },
 }
 
@@ -54,7 +54,7 @@ PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
 class SeamlessM4TTokenizerFast(PreTrainedTokenizerFast):
     """
     Construct a "fast" SeamlessM4T tokenizer (backed by HuggingFace's *tokenizers* library). Based on
-    [BPE](https://huggingface.co/docs/tokenizers/python/latest/components.html?highlight=BPE#models).
+    [BPE](https://hf-mirror.com/docs/tokenizers/python/latest/components.html?highlight=BPE#models).
 
     This tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. Users should
     refer to this superclass for more information regarding those methods.

@@ -31,7 +31,7 @@ VOCAB_FILES_NAMES = {"vocab_file": "spiece.model"}
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "TsinghuaAI/CPM-Generate": "https://huggingface.co/TsinghuaAI/CPM-Generate/resolve/main/spiece.model",
+        "TsinghuaAI/CPM-Generate": "https://hf-mirror.com/TsinghuaAI/CPM-Generate/resolve/main/spiece.model",
     }
 }
 

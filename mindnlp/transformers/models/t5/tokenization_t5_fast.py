@@ -39,18 +39,18 @@ VOCAB_FILES_NAMES = {"vocab_file": "spiece.model", "tokenizer_file": "tokenizer.
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "t5-small": "https://huggingface.co/t5-small/resolve/main/spiece.model",
-        "t5-base": "https://huggingface.co/t5-base/resolve/main/spiece.model",
-        "t5-large": "https://huggingface.co/t5-large/resolve/main/spiece.model",
-        "t5-3b": "https://huggingface.co/t5-3b/resolve/main/spiece.model",
-        "t5-11b": "https://huggingface.co/t5-11b/resolve/main/spiece.model",
+        "t5-small": "https://hf-mirror.com/t5-small/resolve/main/spiece.model",
+        "t5-base": "https://hf-mirror.com/t5-base/resolve/main/spiece.model",
+        "t5-large": "https://hf-mirror.com/t5-large/resolve/main/spiece.model",
+        "t5-3b": "https://hf-mirror.com/t5-3b/resolve/main/spiece.model",
+        "t5-11b": "https://hf-mirror.com/t5-11b/resolve/main/spiece.model",
     },
     "tokenizer_file": {
-        "t5-small": "https://huggingface.co/t5-small/resolve/main/tokenizer.json",
-        "t5-base": "https://huggingface.co/t5-base/resolve/main/tokenizer.json",
-        "t5-large": "https://huggingface.co/t5-large/resolve/main/tokenizer.json",
-        "t5-3b": "https://huggingface.co/t5-3b/resolve/main/tokenizer.json",
-        "t5-11b": "https://huggingface.co/t5-11b/resolve/main/tokenizer.json",
+        "t5-small": "https://hf-mirror.com/t5-small/resolve/main/tokenizer.json",
+        "t5-base": "https://hf-mirror.com/t5-base/resolve/main/tokenizer.json",
+        "t5-large": "https://hf-mirror.com/t5-large/resolve/main/tokenizer.json",
+        "t5-3b": "https://hf-mirror.com/t5-3b/resolve/main/tokenizer.json",
+        "t5-11b": "https://hf-mirror.com/t5-11b/resolve/main/tokenizer.json",
     },
 }
 
@@ -68,7 +68,7 @@ PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
 class T5TokenizerFast(PreTrainedTokenizerFast):
     """
     Construct a "fast" T5 tokenizer (backed by HuggingFace's *tokenizers* library). Based on
-    [Unigram](https://huggingface.co/docs/tokenizers/python/latest/components.html?highlight=unigram#models).
+    [Unigram](https://hf-mirror.com/docs/tokenizers/python/latest/components.html?highlight=unigram#models).
 
     This tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. Users should
     refer to this superclass for more information regarding those methods.

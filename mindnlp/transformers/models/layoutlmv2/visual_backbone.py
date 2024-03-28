@@ -121,7 +121,8 @@ class BasicBlock(nn.Cell):
                 kernel_size=1,
                 stride=stride,
                 has_bias=False,
-                norm=nn.BatchNorm2d(out_channels)
+                norm=nn.BatchNorm2d(out_channels),
+                pad_mode='valid'
             )
         else:
             self.shortcut = None
@@ -132,6 +133,7 @@ class BasicBlock(nn.Cell):
             kernel_size=3,
             stride=stride,
             padding=1,
+            pad_mode='pad',
             has_bias=False,
             norm=nn.BatchNorm2d(out_channels)
         )
@@ -142,6 +144,7 @@ class BasicBlock(nn.Cell):
             kernel_size=3,
             stride=1,
             padding=1,
+            pad_mode='pad',
             has_bias=False,
             norm=nn.BatchNorm2d(out_channels)
         )
@@ -205,7 +208,8 @@ class BottleneckBlock(nn.Cell):
                 kernel_size=1,
                 stride=stride,
                 has_bias=False,
-                norm=norm(out_channels)
+                norm=norm(out_channels),
+                pad_mode='valid'
             )
         else:
             self.shortcut = None
@@ -220,7 +224,8 @@ class BottleneckBlock(nn.Cell):
             kernel_size=1,
             stride=stride_1x1,
             has_bias=False,
-            norm=nn.BatchNorm2d(bottleneck_channels)
+            norm=nn.BatchNorm2d(bottleneck_channels),
+            pad_mode='valid'
         )
 
         self.conv2 = Conv2d(
@@ -240,6 +245,7 @@ class BottleneckBlock(nn.Cell):
             out_channels,
             kernel_size=1,
             has_bias=False,
+            pad_mode='valid',
             norm=norm(out_channels)
         )
         self.relu = nn.ReLU()
@@ -472,21 +478,21 @@ class ResNet(nn.Cell):
 
 def build_resnet_backbone(cfg):
     stem = BasicStem(
-        in_channels=cfg.MODEL.BACKBONE.STEM_IN_CHANNELS,
-        out_channels=cfg.MODEL.BACKBONE.STEM_OUT_CHANNELS,
+        in_channels=cfg.MODEL.RESNETS.STEM_IN_CHANNELS,
+        out_channels=cfg.MODEL.RESNETS.STEM_OUT_CHANNELS,
     )
 
     # fmt: off
-    norm = cfg.MODEL.BACKBONE.NORM  # "BN"
-    out_features = cfg.MODEL.BACKBONE.OUT_FEATURES
-    depth = cfg.MODEL.BACKBONE.DEPTH
-    num_groups = cfg.MODEL.BACKBONE.NUM_GROUPS
-    width_per_group = cfg.MODEL.BACKBONE.WIDTH_PER_GROUP
+    norm = cfg.MODEL.RESNETS.NORM  # "BN"
+    out_features = cfg.MODEL.RESNETS.OUT_FEATURES
+    depth = cfg.MODEL.RESNETS.DEPTH
+    num_groups = cfg.MODEL.RESNETS.NUM_GROUPS
+    width_per_group = cfg.MODEL.RESNETS.WIDTH_PER_GROUP
     bottleneck_channels = num_groups * width_per_group
-    in_channels = cfg.MODEL.BACKBONE.STEM_OUT_CHANNELS
-    out_channels = cfg.MODEL.BACKBONE.RES2_OUT_CHANNELS
-    stride_in_1x1 = cfg.MODEL.BACKBONE.STRIDE_IN_1X1
-    res5_dilation = cfg.MODEL.BACKBONE.RES5_DILATION
+    in_channels = cfg.MODEL.RESNETS.STEM_OUT_CHANNELS
+    out_channels = cfg.MODEL.RESNETS.RES2_OUT_CHANNELS
+    stride_in_1x1 = cfg.MODEL.RESNETS.STRIDE_IN_1X1
+    res5_dilation = cfg.MODEL.RESNETS.RES5_DILATION
     # fmt: on
     assert res5_dilation in {1, 2}, "res5_dilation cannot be {}.".format(res5_dilation)
 
@@ -584,11 +590,9 @@ class FPN(nn.Cell):
         lateral_convs = []
         output_convs = []
 
-        use_bias = norm == ""
         for idx, in_channels in enumerate(in_channels_per_feature):
-            lateral_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1, has_bias=use_bias)
-            output_conv = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, has_bias=use_bias,
-                                    pad_mode='pad')
+            lateral_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1, has_bias=True, pad_mode='valid')
+            output_conv = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, has_bias=True, pad_mode='pad')
             stage = int(math.log2(strides[idx]))
 
             setattr(self, "fpn_lateral{}".format(stage), lateral_conv)

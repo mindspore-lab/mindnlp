@@ -47,7 +47,7 @@ _SEQ_CLASS_EXPECTED_LOSS = 0.17
 
 AUDIO_SPECTROGRAM_TRANSFORMER_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "MIT/ast-finetuned-audioset-10-10-0.4593",
-    # See all Audio Spectrogram Transformer models at https://huggingface.co/models?filter=ast
+    # See all Audio Spectrogram Transformer models at https://hf-mirror.com/models?filter=ast
 ]
 
 

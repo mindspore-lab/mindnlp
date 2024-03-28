@@ -24,8 +24,8 @@ from ...configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 BART_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "facebook/bart-large": "https://huggingface.co/facebook/bart-large/resolve/main/config.json",
-    # See all BART models at https://huggingface.co/models?filter=bart
+    "facebook/bart-large": "https://hf-mirror.com/facebook/bart-large/resolve/main/config.json",
+    # See all BART models at https://hf-mirror.com/models?filter=bart
 }
 
 
@@ -34,7 +34,7 @@ class BartConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`BartModel`]. It is used to instantiate a BART
     model according to the specified arguments, defining the model architecture. Instantiating a configuration with the
     defaults will yield a similar configuration to that of the BART
-    [facebook/bart-large](https://huggingface.co/facebook/bart-large) architecture.
+    [facebook/bart-large](https://hf-mirror.com/facebook/bart-large) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

@@ -262,7 +262,7 @@ class PretrainedConfig:
                 This can be either:
 
                 - a string, the *model id* of a pretrained model configuration hosted inside a model repo on
-                  huggingface.co. Valid model ids can be located at the root-level, like `bert-base-uncased`, or
+                  hf-mirror.com. Valid model ids can be located at the root-level, like `bert-base-uncased`, or
                   namespaced under a user or organization name, like `dbmdz/bert-base-german-cased`.
                 - a path to a *directory* containing a configuration file saved using the
                   [`~PretrainedConfig.save_pretrained`] method, e.g., `./my_model_directory/`.
@@ -284,7 +284,7 @@ class PretrainedConfig:
                 the token generated when running `huggingface-cli login` (stored in `~/.huggingface`).
             revision (`str`, *optional*, defaults to `"main"`):
                 The specific model version to use. It can be a branch name, a tag name, or a commit id, since we use a
-                git-based system for storing models and other artifacts on huggingface.co, so `revision` can be any
+                git-based system for storing models and other artifacts on hf-mirror.com, so `revision` can be any
                 identifier allowed by git.
 
                 <Tip>
@@ -300,7 +300,7 @@ class PretrainedConfig:
                 dictionary consisting of the key/value pairs whose keys are not configuration attributes: i.e., the
                 part of `kwargs` which has not been used to update `config` and is otherwise ignored.
             subfolder (`str`, *optional*, defaults to `""`):
-                In case the relevant files are located inside a subfolder of the model repo on huggingface.co, you can
+                In case the relevant files are located inside a subfolder of the model repo on hf-mirror.com, you can
                 specify the folder name here.
             kwargs (`Dict[str, Any]`, *optional*):
                 The values in kwargs of any keys which are configuration attributes will be used to override the loaded
@@ -317,7 +317,7 @@ class PretrainedConfig:
         # derived class: BertConfig
         config = BertConfig.from_pretrained(
             "bert-base-uncased"
-        )  # Download configuration from huggingface.co and cache.
+        )  # Download configuration from hf-mirror.com and cache.
         config = BertConfig.from_pretrained(
             "./test/saved_model/"
         )  # E.g. config (or model) was saved using *save_pretrained('./test/saved_model/')*

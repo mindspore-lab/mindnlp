@@ -152,7 +152,7 @@ class ProcessorMixin:
                 This can be either:
 
                 - a string, the *model id* of a pretrained feature_extractor hosted inside a model repo on
-                  huggingface.co. Valid model ids can be located at the root-level, like `bert-base-uncased`, or
+                  hf-mirror.com. Valid model ids can be located at the root-level, like `bert-base-uncased`, or
                   namespaced under a user or organization name, like `dbmdz/bert-base-german-cased`.
                 - a path to a *directory* containing a feature extractor file saved using the
                   [`~SequenceFeatureExtractor.save_pretrained`] method, e.g., `./my_model_directory/`.

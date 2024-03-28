@@ -50,7 +50,7 @@ GPT2_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "gpt2-large",
     "gpt2-xl",
     "distilgpt2",
-    # See all GPT-2 models at https://huggingface.co/models?filter=gpt2
+    # See all GPT-2 models at https://hf-mirror.com/models?filter=gpt2
 ]
 
 

@@ -1044,7 +1044,7 @@ class MusicgenForCausalLM(MusicgenPreTrainedModel):
                     f"Both `max_new_tokens` (={generation_config.max_new_tokens}) and `max_length`(="
                     f"{generation_config.max_length}) seem to have been set. `max_new_tokens` will take precedence. "
                     "Please refer to the documentation for more information. "
-                    "(https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)"
+                    "(https://hf-mirror.com/docs/transformers/main/en/main_classes/text_generation)"
                 )
             generation_config.max_length = generation_config.max_new_tokens + input_ids_seq_length
 
@@ -1347,21 +1347,21 @@ class MusicgenForConditionalGeneration(PreTrainedModel):
             text_encoder_pretrained_model_name_or_path (`str`, *optional*):
                 Information necessary to initiate the text encoder. Can be either:
 
-                    - A string, the *model id* of a pretrained model hosted inside a model repo on huggingface.co.
+                    - A string, the *model id* of a pretrained model hosted inside a model repo on hf-mirror.com.
                     - A path to a *directory* containing model weights saved using
                       [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
 
             audio_encoder_pretrained_model_name_or_path (`str`, *optional*):
                 Information necessary to initiate the audio encoder. Can be either:
 
-                    - A string, the *model id* of a pretrained model hosted inside a model repo on huggingface.co.
+                    - A string, the *model id* of a pretrained model hosted inside a model repo on hf-mirror.com.
                     - A path to a *directory* containing model weights saved using
                       [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
 
             decoder_pretrained_model_name_or_path (`str`, *optional*, defaults to `None`):
                 Information necessary to initiate the decoder. Can be either:
 
-                    - A string, the *model id* of a pretrained model hosted inside a model repo on huggingface.co.
+                    - A string, the *model id* of a pretrained model hosted inside a model repo on hf-mirror.com.
                     - A path to a *directory* containing model weights saved using
                       [`~PreTrainedModel.save_pretrained`], e.g., `./my_model_directory/`.
 
@@ -2097,7 +2097,7 @@ class MusicgenForConditionalGeneration(PreTrainedModel):
                     f"Both `max_new_tokens` (={generation_config.max_new_tokens}) and `max_length`(="
                     f"{generation_config.max_length}) seem to have been set. `max_new_tokens` will take precedence. "
                     "Please refer to the documentation for more information. "
-                    "(https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)"
+                    "(https://hf-mirror.com/docs/transformers/main/en/main_classes/text_generation)"
                 )
             generation_config.max_length = generation_config.max_new_tokens + input_ids_seq_length
 

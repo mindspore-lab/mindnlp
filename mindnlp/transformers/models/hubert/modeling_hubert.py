@@ -47,7 +47,7 @@ _HIDDEN_STATES_START_POSITION = 1
 
 HUBERT_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "facebook/hubert-base-ls960",
-    # See all Hubert models at https://huggingface.co/models?filter=hubert
+    # See all Hubert models at https://hf-mirror.com/models?filter=hubert
 ]
 
 

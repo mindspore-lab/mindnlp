@@ -21,8 +21,8 @@ from ...configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 MISTRAL_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "mistralai/Mistral-7B-v0.1": "https://huggingface.co/mistralai/Mistral-7B-v0.1/resolve/main/config.json",
-    "mistralai/Mistral-7B-Instruct-v0.1": "https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1/resolve/main/config.json",
+    "mistralai/Mistral-7B-v0.1": "https://hf-mirror.com/mistralai/Mistral-7B-v0.1/resolve/main/config.json",
+    "mistralai/Mistral-7B-Instruct-v0.1": "https://hf-mirror.com/mistralai/Mistral-7B-Instruct-v0.1/resolve/main/config.json",
 }
 
 
@@ -32,8 +32,8 @@ class MistralConfig(PretrainedConfig):
     Mistral model according to the specified arguments, defining the model architecture. Instantiating a configuration
     with the defaults will yield a similar configuration to that of the Mistral-7B-v0.1 or Mistral-7B-Instruct-v0.1.
 
-    [mistralai/Mistral-7B-v0.1](https://huggingface.co/mistralai/Mistral-7B-v0.1)
-    [mistralai/Mistral-7B-Instruct-v0.1](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1)
+    [mistralai/Mistral-7B-v0.1](https://hf-mirror.com/mistralai/Mistral-7B-v0.1)
+    [mistralai/Mistral-7B-Instruct-v0.1](https://hf-mirror.com/mistralai/Mistral-7B-Instruct-v0.1)
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

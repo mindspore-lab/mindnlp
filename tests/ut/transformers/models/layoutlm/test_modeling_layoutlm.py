@@ -311,7 +311,7 @@ def prepare_layoutlm_batch_inputs():
 class LayoutLMModelIntegrationTest(unittest.TestCase):
     @slow
     def test_forward_pass_no_head(self):
-        model = LayoutLMModel.from_pretrained("microsoft/layoutlm-base-uncased", from_pt=True)
+        model = LayoutLMForMaskedLM.from_pretrained("microsoft/layoutlm-base-uncased", from_pt=True).layoutlm
 
         input_ids, attention_mask, bbox, token_type_ids, labels = prepare_layoutlm_batch_inputs()
 
@@ -323,6 +323,7 @@ class LayoutLMModelIntegrationTest(unittest.TestCase):
             [[0.1785, -0.1947, -0.0425], [-0.3254, -0.2807, 0.2553], [-0.5391, -0.3322, 0.3364]],
         )
 
+        print(outputs.last_hidden_state[0, :3, :3].asnumpy(), expected_slice.asnumpy())
         self.assertTrue(np.allclose(outputs.last_hidden_state[0, :3, :3].asnumpy(), expected_slice.asnumpy(), atol=1e-3))
 
         # test the pooled output on [1, :3]

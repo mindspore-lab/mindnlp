@@ -31,31 +31,31 @@ logger = logging.get_logger(__name__)
 
 VOCAB_FILES_NAMES = {"vocab_file": "vocab.json", "merges_file": "merges.txt", "tokenizer_file": "tokenizer.json"}
 
-# See all BART models at https://huggingface.co/models?filter=bart
+# See all BART models at https://hf-mirror.com/models?filter=bart
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "facebook/bart-base": "https://huggingface.co/facebook/bart-base/resolve/main/vocab.json",
-        "facebook/bart-large": "https://huggingface.co/facebook/bart-large/resolve/main/vocab.json",
-        "facebook/bart-large-mnli": "https://huggingface.co/facebook/bart-large-mnli/resolve/main/vocab.json",
-        "facebook/bart-large-cnn": "https://huggingface.co/facebook/bart-large-cnn/resolve/main/vocab.json",
-        "facebook/bart-large-xsum": "https://huggingface.co/facebook/bart-large-xsum/resolve/main/vocab.json",
-        "yjernite/bart_eli5": "https://huggingface.co/yjernite/bart_eli5/resolve/main/vocab.json",
+        "facebook/bart-base": "https://hf-mirror.com/facebook/bart-base/resolve/main/vocab.json",
+        "facebook/bart-large": "https://hf-mirror.com/facebook/bart-large/resolve/main/vocab.json",
+        "facebook/bart-large-mnli": "https://hf-mirror.com/facebook/bart-large-mnli/resolve/main/vocab.json",
+        "facebook/bart-large-cnn": "https://hf-mirror.com/facebook/bart-large-cnn/resolve/main/vocab.json",
+        "facebook/bart-large-xsum": "https://hf-mirror.com/facebook/bart-large-xsum/resolve/main/vocab.json",
+        "yjernite/bart_eli5": "https://hf-mirror.com/yjernite/bart_eli5/resolve/main/vocab.json",
     },
     "merges_file": {
-        "facebook/bart-base": "https://huggingface.co/facebook/bart-base/resolve/main/merges.txt",
-        "facebook/bart-large": "https://huggingface.co/facebook/bart-large/resolve/main/merges.txt",
-        "facebook/bart-large-mnli": "https://huggingface.co/facebook/bart-large-mnli/resolve/main/merges.txt",
-        "facebook/bart-large-cnn": "https://huggingface.co/facebook/bart-large-cnn/resolve/main/merges.txt",
-        "facebook/bart-large-xsum": "https://huggingface.co/facebook/bart-large-xsum/resolve/main/merges.txt",
-        "yjernite/bart_eli5": "https://huggingface.co/yjernite/bart_eli5/resolve/main/merges.txt",
+        "facebook/bart-base": "https://hf-mirror.com/facebook/bart-base/resolve/main/merges.txt",
+        "facebook/bart-large": "https://hf-mirror.com/facebook/bart-large/resolve/main/merges.txt",
+        "facebook/bart-large-mnli": "https://hf-mirror.com/facebook/bart-large-mnli/resolve/main/merges.txt",
+        "facebook/bart-large-cnn": "https://hf-mirror.com/facebook/bart-large-cnn/resolve/main/merges.txt",
+        "facebook/bart-large-xsum": "https://hf-mirror.com/facebook/bart-large-xsum/resolve/main/merges.txt",
+        "yjernite/bart_eli5": "https://hf-mirror.com/yjernite/bart_eli5/resolve/main/merges.txt",
     },
     "tokenizer_file": {
-        "facebook/bart-base": "https://huggingface.co/facebook/bart-base/resolve/main/tokenizer.json",
-        "facebook/bart-large": "https://huggingface.co/facebook/bart-large/resolve/main/tokenizer.json",
-        "facebook/bart-large-mnli": "https://huggingface.co/facebook/bart-large-mnli/resolve/main/tokenizer.json",
-        "facebook/bart-large-cnn": "https://huggingface.co/facebook/bart-large-cnn/resolve/main/tokenizer.json",
-        "facebook/bart-large-xsum": "https://huggingface.co/facebook/bart-large-xsum/resolve/main/tokenizer.json",
-        "yjernite/bart_eli5": "https://huggingface.co/yjernite/bart_eli5/resolve/main/tokenizer.json",
+        "facebook/bart-base": "https://hf-mirror.com/facebook/bart-base/resolve/main/tokenizer.json",
+        "facebook/bart-large": "https://hf-mirror.com/facebook/bart-large/resolve/main/tokenizer.json",
+        "facebook/bart-large-mnli": "https://hf-mirror.com/facebook/bart-large-mnli/resolve/main/tokenizer.json",
+        "facebook/bart-large-cnn": "https://hf-mirror.com/facebook/bart-large-cnn/resolve/main/tokenizer.json",
+        "facebook/bart-large-xsum": "https://hf-mirror.com/facebook/bart-large-xsum/resolve/main/tokenizer.json",
+        "yjernite/bart_eli5": "https://hf-mirror.com/yjernite/bart_eli5/resolve/main/tokenizer.json",
     },
 }
 

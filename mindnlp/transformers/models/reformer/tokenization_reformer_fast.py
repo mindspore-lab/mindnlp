@@ -40,12 +40,12 @@ VOCAB_FILES_NAMES = {"vocab_file": "spiece.model", "tokenizer_file": "tokenizer.
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
         "google/reformer-crime-and-punishment": (
-            "https://huggingface.co/google/reformer-crime-and-punishment/resolve/main/spiece.model"
+            "https://hf-mirror.com/google/reformer-crime-and-punishment/resolve/main/spiece.model"
         )
     },
     "tokenizer_file": {
         "google/reformer-crime-and-punishment": (
-            "https://huggingface.co/google/reformer-crime-and-punishment/resolve/main/tokenizer.json"
+            "https://hf-mirror.com/google/reformer-crime-and-punishment/resolve/main/tokenizer.json"
         )
     },
 }
@@ -58,7 +58,7 @@ PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
 class ReformerTokenizerFast(PreTrainedTokenizerFast):
     """
     Construct a "fast" Reformer tokenizer (backed by HuggingFace's *tokenizers* library). Based on
-    [Unigram](https://huggingface.co/docs/tokenizers/python/latest/components.html?highlight=unigram#models).
+    [Unigram](https://hf-mirror.com/docs/tokenizers/python/latest/components.html?highlight=unigram#models).
 
     This tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. Users should
     refer to this superclass for more information regarding those methods.

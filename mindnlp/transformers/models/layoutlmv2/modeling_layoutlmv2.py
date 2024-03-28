@@ -518,7 +518,7 @@ class LayoutLMv2VisualBackbone(nn.Cell):
 
     def __init__(self, config):
         super(LayoutLMv2VisualBackbone, self).__init__()
-        self.cfg = config.visual_backbone_config_args
+        self.cfg = config.get_detectron2_config()
         self.backbone = build_resnet_fpn_backbone(self.cfg)
 
         if len(self.cfg.MODEL.PIXEL_MEAN) != len(self.cfg.MODEL.PIXEL_STD):

@@ -25,8 +25,8 @@ from ...configuration_utils import PretrainedConfig
 
 
 ERNIE_M_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "susnato/ernie-m-base_pytorch": "https://huggingface.co/susnato/ernie-m-base_pytorch/blob/main/config.json",
-    "susnato/ernie-m-large_pytorch": "https://huggingface.co/susnato/ernie-m-large_pytorch/blob/main/config.json",
+    "susnato/ernie-m-base_pytorch": "https://hf-mirror.com/susnato/ernie-m-base_pytorch/blob/main/config.json",
+    "susnato/ernie-m-large_pytorch": "https://hf-mirror.com/susnato/ernie-m-large_pytorch/blob/main/config.json",
 }
 
 
@@ -35,7 +35,7 @@ class ErnieMConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`ErnieMModel`]. It is used to instantiate a
     Ernie-M model according to the specified arguments, defining the model architecture. Instantiating a configuration
     with the defaults will yield a similar configuration to that of the `Ernie-M`
-    [susnato/ernie-m-base_pytorch](https://huggingface.co/susnato/ernie-m-base_pytorch) architecture.
+    [susnato/ernie-m-base_pytorch](https://hf-mirror.com/susnato/ernie-m-base_pytorch) architecture.
 
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the

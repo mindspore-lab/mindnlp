@@ -45,12 +45,12 @@ VOCAB_FILES_NAMES = {"vocab_file": "vocab.txt", "tokenizer_file": "tokenizer.jso
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
         "microsoft/layoutlmv2-base-uncased": (
-            "https://huggingface.co/microsoft/layoutlmv2-base-uncased/resolve/main/vocab.txt"
+            "https://hf-mirror.com/microsoft/layoutlmv2-base-uncased/resolve/main/vocab.txt"
         ),
     },
     "tokenizer_file": {
         "microsoft/layoutlmv2-base-uncased": (
-            "https://huggingface.co/microsoft/layoutlmv2-base-uncased/resolve/main/tokenizer.json"
+            "https://hf-mirror.com/microsoft/layoutlmv2-base-uncased/resolve/main/tokenizer.json"
         ),
     },
 }

@@ -36,24 +36,24 @@ VOCAB_FILES_NAMES = {"vocab_file": "spiece.model", "tokenizer_file": "tokenizer.
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "albert-base-v1": "https://huggingface.co/albert-base-v1/resolve/main/spiece.model",
-        "albert-large-v1": "https://huggingface.co/albert-large-v1/resolve/main/spiece.model",
-        "albert-xlarge-v1": "https://huggingface.co/albert-xlarge-v1/resolve/main/spiece.model",
-        "albert-xxlarge-v1": "https://huggingface.co/albert-xxlarge-v1/resolve/main/spiece.model",
-        "albert-base-v2": "https://huggingface.co/albert-base-v2/resolve/main/spiece.model",
-        "albert-large-v2": "https://huggingface.co/albert-large-v2/resolve/main/spiece.model",
-        "albert-xlarge-v2": "https://huggingface.co/albert-xlarge-v2/resolve/main/spiece.model",
-        "albert-xxlarge-v2": "https://huggingface.co/albert-xxlarge-v2/resolve/main/spiece.model",
+        "albert-base-v1": "https://hf-mirror.com/albert-base-v1/resolve/main/spiece.model",
+        "albert-large-v1": "https://hf-mirror.com/albert-large-v1/resolve/main/spiece.model",
+        "albert-xlarge-v1": "https://hf-mirror.com/albert-xlarge-v1/resolve/main/spiece.model",
+        "albert-xxlarge-v1": "https://hf-mirror.com/albert-xxlarge-v1/resolve/main/spiece.model",
+        "albert-base-v2": "https://hf-mirror.com/albert-base-v2/resolve/main/spiece.model",
+        "albert-large-v2": "https://hf-mirror.com/albert-large-v2/resolve/main/spiece.model",
+        "albert-xlarge-v2": "https://hf-mirror.com/albert-xlarge-v2/resolve/main/spiece.model",
+        "albert-xxlarge-v2": "https://hf-mirror.com/albert-xxlarge-v2/resolve/main/spiece.model",
     },
     "tokenizer_file": {
-        "albert-base-v1": "https://huggingface.co/albert-base-v1/resolve/main/tokenizer.json",
-        "albert-large-v1": "https://huggingface.co/albert-large-v1/resolve/main/tokenizer.json",
-        "albert-xlarge-v1": "https://huggingface.co/albert-xlarge-v1/resolve/main/tokenizer.json",
-        "albert-xxlarge-v1": "https://huggingface.co/albert-xxlarge-v1/resolve/main/tokenizer.json",
-        "albert-base-v2": "https://huggingface.co/albert-base-v2/resolve/main/tokenizer.json",
-        "albert-large-v2": "https://huggingface.co/albert-large-v2/resolve/main/tokenizer.json",
-        "albert-xlarge-v2": "https://huggingface.co/albert-xlarge-v2/resolve/main/tokenizer.json",
-        "albert-xxlarge-v2": "https://huggingface.co/albert-xxlarge-v2/resolve/main/tokenizer.json",
+        "albert-base-v1": "https://hf-mirror.com/albert-base-v1/resolve/main/tokenizer.json",
+        "albert-large-v1": "https://hf-mirror.com/albert-large-v1/resolve/main/tokenizer.json",
+        "albert-xlarge-v1": "https://hf-mirror.com/albert-xlarge-v1/resolve/main/tokenizer.json",
+        "albert-xxlarge-v1": "https://hf-mirror.com/albert-xxlarge-v1/resolve/main/tokenizer.json",
+        "albert-base-v2": "https://hf-mirror.com/albert-base-v2/resolve/main/tokenizer.json",
+        "albert-large-v2": "https://hf-mirror.com/albert-large-v2/resolve/main/tokenizer.json",
+        "albert-xlarge-v2": "https://hf-mirror.com/albert-xlarge-v2/resolve/main/tokenizer.json",
+        "albert-xxlarge-v2": "https://hf-mirror.com/albert-xxlarge-v2/resolve/main/tokenizer.json",
     },
 }
 
@@ -74,7 +74,7 @@ SPIECE_UNDERLINE = "▁"
 class AlbertTokenizerFast(PreTrainedTokenizerFast):
     """
     Construct a "fast" ALBERT tokenizer (backed by HuggingFace's *tokenizers* library). Based on
-    [Unigram](https://huggingface.co/docs/tokenizers/python/latest/components.html?highlight=unigram#models). This
+    [Unigram](https://hf-mirror.com/docs/tokenizers/python/latest/components.html?highlight=unigram#models). This
     tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. Users should refer to
     this superclass for more information regarding those methods
 

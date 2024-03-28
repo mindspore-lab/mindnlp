@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 
 GRAPHORMER_PRETRAINED_CONFIG_ARCHIVE_MAP = {
     # pcqm4mv1 now deprecated
-    "graphormer-base": "https://huggingface.co/clefourrier/graphormer-base-pcqm4mv2/resolve/main/config.json",
-    # See all Graphormer models at https://huggingface.co/models?filter=graphormer
+    "graphormer-base": "https://hf-mirror.com/clefourrier/graphormer-base-pcqm4mv2/resolve/main/config.json",
+    # See all Graphormer models at https://hf-mirror.com/models?filter=graphormer
 }
 
 
@@ -33,7 +33,7 @@ class GraphormerConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`~GraphormerModel`]. It is used to instantiate an
     Graphormer model according to the specified arguments, defining the model architecture. Instantiating a
     configuration with the defaults will yield a similar configuration to that of the Graphormer
-    [graphormer-base-pcqm4mv1](https://huggingface.co/graphormer-base-pcqm4mv1) architecture.
+    [graphormer-base-pcqm4mv1](https://hf-mirror.com/graphormer-base-pcqm4mv1) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
