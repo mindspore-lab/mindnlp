@@ -15,7 +15,7 @@
 """
 InternLM Model.
 """
-from . import configuration_baichuan, modeling_baichuan, tokenization_baichuan
+from . import configuration_internlm, modeling_internlm, tokenization_internlm
 
 from .modeling_internlm import *
 from .configuration_internlm import *
