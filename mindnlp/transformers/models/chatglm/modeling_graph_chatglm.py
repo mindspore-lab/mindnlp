@@ -1050,7 +1050,7 @@ class MSChatGLMForConditionalGeneration(MSChatGLMPreTrainedModel):
                     f"Both `max_new_tokens` (={generation_config.max_new_tokens}) and `max_length`(="
                     f"{generation_config.max_length}) seem to have been set. `max_new_tokens` will take precedence. "
                     "Please refer to the documentation for more information. "
-                    "(https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)",
+                    "(https://hf-mirror.com/docs/transformers/main/en/main_classes/text_generation)",
                     UserWarning,
                 )
 

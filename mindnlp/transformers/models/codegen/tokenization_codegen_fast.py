@@ -37,14 +37,14 @@ VOCAB_FILES_NAMES = {"vocab_file": "vocab.json", "merges_file": "merges.txt", "t
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "Salesforce/codegen-350M-mono": "https://huggingface.co/Salesforce/codegen-350M-mono/resolve/main/vocab.json",
+        "Salesforce/codegen-350M-mono": "https://hf-mirror.com/Salesforce/codegen-350M-mono/resolve/main/vocab.json",
     },
     "merges_file": {
-        "Salesforce/codegen-350M-mono": "https://huggingface.co/Salesforce/codegen-350M-mono/resolve/main/merges.txt",
+        "Salesforce/codegen-350M-mono": "https://hf-mirror.com/Salesforce/codegen-350M-mono/resolve/main/merges.txt",
     },
     "tokenizer_file": {
         "Salesforce/codegen-350M-mono": (
-            "https://huggingface.co/Salesforce/codegen-350M-mono/resolve/main/tokenizer.json"
+            "https://hf-mirror.com/Salesforce/codegen-350M-mono/resolve/main/tokenizer.json"
         ),
     },
 }

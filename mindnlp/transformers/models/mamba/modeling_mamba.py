@@ -38,7 +38,7 @@ logger = logging.get_logger(__name__)
 _CHECKPOINT_FOR_DOC = "state-spaces/mamba-130m-hf"
 _CONFIG_FOR_DOC = "MambaConfig"
 
-MAMBA_PRETRAINED_MODEL_ARCHIVE_LIST = []  # See all Mamba models at https://huggingface.co/models?filter=mamba
+MAMBA_PRETRAINED_MODEL_ARCHIVE_LIST = []  # See all Mamba models at https://hf-mirror.com/models?filter=mamba
 
 
 class MambaMixer(nn.Cell):

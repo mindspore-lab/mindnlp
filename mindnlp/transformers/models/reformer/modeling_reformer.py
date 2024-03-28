@@ -49,7 +49,7 @@ _CONFIG_FOR_DOC = "ReformerConfig"
 REFORMER_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "google/reformer-crime-and-punishment",
     "google/reformer-enwik8",
-    # See all Reformer models at https://huggingface.co/models?filter=reformer
+    # See all Reformer models at https://hf-mirror.com/models?filter=reformer
 ]
 
 

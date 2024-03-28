@@ -20,8 +20,8 @@ from ...configuration_utils import PretrainedConfig
 
 
 FALCON_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "tiiuae/falcon-40b": "https://huggingface.co/tiiuae/falcon-40b/resolve/main/config.json",
-    "tiiuae/falcon-7b": "https://huggingface.co/tiiuae/falcon-7b/resolve/main/config.json",
+    "tiiuae/falcon-40b": "https://hf-mirror.com/tiiuae/falcon-40b/resolve/main/config.json",
+    "tiiuae/falcon-7b": "https://hf-mirror.com/tiiuae/falcon-7b/resolve/main/config.json",
 }
 
 logger = logging.get_logger(__name__)

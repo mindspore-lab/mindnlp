@@ -38,7 +38,7 @@ _CONFIG_FOR_DOC = "CpmAntConfig"
 
 CPMANT_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "openbmb/cpm-ant-10b",
-    # See all CPMAnt models at https://huggingface.co/models?filter=cpmant
+    # See all CPMAnt models at https://hf-mirror.com/models?filter=cpmant
 ]
 
 

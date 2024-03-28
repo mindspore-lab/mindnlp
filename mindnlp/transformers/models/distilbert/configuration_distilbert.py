@@ -21,20 +21,20 @@ from ...configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 DISTILBERT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "distilbert-base-uncased": "https://huggingface.co/distilbert-base-uncased/resolve/main/config.json",
+    "distilbert-base-uncased": "https://hf-mirror.com/distilbert-base-uncased/resolve/main/config.json",
     "distilbert-base-uncased-distilled-squad": (
-        "https://huggingface.co/distilbert-base-uncased-distilled-squad/resolve/main/config.json"
+        "https://hf-mirror.com/distilbert-base-uncased-distilled-squad/resolve/main/config.json"
     ),
-    "distilbert-base-cased": "https://huggingface.co/distilbert-base-cased/resolve/main/config.json",
+    "distilbert-base-cased": "https://hf-mirror.com/distilbert-base-cased/resolve/main/config.json",
     "distilbert-base-cased-distilled-squad": (
-        "https://huggingface.co/distilbert-base-cased-distilled-squad/resolve/main/config.json"
+        "https://hf-mirror.com/distilbert-base-cased-distilled-squad/resolve/main/config.json"
     ),
-    "distilbert-base-german-cased": "https://huggingface.co/distilbert-base-german-cased/resolve/main/config.json",
+    "distilbert-base-german-cased": "https://hf-mirror.com/distilbert-base-german-cased/resolve/main/config.json",
     "distilbert-base-multilingual-cased": (
-        "https://huggingface.co/distilbert-base-multilingual-cased/resolve/main/config.json"
+        "https://hf-mirror.com/distilbert-base-multilingual-cased/resolve/main/config.json"
     ),
     "distilbert-base-uncased-finetuned-sst-2-english": (
-        "https://huggingface.co/distilbert-base-uncased-finetuned-sst-2-english/resolve/main/config.json"
+        "https://hf-mirror.com/distilbert-base-uncased-finetuned-sst-2-english/resolve/main/config.json"
     ),
 }
 
@@ -44,7 +44,7 @@ class DistilBertConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`DistilBertModel`] or a [`TFDistilBertModel`]. It
     is used to instantiate a DistilBERT model according to the specified arguments, defining the model architecture.
     Instantiating a configuration with the defaults will yield a similar configuration to that of the DistilBERT
-    [distilbert-base-uncased](https://huggingface.co/distilbert-base-uncased) architecture.
+    [distilbert-base-uncased](https://hf-mirror.com/distilbert-base-uncased) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

@@ -21,8 +21,8 @@ from ...configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 SEAMLESS_M4T_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "facebook/hf-seamless-m4t-medium": "https://huggingface.co/facebook/hf-seamless-m4t-medium/resolve/main/config.json",
-    # See all SeamlessM4T models at https://huggingface.co/models?filter=seamless_m4t
+    "facebook/hf-seamless-m4t-medium": "https://hf-mirror.com/facebook/hf-seamless-m4t-medium/resolve/main/config.json",
+    # See all SeamlessM4T models at https://hf-mirror.com/models?filter=seamless_m4t
 }
 
 
@@ -31,7 +31,7 @@ class SeamlessM4TConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`~SeamlessM4TModel`]. It is used to instantiate an
     SeamlessM4T model according to the specified arguments, defining the model architecture. Instantiating a
     configuration with the defaults will yield a similar configuration to that of the SeamlessM4T
-    ["facebook/hf-seamless-m4t-medium"](https://huggingface.co/"facebook/hf-seamless-m4t-medium") architecture.
+    ["facebook/hf-seamless-m4t-medium"](https://hf-mirror.com/"facebook/hf-seamless-m4t-medium") architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

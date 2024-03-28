@@ -35,8 +35,8 @@ VOCAB_FILES_NAMES = {
 }
 
 PRETRAINED_VOCAB_FILES_MAP = {
-    "vocab_file": {"qwen/qwen-tokenizer": "https://huggingface.co/qwen/qwen-tokenizer/resolve/main/vocab.json"},
-    "merges_file": {"qwen/qwen-tokenizer": "https://huggingface.co/qwen/qwen-tokenizer/resolve/main/merges.txt"},
+    "vocab_file": {"qwen/qwen-tokenizer": "https://hf-mirror.com/qwen/qwen-tokenizer/resolve/main/vocab.json"},
+    "merges_file": {"qwen/qwen-tokenizer": "https://hf-mirror.com/qwen/qwen-tokenizer/resolve/main/merges.txt"},
 }
 
 MAX_MODEL_INPUT_SIZES = {"qwen/qwen-tokenizer": 32768}

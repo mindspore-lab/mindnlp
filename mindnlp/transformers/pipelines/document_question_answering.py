@@ -11,14 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=missing-function-docstring
-# pylint: disable=(missing-class-docstring
-# pylint: disable=invalid-name
-# pylint: disable=unbalanced-tuple-unpacking
-# pylint: disable=unused-argument
-# pylint: disable=unexpected-keyword-arg
-# pylint: disable=arguments-renamed
-# pylint: disable=import-error
 """
 document-question-answering
 """
@@ -137,7 +129,7 @@ def decode_spans(
         idx = np.argpartition(-scores_flat, topk)[0:topk]
         idx_sort = idx[np.argsort(-scores_flat[idx])]
 
-    starts, ends = np.unravel_index(idx_sort, candidates.shape)[1:]
+    starts, ends = np.unravel_index(idx_sort, candidates.shape)[1:] # pylint: disable=unbalanced-tuple-unpacking
     desired_spans = np.isin(starts, undesired_tokens.nonzero()) & np.isin(ends, undesired_tokens.nonzero())
     starts = starts[desired_spans]
     ends = ends[desired_spans]
@@ -183,10 +175,10 @@ def select_starts_ends(
     end = np.where(undesired_tokens_mask, -10000.0, end)
 
     # Normalize logits and spans to retrieve the answer
-    start = np.exp(start - start.max(axis=-1, keepdims=True))
+    start = np.exp(start - start.max(axis=-1, keepdims=True)) # pylint: disable=unexpected-keyword-arg
     start = start / start.sum()
 
-    end = np.exp(end - end.max(axis=-1, keepdims=True))
+    end = np.exp(end - end.max(axis=-1, keepdims=True)) # pylint: disable=unexpected-keyword-arg
     end = end / end.sum()
 
     if handle_impossible_answer:
@@ -209,7 +201,7 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
     >>> from transformers import pipeline
     >>> document_qa = pipeline(model="impira/layoutlm-document-qa")
     >>> document_qa(
-    ...     image="https://huggingface.co/spaces/impira/docquery/resolve/2359223c1837a7587402bda0f2643382a6eefeab/invoice.png",
+    ...     image="https://hf-mirror.com/spaces/impira/docquery/resolve/2359223c1837a7587402bda0f2643382a6eefeab/invoice.png",
     ...     question="What is the invoice number?",
     ... )
     [{'score': 0.425, 'answer': 'us-001', 'start': 16, 'end': 16}]
@@ -219,7 +211,7 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
     identifier: `"document-question-answering"`.
     The models that this pipeline can use are models that have been fine-tuned on a document question answering task.
     See the up-to-date list of available models on
-    [huggingface.co/models](https://huggingface.co/models?filter=document-question-answering).
+    [hf-mirror.com/models](https://hf-mirror.com/models?filter=document-question-answering).
     """
 
     def __init__(self, *args, **kwargs):
@@ -416,7 +408,7 @@ class DocumentQuestionAnsweringPipeline(ChunkPipeline):
 
         if self.model_type == ModelType.VisionEncoderDecoder:
             task_prompt = f'<s_docvqa><s_question>{inputs["question"]}</s_question><s_answer>'
-            # Adapted from https://huggingface.co/spaces/nielsr/donut-docvqa/blob/main/app.py
+            # Adapted from https://hf-mirror.com/spaces/nielsr/donut-docvqa/blob/main/app.py
             encoding = {
                 "inputs": image_features["pixel_values"],
                 "decoder_input_ids": self.tokenizer(

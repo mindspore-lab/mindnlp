@@ -44,7 +44,7 @@ PHI_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "microsoft/phi-1",
     "microsoft/phi-1_5",
     "microsoft/phi-2",
-    # See all Phi models at https://huggingface.co/models?filter=phi
+    # See all Phi models at https://hf-mirror.com/models?filter=phi
 ]
 
 

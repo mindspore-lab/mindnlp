@@ -45,7 +45,7 @@ _CONFIG_FOR_DOC = "BioGptConfig"
 BIOGPT_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "microsoft/biogpt",
     "microsoft/BioGPT-Large",
-    # See all BioGPT models at https://huggingface.co/models?filter=biogpt
+    # See all BioGPT models at https://hf-mirror.com/models?filter=biogpt
 ]
 
 

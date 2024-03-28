@@ -17,7 +17,7 @@ except (AttributeError, ImportError):
     BERT4MS_CACHE =  Path(os.getenv('BERT4MS_CACHE', os.path.join(os.path.expanduser("~"), '.bert4ms')))
 
 CACHE_DIR = Path.home() / '.bert4ms'
-HUGGINGFACE_BASE_URL = 'https://huggingface.co/{}/resolve/main/pytorch_model.bin'
+HUGGINGFACE_BASE_URL = 'https://hf-mirror.com/{}/resolve/main/pytorch_model.bin'
 
 def load_from_cache(name, url, cache_dir:str=None, force_download=False):
     """

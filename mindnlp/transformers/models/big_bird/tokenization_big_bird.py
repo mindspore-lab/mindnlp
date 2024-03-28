@@ -30,12 +30,12 @@ VOCAB_FILES_NAMES = {"vocab_file": "spiece.model"}
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "google/bigbird-roberta-base": "https://huggingface.co/google/bigbird-roberta-base/resolve/main/spiece.model",
+        "google/bigbird-roberta-base": "https://hf-mirror.com/google/bigbird-roberta-base/resolve/main/spiece.model",
         "google/bigbird-roberta-large": (
-            "https://huggingface.co/google/bigbird-roberta-large/resolve/main/spiece.model"
+            "https://hf-mirror.com/google/bigbird-roberta-large/resolve/main/spiece.model"
         ),
         "google/bigbird-base-trivia-itc": (
-            "https://huggingface.co/google/bigbird-base-trivia-itc/resolve/main/spiece.model"
+            "https://hf-mirror.com/google/bigbird-base-trivia-itc/resolve/main/spiece.model"
         ),
     }
 }

@@ -28,8 +28,8 @@ __all__ = [
 logger = logging.get_logger(__name__)
 
 WAV_2_VEC_2_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "facebook/wav2vec2-base-960h": "https://huggingface.co/facebook/wav2vec2-base-960h/resolve/main/config.json",
-    # See all Wav2Vec2 models at https://huggingface.co/models?filter=wav2vec2
+    "facebook/wav2vec2-base-960h": "https://hf-mirror.com/facebook/wav2vec2-base-960h/resolve/main/config.json",
+    # See all Wav2Vec2 models at https://hf-mirror.com/models?filter=wav2vec2
 }
 
 
@@ -38,7 +38,7 @@ class Wav2Vec2Config(PretrainedConfig):
     This is the configuration class to store the configuration of a [`Wav2Vec2Model`]. It is used to instantiate an
     Wav2Vec2 model according to the specified arguments, defining the model architecture. Instantiating a configuration
     with the defaults will yield a similar configuration to that of the Wav2Vec2
-    [facebook/wav2vec2-base-960h](https://huggingface.co/facebook/wav2vec2-base-960h) architecture.
+    [facebook/wav2vec2-base-960h](https://hf-mirror.com/facebook/wav2vec2-base-960h) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -188,7 +188,7 @@ class Wav2Vec2Config(PretrainedConfig):
             True`.
         adapter_attn_dim (`int`, *optional*):
             Dimension of the attention adapter weights to be used in each attention block. An example of a model using
-            attention adapters is [facebook/mms-1b-all](https://huggingface.co/facebook/mms-1b-all).
+            attention adapters is [facebook/mms-1b-all](https://hf-mirror.com/facebook/mms-1b-all).
         output_hidden_size (`int`, *optional*):
             Dimensionality of the encoder output layer. If not defined, this defaults to *hidden-size*. Only relevant
             if `add_adapter is True`.

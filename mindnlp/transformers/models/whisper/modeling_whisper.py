@@ -47,7 +47,7 @@ _CHECKPOINT_FOR_DOC = "openai/whisper-tiny"
 
 WHISPER_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "openai/whisper-base",
-    # See all Whisper models at https://huggingface.co/models?filter=whisper
+    # See all Whisper models at https://hf-mirror.com/models?filter=whisper
 ]
 
 

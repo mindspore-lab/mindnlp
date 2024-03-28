@@ -37,15 +37,15 @@ VOCAB_FILES_NAMES = {"vocab_file": "sentencepiece.bpe.model", "tokenizer_file": 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
         "facebook/mbart-large-en-ro": (
-            "https://huggingface.co/facebook/mbart-large-en-ro/resolve/main/sentencepiece.bpe.model"
+            "https://hf-mirror.com/facebook/mbart-large-en-ro/resolve/main/sentencepiece.bpe.model"
         ),
         "facebook/mbart-large-cc25": (
-            "https://huggingface.co/facebook/mbart-large-cc25/resolve/main/sentencepiece.bpe.model"
+            "https://hf-mirror.com/facebook/mbart-large-cc25/resolve/main/sentencepiece.bpe.model"
         ),
     },
     "tokenizer_file": {
-        "facebook/mbart-large-en-ro": "https://huggingface.co/facebook/mbart-large-en-ro/resolve/main/tokenizer.json",
-        "facebook/mbart-large-cc25": "https://huggingface.co/facebook/mbart-large-cc25/resolve/main/tokenizer.json",
+        "facebook/mbart-large-en-ro": "https://hf-mirror.com/facebook/mbart-large-en-ro/resolve/main/tokenizer.json",
+        "facebook/mbart-large-cc25": "https://hf-mirror.com/facebook/mbart-large-cc25/resolve/main/tokenizer.json",
     },
 }
 
@@ -62,7 +62,7 @@ FAIRSEQ_LANGUAGE_CODES = ["ar_AR", "cs_CZ", "de_DE", "en_XX", "es_XX", "et_EE", 
 class MBartTokenizerFast(PreTrainedTokenizerFast):
     """
     Construct a "fast" MBART tokenizer (backed by HuggingFace's *tokenizers* library). Based on
-    [BPE](https://huggingface.co/docs/tokenizers/python/latest/components.html?highlight=BPE#models).
+    [BPE](https://hf-mirror.com/docs/tokenizers/python/latest/components.html?highlight=BPE#models).
 
     This tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. Users should
     refer to this superclass for more information regarding those methods.

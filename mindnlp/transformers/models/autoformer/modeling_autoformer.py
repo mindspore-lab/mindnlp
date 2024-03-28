@@ -164,7 +164,7 @@ class AutoformerModelOutput(ModelOutput):
 
 AUTOFORMER_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "huggingface/autoformer-tourism-monthly",
-    # See all Autoformer models at https://huggingface.co/models?filter=autoformer
+    # See all Autoformer models at https://hf-mirror.com/models?filter=autoformer
 ]
 
 

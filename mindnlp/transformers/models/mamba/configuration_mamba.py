@@ -24,7 +24,7 @@ from ...configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 MAMBA_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "state-spaces/mamba-2.8b": "https://huggingface.co/state-spaces/mamba-2.8b/resolve/main/config.json",
+    "state-spaces/mamba-2.8b": "https://hf-mirror.com/state-spaces/mamba-2.8b/resolve/main/config.json",
 }
 
 
@@ -33,7 +33,7 @@ class MambaConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`MambaModel`]. It is used to instantiate a MAMBA
     model according to the specified arguments, defining the model architecture. Instantiating a configuration with the
     defaults will yield a similar configuration to that of the MAMBA
-    [state-spaces/mamba-2.8b](https://huggingface.co/state-spaces/mamba-2.8b) architecture.
+    [state-spaces/mamba-2.8b](https://hf-mirror.com/state-spaces/mamba-2.8b) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

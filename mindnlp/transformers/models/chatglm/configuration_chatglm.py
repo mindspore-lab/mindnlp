@@ -25,7 +25,7 @@ class ChatGLMConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`~ChatGLMModel`].
     It is used to instantiate an ChatGLM model according to the specified arguments, defining the model
     architecture. Instantiating a configuration with the defaults will yield a similar configuration to that of
-    the ChatGLM-6B [THUDM/ChatGLM-6B](https://huggingface.co/THUDM/chatglm-6b) architecture.
+    the ChatGLM-6B [THUDM/ChatGLM-6B](https://hf-mirror.com/THUDM/chatglm-6b) architecture.
 
     Configuration objects inherit from  [`PretrainedConfig`] and can be used
     to control the model outputs. Read the documentation from  [`PretrainedConfig`]

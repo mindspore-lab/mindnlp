@@ -22,8 +22,8 @@ from ...configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 CPMANT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "openbmb/cpm-ant-10b": "https://huggingface.co/openbmb/cpm-ant-10b/blob/main/config.json"
-    # See all CPMAnt models at https://huggingface.co/models?filter=cpmant
+    "openbmb/cpm-ant-10b": "https://hf-mirror.com/openbmb/cpm-ant-10b/blob/main/config.json"
+    # See all CPMAnt models at https://hf-mirror.com/models?filter=cpmant
 }
 
 
@@ -32,7 +32,7 @@ class CpmAntConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`CpmAntModel`]. It is used to instantiate an
     CPMAnt model according to the specified arguments, defining the model architecture. Instantiating a configuration
     with the defaults will yield a similar configuration to that of the CPMAnt
-    [openbmb/cpm-ant-10b](https://huggingface.co/openbmb/cpm-ant-10b) architecture.
+    [openbmb/cpm-ant-10b](https://hf-mirror.com/openbmb/cpm-ant-10b) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

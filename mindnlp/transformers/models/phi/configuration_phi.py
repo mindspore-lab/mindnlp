@@ -23,7 +23,7 @@ from ...configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 PHI_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "microsoft/phi-2": "https://huggingface.co/microsoft/phi-2/resolve/main/config.json",
+    "microsoft/phi-2": "https://hf-mirror.com/microsoft/phi-2/resolve/main/config.json",
 }
 
 
@@ -32,7 +32,7 @@ class PhiConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`PhiModel`]. It is used to instantiate an Phi
     model according to the specified arguments, defining the model architecture. Instantiating a configuration with the
     defaults will yield a similar configuration to that of the Phi
-    [microsoft/phi-1](https://huggingface.co/microsoft/phi-1).
+    [microsoft/phi-1](https://hf-mirror.com/microsoft/phi-1).
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

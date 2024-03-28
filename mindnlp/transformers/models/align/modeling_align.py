@@ -50,7 +50,7 @@ _CONFIG_FOR_DOC = "AlignConfig"
 
 ALIGN_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "kakaobrain/align-base",
-    # See all ALIGN models at https://huggingface.co/models?filter=align
+    # See all ALIGN models at https://hf-mirror.com/models?filter=align
 ]
 
 @dataclass

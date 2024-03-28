@@ -32,10 +32,10 @@ VOCAB_FILES_NAMES = {"vocab_file": "tokenizer.model", "tokenizer_file": "tokeniz
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "hf-internal-testing/llama-tokenizer": "https://huggingface.co/hf-internal-testing/llama-tokenizer/resolve/main/tokenizer.model",
+        "hf-internal-testing/llama-tokenizer": "https://hf-mirror.com/hf-internal-testing/llama-tokenizer/resolve/main/tokenizer.model",
     },
     "tokenizer_file": {
-        "hf-internal-testing/llama-tokenizer": "https://huggingface.co/hf-internal-testing/llama-tokenizer/resolve/main/tokenizer_config.json",
+        "hf-internal-testing/llama-tokenizer": "https://hf-mirror.com/hf-internal-testing/llama-tokenizer/resolve/main/tokenizer_config.json",
     },
 }
 B_INST, E_INST = "[INST]", "[/INST]"
@@ -68,7 +68,7 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
     If you want to change the `bos_token` or the `eos_token`, make sure to specify them when initializing the model, or
     call `tokenizer.update_post_processor()` to make sure that the post-processing is correctly done (otherwise the
     values of the first token and final token of an encoded sequence will not be correct). For more details, checkout
-    [post-processors] (https://huggingface.co/docs/tokenizers/api/post-processors) documentation.
+    [post-processors] (https://hf-mirror.com/docs/tokenizers/api/post-processors) documentation.
 
 
     This tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. Users should
@@ -227,7 +227,7 @@ class LlamaTokenizerFast(PreTrainedTokenizerFast):
             "\nNo chat template is defined for this tokenizer - using the default template "
             f"for the {self.__class__.__name__} class. If the default is not appropriate for "
             "your model, please set `tokenizer.chat_template` to an appropriate template. "
-            "See https://huggingface.co/docs/transformers/main/chat_templating for more information.\n"
+            "See https://hf-mirror.com/docs/transformers/main/chat_templating for more information.\n"
         )
         template = (
             "{% if messages[0]['role'] == 'system' %}"

@@ -1506,7 +1506,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
             "\nNo chat template is defined for this tokenizer - using a default chat template "
             "that implements the ChatML format. If the default is not appropriate for "
             "your model, please set `tokenizer.chat_template` to an appropriate template. "
-            "See https://huggingface.co/docs/transformers/main/chat_templating for more information.\n"
+            "See https://hf-mirror.com/docs/transformers/main/chat_templating for more information.\n"
         )
         return (
             "{% for message in messages %}"
@@ -1536,7 +1536,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
             pretrained_model_name_or_path (`str` or `os.PathLike`):
                 Can be either:
 
-                - A string, the *model id* of a predefined tokenizer hosted inside a model repo on huggingface.co.
+                - A string, the *model id* of a predefined tokenizer hosted inside a model repo on hf-mirror.com.
                   Valid model ids can be located at the root-level, like `bert-base-uncased`, or namespaced under a
                   user or organization name, like `dbmdz/bert-base-german-cased`.
                 - A path to a *directory* containing vocabulary files required by the tokenizer, for instance saved
@@ -1564,10 +1564,10 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
                 Whether or not to only rely on local files and not to attempt to download any files.
             revision (`str`, *optional*, defaults to `"main"`):
                 The specific model version to use. It can be a branch name, a tag name, or a commit id, since we use a
-                git-based system for storing models and other artifacts on huggingface.co, so `revision` can be any
+                git-based system for storing models and other artifacts on hf-mirror.com, so `revision` can be any
                 identifier allowed by git.
             subfolder (`str`, *optional*):
-                In case the relevant files are located inside a subfolder of the model repo on huggingface.co (e.g. for
+                In case the relevant files are located inside a subfolder of the model repo on hf-mirror.com (e.g. for
                 facebook/rag-token-base), specify it here.
             inputs (additional positional arguments, *optional*):
                 Will be passed along to the Tokenizer `__init__` method.
@@ -1586,10 +1586,10 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
 
         ```python
         # We can't instantiate directly the base class *PreTrainedTokenizerBase* so let's show our examples on a derived class: BertTokenizer
-        # Download vocabulary from huggingface.co and cache.
+        # Download vocabulary from hf-mirror.com and cache.
         tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
 
-        # Download vocabulary from huggingface.co (user-uploaded) and cache.
+        # Download vocabulary from hf-mirror.com (user-uploaded) and cache.
         tokenizer = BertTokenizer.from_pretrained("dbmdz/bert-base-german-cased")
 
         # If vocabulary files are in a directory (e.g. tokenizer was saved using *save_pretrained('./test/saved_model/')*)
@@ -1703,7 +1703,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         if all(full_file_name is None for full_file_name in resolved_vocab_files.values()):
             raise EnvironmentError(
                 f"Can't load tokenizer for '{pretrained_model_name_or_path}'. If you were trying to load it from "
-                "'https://huggingface.co/models', make sure you don't have a local directory with the same name. "
+                "'https://hf-mirror.com/models', make sure you don't have a local directory with the same name. "
                 f"Otherwise, make sure '{pretrained_model_name_or_path}' is the correct path to a directory "
                 f"containing all relevant files for a {cls.__name__} tokenizer."
             )

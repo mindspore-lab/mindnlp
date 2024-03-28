@@ -6,7 +6,7 @@ tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-layou
 dqa_pipeline = pipeline("document-question-answering", model="hf-internal-testing/tiny-random-layoutlmv2",
                         tokenizer=tokenizer)
 
-image_url = "https://huggingface.co/spaces/impira/docquery/resolve/2f6c96314dc84dfda62d40de9da55f2f5165d403/invoice.png"
+image_url = "https://hf-mirror.com/spaces/impira/docquery/resolve/2f6c96314dc84dfda62d40de9da55f2f5165d403/invoice.png"
 question = "How many cats are there?"
 
 outputs = dqa_pipeline(image=image_url, question=question, top_k=2)

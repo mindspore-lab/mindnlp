@@ -39,7 +39,7 @@ logger = logging.get_logger(__name__)
 
 CHATGLM_6B_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "THUDM/chatglm-6b",
-    # See all ChatGLM-6B models at https://huggingface.co/models?filter=chatglm
+    # See all ChatGLM-6B models at https://hf-mirror.com/models?filter=chatglm
 ]
 
 
@@ -1106,7 +1106,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
                     f"Both `max_new_tokens` (={generation_config.max_new_tokens}) and `max_length`(="
                     f"{generation_config.max_length}) seem to have been set. `max_new_tokens` will take precedence. "
                     "Please refer to the documentation for more information. "
-                    "(https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)",
+                    "(https://hf-mirror.com/docs/transformers/main/en/main_classes/text_generation)",
                     UserWarning,
                 )
 

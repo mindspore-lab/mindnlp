@@ -44,7 +44,7 @@ else:
 # This is a pinned image from a specific revision of a document question answering space, hosted by HuggingFace,
 # so we can expect it to be available.
 INVOICE_URL = (
-    "https://huggingface.co/spaces/impira/docquery/resolve/2f6c96314dc84dfda62d40de9da55f2f5165d403/invoice.png"
+    "https://hf-mirror.com/spaces/impira/docquery/resolve/2f6c96314dc84dfda62d40de9da55f2f5165d403/invoice.png"
 )
 
 
@@ -96,7 +96,7 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
 
     @require_mindspore
     @require_pytesseract
-    def test_small_model_pt(self):
+    def test_small_model_ms(self):
         dqa_pipeline = pipeline("document-question-answering", model="hf-internal-testing/tiny-random-layoutlmv2")
         image = INVOICE_URL
         question = "How many cats are there?"
@@ -106,6 +106,7 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
             {"score": 0.0001, "answer": "oy 2312/2019 DUE", "start": 38, "end": 40},
         ]
         outputs = dqa_pipeline(image=image, question=question, top_k=2)
+        print(outputs)
         self.assertEqual(nested_simplify(outputs, decimals=4), expected_output)
 
         outputs = dqa_pipeline({"image": image, "question": question}, top_k=2)
@@ -127,7 +128,7 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
     @slow
     @require_mindspore
     @require_pytesseract
-    def test_large_model_pt(self):
+    def test_large_model(self):
         dqa_pipeline = pipeline(
             "document-question-answering",
             model="tiennvcs/layoutlmv2-base-uncased-finetuned-docvqa",
@@ -173,7 +174,7 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
     @slow
     @require_mindspore
     @require_pytesseract
-    def test_large_model_pt_chunk(self):
+    def test_large_model_chunk(self):
         dqa_pipeline = pipeline(
             "document-question-answering",
             model="tiennvcs/layoutlmv2-base-uncased-finetuned-docvqa",
@@ -219,7 +220,7 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
     @require_mindspore
     @require_pytesseract
     @require_vision
-    def test_large_model_pt_layoutlm(self):
+    def test_large_model_layoutlm(self):
         tokenizer = AutoTokenizer.from_pretrained(
             "impira/layoutlm-document-qa", revision="3dc6de3", add_prefix_space=True
         )
@@ -280,7 +281,7 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
     @require_mindspore
     @require_pytesseract
     @require_vision
-    def test_large_model_pt_layoutlm_chunk(self):
+    def test_large_model_layoutlm_chunk(self):
         tokenizer = AutoTokenizer.from_pretrained(
             "impira/layoutlm-document-qa", revision="3dc6de3", add_prefix_space=True
         )
@@ -331,7 +332,7 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
 
     @slow
     @require_mindspore
-    def test_large_model_pt_donut(self):
+    def test_large_model_donut(self):
         dqa_pipeline = pipeline(
             "document-question-answering",
             model="naver-clova-ix/donut-base-finetuned-docvqa",

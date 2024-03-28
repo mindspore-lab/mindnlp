@@ -50,7 +50,7 @@ CPMBEE_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "openbmb/cpm-bee-5b",
     "openbmb/cpm-bee-2b",
     "openbmb/cpm-bee-1b",
-    # See all CPMBee models at https://huggingface.co/models?filter=cpmbee
+    # See all CPMBee models at https://hf-mirror.com/models?filter=cpmbee
 ]
 
 
@@ -1835,7 +1835,7 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
                         "You have modified the pretrained model configuration to control generation. This is a"
                         " deprecated strategy to control generation and will be removed soon, in a future version."
                         " Please use a generation configuration file (see"
-                        " https://huggingface.co/docs/transformers/main_classes/text_generation)"
+                        " https://hf-mirror.com/docs/transformers/main_classes/text_generation)"
                     )
                     self.generation_config = new_generation_config
             generation_config = self.generation_config
@@ -1920,7 +1920,7 @@ class CpmBeeForCausalLM(CpmBeePreTrainedModel):
                     f"Both `max_new_tokens` (={generation_config.max_new_tokens}) and `max_length`(="
                     f"{generation_config.max_length}) seem to have been set. `max_new_tokens` will take precedence. "
                     "Please refer to the documentation for more information. "
-                    "(https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)"
+                    "(https://hf-mirror.com/docs/transformers/main/en/main_classes/text_generation)"
                 )
             generation_config.max_length = generation_config.max_new_tokens + input_ids_seq_length
 

@@ -70,7 +70,7 @@ WAV_2_VEC_2_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "facebook/wav2vec2-large-960h",
     "facebook/wav2vec2-large-960h-lv60",
     "facebook/wav2vec2-large-960h-lv60-self",
-    # See all Wav2Vec2 models at https://huggingface.co/models?filter=wav2vec2
+    # See all Wav2Vec2 models at https://hf-mirror.com/models?filter=wav2vec2
 ]
 
 
@@ -1141,7 +1141,7 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
                 the token generated when running `huggingface-cli login` (stored in `~/.huggingface`).
             revision (`str`, *optional*, defaults to `"main"`):
                 The specific model version to use. It can be a branch name, a tag name, or a commit id, since we use a
-                git-based system for storing models and other artifacts on huggingface.co, so `revision` can be any
+                git-based system for storing models and other artifacts on hf-mirror.com, so `revision` can be any
                 identifier allowed by git.
 
                 <Tip>
@@ -1157,7 +1157,7 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
 
         <Tip>
 
-        Activate the special ["offline-mode"](https://huggingface.co/transformers/installation.html#offline-mode) to
+        Activate the special ["offline-mode"](https://hf-mirror.com/transformers/installation.html#offline-mode) to
         use this method in a firewalled environment.
 
         </Tip>
@@ -1233,7 +1233,7 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
                 if use_safetensors:
                     raise EnvironmentError(
                         f"Can't load the model for '{model_path_or_id}'. If you were trying to load it"
-                        " from 'https://huggingface.co/models', make sure you don't have a local directory with the"
+                        " from 'https://hf-mirror.com/models', make sure you don't have a local directory with the"
                         f" same name. Otherwise, make sure '{model_path_or_id}' is the correct path to a"
                         f" directory containing a file named {filepath}."
                     ) from exc
@@ -1269,7 +1269,7 @@ class Wav2Vec2PreTrainedModel(PreTrainedModel):
                 # For any other exception, we throw a generic error.
                 raise EnvironmentError(
                     f"Can't load the model for '{model_path_or_id}'. If you were trying to load it"
-                    " from 'https://huggingface.co/models', make sure you don't have a local directory with the"
+                    " from 'https://hf-mirror.com/models', make sure you don't have a local directory with the"
                     f" same name. Otherwise, make sure '{model_path_or_id}' is the correct path to a"
                     f" directory containing a file named {filepath}."
                 ) from exc

@@ -31,14 +31,14 @@ VOCAB_FILES_NAMES = {"vocab_file": "vocab.json", "merges_file": "merges.txt", "t
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "openai/clip-vit-base-patch32": "https://huggingface.co/openai/clip-vit-base-patch32/resolve/main/vocab.json",
+        "openai/clip-vit-base-patch32": "https://hf-mirror.com/openai/clip-vit-base-patch32/resolve/main/vocab.json",
     },
     "merges_file": {
-        "openai/clip-vit-base-patch32": "https://huggingface.co/openai/clip-vit-base-patch32/resolve/main/merges.txt",
+        "openai/clip-vit-base-patch32": "https://hf-mirror.com/openai/clip-vit-base-patch32/resolve/main/merges.txt",
     },
     "tokenizer_file": {
         "openai/clip-vit-base-patch32": (
-            "https://huggingface.co/openai/clip-vit-base-patch32/resolve/main/tokenizer.json"
+            "https://hf-mirror.com/openai/clip-vit-base-patch32/resolve/main/tokenizer.json"
         ),
     },
 }

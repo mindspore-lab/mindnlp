@@ -53,7 +53,7 @@ class TextGenerationPipeline(Pipeline):
 
     The models that this pipeline can use are models that have been trained with an autoregressive language modeling
     objective, which includes the uni-directional models in the library (e.g. openai-community/gpt2). See the list of available models
-    on [huggingface.co/models](https://huggingface.co/models?filter=text-generation).
+    on [hf-mirror.com/models](https://hf-mirror.com/models?filter=text-generation).
     """
 
     def __init__(self, *args, **kwargs):

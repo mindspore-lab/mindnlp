@@ -54,9 +54,9 @@ class Text2TextGenerationPipeline(Pipeline):
 
     The models that this pipeline can use are models that have been fine-tuned on a translation task. See the
     up-to-date list of available models on
-    [huggingface.co/models](https://huggingface.co/models?filter=text2text-generation). For a list of available
+    [hf-mirror.com/models](https://hf-mirror.com/models?filter=text2text-generation). For a list of available
     parameters, see the [following
-    documentation](https://huggingface.co/docs/transformers/en/main_classes/text_generation#transformers.generation.GenerationMixin.generate)
+    documentation](https://hf-mirror.com/docs/transformers/en/main_classes/text_generation#transformers.generation.GenerationMixin.generate)
 
     Usage:
 
@@ -229,9 +229,9 @@ class SummarizationPipeline(Text2TextGenerationPipeline):
 
     The models that this pipeline can use are models that have been fine-tuned on a summarization task, which is
     currently, '*bart-large-cnn*', '*google-t5/t5-small*', '*google-t5/t5-base*', '*google-t5/t5-large*', '*google-t5/t5-3b*', '*google-t5/t5-11b*'. See the up-to-date
-    list of available models on [huggingface.co/models](https://huggingface.co/models?filter=summarization). For a list
+    list of available models on [hf-mirror.com/models](https://hf-mirror.com/models?filter=summarization). For a list
     of available parameters, see the [following
-    documentation](https://huggingface.co/docs/transformers/en/main_classes/text_generation#transformers.generation.GenerationMixin.generate)
+    documentation](https://hf-mirror.com/docs/transformers/en/main_classes/text_generation#transformers.generation.GenerationMixin.generate)
 
     Usage:
 
@@ -299,9 +299,9 @@ class TranslationPipeline(Text2TextGenerationPipeline):
     `"translation_xx_to_yy"`.
 
     The models that this pipeline can use are models that have been fine-tuned on a translation task. See the
-    up-to-date list of available models on [huggingface.co/models](https://huggingface.co/models?filter=translation).
+    up-to-date list of available models on [hf-mirror.com/models](https://hf-mirror.com/models?filter=translation).
     For a list of available parameters, see the [following
-    documentation](https://huggingface.co/docs/transformers/en/main_classes/text_generation#transformers.generation.GenerationMixin.generate)
+    documentation](https://hf-mirror.com/docs/transformers/en/main_classes/text_generation#transformers.generation.GenerationMixin.generate)
 
     Usage:
 

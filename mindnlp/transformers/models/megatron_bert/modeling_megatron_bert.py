@@ -54,7 +54,7 @@ _CHECKPOINT_FOR_DOC = "nvidia/megatron-bert-cased-345m"
 
 MEGATRON_BERT_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "nvidia/megatron-bert-cased-345m",
-    # See all MegatronBERT models at https://huggingface.co/models?filter=megatron_bert
+    # See all MegatronBERT models at https://hf-mirror.com/models?filter=megatron_bert
 ]
 
 

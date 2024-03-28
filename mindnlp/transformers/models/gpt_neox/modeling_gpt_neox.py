@@ -46,7 +46,7 @@ _CONFIG_FOR_DOC = "GPTNeoXConfig"
 
 GPT_NEOX_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "EleutherAI/gpt-neox-20b",
-    # See all GPTNeoX models at https://huggingface.co/models?filter=gpt_neox
+    # See all GPTNeoX models at https://hf-mirror.com/models?filter=gpt_neox
 ]
 
 

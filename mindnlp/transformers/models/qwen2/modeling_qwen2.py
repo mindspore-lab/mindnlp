@@ -44,7 +44,7 @@ _CONFIG_FOR_DOC = "Qwen2Config"
 
 QWEN2_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "Qwen/Qwen2-7B-beta",
-    # See all Qwen2 models at https://huggingface.co/models?filter=qwen2
+    # See all Qwen2 models at https://hf-mirror.com/models?filter=qwen2
 ]
 
 

@@ -25,7 +25,7 @@ class BigBirdPegasusConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`BigBirdPegasusModel`]. It is used to instantiate
     an BigBirdPegasus model according to the specified arguments, defining the model architecture. Instantiating a
     configuration with the defaults will yield a similar configuration to that of the BigBirdPegasus
-    [google/bigbird-pegasus-large-arxiv](https://huggingface.co/google/bigbird-pegasus-large-arxiv) architecture.
+    [google/bigbird-pegasus-large-arxiv](https://hf-mirror.com/google/bigbird-pegasus-large-arxiv) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

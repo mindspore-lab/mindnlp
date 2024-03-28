@@ -73,7 +73,7 @@ class BarkProcessor(ProcessorMixin):
                 This can be either:
 
                 - a string, the *model id* of a pretrained [`BarkProcessor`] hosted inside a model repo on
-                  huggingface.co.
+                  hf-mirror.com.
                 - a path to a *directory* containing a processor saved using the [`~BarkProcessor.save_pretrained`]
                   method, e.g., `./my_model_directory/`.
             speaker_embeddings_dict_path (`str`, *optional*, defaults to `"speaker_embeddings_path.json"`):

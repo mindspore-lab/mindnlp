@@ -249,7 +249,7 @@ class FeatureExtractionMixin():
                 This can be either:
 
                 - a string, the *model id* of a pretrained feature_extractor hosted inside a model repo on
-                  huggingface.co. Valid model ids can be located at the root-level, like `bert-base-uncased`, or
+                  hf-mirror.com. Valid model ids can be located at the root-level, like `bert-base-uncased`, or
                   namespaced under a user or organization name, like `dbmdz/bert-base-german-cased`.
                 - a path to a *directory* containing a feature extractor file saved using the
                   [`~feature_extraction_utils.FeatureExtractionMixin.save_pretrained`] method, e.g.,
@@ -273,7 +273,7 @@ class FeatureExtractionMixin():
                 the token generated when running `huggingface-cli login` (stored in `~/.huggingface`).
             revision (`str`, *optional*, defaults to `"main"`):
                 The specific model version to use. It can be a branch name, a tag name, or a commit id, since we use a
-                git-based system for storing models and other artifacts on huggingface.co, so `revision` can be any
+                git-based system for storing models and other artifacts on hf-mirror.com, so `revision` can be any
                 identifier allowed by git.
 
 
@@ -303,7 +303,7 @@ class FeatureExtractionMixin():
         # derived class: *Wav2Vec2FeatureExtractor*
         feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
             "facebook/wav2vec2-base-960h"
-        )  # Download feature_extraction_config from huggingface.co and cache.
+        )  # Download feature_extraction_config from hf-mirror.com and cache.
         feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
             "./test/saved_model/"
         )  # E.g. feature_extractor (or model) was saved using *save_pretrained('./test/saved_model/')*
@@ -451,7 +451,7 @@ class FeatureExtractionMixin():
                 # For any other exception, we throw a generic error.
                 raise EnvironmentError(
                     f"Can't load feature extractor for '{pretrained_model_name_or_path}'. If you were trying to load"
-                    " it from 'https://huggingface.co/models', make sure you don't have a local directory with the"
+                    " it from 'https://hf-mirror.com/models', make sure you don't have a local directory with the"
                     f" same name. Otherwise, make sure '{pretrained_model_name_or_path}' is the correct path to a"
                     f" directory containing a {FEATURE_EXTRACTOR_NAME} file"
                 ) from exc

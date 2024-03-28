@@ -697,7 +697,7 @@ class Wav2Vec2CTCTokenizerTest(TokenizerTesterMixin, unittest.TestCase):
         word_time_stamps_end = [round(w * time_offset_wav2vec2_base, 2) for w in word_offsets_end]
 
         # NOTE: you can verify the above results by checking out the dataset viewer
-        # on https://huggingface.co/datasets/common_voice/viewer/en/train and
+        # on https://hf-mirror.com/datasets/common_voice/viewer/en/train and
         # downloading / playing the sample `common_voice_en_100038.mp3`. As
         # you can hear the time-stamps match more or less
 

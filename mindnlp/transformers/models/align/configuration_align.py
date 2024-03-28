@@ -25,7 +25,7 @@ from ...configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 ALIGN_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "kakaobrain/align-base": "https://huggingface.co/kakaobrain/align-base/resolve/main/config.json",
+    "kakaobrain/align-base": "https://hf-mirror.com/kakaobrain/align-base/resolve/main/config.json",
 }
 
 
@@ -34,7 +34,7 @@ class AlignTextConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`AlignTextModel`]. It is used to instantiate a
     ALIGN text encoder according to the specified arguments, defining the model architecture. Instantiating a
     configuration with the defaults will yield a similar configuration to that of the text encoder of the ALIGN
-    [kakaobrain/align-base](https://huggingface.co/kakaobrain/align-base) architecture. The default values here are
+    [kakaobrain/align-base](https://hf-mirror.com/kakaobrain/align-base) architecture. The default values here are
     copied from BERT.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
@@ -156,7 +156,7 @@ class AlignVisionConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`AlignVisionModel`]. It is used to instantiate a
     ALIGN vision encoder according to the specified arguments, defining the model architecture. Instantiating a
     configuration with the defaults will yield a similar configuration to that of the vision encoder of the ALIGN
-    [kakaobrain/align-base](https://huggingface.co/kakaobrain/align-base) architecture. The default values are copied
+    [kakaobrain/align-base](https://hf-mirror.com/kakaobrain/align-base) architecture. The default values are copied
     from EfficientNet (efficientnet-b7)
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
@@ -293,7 +293,7 @@ class AlignConfig(PretrainedConfig):
     [`AlignConfig`] is the configuration class to store the configuration of a [`AlignModel`]. It is used to
     instantiate a ALIGN model according to the specified arguments, defining the text model and vision model configs.
     Instantiating a configuration with the defaults will yield a similar configuration to that of the ALIGN
-    [kakaobrain/align-base](https://huggingface.co/kakaobrain/align-base) architecture.
+    [kakaobrain/align-base](https://hf-mirror.com/kakaobrain/align-base) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

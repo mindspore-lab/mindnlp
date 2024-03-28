@@ -24,9 +24,9 @@ logger = logging.get_logger(__name__)
 
 REFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP = {
     "google/reformer-crime-and-punishment": (
-        "https://huggingface.co/google/reformer-crime-and-punishment/resolve/main/config.json"
+        "https://hf-mirror.com/google/reformer-crime-and-punishment/resolve/main/config.json"
     ),
-    "google/reformer-enwik8": "https://huggingface.co/google/reformer-enwik8/resolve/main/config.json",
+    "google/reformer-enwik8": "https://hf-mirror.com/google/reformer-enwik8/resolve/main/config.json",
 }
 
 
@@ -35,7 +35,7 @@ class ReformerConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`ReformerModel`]. It is used to instantiate a
     Reformer model according to the specified arguments, defining the model architecture. Instantiating a configuration
     with the defaults will yield a similar configuration to that of the ReFormer
-    [google/reformer-crime-and-punishment](https://huggingface.co/google/reformer-crime-and-punishment) architecture.
+    [google/reformer-crime-and-punishment](https://hf-mirror.com/google/reformer-crime-and-punishment) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

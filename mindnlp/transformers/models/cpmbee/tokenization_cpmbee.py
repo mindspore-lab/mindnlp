@@ -33,10 +33,10 @@ VOCAB_FILES_NAMES = {"vocab_file": "vocab.txt"}
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "openbmb/cpm-bee-10b": "https://huggingface.co/openbmb/cpm-bee-10b/blob/main/vocab.txt",
-        "openbmb/cpm-bee-5b": "https://huggingface.co/openbmb/cpm-bee-5b/blob/main/vocab.txt",
-        "openbmb/cpm-bee-2b": "https://huggingface.co/openbmb/cpm-bee-2b/blob/main/vocab.txt",
-        "openbmb/cpm-bee-1b": "https://huggingface.co/openbmb/cpm-bee-1b/blob/main/vocab.txt",
+        "openbmb/cpm-bee-10b": "https://hf-mirror.com/openbmb/cpm-bee-10b/blob/main/vocab.txt",
+        "openbmb/cpm-bee-5b": "https://hf-mirror.com/openbmb/cpm-bee-5b/blob/main/vocab.txt",
+        "openbmb/cpm-bee-2b": "https://hf-mirror.com/openbmb/cpm-bee-2b/blob/main/vocab.txt",
+        "openbmb/cpm-bee-1b": "https://hf-mirror.com/openbmb/cpm-bee-1b/blob/main/vocab.txt",
     },
 }
 

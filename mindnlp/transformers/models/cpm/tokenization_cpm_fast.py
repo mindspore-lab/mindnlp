@@ -28,10 +28,10 @@ VOCAB_FILES_NAMES = {"vocab_file": "spiece.model", "tokenizer_file": "tokenizer.
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "TsinghuaAI/CPM-Generate": "https://huggingface.co/TsinghuaAI/CPM-Generate/resolve/main/spiece.model",
+        "TsinghuaAI/CPM-Generate": "https://hf-mirror.com/TsinghuaAI/CPM-Generate/resolve/main/spiece.model",
     },
     "tokenizer_file": {
-        "TsinghuaAI/CPM-Generate": "https://huggingface.co/TsinghuaAI/CPM-Generate/resolve/main/tokenizer.json",
+        "TsinghuaAI/CPM-Generate": "https://hf-mirror.com/TsinghuaAI/CPM-Generate/resolve/main/tokenizer.json",
     },
 }
 

@@ -68,7 +68,7 @@ def load_dataset(
 ):
     """Load a dataset from the Hugging Face Hub, or a local dataset.
 
-    You can find the list of datasets on the [Hub](https://huggingface.co/datasets) or with [`huggingface_hub.list_datasets`].
+    You can find the list of datasets on the [Hub](https://hf-mirror.com/datasets) or with [`huggingface_hub.list_datasets`].
 
     A dataset is a directory that contains:
 
@@ -86,7 +86,7 @@ def load_dataset(
             Dataset scripts are small python scripts that define dataset builders. They define the citation, info and format of the dataset,
             contain the path or URL to the original data files and the code to load examples from the original data files.
 
-            You can find the complete list of datasets in the Datasets [Hub](https://huggingface.co/datasets).
+            You can find the complete list of datasets in the Datasets [Hub](https://hf-mirror.com/datasets).
 
         2. Run the dataset script which will:
 

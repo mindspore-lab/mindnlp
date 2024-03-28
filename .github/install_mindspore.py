@@ -3,7 +3,7 @@ import requests
 import os
 
 def gen_url(os_name, py_version):
-    hf_url = 'https://huggingface.co/lvyufeng/mindspore-daily/resolve/main/'
+    hf_url = 'https://hf-mirror.com/lvyufeng/mindspore-daily/resolve/main/'
     whl_name = 'mindspore-newest-cp{}-cp{}-{}.whl'
     py_version = py_version.replace('.', '')
 

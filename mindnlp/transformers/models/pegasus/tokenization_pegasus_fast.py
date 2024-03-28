@@ -40,7 +40,7 @@ VOCAB_FILES_NAMES = {"vocab_file": "spiece.model", "tokenizer_file": "tokenizer.
 class PegasusTokenizerFast(PreTrainedTokenizerFast):
     r"""
     Construct a "fast" PEGASUS tokenizer (backed by HuggingFace's *tokenizers* library). Based on
-    [Unigram](https://huggingface.co/docs/tokenizers/python/latest/components.html?highlight=unigram#models).
+    [Unigram](https://hf-mirror.com/docs/tokenizers/python/latest/components.html?highlight=unigram#models).
 
     This tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. Users should
     refer to this superclass for more information regarding those methods.

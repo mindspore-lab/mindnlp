@@ -43,7 +43,7 @@ from .configuration_mbart import MBartConfig
 
 MBART_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "facebook/mbart-large-cc25",
-    # See all MBART models at https://huggingface.co/models?filter=mbart
+    # See all MBART models at https://hf-mirror.com/models?filter=mbart
 ]
 
 

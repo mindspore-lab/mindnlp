@@ -49,11 +49,11 @@ VOCAB_FILES_NAMES = {
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "facebook/wav2vec2-base-960h": "https://huggingface.co/facebook/wav2vec2-base-960h/resolve/main/vocab.json",
+        "facebook/wav2vec2-base-960h": "https://hf-mirror.com/facebook/wav2vec2-base-960h/resolve/main/vocab.json",
     },
     "tokenizer_config_file": {
         "facebook/wav2vec2-base-960h": (
-            "https://huggingface.co/facebook/wav2vec2-base-960h/resolve/main/tokenizer_config.json"
+            "https://hf-mirror.com/facebook/wav2vec2-base-960h/resolve/main/tokenizer_config.json"
         ),
     },
 }
@@ -112,7 +112,7 @@ class Wav2Vec2CTCTokenizer(PreTrainedTokenizer):
             Whether or not to accept lowercase input and lowercase the output when decoding.
         target_lang (`str`, *optional*):
             A target language the tokenizer should set by default. `target_lang` has to be defined for multi-lingual,
-            nested vocabulary such as [facebook/mms-1b-all](https://huggingface.co/facebook/mms-1b-all).
+            nested vocabulary such as [facebook/mms-1b-all](https://hf-mirror.com/facebook/mms-1b-all).
 
         **kwargs
             Additional keyword arguments passed along to [`PreTrainedTokenizer`]
@@ -589,7 +589,7 @@ class Wav2Vec2CTCTokenizer(PreTrainedTokenizer):
         ...     for d in outputs.word_offsets
         ... ]
         >>> # compare word offsets with audio `en_train_0/common_voice_en_19121553.mp3` online on the dataset viewer:
-        >>> # https://huggingface.co/datasets/mozilla-foundation/common_voice_11_0/viewer/en
+        >>> # https://hf-mirror.com/datasets/mozilla-foundation/common_voice_11_0/viewer/en
         >>> word_offsets[:3]
         [{'word': 'THE', 'start_time': 0.7, 'end_time': 0.78}, {'word': 'TRICK', 'start_time': 0.88, 'end_time': 1.08}, {'word': 'APPEARS', 'start_time': 1.2, 'end_time': 1.64}]
         ```"""
@@ -645,19 +645,19 @@ class Wav2Vec2Tokenizer(PreTrainedTokenizer):
         do_normalize (`bool`, *optional*, defaults to `False`):
             Whether or not to zero-mean unit-variance normalize the input. Normalizing can help to significantly
             improve the performance for some models, *e.g.*,
-            [wav2vec2-lv60](https://huggingface.co/models?search=lv60).
+            [wav2vec2-lv60](https://hf-mirror.com/models?search=lv60).
         return_attention_mask (`bool`, *optional*, defaults to `False`):
             Whether or not [`~Wav2Vec2Tokenizer.__call__`] should return `attention_mask`.
 
             <Tip>
 
             Wav2Vec2 models that have set `config.feat_extract_norm == "group"`, such as
-            [wav2vec2-base](https://huggingface.co/facebook/wav2vec2-base-960h), have **not** been trained using
+            [wav2vec2-base](https://hf-mirror.com/facebook/wav2vec2-base-960h), have **not** been trained using
             `attention_mask`. For such models, `input_values` should simply be padded with 0 and no `attention_mask`
             should be passed.
 
             For Wav2Vec2 models that have set `config.feat_extract_norm == "layer"`, such as
-            [wav2vec2-lv60](https://huggingface.co/facebook/wav2vec2-large-960h-lv60-self), `attention_mask` should be
+            [wav2vec2-lv60](https://hf-mirror.com/facebook/wav2vec2-large-960h-lv60-self), `attention_mask` should be
             passed for batched inference.
 
             </Tip>
@@ -669,11 +669,11 @@ class Wav2Vec2Tokenizer(PreTrainedTokenizer):
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = {
         "vocab_file": {
-            "facebook/wav2vec2-base-960h": "https://huggingface.co/facebook/wav2vec2-base-960h/resolve/main/vocab.json"
+            "facebook/wav2vec2-base-960h": "https://hf-mirror.com/facebook/wav2vec2-base-960h/resolve/main/vocab.json"
         },
         "tokenizer_config_file": {
             "facebook/wav2vec2-base-960h": (
-                "https://huggingface.co/facebook/wav2vec2-base-960h/resolve/main/tokenizer.json"
+                "https://hf-mirror.com/facebook/wav2vec2-base-960h/resolve/main/tokenizer.json"
             ),
         },
     }

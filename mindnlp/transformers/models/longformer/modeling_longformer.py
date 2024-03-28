@@ -45,7 +45,7 @@ LONGFORMER_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "allenai/longformer-large-4096-finetuned-triviaqa",
     "allenai/longformer-base-4096-extra.pos.embd.only",
     "allenai/longformer-large-4096-extra.pos.embd.only",
-    # See all Longformer models at https://huggingface.co/models?filter=longformer
+    # See all Longformer models at https://hf-mirror.com/models?filter=longformer
 ]
 
 def scalar_div(input, other, *, rounding_mode="trunc"):

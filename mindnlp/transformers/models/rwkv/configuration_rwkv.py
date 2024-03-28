@@ -22,16 +22,16 @@ from ...configuration_utils import PretrainedConfig
 
 
 RWKV_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "RWKV/rwkv-4-169m-pile": "https://huggingface.co/RWKV/rwkv-4-169m-pile/resolve/main/config.json",
-    "RWKV/rwkv-4-430m-pile": "https://huggingface.co/RWKV/rwkv-4-430m-pile/resolve/main/config.json",
-    "RWKV/rwkv-4-1b5-pile": "https://huggingface.co/RWKV/rwkv-4-1b5-pile/resolve/main/config.json",
-    "RWKV/rwkv-4-3b-pile": "https://huggingface.co/RWKV/rwkv-4-3b-pile/resolve/main/config.json",
-    "RWKV/rwkv-4-7b-pile": "https://huggingface.co/RWKV/rwkv-4-7b-pile/resolve/main/config.json",
-    "RWKV/rwkv-4-14b-pile": "https://huggingface.co/RWKV/rwkv-4-14b-pile/resolve/main/config.json",
-    "RWKV/rwkv-raven-1b5": "https://huggingface.co/RWKV/rwkv-raven-1b5/resolve/main/config.json",
-    "RWKV/rwkv-raven-3b": "https://huggingface.co/RWKV/rwkv-raven-3b/resolve/main/config.json",
-    "RWKV/rwkv-raven-7b": "https://huggingface.co/RWKV/rwkv-raven-7b/resolve/main/config.json",
-    "RWKV/rwkv-raven-14b": "https://huggingface.co/RWKV/rwkv-raven-14b/resolve/main/config.json",
+    "RWKV/rwkv-4-169m-pile": "https://hf-mirror.com/RWKV/rwkv-4-169m-pile/resolve/main/config.json",
+    "RWKV/rwkv-4-430m-pile": "https://hf-mirror.com/RWKV/rwkv-4-430m-pile/resolve/main/config.json",
+    "RWKV/rwkv-4-1b5-pile": "https://hf-mirror.com/RWKV/rwkv-4-1b5-pile/resolve/main/config.json",
+    "RWKV/rwkv-4-3b-pile": "https://hf-mirror.com/RWKV/rwkv-4-3b-pile/resolve/main/config.json",
+    "RWKV/rwkv-4-7b-pile": "https://hf-mirror.com/RWKV/rwkv-4-7b-pile/resolve/main/config.json",
+    "RWKV/rwkv-4-14b-pile": "https://hf-mirror.com/RWKV/rwkv-4-14b-pile/resolve/main/config.json",
+    "RWKV/rwkv-raven-1b5": "https://hf-mirror.com/RWKV/rwkv-raven-1b5/resolve/main/config.json",
+    "RWKV/rwkv-raven-3b": "https://hf-mirror.com/RWKV/rwkv-raven-3b/resolve/main/config.json",
+    "RWKV/rwkv-raven-7b": "https://hf-mirror.com/RWKV/rwkv-raven-7b/resolve/main/config.json",
+    "RWKV/rwkv-raven-14b": "https://hf-mirror.com/RWKV/rwkv-raven-14b/resolve/main/config.json",
 }
 
 
@@ -40,7 +40,7 @@ class RwkvConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`RwkvModel`]. It is used to instantiate a RWKV
     model according to the specified arguments, defining the model architecture. Instantiating a configuration with the
     defaults will yield a similar configuration to that of the RWVK-4
-    [RWKV/rwkv-4-169m-pile](https://huggingface.co/RWKV/rwkv-4-169m-pile) architecture.
+    [RWKV/rwkv-4-169m-pile](https://hf-mirror.com/RWKV/rwkv-4-169m-pile) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

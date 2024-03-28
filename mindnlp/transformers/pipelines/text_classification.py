@@ -66,7 +66,7 @@ class TextClassificationPipeline(Pipeline):
 
     The models that this pipeline can use are models that have been fine-tuned on a sequence classification task. See
     the up-to-date list of available models on
-    [huggingface.co/models](https://huggingface.co/models?filter=text-classification).
+    [hf-mirror.com/models](https://hf-mirror.com/models?filter=text-classification).
     """
 
     return_all_scores = False

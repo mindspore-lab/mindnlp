@@ -172,7 +172,7 @@ def get_image_processor_config(
             This can be either:
 
             - a string, the *model id* of a pretrained model configuration hosted inside a model repo on
-              huggingface.co.
+              hf-mirror.com.
             - a path to a *directory* containing a configuration file saved using the
               [`~PreTrainedTokenizer.save_pretrained`] method, e.g., `./my_model_directory/`.
 
@@ -192,7 +192,7 @@ def get_image_processor_config(
             when running `huggingface-cli login` (stored in `~/.huggingface`).
         revision (`str`, *optional*, defaults to `"main"`):
             The specific model version to use. It can be a branch name, a tag name, or a commit id, since we use a
-            git-based system for storing models and other artifacts on huggingface.co, so `revision` can be any
+            git-based system for storing models and other artifacts on hf-mirror.com, so `revision` can be any
             identifier allowed by git.
         local_files_only (`bool`, *optional*, defaults to `False`):
             If `True`, will only try to load the image processor configuration from local files.
@@ -209,7 +209,7 @@ def get_image_processor_config(
     Examples:
 
     ```python
-    # Download configuration from huggingface.co and cache.
+    # Download configuration from hf-mirror.com and cache.
     image_processor_config = get_image_processor_config("google-bert/bert-base-uncased")
     # This model does not have a image processor config so the result will be an empty dict.
     image_processor_config = get_image_processor_config("FacebookAI/xlm-roberta-base")
@@ -283,7 +283,7 @@ class AutoImageProcessor:
                 This can be either:
 
                 - a string, the *model id* of a pretrained image_processor hosted inside a model repo on
-                  huggingface.co.
+                  hf-mirror.com.
                 - a path to a *directory* containing a image processor file saved using the
                   [`~image_processing_utils.ImageProcessingMixin.save_pretrained`] method, e.g.,
                   `./my_model_directory/`.
@@ -306,7 +306,7 @@ class AutoImageProcessor:
                 when running `huggingface-cli login` (stored in `~/.huggingface`).
             revision (`str`, *optional*, defaults to `"main"`):
                 The specific model version to use. It can be a branch name, a tag name, or a commit id, since we use a
-                git-based system for storing models and other artifacts on huggingface.co, so `revision` can be any
+                git-based system for storing models and other artifacts on hf-mirror.com, so `revision` can be any
                 identifier allowed by git.
             return_unused_kwargs (`bool`, *optional*, defaults to `False`):
                 If `False`, then this function returns just the final image processor object. If `True`, then this
@@ -333,7 +333,7 @@ class AutoImageProcessor:
         ```python
         >>> from transformers import AutoImageProcessor
 
-        >>> # Download image processor from huggingface.co and cache.
+        >>> # Download image processor from hf-mirror.com and cache.
         >>> image_processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
 
         >>> # If image processor files are in a directory (e.g. image processor was saved using *save_pretrained('./test/saved_model/')*)

@@ -21,9 +21,9 @@ from ...configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 LAYOUTLMV2_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "layoutlmv2-base-uncased": "https://huggingface.co/microsoft/layoutlmv2-base-uncased/resolve/main/config.json",
-    "layoutlmv2-large-uncased": "https://huggingface.co/microsoft/layoutlmv2-large-uncased/resolve/main/config.json",
-    # See all LayoutLMv2 models at https://huggingface.co/models?filter=layoutlmv2
+    "layoutlmv2-base-uncased": "https://hf-mirror.com/microsoft/layoutlmv2-base-uncased/resolve/main/config.json",
+    "layoutlmv2-large-uncased": "https://hf-mirror.com/microsoft/layoutlmv2-large-uncased/resolve/main/config.json",
+    # See all LayoutLMv2 models at https://hf-mirror.com/models?filter=layoutlmv2
 }
 
 
@@ -35,7 +35,7 @@ class LayoutLMv2Config(PretrainedConfig):
     This is the configuration class to store the configuration of a [`LayoutLMv2Model`]. It is used to instantiate an
     LayoutLMv2 model according to the specified arguments, defining the model architecture. Instantiating a
     configuration with the defaults will yield a similar configuration to that of the LayoutLMv2
-    [microsoft/layoutlmv2-base-uncased](https://huggingface.co/microsoft/layoutlmv2-base-uncased) architecture.
+    [microsoft/layoutlmv2-base-uncased](https://hf-mirror.com/microsoft/layoutlmv2-base-uncased) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -176,44 +176,106 @@ class LayoutLMv2Config(PretrainedConfig):
         self.has_spatial_attention_bias = has_spatial_attention_bias
         self.has_visual_segment_embedding = has_visual_segment_embedding
         self.use_visual_backbone = use_visual_backbone
-        self.visual_backbone_config_args = (
-            detectron2_config_args if detectron2_config_args is not None else self.get_default_visual_backbone_config_args()
+        self.detectron2_config_args = (
+            detectron2_config_args if detectron2_config_args is not None else self.get_default_detectron2_config()
         )
 
     @classmethod
-    def get_default_visual_backbone_config_args(cls):
-        """
-        Returns:
-            Dict: Default configuration arguments for the visual backbone.
-        """
-        return Dict({
-            "MODEL": {
-                "BACKBONE": {
-                    "FREEZE_AT": 2,
-                    "DEPTH": 101,
-                    "NORM": "BN",
-                    "NUM_GROUPS": 32,
-                    "WIDTH_PER_GROUP": 8,
-                    "STEM_IN_CHANNELS": 3,
-                    "STEM_OUT_CHANNELS": 64,
-                    "RES2_OUT_CHANNELS": 256,
-                    "STRIDE_IN_1X1": False,
-                    "RES5_DILATION": 1,
-                    "NAME": "resnet101",
-                    "PRETRAINED": True,
-                    "NUM_CLASSES": 1000,
-                    "OUT_FEATURES": ["res2", "res3", "res4", "res5"]
-                },
-                "FPN": {
-                    "FUSE_TYPE": "sum",
-                    "IN_FEATURES": ["res2", "res3", "res4", "res5"],
-                    "NORM": "",
-                    "OUT_CHANNELS": 256
-                },
-                "PIXEL_MEAN": [103.53, 116.28, 123.675],
-                "PIXEL_STD": [57.375, 57.12, 58.395]
-            }
-        })
+    def get_default_detectron2_config(cls):
+        return {
+            "MODEL.MASK_ON": True,
+            "MODEL.PIXEL_STD": [57.375, 57.120, 58.395],
+            "MODEL.BACKBONE.NAME": "build_resnet_fpn_backbone",
+            "MODEL.FPN.IN_FEATURES": ["res2", "res3", "res4", "res5"],
+            "MODEL.ANCHOR_GENERATOR.SIZES": [[32], [64], [128], [256], [512]],
+            "MODEL.RPN.IN_FEATURES": ["p2", "p3", "p4", "p5", "p6"],
+            "MODEL.RPN.PRE_NMS_TOPK_TRAIN": 2000,
+            "MODEL.RPN.PRE_NMS_TOPK_TEST": 1000,
+            "MODEL.RPN.POST_NMS_TOPK_TRAIN": 1000,
+            "MODEL.POST_NMS_TOPK_TEST": 1000,
+            "MODEL.ROI_HEADS.NAME": "StandardROIHeads",
+            "MODEL.ROI_HEADS.NUM_CLASSES": 5,
+            "MODEL.ROI_HEADS.IN_FEATURES": ["p2", "p3", "p4", "p5"],
+            "MODEL.ROI_BOX_HEAD.NAME": "FastRCNNConvFCHead",
+            "MODEL.ROI_BOX_HEAD.NUM_FC": 2,
+            "MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION": 14,
+            "MODEL.ROI_MASK_HEAD.NAME": "MaskRCNNConvUpsampleHead",
+            "MODEL.ROI_MASK_HEAD.NUM_CONV": 4,
+            "MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION": 7,
+            "MODEL.RESNETS.DEPTH": 101,
+            "MODEL.RESNETS.SIZES": [[32], [64], [128], [256], [512]],
+            "MODEL.RESNETS.ASPECT_RATIOS": [[0.5, 1.0, 2.0]],
+            "MODEL.RESNETS.OUT_FEATURES": ["res2", "res3", "res4", "res5"],
+            "MODEL.RESNETS.NUM_GROUPS": 32,
+            "MODEL.RESNETS.WIDTH_PER_GROUP": 8,
+            "MODEL.RESNETS.STRIDE_IN_1X1": False,
+        }
 
+    def get_detectron2_config(self):
+        detectron2_config = Dict(
+            {
+                "MODEL": {
+                    "MASK_ON": True,
+                    "PIXEL_MEAN": [103.53, 116.28, 123.675],
+                    "PIXEL_STD": [57.375, 57.120, 58.395],
+                    "BACKBONE": {"NAME": "build_resnet_fpn_backbone"},
+                    "FPN": {
+                        "FUSE_TYPE": "sum",
+                        "IN_FEATURES": ["res2", "res3", "res4", "res5"],
+                        "NORM": "BN",
+                        "OUT_CHANNELS": 256
+                    },
+                    "ANCHOR_GENERATOR": {"SIZES": [[32], [64], [128], [256], [512]]},
+                    "RPN": {
+                        "IN_FEATURES": ["p2", "p3", "p4", "p5", "p6"],
+                        "PRE_NMS_TOPK_TRAIN": 2000,
+                        "PRE_NMS_TOPK_TEST": 1000,
+                        "POST_NMS_TOPK_TRAIN": 1000,
+                    },
+                    "POST_NMS_TOPK_TEST": 1000,
+                    "ROI_HEADS": {
+                        "NAME": "StandardROIHeads",
+                        "NUM_CLASSES": 5,
+                        "IN_FEATURES": ["p2", "p3", "p4", "p5"],
+                    },
+                    "ROI_BOX_HEAD": {
+                        "NAME": "FastRCNNConvFCHead",
+                        "NUM_FC": 2,
+                        "POOLER_RESOLUTION": 14,
+                    },
+                    "ROI_MASK_HEAD": {
+                        "NAME": "MaskRCNNConvUpsampleHead",
+                        "NUM_CONV": 4,
+                        "POOLER_RESOLUTION": 7,
+                    },
+                    "RESNETS": {
+                        "DEPTH": 101,
+                        "SIZES": [[32], [64], [128], [256], [512]],
+                        "ASPECT_RATIOS": [[0.5, 1.0, 2.0]],
+                        "FREEZE_AT": 2,
+                        "NORM": "BN",
+                        "NUM_GROUPS": 32,
+                        "WIDTH_PER_GROUP": 8,
+                        "STEM_IN_CHANNELS": 3,
+                        "STEM_OUT_CHANNELS": 64,
+                        "RES2_OUT_CHANNELS": 256,
+                        "STRIDE_IN_1X1": False,
+                        "RES5_DILATION": 1,
+                        "NAME": "resnet101",
+                        "PRETRAINED": True,
+                        "NUM_CLASSES": 1000,
+                        "OUT_FEATURES": ["res2", "res3", "res4", "res5"]
+                    }
+                }
+            }
+        )
+        for k, v in self.detectron2_config_args.items():
+            attributes = k.split(".")
+            to_set = detectron2_config
+            for attribute in attributes[:-1]:
+                to_set = getattr(to_set, attribute)
+            setattr(to_set, attributes[-1], v)
+
+        return detectron2_config
 
 __all__ = ["LAYOUTLMV2_PRETRAINED_CONFIG_ARCHIVE_MAP", "LayoutLMv2Config"]

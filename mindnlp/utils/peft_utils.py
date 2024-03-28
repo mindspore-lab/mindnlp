@@ -56,7 +56,7 @@ def find_adapter_config_file(
             when running `huggingface-cli login` (stored in `~/.huggingface`).
         revision (`str`, *optional*, defaults to `"main"`):
             The specific model version to use. It can be a branch name, a tag name, or a commit id, since we use a
-            git-based system for storing models and other artifacts on huggingface.co, so `revision` can be any
+            git-based system for storing models and other artifacts on hf-mirror.com, so `revision` can be any
             identifier allowed by git.
 
             <Tip>
@@ -68,7 +68,7 @@ def find_adapter_config_file(
         local_files_only (`bool`, *optional*, defaults to `False`):
             If `True`, will only try to load the tokenizer configuration from local files.
         subfolder (`str`, *optional*, defaults to `""`):
-            In case the relevant files are located inside a subfolder of the model repo on huggingface.co, you can
+            In case the relevant files are located inside a subfolder of the model repo on hf-mirror.com, you can
             specify the folder name here.
     """
     adapter_cached_filename = None

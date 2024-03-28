@@ -27,14 +27,14 @@ logger = logging.get_logger(__name__)
 
 
 BARK_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "suno/bark-small": "https://huggingface.co/suno/bark-small/resolve/main/config.json",
-    "suno/bark": "https://huggingface.co/suno/bark/resolve/main/config.json",
+    "suno/bark-small": "https://hf-mirror.com/suno/bark-small/resolve/main/config.json",
+    "suno/bark": "https://hf-mirror.com/suno/bark/resolve/main/config.json",
 }
 
 BARK_SUBMODELCONFIG_START_DOCSTRING = """
     This is the configuration class to store the configuration of a [`{model}`]. It is used to instantiate the model
     according to the specified arguments, defining the model architecture. Instantiating a configuration with the
-    defaults will yield a similar configuration to that of the Bark [suno/bark](https://huggingface.co/suno/bark)
+    defaults will yield a similar configuration to that of the Bark [suno/bark](https://hf-mirror.com/suno/bark)
     architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
@@ -159,7 +159,7 @@ class BarkConfig(PretrainedConfig):
     model according to the specified sub-models configurations, defining the model architecture.
 
     Instantiating a configuration with the defaults will yield a similar configuration to that of the Bark
-    [suno/bark](https://huggingface.co/suno/bark) architecture.
+    [suno/bark](https://hf-mirror.com/suno/bark) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

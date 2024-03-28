@@ -35,18 +35,18 @@ VOCAB_FILES_NAMES = {
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "gpt2": "https://huggingface.co/gpt2/resolve/main/vocab.json",
-        "gpt2-medium": "https://huggingface.co/gpt2-medium/resolve/main/vocab.json",
-        "gpt2-large": "https://huggingface.co/gpt2-large/resolve/main/vocab.json",
-        "gpt2-xl": "https://huggingface.co/gpt2-xl/resolve/main/vocab.json",
-        "distilgpt2": "https://huggingface.co/distilgpt2/resolve/main/vocab.json",
+        "gpt2": "https://hf-mirror.com/gpt2/resolve/main/vocab.json",
+        "gpt2-medium": "https://hf-mirror.com/gpt2-medium/resolve/main/vocab.json",
+        "gpt2-large": "https://hf-mirror.com/gpt2-large/resolve/main/vocab.json",
+        "gpt2-xl": "https://hf-mirror.com/gpt2-xl/resolve/main/vocab.json",
+        "distilgpt2": "https://hf-mirror.com/distilgpt2/resolve/main/vocab.json",
     },
     "merges_file": {
-        "gpt2": "https://huggingface.co/gpt2/resolve/main/merges.txt",
-        "gpt2-medium": "https://huggingface.co/gpt2-medium/resolve/main/merges.txt",
-        "gpt2-large": "https://huggingface.co/gpt2-large/resolve/main/merges.txt",
-        "gpt2-xl": "https://huggingface.co/gpt2-xl/resolve/main/merges.txt",
-        "distilgpt2": "https://huggingface.co/distilgpt2/resolve/main/merges.txt",
+        "gpt2": "https://hf-mirror.com/gpt2/resolve/main/merges.txt",
+        "gpt2-medium": "https://hf-mirror.com/gpt2-medium/resolve/main/merges.txt",
+        "gpt2-large": "https://hf-mirror.com/gpt2-large/resolve/main/merges.txt",
+        "gpt2-xl": "https://hf-mirror.com/gpt2-xl/resolve/main/merges.txt",
+        "distilgpt2": "https://hf-mirror.com/distilgpt2/resolve/main/merges.txt",
     },
 }
 
@@ -366,7 +366,7 @@ class GPT2Tokenizer(PreTrainedTokenizer):
             "\nNo chat template is defined for this tokenizer - using the default template "
             f"for the {self.__class__.__name__} class. If the default is not appropriate for "
             "your model, please set `tokenizer.chat_template` to an appropriate template. "
-            "See https://huggingface.co/docs/transformers/main/chat_templating for more information.\n"
+            "See https://hf-mirror.com/docs/transformers/main/chat_templating for more information.\n"
         )
         return "{% for message in messages %}" "{{ message.content }}{{ eos_token }}" "{% endfor %}"
 

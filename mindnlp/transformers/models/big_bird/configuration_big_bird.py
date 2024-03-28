@@ -20,10 +20,10 @@ from ...configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 BIG_BIRD_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "google/bigbird-roberta-base": "https://huggingface.co/google/bigbird-roberta-base/resolve/main/config.json",
-    "google/bigbird-roberta-large": "https://huggingface.co/google/bigbird-roberta-large/resolve/main/config.json",
-    "google/bigbird-base-trivia-itc": "https://huggingface.co/google/bigbird-base-trivia-itc/resolve/main/config.json",
-    # See all BigBird models at https://huggingface.co/models?filter=big_bird
+    "google/bigbird-roberta-base": "https://hf-mirror.com/google/bigbird-roberta-base/resolve/main/config.json",
+    "google/bigbird-roberta-large": "https://hf-mirror.com/google/bigbird-roberta-large/resolve/main/config.json",
+    "google/bigbird-base-trivia-itc": "https://hf-mirror.com/google/bigbird-base-trivia-itc/resolve/main/config.json",
+    # See all BigBird models at https://hf-mirror.com/models?filter=big_bird
 }
 
 
@@ -32,7 +32,7 @@ class BigBirdConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`BigBirdModel`]. It is used to instantiate an
     BigBird model according to the specified arguments, defining the model architecture. Instantiating a configuration
     with the defaults will yield a similar configuration to that of the BigBird
-    [google/bigbird-roberta-base](https://huggingface.co/google/bigbird-roberta-base) architecture.
+    [google/bigbird-roberta-base](https://hf-mirror.com/google/bigbird-roberta-base) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

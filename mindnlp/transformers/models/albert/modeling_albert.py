@@ -59,7 +59,7 @@ ALBERT_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "albert-large-v2",
     "albert-xlarge-v2",
     "albert-xxlarge-v2",
-    # See all ALBERT models at https://huggingface.co/models?filter=albert
+    # See all ALBERT models at https://hf-mirror.com/models?filter=albert
 ]
 
 

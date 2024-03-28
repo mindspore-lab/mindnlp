@@ -34,7 +34,7 @@ VOCAB_FILES_NAMES = {"vocab_file": "vocab.txt"}
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "openbmb/cpm-ant-10b": "https://huggingface.co/openbmb/cpm-ant-10b/blob/main/vocab.txt",
+        "openbmb/cpm-ant-10b": "https://hf-mirror.com/openbmb/cpm-ant-10b/blob/main/vocab.txt",
     },
 }
 

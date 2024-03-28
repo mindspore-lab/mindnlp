@@ -22,7 +22,7 @@ from ...configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 MIXTRAL_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "mistral-ai/Mixtral-8x7B": "https://huggingface.co/mistral-ai/Mixtral-8x7B/resolve/main/config.json",
+    "mistral-ai/Mixtral-8x7B": "https://hf-mirror.com/mistral-ai/Mixtral-8x7B/resolve/main/config.json",
 }
 
 
@@ -32,8 +32,8 @@ class MixtralConfig(PretrainedConfig):
     Mixtral model according to the specified arguments, defining the model architecture. Instantiating a configuration
     with the defaults will yield a similar configuration to that of the Mixtral-7B-v0.1 or Mixtral-7B-Instruct-v0.1.
 
-    [mixtralai/Mixtral-8x7B](https://huggingface.co/mixtralai/Mixtral-8x7B)
-    [mixtralai/Mixtral-7B-Instruct-v0.1](https://huggingface.co/mixtralai/Mixtral-7B-Instruct-v0.1)
+    [mixtralai/Mixtral-8x7B](https://hf-mirror.com/mixtralai/Mixtral-8x7B)
+    [mixtralai/Mixtral-7B-Instruct-v0.1](https://hf-mirror.com/mixtralai/Mixtral-7B-Instruct-v0.1)
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

@@ -43,7 +43,7 @@ RWKV_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "RWKV/rwkv-raven-3b",
     "RWKV/rwkv-raven-7b",
     "RWKV/rwkv-raven-14b",
-    # See all RWKV models at https://huggingface.co/models?filter=rwkv
+    # See all RWKV models at https://hf-mirror.com/models?filter=rwkv
 ]
 
 WKV_SHAPE_INFER = {

@@ -23,9 +23,9 @@ logger = logging.get_logger(__name__)
 
 BEIT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
     "microsoft/beit-base-patch16-224-pt22k": (
-        "https://huggingface.co/microsoft/beit-base-patch16-224-pt22k/resolve/main/config.json"
+        "https://hf-mirror.com/microsoft/beit-base-patch16-224-pt22k/resolve/main/config.json"
     ),
-    # See all BEiT models at https://huggingface.co/models?filter=beit
+    # See all BEiT models at https://hf-mirror.com/models?filter=beit
 }
 
 
@@ -34,7 +34,7 @@ class BeitConfig(BackboneConfigMixin, PretrainedConfig):
     This is the configuration class to store the configuration of a [`BeitModel`]. It is used to instantiate an BEiT
     model according to the specified arguments, defining the model architecture. Instantiating a configuration with the
     defaults will yield a similar configuration to that of the BEiT
-    [microsoft/beit-base-patch16-224-pt22k](https://huggingface.co/microsoft/beit-base-patch16-224-pt22k) architecture.
+    [microsoft/beit-base-patch16-224-pt22k](https://hf-mirror.com/microsoft/beit-base-patch16-224-pt22k) architecture.
 
     Args:
         vocab_size (`int`, *optional*, defaults to 8192):

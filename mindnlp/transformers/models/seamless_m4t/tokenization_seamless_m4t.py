@@ -35,7 +35,7 @@ logger = logging.get_logger(__name__)
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
         "facebook/hf-seamless-m4t-medium": (
-            "https://huggingface.co/facebook/hf-seamless-m4t-medium/blob/main/sentencepiece.bpe.model"
+            "https://hf-mirror.com/facebook/hf-seamless-m4t-medium/blob/main/sentencepiece.bpe.model"
         ),
     }
 }

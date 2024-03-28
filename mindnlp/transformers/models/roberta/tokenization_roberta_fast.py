@@ -30,35 +30,35 @@ VOCAB_FILES_NAMES = {"vocab_file": "vocab.json", "merges_file": "merges.txt", "t
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "roberta-base": "https://huggingface.co/roberta-base/resolve/main/vocab.json",
-        "roberta-large": "https://huggingface.co/roberta-large/resolve/main/vocab.json",
-        "roberta-large-mnli": "https://huggingface.co/roberta-large-mnli/resolve/main/vocab.json",
-        "distilroberta-base": "https://huggingface.co/distilroberta-base/resolve/main/vocab.json",
-        "roberta-base-openai-detector": "https://huggingface.co/roberta-base-openai-detector/resolve/main/vocab.json",
+        "roberta-base": "https://hf-mirror.com/roberta-base/resolve/main/vocab.json",
+        "roberta-large": "https://hf-mirror.com/roberta-large/resolve/main/vocab.json",
+        "roberta-large-mnli": "https://hf-mirror.com/roberta-large-mnli/resolve/main/vocab.json",
+        "distilroberta-base": "https://hf-mirror.com/distilroberta-base/resolve/main/vocab.json",
+        "roberta-base-openai-detector": "https://hf-mirror.com/roberta-base-openai-detector/resolve/main/vocab.json",
         "roberta-large-openai-detector": (
-            "https://huggingface.co/roberta-large-openai-detector/resolve/main/vocab.json"
+            "https://hf-mirror.com/roberta-large-openai-detector/resolve/main/vocab.json"
         ),
     },
     "merges_file": {
-        "roberta-base": "https://huggingface.co/roberta-base/resolve/main/merges.txt",
-        "roberta-large": "https://huggingface.co/roberta-large/resolve/main/merges.txt",
-        "roberta-large-mnli": "https://huggingface.co/roberta-large-mnli/resolve/main/merges.txt",
-        "distilroberta-base": "https://huggingface.co/distilroberta-base/resolve/main/merges.txt",
-        "roberta-base-openai-detector": "https://huggingface.co/roberta-base-openai-detector/resolve/main/merges.txt",
+        "roberta-base": "https://hf-mirror.com/roberta-base/resolve/main/merges.txt",
+        "roberta-large": "https://hf-mirror.com/roberta-large/resolve/main/merges.txt",
+        "roberta-large-mnli": "https://hf-mirror.com/roberta-large-mnli/resolve/main/merges.txt",
+        "distilroberta-base": "https://hf-mirror.com/distilroberta-base/resolve/main/merges.txt",
+        "roberta-base-openai-detector": "https://hf-mirror.com/roberta-base-openai-detector/resolve/main/merges.txt",
         "roberta-large-openai-detector": (
-            "https://huggingface.co/roberta-large-openai-detector/resolve/main/merges.txt"
+            "https://hf-mirror.com/roberta-large-openai-detector/resolve/main/merges.txt"
         ),
     },
     "tokenizer_file": {
-        "roberta-base": "https://huggingface.co/roberta-base/resolve/main/tokenizer.json",
-        "roberta-large": "https://huggingface.co/roberta-large/resolve/main/tokenizer.json",
-        "roberta-large-mnli": "https://huggingface.co/roberta-large-mnli/resolve/main/tokenizer.json",
-        "distilroberta-base": "https://huggingface.co/distilroberta-base/resolve/main/tokenizer.json",
+        "roberta-base": "https://hf-mirror.com/roberta-base/resolve/main/tokenizer.json",
+        "roberta-large": "https://hf-mirror.com/roberta-large/resolve/main/tokenizer.json",
+        "roberta-large-mnli": "https://hf-mirror.com/roberta-large-mnli/resolve/main/tokenizer.json",
+        "distilroberta-base": "https://hf-mirror.com/distilroberta-base/resolve/main/tokenizer.json",
         "roberta-base-openai-detector": (
-            "https://huggingface.co/roberta-base-openai-detector/resolve/main/tokenizer.json"
+            "https://hf-mirror.com/roberta-base-openai-detector/resolve/main/tokenizer.json"
         ),
         "roberta-large-openai-detector": (
-            "https://huggingface.co/roberta-large-openai-detector/resolve/main/tokenizer.json"
+            "https://hf-mirror.com/roberta-large-openai-detector/resolve/main/tokenizer.json"
         ),
     },
 }

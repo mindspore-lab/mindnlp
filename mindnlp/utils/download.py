@@ -291,7 +291,7 @@ def get_file_from_repo(
         path_or_repo (`str` or `os.PathLike`):
             This can be either:
 
-            - a string, the *model id* of a model repo on huggingface.co.
+            - a string, the *model id* of a model repo on hf-mirror.com.
             - a path to a *directory* potentially containing the file.
         filename (`str`):
             The name of the file to locate in `path_or_repo`.
@@ -311,12 +311,12 @@ def get_file_from_repo(
             when running `huggingface-cli login` (stored in `~/.huggingface`).
         revision (`str`, *optional*, defaults to `"main"`):
             The specific model version to use. It can be a branch name, a tag name, or a commit id, since we use a
-            git-based system for storing models and other artifacts on huggingface.co, so `revision` can be any
+            git-based system for storing models and other artifacts on hf-mirror.com, so `revision` can be any
             identifier allowed by git.
         local_files_only (`bool`, *optional*, defaults to `False`):
             If `True`, will only try to load the tokenizer configuration from local files.
         subfolder (`str`, *optional*, defaults to `""`):
-            In case the relevant files are located inside a subfolder of the model repo on huggingface.co, you can
+            In case the relevant files are located inside a subfolder of the model repo on hf-mirror.com, you can
             specify the folder name here.
 
     <Tip>
@@ -332,7 +332,7 @@ def get_file_from_repo(
     Examples:
 
     ```python
-    # Download a tokenizer configuration from huggingface.co and cache.
+    # Download a tokenizer configuration from hf-mirror.com and cache.
     tokenizer_config = get_file_from_repo("google-bert/bert-base-uncased", "tokenizer_config.json")
     # This model does not have a tokenizer config so the result will be None.
     tokenizer_config = get_file_from_repo("FacebookAI/xlm-roberta-base", "tokenizer_config.json")
@@ -380,7 +380,7 @@ def cached_file(
         path_or_repo_id (`str` or `os.PathLike`):
             This can be either:
 
-            - a string, the *model id* of a model repo on huggingface.co.
+            - a string, the *model id* of a model repo on hf-mirror.com.
             - a path to a *directory* potentially containing the file.
         filename (`str`):
             The name of the file to locate in `path_or_repo`.
@@ -401,7 +401,7 @@ def cached_file(
         local_files_only (`bool`, *optional*, defaults to `False`):
             If `True`, will only try to load the tokenizer configuration from local files.
         subfolder (`str`, *optional*, defaults to `""`):
-            In case the relevant files are located inside a subfolder of the model repo on huggingface.co, you can
+            In case the relevant files are located inside a subfolder of the model repo on hf-mirror.com, you can
             specify the folder name here.
         repo_type (`str`, *optional*):
             Specify the repo type (useful when downloading from a space for instance).
@@ -485,7 +485,7 @@ def cached_file(
             return resolved_file
         raise EnvironmentError(
             "You are trying to access a gated repo.\nMake sure to have access to it at "
-            f"https://huggingface.co/{path_or_repo_id}.\n{str(e)}"
+            f"https://hf-mirror.com/{path_or_repo_id}.\n{str(e)}"
         ) from e
     except RepositoryNotFoundError as e:
         raise EnvironmentError(
@@ -713,7 +713,7 @@ def try_to_load_from_cache(
         cache_dir (`str` or `os.PathLike`):
             The folder where the cached files lie.
         repo_id (`str`):
-            The ID of the repo on huggingface.co.
+            The ID of the repo on hf-mirror.com.
         filename (`str`):
             The filename to look for inside `repo_id`.
         revision (`str`, *optional*):

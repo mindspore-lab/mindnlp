@@ -33,14 +33,14 @@ VOCAB_FILES_NAMES = {"vocab_file": "spiece.model"}
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "albert-base-v1": "https://huggingface.co/albert-base-v1/resolve/main/spiece.model",
-        "albert-large-v1": "https://huggingface.co/albert-large-v1/resolve/main/spiece.model",
-        "albert-xlarge-v1": "https://huggingface.co/albert-xlarge-v1/resolve/main/spiece.model",
-        "albert-xxlarge-v1": "https://huggingface.co/albert-xxlarge-v1/resolve/main/spiece.model",
-        "albert-base-v2": "https://huggingface.co/albert-base-v2/resolve/main/spiece.model",
-        "albert-large-v2": "https://huggingface.co/albert-large-v2/resolve/main/spiece.model",
-        "albert-xlarge-v2": "https://huggingface.co/albert-xlarge-v2/resolve/main/spiece.model",
-        "albert-xxlarge-v2": "https://huggingface.co/albert-xxlarge-v2/resolve/main/spiece.model",
+        "albert-base-v1": "https://hf-mirror.com/albert-base-v1/resolve/main/spiece.model",
+        "albert-large-v1": "https://hf-mirror.com/albert-large-v1/resolve/main/spiece.model",
+        "albert-xlarge-v1": "https://hf-mirror.com/albert-xlarge-v1/resolve/main/spiece.model",
+        "albert-xxlarge-v1": "https://hf-mirror.com/albert-xxlarge-v1/resolve/main/spiece.model",
+        "albert-base-v2": "https://hf-mirror.com/albert-base-v2/resolve/main/spiece.model",
+        "albert-large-v2": "https://hf-mirror.com/albert-large-v2/resolve/main/spiece.model",
+        "albert-xlarge-v2": "https://hf-mirror.com/albert-xlarge-v2/resolve/main/spiece.model",
+        "albert-xxlarge-v2": "https://hf-mirror.com/albert-xxlarge-v2/resolve/main/spiece.model",
     }
 }
 

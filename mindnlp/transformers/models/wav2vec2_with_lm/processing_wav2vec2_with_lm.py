@@ -132,7 +132,7 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
                 This can be either:
 
                 - a string, the *model id* of a pretrained feature_extractor hosted inside a model repo on
-                  huggingface.co.
+                  hf-mirror.com.
                 - a path to a *directory* containing a feature extractor file saved using the
                   [`~SequenceFeatureExtractor.save_pretrained`] method, e.g., `./my_model_directory/`.
                 - a path or url to a saved feature extractor JSON *file*, e.g.,
@@ -560,7 +560,7 @@ class Wav2Vec2ProcessorWithLM(ProcessorMixin):
         ...     for d in outputs.word_offsets
         ... ]
         >>> # compare word offsets with audio `en_train_0/common_voice_en_19121553.mp3` online on the dataset viewer:
-        >>> # https://huggingface.co/datasets/mozilla-foundation/common_voice_11_0/viewer/en
+        >>> # https://hf-mirror.com/datasets/mozilla-foundation/common_voice_11_0/viewer/en
         >>> word_offsets[:4]
         [{'word': 'THE', 'start_time': 0.68, 'end_time': 0.78},
          {'word': 'TRACK', 'start_time': 0.88, 'end_time': 1.1},

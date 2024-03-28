@@ -61,30 +61,30 @@ class PretrainedConfig:
         return config
 
 CONFIG_ARCHIVE_MAP = {
-    "bert-base-uncased": "https://huggingface.co/bert-base-uncased/resolve/main/config.json",
-    "bert-large-uncased": "https://huggingface.co/bert-large-uncased/resolve/main/config.json",
-    "bert-base-cased": "https://huggingface.co/bert-base-cased/resolve/main/config.json",
-    "bert-large-cased": "https://huggingface.co/bert-large-cased/resolve/main/config.json",
-    "bert-base-multilingual-uncased": "https://huggingface.co/bert-base-multilingual-uncased/resolve/main/config.json",
-    "bert-base-multilingual-cased": "https://huggingface.co/bert-base-multilingual-cased/resolve/main/config.json",
-    "bert-base-chinese": "https://huggingface.co/bert-base-chinese/resolve/main/config.json",
-    "bert-base-german-cased": "https://huggingface.co/bert-base-german-cased/resolve/main/config.json",
-    "bert-large-uncased-whole-word-masking": "https://huggingface.co/bert-large-uncased-whole-word-masking/resolve/main/config.json",
-    "bert-large-cased-whole-word-masking": "https://huggingface.co/bert-large-cased-whole-word-masking/resolve/main/config.json",
-    "bert-large-uncased-whole-word-masking-finetuned-squad": "https://huggingface.co/bert-large-uncased-whole-word-masking-finetuned-squad/resolve/main/config.json",
-    "bert-large-cased-whole-word-masking-finetuned-squad": "https://huggingface.co/bert-large-cased-whole-word-masking-finetuned-squad/resolve/main/config.json",
-    "bert-base-cased-finetuned-mrpc": "https://huggingface.co/bert-base-cased-finetuned-mrpc/resolve/main/config.json",
-    "bert-base-german-dbmdz-cased": "https://huggingface.co/bert-base-german-dbmdz-cased/resolve/main/config.json",
-    "bert-base-german-dbmdz-uncased": "https://huggingface.co/bert-base-german-dbmdz-uncased/resolve/main/config.json",
-    "cl-tohoku/bert-base-japanese": "https://huggingface.co/cl-tohoku/bert-base-japanese/resolve/main/config.json",
-    "cl-tohoku/bert-base-japanese-whole-word-masking": "https://huggingface.co/cl-tohoku/bert-base-japanese-whole-word-masking/resolve/main/config.json",
-    "cl-tohoku/bert-base-japanese-char": "https://huggingface.co/cl-tohoku/bert-base-japanese-char/resolve/main/config.json",
-    "cl-tohoku/bert-base-japanese-char-whole-word-masking": "https://huggingface.co/cl-tohoku/bert-base-japanese-char-whole-word-masking/resolve/main/config.json",
-    "TurkuNLP/bert-base-finnish-cased-v1": "https://huggingface.co/TurkuNLP/bert-base-finnish-cased-v1/resolve/main/config.json",
-    "TurkuNLP/bert-base-finnish-uncased-v1": "https://huggingface.co/TurkuNLP/bert-base-finnish-uncased-v1/resolve/main/config.json",
-    "wietsedv/bert-base-dutch-cased": "https://huggingface.co/wietsedv/bert-base-dutch-cased/resolve/main/config.json",
-    "sentence-transformers/all-MiniLM-L6-v2": "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json"
-    # See all BERT models at https://huggingface.co/models?filter=bert
+    "bert-base-uncased": "https://hf-mirror.com/bert-base-uncased/resolve/main/config.json",
+    "bert-large-uncased": "https://hf-mirror.com/bert-large-uncased/resolve/main/config.json",
+    "bert-base-cased": "https://hf-mirror.com/bert-base-cased/resolve/main/config.json",
+    "bert-large-cased": "https://hf-mirror.com/bert-large-cased/resolve/main/config.json",
+    "bert-base-multilingual-uncased": "https://hf-mirror.com/bert-base-multilingual-uncased/resolve/main/config.json",
+    "bert-base-multilingual-cased": "https://hf-mirror.com/bert-base-multilingual-cased/resolve/main/config.json",
+    "bert-base-chinese": "https://hf-mirror.com/bert-base-chinese/resolve/main/config.json",
+    "bert-base-german-cased": "https://hf-mirror.com/bert-base-german-cased/resolve/main/config.json",
+    "bert-large-uncased-whole-word-masking": "https://hf-mirror.com/bert-large-uncased-whole-word-masking/resolve/main/config.json",
+    "bert-large-cased-whole-word-masking": "https://hf-mirror.com/bert-large-cased-whole-word-masking/resolve/main/config.json",
+    "bert-large-uncased-whole-word-masking-finetuned-squad": "https://hf-mirror.com/bert-large-uncased-whole-word-masking-finetuned-squad/resolve/main/config.json",
+    "bert-large-cased-whole-word-masking-finetuned-squad": "https://hf-mirror.com/bert-large-cased-whole-word-masking-finetuned-squad/resolve/main/config.json",
+    "bert-base-cased-finetuned-mrpc": "https://hf-mirror.com/bert-base-cased-finetuned-mrpc/resolve/main/config.json",
+    "bert-base-german-dbmdz-cased": "https://hf-mirror.com/bert-base-german-dbmdz-cased/resolve/main/config.json",
+    "bert-base-german-dbmdz-uncased": "https://hf-mirror.com/bert-base-german-dbmdz-uncased/resolve/main/config.json",
+    "cl-tohoku/bert-base-japanese": "https://hf-mirror.com/cl-tohoku/bert-base-japanese/resolve/main/config.json",
+    "cl-tohoku/bert-base-japanese-whole-word-masking": "https://hf-mirror.com/cl-tohoku/bert-base-japanese-whole-word-masking/resolve/main/config.json",
+    "cl-tohoku/bert-base-japanese-char": "https://hf-mirror.com/cl-tohoku/bert-base-japanese-char/resolve/main/config.json",
+    "cl-tohoku/bert-base-japanese-char-whole-word-masking": "https://hf-mirror.com/cl-tohoku/bert-base-japanese-char-whole-word-masking/resolve/main/config.json",
+    "TurkuNLP/bert-base-finnish-cased-v1": "https://hf-mirror.com/TurkuNLP/bert-base-finnish-cased-v1/resolve/main/config.json",
+    "TurkuNLP/bert-base-finnish-uncased-v1": "https://hf-mirror.com/TurkuNLP/bert-base-finnish-uncased-v1/resolve/main/config.json",
+    "wietsedv/bert-base-dutch-cased": "https://hf-mirror.com/wietsedv/bert-base-dutch-cased/resolve/main/config.json",
+    "sentence-transformers/all-MiniLM-L6-v2": "https://hf-mirror.com/sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json"
+    # See all BERT models at https://hf-mirror.com/models?filter=bert
 }
 
 class BertConfig(PretrainedConfig):

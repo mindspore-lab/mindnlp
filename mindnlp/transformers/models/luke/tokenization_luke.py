@@ -54,16 +54,16 @@ VOCAB_FILES_NAMES = {
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "studio-ousia/luke-base": "https://huggingface.co/studio-ousia/luke-base/resolve/main/vocab.json",
-        "studio-ousia/luke-large": "https://huggingface.co/studio-ousia/luke-large/resolve/main/vocab.json",
+        "studio-ousia/luke-base": "https://hf-mirror.com/studio-ousia/luke-base/resolve/main/vocab.json",
+        "studio-ousia/luke-large": "https://hf-mirror.com/studio-ousia/luke-large/resolve/main/vocab.json",
     },
     "merges_file": {
-        "studio-ousia/luke-base": "https://huggingface.co/studio-ousia/luke-base/resolve/main/merges.txt",
-        "studio-ousia/luke-large": "https://huggingface.co/studio-ousia/luke-large/resolve/main/merges.txt",
+        "studio-ousia/luke-base": "https://hf-mirror.com/studio-ousia/luke-base/resolve/main/merges.txt",
+        "studio-ousia/luke-large": "https://hf-mirror.com/studio-ousia/luke-large/resolve/main/merges.txt",
     },
     "entity_vocab_file": {
-        "studio-ousia/luke-base": "https://huggingface.co/studio-ousia/luke-base/resolve/main/entity_vocab.json",
-        "studio-ousia/luke-large": "https://huggingface.co/studio-ousia/luke-large/resolve/main/entity_vocab.json",
+        "studio-ousia/luke-base": "https://hf-mirror.com/studio-ousia/luke-base/resolve/main/entity_vocab.json",
+        "studio-ousia/luke-large": "https://hf-mirror.com/studio-ousia/luke-large/resolve/main/entity_vocab.json",
     },
 }
 

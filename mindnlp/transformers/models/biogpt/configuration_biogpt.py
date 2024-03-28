@@ -22,8 +22,8 @@ from ...configuration_utils import PretrainedConfig
 logger = logging.get_logger(__name__)
 
 BIOGPT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "microsoft/biogpt": "https://huggingface.co/microsoft/biogpt/resolve/main/config.json",
-    # See all BioGPT models at https://huggingface.co/models?filter=biogpt
+    "microsoft/biogpt": "https://hf-mirror.com/microsoft/biogpt/resolve/main/config.json",
+    # See all BioGPT models at https://hf-mirror.com/models?filter=biogpt
 }
 
 
@@ -32,7 +32,7 @@ class BioGptConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`BioGptModel`]. It is used to instantiate an
     BioGPT model according to the specified arguments, defining the model architecture. Instantiating a configuration
     with the defaults will yield a similar configuration to that of the BioGPT
-    [microsoft/biogpt](https://huggingface.co/microsoft/biogpt) architecture.
+    [microsoft/biogpt](https://hf-mirror.com/microsoft/biogpt) architecture.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
