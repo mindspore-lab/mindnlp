@@ -772,7 +772,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         return cls.from_pretrained(pretrained_model_name_or_path, args, kwargs)
 
     @classmethod
-    def from_pretrained(            cls,
+    def from_pretrained(
+        cls,
         pretrained_model_name_or_path: Optional[Union[str, os.PathLike]],
         *model_args,
         config: Optional[Union[PretrainedConfig, str, os.PathLike]] = None,
@@ -1525,6 +1526,48 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
     def check_names(self):
         pass
+
+
+    def load_state_dict(self, parameter_dict, strict=False):
+        """
+        Load parameters into network, return parameter list that are not loaded in the network.
+        """
+        if not isinstance(parameter_dict, dict):
+            logger.critical("Failed to combine the net and the parameters.")
+            msg = ("For 'load_param_into_net', the argument 'parameter_dict' should be a dict, "
+                "but got {}.".format(type(parameter_dict)))
+            raise TypeError(msg)
+
+        for key, value in parameter_dict.items():
+            if not isinstance(key, str) or not isinstance(value, (Parameter, str, list)):
+                logger.critical("Load parameters into net failed.")
+                msg = ("For 'parameter_dict', the element in the argument 'parameter_dict' should be a "
+                    "'str' and 'Parameter' , but got {} and {}.".format(type(key), type(value)))
+                raise TypeError(msg)
+
+        param_not_load = []
+        ckpt_not_load = list(parameter_dict.keys())
+        for name, param in self.parameters_and_names():
+            if param.name in parameter_dict:
+                new_param = parameter_dict[name]
+                param.set_data(new_param)
+                ckpt_not_load.remove(name)
+            else:
+                param_not_load.append(name)
+
+        logger.debug("Params not matched(in net but not in parameter_dict):")
+        for param_name in param_not_load:
+            logger.debug("%s", param_name)
+
+        logger.info("Loading parameters into net is finished.")
+        if param_not_load:
+            logger.warning("For 'load_param_into_net', "
+                        "{} parameters in the 'net' are not loaded, because they are not in the "
+                        "'parameter_dict', please check whether the network structure is consistent "
+                        "when training and loading checkpoint.".format(len(param_not_load)))
+            for param_name in param_not_load:
+                logger.warning("{} is not loaded.".format(param_name))
+        return param_not_load, ckpt_not_load
 
 def get_parameter_dtype(parameter: Union[nn.Cell, GenerationMixin, "ModuleUtilsMixin"]):
     """
