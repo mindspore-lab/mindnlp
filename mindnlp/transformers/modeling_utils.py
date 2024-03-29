@@ -1051,12 +1051,12 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
 
         def load_ckpt(resolved_archive_file):
             if 'ckpt' not in resolved_archive_file:
-                if use_safetensors:
+                if use_safetensors or 'safetensors' in resolved_archive_file:
                     from safetensors.numpy import load_file
                     origin_state_dict = load_file(resolved_archive_file)
                     if use_fp16:
                         logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
-                    state_dict = {k: Parameter(v.astype(np.float32).astype(usage_dtype)) for k, v in origin_state_dict.items()}
+                    state_dict = {k: Parameter(v.astype(usage_dtype)) for k, v in origin_state_dict.items()}
                 else:
                     state_dict = load(resolved_archive_file)
             else:

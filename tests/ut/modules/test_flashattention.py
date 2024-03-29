@@ -16,6 +16,8 @@
 from math import sqrt
 import unittest
 import numpy as np
+import pytest
+
 import mindspore as ms
 from mindspore import ops, Tensor
 from mindnlp.transformers.kernel_utils import compile_kernel
@@ -54,6 +56,7 @@ class TestFlashAttention(unittest.TestCase):
         output = ops.matmul(attn, value)
         return output
 
+    @pytest.mark.gpu_only
     def test_flashattention2_forward_FP32(self):
         r"""
         Unit test for flashattention forward.
@@ -61,7 +64,6 @@ class TestFlashAttention(unittest.TestCase):
         # 加载flash cuda kernel
         op = self.load_flash_cuda_kernel("flash_forward", 512)
 
-        ms.set_context(pynative_synchronize=True)
         profiler = ms.Profiler()
 
         # 定义输入数据

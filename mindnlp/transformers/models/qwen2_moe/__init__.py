@@ -13,15 +13,12 @@
 # limitations under the License.
 # ============================================================================
 """
-InternLM Model.
+Qwen MoE Model.
 """
-from . import configuration_internlm, modeling_internlm, tokenization_internlm
-
-from .modeling_internlm import *
-from .configuration_internlm import *
-from .tokenization_internlm import *
+from . import configuration_qwen2_moe, modeling_qwen2_moe
+from .configuration_qwen2_moe import *
+from .modeling_qwen2_moe import *
 
 __all__ = []
-__all__.extend(modeling_internlm.__all__)
-__all__.extend(configuration_internlm.__all__)
-__all__.extend(tokenization_internlm.__all__)
+__all__.extend(configuration_qwen2_moe.__all__)
+__all__.extend(modeling_qwen2_moe.__all__)
