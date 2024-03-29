@@ -1,7 +1,7 @@
+import math
 from typing import List, Optional, Tuple, Union
 import numpy as np
 import mindspore
-import math
 from mindspore import Tensor, Parameter
 from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
@@ -17,10 +17,8 @@ from ...modeling_outputs import (
     CausalLMOutputWithPast,
     SequenceClassifierOutputWithPast
 )
-try:
-    from ...generation.streamers import BaseStreamer
-except:  # noqa # pylint: disable=bare-except
-    BaseStreamer = None
+
+logger = logging.get_logger(__name__)
 
 # Copied from transformers.models.bart.modeling_bart._make_causal_mask
 def _make_causal_mask(
@@ -100,7 +98,8 @@ class InternLMRotaryEmbedding(nn.Cell):
         self.max_seq_len_cached = max_position_embeddings
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
         freqs = ops.einsum("i,j->ij", t, self.inv_freq)
-        # Different from paper, but it uses a different permutation in order to obtain the same calculation
+        # Different from paper,
+        # but it uses a different permutation in order to obtain the same calculation
         emb = ops.cat((freqs, freqs), axis=-1)
         self.cos_cached = emb.cos()[None, None, :, :]
         self.sin_cached = emb.sin()[None, None, :, :]
@@ -122,53 +121,29 @@ class InternLMRotaryEmbedding(nn.Cell):
         )
     
 
-class InternLMDynamicNTKScalingRotaryEmbedding(nn.Cell):
+class InternLMDynamicNTKScalingRotaryEmbedding(InternLMRotaryEmbedding):
 
     def __init__(self, dim, max_position_embeddings=2048, base=10000, scaling_factor=1.0):
-        super().__init__()
-        self.inv_freq = 1.0 / (base ** (ops.arange(0, dim, 2).float() / dim))
-        self.dim = dim
-        self.base = base
         self.scaling_factor = scaling_factor
-        self.max_position_embeddings = max_position_embeddings
-        self.max_seq_len_cached = max_position_embeddings
-        t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
-        freqs = ops.einsum("i,j->ij", t, self.inv_freq)
-        # Different from paper, but it uses a different permutation in order to obtain the same calculation
-        emb = ops.cat((freqs, freqs), axis=-1)
-        self.cos_cached = emb.cos()[None, None, :, :]
-        self.sin_cached = emb.sin()[None, None, :, :]
+        super().__init__(dim, max_position_embeddings, base)
 
-    def _update_cached(self, x, seq_len=None):
-        self.max_seq_len_cached = max(seq_len, self.max_position_embeddings)
+    def _set_cos_sin_cache(self, seq_len, dtype):
+        self.max_seq_len_cached = seq_len
 
         if seq_len > self.max_position_embeddings:
             base = self.base * (
                 (self.scaling_factor * seq_len / self.max_position_embeddings) - (self.scaling_factor - 1)
             ) ** (self.dim / (self.dim - 2))
             inv_freq = 1.0 / (base ** (ops.arange(0, self.dim, 2).float() / self.dim))
-        else:
-            inv_freq = self.inv_freq
-            #self.inv_freq = inv_freq
+            self.inv_freq = inv_freq
 
         t = ops.arange(self.max_seq_len_cached, dtype=self.inv_freq.dtype)
 
-        freqs = ops.einsum("i,j->ij", t, inv_freq)
+        freqs = ops.einsum("i,j->ij", t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
         emb = ops.cat((freqs, freqs), axis=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
-
-    def construct(self, x, seq_len=None):
-        if seq_len <= self.max_position_embeddings:
-            if self.max_seq_len_cached > self.max_position_embeddings:
-                self._update_cached(x, seq_len)
-        else:
-            self._update_cached(x, seq_len)
-        return (
-            self.cos_cached[:, :, :seq_len, ...].to(dtype=x.dtype),
-            self.sin_cached[:, :, :seq_len, ...].to(dtype=x.dtype),
-        )
     
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
@@ -273,7 +248,7 @@ class InternLMAttention(nn.Cell):
             # reuse k, v, self_attention
             key_states = ops.cat([past_key_value[0], key_states], axis=2)
             value_states = ops.cat([past_key_value[1], value_states], axis=2)
-        
+
         past_key_value = (key_states, value_states) if use_cache else None
         kv_seq_len = key_states.shape[-2]
         cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
@@ -724,137 +699,6 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
         for layer_past in past_key_values:
             reordered_past += (tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),)
         return reordered_past
-
-    def build_inputs(self, tokenizer, query: str, history: List[Tuple[str, str]] = [], meta_instruction=""):
-        if tokenizer.add_bos_token:
-            prompt = ""
-        else:
-            prompt = tokenizer.bos_token
-        if meta_instruction:
-            prompt += f"""<|System|>:{meta_instruction}\n"""
-        for record in history:
-            prompt += f"""<|User|>:{record[0]}\n<|Bot|>:{record[1]}<eoa>\n"""
-        prompt += f"""<|User|>:{query}\n<|Bot|>:"""
-        return tokenizer([prompt], return_tensors="pt")
-
-    def chat(
-        self,
-        tokenizer,
-        query: str,
-        history: List[Tuple[str, str]] = [],
-        streamer: Optional[BaseStreamer] = None,
-        max_new_tokens: int = 1024,
-        do_sample: bool = True,
-        temperature: float = 0.8,
-        top_p: float = 0.8,
-        meta_instruction: str = "You are an AI assistant whose name is InternLM (书生·浦语).\n"
-"- InternLM (书生·浦语) is a conversational language model that is developed by Shanghai AI Laboratory (上海人工智能实验室). It is designed to be helpful, honest, and harmless.\n"
-"- InternLM (书生·浦语) can understand and communicate fluently in the language chosen by the user such as English and 中文.",
-        **kwargs,
-    ):
-        inputs = self.build_inputs(tokenizer, query, history, meta_instruction)
-        inputs = {k: v.to(self.device) for k, v in inputs.items() if torch.is_tensor(v)}
-        outputs = self.generate(
-            **inputs,
-            streamer=streamer,
-            max_new_tokens=max_new_tokens,
-            do_sample=do_sample,
-            temperature=temperature,
-            top_p=top_p,
-            **kwargs,
-        )
-        outputs = outputs[0].tolist()[len(inputs["input_ids"][0]) :]
-        response = tokenizer.decode(outputs, skip_special_tokens=True)
-        response = response.split("<eoa>")[0]
-        history = history + [(query, response)]
-
-    def stream_chat(
-        self,
-        tokenizer,
-        query: str,
-        history: List[Tuple[str, str]] = [],
-        max_new_tokens: int = 1024,
-        do_sample: bool = True,
-        temperature: float = 0.8,
-        top_p: float = 0.8,
-        **kwargs,
-    ):
-        """
-        Return a generator in format: (response, history)
-        Eg.
-        ('你好，有什么可以帮助您的吗', [('你好', '你好，有什么可以帮助您的吗')])
-        ('你好，有什么可以帮助您的吗？', [('你好', '你好，有什么可以帮助您的吗？')])
-        """
-        if BaseStreamer is None:
-            raise ModuleNotFoundError(
-                "The version of `transformers` is too low. Please make sure "
-                "that you have installed `transformers>=4.28.0`."
-            )
-
-        response_queue = queue.Queue(maxsize=20)
-
-        class ChatStreamer(BaseStreamer):
-            def __init__(self, tokenizer) -> None:
-                super().__init__()
-                self.tokenizer = tokenizer
-                self.queue = response_queue
-                self.query = query
-                self.history = history
-                self.response = ""
-                self.cache = []
-                self.received_inputs = False
-                self.queue.put((self.response, history + [(self.query, self.response)]))
-
-            def put(self, value):
-                if len(value.shape) > 1 and value.shape[0] > 1:
-                    raise ValueError("ChatStreamer only supports batch size 1")
-                elif len(value.shape) > 1:
-                    value = value[0]
-
-                if not self.received_inputs:
-                    # The first received value is input_ids, ignore here
-                    self.received_inputs = True
-                    return
-
-                self.cache.extend(value.tolist())
-                token = self.tokenizer.decode(self.cache, skip_special_tokens=True)
-                if "�" in token and len(token) <= 5:
-                    return
-                if token.strip() != "<eoa>":
-                    self.response = self.response + token
-                    history = self.history + [(self.query, self.response)]
-                    self.queue.put((self.response, history))
-                    self.cache = []
-                else:
-                    self.end()
-
-            def end(self):
-                self.queue.put(None)
-
-        def stream_producer():
-            return self.chat(
-                tokenizer=tokenizer,
-                query=query,
-                streamer=ChatStreamer(tokenizer=tokenizer),
-                history=history,
-                max_new_tokens=max_new_tokens,
-                do_sample=do_sample,
-                temperature=temperature,
-                top_p=top_p,
-                **kwargs,
-            )
-
-        def consumer():
-            producer = threading.Thread(target=stream_producer)
-            producer.start()
-            while True:
-                res = response_queue.get()
-                if res is None:
-                    return
-                yield res
-
-        return consumer()   
-       
 
 
 
