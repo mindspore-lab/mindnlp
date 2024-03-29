@@ -48,11 +48,11 @@ CUDA_HOME = _find_cuda_home()
 ENV_INFO['cuda_home'] = CUDA_HOME
 ENV_INFO['NVCC'] = _get_nvcc_info(CUDA_HOME)
 
-def compile_kernel(**kwargs):
+def compile_kernel(kernel_name, **kwargs):
     """compile kernel and return so file path"""
     kernel_folder = Path(__file__).resolve().parent.parent / "_csrc" / "cuda"
-    cuda_kernel_file = kernel_folder / "wkv.cu"
-    cuda_so_file = kernel_folder / 'wkv.so'
+    cuda_kernel_file = kernel_folder / f'{kernel_name}.cu'
+    cuda_so_file = kernel_folder / f'{kernel_name}.so'
     if cuda_so_file.exists():
         return cuda_so_file
 

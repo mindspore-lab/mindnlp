@@ -67,7 +67,7 @@ def load_wkv_cuda_kernel(func_name, context_length):
     logger.info(f"Loading CUDA kernel for RWKV at context length of {context_length}.")
 
     from ...kernel_utils import compile_kernel
-    so_path = compile_kernel(Tmax=context_length)
+    so_path = compile_kernel(kernel_name="wkv", Tmax=context_length)
     wkv_op = ops.Custom(
         str(so_path) + ':' + func_name,
         out_shape=WKV_SHAPE_INFER[func_name],
