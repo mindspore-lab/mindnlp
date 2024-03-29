@@ -1,3 +1,20 @@
+# Copyright 2023 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+"""
+InternLM Model.
+"""
 import math
 from typing import List, Optional, Tuple, Union
 import numpy as np
@@ -6,9 +23,8 @@ from mindspore import Tensor, Parameter
 from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
 from mindspore import dtype as mstype
-#from mindnlp.utils import logging
-from mindnlp.utils import logging
 
+from mindnlp.utils import logging
 from .configuration_internlm import InternLMConfig
 from ...activations import ACT2FN
 from ...modeling_utils import PreTrainedModel
@@ -85,7 +101,7 @@ class InternLMRMSNorm(nn.Cell):
             hidden_states = hidden_states.to(self.weight.dtype)
 
         return self.weight * hidden_states
-    
+
 class InternLMRotaryEmbedding(nn.Cell):
     """
     RotaryEmbedding
@@ -119,7 +135,7 @@ class InternLMRotaryEmbedding(nn.Cell):
             self.cos_cached[:, :, :seq_len, ...].to(dtype=x.dtype),
             self.sin_cached[:, :, :seq_len, ...].to(dtype=x.dtype),
         )
-    
+
 
 class InternLMDynamicNTKScalingRotaryEmbedding(InternLMRotaryEmbedding):
 
@@ -144,7 +160,7 @@ class InternLMDynamicNTKScalingRotaryEmbedding(InternLMRotaryEmbedding):
         emb = ops.cat((freqs, freqs), axis=-1)
         self.cos_cached = emb.cos().to(dtype)
         self.sin_cached = emb.sin().to(dtype)
-    
+
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
@@ -224,7 +240,7 @@ class InternLMAttention(nn.Cell):
         else:
             raise ValueError("Currently we only support rotary embedding's type being one of ('origin', 'dynamic').")
         return self.rotary_emb
-    
+
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
@@ -274,8 +290,8 @@ class InternLMAttention(nn.Cell):
             raise ValueError(
                 f"`attn_output` should be of size {(bsz, self.num_heads, q_len, self.head_dim)}, but is"
                 f" {attn_output.shape}"
-            )   
-        
+            )
+
         attn_output = attn_output.swapaxes(1, 2)
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
 
@@ -298,8 +314,8 @@ class InternLMDecoderLayer(nn.Cell):
     def __init__(self, config: InternLMConfig):
         super().__init__()
         self.hidden_size = config.hidden_size
-        
-        self.self_attn = INTERNLM_ATTENTION_CLASSES[config.attn_implementation](config=config)
+
+        self.self_attn = INTERNLM_ATTENTION_CLASSES['eager'](config=config)
 
         self.mlp = InternLMMLP(
             hidden_size=self.hidden_size,
@@ -362,13 +378,9 @@ class InternLMDecoderLayer(nn.Cell):
             outputs += (present_key_value,)
 
         return outputs
-    
-
-
 
 
 # Copied from transformers.models.llama.modeling_llama.LlamaPretrainedModel with Llama->InternLM
-
 class InternLMPreTrainedModel(PreTrainedModel):
     config_class = InternLMConfig
     base_model_prefix = "model"
@@ -411,7 +423,7 @@ class InternLMModel(InternLMPreTrainedModel):
         self.config = config
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=self.padding_idx)
-        
+
         self.layers = nn.CellList([InternLMDecoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.norm = InternLMRMSNorm(config.hidden_size, epsilon=config.rms_norm_eps)
 
@@ -584,7 +596,7 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
 
     def get_decoder(self):
         return self.model
-   
+
     def construct(
             self,
             input_ids: Tensor = None,
@@ -809,4 +821,3 @@ __all__ = [
     "InternLMPreTrainedModel",
     "InternLMForSequenceClassification",
 ]
-
