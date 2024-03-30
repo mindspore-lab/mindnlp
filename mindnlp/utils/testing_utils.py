@@ -42,6 +42,7 @@ from unittest.mock import patch
 import urllib3
 import numpy as np
 
+import mindspore
 from mindnlp.utils import logging as mindnlp_logging
 
 from .import_utils import (
@@ -169,6 +170,11 @@ def require_mindspore(test_case):
 
     """
     return unittest.skipUnless(is_mindspore_available(), "test requires MindSpore")(test_case)
+
+def require_mindspore_gpu_or_npu(test_case):
+    """Decorator marking a test that requires CUDA/CANN and MindSpore."""
+    return unittest.skipUnless(mindspore.get_context('device_target') != "CPU", "test requires CUDA or CANN")(test_case)
+
 
 def require_librosa(test_case):
     """
