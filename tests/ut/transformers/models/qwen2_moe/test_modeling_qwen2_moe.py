@@ -411,9 +411,9 @@ class Qwen2MoeIntegrationTest(unittest.TestCase):
     @slow
     def test_model_a2_7b_logits(self):
         input_ids = [1, 306, 4658, 278, 6593, 310, 2834, 338]
-        model = Qwen2MoeForCausalLM.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", device_map="auto")
-        input_ids = mindspore.tensor([input_ids]).to(model.model.embed_tokens.weight.device)
-        out = model(input_ids).logits.asnumpy()
+        model = Qwen2MoeForCausalLM.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B")
+        input_ids = mindspore.tensor([input_ids])
+        out = model(input_ids).logits
         # Expected mean on dim = -1
         EXPECTED_MEAN = mindspore.tensor([[-4.2125, -3.6416, -4.9136, -4.3005, -4.9938, -3.4393, -3.5195, -4.1621]])
         self.assertTrue(np.allclose(out.mean(-1).asnumpy(), EXPECTED_MEAN.asnumpy(), atol=1e-2, rtol=1e-2))
@@ -430,8 +430,8 @@ class Qwen2MoeIntegrationTest(unittest.TestCase):
         EXPECTED_TEXT_COMPLETION = """To be or not to be, that is the question. This is the question that has been asked by many people over the"""
         prompt = "To be or not to"
         tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", use_fast=False)
-        model = Qwen2MoeForCausalLM.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", device_map="auto")
-        input_ids = tokenizer.encode(prompt, return_tensors="pt").to(model.model.embed_tokens.weight.device)
+        model = Qwen2MoeForCausalLM.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B")
+        input_ids = tokenizer.encode(prompt, return_tensors="ms")
 
         # greedy generation outputs
         generated_ids = model.generate(input_ids, max_new_tokens=20, temperature=0)
@@ -465,7 +465,7 @@ class Qwen2MoeIntegrationTest(unittest.TestCase):
         gc.collect()
 
     @slow
-    def test_model_a2_7b_long_prompt_sdpa(self):
+    def test_model_a2_7b_long_prompt(self):
         EXPECTED_OUTPUT_TOKEN_IDS = [306, 338]
         # An input with 4097 tokens that is above the size of the sliding window
         input_ids = [1] + [306, 338] * 2048
@@ -491,8 +491,7 @@ class Qwen2MoeIntegrationTest(unittest.TestCase):
         prompt = "To be or not to"
         tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", use_fast=False)
 
-        input_ids = tokenizer.encode(prompt, return_tensors="ms").to(model.model.embed_tokens.weight.device)
-
+        input_ids = tokenizer.encode(prompt, return_tensors="ms")
         # greedy generation outputs
         generated_ids = model.generate(input_ids, max_new_tokens=20, temperature=0)
         text = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
@@ -506,10 +505,10 @@ class Qwen2MoeIntegrationTest(unittest.TestCase):
         prompt = "To be or not to"
         tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-MoE-A2.7B", use_fast=False)
         model = Qwen2MoeForCausalLM.from_pretrained(
-            "Qwen/Qwen1.5-MoE-A2.7B", torch_dtype=mindspore.float16
+            "Qwen/Qwen1.5-MoE-A2.7B", ms_dtype=mindspore.float16
         )
         assistant_model = Qwen2MoeForCausalLM.from_pretrained(
-            "Qwen/Qwen1.5-MoE-A2.7B", torch_dtype=mindspore.float16
+            "Qwen/Qwen1.5-MoE-A2.7B", ms_dtype=mindspore.float16
         )
         input_ids = tokenizer.encode(prompt, return_tensors="ms")
         # greedy generation outputs

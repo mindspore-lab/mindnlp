@@ -40,7 +40,7 @@ def _get_nvcc_info(cuda_home):
             nvcc = os.path.join(cuda_home, 'bin/nvcc')
             subprocess.check_output(f"{nvcc} -V", shell=True)
         except subprocess.SubprocessError as exc:
-            raise RuntimeError("NVCC Not Available") from exc
+            logger.warning("NVCC Not Available")
     return nvcc
 
 ENV_INFO = {}
