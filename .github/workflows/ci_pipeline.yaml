@@ -86,14 +86,14 @@ jobs:
     needs: pylint-check
     strategy:
       matrix:
-        ms_version: ['2.2']
+        ms_version: ['2.2.11']
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: 3.8
+        python-version: 3.9
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
