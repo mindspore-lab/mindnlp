@@ -134,7 +134,7 @@ class EncodecConv1d(nn.Cell):
         else:
             padded = ops.pad(hidden_states, paddings, mode)
 
-        end = padded.shape[-1] - extra_pad
+        end = ops.shape(padded)[-1] - extra_pad # use ops.shape not padded.shape to avoid async error on Windows CPU
         return padded[..., :end]
 
     def construct(self, hidden_states):

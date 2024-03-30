@@ -171,9 +171,13 @@ def require_mindspore(test_case):
     """
     return unittest.skipUnless(is_mindspore_available(), "test requires MindSpore")(test_case)
 
-def require_mindspore_gpu_or_npu(test_case):
-    """Decorator marking a test that requires CUDA/CANN and MindSpore."""
-    return unittest.skipUnless(mindspore.get_context('device_target') != "CPU", "test requires CUDA or CANN")(test_case)
+def require_mindspore_gpu(test_case):
+    """Decorator marking a test that requires CUDA and MindSpore."""
+    return unittest.skipUnless(mindspore.get_context('device_target') == "GPU", "test requires CUDA")(test_case)
+
+def require_mindspore_npu(test_case):
+    """Decorator marking a test that requires CANN and MindSpore."""
+    return unittest.skipUnless(mindspore.get_context('device_target') == "Ascend", "test requires CANN")(test_case)
 
 
 def require_librosa(test_case):

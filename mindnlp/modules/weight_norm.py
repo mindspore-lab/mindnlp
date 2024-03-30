@@ -14,7 +14,7 @@
 # ============================================================================
 r"""Weight Normalization from https://arxiv.org/abs/1602.07868."""
 from typing import Any, TypeVar
-from mindspore import Parameter, nn
+from mindspore import Parameter, nn, ops
 from mindspore import numpy as mnp
 
 __all__ = ['WeightNorm', 'weight_norm', 'remove_weight_norm']
@@ -26,8 +26,9 @@ def norm_except_dim(weight_v, pows, dim):
     if dim == -1:
         return mnp.norm(weight_v, pows)
     if dim == 0:
-        output_size = (weight_v.shape[0],) + (1,) * (weight_v.ndim - 1)
-        return mnp.norm(weight_v.view((weight_v.shape[0], -1)), pows, 1).view(output_size)
+        w_shape_v = ops.shape(weight_v)[0] # avoid macOS error
+        output_size = (w_shape_v,) + (1,) * (weight_v.ndim - 1)
+        return mnp.norm(weight_v.view((w_shape_v, -1)), pows, 1).view(output_size)
     if dim == (weight_v.ndim - 1):
         output_size = (1,) * (weight_v.ndim - 1) + (weight_v.shape[weight_v.ndim - 1])
         return mnp.norm(weight_v.view((-1, weight_v.shape[weight_v.ndim - 1])), pows, 0).view(output_size)

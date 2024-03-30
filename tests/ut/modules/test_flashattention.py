@@ -21,7 +21,7 @@ import pytest
 import mindspore as ms
 from mindspore import ops, Tensor
 from mindnlp.transformers.kernel_utils import compile_kernel
-from mindnlp.utils.testing_utils import require_mindspore_gpu_or_npu
+from mindnlp.utils.testing_utils import require_mindspore_gpu
 
 class TestFlashAttention(unittest.TestCase):
     r"""
@@ -56,7 +56,7 @@ class TestFlashAttention(unittest.TestCase):
         output = ops.matmul(attn, value)
         return output
 
-    @require_mindspore_gpu_or_npu
+    @require_mindspore_gpu
     def test_flashattention2_forward_FP32(self):
         r"""
         Unit test for flashattention forward.
