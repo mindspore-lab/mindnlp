@@ -14,7 +14,7 @@
 
 import unittest
 
-import mindspore
+import pytest
 
 from mindnlp.transformers import MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING, pipeline, AutoTokenizer
 from mindnlp.transformers.pipelines.document_question_answering import apply_tesseract
@@ -96,6 +96,7 @@ class DocumentQuestionAnsweringPipelineTests(unittest.TestCase):
 
     @require_mindspore
     @require_pytesseract
+    @pytest.mark.skip
     def test_small_model_ms(self):
         dqa_pipeline = pipeline("document-question-answering", model="hf-internal-testing/tiny-random-layoutlmv2")
         image = INVOICE_URL

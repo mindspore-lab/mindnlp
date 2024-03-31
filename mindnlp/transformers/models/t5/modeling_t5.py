@@ -44,7 +44,6 @@ from ...modeling_utils import PreTrainedModel
 from ...ms_utils import ALL_LAYERNORM_LAYERS, find_pruneable_heads_and_indices, prune_linear_layer
 from .configuration_t5 import T5Config
 
-
 logger = logging.get_logger(__name__)
 
 ####################################################
@@ -367,7 +366,6 @@ class T5Attention(nn.Cell):
         if output_attentions:
             outputs = outputs + (attn_weights,)
         return outputs
-
 
 
 class T5LayerSelfAttention(nn.Cell):
@@ -746,6 +744,7 @@ class T5Stack(T5PreTrainedModel):
             raise ValueError(
                 f"You cannot specify both {err_msg_prefix}input_ids and {err_msg_prefix}inputs_embeds at the same time"
             )
+
         if input_ids is not None:
             input_shape = input_ids.shape
             input_ids = input_ids.view(-1, input_shape[-1])
@@ -866,6 +865,7 @@ class T5Stack(T5PreTrainedModel):
                 ]
                 if v is not None
             )
+
         return BaseModelOutputWithPastAndCrossAttentions(
             last_hidden_state=hidden_states,
             past_key_values=present_key_value_states,
@@ -873,7 +873,6 @@ class T5Stack(T5PreTrainedModel):
             attentions=all_attentions,
             cross_attentions=all_cross_attentions,
         )
-
 
 
 class T5Model(T5PreTrainedModel):
