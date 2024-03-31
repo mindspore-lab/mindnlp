@@ -17,6 +17,7 @@
 import os
 import subprocess
 from pathlib import Path
+import mindspore
 from mindnlp.utils import logging
 
 logger = logging.get_logger(__name__)
@@ -44,7 +45,7 @@ def _get_nvcc_info(cuda_home):
     return nvcc
 
 ENV_INFO = {}
-CUDA_HOME = _find_cuda_home()
+CUDA_HOME = _find_cuda_home() if mindspore.get_context('device_target') =='GPU' else None
 ENV_INFO['cuda_home'] = CUDA_HOME
 ENV_INFO['NVCC'] = _get_nvcc_info(CUDA_HOME)
 

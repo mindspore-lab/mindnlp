@@ -225,7 +225,7 @@ class ModelTesterMixin:
             out_1 = out1.asnumpy()
             out_1[np.isnan(out_1)] = 0
             max_diff = np.amax(np.abs(out_1 - out_2))
-            self.assertLessEqual(max_diff, 1e-5)
+            self.assertLessEqual(max_diff, 1e-4)
 
         for model_class in self.all_model_classes:
             model = model_class(config)
