@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """
-Bert Model.
+BioGPT Model.
 """
 from . import configuration_biogpt, modeling_biogpt, tokenization_biogpt
 from .configuration_biogpt import *

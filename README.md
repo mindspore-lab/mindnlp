@@ -107,7 +107,18 @@ The table below represents the current support in the library for each of those 
 | BaiChuan                      | ✅                | ❌             |
 | Bark                          | ✅                | ❌             |
 | BART                          | ✅                | ❌             |
+| Barthez                       | ✅                | ❌             |
+| Bartpho                       | ✅                | ❌             |
+| BEIT                          | ✅                | ✅             |
 | BERT                          | ✅                | ✅             |
+| BERT Generation               | ✅                | ✅             |
+| BERT Japanese                 | ✅                | ✅             |
+| BERTweet                      | ✅                | ✅             |
+| BGE M3                        | ✅                | ✅             |
+| Bigbird                       | ✅                | ✅             |
+| Bigbird Pegasus               | ✅                | ✅             |
+| BioGPT                        | ✅                | ✅             |
+| Bit                           | ✅                | ✅             |
 | BLIP                          | TODO              | ✅             |
 | BLIP2                         | TODO              | ✅             |
 | BLOOM                         | ✅                | ❌             |

@@ -36,6 +36,7 @@ from . import (
     big_bird,
     bigbird_pegasus,
     biogpt,
+    bit,
     bloom,
     byt5,
     clip,
@@ -118,6 +119,7 @@ from .bge_m3 import *
 from .big_bird import *
 from .bigbird_pegasus import *
 from .biogpt import *
+from .bit import *
 from .bloom import *
 from .byt5 import *
 from .clip import *
@@ -200,6 +202,7 @@ __all__.extend(bge_m3.__all__)
 __all__.extend(big_bird.__all__)
 __all__.extend(bigbird_pegasus.__all__)
 __all__.extend(biogpt.__all__)
+__all__.extend(bit.__all__)
 __all__.extend(bloom.__all__)
 __all__.extend(byt5.__all__)
 __all__.extend(clip.__all__)

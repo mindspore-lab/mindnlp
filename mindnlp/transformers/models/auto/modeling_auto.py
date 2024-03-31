@@ -44,6 +44,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("big_bird", "BigBirdModel"),
         ("bigbird_pegasus", "BigBirdPegasusModel"),
         ("biogpt", "BioGptModel"),
+        ("bit", "BitModel"),
         ("bloom", "BloomModel"),
         ("codegen", "CodeGenModel"),
         ("cpmant", "CpmAntModel"),
