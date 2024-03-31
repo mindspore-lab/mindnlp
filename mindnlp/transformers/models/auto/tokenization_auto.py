@@ -272,7 +272,8 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
                 "MT5TokenizerFast" if is_tokenizers_available() else None,
             ),
         ),
-        # ("musicgen", ("T5Tokenizer", "T5TokenizerFast" if is_tokenizers_available() else None)),
+        ("musicgen", ("T5Tokenizer", "T5TokenizerFast" if is_tokenizers_available() else None)),
+        ("musicgen_melody", ("T5Tokenizer", "T5TokenizerFast" if is_tokenizers_available() else None)),
         ("mvp", ("MvpTokenizer", "MvpTokenizerFast" if is_tokenizers_available() else None)),
         ("nezha", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
         (

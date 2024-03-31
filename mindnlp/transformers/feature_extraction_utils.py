@@ -123,13 +123,14 @@ class BatchFeature(UserDict):
 
             is_tensor = ops.is_tensor
         else:
-
             def as_tensor(value, dtype=None):
                 if isinstance(value, (list, tuple)) and isinstance(value[0], (list, tuple, np.ndarray)):
                     value_lens = [len(val) for val in value]
                     if len(set(value_lens)) > 1 and dtype is None:
                         # we have a ragged list so handle explicitly
                         value = as_tensor([np.asarray(val) for val in value], dtype=object)
+                elif isinstance(value, mindspore.Tensor):
+                    return value.asnumpy()
                 return np.asarray(value, dtype=dtype)
 
             is_tensor = is_numpy_array
@@ -154,7 +155,6 @@ class BatchFeature(UserDict):
             try:
                 if not is_tensor(value):
                     tensor = as_tensor(value)
-
                     self[key] = tensor
             except Exception as exc:  # noqa E722
                 if key == "overflowing_values":
@@ -163,7 +163,6 @@ class BatchFeature(UserDict):
                     "Unable to create tensor, you should probably activate padding "
                     "with 'padding=True' to have batched tensors with the same length."
                 ) from exc
-
         return self
 
     def to(self, *args, **kwargs) -> "BatchFeature":
