@@ -137,6 +137,7 @@ The table below represents the current support in the library for each of those 
 | GPTBigCode                    | ✅                | ❌             |
 | Graphormer                    | ✅                | ❌             |
 | Hubert                        | ✅                | ❌             |
+| Jamba                         | ✅                | ❌             |
 | Llama                         | ✅                | ❌             |
 | Llama2                        | ✅                | ❌             |
 | CodeLlama                     | ✅                | ❌             |
@@ -152,11 +153,13 @@ The table below represents the current support in the library for each of those 
 | Mixtral                       | ✅                | ❌             |
 | MobileBERT                    | ✅                | ❌             |
 | Moss                          | ✅                | ❌             |
+| MusicGen                      | ✅                | ❌             |
 | Nezha                         | ✅                | ❌             |
 | OPT                           | ✅                | ❌             |
 | Phi2                          | ✅                | ❌             |
 | Pop2piano                     | ✅                | ❌             |
 | Qwen2                         | ✅                | ❌             |
+| Qwen2Moe                      | ✅                | ❌             |
 | Reformer                      | ✅                | ❌             |
 | RegNet                        | Todo               | ❌             |
 | RoBERTa                       | ✅                | ✅             |
