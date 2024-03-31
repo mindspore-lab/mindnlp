@@ -77,6 +77,7 @@ from . import (
     mixtral,
     mobilebert,
     musicgen,
+    musicgen_melody,
     nezha,
     opt,
     pegasus,
@@ -160,6 +161,7 @@ from .mistral import *
 from .mixtral import *
 from .mobilebert import *
 from .musicgen import *
+from .musicgen_melody import *
 from .nezha import *
 from .opt import *
 from .pegasus import *
@@ -243,6 +245,7 @@ __all__.extend(mistral.__all__)
 __all__.extend(mixtral.__all__)
 __all__.extend(mobilebert.__all__)
 __all__.extend(musicgen.__all__)
+__all__.extend(musicgen_melody.__all__)
 __all__.extend(nezha.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(pegasus.__all__)

@@ -146,6 +146,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("mistral", "MistralForCausalLM"),
         ("mixtral", "MixtralForCausalLM"),
         ("musicgen", "MusicgenForCausalLM"),
+        ("musicgen_melody", "MusicgenMelodyForCausalLM"),
         ("phi", "PhiForCausalLM"),
         ("qwen2", "Qwen2ForCausalLM"),
         ("qwen2_moe", "Qwen2MoeForCausalLM"),
@@ -641,6 +642,7 @@ MODEL_FOR_TEXT_TO_WAVEFORM_MAPPING_NAMES = OrderedDict(
         # Model for Text-To-Waveform mapping
         ("bark", "BarkModel"),
         ("musicgen", "MusicgenForConditionalGeneration"),
+        ("musicgen_melody", "MusicgenMelodyForConditionalGeneration"),
         ("seamless_m4t", "SeamlessM4TForTextToSpeech"),
         ("vits", "VitsModel"),
     ]

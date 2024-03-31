@@ -109,18 +109,18 @@ The table below represents the current support in the library for each of those 
 | BART                          | ✅                | ❌             |
 | Barthez                       | ✅                | ❌             |
 | Bartpho                       | ✅                | ❌             |
-| BEIT                          | ✅                | ✅             |
-| BERT                          | ✅                | ✅             |
-| BERT Generation               | ✅                | ✅             |
-| BERT Japanese                 | ✅                | ✅             |
-| BERTweet                      | ✅                | ✅             |
-| BGE M3                        | ✅                | ✅             |
-| Bigbird                       | ✅                | ✅             |
-| Bigbird Pegasus               | ✅                | ✅             |
-| BioGPT                        | ✅                | ✅             |
-| Bit                           | ✅                | ✅             |
-| BLIP                          | TODO              | ✅             |
-| BLIP2                         | TODO              | ✅             |
+| BEIT                          | ✅                | ❌             |
+| BERT                          | ✅                | ❌             |
+| BERT Generation               | ✅                | ❌             |
+| BERT Japanese                 | ✅                | ❌             |
+| BERTweet                      | ✅                | ❌             |
+| BGE M3                        | ✅                | ❌             |
+| Bigbird                       | ✅                | ❌             |
+| Bigbird Pegasus               | ✅                | ❌             |
+| BioGPT                        | ✅                | ❌             |
+| Bit                           | ✅                | ❌             |
+| BLIP                          | TODO              | ❌             |
+| BLIP2                         | TODO              | ❌             |
 | BLOOM                         | ✅                | ❌             |
 | ChatGLM                       | ✅                | ❌             |
 | ChatGLM2                      | ✅                | ❌             |
@@ -137,7 +137,7 @@ The table below represents the current support in the library for each of those 
 | EnCodec                       | ✅               | ❌             |
 | ERNIE                         | ✅                | ✅             |
 | ERNIEM                        | ✅                | ✅             |
-| ESM                           | ✅                | ✅             |
+| ESM                           | ✅                | ❌             |
 | Falcon                        | ✅                | ❌             |
 | OpenAI GPT                    | ✅                | ❌             |
 | OpenAI GPT-2                  | ✅                | ✅             |
@@ -165,6 +165,7 @@ The table below represents the current support in the library for each of those 
 | MobileBERT                    | ✅                | ❌             |
 | Moss                          | ✅                | ❌             |
 | MusicGen                      | ✅                | ❌             |
+| MusicGen Melody               | ✅                | ❌             |
 | Nezha                         | ✅                | ❌             |
 | OPT                           | ✅                | ❌             |
 | Phi2                          | ✅                | ❌             |
