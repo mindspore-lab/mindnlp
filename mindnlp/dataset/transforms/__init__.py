@@ -27,7 +27,8 @@ else:
 from .lookup import Lookup
 from .basic_tokenizer import BasicTokenizer
 from .pad_transform import PadTransform
+from .jieba_tokenizer import JiebaTokenizer
 
 __all__ = [
-    'Truncate', 'AddToken', 'Lookup', 'PadTransform', 'BasicTokenizer',
+    'Truncate', 'AddToken', 'Lookup', 'PadTransform', 'BasicTokenizer', 'JiebaTokenizer'
 ]
