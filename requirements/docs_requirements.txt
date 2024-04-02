@@ -21,5 +21,9 @@ ml_dtypes
 cython
 jieba
 pretty_midi
+scipy
+pyctcdecode
+pytesseract
+gemsim
 git+https://github.com/mindspore-lab/mindnlp
 https://hf-mirror.com/lvyufeng/mindspore-daily/resolve/main/mindspore-newest-cp37-cp37m-linux_x86_64.whl

@@ -273,6 +273,10 @@ class FakeParameter:
     stride: tuple = None
     requires_grad: bool = None
 
+@dataclass
+class FakeStorage:
+    storage: np.ndarray = None
+
 def _rebuild_tensor_legacy(storage, storage_offset, size, stride, requires_grad, backward_hooks, metadata=None):
     return FakeParameter(storage, storage_offset, size, stride, requires_grad)
 
@@ -385,7 +389,7 @@ def _legacy_load(f, pickle_module, **pickle_load_args):
             location = _maybe_decode_ascii(location)
 
             if root_key not in deserialized_objects:
-                typed_storage = np.empty(numel, dtype_map[storage_type])
+                typed_storage = FakeStorage(np.empty(numel, dtype_map[storage_type]))
                 deserialized_objects[root_key] = typed_storage
             else:
                 typed_storage = deserialized_objects[root_key]
@@ -435,24 +439,22 @@ def _legacy_load(f, pickle_module, **pickle_load_args):
     unpickler = UnpicklerWrapper(f, **pickle_load_args)
     unpickler.persistent_load = persistent_load
     result = unpickler.load()
-
     deserialized_storage_keys = pickle_module.load(f, **pickle_load_args)
 
     offset = f.tell() if f_should_read_directly else None
     for key in deserialized_storage_keys:
         assert key in deserialized_objects
-        typed_storage = deserialized_objects[key]
+        typed_storage = deserialized_objects[key].storage
         f.read(8) # trick for read
         array = np.frombuffer(f.read(typed_storage.nbytes), typed_storage.dtype)
-        typed_storage[:] = array
-        assert np.allclose(typed_storage, array)
+        deserialized_objects[key].storage = array
         if offset is not None:
             offset = f.tell()
 
     new_result = {}
     for k, v in result.items():
         num_elemets = reduce(operator.mul, v.size)
-        array = v.storage[v.storage_offset: v.storage_offset + num_elemets]
+        array = v.storage.storage[v.storage_offset: v.storage_offset + num_elemets]
         stride = v.stride
         size = v.size
         if stride is not None and len(stride) > 1 and stride[0] == 1 and stride[1] > 1:
