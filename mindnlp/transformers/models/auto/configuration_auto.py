@@ -44,6 +44,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("biogpt", "BioGptConfig"),
         ("bit", "BitConfig"),
         ("blenderbot", "BlenderbotConfig"),
+        ("blenderbot-small", "BlenderbotSmallConfig"),
         ("bloom", "BloomConfig"),
         ('chatglm', 'ChatGLMConfig'),
         ("clip", "CLIPConfig"),

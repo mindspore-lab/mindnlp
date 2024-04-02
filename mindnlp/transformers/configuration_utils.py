@@ -641,6 +641,22 @@ class PretrainedConfig:
             self.id2label = {i: f"LABEL_{i}" for i in range(num_labels)}
             self.label2id = dict(zip(self.id2label.values(), self.id2label.keys()))
 
+    @property
+    def _attn_implementation(self):
+        # This property is made private for now (as it cannot be changed and a PreTrainedModel.use_attn_implementation method needs to be implemented.)
+        if hasattr(self, "_attn_implementation_internal"):
+            if self._attn_implementation_internal is None:
+                # `config.attn_implementation` should never be None, for backward compatibility.
+                return "eager"
+            else:
+                return self._attn_implementation_internal
+        else:
+            return "eager"
+
+    @_attn_implementation.setter
+    def _attn_implementation(self, value):
+        self._attn_implementation_internal = value
+
 
 class EncoderDecoderConfig(PretrainedConfig):
     r"""
