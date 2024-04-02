@@ -21,3 +21,4 @@ pretty_midi
 scipy
 pyctcdecode
 pytesseract
+gensim

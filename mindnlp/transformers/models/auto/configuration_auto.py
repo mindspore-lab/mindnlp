@@ -43,6 +43,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("bigbird_pegasus", "BigBirdPegasusConfig"),
         ("biogpt", "BioGptConfig"),
         ("bit", "BitConfig"),
+        ("blenderbot", "BlenderbotConfig"),
         ("bloom", "BloomConfig"),
         ('chatglm', 'ChatGLMConfig'),
         ("clip", "CLIPConfig"),
