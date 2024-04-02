@@ -186,7 +186,7 @@ class BatchFeature(UserDict):
         if len(args) > 0:
             # device should be always the first argument
             arg = args[0]
-            if isinstance(arg, mindspore.common.dtype.TensorType):
+            if isinstance(arg, mindspore._c_expression.typing.Type):
                 # The first argument is a dtype
                 pass
             else:
