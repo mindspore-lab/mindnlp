@@ -96,6 +96,7 @@ from . import (
     seamless_m4t_v2,
     starcoder2,
     t5,
+    timesformer,
     tinybert,
     wav2vec2,
     wav2vec2_with_lm,
@@ -185,6 +186,7 @@ from .seamless_m4t_v2 import *
 from .starcoder2 import *
 from .tinybert import *
 from .t5 import *
+from .timesformer import *
 from .whisper import *
 from .wav2vec2 import *
 from .wav2vec2_with_lm import *
@@ -271,8 +273,9 @@ __all__.extend(rwkv.__all__)
 __all__.extend(seamless_m4t.__all__)
 __all__.extend(seamless_m4t_v2.__all__)
 __all__.extend(starcoder2.__all__)
-__all__.extend(tinybert.__all__)
 __all__.extend(t5.__all__)
+__all__.extend(timesformer.__all__)
+__all__.extend(tinybert.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
 __all__.extend(wav2vec2_with_lm.__all__)
