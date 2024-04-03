@@ -36,6 +36,10 @@ from . import (
     big_bird,
     bigbird_pegasus,
     biogpt,
+    bit,
+    blenderbot,
+    blenderbot_small,
+    blip,
     bloom,
     byt5,
     clip,
@@ -76,12 +80,14 @@ from . import (
     mixtral,
     mobilebert,
     musicgen,
+    musicgen_melody,
     nezha,
     opt,
     pegasus,
     phi,
     pop2piano,
     qwen2,
+    qwen2_moe,
     reformer,
     roberta,
     rwkv,
@@ -117,6 +123,10 @@ from .bge_m3 import *
 from .big_bird import *
 from .bigbird_pegasus import *
 from .biogpt import *
+from .bit import *
+from .blenderbot import *
+from .blenderbot_small import *
+from .blip import *
 from .bloom import *
 from .byt5 import *
 from .clip import *
@@ -157,12 +167,14 @@ from .mistral import *
 from .mixtral import *
 from .mobilebert import *
 from .musicgen import *
+from .musicgen_melody import *
 from .nezha import *
 from .opt import *
 from .pegasus import *
 from .phi import *
 from .pop2piano import *
 from .qwen2 import *
+from .qwen2_moe import *
 from .reformer import *
 from .roberta import *
 from .rwkv import *
@@ -198,6 +210,10 @@ __all__.extend(bge_m3.__all__)
 __all__.extend(big_bird.__all__)
 __all__.extend(bigbird_pegasus.__all__)
 __all__.extend(biogpt.__all__)
+__all__.extend(bit.__all__)
+__all__.extend(blenderbot.__all__)
+__all__.extend(blenderbot_small.__all__)
+__all__.extend(blip.__all__)
 __all__.extend(bloom.__all__)
 __all__.extend(byt5.__all__)
 __all__.extend(clip.__all__)
@@ -238,12 +254,14 @@ __all__.extend(mistral.__all__)
 __all__.extend(mixtral.__all__)
 __all__.extend(mobilebert.__all__)
 __all__.extend(musicgen.__all__)
+__all__.extend(musicgen_melody.__all__)
 __all__.extend(nezha.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(pegasus.__all__)
 __all__.extend(phi.__all__)
 __all__.extend(pop2piano.__all__)
 __all__.extend(qwen2.__all__)
+__all__.extend(qwen2_moe.__all__)
 __all__.extend(reformer.__all__)
 __all__.extend(roberta.__all__)
 __all__.extend(rwkv.__all__)
