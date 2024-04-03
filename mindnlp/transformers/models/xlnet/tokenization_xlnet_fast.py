@@ -19,8 +19,8 @@ import os
 from shutil import copyfile
 from typing import List, Optional, Tuple
 
-from ...tokenization_utils import AddedToken
-from ...tokenization_utils_fast import PreTrainedTokenizerFast
+from mindnlp.transformers.tokenization_utils import AddedToken
+from mindnlp.transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 from mindnlp.utils import is_sentencepiece_available, logging
 
 

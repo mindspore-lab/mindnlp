@@ -27,9 +27,9 @@ import mindspore
 from mindspore import nn, Parameter, Tensor
 from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
-from ...ms_utils import apply_chunking_to_forward
-from ...activations import ACT2FN
-from ...modeling_utils import PoolerAnswerClass, PoolerEndLogits, PoolerStartLogits, PreTrainedModel, SequenceSummary
+from mindnlp. transformers. ms_utils import apply_chunking_to_forward
+from mindnlp. transformers. activations import ACT2FN
+from mindnlp. transformers. modeling_utils import PoolerAnswerClass, PoolerEndLogits, PoolerStartLogits, PreTrainedModel, SequenceSummary
 from mindnlp.utils import (ModelOutput, logging)
 from .configuration_xlnet import XLNetConfig
 
@@ -947,7 +947,7 @@ class XLNetModel(XLNetPreTrainedModel):
             input_ids = input_ids.transpose(1, 0).contiguous()
             qlen, bsz = input_ids.shape[0], input_ids.shape[1]
         elif inputs_embeds is not None:
-            inputs_embeds = inputs_embeds.transpose(1, 0).contiguous()
+            inputs_embeds = inputs_embeds.transpose(1, 0, 2).contiguous()
             qlen, bsz = inputs_embeds.shape[0], inputs_embeds.shape[1]
         else:
             raise ValueError("You have to specify either input_ids or inputs_embeds")
@@ -1041,7 +1041,6 @@ class XLNetModel(XLNetPreTrainedModel):
 
         # Positional encoding
         pos_emb = self.relative_positional_encoding(qlen, klen, bsz=bsz)
-        pos_emb = pos_emb
         pos_emb = self.dropout(pos_emb)
 
         # Prepare head mask if needed
@@ -1055,9 +1054,8 @@ class XLNetModel(XLNetPreTrainedModel):
                 head_mask = head_mask.expand(self.n_layer, -1, -1, -1, -1)
             elif head_mask.dim() == 2:
                 head_mask = head_mask.unsqueeze(1).unsqueeze(1).unsqueeze(1)
-            head_mask = head_mask.to(
-                dtype=next(self.parameters()).dtype
-            )  # switch to float if need + fp16 compatibility
+            head_mask_dtype = next(iter(self.parameters_dict().items()))[1].dtype
+            head_mask = head_mask.to(dtype=head_mask_dtype)
         else:
             head_mask = [None] * self.n_layer
 
@@ -1320,7 +1318,7 @@ class XLNetLMHeadModel(XLNetPreTrainedModel):
         [`~PreTrainedModel.beam_sample`] is called. This is required to match `mems` with the correct beam_idx at every
         generation step.
         """
-        return [layer_past.index_select(1, beam_idx.to(layer_past.device)) for layer_past in mems]
+        return [layer_past.index_select(1, beam_idx) for layer_past in mems]
 
 
 class XLNetForSequenceClassification(XLNetPreTrainedModel):
@@ -1387,7 +1385,7 @@ class XLNetForSequenceClassification(XLNetPreTrainedModel):
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == mindspore.int64 or labels.dtype == mindspore.int32):
+                elif self.num_labels > 1 and (labels.dtype in (mindspore.int64, mindspore.int32)):
                     self.config.problem_type = "single_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
@@ -1533,12 +1531,12 @@ class XLNetForMultipleChoice(XLNetPreTrainedModel):
 
         num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
 
-        flat_input_ids = input_ids.view(-1, input_ids.size(-1)) if input_ids is not None else None
-        flat_token_type_ids = token_type_ids.view(-1, token_type_ids.size(-1)) if token_type_ids is not None else None
-        flat_attention_mask = attention_mask.view(-1, attention_mask.size(-1)) if attention_mask is not None else None
-        flat_input_mask = input_mask.view(-1, input_mask.size(-1)) if input_mask is not None else None
+        flat_input_ids = input_ids.view(-1, input_ids.shape[-1]) if input_ids is not None else None
+        flat_token_type_ids = token_type_ids.view(-1, token_type_ids.shape[-1]) if token_type_ids is not None else None
+        flat_attention_mask = attention_mask.view(-1, attention_mask.shape[-1]) if attention_mask is not None else None
+        flat_input_mask = input_mask.view(-1, input_mask.shape[-1]) if input_mask is not None else None
         flat_inputs_embeds = (
-            inputs_embeds.view(-1, inputs_embeds.size(-2), inputs_embeds.size(-1))
+            inputs_embeds.view(-1, inputs_embeds.shape[-2], inputs_embeds.shape[-1])
             if inputs_embeds is not None
             else None
         )
@@ -1569,6 +1567,7 @@ class XLNetForMultipleChoice(XLNetPreTrainedModel):
         loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()
+            labels = labels.astype(mindspore.int32)
             loss = loss_fct(reshaped_logits, labels.view(-1))
 
         if not return_dict:
@@ -1646,21 +1645,24 @@ class XLNetForQuestionAnsweringSimple(XLNetPreTrainedModel):
         sequence_output = outputs[0]
 
         logits = self.qa_outputs(sequence_output)
-        start_logits, end_logits = logits.split(1, dim=-1)
+        start_logits, end_logits = logits.split(1, axis=-1)
         start_logits = start_logits.squeeze(-1).contiguous()
         end_logits = end_logits.squeeze(-1).contiguous()
 
         total_loss = None
         if start_positions is not None and end_positions is not None:
             # If we are on multi-GPU, split add a dimension
-            if len(start_positions.size()) > 1:
+            if len(start_positions.shape) > 1:
                 start_positions = start_positions.squeeze(-1)
-            if len(end_positions.size()) > 1:
+            if len(end_positions.shape) > 1:
                 end_positions = end_positions.squeeze(-1)
             # sometimes the start/end positions are outside our model inputs, we ignore these terms
-            ignored_index = start_logits.size(1)
+            ignored_index = start_logits.shape[1]
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
+
+            start_positions = start_positions.astype(mindspore.int32)
+            end_positions = end_positions.astype(mindspore.int32)
 
             loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
             start_loss = loss_fct(start_logits, start_positions)
