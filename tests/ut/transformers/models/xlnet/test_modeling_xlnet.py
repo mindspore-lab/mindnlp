@@ -497,7 +497,7 @@ class XLNetModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
     )
     all_generative_model_classes = (
         (XLNetLMHeadModel,) if is_mindspore_available() else ()
-    )  # TODO (PVP): Check other models whether language generation is also applicable
+    )
     pipeline_model_mapping = (
         {
             "feature-extraction": XLNetModel,
@@ -513,7 +513,6 @@ class XLNetModelTest(ModelTesterMixin, GenerationTesterMixin, unittest.TestCase)
     fx_compatible = False
     test_pruning = False
 
-    # TODO: Fix the failed tests
     def is_pipeline_test_to_skip(
             self, pipeline_test_casse_name, config_class, model_architecture, tokenizer_name, processor_name
     ):
