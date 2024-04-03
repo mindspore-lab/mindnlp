@@ -82,6 +82,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("whisper", "WhisperConfig"),
         ('xlm-roberta', 'XLMRobertaConfig'),
         ("layoutlmv2", "LayoutLMv2Config"),
+        ("xlnet", "XLNetConfig"),
     ]
 )
 
