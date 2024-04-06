@@ -1,26 +1,35 @@
-# coding=utf-8
-# Copyright The HuggingFace team. All rights reserved.
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ============================================================================
 """ ConvBERT model configuration"""
 
 from ...configuration_utils import PretrainedConfig
 
 
-CONVBERT_SUPPORT_LIST = ["conv-bert-base",
-                         "conv-bert-medium-small", "conv-bert-small"]
+CONVBERT_SUPPORT_LIST = ["YituTech/conv-bert-base",
+                         "YituTech/conv-bert-medium-small",
+                         "YituTech/conv-bert-small"]
 
-__all__ = ['ConvBertConfig']
+CONVBERT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
+    "YituTech/conv-bert-base": "https://huggingface.co/YituTech/conv-bert-base/resolve/main/config.json",
+    "YituTech/conv-bert-medium-small": (
+        "https://huggingface.co/YituTech/conv-bert-medium-small/resolve/main/config.json"
+    ),
+    "YituTech/conv-bert-small": "https://huggingface.co/YituTech/conv-bert-small/resolve/main/config.json",
+}
+
+__all__ = ['CONVBERT_PRETRAINED_CONFIG_ARCHIVE_MAP', 'ConvBertConfig']
 
 
 class ConvBertConfig(PretrainedConfig):
