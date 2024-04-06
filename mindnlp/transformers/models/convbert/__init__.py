@@ -15,7 +15,7 @@
 """
 ConvBert Model.
 """
-from . import convbert, convbert_config, convbert_tokenizer
+from . import convbert, convbert_config, convbert_tokenizer, convbert_tokenizer_fast
 from .convbert import *
 from .convbert_config import *
 from .convbert_tokenizer import *
