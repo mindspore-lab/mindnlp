@@ -102,6 +102,7 @@ from . import (
     whisper,
     xlm,
     xlm_roberta,
+    xlnet
 )
 
 from .albert import *
@@ -190,6 +191,7 @@ from .wav2vec2 import *
 from .wav2vec2_with_lm import *
 from .xlm import *
 from .xlm_roberta import *
+from .xlnet import *
 
 __all__ = []
 __all__.extend(albert.__all__)
@@ -278,3 +280,4 @@ __all__.extend(wav2vec2.__all__)
 __all__.extend(wav2vec2_with_lm.__all__)
 __all__.extend(xlm.__all__)
 __all__.extend(xlm_roberta.__all__)
+__all__.extend(xlnet.__all__)
