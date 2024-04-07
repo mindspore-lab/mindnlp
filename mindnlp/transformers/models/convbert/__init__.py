@@ -15,3 +15,14 @@
 """
 ConvBert Model.
 """
+from . import convbert, convbert_config, convbert_tokenizer, convbert_tokenizer_fast
+from .convbert import *
+from .convbert_config import *
+from .convbert_tokenizer import *
+from .convbert_tokenizer_fast import *
+
+__all__ = []
+__all__.extend(convbert.__all__)
+__all__.extend(convbert_config.__all__)
+__all__.extend(convbert_tokenizer.__all__)
+__all__.extend(convbert_tokenizer_fast.__all__)

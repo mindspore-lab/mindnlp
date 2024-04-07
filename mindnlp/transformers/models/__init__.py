@@ -44,6 +44,7 @@ from . import (
     byt5,
     clip,
     codegen,
+    convbert,
     cpm,
     cpmant,
     cpmbee,
@@ -132,6 +133,7 @@ from .bloom import *
 from .byt5 import *
 from .clip import *
 from .codegen import *
+from .convbert import *
 from .cpm import *
 from .cpmant import *
 from .cpmbee import *
@@ -220,6 +222,7 @@ __all__.extend(bloom.__all__)
 __all__.extend(byt5.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
+__all__.extend(convbert.__all__)
 __all__.extend(cpm.__all__)
 __all__.extend(cpmant.__all__)
 __all__.extend(cpmbee.__all__)
