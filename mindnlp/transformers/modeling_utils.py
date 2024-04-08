@@ -255,13 +255,13 @@ class CellUtilMixin:
 
     def _convert_head_mask_to_5d(self, head_mask, num_hidden_layers):
         """-> [num_hidden_layers x batch x num_heads x seq_length x seq_length]"""
-        if head_mask.dim() == 1:
+        if head_mask.ndim == 1:
             head_mask = head_mask.expand_dims(0).expand_dims(0).expand_dims(-1).expand_dims(-1)
             head_mask = head_mask.broadcast_to(num_hidden_layers, -1, -1, -1, -1)
-        elif head_mask.dim() == 2:
+        elif head_mask.ndim == 2:
             head_mask = head_mask.expand_dims(1).expand_dims(-1)\
                 .expand_dims(-1)  # We can specify head_mask for each layer
-        assert head_mask.dim() == 5, f"head_mask.dim != 5, instead {head_mask.dim()}"
+        assert head_mask.ndim == 5, f"head_mask.dim != 5, instead {head_mask.ndim}"
         head_mask = head_mask.astype(dtype=self.dtype)  # switch to float if need + fp16 compatibility
         return head_mask
 
@@ -1245,7 +1245,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     **kwargs,
                 )
             except OSError:
-                logger.warning(
+                logger.info(
                     "Generation config file not found, using a generation config created from the model config."
                 )
 

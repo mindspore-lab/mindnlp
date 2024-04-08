@@ -48,7 +48,10 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("blenderbot", "BlenderbotModel"),
         ("blenderbot-small", "BlenderbotSmallModel"),
         ("blip", "BlipModel"),
+        ("blip-2", "Blip2Model"),
         ("bloom", "BloomModel"),
+        ("bridgetower", "BridgeTowerModel"),
+        ("bros", "BrosModel"),
         ("codegen", "CodeGenModel"),
         ("cpmant", "CpmAntModel"),
         ("cpmbee", "CpmBeeModel"),
@@ -74,6 +77,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ('minicpm', 'MiniCPMModel'),
         ("mistral", "MistralModel"),
         ("mixtral", "MixtralModel"),
+        ("opt", "OPTModel"),
         ("phi", "PhiModel"),
         ("qwen2", "Qwen2Model"),
         ("qwen2_moe", "Qwen2MoeModel"),
@@ -84,6 +88,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("t5", "T5Model"),
         ("whisper", "WhisperModel"),
         ("xlm-roberta", "XLMRobertaModel"),
+	("xlnet", "XLNetModel"),
     ]
 )
 
@@ -100,6 +105,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ('minicpm', 'MiniCPMForCausalLM'),
         ("rwkv", "RwkvForCausalLM"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
+	("xlnet", "XLNetLMHeadModel"),
     ]
 )
 
@@ -125,6 +131,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("rwkv", "RwkvForCausalLM"),
         ("whisper", "WhisperForConditionalGeneration"),
         ("xlm-roberta", "XLMRobertaForMaskedLM"),
+	("xlnet", "XLNetLMHeadModel"),
     ]
 )
 
@@ -154,6 +161,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("mixtral", "MixtralForCausalLM"),
         ("musicgen", "MusicgenForCausalLM"),
         ("musicgen_melody", "MusicgenMelodyForCausalLM"),
+        ("opt", "OPTForCausalLM"),
         ("phi", "PhiForCausalLM"),
         ("qwen2", "Qwen2ForCausalLM"),
         ("qwen2_moe", "Qwen2MoeForCausalLM"),
@@ -163,6 +171,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("starcoder2", "Starcoder2ForCausalLM"),
         ("whisper", "WhisperForCausalLM"),
         ("xlm-roberta", "XLMRobertaForCausalLM"),
+	("xlnet", "XLNetLMHeadModel"),
     ]
 )
 
@@ -364,12 +373,14 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ('minicpm', 'MiniCPMForSequenceClassification'),
         ("mistral", "MistralForSequenceClassification"),
         ("mixtral", "MixtralForSequenceClassification"),
+        ("opt", "OPTForSequenceClassification"),
         ("phi", "PhiForSequenceClassification"),
         ("qwen2", "Qwen2ForSequenceClassification"),
         ("qwen2_moe", "Qwen2MoeForSequenceClassification"),
         ("reformer", "ReformerForSequenceClassification"),
         ("starcoder2", "Starcoder2ForSequenceClassification"),
         ("xlm-roberta", "XLMRobertaForSequenceClassification"),
+	("xlnet", "XLNetForSequenceClassification"),
     ]
 )
 

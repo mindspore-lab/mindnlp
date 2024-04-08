@@ -40,7 +40,10 @@ from . import (
     blenderbot,
     blenderbot_small,
     blip,
+    blip_2,
     bloom,
+    bridgetower,
+    bros,
     byt5,
     clip,
     codegen,
@@ -102,6 +105,7 @@ from . import (
     whisper,
     xlm,
     xlm_roberta,
+    xlnet
 )
 
 from .albert import *
@@ -128,7 +132,10 @@ from .bit import *
 from .blenderbot import *
 from .blenderbot_small import *
 from .blip import *
+from .blip_2 import *
 from .bloom import *
+from .bridgetower import *
+from .bros import *
 from .byt5 import *
 from .clip import *
 from .codegen import *
@@ -190,6 +197,7 @@ from .wav2vec2 import *
 from .wav2vec2_with_lm import *
 from .xlm import *
 from .xlm_roberta import *
+from .xlnet import *
 
 __all__ = []
 __all__.extend(albert.__all__)
@@ -216,7 +224,10 @@ __all__.extend(bit.__all__)
 __all__.extend(blenderbot.__all__)
 __all__.extend(blenderbot_small.__all__)
 __all__.extend(blip.__all__)
+__all__.extend(blip_2.__all__)
 __all__.extend(bloom.__all__)
+__all__.extend(bridgetower.__all__)
+__all__.extend(bros.__all__)
 __all__.extend(byt5.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
@@ -278,3 +289,4 @@ __all__.extend(wav2vec2.__all__)
 __all__.extend(wav2vec2_with_lm.__all__)
 __all__.extend(xlm.__all__)
 __all__.extend(xlm_roberta.__all__)
+__all__.extend(xlnet.__all__)

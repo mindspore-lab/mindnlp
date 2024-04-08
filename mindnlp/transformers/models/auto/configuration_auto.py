@@ -46,7 +46,10 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("blenderbot", "BlenderbotConfig"),
         ("blenderbot-small", "BlenderbotSmallConfig"),
         ("blip", "BlipConfig"),
+        ("blip-2", "Blip2Config"),
         ("bloom", "BloomConfig"),
+        ("bridgetower", "BridgeTowerConfig"),
+        ("bros", "BrosConfig"),
         ('chatglm', 'ChatGLMConfig'),
         ("clip", "CLIPConfig"),
         ("clip_vision_model", "CLIPVisionConfig"),
@@ -71,6 +74,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("musicgen", "MusicgenConfig"),
         ("musicgen_melody", "MusicgenMelodyConfig"),
         ('mt5', 'MT5Config'),
+        ("opt", 'OPTConfig'),
         ("phi", "PhiConfig"),
         ("qwen2", "Qwen2Config"),
         ("qwen2_moe", "Qwen2MoeConfig"),
@@ -82,6 +86,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("whisper", "WhisperConfig"),
         ('xlm-roberta', 'XLMRobertaConfig'),
         ("layoutlmv2", "LayoutLMv2Config"),
+        ("xlnet", "XLNetConfig"),
     ]
 )
 

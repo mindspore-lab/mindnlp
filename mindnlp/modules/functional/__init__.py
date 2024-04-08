@@ -16,3 +16,4 @@
 
 from .neural_network import embedding
 from .graph_func import *
+from .normalize import *
