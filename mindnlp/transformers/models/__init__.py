@@ -40,6 +40,7 @@ from . import (
     blenderbot,
     blenderbot_small,
     blip,
+    blip_2,
     bloom,
     byt5,
     clip,
@@ -129,6 +130,7 @@ from .bit import *
 from .blenderbot import *
 from .blenderbot_small import *
 from .blip import *
+from .blip_2 import *
 from .bloom import *
 from .byt5 import *
 from .clip import *
@@ -218,6 +220,7 @@ __all__.extend(bit.__all__)
 __all__.extend(blenderbot.__all__)
 __all__.extend(blenderbot_small.__all__)
 __all__.extend(blip.__all__)
+__all__.extend(blip_2.__all__)
 __all__.extend(bloom.__all__)
 __all__.extend(byt5.__all__)
 __all__.extend(clip.__all__)

@@ -31,6 +31,7 @@ from mindspore import ops
 from mindnlp.utils import ModelOutput, logging, ExplicitEnum, no_grad
 from .configuration_utils import GenerationConfig
 from ..modeling_outputs import CausalLMOutputWithPast, Seq2SeqLMOutput
+from ..cache_utils import StaticCache
 
 from .logits_process import (
     EncoderNoRepeatNGramLogitsProcessor,
@@ -74,6 +75,10 @@ from .stopping_criteria import (
 
 
 logger = logging.get_logger(__name__)
+
+NEED_SETUP_CACHE_CLASSES_MAPPING = {
+    "static": StaticCache,
+}
 
 @dataclass
 class GenerateDecoderOnlyOutput(ModelOutput):
@@ -1522,6 +1527,31 @@ class GenerationMixin:
                     "(https://hf-mirror.com/docs/transformers/main/en/main_classes/text_generation)"
                 )
             generation_config.max_length = generation_config.max_new_tokens + input_ids_length
+
+        # otherwise the total length [inputs-embeds-len + new-tokens-len] will go beyond indicated `max_length``
+        elif (
+            model_input_name == "inputs_embeds"
+            and inputs_tensor.shape[:-1] != input_ids.shape
+            and not self.config.is_encoder_decoder
+        ):
+            generation_config.max_length -= inputs_tensor.shape[1]
+            generation_config.min_length = max(generation_config.min_length - inputs_tensor.shape[1], 0)
+
+        if generation_config.cache_implementation in NEED_SETUP_CACHE_CLASSES_MAPPING:
+            if generation_config.cache_implementation == "static":
+                if model_kwargs.get("past_key_values", False) is not False:
+                    raise ValueError(
+                        "Using `past_key_values` argument with `generate()` when using a static KV cache is not supported. Please open an issue in Transformers GitHub repository."
+                    )
+                cache_cls = NEED_SETUP_CACHE_CLASSES_MAPPING["static"]
+                if not callable(getattr(self, "_setup_cache", None)):
+                    raise ValueError(
+                        "The `generation_config` defines a `cache_implementation` that is not compatible with this model."
+                        " Make sure it has a `_setup_cache` function."
+                    )
+                self._setup_cache(cache_cls, max_batch_size=batch_size, max_cache_len=generation_config.max_length)
+
+
         self._validate_generated_length(generation_config, input_ids_length, has_default_max_length)
 
         # 7. determine generation mode

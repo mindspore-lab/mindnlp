@@ -352,7 +352,7 @@ def _long_tensor(tok_lst):
 class OPTModelIntegrationTests(unittest.TestCase):
     @slow
     def test_inference_no_head(self):
-        model = OPTModel.from_pretrained("facebook/opt-350m")
+        model = OPTModel.from_pretrained("facebook/opt-350m", ms_dtype=mindspore.float32)
         input_ids = _long_tensor([[0, 31414, 232, 328, 740, 1140, 12695, 69, 46078, 1588, 2]])
         output = model(input_ids=input_ids).last_hidden_state
 
@@ -383,7 +383,7 @@ class OPTEmbeddingsTest(unittest.TestCase):
             self.fail("Failed loading model")
 
     def test_logits(self):
-        model = OPTForCausalLM.from_pretrained(self.path_model)
+        model = OPTForCausalLM.from_pretrained(self.path_model, ms_dtype=mindspore.float32)
         model = model.set_train(False)
         tokenizer = GPT2Tokenizer.from_pretrained(self.path_model)
 
@@ -537,7 +537,7 @@ class OPTGenerationTest(unittest.TestCase):
             "there?"
         )
 
-        opt_tokenizer = GPT2Tokenizer.from_pretrained("facebook/opt-1.3b")
+        opt_tokenizer = GPT2Tokenizer.from_pretrained("facebook/opt-1.3b", ms_dtype=mindspore.float32)
         opt_model = OPTForCausalLM.from_pretrained("facebook/opt-1.3b")
         input_ids = opt_tokenizer(article, return_tensors="ms").input_ids
 
