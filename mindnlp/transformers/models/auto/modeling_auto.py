@@ -50,6 +50,8 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("blip", "BlipModel"),
         ("blip-2", "Blip2Model"),
         ("bloom", "BloomModel"),
+        ("bridgetower", "BridgeTowerModel"),
+        ("bros", "BrosModel"),
         ("codegen", "CodeGenModel"),
         ("cpmant", "CpmAntModel"),
         ("cpmbee", "CpmBeeModel"),

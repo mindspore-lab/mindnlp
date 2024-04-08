@@ -188,6 +188,8 @@ def _ones(*size, dtype=None):
         dtype = mindspore.float32
     if isinstance(size[0], tuple):
         size = size[0]
+    elif isinstance(size[0], list):
+        size = tuple(size[0])
     return ops.fill(dtype, size, 1)
 
 ops.ones = _ones
@@ -197,6 +199,8 @@ def _zeros(*size, dtype=None):
         dtype = mindspore.float32
     if isinstance(size[0], tuple):
         size = size[0]
+    elif isinstance(size[0], list):
+        size = tuple(size[0])
     return ops.fill(dtype, size, 0)
 
 ops.zeros = _zeros
@@ -399,6 +403,13 @@ def _eq(self, other):
     return ops.eq(self, other)
 
 Parameter.__eq__ = _eq
+
+
+def _initialize(self, init_method):
+    self.set_data(initializer(init_method, self.shape, self.dtype))
+
+Parameter.initialize = _initialize
+
 
 old_repeat = Tensor.repeat
 def new_repeat_interleave(input, repeats, axis=None):
