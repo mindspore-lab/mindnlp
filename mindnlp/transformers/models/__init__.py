@@ -72,6 +72,7 @@ from . import (
     layoutlm,
     layoutlmv2,
     llama,
+    llava_mistral,
     longformer,
     luke,
     mamba,
@@ -162,6 +163,7 @@ from .hubert import *
 from .layoutlm import *
 from .layoutlmv2 import *
 from .llama import *
+from .llava_mistral import *
 from .longformer import *
 from .luke import *
 from .mamba import *
@@ -252,6 +254,7 @@ __all__.extend(hubert.__all__)
 __all__.extend(layoutlm.__all__)
 __all__.extend(layoutlmv2.__all__)
 __all__.extend(llama.__all__)
+__all__.extend(llava_mistral.__all__)
 __all__.extend(longformer.__all__)
 __all__.extend(luke.__all__)
 __all__.extend(mamba.__all__)
