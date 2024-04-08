@@ -100,6 +100,13 @@ class GenerationConfig:
         self.num_assistant_tokens = kwargs.pop("num_assistant_tokens", 5)
         self.num_assistant_tokens_schedule = kwargs.pop("num_assistant_tokens_schedule", "heuristic")
 
+        # Cache implementation
+        self.cache_implementation = kwargs.pop("cache_implementation", None)
+
+        # Prompt lookup decoding
+        self.prompt_lookup_num_tokens = kwargs.pop("prompt_lookup_num_tokens", None)
+        self.max_matching_ngram_size = kwargs.pop("max_matching_ngram_size", None)
+
         # Wild card
         self.generation_kwargs = kwargs.pop("generation_kwargs", {})
 
