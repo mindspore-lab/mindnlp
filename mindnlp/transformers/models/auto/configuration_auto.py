@@ -48,6 +48,8 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("blip", "BlipConfig"),
         ("blip-2", "Blip2Config"),
         ("bloom", "BloomConfig"),
+        ("bridgetower", "BridgeTowerConfig"),
+        ("bros", "BrosConfig"),
         ('chatglm', 'ChatGLMConfig'),
         ("clip", "CLIPConfig"),
         ("clip_vision_model", "CLIPVisionConfig"),

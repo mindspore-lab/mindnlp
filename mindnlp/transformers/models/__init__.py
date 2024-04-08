@@ -42,6 +42,8 @@ from . import (
     blip,
     blip_2,
     bloom,
+    bridgetower,
+    bros,
     byt5,
     clip,
     codegen,
@@ -132,6 +134,8 @@ from .blenderbot_small import *
 from .blip import *
 from .blip_2 import *
 from .bloom import *
+from .bridgetower import *
+from .bros import *
 from .byt5 import *
 from .clip import *
 from .codegen import *
@@ -222,6 +226,8 @@ __all__.extend(blenderbot_small.__all__)
 __all__.extend(blip.__all__)
 __all__.extend(blip_2.__all__)
 __all__.extend(bloom.__all__)
+__all__.extend(bridgetower.__all__)
+__all__.extend(bros.__all__)
 __all__.extend(byt5.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
