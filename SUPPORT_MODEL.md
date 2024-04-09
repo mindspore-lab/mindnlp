@@ -25,15 +25,19 @@ The table below represents the current support in the library for each of those 
 | BioGPT                        | ✅                | ❌             |
 | Bit                           | ✅                | ❌             |
 | Blenderbot                    | ✅                | ❌             |
-| BLIP                          | TODO              | ❌             |
-| BLIP2                         | TODO              | ❌             |
+| Blenderbot Small              | ✅                | ❌             |
+| BLIP                          | ✅                | ❌             |
+| BLIP2                         | ✅                | ❌             |
 | BLOOM                         | ✅                | ❌             |
+| BridgeTower                   | ✅                | ❌             |
+| Bros                          | ✅                | ❌             |
+| ByT5                          | ✅                | ❌             |
 | ChatGLM                       | ✅                | ❌             |
 | ChatGLM2                      | ✅                | ❌             |
 | ChatGLM3                      | ✅                | ❌             |
 | CLIP                          | ✅                | ❌             |
 | CodeGen                       | ✅                | ❌             |
-| ConvBERT                      | TODO              | ❌             |
+| ConvBERT                      | ✅                | ❌             |
 | CPM                           | ✅                | ❌             |
 | CPM-Ant                       | ✅                | ❌             |
 | CPM-Bee                       | ✅                | ❌             |
@@ -49,12 +53,13 @@ The table below represents the current support in the library for each of those 
 | OpenAI GPT-2                  | ✅                | ✅             |
 | Gemma                         | ✅                | ❌             |
 | GPT Neo                       | ✅                | ❌             |
-| GPT NeoX                      | TODO              | ❌             |
+| GPT NeoX                      | ✅                | ❌             |
 | GPT Pangu                     | ✅                | ❌             |
 | GPTBigCode                    | ✅                | ❌             |
 | Graphormer                    | ✅                | ❌             |
 | Hubert                        | ✅                | ❌             |
 | Jamba                         | ✅                | ❌             |
+| JetMoE                        | ✅                | ❌             |
 | Llama                         | ✅                | ❌             |
 | Llama2                        | ✅                | ❌             |
 | CodeLlama                     | ✅                | ❌             |
@@ -92,3 +97,4 @@ The table below represents the current support in the library for each of those 
 | Whisper                       | ✅                | ❌             |
 | XLM                           | ✅                | ❌             |
 | XLM-RoBERTa                   | ✅                | ❌             |
+| XLNet                         | ✅                | ❌             |

@@ -19,7 +19,9 @@ import operator
 from typing import OrderedDict
 from functools import reduce, partial
 import math
+from uuid import uuid4
 from packaging import version
+
 import numpy as np
 import mindspore
 import mindspore.common.dtype as mstype
@@ -410,6 +412,12 @@ def _initialize(self, init_method):
 
 Parameter.initialize = _initialize
 
+old_param_init = Parameter.__init__
+def _param_new_init(self, default_input, name=None, requires_grad=True, layerwise_parallel=False, parallel_optimizer=True):
+    old_param_init(self, default_input, name, requires_grad, layerwise_parallel, parallel_optimizer)
+    self.uuid = uuid4().hex
+
+Parameter.__init__ = _param_new_init
 
 old_repeat = Tensor.repeat
 def new_repeat_interleave(input, repeats, axis=None):
