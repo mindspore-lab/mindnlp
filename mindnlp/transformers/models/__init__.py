@@ -71,6 +71,7 @@ from . import (
     gpt_pangu,
     graphormer,
     hubert,
+    jetmoe,
     layoutlm,
     layoutlmv2,
     llama,
@@ -163,6 +164,7 @@ from .gpt_pangu import *
 from .gpt2 import *
 from .graphormer import *
 from .hubert import *
+from .jetmoe import *
 from .layoutlm import *
 from .layoutlmv2 import *
 from .llama import *
@@ -255,6 +257,7 @@ __all__.extend(gpt_bigcode.__all__)
 __all__.extend(gpt2.__all__)
 __all__.extend(graphormer.__all__)
 __all__.extend(hubert.__all__)
+__all__.extend(jetmoe.__all__)
 __all__.extend(layoutlm.__all__)
 __all__.extend(layoutlmv2.__all__)
 __all__.extend(llama.__all__)

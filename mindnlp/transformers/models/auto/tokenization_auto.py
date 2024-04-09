@@ -189,6 +189,13 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
         ("ibert", ("RobertaTokenizer", "RobertaTokenizerFast" if is_tokenizers_available() else None)),
         # ("idefics", (None, "LlamaTokenizerFast" if is_tokenizers_available() else None)),
         ("instructblip", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
+        (
+            "jetmoe",
+            (
+                "LlamaTokenizer" if is_sentencepiece_available() else None,
+                "LlamaTokenizerFast" if is_tokenizers_available() else None,
+            ),
+        ),
         ("jukebox", ("JukeboxTokenizer", None)),
         # (
         #     "kosmos-2",
