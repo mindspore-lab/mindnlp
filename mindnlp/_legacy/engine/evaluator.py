@@ -19,8 +19,8 @@ from inspect import signature
 from tqdm.autonotebook import tqdm
 from mindnlp import ms_jit
 from mindnlp.abc import Metric
-from mindnlp.engine.callbacks.callback_manager import CallbackManager, RunContext
-from mindnlp.utils import ModelOutput, logging
+from .callbacks.callback_manager import CallbackManager, RunContext
+from ...utils import ModelOutput, logging
 
 logger = logging.get_logger(__name__)
 

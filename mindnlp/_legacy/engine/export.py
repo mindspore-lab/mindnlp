@@ -12,11 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+"""
+export models to other IR format
+"""
 
-"""
-Engine of text.
-"""
-from .trainer import *
-from .train_args import *
-from .utils import *
-from .callbacks import *
+# TODO: use `mindspore.export` api to achieve such function.
