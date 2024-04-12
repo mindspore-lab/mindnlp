@@ -84,6 +84,7 @@ from . import (
     mistral,
     mixtral,
     mobilebert,
+    mpnet,
     musicgen,
     musicgen_melody,
     nezha,
@@ -100,6 +101,7 @@ from . import (
     seamless_m4t_v2,
     starcoder2,
     t5,
+    timesformer,
     tinybert,
     wav2vec2,
     wav2vec2_with_lm,
@@ -177,6 +179,7 @@ from .minicpm import *
 from .mistral import *
 from .mixtral import *
 from .mobilebert import *
+from .mpnet import *
 from .musicgen import *
 from .musicgen_melody import *
 from .nezha import *
@@ -194,6 +197,7 @@ from .seamless_m4t_v2 import *
 from .starcoder2 import *
 from .tinybert import *
 from .t5 import *
+from .timesformer import *
 from .whisper import *
 from .wav2vec2 import *
 from .wav2vec2_with_lm import *
@@ -270,6 +274,7 @@ __all__.extend(minicpm.__all__)
 __all__.extend(mistral.__all__)
 __all__.extend(mixtral.__all__)
 __all__.extend(mobilebert.__all__)
+__all__.extend(mpnet.__all__)
 __all__.extend(musicgen.__all__)
 __all__.extend(musicgen_melody.__all__)
 __all__.extend(nezha.__all__)
@@ -285,8 +290,9 @@ __all__.extend(rwkv.__all__)
 __all__.extend(seamless_m4t.__all__)
 __all__.extend(seamless_m4t_v2.__all__)
 __all__.extend(starcoder2.__all__)
-__all__.extend(tinybert.__all__)
 __all__.extend(t5.__all__)
+__all__.extend(timesformer.__all__)
+__all__.extend(tinybert.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
 __all__.extend(wav2vec2_with_lm.__all__)

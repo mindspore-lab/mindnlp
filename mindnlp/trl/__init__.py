@@ -1,4 +1,4 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,16 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""
-Timesformer Model.
-"""
-from . import configuration_timesformer, modeling_timesformer, image_processing_videomae
-from .configuration_timesformer import *
-from .modeling_timesformer import *
-from .image_processing_videomae import *
-
-
-__all__ = []
-__all__.extend(configuration_timesformer.__all__)
-__all__.extend(modeling_timesformer.__all__)
-__all__.extend(image_processing_videomae.__all__)
+"""MindNLP Transformer Reinforcement Learning."""

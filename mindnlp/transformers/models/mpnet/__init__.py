@@ -13,15 +13,14 @@
 # limitations under the License.
 # ============================================================================
 """
-Timesformer Model.
+MPNet Model.
 """
-from . import configuration_timesformer, modeling_timesformer, image_processing_videomae
-from .configuration_timesformer import *
-from .modeling_timesformer import *
-from .image_processing_videomae import *
-
+from . import configuration_mpnet, modeling_mpnet, tokenization_mpnet
+from .configuration_mpnet import *
+from .modeling_mpnet import *
+from .tokenization_mpnet import *
 
 __all__ = []
-__all__.extend(configuration_timesformer.__all__)
-__all__.extend(modeling_timesformer.__all__)
-__all__.extend(image_processing_videomae.__all__)
+__all__.extend(configuration_mpnet.__all__)
+__all__.extend(modeling_mpnet.__all__)
+__all__.extend(tokenization_mpnet.__all__)
