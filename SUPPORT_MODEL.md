@@ -80,6 +80,7 @@ The table below represents the current support in the library for each of those 
 | Nezha                         | ✅                | ❌             |
 | OPT                           | ✅                | ❌             |
 | Phi2                          | ✅                | ❌             |
+| Pagasus                       | ✅                | ❌             |
 | Pop2piano                     | ✅                | ❌             |
 | Qwen2                         | ✅                | ❌             |
 | Qwen2Moe                      | ✅                | ❌             |
@@ -91,7 +92,7 @@ The table below represents the current support in the library for each of those 
 | SeamlessM4Tv2                 | ✅                | ❌             |
 | StarCoder                     | ✅                | ❌             |
 | T5                            | ✅                | ❌             |
-| Timesformer                   | TODO              | ❌             |
+| Timesformer                   | ✅                | ❌             |
 | Tinybert                      | ✅                | ❌             |
 | wav2vec                       | ✅                | ❌             |
 | Whisper                       | ✅                | ❌             |
