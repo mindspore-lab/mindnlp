@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=unused-import
 """ Logging utilities."""
 
 import functools
@@ -22,13 +23,13 @@ import os
 import sys
 import threading
 from logging import (
-    # CRITICAL,  # NOQA
+    CRITICAL,  # NOQA
     DEBUG,  # NOQA
     ERROR,  # NOQA
-    # FATAL,  # NOQA
+    FATAL,  # NOQA
     INFO,  # NOQA
-    # NOTSET,  # NOQA
-    # WARN,  # NOQA
+    NOTSET,  # NOQA
+    WARN,  # NOQA
     WARNING,  # NOQA
 )
 from logging import captureWarnings as _captureWarnings
