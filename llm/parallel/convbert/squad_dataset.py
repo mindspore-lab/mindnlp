@@ -1,5 +1,7 @@
 from mindnlp.dataset import load_dataset
 
+# DATA_PATH = "/home/daiyuxin/neoming_convbert/dev/mindnlp/llm/parallel/convbert/.mindnlp/datasets/squad"
+
 
 def get_squad_dataset(tokenizer, batch_size):
     # process squad data
