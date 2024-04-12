@@ -33,7 +33,11 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel, SequenceSummary
 from .convbert_config import ConvBertConfig
-from ...ms_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
+from ...ms_utils import (
+    apply_chunking_to_forward,
+    find_pruneable_heads_and_indices,
+    prune_linear_layer,
+)
 
 CONVBERT_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "conv-bert-base",
@@ -48,23 +52,27 @@ class ConvBertEmbeddings(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.word_embeddings = nn.Embedding(
-            config.vocab_size, config.embedding_size, padding_idx=config.pad_token_id)
+            config.vocab_size, config.embedding_size, padding_idx=config.pad_token_id
+        )
         self.position_embeddings = nn.Embedding(
-            config.max_position_embeddings, config.embedding_size)
+            config.max_position_embeddings, config.embedding_size
+        )
         self.token_type_embeddings = nn.Embedding(
-            config.type_vocab_size, config.embedding_size)
+            config.type_vocab_size, config.embedding_size
+        )
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
         self.LayerNorm = nn.LayerNorm(
-            config.embedding_size, epsilon=config.layer_norm_eps)
+            config.embedding_size, epsilon=config.layer_norm_eps
+        )
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
-        self.position_ids = ops.arange(
-            config.max_position_embeddings).broadcast_to((1, -1))
+        self.position_ids = ops.arange(config.max_position_embeddings).broadcast_to(
+            (1, -1)
+        )
 
-        self.token_type_ids = ops.zeros(
-            self.position_ids.shape, dtype=ms.int64)
+        self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=ms.int64)
 
     def construct(
         self,
@@ -90,7 +98,8 @@ class ConvBertEmbeddings(nn.Cell):
             if hasattr(self, "token_type_ids"):
                 buffered_token_type_ids = self.token_type_ids[:, :seq_length]
                 buffered_token_type_ids_expanded = buffered_token_type_ids.broadcast_to(
-                    input_shape[0], seq_length)
+                    input_shape[0], seq_length
+                )
                 token_type_ids = buffered_token_type_ids_expanded
             else:
                 token_type_ids = ops.zeros(input_shape, dtype=ms.int64)
@@ -119,17 +128,25 @@ class ConvBertPreTrainedModel(PreTrainedModel):
     def _init_weights(self, cell):
         """Initialize the weights"""
         if isinstance(cell, nn.Dense):
-            cell.weight = ms.Parameter(initializer(
-                Normal(sigma=self.config.initializer_range, mean=0.0),
-                cell.weight.shape,
-                cell.weight.dtype
-            ))
+            cell.weight = ms.Parameter(
+                initializer(
+                    Normal(sigma=self.config.initializer_range, mean=0.0),
+                    cell.weight.shape,
+                    cell.weight.dtype,
+                )
+            )
             if cell.bias is not None:
-                cell.bias = ms.Parameter(initializer(
-                    'zeros', cell.bias.shape, cell.bias.dtype))
+                cell.bias = ms.Parameter(
+                    initializer("zeros", cell.bias.shape, cell.bias.dtype)
+                )
         elif isinstance(cell, nn.Embedding):
-            cell.weight = ms.Parameter(initializer(Normal(mean=0.0, sigma=self.config.initializer_range),
-                                                   cell.weight.shape, cell.weight.dtype))
+            cell.weight = ms.Parameter(
+                initializer(
+                    Normal(mean=0.0, sigma=self.config.initializer_range),
+                    cell.weight.shape,
+                    cell.weight.dtype,
+                )
+            )
             # if cell.padding_idx is not None:
             #     cell.weight.data[cell.padding_idx].set_data(
             #         initializer('zeros',
@@ -138,12 +155,10 @@ class ConvBertPreTrainedModel(PreTrainedModel):
             #     )
         elif isinstance(cell, nn.LayerNorm):
             cell.bias = ms.Parameter(
-                initializer(
-                    'zeros', cell.bias.shape, cell.bias.dtype)
+                initializer("zeros", cell.bias.shape, cell.bias.dtype)
             )
             cell.weight = ms.Parameter(
-                initializer(
-                    'ones', cell.weight.shape, cell.weight.dtype)
+                initializer("ones", cell.weight.shape, cell.weight.dtype)
             )
 
 
@@ -157,28 +172,29 @@ class SeparableConv1D(nn.Cell):
             input_filters,
             kernel_size=kernel_size,
             group=input_filters,
-            pad_mode='pad',
+            pad_mode="pad",
             padding=kernel_size // 2,
-            has_bias=False
+            has_bias=False,
         )
         self.pointwise = nn.Conv1d(
-            input_filters,
-            output_filters,
-            kernel_size=1,
-            has_bias=False
+            input_filters, output_filters, kernel_size=1, has_bias=False
         )
         self.bias = ms.Parameter(ops.zeros((output_filters, 1)))
 
-        self.depthwise.weight = ms.Parameter(initializer(
-            Normal(sigma=config.initializer_range, mean=0.0),
-            self.depthwise.weight.shape,
-            self.depthwise.weight.dtype
-        ))
-        self.pointwise.weight = ms.Parameter(initializer(
-            Normal(sigma=config.initializer_range, mean=0.0),
-            self.pointwise.weight.shape,
-            self.depthwise.weight.dtype
-        ))
+        self.depthwise.weight = ms.Parameter(
+            initializer(
+                Normal(sigma=config.initializer_range, mean=0.0),
+                self.depthwise.weight.shape,
+                self.depthwise.weight.dtype,
+            )
+        )
+        self.pointwise.weight = ms.Parameter(
+            initializer(
+                Normal(sigma=config.initializer_range, mean=0.0),
+                self.pointwise.weight.shape,
+                self.depthwise.weight.dtype,
+            )
+        )
 
     def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
         x = self.depthwise(hidden_states)
@@ -194,7 +210,9 @@ class ConvBertSelfAttention(nn.Cell):
 
     def __init__(self, config):
         super().__init__()
-        if config.hidden_size % config.num_attention_heads != 0 and not hasattr(config, "embedding_size"):
+        if config.hidden_size % config.num_attention_heads != 0 and not hasattr(
+            config, "embedding_size"
+        ):
             raise ValueError(
                 f"The hidden size ({config.hidden_size}) is not a multiple of the number of attention "
                 f"heads ({config.num_attention_heads})"
@@ -210,11 +228,9 @@ class ConvBertSelfAttention(nn.Cell):
 
         self.conv_kernel_size = config.conv_kernel_size
         if config.hidden_size % self.num_attention_heads != 0:
-            raise ValueError(
-                "hidden_size should be divisible by num_attention_heads")
+            raise ValueError("hidden_size should be divisible by num_attention_heads")
 
-        self.attention_head_size = (
-            config.hidden_size // self.num_attention_heads) // 2
+        self.attention_head_size = (config.hidden_size // self.num_attention_heads) // 2
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
         self.query = nn.Dense(config.hidden_size, self.all_head_size)
@@ -225,20 +241,23 @@ class ConvBertSelfAttention(nn.Cell):
             config, config.hidden_size, self.all_head_size, self.conv_kernel_size
         )
         self.conv_kernel_layer = nn.Dense(
-            self.all_head_size, self.num_attention_heads * self.conv_kernel_size)
+            self.all_head_size, self.num_attention_heads * self.conv_kernel_size
+        )
         self.conv_out_layer = nn.Dense(config.hidden_size, self.all_head_size)
         self.unfold = nn.Unfold(
             ksizes=[1, self.conv_kernel_size, 1, 1],
             rates=[1, 1, 1, 1],
             strides=[1, 1, 1, 1],
-            padding="same"
+            padding="same",
         )
         self.dropout = nn.Dropout(p=config.attention_probs_dropout_prob)
 
     def swapaxes_for_scores(self, x):
         """swapaxes for scores"""
-        new_x_shape = x.shape[:-1] + \
-            (self.num_attention_heads, self.attention_head_size)
+        new_x_shape = x.shape[:-1] + (
+            self.num_attention_heads,
+            self.attention_head_size,
+        )
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
@@ -263,23 +282,25 @@ class ConvBertSelfAttention(nn.Cell):
             mixed_value_layer = self.value(hidden_states)
 
         mixed_key_conv_attn_layer = self.key_conv_attn_layer(
-            hidden_states.swapaxes(1, 2))
+            hidden_states.swapaxes(1, 2)
+        )
         mixed_key_conv_attn_layer = mixed_key_conv_attn_layer.swapaxes(1, 2)
 
         query_layer = self.swapaxes_for_scores(mixed_query_layer)
         key_layer = self.swapaxes_for_scores(mixed_key_layer)
         value_layer = self.swapaxes_for_scores(mixed_value_layer)
-        conv_attn_layer = ops.multiply(
-            mixed_key_conv_attn_layer, mixed_query_layer)
+        conv_attn_layer = ops.multiply(mixed_key_conv_attn_layer, mixed_query_layer)
 
         conv_kernel_layer = self.conv_kernel_layer(conv_attn_layer)
         conv_kernel_layer = ops.reshape(
-            conv_kernel_layer, [-1, self.conv_kernel_size, 1])
+            conv_kernel_layer, [-1, self.conv_kernel_size, 1]
+        )
         conv_kernel_layer = ops.softmax(conv_kernel_layer, axis=1)
 
         conv_out_layer = self.conv_out_layer(hidden_states)
         conv_out_layer = ops.reshape(
-            conv_out_layer, [batch_size, -1, self.all_head_size])
+            conv_out_layer, [batch_size, -1, self.all_head_size]
+        )
         conv_out_layer = conv_out_layer.swapaxes(1, 2).unsqueeze(-1)
         conv_out_layer = ops.unfold(
             conv_out_layer,
@@ -292,14 +313,14 @@ class ConvBertSelfAttention(nn.Cell):
             batch_size, -1, self.all_head_size, self.conv_kernel_size
         )
         conv_out_layer = ops.reshape(
-            conv_out_layer, [-1, self.attention_head_size, self.conv_kernel_size])
+            conv_out_layer, [-1, self.attention_head_size, self.conv_kernel_size]
+        )
         conv_out_layer = ops.matmul(conv_out_layer, conv_kernel_layer)
         conv_out_layer = ops.reshape(conv_out_layer, [-1, self.all_head_size])
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
         attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
-        attention_scores = attention_scores / \
-            math.sqrt(self.attention_head_size)
+        attention_scores = attention_scores / math.sqrt(self.attention_head_size)
         if attention_mask is not None:
             # Apply the attention mask is (precomputed for all layers in ConvBertModel forward() function)
             attention_scores = attention_scores + attention_mask
@@ -318,8 +339,10 @@ class ConvBertSelfAttention(nn.Cell):
         context_layer = ops.matmul(attention_probs, value_layer)
         context_layer = context_layer.permute(0, 2, 1, 3)
 
-        conv_out = ops.reshape(conv_out_layer, [
-                               batch_size, -1, self.num_attention_heads, self.attention_head_size])
+        conv_out = ops.reshape(
+            conv_out_layer,
+            [batch_size, -1, self.num_attention_heads, self.attention_head_size],
+        )
         context_layer = ops.cat([context_layer, conv_out], 2)
 
         # conv and context
@@ -328,8 +351,9 @@ class ConvBertSelfAttention(nn.Cell):
         )
         context_layer = context_layer.view(*new_context_layer_shape)
 
-        outputs = (context_layer, attention_probs) if output_attentions else (
-            context_layer,)
+        outputs = (
+            (context_layer, attention_probs) if output_attentions else (context_layer,)
+        )
         return outputs
 
 
@@ -341,8 +365,7 @@ class ConvBertSelfOutput(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
@@ -364,25 +387,27 @@ class ConvBertAttention(nn.Cell):
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
-        """ prune heads """
+        """prune heads"""
         if len(heads) == 0:
             return
         heads, index = find_pruneable_heads_and_indices(
-            heads, self.self.num_attention_heads, self.self.attention_head_size, self.pruned_heads
+            heads,
+            self.self.num_attention_heads,
+            self.self.attention_head_size,
+            self.pruned_heads,
         )
 
         # Prune linear layers
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(
-            self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
 
         # Update hyper params and store pruned heads
-        self.self.num_attention_heads = self.self.num_attention_heads - \
-            len(heads)
-        self.self.all_head_size = self.self.attention_head_size * \
-            self.self.num_attention_heads
+        self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
+        self.self.all_head_size = (
+            self.self.attention_head_size * self.self.num_attention_heads
+        )
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def construct(
@@ -419,13 +444,13 @@ class GroupedLinearLayer(nn.Cell):
         self.group_in_dim = self.input_size // self.num_groups
         self.group_out_dim = self.output_size // self.num_groups
         self.weight = nn.Parameter(
-            ops.zeros((self.num_groups, self.group_in_dim, self.group_out_dim)))
+            ops.zeros((self.num_groups, self.group_in_dim, self.group_out_dim))
+        )
         self.bias = nn.Parameter(ops.zeros(output_size))
 
     def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
         batch_size = list(hidden_states.shape)[0]
-        x = ops.reshape(
-            hidden_states, [-1, self.num_groups, self.group_in_dim])
+        x = ops.reshape(hidden_states, [-1, self.num_groups, self.group_in_dim])
         x = x.permute(1, 0, 2)
         x = ops.matmul(x, self.weight)
         x = x.permute(1, 0, 2)
@@ -445,7 +470,9 @@ class ConvBertIntermediate(nn.Cell):
             self.dense = nn.Dense(config.hidden_size, config.intermediate_size)
         else:
             self.dense = GroupedLinearLayer(
-                input_size=config.hidden_size, output_size=config.intermediate_size, num_groups=config.num_groups
+                input_size=config.hidden_size,
+                output_size=config.intermediate_size,
+                num_groups=config.num_groups,
             )
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
@@ -469,10 +496,11 @@ class ConvBertOutput(nn.Cell):
             self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
         else:
             self.dense = GroupedLinearLayer(
-                input_size=config.intermediate_size, output_size=config.hidden_size, num_groups=config.num_groups
+                input_size=config.intermediate_size,
+                output_size=config.hidden_size,
+                num_groups=config.num_groups,
             )
-        self.LayerNorm = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
         self.dropout = nn.Dropout(p=config.hidden_dropout_prob)
 
     def construct(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
@@ -497,7 +525,8 @@ class ConvBertLayer(nn.Cell):
         if self.add_cross_attention:
             if not self.is_decoder:
                 raise TypeError(
-                    f"{self} should be used as a decoder model if cross attention is added")
+                    f"{self} should be used as a decoder model if cross attention is added"
+                )
             self.crossattention = ConvBertAttention(config)
         self.intermediate = ConvBertIntermediate(config)
         self.output = ConvBertOutput(config)
@@ -539,7 +568,10 @@ class ConvBertLayer(nn.Cell):
             outputs = outputs + cross_attention_outputs[1:]
 
         layer_output = apply_chunking_to_forward(
-            self.feed_forward_chunk, self.chunk_size_feed_forward, self.seq_len_dim, attention_output
+            self.feed_forward_chunk,
+            self.chunk_size_feed_forward,
+            self.seq_len_dim,
+            attention_output,
         )
         outputs = (layer_output,) + outputs
         return outputs
@@ -559,8 +591,9 @@ class ConvBertEncoder(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.layer = nn.CellList([ConvBertLayer(config)
-                                 for _ in range(config.num_hidden_layers)])
+        self.layer = nn.CellList(
+            [ConvBertLayer(config) for _ in range(config.num_hidden_layers)]
+        )
         self.gradient_checkpointing = False
 
     def construct(
@@ -576,7 +609,9 @@ class ConvBertEncoder(nn.Cell):
     ) -> Union[Tuple, BaseModelOutputWithCrossAttentions]:
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
-        all_cross_attentions = () if output_attentions and self.config.add_cross_attention else None
+        all_cross_attentions = (
+            () if output_attentions and self.config.add_cross_attention else None
+        )
         for i, layer_cell in enumerate(self.layer):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
@@ -606,8 +641,7 @@ class ConvBertEncoder(nn.Cell):
             if output_attentions:
                 all_self_attentions = all_self_attentions + (layer_outputs[1],)
                 if self.config.add_cross_attention:
-                    all_cross_attentions = all_cross_attentions + \
-                        (layer_outputs[2],)
+                    all_cross_attentions = all_cross_attentions + (layer_outputs[2],)
 
         if output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)
@@ -615,7 +649,12 @@ class ConvBertEncoder(nn.Cell):
         if not return_dict:
             return tuple(
                 v
-                for v in [hidden_states, all_hidden_states, all_self_attentions, all_cross_attentions]
+                for v in [
+                    hidden_states,
+                    all_hidden_states,
+                    all_self_attentions,
+                    all_cross_attentions,
+                ]
                 if v is not None
             )
         return BaseModelOutputWithCrossAttentions(
@@ -638,8 +677,7 @@ class ConvBertPredictionHeadTransform(nn.Cell):
             self.transform_act_fn = ACT2FN[config.hidden_act]
         else:
             self.transform_act_fn = config.hidden_act
-        self.LayerNorm = nn.LayerNorm(
-            config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
 
     def construct(self, hidden_states: ms.Tensor) -> ms.Tensor:
         hidden_states = self.dense(hidden_states)
@@ -650,7 +688,7 @@ class ConvBertPredictionHeadTransform(nn.Cell):
 
 class ConvBertModel(ConvBertPreTrainedModel):
     """
-    ConvBertEncoder
+    ConvBertModel
     """
 
     def __init__(self, config):
@@ -659,7 +697,8 @@ class ConvBertModel(ConvBertPreTrainedModel):
 
         if config.embedding_size != config.hidden_size:
             self.embeddings_project = nn.Dense(
-                config.embedding_size, config.hidden_size)
+                config.embedding_size, config.hidden_size
+            )
 
         self.encoder = ConvBertEncoder(config)
         self.config = config
@@ -692,24 +731,31 @@ class ConvBertModel(ConvBertPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithCrossAttentions]:
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_attentions = (
+            output_attentions
+            if output_attentions is not None
+            else self.config.output_attentions
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError(
-                "You cannot specify both input_ids and inputs_embeds at the same time")
+                "You cannot specify both input_ids and inputs_embeds at the same time"
+            )
         if input_ids is not None:
-            self.warn_if_padding_and_no_attention_mask(
-                input_ids, attention_mask)
+            self.warn_if_padding_and_no_attention_mask(input_ids, attention_mask)
             input_shape = input_ids.shape
         elif inputs_embeds is not None:
             input_shape = inputs_embeds.shape[:-1]
         else:
-            raise ValueError(
-                "You have to specify either input_ids or inputs_embeds")
+            raise ValueError("You have to specify either input_ids or inputs_embeds")
 
         batch_size, seq_length = input_shape
 
@@ -719,18 +765,22 @@ class ConvBertModel(ConvBertPreTrainedModel):
             if hasattr(self.embeddings, "token_type_ids"):
                 buffered_token_type_ids = self.embeddings.token_type_ids[:, :seq_length]
                 buffered_token_type_ids_expanded = buffered_token_type_ids.expand(
-                    batch_size, seq_length)
+                    batch_size, seq_length
+                )
                 token_type_ids = buffered_token_type_ids_expanded
             else:
                 token_type_ids = ops.zeros(input_shape, dtype=ms.int64)
 
         extended_attention_mask = self.get_extended_attention_mask(
-            attention_mask, input_shape)
-        head_mask = self.get_head_mask(
-            head_mask, self.config.num_hidden_layers)
+            attention_mask, input_shape
+        )
+        head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
 
         hidden_states = self.embeddings(
-            input_ids=input_ids, position_ids=position_ids, token_type_ids=token_type_ids, inputs_embeds=inputs_embeds
+            input_ids=input_ids,
+            position_ids=position_ids,
+            token_type_ids=token_type_ids,
+            inputs_embeds=inputs_embeds,
         )
 
         if hasattr(self, "embeddings_project"):
@@ -756,7 +806,8 @@ class ConvBertGeneratorPredictions(nn.Cell):
 
         self.activation = get_activation("gelu")
         self.LayerNorm = nn.LayerNorm(
-            config.embedding_size, epsilon=config.layer_norm_eps)
+            config.embedding_size, epsilon=config.layer_norm_eps
+        )
         self.dense = nn.Dense(config.hidden_size, config.embedding_size)
 
     def construct(self, generator_hidden_states: ms.Tensor) -> ms.Tensor:
@@ -769,8 +820,9 @@ class ConvBertGeneratorPredictions(nn.Cell):
 
 class ConvBertForMaskedLM(ConvBertPreTrainedModel):
     """
-    ConvBertEncoder
+    ConvBertForMaskedLM
     """
+
     _tied_weights_keys = ["generator.lm_head.weight"]
 
     def __init__(self, config):
@@ -779,8 +831,7 @@ class ConvBertForMaskedLM(ConvBertPreTrainedModel):
         self.convbert = ConvBertModel(config)
         self.generator_predictions = ConvBertGeneratorPredictions(config)
 
-        self.generator_lm_head = nn.Dense(
-            config.embedding_size, config.vocab_size)
+        self.generator_lm_head = nn.Dense(config.embedding_size, config.vocab_size)
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -809,7 +860,9 @@ class ConvBertForMaskedLM(ConvBertPreTrainedModel):
             config.vocab_size]` (see `input_ids` docstring) Tokens with indices set to `-100` are ignored (masked), the
             loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         generator_hidden_states = self.convbert(
             input_ids,
@@ -824,8 +877,7 @@ class ConvBertForMaskedLM(ConvBertPreTrainedModel):
         )
         generator_sequence_output = generator_hidden_states[0]
 
-        prediction_scores = self.generator_predictions(
-            generator_sequence_output)
+        prediction_scores = self.generator_predictions(generator_sequence_output)
         prediction_scores = self.generator_lm_head(prediction_scores)
 
         loss = None
@@ -833,8 +885,9 @@ class ConvBertForMaskedLM(ConvBertPreTrainedModel):
         if labels is not None:
             labels = labels.to(ms.int32)
             loss_fct = nn.CrossEntropyLoss()  # -100 index = padding token
-            loss = loss_fct(prediction_scores.view(-1,
-                            self.config.vocab_size), labels.view(-1))
+            loss = loss_fct(
+                prediction_scores.view(-1, self.config.vocab_size), labels.view(-1)
+            )
 
         if not return_dict:
             output = (prediction_scores,) + generator_hidden_states[1:]
@@ -855,7 +908,9 @@ class ConvBertClassificationHead(nn.Cell):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
         classifier_dropout = (
-            config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
+            config.classifier_dropout
+            if config.classifier_dropout is not None
+            else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
         self.out_proj = nn.Dense(config.hidden_size, config.num_labels)
@@ -874,7 +929,7 @@ class ConvBertClassificationHead(nn.Cell):
 
 class ConvBertForSequenceClassification(ConvBertPreTrainedModel):
     """
-    ConvBertEncoder
+    ConvBertForSequenceClassification
     """
 
     def __init__(self, config):
@@ -906,7 +961,9 @@ class ConvBertForSequenceClassification(ConvBertPreTrainedModel):
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         outputs = self.convbert(
             input_ids,
@@ -942,8 +999,7 @@ class ConvBertForSequenceClassification(ConvBertPreTrainedModel):
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
                 loss_fct = CrossEntropyLoss()
-                loss = loss_fct(
-                    logits.view(-1, self.num_labels), labels.view(-1))
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
@@ -994,20 +1050,33 @@ class ConvBertForMultipleChoice(ConvBertPreTrainedModel):
             num_choices-1]` where `num_choices` is the size of the second dimension of the input tensors. (See
             `input_ids` above)
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        num_choices = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
+        num_choices = (
+            input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
+        )
 
-        input_ids = input_ids.view(-1,
-                                   input_ids.shape[-1]) if input_ids is not None else None
-        attention_mask = attention_mask.view(
-            -1, attention_mask.shape[-1]) if attention_mask is not None else None
-        token_type_ids = token_type_ids.view(
-            -1, token_type_ids.shape[-1]) if token_type_ids is not None else None
-        position_ids = position_ids.view(
-            -1, position_ids.shape[-1]) if position_ids is not None else None
+        input_ids = (
+            input_ids.view(-1, input_ids.shape[-1]) if input_ids is not None else None
+        )
+        attention_mask = (
+            attention_mask.view(-1, attention_mask.shape[-1])
+            if attention_mask is not None
+            else None
+        )
+        token_type_ids = (
+            token_type_ids.view(-1, token_type_ids.shape[-1])
+            if token_type_ids is not None
+            else None
+        )
+        position_ids = (
+            position_ids.view(-1, position_ids.shape[-1])
+            if position_ids is not None
+            else None
+        )
         inputs_embeds = (
-            inputs_embeds.view(-1,
-                               inputs_embeds.shape[-2], inputs_embeds.shape[-1])
+            inputs_embeds.view(-1, inputs_embeds.shape[-2], inputs_embeds.shape[-1])
             if inputs_embeds is not None
             else None
         )
@@ -1059,7 +1128,9 @@ class ConvBertForTokenClassification(ConvBertPreTrainedModel):
 
         self.convbert = ConvBertModel(config)
         classifier_dropout = (
-            config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
+            config.classifier_dropout
+            if config.classifier_dropout is not None
+            else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(p=classifier_dropout)
         self.classifier = nn.Dense(config.hidden_size, config.num_labels)
@@ -1084,7 +1155,9 @@ class ConvBertForTokenClassification(ConvBertPreTrainedModel):
         labels (`ms.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         outputs = self.convbert(
             input_ids,
@@ -1150,7 +1223,9 @@ class ConvBertForQuestionAnswering(ConvBertPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict if return_dict is not None else self.config.use_return_dict
+        )
 
         outputs = self.convbert(
             input_ids,
@@ -1163,9 +1238,7 @@ class ConvBertForQuestionAnswering(ConvBertPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-
         sequence_output = outputs[0]
-
         logits = self.qa_outputs(sequence_output)
         start_logits, end_logits = logits.split(1, axis=-1)
         start_logits = start_logits.squeeze(-1)
@@ -1180,8 +1253,7 @@ class ConvBertForQuestionAnswering(ConvBertPreTrainedModel):
                 end_positions = end_positions.squeeze(-1)
             # sometimes the start/end positions are outside our model inputs, we ignore these terms
             ignored_index = start_logits.shape[1]
-            start_positions = start_positions.clamp(
-                0, ignored_index).to(ms.int32)
+            start_positions = start_positions.clamp(0, ignored_index).to(ms.int32)
             end_positions = end_positions.clamp(0, ignored_index).to(ms.int32)
 
             loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
