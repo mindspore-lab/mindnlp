@@ -19,12 +19,16 @@ import operator
 from typing import OrderedDict
 from functools import reduce, partial
 import math
+import types
 from uuid import uuid4
+import mindspore.experimental
+import mindspore.experimental.optim
 from packaging import version
 
 import numpy as np
 import mindspore
 import mindspore.common.dtype as mstype
+from mindspore._c_expression import Tensor as Tensor_ # pylint: disable=no-name-in-module
 from mindspore import nn, ops, Tensor, Parameter
 from mindspore.common._stub_tensor import StubTensor
 from mindspore.nn.layer.conv import _Conv, _deconv_output_length
@@ -33,6 +37,7 @@ from mindspore import _checkparam as Validator
 from mindspore.ops import functional as F
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp._legacy.functional import einsum
+from .utils.logging import get_logger
 
 LESS_MS_2_1 = version.parse(mindspore.__version__) < version.parse('2.1.0')
 LESS_MS_2_2 = version.parse(mindspore.__version__) < version.parse('2.2.0')
@@ -966,6 +971,50 @@ def parameters_dict(self, recurse=True):
         param_dict[name] = param
     return param_dict
 
+
+logger = get_logger()
+def cell_load_state_dict(self, parameter_dict, strict=False):
+    """
+    Load parameters into network, return parameter list that are not loaded in the network.
+    """
+    if not isinstance(parameter_dict, dict):
+        logger.critical("Failed to combine the net and the parameters.")
+        msg = ("For 'load_param_into_net', the argument 'parameter_dict' should be a dict, "
+            "but got {}.".format(type(parameter_dict)))
+        raise TypeError(msg)
+
+    for key, value in parameter_dict.items():
+        if not isinstance(key, str) or not isinstance(value, (Parameter, str, list)):
+            logger.critical("Load parameters into net failed.")
+            msg = ("For 'parameter_dict', the element in the argument 'parameter_dict' should be a "
+                "'str' and 'Parameter' , but got {} and {}.".format(type(key), type(value)))
+            raise TypeError(msg)
+
+    param_not_load = []
+    ckpt_not_load = list(parameter_dict.keys())
+    for name, param in self.parameters_and_names():
+        if param.name in parameter_dict:
+            new_param = parameter_dict[name]
+            param.set_data(new_param)
+            ckpt_not_load.remove(name)
+        else:
+            param_not_load.append(name)
+
+    logger.debug("Params not matched(in net but not in parameter_dict):")
+    for param_name in param_not_load:
+        logger.debug("%s", param_name)
+
+    logger.info("Loading parameters into net is finished.")
+    if param_not_load:
+        logger.warning(f"For 'load_param_into_net', "
+                    f"{len(param_not_load)} parameters in the 'net' are not loaded, because they are not in the "
+                    f"'parameter_dict', please check whether the network structure is consistent "
+                    f"when training and loading checkpoint.")
+        for param_name in param_not_load:
+            logger.warning(f"{param_name} is not loaded.")
+    return param_not_load, ckpt_not_load
+
+nn.Cell.load_state_dict = cell_load_state_dict
 nn.Cell.parameters_dict = parameters_dict
 
 
@@ -1014,3 +1063,62 @@ class GroupNorm_hijack(GroupNorm_original):
         return o
 
 nn.GroupNorm = GroupNorm_hijack
+
+def state_dict(self):
+    """Returns the state of the scheduler as a :class:`dict`.
+
+    It contains an entry for every variable in self.__dict__ which
+    is not the optimizer.
+    The learning rate lambda functions will only be saved if they are callable objects
+    and not if they are functions or lambdas.
+
+    When saving or loading the scheduler, please make sure to also save or load the state of the optimizer.
+    """
+
+    state_dict = {key: value for key, value in self.__dict__.items() if key not in ('optimizer', 'lr_lambdas')}
+    state_dict['lr_lambdas'] = [None] * len(self.lr_lambdas)
+
+    for idx, fn in enumerate(self.lr_lambdas):
+        if not isinstance(fn, types.FunctionType):
+            state_dict['lr_lambdas'][idx] = fn.__dict__.copy()
+
+    return state_dict
+
+def load_state_dict(self, state_dict):
+    """Loads the schedulers state.
+
+    When saving or loading the scheduler, please make sure to also save or load the state of the optimizer.
+
+    Args:
+        state_dict (dict): scheduler state. Should be an object returned
+            from a call to :meth:`state_dict`.
+    """
+    def assign_scalar_to_tensor(data, saved_data):
+        if isinstance(saved_data, dict):
+            for key, value in saved_data.items():
+                if key in data:
+                    assign_scalar_to_tensor(data[key], value)  # 递归调用以处理嵌套字典
+        elif isinstance(saved_data, list):
+            for i, item in enumerate(saved_data):
+                assign_scalar_to_tensor(data[i], item)  # 递归调用以处理嵌套列表
+        elif isinstance(data, mindspore.Tensor):
+            data.assign_value(Tensor(saved_data))  # 将标量值填充到Tensor中
+
+    lr_lambdas = state_dict.pop('lr_lambdas')
+    assign_scalar_to_tensor(self.__dict__, state_dict)
+    # Restore state_dict keys in order to prevent side effects
+    # https://github.com/pytorch/pytorch/issues/32756
+    state_dict['lr_lambdas'] = lr_lambdas
+
+    for idx, fn in enumerate(lr_lambdas):
+        if fn is not None:
+            self.lr_lambdas[idx].__dict__.update(fn)
+
+mindspore.experimental.optim.lr_scheduler.LambdaLR.state_dict = state_dict
+mindspore.experimental.optim.lr_scheduler.LambdaLR.load_state_dict = load_state_dict
+
+def _str(self):
+    return f'Parameter ({Tensor_.__str__(self)}, ' \
+           f'requires_grad={self.requires_grad})'
+
+Parameter.__str__ = _str

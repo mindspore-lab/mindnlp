@@ -45,6 +45,7 @@ from mindnlp.transformers import (
 )
 from mindnlp.modules.optimization import get_polynomial_decay_schedule_with_warmup
 from mindnlp.utils import is_mindspore_available, logging
+from mindnlp.utils.serialization import safe_load_file, safe_save_file
 from mindnlp.utils.testing_utils import (
     # ENDPOINT_STAGING,
     # TOKEN,
@@ -147,7 +148,7 @@ class RepeatDataset:
         return self.length
 
     def __getitem__(self, i):
-        return {"input_ids": self.x, "labels": self.x}
+        return self.x, self.x
 
 
 class DynamicShapesDataset:
@@ -296,7 +297,7 @@ if is_mindspore_available():
             self.ln1 = nn.LayerNorm(hidden_size)
             self.linear2 = nn.Dense(hidden_size, hidden_size)
             self.ln2 = nn.LayerNorm(hidden_size)
-            self.bias = nn.Dense(ops.zeros(hidden_size))
+            self.bias = mindspore.Parameter(ops.zeros(hidden_size))
 
         def construct(self, x):
             h = self.ln1(ops.relu(self.linear1(x)))
@@ -350,16 +351,15 @@ if is_mindspore_available():
 
 
 class TrainerIntegrationCommon:
-    def check_saved_checkpoints(self, output_dir, freq, total, is_pretrained=True, safe_weights=False):
+    def check_saved_checkpoints(self, output_dir, freq, total, is_pretrained=True, safe_weights=True):
         weights_file = WEIGHTS_NAME if not safe_weights else SAFE_WEIGHTS_NAME
-        file_list = [weights_file] #, "training_args.bin", "optimizer.pt", "scheduler.pt", "trainer_state.json"]
+        file_list = [weights_file]#, "training_args.bin", "optimizer.ckpt", "scheduler.json", "trainer_state.json"]
         if is_pretrained:
             file_list.append("config.json")
         for step in range(freq, total, freq):
             checkpoint = os.path.join(output_dir, f"checkpoint-{step}")
             self.assertTrue(os.path.isdir(checkpoint))
             for filename in file_list:
-                print(os.path.join(checkpoint, filename))
                 self.assertTrue(os.path.isfile(os.path.join(checkpoint, filename)))
 
     def check_best_model_has_been_loaded(
@@ -407,7 +407,7 @@ class TrainerIntegrationCommon:
     def convert_to_sharded_checkpoint(self, folder, save_safe=True, load_safe=True):
         # Converts a checkpoint of a regression model to a sharded checkpoint.
         if load_safe:
-            loader = safetensors.numpy.load_file
+            loader = safe_load_file
             weights_file = os.path.join(folder, SAFE_WEIGHTS_NAME)
         else:
             loader = mindspore.load_checkpoint
@@ -415,7 +415,7 @@ class TrainerIntegrationCommon:
 
         if save_safe:
             extension = "safetensors"
-            saver = safetensors.numpy.save_file
+            saver = safe_save_file
             index_file = os.path.join(folder, SAFE_WEIGHTS_INDEX_NAME)
             shard_name = SAFE_WEIGHTS_NAME
         else:
@@ -441,7 +441,6 @@ class TrainerIntegrationCommon:
 
         for param_name, shard_file in zip(keys, shard_files):
             saver({param_name: state_dict[param_name]}, os.path.join(folder, shard_file))
-
 
 @require_mindspore
 @require_sentencepiece
@@ -470,7 +469,6 @@ class TrainerIntegrationPrerunTest(TestCasePlus, TrainerIntegrationCommon):
     def check_trained_model(self, model, alternate_seed=False):
         # Checks a training seeded with learning_rate = 0.1
         (a, b) = self.alternate_trained_model if alternate_seed else self.default_trained_model
-        print(model.a.asnumpy(), a.asnumpy())
         self.assertTrue(np.allclose(model.a.asnumpy(), a.asnumpy()))
         self.assertTrue(np.allclose(model.b.asnumpy(), b.asnumpy()))
 
@@ -851,8 +849,8 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
     def test_logging_inf_nan_filter(self):
         config = GPT2Config(vocab_size=100, n_positions=128, n_embd=32, n_layer=3, n_head=4)
         tiny_gpt2 = GPT2LMHeadModel(config)
-        x = torch.randint(0, 100, (128,))
-        train_dataset = RepeatDataset(x)
+        x = ops.randint(0, 100, (128,))
+        train_dataset = GeneratorDataset(RepeatDataset(x), column_names=['input_ids', 'labels'])
 
         # Trainer without inf/nan filter
         args = TrainingArguments("./test", learning_rate=1e9, logging_steps=5, logging_nan_inf_filter=False)
@@ -1142,7 +1140,6 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
                 trainer.train()
             # assert get_last_checkpoint(tmpdir) is None
 
-    @pytest.mark.skip('not support save as safetensors now.')
     @require_safetensors
     def test_safe_checkpoints(self):
         for save_safetensors in [True, False]:
@@ -1184,16 +1181,16 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
             kwargs = {
                 "output_dir": tmpdir,
                 "train_len": 128,
-                "save_steps": 5,
+                "save_steps": 16,
                 "learning_rate": 0.1,
-                "logging_steps": 5,
+                "logging_steps": 16,
             }
             trainer = get_regression_trainer(**kwargs)
             trainer.train()
             (a, b) = trainer.model.a.item(), trainer.model.b.item()
             state = dataclasses.asdict(trainer.state)
 
-            checkpoint = os.path.join(tmpdir, "checkpoint-5")
+            checkpoint = os.path.join(tmpdir, "checkpoint-16")
 
             # Reinitialize trainer
             trainer = get_regression_trainer(**kwargs)
@@ -1206,7 +1203,7 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
             self.check_trainer_state_are_the_same(state, state1)
 
             # Now check with a later checkpoint that it also works when we span over one epoch
-            checkpoint = os.path.join(tmpdir, "checkpoint-15")
+            checkpoint = os.path.join(tmpdir, "checkpoint-48")
 
             # Reinitialize trainer and load model
             trainer = get_regression_trainer(**kwargs)
@@ -1223,7 +1220,7 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
             kwargs = {
                 "output_dir": tmpdir,
                 "train_len": 128,
-                "save_steps": 5,
+                "save_steps": 16,
                 "learning_rate": 0.1,
                 "pretrained": False,
             }
@@ -1233,7 +1230,7 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
             (a, b) = trainer.model.a.item(), trainer.model.b.item()
             state = dataclasses.asdict(trainer.state)
 
-            checkpoint = os.path.join(tmpdir, "checkpoint-5")
+            checkpoint = os.path.join(tmpdir, "checkpoint-16")
 
             # Reinitialize trainer and load model
             trainer = get_regression_trainer(**kwargs)
@@ -1246,7 +1243,7 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
             self.check_trainer_state_are_the_same(state, state1)
 
             # Now check with a later checkpoint that it also works when we span over one epoch
-            checkpoint = os.path.join(tmpdir, "checkpoint-15")
+            checkpoint = os.path.join(tmpdir, "checkpoint-48")
 
             # Reinitialize trainer and load model
             trainer = get_regression_trainer(**kwargs)
@@ -1369,7 +1366,6 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         class MockCudaOOMCallback(TrainerCallback):
             def on_step_end(self, args, state, control, **kwargs):
                 # simulate OOM on the first step
-                print(state.train_batch_size)
                 if state.train_batch_size >= 16:
                     raise RuntimeError("CUDA out of memory.")
 
@@ -1414,12 +1410,12 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         # won't be the same since the training dataloader is shuffled).
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            trainer = get_regression_trainer(output_dir=tmpdir, train_len=128, save_steps=5, learning_rate=0.1)
+            trainer = get_regression_trainer(output_dir=tmpdir, train_len=128, save_steps=16, learning_rate=0.1)
             trainer.train()
             (a, b) = trainer.model.a.item(), trainer.model.b.item()
             state = dataclasses.asdict(trainer.state)
 
-            checkpoint = os.path.join(tmpdir, "checkpoint-5")
+            checkpoint = os.path.join(tmpdir, "checkpoint-16")
             self.convert_to_sharded_checkpoint(checkpoint)
 
             # Reinitialize trainer
@@ -1444,7 +1440,7 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
                     trainer = get_regression_trainer(
                         output_dir=tmpdir,
                         train_len=128,
-                        save_steps=5,
+                        save_steps=16,
                         learning_rate=0.1,
                         save_safetensors=initial_safe,
                     )
@@ -1452,12 +1448,12 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
                     (a, b) = trainer.model.a.item(), trainer.model.b.item()
                     state = dataclasses.asdict(trainer.state)
 
-                    checkpoint = os.path.join(tmpdir, "checkpoint-5")
+                    checkpoint = os.path.join(tmpdir, "checkpoint-16")
                     self.convert_to_sharded_checkpoint(checkpoint, load_safe=initial_safe, save_safe=loaded_safe)
 
                     # Reinitialize trainer
                     trainer = get_regression_trainer(
-                        output_dir=tmpdir, train_len=128, save_steps=5, learning_rate=0.1, save_safetensors=loaded_safe
+                        output_dir=tmpdir, train_len=128, save_steps=16, learning_rate=0.1, save_safetensors=loaded_safe
                     )
 
                     trainer.train(resume_from_checkpoint=checkpoint)
@@ -1478,14 +1474,14 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
                 train_len=128,
                 gradient_accumulation_steps=2,
                 per_device_train_batch_size=4,
-                save_steps=5,
+                save_steps=16,
                 learning_rate=0.1,
             )
             trainer.train()
             (a, b) = trainer.model.a.item(), trainer.model.b.item()
             state = dataclasses.asdict(trainer.state)
 
-            checkpoint = os.path.join(tmpdir, "checkpoint-5")
+            checkpoint = os.path.join(tmpdir, "checkpoint-16")
 
             # Reinitialize trainer
             trainer = get_regression_trainer(
@@ -1493,7 +1489,7 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
                 train_len=128,
                 gradient_accumulation_steps=2,
                 per_device_train_batch_size=4,
-                save_steps=5,
+                save_steps=16,
                 learning_rate=0.1,
             )
 
@@ -1514,7 +1510,7 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
                 output_dir=tmpdir,
                 train_len=128,
                 per_device_train_batch_size=4,
-                save_steps=5,
+                save_steps=32,
                 learning_rate=0.1,
             )
             trainer.model.a.requires_grad = False
@@ -1522,14 +1518,14 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
             (a, b) = trainer.model.a.item(), trainer.model.b.item()
             state = dataclasses.asdict(trainer.state)
 
-            checkpoint = os.path.join(tmpdir, "checkpoint-5")
+            checkpoint = os.path.join(tmpdir, "checkpoint-32")
 
             # Reinitialize trainer
             trainer = get_regression_trainer(
                 output_dir=tmpdir,
                 train_len=128,
                 per_device_train_batch_size=4,
-                save_steps=5,
+                save_steps=32,
                 learning_rate=0.1,
             )
             trainer.model.a.requires_grad = False
@@ -1738,7 +1734,7 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
     def test_predict_iterable_dataset(self):
         config = RegressionModelConfig(a=1.5, b=2.5)
         model = RegressionPreTrainedModel(config)
-        eval_dataset = SampleIterableDataset()
+        eval_dataset = GeneratorDataset(SampleIterableDataset(), column_names=['input_x', 'labels'])
 
         args = RegressionTrainingArguments(output_dir="./examples")
         trainer = Trainer(model=model, args=args, eval_dataset=eval_dataset, compute_metrics=AlmostAccuracy())
@@ -1999,12 +1995,12 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         self.assertAlmostEqual(bf16_eval, fp32_init / 2, delta=5_000)
 
     def test_no_wd_param_group(self):
-        model = nn.Sequential(TstLayer(128), nn.CellList([TstLayer(128), TstLayer(128)]))
+        model = nn.SequentialCell(TstLayer(128), nn.CellList([TstLayer(128), TstLayer(128)]))
         trainer = Trainer(model=model)
         trainer.create_optimizer_and_scheduler(10)
         wd_names = ['0.linear1.weight', '0.linear2.weight', '1.0.linear1.weight', '1.0.linear2.weight', '1.1.linear1.weight', '1.1.linear2.weight']  # fmt: skip
-        wd_params = [p for n, p in model.named_parameters() if n in wd_names]
-        no_wd_params = [p for n, p in model.named_parameters() if n not in wd_names]
+        wd_params = [p for n, p in model.parameters_and_names() if n in wd_names]
+        no_wd_params = [p for n, p in model.parameters_and_names() if n not in wd_names]
         self.assertListEqual(trainer.optimizer.param_groups[0]["params"], wd_params)
         self.assertListEqual(trainer.optimizer.param_groups[1]["params"], no_wd_params)
 
