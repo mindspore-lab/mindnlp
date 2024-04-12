@@ -37,6 +37,8 @@ from ml_dtypes import bfloat16
 import numpy as np
 import mindspore
 from mindspore import Tensor
+import safetensors
+import safetensors.numpy
 
 from . import logging
 
@@ -597,3 +599,11 @@ def convert_torch_to_mindspore(pth_file):
                             f'please checkout the path.') from exc
 
     return ms_ckpt_path
+
+def safe_load_file(filename):
+    state_dict = safetensors.numpy.load_file(filename)
+    return {k: mindspore.Parameter(v) for k, v in state_dict.items()}
+
+def safe_save_file(tensor_dict, filename, metadata=None):
+    tensor_dict = {k: v.asnumpy() for k, v in tensor_dict.items()}
+    return safetensors.numpy.save_file(tensor_dict, filename, metadata)

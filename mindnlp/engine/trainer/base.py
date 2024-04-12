@@ -19,16 +19,18 @@
 """Trainer class, to easily train a 🤗 Transformers from scratch or finetune it on a new task."""
 import os
 import re
+import gc
 import sys
 import math
 import time
 import inspect
 import shutil
+import json
+import copy
 from pathlib import Path
 from functools import lru_cache
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-import safetensors
 import numpy as np
 
 import mindspore
@@ -41,6 +43,8 @@ from mindspore.nn.learning_rate_schedule import LearningRateSchedule
 from ...configs import WEIGHTS_NAME, CONFIG_NAME, ADAPTER_WEIGHTS_NAME, ADAPTER_SAFE_WEIGHTS_NAME, \
     WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
 from ...utils import logging, find_labels, can_return_loss
+from ...utils.serialization import safe_load_file, safe_save_file
+from ...utils.import_utils import is_safetensors_available
 from ...modules.optimization import get_scheduler
 from ...transformers.modeling_utils import PreTrainedModel
 from ...transformers.configuration_utils import PretrainedConfig
@@ -65,7 +69,9 @@ from ..utils import (
     find_executable_batch_size,
     get_parameter_names,
     get_model_param_count,
-    speed_metrics
+    speed_metrics,
+    convert_tensor_to_scalar,
+    nested_concat
 )
 from ..train_args import TrainingArguments, OptimizerNames
 from ..callbacks import (
@@ -87,10 +93,9 @@ DEFAULT_PROGRESS_CALLBACK = ProgressCallback
 # Name of the files used for checkpointing
 TRAINING_ARGS_NAME = "training_args.bin"
 TRAINER_STATE_NAME = "trainer_state.json"
-OPTIMIZER_NAME = "optimizer.pt"
-OPTIMIZER_NAME_BIN = "optimizer.bin"
-SCHEDULER_NAME = "scheduler.pt"
-SCALER_NAME = "scaler.pt"
+OPTIMIZER_NAME = "optimizer.ckpt"
+SCHEDULER_NAME = "scheduler.json"
+SCALER_NAME = "scaler.json"
 
 class Trainer:
     """
@@ -148,14 +153,14 @@ class Trainer:
                 "https://huggingface.co/docs/transformers/model_doc/auto"
             )
 
-        if hasattr(model, "is_parallelizable") and model.is_parallelizable and model.model_parallel:
-            self.is_model_parallel = True
-        else:
-            self.is_model_parallel = False
+        # if hasattr(model, "is_parallelizable") and model.is_parallelizable and model.model_parallel:
+        #     self.is_model_parallel = True
+        # else:
+        self.is_model_parallel = False
 
         # TODO: support quantized model
-        self.train_dataset = train_dataset
-        self.eval_dataset = eval_dataset
+        self.train_dataset = copy.deepcopy(train_dataset)
+        self.eval_dataset = copy.deepcopy(eval_dataset)
         self.tokenizer = tokenizer
 
         # later use `self.model is self.model_wrapped` to check if it's wrapped or not
@@ -374,13 +379,13 @@ class Trainer:
             optimizer_grouped_parameters = [
                 {
                     "params": [
-                        p for n, p in opt_model.parameters_and_names() if (n in decay_parameters and p.requires_grad)
+                        p for p in opt_model.trainable_params() if (p.name in decay_parameters and p.requires_grad)
                     ],
                     "weight_decay": self.args.weight_decay,
                 },
                 {
                     "params": [
-                        p for n, p in opt_model.parameters_and_names() if (n not in decay_parameters and p.requires_grad)
+                        p for p in opt_model.trainable_params() if (p.name not in decay_parameters and p.requires_grad)
                     ],
                     "weight_decay": 0.0,
                 },
@@ -509,7 +514,7 @@ class Trainer:
 
         return model
 
-    @lru_cache()
+    @lru_cache
     def get_train_dataset(self) -> Dataset:
         """
         Returns the training [`~torch.utils.data.DataLoader`].
@@ -526,9 +531,9 @@ class Trainer:
         train_dataset = self._remove_unused_columns(train_dataset, description="training")
 
         train_dataset = train_dataset.batch(self._train_batch_size, self.args.dataset_drop_last, self.args.dataset_num_workers)
-
         return train_dataset
 
+    @lru_cache
     def get_test_dataset(self, test_dataset: Dataset) -> Dataset:
         """
         Returns the test [`~torch.utils.data.DataLoader`].
@@ -548,7 +553,7 @@ class Trainer:
         # We use the same batch_size as for eval.
         return test_dataset
 
-    @lru_cache()
+    @lru_cache
     def get_eval_dataset(self, eval_dataset: Dataset = None) -> Dataset:
         """
         Returns the test [`~torch.utils.data.DataLoader`].
@@ -835,7 +840,8 @@ class Trainer:
             self.control = self.callback_handler.on_epoch_begin(args, self.state, self.control)
 
             if epoch == epochs_trained and resume_from_checkpoint is not None and steps_trained_in_current_epoch == 0:
-                self._load_rng_state(resume_from_checkpoint)
+                # self._load_rng_state(resume_from_checkpoint)
+                pass
 
             rng_to_sync = False
             steps_skipped = 0
@@ -1010,11 +1016,10 @@ class Trainer:
             config = PretrainedConfig.from_json_file(config_file)
 
         if os.path.isfile(weights_file) or os.path.isfile(safe_weights_file):
-            weights_only_kwarg = {"weights_only": True}
             # If the model is on the GPU, it still works!
             # We load the model state dict on the CPU to avoid an OOM error.
             if self.args.save_safetensors and os.path.isfile(safe_weights_file):
-                state_dict = safetensors.numpy.load_file(safe_weights_file)
+                state_dict = safe_load_file(safe_weights_file)
             else:
                 state_dict = mindspore.load_checkpoint(
                     weights_file,
@@ -1041,12 +1046,12 @@ class Trainer:
         #             )
         #     else:
         #         logger.warning("Could not load adapter model, make sure to have `peft>=0.3.0` installed")
-        # else:
-        #     # We load the sharded checkpoint
-        #     load_result = load_sharded_checkpoint(
-        #         model, resume_from_checkpoint, prefer_safe=self.args.save_safetensors
-        #     )
-        #     self._issue_warnings_after_load(load_result)
+        else:
+            # We load the sharded checkpoint
+            load_result = load_sharded_checkpoint(
+                model, resume_from_checkpoint, prefer_safe=self.args.save_safetensors
+            )
+            self._issue_warnings_after_load(load_result)
 
 
     def _load_optimizer_and_scheduler(self, checkpoint):
@@ -1057,25 +1062,15 @@ class Trainer:
 
         checkpoint_file_exists = (
             os.path.isfile(os.path.join(checkpoint, OPTIMIZER_NAME))
-            or os.path.isfile(os.path.join(checkpoint, OPTIMIZER_NAME_BIN))
-            or (
-                os.path.isdir(checkpoint)
-                and any(
-                    OPTIMIZER_NAME_BIN.split(".", maxsplit=1)[0] in folder_name
-                    for folder_name in os.listdir(checkpoint)
-                    if os.path.isdir(os.path.join(checkpoint, folder_name))
-                )
-            )
         )
         if checkpoint_file_exists and os.path.isfile(os.path.join(checkpoint, SCHEDULER_NAME)):
             # Load in optimizer and scheduler states
-            # self.optimizer.load_state_dict(
-            #     torch.load(os.path.join(checkpoint, OPTIMIZER_NAME), map_location=map_location)
-            # )
+            mindspore.load_param_into_net(self.optimizer, mindspore.load_checkpoint(os.path.join(checkpoint, OPTIMIZER_NAME)))
             # with warnings.catch_warnings(record=True) as caught_warnings:
-            #     self.lr_scheduler.load_state_dict(torch.load(os.path.join(checkpoint, SCHEDULER_NAME)))
+            with open(os.path.join(checkpoint, SCHEDULER_NAME), 'r') as fp:
+                self.lr_scheduler.load_state_dict(json.load(fp))
+
             # reissue_pt_warnings(caught_warnings)
-            pass
 
     def _prepare_inputs(self, inputs: Dict[str, Union[mindspore.Tensor, Any]]) -> Dict[str, Union[mindspore.Tensor, Any]]:
         """
@@ -1277,12 +1272,12 @@ class Trainer:
                 )
             else:
                 logger.info("Trainer.model is not a `PreTrainedModel`, only saving its state dict.")
-                # if self.args.save_safetensors:
-                #     safetensors.torch.save_file(
-                #         state_dict, os.path.join(output_dir, SAFE_WEIGHTS_NAME), metadata={"format": "pt"}
-                #     )
-                # else:
-                mindspore.save_checkpoint(self.model, os.path.join(output_dir, WEIGHTS_NAME))
+                if self.args.save_safetensors:
+                    safe_save_file(
+                        state_dict, os.path.join(output_dir, SAFE_WEIGHTS_NAME), metadata={"format": "np"}
+                    )
+                else:
+                    mindspore.save_checkpoint(self.model, os.path.join(output_dir, WEIGHTS_NAME))
         else:
             self.model.save_pretrained(
                 output_dir, state_dict=state_dict, safe_serialization=self.args.save_safetensors
@@ -1301,9 +1296,10 @@ class Trainer:
 
         # Save SCHEDULER & SCALER
         if self.args.should_save:
-            pass
             # with warnings.catch_warnings(record=True) as caught_warnings:
-            # mindspore.save_checkpoint(self.lr_scheduler, os.path.join(output_dir, SCHEDULER_NAME))
+            lr_scheduler_state_dict = copy.deepcopy(self.lr_scheduler.state_dict())
+            with open(os.path.join(output_dir, SCHEDULER_NAME), 'w') as fp:
+                json.dump(convert_tensor_to_scalar(lr_scheduler_state_dict), fp)
             # reissue_pt_warnings(caught_warnings)
 
     def _save_checkpoint(self, model, metrics=None):
@@ -1610,6 +1606,8 @@ class Trainer:
 
             # Prediction step
             loss, logits, labels = self.prediction_step(model, inputs, prediction_loss_only, ignore_keys=ignore_keys)
+            all_preds = logits if all_preds is None else nested_concat(all_preds, logits, padding_index=-100)
+            all_labels = labels
             main_input_name = getattr(self.model, "main_input_name", "input_ids")
             inputs_decode = self._prepare_input(inputs[main_input_name]) if args.include_inputs_for_metrics else None
 
@@ -1788,3 +1786,86 @@ class Trainer:
             for i in range(best_model_index, len(checkpoints_sorted) - 2):
                 checkpoints_sorted[i], checkpoints_sorted[i + 1] = checkpoints_sorted[i + 1], checkpoints_sorted[i]
         return checkpoints_sorted
+
+def load_sharded_checkpoint(model, folder, strict=True, prefer_safe=True):
+    """
+    This is the same as
+    [`torch.nn.Module.load_state_dict`](https://pytorch.org/docs/stable/generated/torch.nn.Module.html?highlight=load_state_dict#torch.nn.Module.load_state_dict)
+    but for a sharded checkpoint.
+
+    This load is performed efficiently: each checkpoint shard is loaded one by one in RAM and deleted after being
+    loaded in the model.
+
+    Args:
+        model (`torch.nn.Module`): The model in which to load the checkpoint.
+        folder (`str` or `os.PathLike`): A path to a folder containing the sharded checkpoint.
+        strict (`bool`, *optional`, defaults to `True`):
+            Whether to strictly enforce that the keys in the model state dict match the keys in the sharded checkpoint.
+        prefer_safe (`bool`, *optional*, defaults to `False`)
+            If both safetensors and PyTorch save files are present in checkpoint and `prefer_safe` is True, the
+            safetensors files will be loaded. Otherwise, PyTorch files are always loaded when possible.
+
+    Returns:
+        `NamedTuple`: A named tuple with `missing_keys` and `unexpected_keys` fields
+            - `missing_keys` is a list of str containing the missing keys
+            - `unexpected_keys` is a list of str containing the unexpected keys
+    """
+    # Load the index
+    index_file = os.path.join(folder, WEIGHTS_INDEX_NAME)
+    safe_index_file = os.path.join(folder, SAFE_WEIGHTS_INDEX_NAME)
+
+    index_present = os.path.isfile(index_file)
+    safe_index_present = os.path.isfile(safe_index_file)
+
+    if not index_present and not (safe_index_present and is_safetensors_available()):
+        filenames = (
+            (WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_INDEX_NAME) if is_safetensors_available() else (WEIGHTS_INDEX_NAME,)
+        )
+        raise ValueError(f"Can't find a checkpoint index ({' or '.join(filenames)}) in {folder}.")
+
+    load_safe = False
+    if safe_index_present:
+        if prefer_safe:
+            if is_safetensors_available():
+                load_safe = True  # load safe due to preference
+            else:
+                logger.warning(
+                    f"Cannot load sharded checkpoint at {folder} safely since safetensors is not installed!"
+                )
+        elif not index_present:
+            load_safe = True  # load safe since we have no other choice
+
+    load_index = safe_index_file if load_safe else index_file
+
+    with open(load_index, "r", encoding="utf-8") as f:
+        index = json.load(f)
+
+    shard_files = list(set(index["weight_map"].values()))
+
+    # If strict=True, error before loading any of the state dicts.
+    loaded_keys = index["weight_map"].keys()
+    model_keys = model.parameters_dict().keys()
+    missing_keys = [key for key in model_keys if key not in loaded_keys]
+    unexpected_keys = [key for key in loaded_keys if key not in model_keys]
+    if strict and (len(missing_keys) > 0 or len(unexpected_keys) > 0):
+        error_message = f"Error(s) in loading state_dict for {model.__class__.__name__}"
+        if len(missing_keys) > 0:
+            str_missing_keys = ",".join([f'"{k}"' for k in missing_keys])
+            error_message += f"\nMissing key(s): {str_missing_keys}."
+        if len(unexpected_keys) > 0:
+            str_unexpected_keys = ",".join([f'"{k}"' for k in unexpected_keys])
+            error_message += f"\nMissing key(s): {str_unexpected_keys}."
+        raise RuntimeError(error_message)
+
+    loader = safe_load_file if load_safe else mindspore.load_checkpoint
+
+    for shard_file in shard_files:
+        state_dict = loader(os.path.join(folder, shard_file))
+        model.load_state_dict(state_dict, strict=False)
+
+        # Make sure memory is freed before we load the next state dict.
+        del state_dict
+        gc.collect()
+
+    # Return the same thing as PyTorch load_state_dict function.
+    return missing_keys, unexpected_keys

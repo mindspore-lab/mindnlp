@@ -275,7 +275,7 @@ def get_parameter_names(model, forbidden_layer_types):
     Returns the names of the model parameters that are not inside a forbidden layer.
     """
     result = []
-    for name, child in model.name_cells():
+    for name, child in model.name_cells().items():
         result += [
             f"{name}.{n}"
             for n in get_parameter_names(child, forbidden_layer_types)
@@ -361,3 +361,81 @@ def denumpify_detensorize(metrics):
     elif is_mindspore_available() and isinstance(metrics, mindspore.Tensor) and metrics.numel() == 1:
         return metrics.item()
     return metrics
+
+def convert_tensor_to_scalar(data):
+    if isinstance(data, dict):
+        for key, value in data.items():
+            data[key] = convert_tensor_to_scalar(value)  # 递归调用以处理嵌套字典
+    elif isinstance(data, list):
+        for i, item in enumerate(data):
+            data[i] = convert_tensor_to_scalar(item)  # 递归调用以处理嵌套列表
+    elif isinstance(data, mindspore.Tensor):
+        data = data.item()  # 转换为标量值
+    return data
+
+
+def atleast_1d(tensor_or_array: Union[mindspore.Tensor, np.ndarray]):
+    if isinstance(tensor_or_array, mindspore.Tensor):
+        if hasattr(mindspore.ops, "atleast_1d"):
+            tensor_or_array = ops.atleast_1d(tensor_or_array)
+        elif tensor_or_array.ndim < 1:
+            tensor_or_array = tensor_or_array[None]
+    else:
+        tensor_or_array = np.atleast_1d(tensor_or_array)
+    return tensor_or_array
+
+def ms_pad_and_concatenate(tensor1, tensor2, padding_index=-100):
+    """Concatenates `tensor1` and `tensor2` on first axis, applying padding on the second if necessary."""
+    tensor1 = atleast_1d(tensor1)
+    tensor2 = atleast_1d(tensor2)
+
+    if len(tensor1.shape) == 1 or tensor1.shape[1] == tensor2.shape[1]:
+        return ops.cat((tensor1, tensor2), axis=0)
+
+    # Let's figure out the new shape
+    new_shape = (tensor1.shape[0] + tensor2.shape[0], max(tensor1.shape[1], tensor2.shape[1])) + tensor1.shape[2:]
+
+    # Now let's fill the result tensor
+    result = tensor1.new_full(new_shape, padding_index)
+    result[: tensor1.shape[0], : tensor1.shape[1]] = tensor1
+    result[tensor1.shape[0] :, : tensor2.shape[1]] = tensor2
+    return result
+
+def numpy_pad_and_concatenate(array1, array2, padding_index=-100):
+    """Concatenates `array1` and `array2` on first axis, applying padding on the second if necessary."""
+    array1 = atleast_1d(array1)
+    array2 = atleast_1d(array2)
+
+    if len(array1.shape) == 1 or array1.shape[1] == array2.shape[1]:
+        return np.concatenate((array1, array2), axis=0)
+
+    # Let's figure out the new shape
+    new_shape = (array1.shape[0] + array2.shape[0], max(array1.shape[1], array2.shape[1])) + array1.shape[2:]
+
+    # Now let's fill the result tensor
+    result = np.full_like(array1, padding_index, shape=new_shape)
+    result[: array1.shape[0], : array1.shape[1]] = array1
+    result[array1.shape[0] :, : array2.shape[1]] = array2
+    return result
+
+
+def nested_concat(tensors, new_tensors, padding_index=-100):
+    """
+    Concat the `new_tensors` to `tensors` on the first dim and pad them on the second if needed. Works for tensors or
+    nested list/tuples/dict of tensors.
+    """
+    assert type(tensors) == type(
+        new_tensors
+    ), f"Expected `tensors` and `new_tensors` to have the same type but found {type(tensors)} and {type(new_tensors)}."
+    if isinstance(tensors, (list, tuple)):
+        return type(tensors)(nested_concat(t, n, padding_index=padding_index) for t, n in zip(tensors, new_tensors))
+    elif isinstance(tensors, mindspore.Tensor):
+        return ms_pad_and_concatenate(tensors, new_tensors, padding_index=padding_index)
+    elif isinstance(tensors, Mapping):
+        return type(tensors)(
+            {k: nested_concat(t, new_tensors[k], padding_index=padding_index) for k, t in tensors.items()}
+        )
+    elif isinstance(tensors, np.ndarray):
+        return numpy_pad_and_concatenate(tensors, new_tensors, padding_index=padding_index)
+    else:
+        raise TypeError(f"Unsupported type for concatenation: got {type(tensors)}")
