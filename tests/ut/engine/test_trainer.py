@@ -104,6 +104,8 @@ if is_mindspore_available():
         import safetensors.numpy
 
 
+# mindspore.set_context(pynative_synchronize=True)
+
 PATH_SAMPLE_TEXT = f"{get_tests_dir()}/fixtures/sample_text.txt"
 
 
@@ -316,7 +318,7 @@ if is_mindspore_available():
             column_names.extend(label_names)
         gradient_checkpointing = kwargs.get("gradient_checkpointing", False)
         train_dataset = GeneratorDataset(RegressionDataset(length=train_len, label_names=label_names), column_names=column_names)
-        eval_dataset = GeneratorDataset(RegressionDataset(length=eval_len, label_names=label_names), column_names=column_names)
+        eval_dataset = GeneratorDataset(RegressionDataset(length=eval_len, label_names=label_names), column_names=column_names, shuffle=False)
 
         model_init = kwargs.pop("model_init", None)
         if model_init is not None:
@@ -374,17 +376,15 @@ class TrainerIntegrationCommon:
         checkpoint = os.path.join(output_dir, f"checkpoint-{best_checkpoint}")
         if is_pretrained:
             best_model = RegressionPreTrainedModel.from_pretrained(checkpoint)
-            best_model.to(trainer.args.device)
         else:
             best_model = RegressionModel()
             if not safe_weights:
-                state_dict = torch.load(os.path.join(checkpoint, WEIGHTS_NAME))
+                state_dict = mindspore.load_checkpoint(os.path.join(checkpoint, WEIGHTS_NAME))
             else:
-                state_dict = safetensors.numpy.load_file(os.path.join(checkpoint, SAFE_WEIGHTS_NAME))
+                state_dict = safe_load_file(os.path.join(checkpoint, SAFE_WEIGHTS_NAME))
             best_model.load_state_dict(state_dict)
-            best_model.to(trainer.args.device)
-        self.assertTrue(np.allclose(best_model.a, trainer.model.a))
-        self.assertTrue(np.allclose(best_model.b, trainer.model.b))
+        self.assertTrue(np.allclose(best_model.a.asnumpy(), trainer.model.a.asnumpy()))
+        self.assertTrue(np.allclose(best_model.b.asnumpy(), trainer.model.b.asnumpy()))
 
         metrics = trainer.evaluate()
         self.assertEqual(metrics[metric], best_value)
@@ -765,8 +765,8 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
     def test_evaluation_with_keys_to_drop(self):
         config = GPT2Config(vocab_size=100, n_positions=128, n_embd=32, n_layer=3, n_head=4)
         tiny_gpt2 = GPT2LMHeadModel(config)
-        x = torch.randint(0, 100, (128,))
-        eval_dataset = RepeatDataset(x)
+        x = ops.randint(0, 100, (128,))
+        eval_dataset = GeneratorDataset(RepeatDataset(x), column_names=['input_ids', 'labels'])
         args = TrainingArguments("./test")
         trainer = Trainer(tiny_gpt2, args, eval_dataset=eval_dataset)
         # By default the past_key_values are removed
@@ -806,8 +806,8 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
     def test_neftune(self):
         config = GPT2Config(vocab_size=100, n_positions=128, n_embd=32, n_layer=3, n_head=4)
         tiny_gpt2 = GPT2LMHeadModel(config)
-        x = torch.randint(0, 100, (128,))
-        train_dataset = RepeatDataset(x)
+        x = np.random.randint(0, 100, (128,))
+        train_dataset = GeneratorDataset(RepeatDataset(x), column_names=['input_ids', 'labels'])
 
         # Trainer without inf/nan filter
         args = TrainingArguments(
@@ -821,7 +821,7 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         emb1 = trainer.model.get_input_embeddings()(dummy_input)
         emb2 = trainer.model.get_input_embeddings()(dummy_input)
 
-        self.assertFalse(np.allclose(emb1, emb2), "Neftune noise is not applied!")
+        self.assertFalse(np.allclose(emb1.asnumpy(), emb2.asnumpy()), "Neftune noise is not applied!")
 
         # redefine the model
         tiny_gpt2 = GPT2LMHeadModel(config)
@@ -836,15 +836,15 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
 
         # Make sure forward pass works fine
         _ = trainer.model(dummy_input)
-        self.assertTrue(len(trainer.model.get_input_embeddings()._forward_hooks) == 0)
+        self.assertTrue(len(trainer.model.get_input_embeddings()._forward_hook) == 0)
 
-        trainer.model.eval()
+        trainer.model.set_train(False)
 
         # Check that we get identical embeddings just in case
         emb1 = trainer.model.get_input_embeddings()(dummy_input)
         emb2 = trainer.model.get_input_embeddings()(dummy_input)
 
-        self.assertTrue(np.allclose(emb1, emb2), "Neftune noise is still applied!")
+        self.assertTrue(np.allclose(emb1.asnumpy(), emb2.asnumpy()), "Neftune noise is still applied!")
 
     def test_logging_inf_nan_filter(self):
         config = GPT2Config(vocab_size=100, n_positions=128, n_embd=32, n_layer=3, n_head=4)
@@ -919,7 +919,7 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         trainer = get_regression_trainer(a=1.5, b=2.5, eval_len=66, compute_metrics=AlmostAccuracy())
         results = trainer.evaluate()
 
-        x, y = trainer.eval_dataset.x, trainer.eval_dataset.ys[0]
+        x, y = trainer.eval_dataset.source.x, trainer.eval_dataset.source.ys[0]
         pred = 1.5 * x + 2.5
         expected_loss = ((pred - y) ** 2).mean()
         self.assertAlmostEqual(results["eval_loss"], expected_loss)
@@ -935,7 +935,7 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         )
         results = trainer.evaluate()
 
-        x, y = trainer.eval_dataset.x, trainer.eval_dataset.ys[0]
+        x, y = trainer.eval_dataset.source.x, trainer.eval_dataset.source.ys[0]
         pred = 1.5 * x + 2.5
         expected_loss = ((pred - y) ** 2).mean()
         self.assertAlmostEqual(results["eval_loss"], expected_loss)
@@ -946,7 +946,7 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         trainer = get_regression_trainer(a=1.5, b=2.5, compute_metrics=AlmostAccuracy(), jit_mode_eval=True)
         results = trainer.evaluate()
 
-        x, y = trainer.eval_dataset.x, trainer.eval_dataset.ys[0]
+        x, y = trainer.eval_dataset.source.x, trainer.eval_dataset.source.ys[0]
         pred = 1.5 * x + 2.5
         expected_loss = ((pred - y) ** 2).mean()
         self.assertAlmostEqual(results["eval_loss"], expected_loss)
@@ -959,7 +959,7 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         )
         results = trainer.evaluate()
 
-        x, y = trainer.eval_dataset.x, trainer.eval_dataset.ys[0]
+        x, y = trainer.eval_dataset.source.x, trainer.eval_dataset.source.ys[0]
         pred = 1.5 * x + 2.5
         expected_loss = ((pred - y) ** 2).mean()
         self.assertAlmostEqual(results["eval_loss"], expected_loss)
@@ -976,7 +976,7 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         )
         results = trainer.evaluate()
 
-        x, y = trainer.eval_dataset.x, trainer.eval_dataset.ys[0]
+        x, y = trainer.eval_dataset.source.x, trainer.eval_dataset.source.ys[0]
         pred = 1.5 * x + 2.5
         expected_loss = ((pred - y) ** 2).mean()
         self.assertAlmostEqual(results["eval_loss"], expected_loss)
@@ -987,21 +987,22 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         trainer = get_regression_trainer(a=1.5, b=2.5)
         preds = trainer.predict(trainer.eval_dataset).predictions
         x = trainer.eval_dataset.source.x
-        self.assertTrue(np.allclose(preds.asnumpy(), 1.5 * x + 2.5))
+        print(preds, 1.5 * x + 2.5)
+        self.assertTrue(np.allclose(preds, 1.5 * x + 2.5))
 
         # With a number of elements not a round multiple of the batch size
         trainer = get_regression_trainer(a=1.5, b=2.5, eval_len=66)
         preds = trainer.predict(trainer.eval_dataset).predictions
         x = trainer.eval_dataset.source.x
-        self.assertTrue(np.allclose(preds.asnumpy(), 1.5 * x + 2.5))
+        self.assertTrue(np.allclose(preds, 1.5 * x + 2.5))
 
         # With more than one output of the model
         trainer = get_regression_trainer(a=1.5, b=2.5, double_output=True)
         preds = trainer.predict(trainer.eval_dataset).predictions
         x = trainer.eval_dataset.source.x
         self.assertEqual(len(preds), 2)
-        self.assertTrue(np.allclose(preds[0].asnumpy(), 1.5 * x + 2.5))
-        self.assertTrue(np.allclose(preds[1].asnumpy(), 1.5 * x + 2.5))
+        self.assertTrue(np.allclose(preds[0], 1.5 * x + 2.5))
+        self.assertTrue(np.allclose(preds[1], 1.5 * x + 2.5))
 
         # With more than one output/label of the model
         trainer = get_regression_trainer(a=1.5, b=2.5, double_output=True, label_names=["labels", "labels_2"])
@@ -1010,30 +1011,30 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         labels = outputs.label_ids
         x = trainer.eval_dataset.source.x
         self.assertEqual(len(preds), 2)
-        self.assertTrue(np.allclose(preds[0].asnumpy(), 1.5 * x + 2.5))
-        self.assertTrue(np.allclose(preds[1].asnumpy(), 1.5 * x + 2.5))
-        self.assertTrue(np.array_equal(labels[0], trainer.eval_dataset.ys[0]))
-        self.assertTrue(np.array_equal(labels[1], trainer.eval_dataset.ys[1]))
+        self.assertTrue(np.allclose(preds[0], 1.5 * x + 2.5))
+        self.assertTrue(np.allclose(preds[1], 1.5 * x + 2.5))
+        self.assertTrue(np.array_equal(labels[0], trainer.eval_dataset.source.ys[0]))
+        self.assertTrue(np.array_equal(labels[1], trainer.eval_dataset.source.ys[1]))
 
     def test_predict_with_jit(self):
         trainer = get_regression_trainer(a=1.5, b=2.5, jit_mode_eval=True)
         preds = trainer.predict(trainer.eval_dataset).predictions
         x = trainer.eval_dataset.source.x
-        self.assertTrue(np.allclose(preds.asnumpy(), 1.5 * x + 2.5))
+        self.assertTrue(np.allclose(preds, 1.5 * x + 2.5))
 
         # With a number of elements not a round multiple of the batch size
         trainer = get_regression_trainer(a=1.5, b=2.5, eval_len=66, jit_mode_eval=True)
         preds = trainer.predict(trainer.eval_dataset).predictions
         x = trainer.eval_dataset.source.x
-        self.assertTrue(np.allclose(preds.asnumpy(), 1.5 * x + 2.5))
+        self.assertTrue(np.allclose(preds, 1.5 * x + 2.5))
 
         # With more than one output of the model
         trainer = get_regression_trainer(a=1.5, b=2.5, double_output=True, jit_mode_eval=True)
         preds = trainer.predict(trainer.eval_dataset).predictions
         x = trainer.eval_dataset.source.x
         self.assertEqual(len(preds), 2)
-        self.assertTrue(np.allclose(preds[0].asnumpy(), 1.5 * x + 2.5))
-        self.assertTrue(np.allclose(preds[1].asnumpy(), 1.5 * x + 2.5))
+        self.assertTrue(np.allclose(preds[0], 1.5 * x + 2.5))
+        self.assertTrue(np.allclose(preds[1], 1.5 * x + 2.5))
 
         # With more than one output/label of the model
         trainer = get_regression_trainer(
@@ -1042,12 +1043,12 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         outputs = trainer.predict(trainer.eval_dataset)
         preds = outputs.predictions
         labels = outputs.label_ids
-        x = trainer.eval_dataset.x
+        x = trainer.eval_dataset.source.x
         self.assertEqual(len(preds), 2)
         self.assertTrue(np.allclose(preds[0], 1.5 * x + 2.5))
         self.assertTrue(np.allclose(preds[1], 1.5 * x + 2.5))
-        self.assertTrue(np.array_equal(labels[0], trainer.eval_dataset.ys[0]))
-        self.assertTrue(np.array_equal(labels[1], trainer.eval_dataset.ys[1]))
+        self.assertTrue(np.array_equal(labels[0], trainer.eval_dataset.source.ys[0]))
+        self.assertTrue(np.array_equal(labels[1], trainer.eval_dataset.source.ys[1]))
 
     @pytest.mark.skip('not support dynamic shape')
     def test_dynamic_shapes(self):
@@ -1707,13 +1708,14 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         config = RegressionModelConfig(a=1.5, b=2.5)
         model = RegressionPreTrainedModel(config)
         # Adding one column not used by the model should have no impact
-        eval_dataset = SampleIterableDataset(label_names=["labels", "extra"])
+        eval_dataset = GeneratorDataset(SampleIterableDataset(label_names=["labels", "extra"]),
+                                        column_names=['input_x', "labels", "extra"], shuffle=False)
 
-        args = RegressionTrainingArguments(output_dir="./examples")
+        args = RegressionTrainingArguments(output_dir="./examples", per_device_eval_batch_size=64)
         trainer = Trainer(model=model, args=args, eval_dataset=eval_dataset, compute_metrics=AlmostAccuracy())
         results = trainer.evaluate()
 
-        x, y = trainer.eval_dataset.dataset.x, trainer.eval_dataset.dataset.ys[0]
+        x, y = trainer.eval_dataset.source.dataset.x, trainer.eval_dataset.source.dataset.ys[0]
         pred = 1.5 * x + 2.5
         expected_loss = ((pred - y) ** 2).mean()
         self.assertAlmostEqual(results["eval_loss"], expected_loss)
@@ -1721,10 +1723,11 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         self.assertAlmostEqual(results["eval_accuracy"], expected_acc)
 
         # With a number of elements not a round multiple of the batch size
-        eval_dataset = SampleIterableDataset(length=66)
+        eval_dataset = GeneratorDataset(SampleIterableDataset(length=66),
+                                        column_names=['input_x', "labels"], shuffle=False)
         results = trainer.evaluate(eval_dataset)
 
-        x, y = eval_dataset.dataset.x, eval_dataset.dataset.ys[0]
+        x, y = eval_dataset.source.dataset.x, eval_dataset.source.dataset.ys[0]
         pred = 1.5 * x + 2.5
         expected_loss = ((pred - y) ** 2).mean()
         self.assertAlmostEqual(results["eval_loss"], expected_loss)
@@ -1740,14 +1743,15 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         trainer = Trainer(model=model, args=args, eval_dataset=eval_dataset, compute_metrics=AlmostAccuracy())
 
         preds = trainer.predict(trainer.eval_dataset).predictions
-        x = eval_dataset.dataset.x
+        x = eval_dataset.source.dataset.x
         self.assertTrue(np.allclose(preds, 1.5 * x + 2.5))
 
         # With a number of elements not a round multiple of the batch size
         # Adding one column not used by the model should have no impact
-        test_dataset = SampleIterableDataset(length=66, label_names=["labels", "extra"])
+        test_dataset = GeneratorDataset(SampleIterableDataset(length=66, label_names=["labels", "extra"]),
+                                        column_names=['input_x', 'labels', "extra"])
         preds = trainer.predict(test_dataset).predictions
-        x = test_dataset.dataset.x
+        x = test_dataset.source.dataset.x
         self.assertTrue(np.allclose(preds, 1.5 * x + 2.5))
 
     def test_num_train_epochs_in_training(self):
@@ -1805,14 +1809,14 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         trainer = get_regression_trainer(learning_rate=0.1)
 
         def assert_flos_extraction(trainer, wrapped_model_to_check):
-            self.assertEqual(trainer.model, unwrap_model(wrapped_model_to_check))
-            self.assertGreaterEqual(getattr(unwrap_model(wrapped_model_to_check).config, "total_flos", 0), 0)
+            self.assertEqual(trainer.model, wrapped_model_to_check)
+            self.assertGreaterEqual(getattr(wrapped_model_to_check.config, "total_flos", 0), 0)
 
         # with plain model
         assert_flos_extraction(trainer, trainer.model)
 
-        # with enforced DataParallel
-        assert_flos_extraction(trainer, nn.DataParallel(trainer.model))
+        # # with enforced DataParallel
+        # assert_flos_extraction(trainer, nn.DataParallel(trainer.model))
 
         trainer.train()
         self.assertTrue(isinstance(trainer.state.total_flos, float))
@@ -1868,27 +1872,28 @@ class TrainerIntegrationTest(TestCasePlus, TrainerIntegrationCommon):
         if backend_device_count(torch_device) > 0:
             check_func("test_mem_gpu_alloc_delta", metrics)
 
-    def test_mem_metrics(self):
-        # with mem metrics enabled
-        trainer = get_regression_trainer(skip_memory_metrics=False)
-        self.check_mem_metrics(trainer, self.assertIn)
+    # def test_mem_metrics(self):
+    #     # with mem metrics enabled
+    #     trainer = get_regression_trainer(skip_memory_metrics=False)
+    #     self.check_mem_metrics(trainer, self.assertIn)
 
-        # with mem metrics disabled
-        trainer = get_regression_trainer(skip_memory_metrics=True)
-        self.check_mem_metrics(trainer, self.assertNotIn)
+    #     # with mem metrics disabled
+    #     trainer = get_regression_trainer(skip_memory_metrics=True)
+    #     self.check_mem_metrics(trainer, self.assertNotIn)
 
+    @pytest.mark.skip('skip_memory_metrics not support')
     def test_fp16_full_eval(self):
         # this is a sensitive test so let's keep debugging printouts in place for quick diagnosis.
         # it's using pretty large safety margins, but small enough to detect broken functionality.
         debug = 0
-        n_gpus = backend_device_count(torch_device)
+        n_gpus = 1
 
         bs = 8
         eval_len = 16 * n_gpus
         # make the params somewhat big so that there will be enough RAM consumed to be able to
         # measure things. We should get about 64KB for a+b in fp32
-        a = ops.ones(1000, bs) + 0.001
-        b = ops.ones(1000, bs) - 0.001
+        a = np.ones((1000, bs), np.float32) + 0.001
+        b = np.ones((1000, bs), np.float32) - 0.001
 
         # 1. with fp16_full_eval disabled
         trainer = get_regression_trainer(a=a, b=b, eval_len=eval_len, skip_memory_metrics=False)

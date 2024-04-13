@@ -962,6 +962,30 @@ def _cells_and_names(self, name_prefix=''):
 
 nn.Cell.cells_and_names = _cells_and_names
 
+def _run_forward_hook(self, inputs, output):
+    """
+    Running forward hook function registered on Cell object.
+
+    Args:
+        inputs: The input objects of Cell object.
+        output: The output object of Cell object.
+
+    Returns:
+        - **output** - New output object or none.
+
+    Supported Platforms:
+    ``Ascend`` ``GPU`` ``CPU``
+    """
+    cell_id = self.cls_name + "(" + str(id(self)) + ")"
+    for fn in self._forward_hook.values():
+        ret = fn(self, inputs, output)
+        if ret is not None:
+            output = ret
+    return output
+
+nn.Cell._run_forward_hook = _run_forward_hook
+
+
 def parameters_dict(self, recurse=True):
     """
     fix ignore tied weights

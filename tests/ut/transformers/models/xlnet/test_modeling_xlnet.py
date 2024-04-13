@@ -94,7 +94,6 @@ class XLNetModelTester:
         self.pad_token_id = 5
         self.num_choices = 4
 
-        mindspore.set_context(pynative_synchronize=True)
 
     def prepare_config_and_inputs(self):
 

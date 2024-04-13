@@ -36,7 +36,6 @@ if is_mindspore_available():
         ConvBertForTokenClassification,
         ConvBertModel,
     )
-    mindspore.set_context(pynative_synchronize=True)
 
 
 class ConvBertModelTester:
