@@ -23,8 +23,6 @@ def parallel_setup():
     # mindspore.set_auto_parallel_context(
     #    parallel_mode=mindspore.ParallelMode.DATA_PARALLEL,
     # )
-    # mindspore.set_context(mode=mindspore.PYNATIVE_MODE)
-    # mindspore.set_context(pynative_synchronize=True)
     mindspore.set_context(mode=mindspore.GRAPH_MODE)
     mindspore.set_context(device_target="GPU")
 

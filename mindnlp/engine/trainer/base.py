@@ -40,6 +40,7 @@ import mindspore.experimental
 import mindspore.experimental.optim
 from mindspore.nn.learning_rate_schedule import LearningRateSchedule
 
+from ...peft import PeftModel
 from ...configs import WEIGHTS_NAME, CONFIG_NAME, ADAPTER_WEIGHTS_NAME, ADAPTER_SAFE_WEIGHTS_NAME, \
     WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
 from ...utils import logging, find_labels, can_return_loss
@@ -71,7 +72,9 @@ from ..utils import (
     get_model_param_count,
     speed_metrics,
     convert_tensor_to_scalar,
-    nested_concat
+    nested_concat,
+    nested_numpify,
+    neftune_post_forward_hook
 )
 from ..train_args import TrainingArguments, OptimizerNames
 from ..callbacks import (
@@ -96,6 +99,12 @@ TRAINER_STATE_NAME = "trainer_state.json"
 OPTIMIZER_NAME = "optimizer.ckpt"
 SCHEDULER_NAME = "scheduler.json"
 SCALER_NAME = "scaler.json"
+
+def _is_peft_model(model):
+    classes_to_check = (PeftModel,)
+    # Here we also check if the model is an instance of `PeftMixedModel` introduced in peft>=0.7.0: https://github.com/huggingface/transformers/pull/28321
+    return isinstance(model, classes_to_check)
+
 
 class Trainer:
     """
@@ -165,6 +174,7 @@ class Trainer:
 
         # later use `self.model is self.model_wrapped` to check if it's wrapped or not
         self.model = model
+        self.model.set_train()
 
         self.neftune_noise_alpha = args.neftune_noise_alpha
 
@@ -236,19 +246,19 @@ class Trainer:
         https://arxiv.org/abs/2310.05914
         """
         # TODO: support neftune
-        # unwrapped_model = unwrap_model(model)
+        unwrapped_model = model
 
-        # if _is_peft_model(unwrapped_model):
-        #     embeddings = unwrapped_model.base_model.model.get_input_embeddings()
-        # else:
-        #     embeddings = unwrapped_model.get_input_embeddings()
+        if _is_peft_model(unwrapped_model):
+            embeddings = unwrapped_model.base_model.model.get_input_embeddings()
+        else:
+            embeddings = unwrapped_model.get_input_embeddings()
 
-        # del unwrapped_model
+        del unwrapped_model
 
-        # embeddings.neftune_noise_alpha = self.neftune_noise_alpha
-        # hook_handle = embeddings.register_forward_hook(neftune_post_forward_hook)
-        # self.neftune_hook_handle = hook_handle
-        # return model
+        embeddings.neftune_noise_alpha = self.neftune_noise_alpha
+        hook_handle = embeddings.register_forward_hook(neftune_post_forward_hook)
+        self.neftune_hook_handle = hook_handle
+        return model
 
     def _deactivate_neftune(self, model):
         """
@@ -258,15 +268,15 @@ class Trainer:
         # if not hasattr(self, "neftune_hook_handle"):
         #     raise ValueError("Neftune is not activated make sure to call `trainer._activate_neftune()` first")
 
-        # unwrapped_model = unwrap_model(model)
+        unwrapped_model = model
 
-        # if _is_peft_model(unwrapped_model):
-        #     embeddings = unwrapped_model.base_model.model.get_input_embeddings()
-        # else:
-        #     embeddings = unwrapped_model.get_input_embeddings()
+        if _is_peft_model(unwrapped_model):
+            embeddings = unwrapped_model.base_model.model.get_input_embeddings()
+        else:
+            embeddings = unwrapped_model.get_input_embeddings()
 
-        # self.neftune_hook_handle.remove()
-        # del embeddings.neftune_noise_alpha, unwrapped_model
+        self.neftune_hook_handle.remove()
+        del embeddings.neftune_noise_alpha, unwrapped_model
 
     def add_callback(self, callback):
         """
@@ -310,12 +320,12 @@ class Trainer:
         if self._signature_columns is None:
             # Inspect model forward signature to keep only the arguments it accepts.
             model_to_inspect = self.model
-            # if _is_peft_model(self.model):
-            #     if hasattr(self.model, "get_base_model"):
-            #         model_to_inspect = self.model.get_base_model()
-            #     else:
-            #         # PeftMixedModel do not provide a `get_base_model` method
-            #         model_to_inspect = self.model.base_model.model
+            if _is_peft_model(self.model):
+                if hasattr(self.model, "get_base_model"):
+                    model_to_inspect = self.model.get_base_model()
+                else:
+                    # PeftMixedModel do not provide a `get_base_model` method
+                    model_to_inspect = self.model.base_model.model
             signature = inspect.signature(model_to_inspect.construct)
             self._signature_columns = list(signature.parameters.keys())
 
@@ -650,6 +660,66 @@ class Trainer:
             resume_from_checkpoint=resume_from_checkpoint,
             ignore_keys_for_eval=ignore_keys_for_eval,
         )
+
+    def _load_best_model(self):
+        logger.info(f"Loading best model from {self.state.best_model_checkpoint} (score: {self.state.best_metric}).")
+        best_model_path = os.path.join(self.state.best_model_checkpoint, WEIGHTS_NAME)
+        best_safe_model_path = os.path.join(self.state.best_model_checkpoint, SAFE_WEIGHTS_NAME)
+        best_adapter_model_path = os.path.join(self.state.best_model_checkpoint, ADAPTER_WEIGHTS_NAME)
+        best_safe_adapter_model_path = os.path.join(self.state.best_model_checkpoint, ADAPTER_SAFE_WEIGHTS_NAME)
+
+        model = self.model
+
+        if (
+            os.path.exists(best_model_path)
+            or os.path.exists(best_safe_model_path)
+            or os.path.exists(best_adapter_model_path)
+            or os.path.exists(best_safe_adapter_model_path)
+        ):
+            has_been_loaded = True
+
+            if _is_peft_model(model):
+                # If train a model using PEFT & LoRA, assume that adapter have been saved properly.
+                if hasattr(model, "active_adapter") and hasattr(model, "load_adapter"):
+                    if os.path.exists(best_adapter_model_path) or os.path.exists(best_safe_adapter_model_path):
+                        model.load_adapter(self.state.best_model_checkpoint, model.active_adapter)
+                        # Load_adapter has no return value present, modify it when appropriate.
+                        load_result = [], []
+                    else:
+                        logger.warning(
+                            "The intermediate checkpoints of PEFT may not be saved correctly, "
+                            f"consider using a custom callback to save {ADAPTER_WEIGHTS_NAME} in corresponding saving folders. "
+                            "Check some examples here: https://github.com/huggingface/peft/issues/96"
+                        )
+                        has_been_loaded = False
+                else:
+                    logger.warning("Could not load adapter model, make sure to have `peft>=0.3.0` installed")
+                    has_been_loaded = False
+            else:
+                # We load the model state dict on the CPU to avoid an OOM error.
+                if self.args.save_safetensors and os.path.isfile(best_safe_model_path):
+                    state_dict = safe_load_file(best_safe_model_path)
+                else:
+                    state_dict = mindspore.load_checkpoint(
+                        best_model_path,
+                    )
+
+                # If the model is on the GPU, it still works!
+                # which takes *args instead of **kwargs
+                load_result = model.load_state_dict(state_dict, False)
+            if has_been_loaded:
+                self._issue_warnings_after_load(load_result)
+        elif os.path.exists(os.path.join(self.state.best_model_checkpoint, WEIGHTS_INDEX_NAME)):
+            load_result = load_sharded_checkpoint(
+                model, self.state.best_model_checkpoint, strict=False
+            )
+            self._issue_warnings_after_load(load_result)
+        else:
+            logger.warning(
+                f"Could not locate the best model at {best_model_path}, if you are running a distributed training "
+                "on multiple nodes, you should activate `--save_on_each_node`."
+            )
+
 
     def _get_output_dir(self):
         run_dir = self.args.output_dir
@@ -1598,6 +1668,7 @@ class Trainer:
         for step, inputs in enumerate(dataset.create_dict_iterator()):
             # Update the observed num examples
             observed_batch_size = find_batch_size(inputs)
+
             if observed_batch_size is not None:
                 observed_num_examples += observed_batch_size
                 # For batch samplers, batch_size is not known by the dataloader in advance.
@@ -1606,17 +1677,84 @@ class Trainer:
 
             # Prediction step
             loss, logits, labels = self.prediction_step(model, inputs, prediction_loss_only, ignore_keys=ignore_keys)
-            all_preds = logits if all_preds is None else nested_concat(all_preds, logits, padding_index=-100)
-            all_labels = labels
             main_input_name = getattr(self.model, "main_input_name", "input_ids")
             inputs_decode = self._prepare_input(inputs[main_input_name]) if args.include_inputs_for_metrics else None
 
             self.control = self.callback_handler.on_prediction_step(args, self.state, self.control)
 
+            # Update containers on host
+            if loss is not None:
+                losses = loss.repeat(observed_batch_size)
+                # losses = loss.repeat(batch_size)
+                losses_host = losses if losses_host is None else nested_concat(losses_host, losses, padding_index=-100)
+            # if labels is not None:
+            #     labels = self.accelerator.pad_across_processes(labels, dim=1, pad_index=-100)
+            if inputs_decode is not None:
+                # inputs_decode = self.accelerator.pad_across_processes(inputs_decode, dim=1, pad_index=-100)
+                # inputs_decode = self.gather_function((inputs_decode))
+                inputs_host = (
+                    inputs_decode
+                    if inputs_host is None
+                    else nested_concat(inputs_host, inputs_decode, padding_index=-100)
+                )
+
+            if logits is not None:
+                # logits = self.accelerator.pad_across_processes(logits, dim=1, pad_index=-100)
+                if self.preprocess_logits_for_metrics is not None:
+                    logits = self.preprocess_logits_for_metrics(logits, labels)
+                # logits = self.gather_function((logits))
+                preds_host = logits if preds_host is None else nested_concat(preds_host, logits, padding_index=-100)
+
+            if labels is not None:
+                # labels = self.gather_function((labels))
+                labels_host = labels if labels_host is None else nested_concat(labels_host, labels, padding_index=-100)
+
+            self.control = self.callback_handler.on_prediction_step(args, self.state, self.control)
+
+            # Gather all tensors and put them back on the CPU if we have done enough accumulation steps.
+            if args.eval_accumulation_steps is not None and (step + 1) % args.eval_accumulation_steps == 0:
+                if losses_host is not None:
+                    losses = nested_numpify(losses_host)
+                    all_losses = losses if all_losses is None else np.concatenate((all_losses, losses), axis=0)
+                if preds_host is not None:
+                    logits = nested_numpify(preds_host)
+                    all_preds = logits if all_preds is None else nested_concat(all_preds, logits, padding_index=-100)
+                if inputs_host is not None:
+                    inputs_decode = nested_numpify(inputs_host)
+                    all_inputs = (
+                        inputs_decode
+                        if all_inputs is None
+                        else nested_concat(all_inputs, inputs_decode, padding_index=-100)
+                    )
+                if labels_host is not None:
+                    labels = nested_numpify(labels_host)
+                    all_labels = (
+                        labels if all_labels is None else nested_concat(all_labels, labels, padding_index=-100)
+                    )
+
+                # Set back to None to begin a new accumulation
+                losses_host, preds_host, inputs_host, labels_host = None, None, None, None
 
         if args.past_index and hasattr(self, "_past"):
             # Clean the state at the end of the evaluation loop
             delattr(self, "_past")
+
+        # Gather all remaining tensors and put them back on the CPU
+        if losses_host is not None:
+            losses = nested_numpify(losses_host)
+            all_losses = losses if all_losses is None else np.concatenate((all_losses, losses), axis=0)
+
+        if preds_host is not None:
+            logits = nested_numpify(preds_host)
+            all_preds = logits if all_preds is None else nested_concat(all_preds, logits, padding_index=-100)
+        if inputs_host is not None:
+            inputs_decode = nested_numpify(inputs_host)
+            all_inputs = (
+                inputs_decode if all_inputs is None else nested_concat(all_inputs, inputs_decode, padding_index=-100)
+            )
+        if labels_host is not None:
+            labels = nested_numpify(labels_host)
+            all_labels = labels if all_labels is None else nested_concat(all_labels, labels, padding_index=-100)
 
         # Number of samples
         if has_length(dataset):
@@ -1638,8 +1776,8 @@ class Trainer:
         # To be JSON-serializable, we need to remove numpy types or zero-d tensors
         metrics = denumpify_detensorize(metrics)
 
-        if loss is not None:
-            metrics[f"{metric_key_prefix}_loss"] = loss.mean().item()
+        if all_losses is not None:
+            metrics[f"{metric_key_prefix}_loss"] = all_losses.mean().item()
 
         # Prefix all keys with metric_key_prefix + '_'
         for key in list(metrics.keys()):
