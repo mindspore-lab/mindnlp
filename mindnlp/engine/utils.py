@@ -474,7 +474,7 @@ def neftune_post_forward_hook(module, input, output):
             The output tensor of the model (i.e. the embeddings).
     """
     if module.training:
-        dims = mindspore.tensor(output.shape[1] * output.shape[2])
+        dims = mindspore.tensor(output.shape[1] * output.shape[2], mindspore.float32)
         mag_norm = module.neftune_noise_alpha / ops.sqrt(dims)
         output = output + ops.uniform(output.shape, -mag_norm, mag_norm, dtype=output.dtype)
     return output
