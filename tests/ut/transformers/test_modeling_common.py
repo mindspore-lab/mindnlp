@@ -936,14 +936,14 @@ class ModelTesterMixin:
 
             if model.config.is_encoder_decoder:
                 for p1, p2 in zip(encoder_cloned_embeddings, encoder_model_embed.weight):
-                    if p1.data.ne(p2.data).sum() > 0:
+                    if p1.ne(p2).sum() > 0:
                         models_equal = False
                 for p1, p2 in zip(decoder_cloned_embeddings, decoder_model_embed.weight):
-                    if p1.data.ne(p2.data).sum() > 0:
+                    if p1.ne(p2).sum() > 0:
                         models_equal = False
             else:
                 for p1, p2 in zip(cloned_embeddings, model_embed.weight):
-                    if p1.data.ne(p2.data).sum() > 0:
+                    if p1.ne(p2).sum() > 0:
                         models_equal = False
 
             self.assertTrue(models_equal)

@@ -355,4 +355,5 @@ class GPTNeoXLanguageGenerationTest(unittest.TestCase):
             return mindspore.tensor(value, dtype)
         input_ids = as_tensor(input_ids)[None]
         outputs = model(input_ids)["logits"][:, -1][0, :30]
+        print(EXPECTED_LOGITS.asnumpy(), outputs.asnumpy())
         self.assertTrue(np.allclose(EXPECTED_LOGITS.asnumpy(), outputs.asnumpy(), atol=1e-5))

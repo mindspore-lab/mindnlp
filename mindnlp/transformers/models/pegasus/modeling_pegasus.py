@@ -21,9 +21,8 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import mindspore
+from mindspore import nn, ops, Tensor
 from mindspore.common.initializer import initializer, Normal
-from mindspore import nn
-from mindspore.nn import CrossEntropyLoss
 
 from mindnlp.modules.functional import finfo
 from mindnlp.utils import logging
@@ -53,13 +52,13 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
     Shift input ids one token to the right.
     """
     shifted_input_ids = input_ids.new_zeros(input_ids.shape)
-    shifted_input_ids[:, 1:] = input_ids[:, :-1].copy()
+    shifted_input_ids[:, 1:] = input_ids[:, :-1].clone()
     shifted_input_ids[:, 0] = decoder_start_token_id
 
     if pad_token_id is None:
         raise ValueError("self.model.config.pad_token_id has to be defined.")
     # replace possible -100 values in labels by `pad_token_id`
-    shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
+    shifted_input_ids = shifted_input_ids.masked_fill(shifted_input_ids == -100, pad_token_id)
 
     return shifted_input_ids
 
@@ -78,19 +77,22 @@ class PegasusSinusoidalPositionalEmbedding(nn.Embedding):
         Identical to the XLM create_sinusoidal_embeddings except features are not interleaved. The cos features are in
         the 2nd half of the vector. [dim // 2:]
         """
+        out_np = out.asnumpy()
         n_pos, dim = out.shape
         position_enc = np.array(
             [[pos / np.power(10000, 2 * (j // 2) / dim) for j in range(dim)] for pos in range(n_pos)]
         )
+        out.requires_grad = False
         sentinel = dim // 2 if dim % 2 == 0 else (dim // 2) + 1
-        out[:, 0:sentinel] = mindspore.Tensor(np.sin(position_enc[:, 0::2]))
-        out[:, sentinel:] = mindspore.Tensor(np.cos(position_enc[:, 1::2]))
+        out_np[:, 0:sentinel] = np.sin(position_enc[:, 0::2])
+        out_np[:, sentinel:] = np.cos(position_enc[:, 1::2])
+        out.set_data(Tensor(out_np, out.dtype))
         return out
 
     def construct(self, input_ids_shape, past_key_values_length: int = 0) -> mindspore.Tensor:
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
         bsz, seq_len = input_ids_shape[:2]
-        positions = mindspore.ops.arange(
+        positions = ops.arange(
             past_key_values_length, past_key_values_length + seq_len, dtype=mindspore.int64
         )
         return super().construct(positions)
@@ -132,7 +134,7 @@ class PegasusAttention(nn.Cell):
         self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2).contiguous()
+        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
     def construct(
         self,
@@ -173,8 +175,8 @@ class PegasusAttention(nn.Cell):
             # reuse k, v, self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
             value_states = self._shape(self.v_proj(hidden_states), -1, bsz)
-            key_states = mindspore.ops.cat([past_key_value[0], key_states], axis=2)
-            value_states = mindspore.ops.cat([past_key_value[1], value_states], axis=2)
+            key_states = ops.cat([past_key_value[0], key_states], axis=2)
+            value_states = ops.cat([past_key_value[1], value_states], axis=2)
         else:
             # self_attention
             key_states = self._shape(self.k_proj(hidden_states), -1, bsz)
@@ -197,7 +199,7 @@ class PegasusAttention(nn.Cell):
         value_states = value_states.reshape(*proj_shape)
 
         src_len = key_states.shape[1]
-        attn_weights = mindspore.ops.bmm(query_states, key_states.swapaxes(1, 2))
+        attn_weights = ops.bmm(query_states, key_states.swapaxes(1, 2))
 
         if attn_weights.shape != (bsz * self.num_heads, tgt_len, src_len):
             raise ValueError(
@@ -213,7 +215,7 @@ class PegasusAttention(nn.Cell):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = mindspore.ops.softmax(attn_weights, axis=-1)
+        attn_weights = ops.softmax(attn_weights, axis=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.shape != (self.num_heads,):
@@ -234,9 +236,9 @@ class PegasusAttention(nn.Cell):
         else:
             attn_weights_reshaped = None
 
-        attn_probs = mindspore.ops.dropout(attn_weights, p=self.dropout, training=self.training)
+        attn_probs = ops.dropout(attn_weights, p=self.dropout, training=self.training)
 
-        attn_output = mindspore.ops.bmm(attn_probs, value_states)
+        attn_output = ops.bmm(attn_probs, value_states)
 
         if attn_output.shape != (bsz * self.num_heads, tgt_len, self.head_dim):
             raise ValueError(
@@ -305,22 +307,22 @@ class PegasusEncoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = mindspore.ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         residual = hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = mindspore.ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = mindspore.ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         if hidden_states.dtype == mindspore.float16 and (
-            mindspore.ops.isinf(hidden_states).any() or mindspore.ops.isnan(hidden_states).any()
+            ops.isinf(hidden_states).any() or ops.isnan(hidden_states).any()
         ):
             clamp_value = finfo(hidden_states.dtype, 'max') - 1000
-            hidden_states = mindspore.op.clamp(hidden_states, min=-clamp_value, max=clamp_value)
+            hidden_states = ops.clamp(hidden_states, min=-clamp_value, max=clamp_value)
 
         outputs = (hidden_states,)
 
@@ -405,7 +407,7 @@ class PegasusDecoderLayer(nn.Cell):
             layer_head_mask=layer_head_mask,
             output_attentions=output_attentions,
         )
-        hidden_states = mindspore.ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         # Cross-Attention Block
         cross_attn_present_key_value = None
@@ -424,7 +426,7 @@ class PegasusDecoderLayer(nn.Cell):
                 past_key_value=cross_attn_past_key_value,
                 output_attentions=output_attentions,
             )
-            hidden_states = mindspore.ops.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
             hidden_states = residual + hidden_states
 
             # add cross-attn to positions 3,4 of present_key_value tuple
@@ -434,9 +436,9 @@ class PegasusDecoderLayer(nn.Cell):
         residual = hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
         hidden_states = self.activation_fn(self.fc1(hidden_states))
-        hidden_states = mindspore.ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
+        hidden_states = ops.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
-        hidden_states = mindspore.ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
 
         outputs = (hidden_states,)
@@ -452,7 +454,7 @@ class PegasusDecoderLayer(nn.Cell):
 class PegasusPreTrainedModel(PreTrainedModel):
     config_class = PegasusConfig
     base_model_prefix = "model"
-    supports_gradient_checkpointing = True
+    supports_gradient_checkpointing = False
 
     def _init_weights(self, cell):
         std = self.config.init_std
@@ -606,7 +608,7 @@ class PegasusEncoder(PegasusPreTrainedModel):
 
         hidden_states = inputs_embeds + embed_pos
 
-        hidden_states = mindspore.ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
 
         # expand attention_mask
         if attention_mask is not None:
@@ -629,7 +631,7 @@ class PegasusEncoder(PegasusPreTrainedModel):
             # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
             to_drop = False
             if self.training:
-                dropout_probability = mindspore.ops.rand([])
+                dropout_probability = ops.rand([])
                 if dropout_probability < self.layerdrop:  # skip the layer
                     to_drop = True
 
@@ -854,10 +856,9 @@ class PegasusDecoder(PegasusPreTrainedModel):
 
         # embed positions
         positions = self.embed_positions(input_shape, past_key_values_length)
-
         hidden_states = inputs_embeds + positions
 
-        hidden_states = mindspore.ops.dropout(hidden_states, p=self.dropout, training=self.training)
+        hidden_states = ops.dropout(hidden_states, p=self.dropout, training=self.training)
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
@@ -885,7 +886,7 @@ class PegasusDecoder(PegasusPreTrainedModel):
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
             if self.training:
-                dropout_probability = mindspore.ops.rand([])
+                dropout_probability = ops.rand([])
                 if dropout_probability < self.layerdrop:
                     continue
 
@@ -1084,7 +1085,6 @@ class PegasusModel(PegasusPreTrainedModel):
 
         if not return_dict:
             return decoder_outputs + encoder_outputs
-
         return Seq2SeqModelOutput(
             last_hidden_state=decoder_outputs.last_hidden_state,
             past_key_values=decoder_outputs.past_key_values,
@@ -1099,13 +1099,13 @@ class PegasusModel(PegasusPreTrainedModel):
 
 class PegasusForConditionalGeneration(PegasusPreTrainedModel):
     base_model_prefix = "model"
-    _keys_to_ignore_on_load_unexpected = ["final_logits_bias"]
+    # _keys_to_ignore_on_load_unexpected = ["final_logits_bias"]
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight", "lm_head.weight"]
 
     def __init__(self, config: PegasusConfig):
         super().__init__(config)
         self.model = PegasusModel(config)
-        self.final_logits_bias=mindspore.ops.zeros((1, self.model.shared.vocab_size))
+        self.final_logits_bias = ops.zeros((1, self.model.shared.vocab_size))
         self.lm_head = nn.Dense(config.d_model, self.model.shared.vocab_size, has_bias=False)
 
         # Initialize weights and apply final processing
@@ -1127,8 +1127,8 @@ class PegasusForConditionalGeneration(PegasusPreTrainedModel):
         if new_num_tokens <= old_num_tokens:
             new_bias = self.final_logits_bias[:, :new_num_tokens]
         else:
-            extra_bias = mindspore.ops.zeros((1, new_num_tokens - old_num_tokens))
-            new_bias = mindspore.ops.cat([self.final_logits_bias, extra_bias], axis=1)
+            extra_bias = ops.zeros((1, new_num_tokens - old_num_tokens))
+            new_bias = ops.cat([self.final_logits_bias, extra_bias], axis=1)
         self.final_logits_bias = new_bias
 
     def get_output_embeddings(self):
@@ -1217,11 +1217,9 @@ class PegasusForConditionalGeneration(PegasusPreTrainedModel):
             return_dict=return_dict,
         )
         lm_logits = self.lm_head(outputs[0]) + self.final_logits_bias
-
         masked_lm_loss = None
         if labels is not None:
-            loss_fct = CrossEntropyLoss()
-            masked_lm_loss = loss_fct(lm_logits.view(-1, self.config.vocab_size), labels.view(-1).astype(mindspore.int32))
+            masked_lm_loss = ops.cross_entropy(lm_logits.view(-1, self.config.vocab_size), labels.view(-1).astype(mindspore.int32))
 
         if not return_dict:
             output = (lm_logits,) + outputs[1:]
@@ -1488,8 +1486,7 @@ class PegasusForCausalLM(PegasusPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = CrossEntropyLoss()
-            loss = loss_fct(logits.view(-1, self.config.vocab_size), labels.view(-1).astype(mindspore.int32))
+            loss = ops.cross_entropy(logits.view(-1, self.config.vocab_size), labels.view(-1).astype(mindspore.int32))
 
         if not return_dict:
             output = (logits,) + outputs[1:]

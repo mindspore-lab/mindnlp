@@ -445,11 +445,11 @@ class MBartPreTrainedModel(PreTrainedModel):
                 cell.bias.set_data(initializer('zeros',
                                                cell.bias.shape, cell.bias.dtype))
         elif isinstance(cell, nn.Embedding):
-            cell.weight.set_data(initializer(Normal(
-                sigma=std, mean=0.0), cell.weight.shape, cell.weight.dtype))
-            if cell.padding_idx is not None:
-                cell.weight.data[cell.padding_idx] = ops.zeros_like(
-                    cell.weight.data[cell.padding_idx])
+            weight = np.random.normal(0.0, std, cell.weight.shape)
+            if cell.padding_idx:
+                weight[cell.padding_idx] = 0
+
+            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
 
     @property
     def dummy_inputs(self):

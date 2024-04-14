@@ -19,7 +19,7 @@ from typing import Optional, Tuple, Union
 from functools import partial
 import numpy as np
 import mindspore
-from mindspore import nn, Tensor, ops
+from mindspore import nn, ops
 from mindspore.common.initializer import initializer, Normal
 from mindnlp.utils import logging, get_default_dtype
 
@@ -73,6 +73,7 @@ class GPTNeoXPreTrainedModel(PreTrainedModel):
     base_model_prefix = "gpt_neox"
     supports_gradient_checkpointing = True
     _no_split_modules = ["GPTNeoXLayer"]
+    _keys_to_ignore_on_load_unexpected = [r'masked_bias', r'attention.bias', r'inv_freq']
     _skip_keys_device_placement = "past_key_values"
     _supports_flash_attn_2 = False
 
@@ -143,8 +144,8 @@ class GPTNeoXAttention(nn.Cell):
         self.is_causal = True
 
     def _init_bias(self, max_positions):
-        self.bias = Tensor.tril(ops.ones((max_positions, max_positions), dtype=mindspore.dtype.bool_)).view(
-                1, 1, max_positions, max_positions)
+        self.bias = ops.tril(ops.ones((max_positions, max_positions))).view(
+                1, 1, max_positions, max_positions).astype(mindspore.bool_)
 
     def _init_rope(self):
         if self.config.rope_scaling is None:
@@ -210,8 +211,8 @@ class GPTNeoXAttention(nn.Cell):
             seq_len += layer_past[0].shape[-2]
         cos, sin = self.rotary_emb(value, seq_len=seq_len)
         query, key = apply_rotary_pos_emb(query_rot, key_rot, cos, sin, position_ids)
-        query = ops.cat((query, query_pass), axis=-1)
-        key = ops.cat((key, key_pass), axis=-1)
+        query = ops.cat((query, query_pass.type_as(query)), axis=-1)
+        key = ops.cat((key, key_pass.type_as(key)), axis=-1)
 
         # Cache QKV values
         if has_layer_past:
@@ -276,13 +277,10 @@ class GPTNeoXAttention(nn.Cell):
             key_length),
             dtype=query.dtype
         )
-        attn_scores = Tensor.baddbmm(
-            attn_scores,
+        attn_scores = ops.bmm(
             query,
             key.swapaxes(1, 2),
-            beta=1.0,
-            alpha=self.norm_factor,
-        )
+        ) * self.norm_factor
         attn_scores = attn_scores.view(batch_size, num_attention_heads, query_length, key_length)
 
         mask_value = np.finfo(mindspore.dtype_to_nptype(attn_scores.dtype)).min
@@ -323,10 +321,9 @@ class GPTNeoXRotaryEmbedding(nn.Cell):
         self.dim = dim
         self.max_position_embeddings = max_position_embeddings
         self.base = base
-        inv_freq = 1.0 / (self.base ** (ops.arange(0, self.dim, 2, dtype=mindspore.int64).float() / self.dim))
+        inv_freq = 1.0 / (self.base ** (ops.arange(0, self.dim, 2).float() / self.dim))
         self.inv_freq = inv_freq
 
-        # Build here to make `torch.jit.trace` work.
         self._set_cos_sin_cache(
             seq_len=max_position_embeddings, dtype=get_default_dtype()
         )
@@ -338,8 +335,8 @@ class GPTNeoXRotaryEmbedding(nn.Cell):
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
         emb = ops.cat((freqs, freqs), axis=-1)
-        self.cos_cached = emb.cos().to(dtype)
-        self.sin_cached = emb.sin().to(dtype)
+        self.cos_cached = emb.cos()
+        self.sin_cached = emb.sin()
 
     def construct(self, x, seq_len=None):
         # x: [bs, num_attention_heads, seq_len, head_size]
@@ -347,8 +344,8 @@ class GPTNeoXRotaryEmbedding(nn.Cell):
             self._set_cos_sin_cache(seq_len=seq_len, dtype=x.dtype)
 
         return (
-            self.cos_cached[:seq_len].to(dtype=x.dtype),
-            self.sin_cached[:seq_len].to(dtype=x.dtype),
+            self.cos_cached[:seq_len],
+            self.sin_cached[:seq_len],
         )
 
 
@@ -362,14 +359,14 @@ class GPTNeoXLinearScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
 
     def _set_cos_sin_cache(self, seq_len, dtype):
         self.max_seq_len_cached = seq_len
-        t = ops.arange(self.max_seq_len_cached, dtype=mindspore.int64).type_as(self.inv_freq)
+        t = ops.arange(self.max_seq_len_cached, dtype=mindspore.float32).type_as(self.inv_freq)
         t = t / self.scaling_factor
 
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
         emb = ops.cat((freqs, freqs), axis=-1)
-        self.cos_cached = emb.cos().to(dtype)
-        self.sin_cached = emb.sin().to(dtype)
+        self.cos_cached = emb.cos()
+        self.sin_cached = emb.sin()
 
 
 class GPTNeoXDynamicNTKScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
@@ -394,8 +391,8 @@ class GPTNeoXDynamicNTKScalingRotaryEmbedding(GPTNeoXRotaryEmbedding):
         freqs = ops.outer(t, self.inv_freq)
         # Different from paper, but it uses a different permutation in order to obtain the same calculation
         emb = ops.cat((freqs, freqs), axis=-1)
-        self.cos_cached = emb.cos().to(dtype)
-        self.sin_cached = emb.sin().to(dtype)
+        self.cos_cached = emb.cos()
+        self.sin_cached = emb.sin()
 
 
 def rotate_half(x):
