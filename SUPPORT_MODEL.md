@@ -88,8 +88,10 @@ The table below represents the current support in the library for each of those 
 | RegNet                        | Todo               | ❌             |
 | RoBERTa                       | ✅                | ✅             |
 | RWKV                          | ✅                | ❌             |
+| SAM                           | ✅                | ❌             |
 | SeamlessM4T                   | ✅                | ❌             |
 | SeamlessM4Tv2                 | ✅                | ❌             |
+| Segformer                     | ✅                | ❌             |
 | StarCoder                     | ✅                | ❌             |
 | T5                            | ✅                | ❌             |
 | Timesformer                   | ✅                | ❌             |
