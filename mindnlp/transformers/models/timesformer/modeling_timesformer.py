@@ -19,9 +19,8 @@ import collections
 from typing import Optional, Tuple, Union
 
 import mindspore
-import mindspore.ops
-from mindspore import nn
-from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+import ops
+from mindspore import nn, ops
 from mindspore.common.initializer import initializer, TruncatedNormal
 
 from mindnlp.utils import logging
@@ -83,11 +82,11 @@ class TimesformerEmbeddings(nn.Cell):
         self.num_patches = self.patch_embeddings.num_patches
 
         # Positional Embeddings
-        self.cls_token = mindspore.Parameter(mindspore.ops.zeros(1, 1, embed_dim))
-        self.position_embeddings = mindspore.Parameter(mindspore.ops.zeros(1, self.num_patches + 1, embed_dim))
+        self.cls_token = mindspore.Parameter(ops.zeros(1, 1, embed_dim))
+        self.position_embeddings = mindspore.Parameter(ops.zeros(1, self.num_patches + 1, embed_dim))
         self.pos_drop = nn.Dropout(p=drop_rate)
         if attention_type != "space_only":
-            self.time_embeddings = mindspore.Parameter(mindspore.ops.zeros(1, num_frames, embed_dim))
+            self.time_embeddings = mindspore.Parameter(ops.zeros(1, num_frames, embed_dim))
             self.time_drop = nn.Dropout(p=drop_rate)
 
     def construct(self, pixel_values):
@@ -97,7 +96,7 @@ class TimesformerEmbeddings(nn.Cell):
         embeddings, num_frames, patch_width = self.patch_embeddings(pixel_values)
 
         cls_tokens = self.cls_token.broadcast_to((embeddings.shape[0], -1, -1))
-        embeddings = mindspore.ops.cat((cls_tokens, embeddings), axis=1)
+        embeddings = ops.cat((cls_tokens, embeddings), axis=1)
 
         # resizing the positional embeddings in case they don't match the input at inference
         if embeddings.shape[1] != self.position_embeddings.shape[1]:
@@ -107,12 +106,12 @@ class TimesformerEmbeddings(nn.Cell):
             patch_num = int(other_pos_embed.shape[2] ** 0.5)
             patch_height = embeddings.shape[1] // patch_width
             other_pos_embed = other_pos_embed.reshape(1, embeddings.shape[2], patch_num, patch_num)
-            new_pos_embed = mindspore.ops.interpolate(
+            new_pos_embed = ops.interpolate(
                 other_pos_embed, size=(patch_height, patch_width), mode="nearest"
             )
             new_pos_embed = new_pos_embed.flatten(2)
             new_pos_embed = new_pos_embed.swapaxes(1, 2)
-            new_pos_embed = mindspore.ops.cat((cls_pos_embed, new_pos_embed), 1)
+            new_pos_embed = ops.cat((cls_pos_embed, new_pos_embed), 1)
             embeddings = embeddings + new_pos_embed
         else:
             embeddings = embeddings + self.position_embeddings
@@ -131,7 +130,7 @@ class TimesformerEmbeddings(nn.Cell):
             # Resizing time embeddings in case they don't match
             if num_frames != self.time_embeddings.shape[1]:
                 time_embeddings = self.time_embeddings.swapaxes(1, 2)
-                new_time_embeddings = mindspore.ops.interpolate(time_embeddings, size=(num_frames), mode="nearest")
+                new_time_embeddings = ops.interpolate(time_embeddings, size=(num_frames), mode="nearest")
                 new_time_embeddings = new_time_embeddings.swapaxes(1, 2)
                 embeddings = embeddings + new_time_embeddings
             else:
@@ -140,7 +139,7 @@ class TimesformerEmbeddings(nn.Cell):
             embeddings = embeddings.view(batch_size, patch_height, num_frames, patch_width).reshape(
                 batch_size, patch_height * num_frames, patch_width
             )
-            embeddings = mindspore.ops.cat((cls_tokens, embeddings), axis=1)
+            embeddings = ops.cat((cls_tokens, embeddings), axis=1)
 
         return embeddings
 
@@ -160,7 +159,7 @@ def drop_path(input: mindspore.Tensor, drop_prob: float = 0.0, training: bool = 
         return input
     keep_prob = 1 - drop_prob
     shape = (input.shape[0],) + (1,) * (input.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
-    random_tensor = keep_prob + mindspore.ops.rand(shape, dtype=input.dtype)
+    random_tensor = keep_prob + ops.rand(shape, dtype=input.dtype)
     random_tensor = random_tensor.floor(random_tensor)  # binarize
     output = input.div(keep_prob) * random_tensor
     return output
@@ -294,7 +293,7 @@ class TimesformerLayer(nn.Cell):
         attention_type = config.attention_type
 
         drop_path_rates = [
-            x.item() for x in mindspore.ops.linspace(0, config.drop_path_rate, config.num_hidden_layers)
+            x.item() for x in ops.linspace(0, config.drop_path_rate, config.num_hidden_layers)
         ]  # stochastic depth decay rule
         drop_path_rate = drop_path_rates[layer_index]
 
@@ -373,7 +372,7 @@ class TimesformerLayer(nn.Cell):
                 .permute(0, 3, 1, 2, 4)
                 .reshape(batch_size * num_frames, num_patch_height * num_patch_width, spatial_embedding.shape[2])
             )
-            spatial_embedding = mindspore.ops.cat((cls_token, spatial_embedding), 1)
+            spatial_embedding = ops.cat((cls_token, spatial_embedding), 1)
 
             spatial_attention_outputs = self.attention(
                 self.layernorm_before(spatial_embedding), output_attentions=output_attentions
@@ -386,7 +385,7 @@ class TimesformerLayer(nn.Cell):
             # Taking care of CLS token
             cls_token = residual_spatial[:, 0, :]
             cls_token = cls_token.reshape(batch_size, num_frames, cls_token.shape[1])
-            cls_token = mindspore.ops.mean(cls_token, 1, True)  # averaging for every frame
+            cls_token = ops.mean(cls_token, 1, True)  # averaging for every frame
             residual_spatial = residual_spatial[:, 1:, :]
             residual_spatial = (
                 residual_spatial.reshape(
@@ -399,7 +398,7 @@ class TimesformerLayer(nn.Cell):
             hidden_states = temporal_embedding
 
             # Mlp
-            hidden_states = mindspore.ops.cat((init_cls_token, hidden_states), 1) + mindspore.ops.cat((cls_token, residual), 1)
+            hidden_states = ops.cat((init_cls_token, hidden_states), 1) + ops.cat((cls_token, residual), 1)
             layer_output = self.layernorm_after(hidden_states)
             layer_output = self.intermediate(layer_output)
             layer_output = self.output(layer_output)
@@ -743,17 +742,14 @@ class TimesformerForVideoClassification(TimesformerPreTrainedModel):
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
-                loss_fct = MSELoss()
                 if self.num_labels == 1:
-                    loss = loss_fct(logits.squeeze(), labels.squeeze())
+                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = loss_fct(logits, labels)
+                    loss = ops.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss_fct = BCEWithLogitsLoss()
-                loss = loss_fct(logits, labels)
+                loss = ops.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]

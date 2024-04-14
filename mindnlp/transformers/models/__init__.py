@@ -99,6 +99,7 @@ from . import (
     rwkv,
     seamless_m4t,
     seamless_m4t_v2,
+    segformer,
     starcoder2,
     t5,
     timesformer,
@@ -194,6 +195,7 @@ from .roberta import *
 from .rwkv import *
 from .seamless_m4t import *
 from .seamless_m4t_v2 import *
+from .segformer import *
 from .starcoder2 import *
 from .tinybert import *
 from .t5 import *
@@ -289,6 +291,7 @@ __all__.extend(roberta.__all__)
 __all__.extend(rwkv.__all__)
 __all__.extend(seamless_m4t.__all__)
 __all__.extend(seamless_m4t_v2.__all__)
+__all__.extend(segformer.__all__)
 __all__.extend(starcoder2.__all__)
 __all__.extend(t5.__all__)
 __all__.extend(timesformer.__all__)

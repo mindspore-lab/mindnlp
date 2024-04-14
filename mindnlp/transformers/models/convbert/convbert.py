@@ -19,7 +19,6 @@ import math
 import mindspore as ms
 from mindspore import nn
 from mindspore import ops
-from mindspore.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from mindspore.common.initializer import initializer, Normal
 
 from ...activations import ACT2FN, get_activation
@@ -884,8 +883,7 @@ class ConvBertForMaskedLM(ConvBertPreTrainedModel):
         # Masked language modeling softmax layer
         if labels is not None:
             labels = labels.to(ms.int32)
-            loss_fct = nn.CrossEntropyLoss()  # -100 index = padding token
-            loss = loss_fct(
+            loss = ops.cross_entropy(
                 prediction_scores.view(-1, self.config.vocab_size), labels.view(-1)
             )
 
@@ -992,17 +990,14 @@ class ConvBertForSequenceClassification(ConvBertPreTrainedModel):
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
-                loss_fct = MSELoss()
                 if self.num_labels == 1:
-                    loss = loss_fct(logits.squeeze(), labels.squeeze())
+                    loss = ops.mse_loss(logits.squeeze(), labels.squeeze())
                 else:
-                    loss = loss_fct(logits, labels)
+                    loss = ops.mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss_fct = BCEWithLogitsLoss()
-                loss = loss_fct(logits, labels)
+                loss = ops.binary_cross_entropy_with_logits(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -1102,8 +1097,7 @@ class ConvBertForMultipleChoice(ConvBertPreTrainedModel):
         loss = None
         if labels is not None:
             labels = labels.to(ms.int32)
-            loss_fct = CrossEntropyLoss()
-            loss = loss_fct(reshaped_logits, labels)
+            loss = ops.cross_entropy(reshaped_logits, labels)
 
         if not return_dict:
             output = (reshaped_logits,) + outputs[1:]
@@ -1179,8 +1173,7 @@ class ConvBertForTokenClassification(ConvBertPreTrainedModel):
         loss = None
         if labels is not None:
             labels = labels.to(ms.int32)
-            loss_fct = CrossEntropyLoss()
-            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[1:]
@@ -1256,9 +1249,8 @@ class ConvBertForQuestionAnswering(ConvBertPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index).to(ms.int32)
             end_positions = end_positions.clamp(0, ignored_index).to(ms.int32)
 
-            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
-            start_loss = loss_fct(start_logits, start_positions)
-            end_loss = loss_fct(end_logits, end_positions)
+            start_loss = ops.cross_entropy(start_logits, start_positions, ignore_index=ignored_index)
+            end_loss = ops.cross_entropy(end_logits, end_positions, ignore_index=ignored_index)
             total_loss = (start_loss + end_loss) / 2
 
         if not return_dict:
