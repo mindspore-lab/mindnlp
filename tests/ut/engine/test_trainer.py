@@ -97,10 +97,6 @@ if is_mindspore_available():
     from mindnlp.engine import Trainer, TrainerState
     # from mindnlp.transformers.modeling_utils import unwrap_model
 
-    if is_safetensors_available():
-        import safetensors.numpy
-
-# mindspore.set_context(pynative_synchronize=True)
 
 PATH_SAMPLE_TEXT = f"{get_tests_dir()}/fixtures/sample_text.txt"
 

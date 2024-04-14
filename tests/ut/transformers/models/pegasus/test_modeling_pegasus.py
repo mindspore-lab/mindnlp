@@ -34,7 +34,6 @@ from ...test_modeling_common import ModelTesterMixin, ids_tensor
 # from ...test_pipeline_mixin import PipelineTesterMixin
 from ..mbart.test_modeling_mbart import AbstractSeq2SeqIntegrationTest
 
-mindspore.set_context(pynative_synchronize=True)    # temporally solution for the sychronize problem
 
 if is_mindspore_available():
     import mindspore
@@ -367,7 +366,7 @@ class PegasusXSUMIntegrationTest(AbstractSeq2SeqIntegrationTest):
     @require_mindspore
     def test_pegasus_xsum_summary(self):
         assert self.tokenizer.model_max_length == 512
-        inputs = self.tokenizer(self.src_text, return_tensors="pt", truncation=True, max_length=512, padding=True)
+        inputs = self.tokenizer(self.src_text, return_tensors="ms", truncation=True, max_length=512, padding=True)
         assert inputs.input_ids.shape == (2, 421)
         translated_tokens = self.model.generate(**inputs, num_beams=2)
         decoded = self.tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)

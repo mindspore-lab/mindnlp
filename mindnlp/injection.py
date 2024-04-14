@@ -904,7 +904,9 @@ def _half(self):
     self.to_float(mindspore.float16)
     for _, param in self.parameters_and_names():
         if param.dtype in (mindspore.float16, mindspore.float32, mindspore.bfloat16):
-            param.set_dtype(mindspore.float16)
+            # param.set_dtype(mindspore.float16) # set_dtype is useless if Parameter copied from host to device(just be used).
+            param.set_data(param.astype(mindspore.float16)) # this is a bug that MindSpore just use new pointer of incoming Tensor
+            param.init_data()
     return self
 
 nn.Cell.half = _half
@@ -914,7 +916,8 @@ def _float(self):
     self.to_float(mindspore.float32)
     for _, param in self.parameters_and_names():
         if param.dtype in (mindspore.float16, mindspore.float32, mindspore.bfloat16):
-            param.set_dtype(mindspore.float32)
+            param.set_data(param.astype(mindspore.float32))
+            # param.set_dtype(mindspore.float32)
     return self
 
 nn.Cell.float = _float
