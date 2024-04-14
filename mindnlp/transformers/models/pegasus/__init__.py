@@ -15,10 +15,14 @@
 """
 Pegasus Models init
 """
-from . import tokenization_pegasus, tokenization_pegasus_fast
+from . import tokenization_pegasus, tokenization_pegasus_fast, configuration_pegasus, modeling_pegasus
 from .tokenization_pegasus import *
 from .tokenization_pegasus_fast import *
+from .configuration_pegasus import *
+from .modeling_pegasus import *
 
 __all__ = []
 __all__.extend(tokenization_pegasus.__all__)
 __all__.extend(tokenization_pegasus_fast.__all__)
+__all__.extend(configuration_pegasus.__all__)
+__all__.extend(modeling_pegasus.__all__)
