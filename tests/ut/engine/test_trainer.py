@@ -53,16 +53,13 @@ from mindnlp.utils.testing_utils import (
     CaptureLogger,
     LoggingLevel,
     TestCasePlus,
-    # backend_device_count,
     execute_subprocess_async,
-    # get_gpu_count,
     get_tests_dir,
     is_staging_test,
     require_safetensors,
     require_sentencepiece,
     require_tokenizers,
     require_mindspore,
-    # require_wandb,
     slow,
 )
 from mindnlp.transformers.tokenization_utils_base import PreTrainedTokenizerBase
@@ -102,7 +99,6 @@ if is_mindspore_available():
 
     if is_safetensors_available():
         import safetensors.numpy
-
 
 # mindspore.set_context(pynative_synchronize=True)
 
@@ -238,8 +234,8 @@ if is_mindspore_available():
     class RegressionDictModel(nn.Cell):
         def __init__(self, a=0, b=0):
             super().__init__()
-            self.a = mindspore.Parameter(mindspore.tensor(a).float())
-            self.b = mindspore.Parameter(mindspore.tensor(b).float())
+            self.a = mindspore.Parameter(mindspore.tensor([a]).float())
+            self.b = mindspore.Parameter(mindspore.tensor([b]).float())
             self.config = None
 
         def construct(self, input_x, labels=None, **kwargs):
@@ -272,8 +268,8 @@ if is_mindspore_available():
 
         def __init__(self, config):
             super().__init__(config)
-            self.a = mindspore.Parameter(mindspore.tensor(config.a).float())
-            self.b = mindspore.Parameter(mindspore.tensor(config.b).float())
+            self.a = mindspore.Parameter(mindspore.tensor([config.a]).float())
+            self.b = mindspore.Parameter(mindspore.tensor([config.b]).float())
             self.random_ms = config.random_ms
 
         def construct(self, input_x, labels=None, **kwargs):
