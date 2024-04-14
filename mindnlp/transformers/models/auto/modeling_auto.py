@@ -86,6 +86,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("reformer", "ReformerModel"),
         ("roberta", "RobertaModel"),
         ("rwkv", "RwkvModel"),
+        ("sam", "SamModel"),
         ("segformer", "SegformerModel"),
         ("starcoder2", "Starcoder2Model"),
         ("t5", "T5Model"),

@@ -19,7 +19,6 @@ import collections
 from typing import Optional, Tuple, Union
 
 import mindspore
-import ops
 from mindspore import nn, ops
 from mindspore.common.initializer import initializer, TruncatedNormal
 

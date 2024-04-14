@@ -97,6 +97,7 @@ from . import (
     reformer,
     roberta,
     rwkv,
+    sam,
     seamless_m4t,
     seamless_m4t_v2,
     segformer,
@@ -193,6 +194,7 @@ from .qwen2_moe import *
 from .reformer import *
 from .roberta import *
 from .rwkv import *
+from .sam import *
 from .seamless_m4t import *
 from .seamless_m4t_v2 import *
 from .segformer import *
@@ -289,6 +291,7 @@ __all__.extend(qwen2_moe.__all__)
 __all__.extend(reformer.__all__)
 __all__.extend(roberta.__all__)
 __all__.extend(rwkv.__all__)
+__all__.extend(sam.__all__)
 __all__.extend(seamless_m4t.__all__)
 __all__.extend(seamless_m4t_v2.__all__)
 __all__.extend(segformer.__all__)
