@@ -19,7 +19,7 @@ import unittest
 import numpy as np
 import mindspore
 from mindspore import Tensor
-from mindnlp.metrics import (Perplexity, BleuScore, RougeN, RougeL, Distinct, Accuracy,
+from mindnlp._legacy.metrics import (Perplexity, BleuScore, RougeN, RougeL, Distinct, Accuracy,
                              Precision, Recall, F1Score, ConfusionMatrix,
                              MatthewsCorrelation, PearsonCorrelation,
                              SpearmanCorrelation, EmScore)
