@@ -15,7 +15,7 @@
 """
 Callbacks.
 """
-from mindnlp.metrics import accuracy, bleu, confusion_matrix, distinct, em_score, \
+from . import accuracy, bleu, confusion_matrix, distinct, em_score, \
     f1, matthews, pearson, perplexity, precision, recall, rouge, spearman
 
 from .perplexity import *

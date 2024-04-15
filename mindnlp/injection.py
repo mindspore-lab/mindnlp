@@ -1006,7 +1006,7 @@ def cell_load_state_dict(self, parameter_dict, strict=False):
     """
     if not isinstance(parameter_dict, dict):
         logger.critical("Failed to combine the net and the parameters.")
-        msg = ("For 'load_param_into_net', the argument 'parameter_dict' should be a dict, "
+        msg = ("For 'load_state_dict', the argument 'parameter_dict' should be a dict, "
             "but got {}.".format(type(parameter_dict)))
         raise TypeError(msg)
 
@@ -1020,25 +1020,13 @@ def cell_load_state_dict(self, parameter_dict, strict=False):
     param_not_load = []
     ckpt_not_load = list(parameter_dict.keys())
     for name, param in self.parameters_and_names():
-        if param.name in parameter_dict:
+        if name in parameter_dict:
             new_param = parameter_dict[name]
             param.set_data(new_param)
             ckpt_not_load.remove(name)
         else:
             param_not_load.append(name)
 
-    logger.debug("Params not matched(in net but not in parameter_dict):")
-    for param_name in param_not_load:
-        logger.debug("%s", param_name)
-
-    logger.info("Loading parameters into net is finished.")
-    if param_not_load:
-        logger.warning(f"For 'load_param_into_net', "
-                    f"{len(param_not_load)} parameters in the 'net' are not loaded, because they are not in the "
-                    f"'parameter_dict', please check whether the network structure is consistent "
-                    f"when training and loading checkpoint.")
-        for param_name in param_not_load:
-            logger.warning(f"{param_name} is not loaded.")
     return param_not_load, ckpt_not_load
 
 nn.Cell.load_state_dict = cell_load_state_dict

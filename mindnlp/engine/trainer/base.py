@@ -35,7 +35,7 @@ import numpy as np
 
 import mindspore
 from mindspore import nn, ops
-from mindspore.dataset import Dataset
+from mindspore.dataset import Dataset, BatchDataset, PaddedBatchDataset
 import mindspore.experimental
 import mindspore.experimental.optim
 from mindspore.nn.learning_rate_schedule import LearningRateSchedule
@@ -348,7 +348,7 @@ class Trainer:
                 " you can safely ignore this message."
             )
 
-        columns = [k for k in dataset.column_names if k not in ignored_columns]
+        columns = [k for k in dataset.get_col_names() if k not in ignored_columns]
 
         return dataset.project(columns)
 
@@ -538,6 +538,9 @@ class Trainer:
             raise ValueError("Trainer: training requires a train_dataset.")
 
         train_dataset = self.train_dataset
+
+        if isinstance(train_dataset, (BatchDataset, PaddedBatchDataset)):
+            return train_dataset
         train_dataset = self._remove_unused_columns(train_dataset, description="training")
 
         train_dataset = train_dataset.batch(self._train_batch_size, self.args.dataset_drop_last, self.args.dataset_num_workers)
@@ -556,7 +559,8 @@ class Trainer:
                 `model.forward()` method are automatically removed. It must implement `__len__`.
         """
         # data_collator = self.data_collator
-
+        if isinstance(test_dataset, (BatchDataset, PaddedBatchDataset)):
+            return test_dataset
         test_dataset = self._remove_unused_columns(test_dataset, description="test")
         test_dataset = test_dataset.batch(self.args.eval_batch_size, self.args.dataset_drop_last, self.args.dataset_num_workers)
 
@@ -580,6 +584,9 @@ class Trainer:
             raise ValueError("Trainer: evaluation requires an eval_dataset.")
 
         eval_dataset = eval_dataset if eval_dataset is not None else self.eval_dataset
+
+        if isinstance(eval_dataset, (BatchDataset, PaddedBatchDataset)):
+            return eval_dataset
 
         eval_dataset = self._remove_unused_columns(eval_dataset, description="test")
         eval_dataset = eval_dataset.batch(self.args.eval_batch_size, self.args.dataset_drop_last, self.args.dataset_num_workers)
@@ -1679,8 +1686,6 @@ class Trainer:
             loss, logits, labels = self.prediction_step(model, inputs, prediction_loss_only, ignore_keys=ignore_keys)
             main_input_name = getattr(self.model, "main_input_name", "input_ids")
             inputs_decode = self._prepare_input(inputs[main_input_name]) if args.include_inputs_for_metrics else None
-
-            self.control = self.callback_handler.on_prediction_step(args, self.state, self.control)
 
             # Update containers on host
             if loss is not None:
