@@ -119,14 +119,16 @@ setup(
         'mindspore',
         'tqdm',
         'requests',
-        'datasets',
-        'tokenizers',
+        'datasets', # hf dependency
+        'evaluate', # hf dependency
+        'tokenizers', # hf dependency
+        'safetensors', # hf dependency
         'sentencepiece',
         'regex',
         'addict',
-        'safetensors',
         'ml_dtypes',
-        'pyctcdecode'
+        'pyctcdecode',
+        'jieba'
     ],
     classifiers=[
         'License :: OSI Approved :: Apache Software License'

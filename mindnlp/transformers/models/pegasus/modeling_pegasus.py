@@ -465,11 +465,11 @@ class PegasusPreTrainedModel(PreTrainedModel):
         elif isinstance(cell, PegasusSinusoidalPositionalEmbedding):
             pass
         elif isinstance(cell, nn.Embedding):
-            weight = initializer(Normal(sigma=std, mean=0.0), cell.weight.shape, cell.weight.dtype)
-            if cell.padding_idx is not None:
+            weight = np.random.normal(0.0, self.config.initializer_range, cell.weight.shape)
+            if cell.padding_idx:
                 weight[cell.padding_idx] = 0
-            cell.weight.set_data(weight)
 
+            cell.weight.set_data(Tensor(weight, cell.weight.dtype))
 
 class PegasusEncoder(PegasusPreTrainedModel):
     """

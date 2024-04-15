@@ -1056,9 +1056,9 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                     origin_state_dict = load_file(resolved_archive_file)
                     if use_fp16:
                         logger.warning_once("MindSpore do not support bfloat16 dtype, we will automaticlly convert to float16")
-                    new_state_dict = {k: Parameter(Tensor.from_numpy(v.astype(usage_dtype))) for k, v in origin_state_dict.items()}
+                    state_dict = {k: Parameter(Tensor.from_numpy(v.astype(usage_dtype))) for k, v in origin_state_dict.items()}
                 else:
-                    new_state_dict = load(resolved_archive_file)
+                    state_dict = load(resolved_archive_file)
             else:
                 try:
                     state_dict = load_checkpoint(str(resolved_archive_file))
@@ -1067,13 +1067,12 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                         f"Unable to load weights from mindspore checkpoint file '{resolved_archive_file}'. "
                     ) from exc
 
-                new_state_dict = {}
-                for key, value in state_dict.items():
-                    key = key.replace('gamma', 'weight').replace('beta', 'bias').replace('embedding_table', 'weight')
-                    value.name = value.name.replace('gamma', 'weight').replace('beta', 'bias')\
-                        .replace('embedding_table', 'weight')
-                    new_state_dict[key] = value
-            return new_state_dict
+            state_keys = list(state_dict.keys())
+            for key in state_keys:
+                new_key = key.replace('gamma', 'weight').replace('beta', 'bias').replace('embedding_table', 'weight')
+                if new_key != key:
+                    state_dict[new_key] = state_dict.pop(key)
+            return state_dict
 
         keys_missing = list(model.parameters_dict().keys())
         param_id_set = set()

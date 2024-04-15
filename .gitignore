@@ -152,3 +152,6 @@ train_with_summ.txt
 
 # mindspore profiler
 RuntimeProfiler*
+
+checkpoint-*/
+data*/
