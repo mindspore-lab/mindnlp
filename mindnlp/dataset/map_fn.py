@@ -13,5 +13,12 @@
 # limitations under the License.
 # ============================================================================
 """
-Dataset init
+Map fuction init
 """
+class BaseMapFuction:
+    def __init__(self, input_colums, output_columns):
+        self.input_columns = input_colums
+        self.output_columns = output_columns
+
+    def __call__(self, *args):
+        return args

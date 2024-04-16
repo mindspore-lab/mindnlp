@@ -478,3 +478,22 @@ def neftune_post_forward_hook(module, input, output):
         mag_norm = module.neftune_noise_alpha / ops.sqrt(dims)
         output = output + ops.uniform(output.shape, -mag_norm, mag_norm, dtype=output.dtype)
     return output
+
+def mismatch_dataset_col_names(map_fn_args, col_names):
+    return not set(map_fn_args).issubset(set(col_names))
+
+def get_function_args(fn):
+    signature = inspect.signature(fn)
+    parameter_names = [param.name for param in signature.parameters.values()]
+    return parameter_names
+
+def args_only_in_map_fn(map_fn_args, col_names):
+    return [element for element in map_fn_args if element not in col_names]
+
+def check_input_output_count(fn):
+    num_input_params = len(inspect.signature(fn).parameters)
+    return_annotation = inspect.signature(fn).return_annotation
+    num_output_params = 1 if isinstance(return_annotation, type) else len(return_annotation.__args__) \
+        if return_annotation != inspect.Signature.empty else 0
+
+    return num_input_params == num_output_params

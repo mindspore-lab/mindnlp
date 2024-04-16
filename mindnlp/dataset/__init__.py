@@ -17,3 +17,4 @@ Dataset init
 """
 
 from .load import load_dataset
+from .map_fn import BaseMapFuction
