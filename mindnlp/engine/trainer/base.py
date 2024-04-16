@@ -43,6 +43,7 @@ from mindspore.nn.learning_rate_schedule import LearningRateSchedule
 from ...peft import PeftModel
 from ...configs import WEIGHTS_NAME, CONFIG_NAME, ADAPTER_WEIGHTS_NAME, ADAPTER_SAFE_WEIGHTS_NAME, \
     WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
+from ...dataset import BaseMapFuction
 from ...utils import logging, find_labels, can_return_loss
 from ...utils.serialization import safe_load_file, safe_save_file
 from ...utils.import_utils import is_safetensors_available
@@ -74,7 +75,11 @@ from ..utils import (
     convert_tensor_to_scalar,
     nested_concat,
     nested_numpify,
-    neftune_post_forward_hook
+    neftune_post_forward_hook,
+    mismatch_dataset_col_names,
+    get_function_args,
+    args_only_in_map_fn,
+    check_input_output_count
 )
 from ..train_args import TrainingArguments, OptimizerNames
 from ..callbacks import (
@@ -116,7 +121,7 @@ class Trainer:
         self,
         model: Union[PreTrainedModel, nn.Cell] = None,
         args: TrainingArguments = None,
-        map_fn: Optional[Callable] = None,
+        map_fn: Optional[Union[Callable, BaseMapFuction]] = None,
         train_dataset: Optional[Dataset] = None,
         eval_dataset: Optional[Union[Dataset, Dict[str, Dataset]]] = None,
         tokenizer: Optional[PreTrainedTokenizerBase] = None,
@@ -168,6 +173,13 @@ class Trainer:
         self.is_model_parallel = False
 
         # TODO: support quantized model
+
+        self.data_map_fn = map_fn
+        if not (hasattr(map_fn, 'input_columns') and hasattr(map_fn, 'output_columns')) and \
+            not check_input_output_count(map_fn):
+            raise ValueError('`map_fn` must have same number of inputs and outputs when it is callable function'
+                             ' without attributes `input_columns` and `output_columns`')
+
         self.train_dataset = copy.deepcopy(train_dataset)
         self.eval_dataset = copy.deepcopy(eval_dataset)
         self.tokenizer = tokenizer
@@ -538,9 +550,22 @@ class Trainer:
             raise ValueError("Trainer: training requires a train_dataset.")
 
         train_dataset = self.train_dataset
-
+        map_fn = self.data_map_fn
         if isinstance(train_dataset, (BatchDataset, PaddedBatchDataset)):
+            if self.data_map_fn is not None:
+                logger.warning("The trainer has been passed a `map_fn` and found `BatchDataset` at same time, "
+                               "the `map_fn` will be ignored.")
             return train_dataset
+
+        if map_fn is None:
+            raise ValueError('Can not found `map_fn` or use `BatchDataset` as train_dataset, '
+                             'please pass the preprocessed dataset or use a `map_fn`.')
+
+        if mismatch_dataset_col_names(get_function_args(map_fn), train_dataset.get_col_names()):
+            raise ValueError(f'The arguments of `map_fn` must be subset of useful dataset columns, '
+                             f'but found {args_only_in_map_fn(get_function_args(map_fn), train_dataset.get_col_names())}')
+
+        train_dataset = train_dataset.map(map_fn, map_fn.input_columns, map_fn.output_columns)
         train_dataset = self._remove_unused_columns(train_dataset, description="training")
 
         train_dataset = train_dataset.batch(self._train_batch_size, self.args.dataset_drop_last, self.args.dataset_num_workers)
