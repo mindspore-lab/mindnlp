@@ -129,6 +129,7 @@ class PegasusConfig(PretrainedConfig):
         attention_dropout=0.0,
         activation_dropout=0.0,
         init_std=0.02,
+        initializer_range=0.02,
         decoder_start_token_id=0,
         scale_embedding=False,
         pad_token_id=0,
@@ -150,6 +151,7 @@ class PegasusConfig(PretrainedConfig):
         self.activation_dropout = activation_dropout
         self.activation_function = activation_function
         self.init_std = init_std
+        self.initializer_range = initializer_range
         self.encoder_layerdrop = encoder_layerdrop
         self.decoder_layerdrop = decoder_layerdrop
         self.use_cache = use_cache
