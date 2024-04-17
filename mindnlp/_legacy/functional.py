@@ -265,7 +265,7 @@ def _in_projection_packed(q, k, v, w, b, k_is_v, q_is_k):
 
 def _scaled_dot_product_attention(query, key, value, attn_mask, dropout_p, is_causal, is_training):
     embed_size = query.shape[-1]
-    scaling_factor = sqrt(Tensor(embed_size, dtype=query.dtype))
+    scaling_factor = sqrt(sqrt(Tensor(embed_size, dtype=query.dtype)))
     query = query / scaling_factor
 
     if is_causal:
