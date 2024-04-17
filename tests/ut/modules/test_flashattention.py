@@ -82,7 +82,7 @@ class TestFlashAttention(unittest.TestCase):
         output1 = flash_1_op(
             ms.Tensor(Q),
             ms.Tensor(K),
-            ms.Tensor(V),mind
+            ms.Tensor(V),
             ms.Tensor(l),
             ms.Tensor(m),
         )
