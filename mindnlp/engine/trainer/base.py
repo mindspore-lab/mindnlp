@@ -175,7 +175,7 @@ class Trainer:
         # TODO: support quantized model
 
         self.data_map_fn = map_fn
-        if not (hasattr(map_fn, 'input_columns') and hasattr(map_fn, 'output_columns')) and \
+        if map_fn is not None and not (hasattr(map_fn, 'input_columns') and hasattr(map_fn, 'output_columns')) and \
             not check_input_output_count(map_fn):
             raise ValueError('`map_fn` must have same number of inputs and outputs when it is callable function'
                              ' without attributes `input_columns` and `output_columns`')
@@ -557,15 +557,12 @@ class Trainer:
                                "the `map_fn` will be ignored.")
             return train_dataset
 
-        if map_fn is None:
-            raise ValueError('Can not found `map_fn` or use `BatchDataset` as train_dataset, '
-                             'please pass the preprocessed dataset or use a `map_fn`.')
+        if map_fn is not None:
+            if mismatch_dataset_col_names(get_function_args(map_fn), train_dataset.get_col_names()):
+                raise ValueError(f'The arguments of `map_fn` must be subset of useful dataset columns, '
+                                f'but found {args_only_in_map_fn(get_function_args(map_fn), train_dataset.get_col_names())}')
+            train_dataset = train_dataset.map(map_fn, map_fn.input_columns, map_fn.output_columns)
 
-        if mismatch_dataset_col_names(get_function_args(map_fn), train_dataset.get_col_names()):
-            raise ValueError(f'The arguments of `map_fn` must be subset of useful dataset columns, '
-                             f'but found {args_only_in_map_fn(get_function_args(map_fn), train_dataset.get_col_names())}')
-
-        train_dataset = train_dataset.map(map_fn, map_fn.input_columns, map_fn.output_columns)
         train_dataset = self._remove_unused_columns(train_dataset, description="training")
 
         train_dataset = train_dataset.batch(self._train_batch_size, self.args.dataset_drop_last, self.args.dataset_num_workers)
