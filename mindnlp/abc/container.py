@@ -18,8 +18,8 @@ from __future__ import absolute_import
 from typing import Dict
 from collections import OrderedDict, abc as container_abcs
 from mindspore.nn.cell import Cell
-
-__all__ = ['CellDict']
+from mindspore import Parameter
+__all__ = ['CellDict','ParameterDict']
 
 def _valid_index(cell_num, index, op_name=None):
     """Internal function, used to detect the value and type of index."""
@@ -160,3 +160,73 @@ class CellDict(Cell):
 
     def construct(self, *inputs):
         raise NotImplementedError
+
+class ParameterDict(Cell):
+    _params: Dict[str, Parameter]
+
+    def __init__(self, parameters: Dict[str, Parameter] = None):
+        super(ParameterDict, self).__init__()
+        if parameters is not None:
+            self.update(parameters) 
+
+    def __getitem__(self, key): 
+        return self._params[key]
+
+    def __setitem__(self, key, parameter): 
+        self.insert_param_to_cell(key, parameter)
+
+    def __delitem__(self, key): 
+        del self._params[key]
+
+    def __len__(self): 
+        return len(self._params)
+
+    def __iter__(self): 
+        return iter(self._params.keys())
+
+    def __contains__(self, key): 
+        return key in self._params
+
+    def clear(self): 
+        self._params.clear()
+
+    def pop(self, key): 
+        v = self[key]
+        del self[key]
+        return v
+
+    def keys(self): 
+        return self._params.keys()
+
+    def items(self):
+        return self._params.items()
+
+    def values(self): 
+        r"""Return an iterable of the ParameterDict values.
+        """
+        return self._params.values()
+
+    def update(self, parameters): 
+        if not isinstance(parameters, container_abcs.Iterable): 
+            raise TypeError("ParametersDict.update should be called with an "
+                            "iterable of key/value pairs, but got " +
+                            type(parameters).__name__)
+
+        if isinstance(parameters, container_abcs.Mapping): 
+            if isinstance(parameters, (OrderedDict, ParameterDict)):
+                for key, parameter in parameters.items():
+                    self[key] = parameter
+            else:
+                for key, parameter in sorted(parameters.items()):
+                    self[key] = parameter
+        else:
+            for j, p in enumerate(parameters): 
+                if not isinstance(p, container_abcs.Iterable):
+                    raise TypeError("ParameterDict update sequence element "
+                                    "#" + str(j) + " should be Iterable; is" +
+                                    type(p).__name__)
+                if not len(p) == 2:
+                    raise ValueError("ParameterDict update sequence element "
+                                     "#" + str(j) + " has length " + str(len(p)) +
+                                     "; 2 is required")
+                self[p[0]] = p[1]

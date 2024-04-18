@@ -15,8 +15,8 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Union
 
-from ..config import PeftConfig
-from ..utils import PeftType
+from mindnlp.peft.config import PeftConfig
+from mindnlp.peft.utils import PeftType
 
 
 @dataclass

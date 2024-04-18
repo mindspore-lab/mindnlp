@@ -89,10 +89,20 @@ class BaseTuner(nn.Cell):
         # if not hasattr(self, "config"):
         #     self.config = {"model_type": "custom"}
 
+        
+        self.active_adapter: str | list[str] = adapter_name
+            
         self.inject_adapter(self.model, adapter_name)
 
         # Copy the peft_config in the injected model.
         self.model.peft_config = self.peft_config
+    
+    @property
+    def active_adapters(self) -> list[str]:
+        if isinstance(self.active_adapter, str):
+            return [self.active_adapter]
+        # is already a list of str
+        return self.active_adapter
 
     def construct(self, *args: Any, **kwargs: Any):
         return self.model.construct(*args, **kwargs)
@@ -240,7 +250,7 @@ class BaseTuner(nn.Cell):
                 f"Please check the target modules and try again."
             )
 
-        self._mark_only_adapters_as_trainable()
+        self._mark_only_adapters_as_trainable(model)
 
         if self.peft_config[adapter_name].inference_mode:
             for name, param in self.model.parameters_and_names():
@@ -389,9 +399,9 @@ class BaseTunerLayer(ABC):
                 if key in adapter_names:
                     # Note: It is possible that not a single layer is called with requires_grad_(True) here. This may
                     # happen if a completely different adapter layer is being activated.
-                    layer.set_grad(requires_grad=True)
+                    layer.requires_grad = True
                 else:
-                    layer.set_grad(requires_grad=False)
+                    layer.requires_grad = False
 
         self._active_adapter = adapter_names
 

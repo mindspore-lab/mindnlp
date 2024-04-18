@@ -23,8 +23,8 @@ import mindspore
 from mindspore import nn, ops
 from mindnlp.transformers.ms_utils import Conv1D
 
-from .tuners_utils import BaseTuner, BaseTunerLayer, check_target_module_exists
-from ..utils import (
+from ..tuners_utils import BaseTuner, BaseTunerLayer, check_target_module_exists
+from mindnlp.peft.utils import (
     TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING,
     TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING,
     ModulesToSaveWrapper,
@@ -158,19 +158,21 @@ class IA3Model(BaseTuner):
         target,
         target_name,
         parent,
-        current_key,
+        **optionnal_kwargs,
     ):
         # check if target module is in feedforward_modules
+        current_key = optionnal_kwargs.pop("current_key")
         is_feedforward = self._check_target_module_feedforward(ia3_config, current_key)
 
         kwargs = {
             "fan_in_fan_out": ia3_config.fan_in_fan_out,
             "init_ia3_weights": ia3_config.init_ia3_weights,
             "is_feedforward": is_feedforward,
-            "loaded_in_8bit": getattr(self.model, "is_loaded_in_8bit", False),
-            "loaded_in_4bit": getattr(self.model, "is_loaded_in_4bit", False),
         }
-
+        
+        kwargs["loaded_in_8bit"] = optionnal_kwargs.pop("loaded_in_8bit", False)
+        kwargs["loaded_in_4bit"] = optionnal_kwargs.pop("loaded_in_4bit", False)
+        
         if isinstance(target, IA3Layer):
             target.update_layer(
                 adapter_name,
@@ -180,7 +182,7 @@ class IA3Model(BaseTuner):
             new_module = self._create_new_module(ia3_config, adapter_name, target, **kwargs)
             if adapter_name not in self.active_adapters:
                 # adding an additional adapter: it is not automatically trainable
-                new_module.requires_grad(False)
+                new_module.requires_grad = False
             self._replace_module(parent, target_name, new_module, target)
 
     @staticmethod

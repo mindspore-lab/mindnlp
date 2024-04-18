@@ -19,8 +19,8 @@ import mindspore
 from mindspore import nn, ops, Parameter, Tensor
 from mindnlp.transformers.ms_utils import Conv1D
 
-from .tuners_utils import BaseTunerLayer, check_adapters_to_merge
-from ..utils import transpose
+from ..tuners_utils import BaseTunerLayer, check_adapters_to_merge
+from mindnlp.peft.utils import transpose
 from mindnlp.abc import  ParameterDict
 from mindspore.common.initializer import initializer,  Constant
 
@@ -39,7 +39,7 @@ class IA3Layer(BaseTunerLayer):
 
         base_layer = self.get_base_layer() 
         if isinstance(base_layer, nn.Dense):
-            in_features, out_features = base_layer.in_features, base_layer.out_features
+            in_features, out_features = base_layer.in_channels, base_layer.out_channels
         elif isinstance(base_layer, nn.Conv2d):
             in_features, out_features = base_layer.in_channels, base_layer.out_channels
         elif isinstance(base_layer, nn.Embedding):
