@@ -167,52 +167,52 @@ class ParameterDict(Cell):
     def __init__(self, parameters: Dict[str, Parameter] = None):
         super(ParameterDict, self).__init__()
         if parameters is not None:
-            self.update(parameters) 
+            self.update(parameters)
 
-    def __getitem__(self, key): 
+    def __getitem__(self, key):
         return self._params[key]
 
-    def __setitem__(self, key, parameter): 
+    def __setitem__(self, key, parameter):
         self.insert_param_to_cell(key, parameter)
 
-    def __delitem__(self, key): 
+    def __delitem__(self, key):
         del self._params[key]
 
-    def __len__(self): 
+    def __len__(self):
         return len(self._params)
 
-    def __iter__(self): 
+    def __iter__(self):
         return iter(self._params.keys())
 
-    def __contains__(self, key): 
+    def __contains__(self, key):
         return key in self._params
 
-    def clear(self): 
+    def clear(self):
         self._params.clear()
 
-    def pop(self, key): 
+    def pop(self, key):
         v = self[key]
         del self[key]
         return v
 
-    def keys(self): 
+    def keys(self):
         return self._params.keys()
 
     def items(self):
         return self._params.items()
 
-    def values(self): 
+    def values(self):
         r"""Return an iterable of the ParameterDict values.
         """
         return self._params.values()
 
-    def update(self, parameters): 
-        if not isinstance(parameters, container_abcs.Iterable): 
+    def update(self, parameters):
+        if not isinstance(parameters, container_abcs.Iterable):
             raise TypeError("ParametersDict.update should be called with an "
                             "iterable of key/value pairs, but got " +
                             type(parameters).__name__)
 
-        if isinstance(parameters, container_abcs.Mapping): 
+        if isinstance(parameters, container_abcs.Mapping):
             if isinstance(parameters, (OrderedDict, ParameterDict)):
                 for key, parameter in parameters.items():
                     self[key] = parameter
@@ -220,7 +220,7 @@ class ParameterDict(Cell):
                 for key, parameter in sorted(parameters.items()):
                     self[key] = parameter
         else:
-            for j, p in enumerate(parameters): 
+            for j, p in enumerate(parameters):
                 if not isinstance(p, container_abcs.Iterable):
                     raise TypeError("ParameterDict update sequence element "
                                     "#" + str(j) + " should be Iterable; is" +
