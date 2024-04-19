@@ -15,7 +15,6 @@
 import warnings
 from typing import Any, List, Optional
 
-import mindspore
 from mindspore import nn, ops, Parameter, Tensor
 from mindnlp.transformers.ms_utils import Conv1D
 
