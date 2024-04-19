@@ -1137,3 +1137,24 @@ def _str(self):
            f'requires_grad={self.requires_grad})'
 
 Parameter.__str__ = _str
+
+class CustomDropout(nn.Cell):
+    def __init__(self, p=0.5):
+        super(CustomDropout, self).__init__()
+        self.p = p
+
+    def construct(self, x):
+        if not self.training:
+            return x
+        mask = ops.rand_like(x) > self.p
+        return x * mask / (1 - self.p)
+
+nn.Dropout = CustomDropout
+
+def dropout(input, p=0.5, training=True, seed=None):
+    if training is False:
+        return input
+    mask = ops.rand_like(input) > p
+    return input * mask / (1 - p)
+
+ops.dropout = dropout
