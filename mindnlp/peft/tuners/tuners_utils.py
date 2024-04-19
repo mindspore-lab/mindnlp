@@ -15,6 +15,13 @@
 """
 BaseTuner class and BaseTunerLayer class.
 """
+# pylint: disable=line-too-long
+# pylint: disable=missing-function-docstring
+# pylint: disable=unused-argument
+# pylint: disable=too-many-arguments
+# pylint: disable=too-many-function-args
+# pylint: disable=no-member
+# pylint: disable=function-redefined
 from __future__ import annotations
 import re
 import logging
@@ -89,14 +96,12 @@ class BaseTuner(nn.Cell):
         # if not hasattr(self, "config"):
         #     self.config = {"model_type": "custom"}
 
-        
         self.active_adapter: str | list[str] = adapter_name
-            
         self.inject_adapter(self.model, adapter_name)
 
         # Copy the peft_config in the injected model.
         self.model.peft_config = self.peft_config
-    
+
     @property
     def active_adapters(self) -> list[str]:
         if isinstance(self.active_adapter, str):
@@ -505,8 +510,6 @@ def check_target_module_exists(config, key: str) -> bool | re.Match[str] | None:
         )
         if is_using_layer_indexes and target_module_found:
             layer_index = None
-            # TODO: It's still unclear how empty layers_pattern (None, [], or "") should behave
-            # For now, empty layers_pattern means any layer pattern is ok
             if layers_pattern is None or len(layers_pattern) == 0:
                 layer_index = re.match(r".*\.[^.]*\.(\d+)\.", key)
             else:

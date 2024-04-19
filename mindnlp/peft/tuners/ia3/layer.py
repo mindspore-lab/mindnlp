@@ -11,17 +11,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+# ============================================================================
+# pylint: disable=missing-function-docstring
+# pylint: disable=missing-class-docstring
+# pylint: disable=line-too-long
+# pylint: disable=arguments-differ
+# pylint: disable=unused-argument
+# pylint: disable=too-many-arguments
+"IA3 Layer"
 import warnings
 from typing import Any, List, Optional
 
 from mindspore import nn, ops, Parameter, Tensor
-from mindnlp.transformers.ms_utils import Conv1D
+from mindspore.common.initializer import initializer,  Constant
 
-from ..tuners_utils import BaseTunerLayer, check_adapters_to_merge
+from mindnlp.transformers.ms_utils import Conv1D
 from mindnlp.peft.utils import transpose
 from mindnlp.abc import  ParameterDict
-from mindspore.common.initializer import initializer,  Constant
+
+from ..tuners_utils import BaseTunerLayer, check_adapters_to_merge
+
 
 
 class IA3Layer(BaseTunerLayer):
@@ -35,8 +44,7 @@ class IA3Layer(BaseTunerLayer):
         self._disable_adapters = False
         self.merged_adapters = []
         self.is_feedforward = is_feedforward
-
-        base_layer = self.get_base_layer() 
+        base_layer = self.get_base_layer()
         if isinstance(base_layer, nn.Dense):
             in_features, out_features = base_layer.in_channels, base_layer.out_channels
         elif isinstance(base_layer, nn.Conv2d):
@@ -62,7 +70,7 @@ class IA3Layer(BaseTunerLayer):
         self.ia3_l[adapter_name] = Parameter(weight)
         if init_ia3_weights:
             self.reset_ia3_parameters(adapter_name)
-        self.set_adapter(self.active_adapters) 
+        self.set_adapter(self.active_adapters)
 
     def reset_ia3_parameters(self, adapter_name):
         if adapter_name in self.ia3_l.keys():
@@ -113,7 +121,7 @@ class Linear(nn.Cell, IA3Layer):
 
         for active_adapter in adapter_names:
             if active_adapter in self.ia3_l.keys():
-                base_layer = self.get_base_layer() 
+                base_layer = self.get_base_layer()
                 ia3_l = transpose(self.ia3_l[active_adapter].data, self.fan_in_fan_out)
                 if safe_merge:
                     orig_weights = base_layer.weight.data
@@ -156,7 +164,6 @@ class Linear(nn.Cell, IA3Layer):
 
     def construct(self, x: Tensor, *args: Any, **kwargs: Any) -> Tensor:
         dtype = previous_dtype = x.dtype
-
         if self.disable_adapters:
             if self.merged:
                 self.unmerge()
@@ -173,8 +180,6 @@ class Linear(nn.Cell, IA3Layer):
 
             if self.is_feedforward:
                 x = x.to(dtype)
-                # TODO: weight.dtype can be != self.ia3_l[self.active_adapters].dtype
-                # e.g. bf16 vs fp32. Is that okay?
                 interm = (x * ia3_scaling).to(self.get_base_layer().weight.dtype)
                 result = self.base_layer(interm, *args, **kwargs)
             else:
@@ -298,8 +303,6 @@ class Conv2d(nn.Cell, IA3Layer):
 
             if self.is_feedforward:
                 x = x.to(dtype)
-                # TODO: weight.dtype can be != self.ia3_l[self.active_adapters].dtype
-                # e.g. bf16 vs fp32. Is that okay?
                 interm = (x * ia3_scaling).to(self.get_base_layer().weight.dtype)
                 result = self.base_layer(interm, *args, **kwargs)
             else:

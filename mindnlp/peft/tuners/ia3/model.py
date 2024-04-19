@@ -11,6 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ============================================================================
+# pylint: disable=arguments-differ
+# pylint: disable=arguments-renamed
+# pylint: disable=useless-parent-delegation
+# pylint: disable=line-too-long
+# pylint: disable=unused-variable
+# pylint: disable=unused-argument
+# pylint: disable=too-many-arguments
+"IA3 Model"
 from __future__ import annotations
 
 import re
@@ -19,18 +28,16 @@ from dataclasses import asdict
 from enum import Enum
 from typing import Optional
 
-import mindspore
-from mindspore import nn, ops
-from mindnlp.transformers.ms_utils import Conv1D
+from mindspore import nn
 
-from ..tuners_utils import BaseTuner, BaseTunerLayer, check_target_module_exists
+from mindnlp.transformers.ms_utils import Conv1D
 from mindnlp.peft.utils import (
     TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING,
     TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING,
     ModulesToSaveWrapper,
     _get_submodules,
 )
-
+from ..tuners_utils import BaseTuner, BaseTunerLayer, check_target_module_exists
 from .layer import Conv2d, IA3Layer, Linear
 
 
@@ -147,9 +154,9 @@ class IA3Model(BaseTuner):
         return check_target_module_exists(ia3_config, key)
 
     def _mark_only_adapters_as_trainable(self, model: nn.Cell) -> None:
-        for n, p in model.parameters_and_names():
-            if self.prefix not in n:
-                p.requires_grad = False
+        for name, param in model.parameters_and_names():
+            if self.prefix not in name:
+                param.requires_grad = False
 
     def _create_and_replace(
         self,
@@ -169,10 +176,8 @@ class IA3Model(BaseTuner):
             "init_ia3_weights": ia3_config.init_ia3_weights,
             "is_feedforward": is_feedforward,
         }
-        
         kwargs["loaded_in_8bit"] = optionnal_kwargs.pop("loaded_in_8bit", False)
         kwargs["loaded_in_4bit"] = optionnal_kwargs.pop("loaded_in_4bit", False)
-        
         if isinstance(target, IA3Layer):
             target.update_layer(
                 adapter_name,
@@ -226,12 +231,13 @@ class IA3Model(BaseTuner):
             return getattr(self.model, name)
 
     def get_peft_config_as_dict(self, inference: bool = False):
+        """Get the configuration of the (IA)^3 model as a dictionary."""
         config_dict = {}
         for key, value in self.peft_config.items():
             config = {k: v.value if isinstance(v, Enum) else v for k, v in asdict(value).items()}
             if inference:
                 config["inference_mode"] = True
-        config_dict[key] = config
+            config_dict[key] = config
         return config
 
     def _set_adapter_layers(self, enabled=True):
