@@ -70,6 +70,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("gpt_pangu", "GPTPanguConfig"),
         ("hubert", "HubertConfig"),
         ("jetmoe", "JetMoEConfig"),
+        ("llama", "LlamaConfig"),
         ("mamba", "MambaConfig"),
         ("mbart", "MBartConfig"),
         ("minicpm", "MiniCPMConfig"),
