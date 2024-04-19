@@ -33,6 +33,8 @@ from .peft_model import (
 from .tuners import (
     LoraConfig,
     LoraModel,
+    IA3Config,
+    IA3Model,
 )
 
 from .utils import (

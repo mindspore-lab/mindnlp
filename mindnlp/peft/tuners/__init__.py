@@ -15,3 +15,4 @@
 """Tuners"""
 
 from .lora import LoraConfig, LoraModel
+from .ia3 import IA3Config, IA3Model
