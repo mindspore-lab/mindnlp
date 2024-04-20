@@ -1,4 +1,4 @@
-# <center> MindNLP oft
+# <center> MindNLP oft -change
 
 <p align="center">
     <a href="https://mindnlp.cqu.ai/en/latest/">
