@@ -3,6 +3,7 @@ from mindspore import ops
 from mindnlp.transformers import BloomTokenizerFast, BloomForCausalLM
 from mindnlp.engine import TrainingArguments, Trainer
 from mindnlp.dataset import load_dataset, BaseMapFuction
+from mindnlp.amp import autocast
 
 class ModifiedTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):
@@ -32,6 +33,7 @@ training_args = TrainingArguments(
     learning_rate=2e-5,
     num_train_epochs=2,
     logging_steps=100,
+    save_strategy='epoch'
 )
 
 trainer = ModifiedTrainer(

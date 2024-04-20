@@ -28,6 +28,7 @@ from .config import PeftConfig, PromptLearningConfig
 
 from .tuners import (
     LoraModel,
+    IA3Model,
     # LoraConfig
 )
 from .utils import (
@@ -52,6 +53,7 @@ from .utils import (
 
 PEFT_TYPE_TO_MODEL_MAPPING = {
     PeftType.LORA: LoraModel,
+    PeftType.IA3: IA3Model,
 }
 class PeftModel(nn.Cell):
     """

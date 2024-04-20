@@ -59,7 +59,11 @@ class PeftConfigMixin():
 
         os.makedirs(save_directory, exist_ok=True)
 
-        output_dict = self.__dict__
+        output_dict = asdict(self)
+        # converting set type to list
+        for key, value in output_dict.items():
+            if isinstance(value, set):
+                output_dict[key] = list(value)
         output_path = os.path.join(save_directory, CONFIG_NAME)
 
         # save it
