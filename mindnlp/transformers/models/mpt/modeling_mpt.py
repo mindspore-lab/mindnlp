@@ -14,6 +14,7 @@
 # limitations under the License.
 """PyTorch MPT model."""
 # pylint: disable=W0235
+# pylint: disable=E1123
 
 import math
 from typing import Optional, Tuple, Union
