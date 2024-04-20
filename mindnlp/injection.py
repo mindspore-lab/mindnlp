@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=no-name-in-module
 """
 Injection mindspore.nn for MindNLP
 """
@@ -28,7 +29,7 @@ from packaging import version
 import numpy as np
 import mindspore
 import mindspore.common.dtype as mstype
-from mindspore._c_expression import Tensor as Tensor_ # pylint: disable=no-name-in-module
+from mindspore._c_expression import Tensor as Tensor_
 from mindspore import nn, ops, Tensor, Parameter
 from mindspore.common._stub_tensor import StubTensor
 from mindspore.nn.layer.conv import _Conv, _deconv_output_length
@@ -38,6 +39,7 @@ from mindspore.ops import functional as F
 from mindspore.ops._primitive_cache import _get_cache_prim
 from mindnlp._legacy.functional import einsum
 from .utils.logging import get_logger
+from .amp import OP_WHITE_LIST, OP_BLACK_LIST, CELL_WHITE_LIST, get_global_amp
 
 LESS_MS_2_1 = version.parse(mindspore.__version__) < version.parse('2.1.0')
 LESS_MS_2_2 = version.parse(mindspore.__version__) < version.parse('2.2.0')
@@ -152,6 +154,29 @@ def _get_unflatten_size(input_shape, dim, sizes):
 
     out_shape = input_shape[:_dim] + tuple(sizes) + input_shape[_dim + 1:]
     return out_shape
+
+old_op_call = ops.Primitive.__call__
+def _op_call(self, *args):
+    GLOBAL_AMP, GLOBAL_AMP_DTYPE = get_global_amp()
+
+    if GLOBAL_AMP:
+        if GLOBAL_AMP and self.__class__.__name__ in OP_WHITE_LIST:
+            args = [arg.astype(GLOBAL_AMP_DTYPE) if isinstance(arg, Tensor) \
+                    else arg for arg in args]
+        elif GLOBAL_AMP and self.__class__.__name__ in OP_BLACK_LIST:
+            args = [arg.astype(mindspore.float32) if isinstance(arg, Tensor) \
+                    else arg for arg in args]
+        else:
+            return old_op_call(self, *args)
+
+        outputs = old_op_call(self, *args)
+
+        return outputs
+
+    return old_op_call(self, *args)
+
+
+ops.Primitive.__call__ = _op_call
 
 # For all backend
 # For functional api
@@ -1158,3 +1183,12 @@ def dropout(input, p=0.5, training=True, seed=None):
     return input * mask / (1 - p)
 
 ops.dropout = dropout
+
+old_cell_call = nn.Cell.__call__
+def _cell_call(self, *args, **kwargs):
+    GLOBAL_AMP, GLOBAL_AMP_DTYPE = get_global_amp()
+    if GLOBAL_AMP and self.__class__.__name__ in CELL_WHITE_LIST:
+        self.to_float(GLOBAL_AMP_DTYPE)
+    return old_cell_call(self, *args, **kwargs)
+
+nn.Cell.__call__ = old_cell_call
