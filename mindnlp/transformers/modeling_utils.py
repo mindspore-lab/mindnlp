@@ -1050,7 +1050,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         # These are all the pointers of shared tensors.
         tied_params = [names for _, names in ptrs.items() if len(names) > 1]
         def load_ckpt(resolved_archive_file):
-            if 'ckpt' not in resolved_archive_file:
+            if not resolved_archive_file.endswith('ckpt'):
                 if use_safetensors or 'safetensors' in resolved_archive_file:
                     from safetensors.numpy import load_file
                     origin_state_dict = load_file(resolved_archive_file)
