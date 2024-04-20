@@ -1,4 +1,4 @@
-# <center> MindNLP
+# <center> MindNLP oft
 
 <p align="center">
     <a href="https://mindnlp.cqu.ai/en/latest/">
