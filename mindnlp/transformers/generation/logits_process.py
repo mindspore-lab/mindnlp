@@ -441,11 +441,13 @@ class MinLengthLogitsProcessor(LogitsProcessor):
         self.eos_token_id = eos_token_id
 
     def __call__(self, input_ids: mindspore.Tensor, scores: mindspore.Tensor) -> mindspore.Tensor:
-        cur_len = input_ids.shape[-1]
-        if cur_len < self.min_length:
-            for i in self.eos_token_id:
-                scores[:, i] = -float("inf")
-        return scores
+        vocab_tensor = ops.arange(scores.shape[-1])
+        eos_token_id = mindspore.tensor(self.eos_token_id)
+        eos_token_mask = vocab_tensor == eos_token_id
+        scores_processed = scores.copy()
+        if input_ids.shape[-1] < self.min_length:
+            scores_processed = ops.where(eos_token_mask, -math.inf, scores)
+        return scores_processed
 
 
 class MinNewTokensLengthLogitsProcessor(LogitsProcessor):
