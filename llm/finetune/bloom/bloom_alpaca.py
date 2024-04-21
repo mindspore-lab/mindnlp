@@ -3,11 +3,7 @@ from mindspore import ops
 from mindnlp.transformers import BloomTokenizerFast, BloomForCausalLM
 from mindnlp.engine import TrainingArguments, Trainer
 from mindnlp.dataset import load_dataset, BaseMapFuction
-
-
-from dataclasses import dataclass, field
-from typing import Optional
-
+from mindnlp.amp import autocast
 
 class ModifiedTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):
@@ -32,11 +28,12 @@ class ModifiedMapFunction(BaseMapFuction):
 training_args = TrainingArguments(
     "output",
     fp16=False,
-    gradient_accumulation_steps= 1,
-    per_device_train_batch_size = 2,
-    learning_rate = 2e-5,
+    gradient_accumulation_steps=1,
+    per_device_train_batch_size=2,
+    learning_rate=2e-5,
     num_train_epochs=2,
-    logging_steps=10,
+    logging_steps=100,
+    save_strategy='epoch'
 )
 
 trainer = ModifiedTrainer(
