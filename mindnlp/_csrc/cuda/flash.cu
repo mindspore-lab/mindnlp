@@ -1,5 +1,4 @@
 // Modified from: https://github.com/tspeterkim/flash-attention-minimal/blob/main/flash.cu
-// Modified from: https://github.com/tspeterkim/flash-attention-minimal/blob/main/flash.cu
 #include <stdio.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -37,20 +36,7 @@ __global__ void flash_attn_1_fwd_f32_kernel(
     // Offset into Q,K,V,O,l,m - different for each batch and head
     int qkv_offset = (bx * gridDim.y + by) * N * d; // gridDim.y = nh  qkv dim: (B, nh, N, d)   it equals to (by * gridDim.x + bx) * N * d
     int lm_offset = (bx * gridDim.y + by) * N;      // offset for l and m  lm dim: (B, nh, N)
-    // Offset into Q,K,V,O,l,m - different for each batch and head
-    int qkv_offset = (bx * gridDim.y + by) * N * d; // gridDim.y = nh  qkv dim: (B, nh, N, d)   it equals to (by * gridDim.x + bx) * N * d
-    int lm_offset = (bx * gridDim.y + by) * N;      // offset for l and m  lm dim: (B, nh, N)
 
-    // Define SRAM for Q,K,V,S
-    extern __shared__ float sram[];
-    int tile_size = Bc * d; // size of Qi, Kj, Vj , Bc >= Br, so choose consistent Bc as tile_size
-    float *Qi = sram;
-    float *Kj = &sram[tile_size];
-    float *Vj = &sram[tile_size * 2];
-    float *S = &sram[tile_size * 3];
-
-    for (int j = 0; j < Tc; j++)
-    {
     // Define SRAM for Q,K,V,S
     extern __shared__ float sram[];
     int tile_size = Bc * d; // size of Qi, Kj, Vj , Bc >= Br, so choose consistent Bc as tile_size
@@ -70,32 +56,11 @@ __global__ void flash_attn_1_fwd_f32_kernel(
             Vj[(tx * d) + x] = V[qkv_offset + (tile_size * j) + (tx * d) + x];
         }
         __syncthreads(); // such that the inner loop can use the correct Kj, Vj
-// Load Kj, Vj to SRAM
-#pragma unroll
-        for (int x = 0; x < d; x++) // one block caculates one tile
-        {                           // tx * d indexes the thread, x indexes the element in the vector
-            Kj[(tx * d) + x] = K[qkv_offset + (tile_size * j) + (tx * d) + x];
-            Vj[(tx * d) + x] = V[qkv_offset + (tile_size * j) + (tx * d) + x];
-        }
-        __syncthreads(); // such that the inner loop can use the correct Kj, Vj
 
 #pragma unroll
         for (int i = 0; i < Tr; i++)
         {
-#pragma unroll
-        for (int i = 0; i < Tr; i++)
-        {
 
-// Load Qi to SRAM, l and m to registers
-#pragma unroll
-            for (int x = 0; x < d; x++)
-            { // one thread caculates one row of Qi
-                Qi[(tx * d) + x] = Q[qkv_offset + (tile_size * i) + (tx * d) + x];
-            }
-            __syncthreads(); // such that the inner loop can use the correct Qi
-
-            float row_m_prev = m[lm_offset + (Br * i) + tx];
-            float row_l_prev = l[lm_offset + (Br * i) + tx];
 // Load Qi to SRAM, l and m to registers
 #pragma unroll
             for (int x = 0; x < d; x++)
@@ -123,41 +88,11 @@ __global__ void flash_attn_1_fwd_f32_kernel(
                 if (i * Br + tx < j * Bc + y)
                     sum = -INFINITY;
                 S[(Bc * tx) + y] = sum; // S dim: (Br, Bc)
-            // S = QK^T, row_m = rowmax(S) row-wise
-            // with causal masking
-            float row_m = -INFINITY;
-#pragma unroll
-            for (int y = 0; y < Bc; y++)
-            {
-                float sum = 0;
-#pragma unroll
-                for (int x = 0; x < d; x++)
-                {
-                    sum += Qi[(tx * d) + x] * Kj[(y * d) + x]; // a thread caculates one element of S
-                }
-                sum *= softmax_scale;
-                if (i * Br + tx < j * Bc + y)
-                    sum = -INFINITY;
-                S[(Bc * tx) + y] = sum; // S dim: (Br, Bc)
 
                 if (sum > row_m)
                     row_m = sum; // every thread hold one row_m
             }
-                if (sum > row_m)
-                    row_m = sum; // every thread hold one row_m
-            }
 
-            // P = exp(S - row_m), row_l = rowsum(P)
-            float row_l = 0;
-#pragma unroll
-            for (int y = 0; y < Bc; y++)
-            {
-                if (i * Br + tx < j * Bc + y)
-                    S[(Bc * tx) + y] = 0;
-                else
-                    S[(Bc * tx) + y] = __expf(S[(Bc * tx) + y] - row_m);
-                row_l += S[(Bc * tx) + y];
-            }
             // P = exp(S - row_m), row_l = rowsum(P)
             float row_l = 0;
 #pragma unroll
@@ -174,32 +109,7 @@ __global__ void flash_attn_1_fwd_f32_kernel(
             float row_m_new = max(row_m_prev, row_m);
             float row_l_new = (__expf(row_m_prev - row_m_new) * row_l_prev) +
                               (__expf(row_m - row_m_new) * row_l);
-            // Compute new m and l
-            float row_m_new = max(row_m_prev, row_m);
-            float row_l_new = (__expf(row_m_prev - row_m_new) * row_l_prev) +
-                              (__expf(row_m - row_m_new) * row_l);
 
-// Write O, l, m to HBM
-#pragma unroll
-            for (int x = 0; x < d; x++)
-            {
-                float pv = 0; // Pij * Vj
-#pragma unroll
-                for (int y = 0; y < Bc; y++)
-                {
-                    pv += S[(Bc * tx) + y] * Vj[(y * d) + x];
-                }
-                O[qkv_offset + (tile_size * i) + (tx * d) + x] =
-                    (1 / row_l_new) *
-                    ((row_l_prev * __expf(row_m_prev - row_m_new) *
-                      O[qkv_offset + (tile_size * i) + (tx * d) + x]) +
-                     (__expf(row_m - row_m_new) * pv));
-            }
-            m[lm_offset + (Br * i) + tx] = row_m_new;
-            l[lm_offset + (Br * i) + tx] = row_l_new;
-        }
-        __syncthreads(); // otherwise, thread can use the wrong Kj, Vj in inner loop
-    }
 // Write O, l, m to HBM
 #pragma unroll
             for (int x = 0; x < d; x++)
@@ -702,8 +612,6 @@ extern "C"
         cudaStream_t custream = static_cast<cudaStream_t>(stream);
         if (nparam != 6)
             return 1;
-        if (nparam != 6)
-            return 1;
         float *Q = static_cast<float *>(params[0]);
         float *K = static_cast<float *>(params[1]);
         float *V = static_cast<float *>(params[2]);
@@ -786,25 +694,11 @@ extern "C"
 
         const int Tc = ceil((float)N / Bc);
         const int Tr = ceil((float)N / Br);
-        // Calculate SRAM size needed per block
-        int col_tile_size = Bc * d; // size of Kj, Vj
-        int row_tile_size = Br * d; // size of Qi
-        const int sram_size =
-            (2 * col_tile_size * sizeof(float)) // SRAM size for Kj, Vj
-            + (row_tile_size * sizeof(float))   // SRAM size for Qi
-            + (Bc * Br * sizeof(float));        // SRAM size for S
-        int max_sram_size;
-        cudaDeviceGetAttribute(&max_sram_size, cudaDevAttrMaxSharedMemoryPerBlock, 0);
-
-        const int Tc = ceil((float)N / Bc);
-        const int Tr = ceil((float)N / Br);
         const float softmax_scale = 1.0 / sqrt(d);
 
         printf("Bc: %d, Br: %d, Tc: %d, Tr: %d \n", Bc, Br, Tc, Tr);
         printf("Max shared memory: %d, requested shared memory: %d \n", max_sram_size, sram_size);
 
-        dim3 grid_dim(B, nh); // batch_size x num_heads
-        dim3 block_dim(Bc);   // Bc threads per block
         dim3 grid_dim(B, nh); // batch_size x num_heads
         dim3 block_dim(Bc);   // Bc threads per block
 
