@@ -32,7 +32,7 @@ def load_falcon_model(pretrained_model_name_or_path):
     model = AutoModelForSequenceClassification.from_pretrained(
         pretrained_model_name_or_path, config=config, ms_dtype=mindspore.float16
     )
-    tokenizer = AutoTokenizer.from_pretrained("falcon-rw-1b")
+    tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path)
 
     return model, config, tokenizer
 
@@ -143,6 +143,9 @@ def eval_model(model, optimizer, criterion, eval_dataloader):
 
 
 if __name__ == "__main__":
+
+    # 设置gpu
+    # mindspore.set_context(device_target="GPU", device_id=5)
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--save_dir",
@@ -163,7 +166,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--num_epochs", default=10, type=int)
     parser.add_argument(
-        "--lr", default=1e-4, type=float, help="Set 2e-5 for full-finetuning."
+        "--lr", default=4e-5, type=float, help="Set 2e-5 for full-finetuning."
     )
     parser.add_argument("--max_seq_len", default=256, type=int)
     parser.add_argument("--debug", action="store_true", help="debug mode")
@@ -193,7 +196,6 @@ if __name__ == "__main__":
             lora_dropout=0.1,
         )
         model = get_peft_model(model, peft_config)
-        # print(model)
         model.print_trainable_parameters()
 
     # load dataset
@@ -202,6 +204,11 @@ if __name__ == "__main__":
     train_dataloader = get_dataloader_from_ds(train_ds, args.batch_size)
     test_dataloader = get_dataloader_from_ds(test_ds, args.batch_size)
     logging.info("dataset load")
+
+    # 最后两层参数param.name是一样的，手动将模型最后一个参数score改为classifier
+    for name, param in model.parameters_and_names():
+        if name == "base_model.model.score.original_module.weight":
+            param.name = "base_model.classifier.weight"
 
     # optimizer
     optimizer = AdamWeightDecay(params=model.trainable_params(), learning_rate=args.lr)
