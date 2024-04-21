@@ -68,6 +68,7 @@ class AdaptedAttention(nn.Cell):
                 self.model.k_proj.in_features // self.model.k_proj.out_features
         )
 
+
         if k_proj_layer == v_proj_layer:
             _, key, value = getattr(self.model, k_proj_layer)(self.adaption_prompt).split(embed_dim, axis=2)
         else:
