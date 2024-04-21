@@ -28,7 +28,7 @@ class TestFlashAttention(unittest.TestCase):
     Test module flashattention
     """
 
-    def manual_attn(self, query, key, value):
+    def manual_attn_forward(self, query, key, value):
         r"""
         manual attention
         """
