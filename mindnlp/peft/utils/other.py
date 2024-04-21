@@ -283,8 +283,55 @@ TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING = {
     # "codegen": ["qkv_proj"],
 }
 
-TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING = {}
-TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING = {}
+TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING = {
+    "t5": ["k", "v", "wo"],
+    "mt5": ["k", "v", "wi_1"],
+    "gpt2": ["c_attn", "mlp.c_proj"],
+    "bloom": ["query_key_value", "mlp.dense_4h_to_h"],
+    "roberta": ["key", "value", "output.dense"],
+    "opt": ["q_proj", "k_proj", "fc2"],
+    "gptj": ["q_proj", "v_proj", "fc_out"],
+    "gpt_neox": ["query_key_value", "dense_4h_to_h"],
+    "gpt_neo": ["q_proj", "v_proj", "c_proj"],
+    "bart": ["q_proj", "v_proj", "fc2"],
+    "gpt_bigcode": ["c_attn", "mlp.c_proj"],
+    "llama": ["k_proj", "v_proj", "down_proj"],
+    "mistral": ["k_proj", "v_proj", "down_proj"],
+    "mixtral": ["k_proj", "v_proj", "w2"],
+    "bert": ["key", "value", "output.dense"],
+    "deberta-v2": ["key_proj", "value_proj", "output.dense"],
+    "deberta": ["in_proj", "output.dense"],
+    "RefinedWebModel": ["query_key_value", "dense_4h_to_h"],
+    "RefinedWeb": ["query_key_value", "dense_4h_to_h"],
+    "falcon": ["query_key_value", "dense_4h_to_h"],
+    "phi": ["q_proj", "v_proj", "fc2"],
+    "gemma": ["q_proj", "v_proj", "down_proj"],
+}
+
+TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING = {
+    "t5": ["wo"],
+    "mt5": [],
+    "gpt2": ["mlp.c_proj"],
+    "bloom": ["mlp.dense_4h_to_h"],
+    "roberta": ["output.dense"],
+    "opt": ["fc2"],
+    "gptj": ["fc_out"],
+    "gpt_neox": ["dense_4h_to_h"],
+    "gpt_neo": ["c_proj"],
+    "bart": ["fc2"],
+    "gpt_bigcode": ["mlp.c_proj"],
+    "llama": ["down_proj"],
+    "mistral": ["down_proj"],
+    "mixtral": ["w2"],
+    "bert": ["output.dense"],
+    "deberta-v2": ["output.dense"],
+    "deberta": ["output.dense"],
+    "RefinedWeb": ["dense_4h_to_h"],
+    "RefinedWebModel": ["dense_4h_to_h"],
+    "falcon": ["dense_4h_to_h"],
+    "phi": ["fc2"],
+    "gemma": ["down_proj"],
+}
 COMMON_LAYERS_PATTERN = ["layers", "h", "block", "blocks", "layer"]
 TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING = {}
 

@@ -1,4 +1,4 @@
-# Copyright 2023 Huawei Technologies Co., Ltd
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,30 +13,12 @@
 # limitations under the License.
 # ============================================================================
 """
-Peft types and Task types.
+MPT Model.
 """
-import enum
+from . import configuration_mpt, modeling_mpt
+from .configuration_mpt import *
+from .modeling_mpt import *
 
-class PeftType(str, enum.Enum):
-    """
-    PeftType.
-    """
-    # PROMPT_TUNING = "PROMPT_TUNING"
-    # P_TUNING = "P_TUNING"
-    # PREFIX_TUNING = "PREFIX_TUNING"
-    LORA = "LORA"
-    # ADALORA = "ADALORA"
-    # ADAPTION_PROMPT = "ADAPTION_PROMPT"
-    IA3 = "IA3"
-
-
-class TaskType(str, enum.Enum):
-    """
-    TaskType
-    """
-    SEQ_CLS = "SEQ_CLS"
-    SEQ_2_SEQ_LM = "SEQ_2_SEQ_LM"
-    CAUSAL_LM = "CAUSAL_LM"
-    TOKEN_CLS = "TOKEN_CLS"
-    QUESTION_ANS = "QUESTION_ANS"
-    FEATURE_EXTRACTION = "FEATURE_EXTRACTION"
+__all__ = []
+__all__.extend(configuration_mpt.__all__)
+__all__.extend(modeling_mpt.__all__)
