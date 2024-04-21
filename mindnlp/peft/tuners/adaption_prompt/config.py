@@ -16,85 +16,66 @@
 "IA3 Config"
 from dataclasses import dataclass, field
 from typing import List, Optional, Union
-
+from collections import namedtuple
 from mindnlp.peft.config import PeftConfig
 from mindnlp.peft.utils import PeftType
+from .utils import llama_compute_query_states
 
 
 @dataclass
-class IA3Config(PeftConfig):
-    """
-    This is the configuration class to store the configuration of a [`IA3Model`].
+class AdaptionPromptConfig(PeftConfig):
+    """Stores the configuration of an [`AdaptionPromptModel`]."""
 
-    Args:
-        target_modules (`Optional[Union[List[str], str]]`):
-            The names of the modules to apply the adapter to. If this is specified, only the modules with the specified
-            names will be replaced. When passing a string, a regex match will be performed. When passing a list of
-            strings, either an exact match will be performed or it is checked if the name of the module ends with any
-            of the passed strings. If this is specified as 'all-linear', then all linear/Conv1D modules are chosen,
-            excluding the output layer. If this is not specified, modules will be chosen according to the model
-            architecture. If the architecture is not known, an error will be raised -- in this case, you should specify
-            the target modules manually.
-        feedforward_modules (`Optional[Union[List[str], str]]`):
-            The names of the modules to be treated as feedforward modules, as in the original paper. These modules will
-            have (IA)³ vectors multiplied to the input, instead of the output. `feedforward_modules` must be a name or
-            a subset of names present in `target_modules`.
-        fan_in_fan_out (`bool`):
-            Set this to True if the layer to replace stores weight like (fan_in, fan_out). For example, gpt-2 uses
-            `Conv1D` which stores weights like (fan_in, fan_out) and hence this should be set to `True`.
-        modules_to_save (`Optional[List[str]]`):
-            List of modules apart from (IA)³ layers to be set as trainable and saved in the final checkpoint.
-        init_ia3_weights (`bool`):
-            Whether to initialize the vectors in the (IA)³ layers, defaults to `True`. Setting this to `False` is
-            discouraged.
-    """
-
-    target_modules: Optional[Union[List[str], str]] = field(
-        default=None,
-        metadata={
-            "help": (
-                "List of module names or regex expression of the module names to replace with (IA)³."
-                "For example, ['q', 'v'] or '.*decoder.*(SelfAttention|EncDecAttention).*(q|v)$'."
-                "This can also be a wildcard 'all-linear' which matches all linear/Conv1D layers except the output layer."
-                "If not specified, modules will be chosen according to the model architecture, If the architecture is "
-                "not known, an error will be raised -- in this case, you should specify the target modules manually."
-            ),
-        },
+    target_modules: str = field(
+        default=None, metadata={"help": "Name of the attention submodules to insert adaption prompts into."}
     )
-    feedforward_modules: Optional[Union[List[str], str]] = field(
-        default=None,
-        metadata={
-            "help": "List of module names or a regex expression of module names which are feedforward"
-            "For example, ['output.dense']"
-        },
-    )
-    fan_in_fan_out: bool = field(
-        default=False,
-        metadata={"help": "Set this to True if the layer to replace stores weight like (fan_in, fan_out)"},
-    )
-    modules_to_save: Optional[List[str]] = field(
-        default=None,
-        metadata={
-            "help": "List of modules apart from (IA)^3 layers to be set as trainable and saved in the final checkpoint. "
-            "For example, in Sequence Classification or Token Classification tasks, "
-            "the final layer `classifier/score` are randomly initialized and as such need to be trainable and saved."
-        },
-    )
-    init_ia3_weights: bool = field(
-        default=True,
-        metadata={"help": "Whether to initialize the vectors in the (IA)^3 layers."},
-    )
+    adapter_len: int = field(default=None, metadata={"help": "Number of adapter tokens to insert"})
+    adapter_layers: int = field(default=None, metadata={"help": "Number of adapter layers (from the top)"})
 
     def __post_init__(self):
-        self.peft_type = PeftType.IA3
-        self.target_modules = (
-            set(self.target_modules) if isinstance(self.target_modules, list) else self.target_modules
-        )
-        self.feedforward_modules = (
-            set(self.feedforward_modules) if isinstance(self.feedforward_modules, list) else self.feedforward_modules
-        )
+        self.peft_type = PeftType.ADAPTION_PROMPT
 
-        # check if feedforward_modules is a subset of target_modules. run the check only if both are sets
-        if isinstance(self.feedforward_modules, set) and isinstance(self.target_modules, set):
-            if not self.feedforward_modules.issubset(self.target_modules):
-                raise ValueError("`feedforward_modules` should be a subset of `target_modules`")
+    @property
+    def is_adaption_prompt(self) -> bool:
+        """Return True if this is an adaption prompt config."""
+        return True
+
+
+# Contains the config that is specific to a transformers model type.
+ModelTypeConfig = namedtuple(
+    "ModelTypeConfig", ["compute_query_states", "target_modules", "k_proj_layer", "v_proj_layer", "o_proj_layer"]
+)
+
+# Mapping of transformers model types to their specific configuration.
+TRANSFORMERS_MODEL_CONFIG = {
+    "llama": ModelTypeConfig(
+        compute_query_states=llama_compute_query_states,
+        target_modules="self_attn",
+        k_proj_layer="k_proj",
+        v_proj_layer="v_proj",
+        o_proj_layer="o_proj",
+    ),
+    "mistral": ModelTypeConfig(  # same as llama,
+        compute_query_states=llama_compute_query_states,
+        target_modules="self_attn",
+        k_proj_layer="k_proj",
+        v_proj_layer="v_proj",
+        o_proj_layer="o_proj",
+    ),
+}
+
+
+def prepare_config(
+    peft_config: AdaptionPromptConfig,
+    model,
+) -> AdaptionPromptConfig:
+    """Prepare the config based on the llama model type."""
+    if model.config.model_type not in TRANSFORMERS_MODEL_CONFIG:
+        raise ValueError("Unsupported model type for adaption prompt: '{model.config.model_type}'.")
+
+    model_config = TRANSFORMERS_MODEL_CONFIG[model.config.model_type]
+
+    if peft_config.target_modules is None:
+        peft_config.target_modules = model_config.target_modules
+
+    return peft_config

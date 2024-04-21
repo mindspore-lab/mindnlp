@@ -11,388 +11,138 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
-# pylint: disable=arguments-differ
-# pylint: disable=arguments-renamed
-# pylint: disable=useless-parent-delegation
-# pylint: disable=line-too-long
-# pylint: disable=unused-variable
-# pylint: disable=unused-argument
-# pylint: disable=too-many-arguments
-"IA3 Model"
-from __future__ import annotations
 
-import re
-import warnings
-from dataclasses import asdict
-from enum import Enum
-from typing import Optional
+from typing import Dict, List
 
 from mindspore import nn
 
-from mindnlp.transformers.ms_utils import Conv1D
-from mindnlp.peft.utils import (
-    TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING,
-    TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING,
-    ModulesToSaveWrapper,
-    _get_submodules,
-)
-from ..tuners_utils import BaseTuner, BaseTunerLayer, check_target_module_exists
-from .layer import Conv2d, IA3Layer, Linear
+from mindnlp.peft.utils import _freeze_adapter, _get_submodules
+
+from .config import AdaptionPromptConfig, prepare_config
+from .layer import AdaptedAttention
+from .utils import is_adaption_prompt_trainable
 
 
-class IA3Model(BaseTuner):
+class AdaptionPromptModel(nn.Cell):
     """
-    Creates a Infused Adapter by Inhibiting and Amplifying Inner Activations ((IA)^3) model from a pretrained
-    transformers model. The method is described in detail in https://arxiv.org/abs/2205.05638
+    Implements adaption prompts as described in https://arxiv.org/pdf/2303.16199.pdf.
 
-    Args:
-        model ([`~transformers.PreTrainedModel`]): The model to be adapted.
-        config ([`IA3Config`]): The configuration of the (IA)^3 model.
-        adapter_name (`str`): The name of the adapter, defaults to `"default"`.
+    The top L attention modules are replaced with AdaptedAttention modules that wrap the original ones, but insert
+    trainable prompts with gates (for zero init).
 
-    Returns:
-        `torch.nn.Module`: The (IA)^3 model.
-
-    Example:
-
-        ```py
-        >>> from transformers import AutoModelForSeq2SeqLM, ia3Config
-        >>> from peft import IA3Model, IA3Config
-
-        >>> config = IA3Config(
-        ...     peft_type="IA3",
-        ...     task_type="SEQ_2_SEQ_LM",
-        ...     target_modules=["k", "v", "w0"],
-        ...     feedforward_modules=["w0"],
-        ... )
-
-        >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base")
-        >>> ia3_model = IA3Model(config, model)
-        ```
-
-    **Attributes**:
-        - **model** ([`~transformers.PreTrainedModel`]) -- The model to be adapted.
-        - **peft_config** ([`ia3Config`]): The configuration of the (IA)^3 model.
+    Notes on the multi-adapter pattern:
+    - We store the states of different adapters by keeping a dictionary of AdaptedAttention modules indexed by adapter
+      name.
+    - Every time we switch adapters, we remove the modules of the currently active adapter from the model, store them
+      in the dictionary, and replace them with the modules of the new adapter.
+    - To avoid duplicated and potentially inconsistent state, the currently active adapter is always removed from the
+      dictionary.
+    - Disabling the adapter would also result in the modules being removed from the model.
     """
 
-    prefix: str = "ia3_"
+    def __init__(self, model, configs: Dict, adapter_name: str):
+        super(AdaptionPromptModel, self).__init__()
+        self.model = model
+        self.peft_config = {}
+        self._parents = {}
+        self._cached_adapters = {}
+        self._active_adapter = None
+        self._enabled = True
+        self.forward = self.model.construct
+        self.add_adapter(adapter_name, configs[adapter_name])
+        self._mark_only_adaption_prompts_as_trainable(self.model)
 
-    def __init__(self, model, config, adapter_name):
-        super().__init__(model, config, adapter_name)
+    def add_adapter(self, adapter_name: str, config: AdaptionPromptConfig) -> None:
+        config = prepare_config(config, self.model)
+        if adapter_name in self.peft_config:
+            raise ValueError(f"Adapter named '{adapter_name}' already exists.")
 
-    @staticmethod
-    def _create_new_module(ia3_config, adapter_name, target, **kwargs):
-        # avoid eager bnb import
-        # if is_bnb_available():
-        #     import bitsandbytes as bnb
+        parents = []
+        # 获取模型的所有子模块及其名称
+        for name, submodule in self.model.name_cells().items():
+            if name.endswith(config.target_modules):
+                # 对每个符合条件的子模块调用 _get_submodules 函数
+                parent, target, target_name = _get_submodules(self.model, name)
+                if target == submodule:
+                    parents.append(parent)
 
-        #     from .bnb import Linear8bitLt
+        if len(parents) < config.adapter_layers:
+            raise ValueError("Config specifies more adapter layers than available in the model.")
 
-        # if is_bnb_4bit_available():
-        #     from .bnb import Linear4bit
+        parents = parents[-config.adapter_layers:]
+        self._parents[adapter_name] = parents
 
-        loaded_in_8bit = kwargs.pop("loaded_in_8bit", False)
-        loaded_in_4bit = kwargs.pop("loaded_in_4bit", False)
-        is_feedforward = kwargs.pop("is_feedforward", False)
+        if self._active_adapter and self._enabled:
+            self._remove_adapted_attentions(self._active_adapter)
+        self._active_adapter = adapter_name
+        self.peft_config[adapter_name] = config
+        self._create_adapted_attentions(config, parents)
+        if not self._enabled:
+            self._remove_adapted_attentions(adapter_name)
 
-        if isinstance(target, BaseTunerLayer):
-            target_base_layer = target.get_base_layer()
-        else:
-            target_base_layer = target
+        if config.inference_mode:
+            _freeze_adapter(self.model, adapter_name)
 
-        # if loaded_in_8bit and isinstance(target_base_layer, bnb.nn.Linear8bitLt):
-        #     eightbit_kwargs = kwargs.copy()
-        #     eightbit_kwargs.update(
-        #         {
-        #             "has_fp16_weights": target_base_layer.state.has_fp16_weights,
-        #             "memory_efficient_backward": target_base_layer.state.memory_efficient_backward,
-        #             "threshold": target_base_layer.state.threshold,
-        #             "index": target_base_layer.index,
-        #         }
-        #     )
-        #     new_module = Linear8bitLt(target, adapter_name, is_feedforward=is_feedforward, **eightbit_kwargs)
-        # elif loaded_in_4bit and isinstance(target_base_layer, bnb.nn.Linear4bit):
-        #     fourbit_kwargs = kwargs.copy()
-        #     fourbit_kwargs.update(
-        #         {
-        #             "compute_dtype": target_base_layer.compute_dtype,
-        #             "compress_statistics": target_base_layer.weight.compress_statistics,
-        #             "quant_type": target_base_layer.weight.quant_type,
-        #         }
-        #     )
-        #     new_module = Linear4bit(target, adapter_name, is_feedforward=is_feedforward, **fourbit_kwargs)
-        if isinstance(target, nn.Conv2d):
-            new_module = Conv2d(target, adapter_name, is_feedforward=is_feedforward, **kwargs)
-        elif isinstance(target_base_layer, nn.Dense):
-            if kwargs["fan_in_fan_out"]:
-                warnings.warn(
-                    "fan_in_fan_out is set to True but the target module is `torch.nn.Linear`. "
-                    "Setting fan_in_fan_out to False."
-                )
-                kwargs["fan_in_fan_out"] = ia3_config.fan_in_fan_out = False
-            new_module = Linear(target, adapter_name, is_feedforward=is_feedforward, **kwargs)
-        elif isinstance(target_base_layer, Conv1D):
-            if not kwargs["fan_in_fan_out"]:
-                warnings.warn(
-                    "fan_in_fan_out is set to False but the target module is `Conv1D`. "
-                    "Setting fan_in_fan_out to True."
-                )
-                kwargs["fan_in_fan_out"] = ia3_config.fan_in_fan_out = True
-            new_module = Linear(
-                target, adapter_name, is_feedforward=is_feedforward, is_target_conv_1d_layer=True, **kwargs
+    def set_adapter(self, adapter_name: str) -> None:
+        """Set the model to use the adapter with the given name."""
+        if self._active_adapter == adapter_name:
+            return
+        if adapter_name not in self.peft_config:
+            raise ValueError(f"Adapter with name '{adapter_name}' does not exist.")
+
+        if self._enabled:
+            self._remove_adapted_attentions(self._active_adapter)
+            self._set_adapted_attentions(adapter_name)
+
+        self._active_adapter = adapter_name
+
+    def enable_adapter_layers(self):
+        """Enable adapter layers by swapping in cached AdaptedAttention modules."""
+        self._enabled = True
+        self._set_adapted_attentions(self._active_adapter)
+
+    def disable_adapter_layers(self):
+        """Disable adapter layers by swapping out AdaptedAttention modules."""
+        self._enabled = False
+        self._remove_adapted_attentions(self._active_adapter)
+
+    def _create_adapted_attentions(self, config: AdaptionPromptConfig, parents: List[nn.Cell]) -> None:
+        """Wrap LlamaAttention modules with newly created AdaptedAttention modules."""
+        for par in parents:
+            attn = AdaptedAttention(
+                model_type=self.model.config.model_type,
+                adapter_len=config.adapter_len,
+                model=getattr(par, config.target_modules),
             )
-        else:
-            raise ValueError(
-                f"Target module {target} is not supported. "
-                f"Currently, only `torch.nn.Linear`, `torch.nn.Conv2d`, and `Conv1D` are supported."
-            )
-        return new_module
+            setattr(par, config.target_modules, attn)
 
-    @staticmethod
-    def _check_target_module_exists(ia3_config, key):
-        return check_target_module_exists(ia3_config, key)
+    def _set_adapted_attentions(self, adapter_name: str) -> None:
+        """Replace LlamaAttention modules with cached AdaptedAttention modules."""
+        cached = self._cached_adapters[adapter_name]
+        del self._cached_adapters[adapter_name]
+        config = self.peft_config[adapter_name]
+        for i, par in enumerate(self._parents[adapter_name]):
+            setattr(par, config.target_modules, cached[i])
 
-    def _mark_only_adapters_as_trainable(self, model: nn.Cell) -> None:
-        for name, param in model.parameters_and_names():
-            if self.prefix not in name:
+    def _remove_adapted_attentions(self, adapter_name: str) -> None:
+        """Remove AdaptedAttention modules from the model and store them in the cache."""
+        config = self.peft_config[adapter_name]
+        adapted_attentions = []
+        for par in self._parents[adapter_name]:
+            attn = getattr(par, config.target_modules)
+            adapted_attentions.append(attn)
+            setattr(par, config.target_modules, attn.model)
+        self._cached_adapters[adapter_name] = adapted_attentions
+
+    def _mark_only_adaption_prompts_as_trainable(self, model: nn.Cell) -> None:
+        for param in model.trainable_params():
+            if not is_adaption_prompt_trainable(param.name):
                 param.requires_grad = False
-
-    def _create_and_replace(
-        self,
-        ia3_config,
-        adapter_name,
-        target,
-        target_name,
-        parent,
-        **optionnal_kwargs,
-    ):
-        # check if target module is in feedforward_modules
-        current_key = optionnal_kwargs.pop("current_key")
-        is_feedforward = self._check_target_module_feedforward(ia3_config, current_key)
-
-        kwargs = {
-            "fan_in_fan_out": ia3_config.fan_in_fan_out,
-            "init_ia3_weights": ia3_config.init_ia3_weights,
-            "is_feedforward": is_feedforward,
-        }
-        kwargs["loaded_in_8bit"] = optionnal_kwargs.pop("loaded_in_8bit", False)
-        kwargs["loaded_in_4bit"] = optionnal_kwargs.pop("loaded_in_4bit", False)
-        if isinstance(target, IA3Layer):
-            target.update_layer(
-                adapter_name,
-                ia3_config.init_ia3_weights,
-            )
-        else:
-            new_module = self._create_new_module(ia3_config, adapter_name, target, **kwargs)
-            if adapter_name not in self.active_adapters:
-                # adding an additional adapter: it is not automatically trainable
-                new_module.requires_grad = False
-            self._replace_module(parent, target_name, new_module, target)
-
-    @staticmethod
-    def _check_target_module_feedforward(ia3_config, key) -> bool:
-        """
-        A helper private method that checks if the target module `key` matches with a feedforward module specified in
-        `ia3_config`
-        """
-        if isinstance(ia3_config.feedforward_modules, str):
-            is_feedforward = bool(re.fullmatch(ia3_config.feedforward_modules, key))
-        else:
-            is_feedforward = any(key.endswith(target_key) for target_key in ia3_config.feedforward_modules)
-        return is_feedforward
-
-    def _replace_module(self, parent, child_name, new_module, child):
-        setattr(parent, child_name, new_module)
-
-        # child layer wraps the original module, unpack it
-        if hasattr(child, "base_layer"):
-            child = child.base_layer
-
-        # layers with base_layer don't need the weight to be copied, as they have a reference already
-        if not hasattr(new_module, "base_layer"):
-            new_module.weight = child.weight
-            if hasattr(child, "bias"):
-                new_module.bias = child.bias
-
-        if getattr(child, "state", None) is not None:
-            if hasattr(new_module, "base_layer"):
-                new_module.base_layer.state = child.state
-            else:
-                new_module.state = child.state
-            new_module.to(child.weight.device)
-
-
     def __getattr__(self, name: str):
         """Forward missing attributes to the wrapped module."""
         try:
             return super().__getattr__(name)  # defer to nn.Module's logic
         except AttributeError:
+            # This is necessary as e.g. causal models have various methods that we
+            # don't want to re-implement here.
             return getattr(self.model, name)
-
-    def get_peft_config_as_dict(self, inference: bool = False):
-        """Get the configuration of the (IA)^3 model as a dictionary."""
-        config_dict = {}
-        for key, value in self.peft_config.items():
-            config = {k: v.value if isinstance(v, Enum) else v for k, v in asdict(value).items()}
-            if inference:
-                config["inference_mode"] = True
-            config_dict[key] = config
-        return config
-
-    def _set_adapter_layers(self, enabled=True):
-        for module in self.model.modules():
-            if isinstance(module, (IA3Layer, ModulesToSaveWrapper)):
-                module.enable_adapters(enabled)
-
-    def enable_adapter_layers(self) -> None:
-        """Enable all adapters.
-
-        Call this if you have previously disabled all adapters and want to re-enable them.
-        """
-        self._set_adapter_layers(enabled=True)
-
-    def disable_adapter_layers(self) -> None:
-        """Disable all adapters.
-
-        When disabling all adapters, the model output corresponds to the output of the base model.
-        """
-        self._set_adapter_layers(enabled=False)
-
-    def set_adapter(self, adapter_name: str | list[str]) -> None:
-        """Set the active adapter(s).
-
-        Additionally, this function will set the specified adapters to trainable (i.e., requires_grad=True). If this is
-        not desired, use the following code.
-
-        ```py
-        >>> for name, param in model_peft.named_parameters():
-        ...     if ...:  # some check on name (ex. if 'lora' in name)
-        ...         param.requires_grad = False
-        ```
-
-        Args:
-            adapter_name (`str` or `list[str]`): Name of the adapter(s) to be activated.
-        """
-        for module in self.model.modules():
-            if isinstance(module, IA3Layer):
-                if module.merged:
-                    warnings.warn("Adapter cannot be set when the model is merged. Unmerging the model first.")
-                    module.unmerge()
-                module.set_adapter(adapter_name)
-        self.active_adapter = adapter_name
-
-    def _prepare_adapter_config(self, peft_config, model_config):
-        if peft_config.target_modules is None:
-            if model_config["model_type"] not in TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING:
-                raise ValueError("Please specify `target_modules` in `peft_config`")
-            peft_config.target_modules = TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING[model_config["model_type"]]
-        if peft_config.feedforward_modules is None:
-            if model_config["model_type"] not in TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING:
-                raise ValueError("Please specify `feedforward_modules` in `peft_config`")
-            peft_config.feedforward_modules = TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING[
-                model_config["model_type"]
-            ]
-        return peft_config
-
-    def _unload_and_optionally_merge(
-        self, merge: bool = True, safe_merge: bool = False, adapter_names: Optional[list[str]] = None
-    ):
-        r"""
-        This method merges the (IA)^3 layers into the base model. This is needed if someone wants to use the base model
-        as a standalone model.
-
-        Args:
-            safe_merge (`bool`, `optional`, defaults to `False`):
-                If True, the merge operation will be performed in a copy of the original weights and check for NaNs
-                before merging the weights. This is useful if you want to check if the merge operation will produce
-                NaNs. Defaults to `False`.
-            adapter_names (`List[str]`, *optional*):
-                The list of adapter names that should be merged. If None, all active adapters will be merged. Defaults
-                to `None`.
-        """
-        if getattr(self.model, "is_loaded_in_8bit", False):
-            raise ValueError("Cannot merge ia3 layers when the model is loaded in 8-bit mode")
-
-        if getattr(self.model, "is_loaded_in_4bit", False):
-            raise ValueError("Cannot merge ia3 layers when the model is loaded in 4-bit mode")
-
-        self._unloading_checks(adapter_names)
-        key_list = [key for key, _ in self.model.name_cells() if self.prefix not in key]
-        for key in key_list:
-            try:
-                parent, target, target_name = _get_submodules(self.model, key)
-            except AttributeError:
-                continue
-
-            if hasattr(target, "base_layer"):
-                if merge:
-                    target.merge(safe_merge=safe_merge, adapter_names=adapter_names)
-                self._replace_module(parent, target_name, target.get_base_layer(), target)
-            elif isinstance(target, ModulesToSaveWrapper):
-                # save any additional trainable modules part of `modules_to_save`
-                new_module = target.modules_to_save[target.active_adapter]
-                if hasattr(new_module, "base_layer"):
-                    # check if the module is itself a tuner layer
-                    if merge:
-                        new_module.merge(safe_merge=safe_merge, adapter_names=adapter_names)
-                    new_module = new_module.get_base_layer()
-                setattr(parent, target_name, new_module)
-
-        return self.model
-
-    def merge_and_unload(self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None) -> nn.Cell:
-        r"""
-        This method merges the IA³ layers into the base model. This is needed if someone wants to use the base model as
-        a standalone model.
-
-        Args:
-            safe_merge (`bool`):
-                whether to activate the safe merging check to check if there is any potential Nan in the adapter
-                weights
-            adapter_names (`List[str]`, *optional*):
-                The list of adapter names that should be merged. If None, all active adapters will be merged. Defaults
-                to `None`.
-
-        Example:
-
-        ```py
-        >>> from transformers import AutoModelForCausalLM
-        >>> from peft import PeftModel
-
-        >>> base_model = AutoModelForCausalLM.from_pretrained("tiiuae/falcon-40b")
-        >>> peft_model_id = "smangrul/falcon-40B-int4-peft-lora-sfttrainer-sample"
-        >>> model = PeftModel.from_pretrained(base_model, peft_model_id)
-        >>> merged_model = model.merge_and_unload()
-        ```
-        """
-        return self._unload_and_optionally_merge(safe_merge=safe_merge, adapter_names=adapter_names)
-
-    def unload(self) -> nn.Cell:
-        """
-        Gets back the base model by removing all the IA³ modules without merging. This gives back the original base
-        model.
-        """
-        return self._unload_and_optionally_merge(merge=False)
-
-    def delete_adapter(self, adapter_name: str) -> None:
-        """
-        Deletes an existing adapter.
-
-        Args:
-            adapter_name (str): Name of the adapter to be deleted.
-        """
-        if adapter_name not in self.peft_config:
-            raise ValueError(f"Adapter {adapter_name} does not exist")
-        del self.peft_config[adapter_name]
-
-        key_list = [key for key, _ in self.model.name_cells() if self.prefix not in key]
-        new_adapter = None
-        for key in key_list:
-            _, target, _ = _get_submodules(self.model, key)
-            if isinstance(target, IA3Layer):
-                target.delete_adapter(adapter_name)
-                if new_adapter is None:
-                    new_adapter = target.active_adapters[:]
-
-        self.active_adapter = new_adapter or []
