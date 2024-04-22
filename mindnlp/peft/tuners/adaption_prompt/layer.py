@@ -11,12 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""layer for adaption prompt tuners."""
 import math
 import numpy as np
 from mindspore import nn, ops, Tensor, Parameter
 import mindspore.common.dtype as mstype
-from mindspore.common.initializer import Normal, Zero
 from mindspore.ops import operations as P
 from .config import TRANSFORMERS_MODEL_CONFIG
 
