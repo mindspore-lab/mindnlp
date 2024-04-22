@@ -14,10 +14,10 @@
 # ============================================================================
 # pylint: disable=C0301
 """Module for defining and configuring the Adaption Prompt in PEFT framework."""
+from collections import namedtuple
 from dataclasses import dataclass, field
 from mindnlp.peft.config import PeftConfig
 from mindnlp.peft.utils import PeftType
-from collections import namedtuple
 from .utils import llama_compute_query_states
 
 @dataclass
