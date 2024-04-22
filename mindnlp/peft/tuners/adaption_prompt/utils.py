@@ -11,10 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Utility functions for adaption prompt tuners."""
 import inspect
-
-from mindspore import nn, ops, Parameter, Tensor
-from mindspore.common.initializer import initializer,  Constant
+from mindspore import nn, ops, Tensor
 
 
 def llama_rotate_half(x: Tensor) -> Tensor:
