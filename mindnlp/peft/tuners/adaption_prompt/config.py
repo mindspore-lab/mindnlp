@@ -17,8 +17,8 @@
 from dataclasses import dataclass, field
 from mindnlp.peft.config import PeftConfig
 from mindnlp.peft.utils import PeftType
+from collections import namedtuple
 from .utils import llama_compute_query_states
-
 
 @dataclass
 class AdaptionPromptConfig(PeftConfig):
