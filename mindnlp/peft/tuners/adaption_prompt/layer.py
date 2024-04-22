@@ -14,13 +14,12 @@
 
 import math
 import numpy as np
-from .config import TRANSFORMERS_MODEL_CONFIG
+from mindspore import nn, ops, Tensor, Parameter
 import mindspore.common.dtype as mstype
-from mindspore import Parameter, Tensor
-from mindspore import nn, ops, Parameter, Tensor
 from mindspore.common.initializer import Normal, Zero
-from mindspore.ops import functional as F
 from mindspore.ops import operations as P
+from .config import TRANSFORMERS_MODEL_CONFIG
+
 
 class AdaptedAttention(nn.Cell):
     """This module wraps a LLamaAttention module and injects adaption prompts."""
