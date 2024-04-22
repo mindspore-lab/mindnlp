@@ -13,10 +13,8 @@
 # limitations under the License.
 # ============================================================================
 # pylint: disable=C0301
-"IA3 Config"
+"""Module for defining and configuring the Adaption Prompt in PEFT framework."""
 from dataclasses import dataclass, field
-from typing import List, Optional, Union
-from collections import namedtuple
 from mindnlp.peft.config import PeftConfig
 from mindnlp.peft.utils import PeftType
 from .utils import llama_compute_query_states
