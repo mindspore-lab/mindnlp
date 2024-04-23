@@ -15,7 +15,6 @@
 """ ConvBERT model."""
 
 from typing import Optional, Tuple, Union
-import math
 import mindspore as ms
 from mindspore import nn
 from mindspore import ops
@@ -30,7 +29,6 @@ from ...modeling_outputs import (
 from ...modeling_utils import PreTrainedModel
 from .convbert_config import ConvBertConfig
 from ...ms_utils import (
-    apply_chunking_to_forward,
     find_pruneable_heads_and_indices,
     prune_linear_layer,
 )
