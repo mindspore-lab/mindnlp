@@ -75,6 +75,8 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
         else:
             raise NotImplementedError
         to_return = {k: v for k, v in to_return.items() if (("lora_" in k and adapter_name in k) or ("bias" in k))}
+    elif config.peft_type == PeftType.ADAPTION_PROMPT:
+        to_return = {k: state_dict[k] for k in state_dict if k.split(".")[-1].startswith("adaption_")}
     elif config.peft_type == PeftType.IA3:
         to_return = {k: state_dict[k] for k in state_dict if "ia3_" in k}
     else:
@@ -130,6 +132,8 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
                 peft_model_state_dict[k] = v
             else:
                 peft_model_state_dict[k] = v
+    elif config.peft_type == PeftType.ADAPTION_PROMPT:
+        peft_model_state_dict = state_dict
     else:
         raise NotImplementedError
 

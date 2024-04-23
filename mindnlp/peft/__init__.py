@@ -31,6 +31,8 @@ from .peft_model import (
 )
 
 from .tuners import (
+    AdaptionPromptConfig,
+    AdaptionPromptModel,
     LoraConfig,
     LoraModel,
     IA3Config,
