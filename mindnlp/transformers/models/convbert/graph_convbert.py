@@ -63,7 +63,8 @@ class MSConvBertEmbeddings(nn.Cell):
             (1, -1)
         )
 
-        self.token_type_ids = ops.zeros(self.position_ids.shape, dtype=ms.int64)
+        self.token_type_ids = ops.zeros(
+            self.position_ids.shape, dtype=ms.int64)
 
     def construct(
         self,
@@ -198,9 +199,11 @@ class MSConvBertSelfAttention(nn.Cell):
 
         self.conv_kernel_size = config.conv_kernel_size
         if config.hidden_size % self.num_attention_heads != 0:
-            raise ValueError("hidden_size should be divisible by num_attention_heads")
+            raise ValueError(
+                "hidden_size should be divisible by num_attention_heads")
 
-        self.attention_head_size = (config.hidden_size // self.num_attention_heads) // 2
+        self.attention_head_size = (
+            config.hidden_size // self.num_attention_heads) // 2
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
         self.query = nn.Dense(config.hidden_size, self.all_head_size)
@@ -252,7 +255,8 @@ class MSConvBertSelfAttention(nn.Cell):
         query_layer = self.swapaxes_for_scores(mixed_query_layer)
         key_layer = self.swapaxes_for_scores(mixed_key_layer)
         value_layer = self.swapaxes_for_scores(mixed_value_layer)
-        conv_attn_layer = ops.multiply(mixed_key_conv_attn_layer, mixed_query_layer)
+        conv_attn_layer = ops.multiply(
+            mixed_key_conv_attn_layer, mixed_query_layer)
 
         conv_kernel_layer = self.conv_kernel_layer(conv_attn_layer)
         conv_kernel_layer = ops.reshape(
@@ -276,14 +280,16 @@ class MSConvBertSelfAttention(nn.Cell):
             batch_size, -1, self.all_head_size, self.conv_kernel_size
         )
         conv_out_layer = ops.reshape(
-            conv_out_layer, [-1, self.attention_head_size, self.conv_kernel_size]
+            conv_out_layer, [-1, self.attention_head_size,
+                             self.conv_kernel_size]
         )
         conv_out_layer = ops.matmul(conv_out_layer, conv_kernel_layer)
         conv_out_layer = ops.reshape(conv_out_layer, [-1, self.all_head_size])
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
         attention_scores = ops.matmul(query_layer, key_layer.swapaxes(-1, -2))
-        attention_scores = attention_scores / math.sqrt(self.attention_head_size)
+        attention_scores = attention_scores / \
+            ops.sqrt(ms.Tensor(self.attention_head_size))
 
         # Apply the attention mask is (precomputed for all layers in ConvBertModel forward() function)
         attention_scores = attention_scores + attention_mask
@@ -308,7 +314,7 @@ class MSConvBertSelfAttention(nn.Cell):
         new_context_layer_shape = context_layer.shape[:-2] + (
             self.num_attention_heads * self.attention_head_size * 2,
         )
-        context_layer = context_layer.view(*new_context_layer_shape)
+        context_layer = context_layer.view(new_context_layer_shape)
 
         outputs = (context_layer,)
         return outputs
@@ -322,13 +328,15 @@ class MSConvBertSelfOutput(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.hidden_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(
+            config.hidden_size, epsilon=config.layer_norm_eps)
         self.dropout_p = config.hidden_dropout_prob
 
     def construct(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
         hidden_states = self.dense(hidden_states)
         hidden_states = ops.dropout(hidden_states, p=self.dropout_p)
-        hidden_states = self.LayerNorm(hidden_states + input_tensor)
+        hidden_states = hidden_states + input_tensor
+        hidden_states = self.LayerNorm(hidden_states)
         return hidden_states
 
 
@@ -358,10 +366,12 @@ class MSConvBertAttention(nn.Cell):
         self.self.query = prune_linear_layer(self.self.query, index)
         self.self.key = prune_linear_layer(self.self.key, index)
         self.self.value = prune_linear_layer(self.self.value, index)
-        self.output.dense = prune_linear_layer(self.output.dense, index, axis=1)
+        self.output.dense = prune_linear_layer(
+            self.output.dense, index, axis=1)
 
         # Update hyper params and store pruned heads
-        self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
+        self.self.num_attention_heads = self.self.num_attention_heads - \
+            len(heads)
         self.self.all_head_size = (
             self.self.attention_head_size * self.self.num_attention_heads
         )
@@ -406,7 +416,8 @@ class MSConvBertOutput(nn.Cell):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Dense(config.intermediate_size, config.hidden_size)
-        self.LayerNorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(
+            config.hidden_size, epsilon=config.layer_norm_eps)
         self.dropout_p = config.hidden_dropout_prob
 
     def construct(self, hidden_states: ms.Tensor, input_tensor: ms.Tensor) -> ms.Tensor:
@@ -423,7 +434,6 @@ class MSConvBertLayer(nn.Cell):
 
     def __init__(self, config):
         super().__init__()
-        self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
         self.attention = MSConvBertAttention(config)
         self.intermediate = MSConvBertIntermediate(config)
@@ -439,20 +449,10 @@ class MSConvBertLayer(nn.Cell):
         # add self attentions if we output attention weights
         outputs = self_attention_outputs[1:]
 
-        layer_output = apply_chunking_to_forward(
-            self.feed_forward_chunk,
-            self.chunk_size_feed_forward,
-            self.seq_len_dim,
-            attention_output,
-        )
-        outputs = (layer_output,) + outputs
-        return outputs
-
-    def feed_forward_chunk(self, attention_output):
-        """feed forward chunk"""
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
-        return layer_output
+        outputs = (layer_output,) + outputs
+        return outputs
 
 
 class MSConvBertEncoder(nn.Cell):
@@ -583,13 +583,7 @@ class MSConvBertForQuestionAnswering(ConvBertPreTrainedModel):
         end_loss = loss_fct(end_logits, end_positions)
         total_loss = (start_loss + end_loss) / 2
 
-        return QuestionAnsweringModelOutput(
-            loss=total_loss,
-            start_logits=start_logits,
-            end_logits=end_logits,
-            hidden_states=outputs,
-            attentions=None,
-        )
+        return total_loss
 
 
 __all__ = [
