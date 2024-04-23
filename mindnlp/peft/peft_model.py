@@ -27,6 +27,7 @@ from mindspore.nn import CrossEntropyLoss
 from .config import PeftConfig, PromptLearningConfig
 
 from .tuners import (
+    AdaptionPromptModel,
     LoraModel,
     IA3Model,
     # LoraConfig
@@ -53,6 +54,7 @@ from .utils import (
 
 PEFT_TYPE_TO_MODEL_MAPPING = {
     PeftType.LORA: LoraModel,
+    PeftType.ADAPTION_PROMPT: AdaptionPromptModel,
     PeftType.IA3: IA3Model,
 }
 class PeftModel(nn.Cell):

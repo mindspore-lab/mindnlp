@@ -30,6 +30,7 @@ from .peft_model import (
 from .tuners import (
     LoraConfig,
     LoraModel,
+    AdaptionPromptConfig,
     IA3Config,
     IA3Model,
 )
@@ -49,6 +50,7 @@ PEFT_TYPE_TO_CONFIG_MAPPING = {
     # "PROMPT_TUNING": PromptTuningConfig,
     # "PREFIX_TUNING": PrefixTuningConfig,
     # "P_TUNING": PromptEncoderConfig,
+    "ADAPTION_PROMPT": AdaptionPromptConfig,
     "LORA": LoraConfig,
     # "ADALORA": AdaLoraConfig,
     "IA3": IA3Config,

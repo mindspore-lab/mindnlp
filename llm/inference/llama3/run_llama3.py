@@ -2,7 +2,6 @@ import mindspore
 from mindnlp.transformers import AutoTokenizer, AutoModelForCausalLM
 
 model_id = "meta-llama/Meta-Llama-3-8B-Instruct"
-model_id = '/home/daiyuxin/ljm_script/llama3_test/ckpt/LLM-Research/Meta-Llama-3-8B'
 
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 model = AutoModelForCausalLM.from_pretrained(
