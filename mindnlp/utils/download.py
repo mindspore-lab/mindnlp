@@ -33,7 +33,7 @@ import requests
 from requests.exceptions import ProxyError, SSLError, HTTPError
 
 from mindnlp.configs import DEFAULT_ROOT, ENV_VARS_TRUE_VALUES, MINDNLP_CACHE, REPO_TYPES, HF_URL_BASE, \
-    HF_TOKEN
+    HF_TOKEN, MS_URL_BASE
 from .errors import (
     EntryNotFoundError,
     LocalEntryNotFoundError,
@@ -192,8 +192,10 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None,
                             file.write(chunk)
                             pbar.update(len(chunk))
                 else:
+                    pbar = tqdm(total=total_size, unit='B', unit_scale=True)
                     for chunk in req.iter_content(chunk_size=1024):
                         if chunk:
+                            pbar.update(len(chunk))
                             file.write(chunk)
             shutil.move(tmp_file_path, file_path)
         except requests.exceptions.RequestException as e:
@@ -586,14 +588,14 @@ def download(
     if token:
         headers = {
             'authorization': f"Bearer {token}",
-            "Accept": "application/vnd.git-lfs+json",
-            "Content-Type": "application/vnd.git-lfs+json",
         }
 
     try:
         pointer_path = http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies, headers=headers)
-    except (requests.exceptions.SSLError,
-            requests.exceptions.ProxyError,
+    except requests.exceptions.SSLError:
+        if mirror == 'aliendao':
+            pass
+    except (requests.exceptions.ProxyError,
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout):
         # Otherwise, our Internet connection is down.
@@ -849,9 +851,11 @@ def get_checkpoint_shard_files(
 
 MIRROR_MAP = {
     'huggingface': HF_URL_BASE,
+    'modelscope': MS_URL_BASE,
+    'wisemodel': "https://awsdownload.wisemodel.cn/file-proxy/{}/-/raw/{}/{}",
     'gitee': "https://ai.gitee.com/huggingface/{}/resolve/{}/{}",
     'aliendao': "http://61.133.217.142:20800/download/models/{}/{}",
-    'aifast': "https://aifasthub.com/models/{}/{}"
+    'aifast': "https://aifasthub.com/models/{}/{}",
 }
 
 def build_download_url(
@@ -867,10 +871,10 @@ def build_download_url(
     """
     if mirror not in MIRROR_MAP:
         raise ValueError('The mirror name not support, please use one of the mirror website below: '
-                         '["huggingface", "gitee", "aliendao", "aifast"]')
-    if mirror in ('huggingface', 'gitee'):
+                         '["huggingface", "modelscope", "wisemodel", "gitee", "aliendao", "aifast"]')
+    if mirror in ('huggingface', 'gitee', 'modelscope', 'wisemodel'):
         return MIRROR_MAP[mirror].format(repo_id, revision, filename)
     if revision is not None and revision != 'main':
         logger.warning(f'`revision` is not support when use "{mirror}" website. '
-                    f'If you want use specific revision, please use "huggingface" or "gitee".')
+                    f'If you want use specific revision, please use "modelscope", "huggingface" or "gitee".')
     return MIRROR_MAP[mirror].format(repo_id, filename)
