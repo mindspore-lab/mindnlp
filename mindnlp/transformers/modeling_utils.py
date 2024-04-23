@@ -784,6 +784,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
         local_files_only: bool = False,
         token: Optional[Union[str, bool]] = None,
         use_safetensors: bool = None,
+        mirror: str = 'huggingface',
         **kwargs,
     ):
         """from_pretrained"""
@@ -818,6 +819,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 resume_download=resume_download,
                 proxies=proxies,
                 local_files_only=local_files_only,
+                mirror=mirror,
                 **kwargs,
             )
         else:
@@ -907,7 +909,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                         "subfolder": subfolder,
                         "_raise_exceptions_for_missing_entries": False,
                         'revision': revision,
-                        "token": token
+                        "token": token,
+                        'mirror': mirror
                     }
                     # try safetensors
                     resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
@@ -993,7 +996,8 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
                 local_files_only=local_files_only,
                 token=token,
                 subfolder=subfolder,
-                revision=revision
+                revision=revision,
+                mirror=mirror,
             )
 
         if pretrained_model_name_or_path is None and state_dict is None:

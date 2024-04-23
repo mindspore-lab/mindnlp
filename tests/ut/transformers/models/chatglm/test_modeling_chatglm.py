@@ -39,9 +39,9 @@ def ids_tensor(shape, vocab_size):
 
 
 def get_model_and_tokenizer():
-    model = AutoModelForSeq2SeqLM.from_pretrained("THUDM/chatglm-6b").half()
+    model = AutoModelForSeq2SeqLM.from_pretrained("THUDM/chatglm-6b", mirror='aifast').half()
     model.set_train(False)
-    tokenizer = AutoTokenizer.from_pretrained("THUDM/chatglm-6b")
+    tokenizer = AutoTokenizer.from_pretrained("THUDM/chatglm-6b", mirror='gitee')
     return model, tokenizer
 
 def get_model_and_tokenizer_random_init():

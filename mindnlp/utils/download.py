@@ -367,6 +367,7 @@ def cached_file(
     revision = 'main',
     token = None,
     subfolder: str = "",
+    mirror: str = 'huggingface',
     repo_type: Optional[str] = None,
     user_agent: Optional[Union[str, Dict[str, str]]] = None,
     _raise_exceptions_for_gated_repo: bool = True,
@@ -476,7 +477,8 @@ def cached_file(
             resume_download=resume_download,
             local_files_only=local_files_only,
             revision=revision,
-            token=token
+            token=token,
+            mirror=mirror
         )
     except GatedRepoError as e:
         if not _raise_exceptions_for_missing_entries:
@@ -484,8 +486,7 @@ def cached_file(
         if resolved_file is not None or not _raise_exceptions_for_gated_repo:
             return resolved_file
         raise EnvironmentError(
-            "You are trying to access a gated repo.\nMake sure to have access to it at "
-            f"https://hf-mirror.com/{path_or_repo_id}.\n{str(e)}"
+            "You are trying to access a gated repo.\nMake sure to have access to it."
         ) from e
     except RepositoryNotFoundError as e:
         raise EnvironmentError(
@@ -538,6 +539,7 @@ def download(
     local_files_only: bool = False,
     revision: str = 'main',
     token: str = None,
+    mirror: str = 'huggingface'
 ) -> str:
     """Download a given file if it's not already present in the local cache.
     """
@@ -576,22 +578,19 @@ def download(
     if os.path.exists(pointer_path) and not force_download:
         return pointer_path
 
-    url = build_download_url(repo_id, filename, revision, repo_type=repo_type)
-    # check model whether exist
-    model_url = url[: url.rfind(repo_id) + len(repo_id)]
+    url = build_download_url(repo_id, filename, revision, repo_type=repo_type, mirror=mirror)
 
     token = HF_TOKEN if not token else token
 
     headers = None
     if token:
         headers = {
-            'authorization': f"Bearer {token}"
+            'authorization': f"Bearer {token}",
+            "Accept": "application/vnd.git-lfs+json",
+            "Content-Type": "application/vnd.git-lfs+json",
         }
 
     try:
-        req = requests.head(model_url, timeout=3, proxies=proxies, headers=headers)
-        if req.status_code >= 400:
-            raise RepositoryNotFoundError(f"Can not found model: {repo_id}")
         pointer_path = http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies, headers=headers)
     except (requests.exceptions.SSLError,
             requests.exceptions.ProxyError,
@@ -777,6 +776,7 @@ def get_checkpoint_shard_files(
     token=None,
     user_agent=None,
     subfolder="",
+    mirror='huggingface'
 ):
     """
     For a given model:
@@ -827,7 +827,8 @@ def get_checkpoint_shard_files(
                 user_agent=user_agent,
                 subfolder=subfolder,
                 revision=revision,
-                token=token
+                token=token,
+                mirror=mirror
             )
         # We have already dealt with RepositoryNotFoundError and RevisionNotFoundError when getting the index, so
         # we don't have to catch them here.
@@ -846,6 +847,12 @@ def get_checkpoint_shard_files(
 
     return cached_filenames, sharded_metadata
 
+MIRROR_MAP = {
+    'huggingface': HF_URL_BASE,
+    'gitee': "https://ai.gitee.com/huggingface/{}/resolve/{}/{}",
+    'aliendao': "http://61.133.217.142:20800/download/models/{}/{}",
+    'aifast': "https://aifasthub.com/models/{}/{}"
+}
 
 def build_download_url(
     repo_id: str,
@@ -854,7 +861,16 @@ def build_download_url(
     *,
     subfolder: Optional[str] = None,
     repo_type: Optional[str] = None,
+    mirror: str = 'huggingface'
 ) -> str:
     """Construct the URL of a file from the given information.
     """
-    return HF_URL_BASE.format(repo_id, revision, filename)
+    if mirror not in MIRROR_MAP:
+        raise ValueError('The mirror name not support, please use one of the mirror website below: '
+                         '["huggingface", "gitee", "aliendao", "aifast"]')
+    if mirror in ('huggingface', 'gitee'):
+        return MIRROR_MAP[mirror].format(repo_id, revision, filename)
+    if revision is not None and revision != 'main':
+        logger.warning(f'`revision` is not support when use "{mirror}" website. '
+                    f'If you want use specific revision, please use "huggingface" or "gitee".')
+    return MIRROR_MAP[mirror].format(repo_id, filename)
