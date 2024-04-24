@@ -17,3 +17,4 @@
 from .lora import LoraConfig, LoraModel
 from .ia3 import IA3Config, IA3Model
 from .adaption_prompt import AdaptionPromptConfig, AdaptionPromptModel
+from .adalora import AdaLoraConfig, AdaLoraModel
