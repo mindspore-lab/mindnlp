@@ -41,7 +41,7 @@ ADAPTER_SAFE_WEIGHTS_NAME = "adapter_model.safetensors"
 
 DEFAULT_ROOT = os.path.join(os.getcwd(), ".mindnlp")
 # for modelscope models
-MS_URL_BASE = "https://modelscope.cn/api/v1/models/mindnlp/{}/repo?Revision=master&FilePath={}"
+MS_URL_BASE = "https://modelscope.cn/api/v1/models/{}/repo?Revision={}&FilePath={}"
 # for huggingface url
 HF_ENDPOINT = os.environ.get('HF_ENDPOINT', 'https://hf-mirror.com')
 HF_URL_BASE = HF_ENDPOINT + '/{}/resolve/{}/{}'

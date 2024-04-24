@@ -252,6 +252,7 @@ class PretrainedConfig:
         cache_dir: Optional[Union[str, os.PathLike]] = None,
         force_download: bool = False,
         local_files_only: bool = False,
+        mirror: str = 'huggingface',
         **kwargs,
     ) -> "PretrainedConfig":
         r"""
@@ -333,6 +334,7 @@ class PretrainedConfig:
         kwargs["cache_dir"] = cache_dir
         kwargs["force_download"] = force_download
         kwargs["local_files_only"] = local_files_only
+        kwargs['mirror'] = mirror
 
         config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
         if "model_type" in config_dict and hasattr(cls, "model_type") and config_dict["model_type"] != cls.model_type:
@@ -396,6 +398,7 @@ class PretrainedConfig:
         subfolder = kwargs.pop("subfolder", "")
         token = kwargs.pop('token', None)
         revision = kwargs.pop('revision', 'main')
+        mirror = kwargs.pop('mirror', 'huggingface')
 
         pretrained_model_name_or_path = str(pretrained_model_name_or_path)
 
@@ -425,6 +428,7 @@ class PretrainedConfig:
                     revision=revision,
                     token=token,
                     subfolder=subfolder,
+                    mirror=mirror
                 )
             except EnvironmentError:
                 # Raise any environment error raise by `cached_file`. It will have a helpful error message adapted to

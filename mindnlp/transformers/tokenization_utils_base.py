@@ -1526,6 +1526,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
         force_download: bool = False,
         local_files_only: bool = False,
         token: str = None,
+        mirror: str = 'huggingface',
         **kwargs,
     ):
         r"""
@@ -1658,6 +1659,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
                     token=token,
                     subfolder=subfolder,
                     revision=revision,
+                    mirror=mirror,
                     _raise_exceptions_for_missing_entries=False,
                     _raise_exceptions_for_connection_errors=False,
                 )
@@ -1691,6 +1693,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin):
                     token=token,
                     subfolder=subfolder,
                     revision=revision,
+                    mirror=mirror,
                     _raise_exceptions_for_missing_entries=False,
                     _raise_exceptions_for_connection_errors=False,
                 )
