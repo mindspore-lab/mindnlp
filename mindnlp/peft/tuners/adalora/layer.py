@@ -22,31 +22,54 @@
 import warnings
 from typing import Any, List, Optional
 
-from mindspore import nn, ops, Parameter, Tensor
+from mindspore import nn, ops, Parameter, Tensor, get_grad
 from mindspore.common.initializer import initializer,  Normal
 
 
-from mindnlp.peft.tuners import LoraLayer
+from mindnlp.peft.tuners.lora import LoraLayer
 from mindnlp.peft.utils import transpose
-from mindnlp.abc import  ParameterDict
+from mindnlp.abc import  ParameterDict, CellDict
 
-from ..tuners_utils import check_adapters_to_merge
-
-
+from ..tuners_utils import check_adapters_to_merge, BaseTunerLayer
 
 
-class AdaLoraLayer(LoraLayer):
+
+
+class AdaLoraLayer(BaseTunerLayer):
     # List all names of layers that may contain adapter weights
     # Note: ranknum doesn't need to be included as it is not an nn.Cell
     adapter_layer_names = ("lora_A", "lora_B", "lora_E", "lora_embedding_A", "lora_embedding_B")
     # other_param_names is defined in LoraLayer
 
     def __init__(self, base_layer: nn.Cell) -> None:
-        super().__init__(base_layer)
+        self.base_layer = base_layer
+        self.r = {}
+        self.lora_alpha = {}
+        self.scaling = {}
+        self.lora_dropout = CellDict()
         self.lora_E = ParameterDict({})
         self.lora_A = ParameterDict({})
         self.lora_B = ParameterDict({})
         self.ranknum = ParameterDict({})
+        # For Embedding layer
+        self.lora_embedding_A = CellDict()
+        self.lora_embedding_B = CellDict()
+        
+        if isinstance(base_layer, nn.Dense):
+            in_features, out_features = base_layer.in_channels, base_layer.out_channels
+        elif isinstance(base_layer, nn.Conv2d):
+            in_features, out_features = base_layer.in_channels, base_layer.out_channels
+        elif isinstance(base_layer, nn.Embedding):
+            in_features, out_features = base_layer.vocab_size, base_layer.embedding_size
+        elif isinstance(base_layer, Conv1D):
+            in_features, out_features = (
+                base_layer.weight.ds_shape if hasattr(base_layer.weight, "ds_shape") else base_layer.weight.shape
+            )
+        else:
+            raise ValueError(f"Unsupported layer type {type(base_layer)}")
+        self.in_features = in_features
+        self.out_features = out_features
+
 
     def update_layer(self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights):
         if r < 0:
@@ -120,7 +143,7 @@ class SVDLinear(nn.Cell, AdaLoraLayer):
         super().__init__()
         AdaLoraLayer.__init__(self, base_layer)
         # Freezing the pre-trained weight matrix
-        self.get_base_layer().weight.requires_grad = False
+        self.get_base_layer().requires_grad = False
 
         self.fan_in_fan_out = fan_in_fan_out
         self._active_adapter = adapter_name
@@ -245,7 +268,7 @@ class RankAllocator:
         self.name_set = set()
         for n, p in model.parameters_and_names():
             if f"lora_A.{self.adapter_name}" in n:
-                self.init_bgt += p.size(0)
+                self.init_bgt += p.data.shape[0]
                 self.name_set.add(n.replace("lora_A", "%s"))
         self.name_set = sorted(self.name_set)
         # The total final rank budget
@@ -270,16 +293,20 @@ class RankAllocator:
             mask_ind = True if step % self.peft_config.deltaT == 0 else False
         return budget, mask_ind
 
-    def update_ipt(self, model):
+    def update_ipt(self, model,gradient):
         # Update the sensitivity and uncertainty for every weight
-        for n, p in model.parameters_and_names():
+        for p in model.trainable_params():
+            n = p.name
             if "lora_" in n and self.adapter_name in n:
                 if n not in self.ipt:
+                    grad = get_grad(gradient, p)
                     self.ipt[n] = ops.zeros_like(p)
                     self.exp_avg_ipt[n] = ops.zeros_like(p)
                     self.exp_avg_unc[n] = ops.zeros_like(p)
-
-                    self.ipt[n] = (p * p.grad).abs()
+                    print(p.shape)
+                    print(grad.shape)
+                    print(name)
+                    self.ipt[n] = (p * grad).abs()
                     # Sensitivity smoothing
                     self.exp_avg_ipt[n] = self.beta1 * self.exp_avg_ipt[n] + (1 - self.beta1) * self.ipt[n]
                     # Uncertainty quantification

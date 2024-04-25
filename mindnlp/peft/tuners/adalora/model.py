@@ -24,14 +24,12 @@ import warnings
 from mindspore import nn, ops, Tensor
 from mindnlp.transformers.ms_utils import Conv1D
 
-from mindnlp.peft.tuners import LoraConfig, LoraModel
+from mindnlp.peft.tuners.lora import LoraConfig, LoraModel
 from ..tuners_utils import BaseTunerLayer
 from mindnlp.peft.utils import (
     TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING,
     _freeze_adapter,
     _get_submodules,
-    get_auto_gptq_quant_linear,
-    get_quantization_config,
 )
 
 from .layer import AdaLoraLayer, RankAllocator, SVDLinear
@@ -106,7 +104,27 @@ class AdaLoraModel(LoraModel):
                 "When using multiple adapters, set inference_mode to True for all adapters except the one "
                 "you want to train."
             )
+    def _mark_only_adapters_as_trainable(self, model: nn.Cell) -> None:
+        for n, p in model.parameters_and_names():
+            if "lora_" not in n:
+                p.requires_grad = False
 
+        for active_adapter in self.active_adapters:
+            bias = self.peft_config[active_adapter].bias
+            if bias == "none":
+                continue
+
+            if bias == "all":
+                for n, p in model.parameters_and_names():
+                    if "bias" in n:
+                        p.requires_grad = True
+            elif bias == "lora_only":
+                for m in model.cells():
+                    if isinstance(m, LoraLayer) and hasattr(m, "bias") and m.bias is not None:
+                        m.bias.requires_grad = True
+            else:
+                raise NotImplementedError(f"Requested bias: {bias}, is not implemented.")
+            
     def _create_and_replace(
         self,
         lora_config,
@@ -215,7 +233,28 @@ class AdaLoraModel(LoraModel):
         new_module = SVDLinear(target, adapter_name, **kwargs)
 
         return new_module
+    
+    def _replace_module(self, parent, child_name, new_module, child):
+        setattr(parent, child_name, new_module)
 
+        # child layer wraps the original module, unpack it
+        if hasattr(child, "base_layer"):
+            child = child.base_layer
+
+        # layers with base_layer don't need the weight to be copied, as they have a reference already
+        if not hasattr(new_module, "base_layer"):
+            new_module.weight = child.weight
+            if hasattr(child, "bias"):
+                new_module.bias = child.bias
+
+        if getattr(child, "state", None) is not None:
+            if hasattr(new_module, "base_layer"):
+                new_module.base_layer.state = child.state
+            else:
+                new_module.state = child.state
+
+
+                
     @staticmethod
     def _prepare_adapter_config(peft_config, model_config):
         if peft_config.target_modules is None:
@@ -248,7 +287,7 @@ class AdaLoraModel(LoraModel):
             for n, p in self.model.parameters_and_names():
                 if ("lora_A" in n or "lora_B" in n) and self.trainable_adapter_name in n:
                     para_cov = p @ p.T if "lora_A" in n else p.T @ p
-                    I = ops.eye(*para_cov.size())  # noqa: E741
+                    I = ops.eye(*para_cov.shape)  # noqa: E741
                     # TODO I.requires_grad = False
                     num_param += 1
                     regu_loss += ops.norm(para_cov - I, ord="fro")
