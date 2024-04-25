@@ -926,7 +926,7 @@ class BatchNorm1d(nn.Cell):
 
 def _half(self):
     """patched nn.Cell.half"""
-    self.to_float(mindspore.float16)
+    # self.to_float(mindspore.float16), fix t5 fp16 inference error
     for _, param in self.parameters_and_names():
         if param.dtype in (mindspore.float16, mindspore.float32, mindspore.bfloat16):
             # param.set_dtype(mindspore.float16) # set_dtype is useless if Parameter copied from host to device(just be used).
@@ -938,7 +938,7 @@ nn.Cell.half = _half
 
 def _float(self):
     """patched nn.Cell.float"""
-    self.to_float(mindspore.float32)
+    # self.to_float(mindspore.float32)
     for _, param in self.parameters_and_names():
         if param.dtype in (mindspore.float16, mindspore.float32, mindspore.bfloat16):
             param.set_data(param.astype(mindspore.float32))

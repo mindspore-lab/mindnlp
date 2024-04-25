@@ -410,8 +410,6 @@ class VipLlavaForConditionalGeneration(VipLlavaPreTrainedModel):
         The image features a brown and white cat sitting on a green surface, with a red ball in its
         ```"""
 
-        attention_mask = attention_mask.astype(ms.int64)
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
