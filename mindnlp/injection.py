@@ -480,6 +480,12 @@ if version.parse(mindspore.__version__) < version.parse('2.3.0'):
     Tensor.stride = _stride
     StubTensor.stride = _stride
 
+def _ne(self, other):
+    return ops.ne(self, other)
+
+Tensor.__ne__ = _ne
+StubTensor.__ne__ = _ne
+
 # Ascend only
 if DEVICE_TARGET == 'Ascend':
     # cumsum
