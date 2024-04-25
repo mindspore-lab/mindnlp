@@ -75,6 +75,8 @@ from . import (
     layoutlm,
     layoutlmv2,
     llama,
+    llava,
+    llava_next,
     longformer,
     luke,
     mamba,
@@ -107,6 +109,7 @@ from . import (
     t5,
     timesformer,
     tinybert,
+    vipllava,
     wav2vec2,
     wav2vec2_with_lm,
     whisper,
@@ -174,6 +177,8 @@ from .jetmoe import *
 from .layoutlm import *
 from .layoutlmv2 import *
 from .llama import *
+from .llava import *
+from .llava_next import *
 from .longformer import *
 from .luke import *
 from .mamba import *
@@ -206,6 +211,7 @@ from .starcoder2 import *
 from .tinybert import *
 from .t5 import *
 from .timesformer import *
+from .vipllava import *
 from .whisper import *
 from .wav2vec2 import *
 from .wav2vec2_with_lm import *
@@ -273,6 +279,8 @@ __all__.extend(jetmoe.__all__)
 __all__.extend(layoutlm.__all__)
 __all__.extend(layoutlmv2.__all__)
 __all__.extend(llama.__all__)
+__all__.extend(llava.__all__)
+__all__.extend(llava_next.__all__)
 __all__.extend(longformer.__all__)
 __all__.extend(luke.__all__)
 __all__.extend(mamba.__all__)
@@ -305,6 +313,7 @@ __all__.extend(starcoder2.__all__)
 __all__.extend(t5.__all__)
 __all__.extend(timesformer.__all__)
 __all__.extend(tinybert.__all__)
+__all__.extend(vipllava.__all__)
 __all__.extend(whisper.__all__)
 __all__.extend(wav2vec2.__all__)
 __all__.extend(wav2vec2_with_lm.__all__)
