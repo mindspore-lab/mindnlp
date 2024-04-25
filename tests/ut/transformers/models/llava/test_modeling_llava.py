@@ -205,7 +205,7 @@ class LlavaForConditionalGenerationModelTest(ModelTesterMixin, unittest.TestCase
             model = model_class(config)
 
             if self.model_tester.is_training is False:
-                model.eval()
+                model.set_train(False)
 
             model_vocab_size = config.text_config.vocab_size
             # Retrieve the embeddings and clone theme
@@ -232,18 +232,18 @@ class LlavaForConditionalGenerationModelTest(ModelTesterMixin, unittest.TestCase
 
             # Check that the model can still do a forward pass successfully (every parameter should be resized)
             # Input ids should be clamped to the maximum size of the vocabulary
-            inputs_dict["input_ids"].clamp(max=model_vocab_size - 15 - 1)
+            inputs_dict["input_ids"] = inputs_dict["input_ids"].clamp(max=model_vocab_size - 15 - 1)
 
             # make sure that decoder_input_ids are resized as well
             if "decoder_input_ids" in inputs_dict:
-                inputs_dict["decoder_input_ids"].clamp(
+                inputs_dict["decoder_input_ids"] = inputs_dict["decoder_input_ids"].clamp(
                     max=model_vocab_size - 15 - 1)
             model(**self._prepare_for_class(inputs_dict, model_class))
 
             # Check that adding and removing tokens has not modified the first part of the embedding matrix.
             models_equal = True
             for p1, p2 in zip(cloned_embeddings, model_embed.weight):
-                if p1.data.ne(p2.data).sum() > 0:
+                if p1.ne(p2).sum() > 0:
                     models_equal = False
 
             self.assertTrue(models_equal)
@@ -335,9 +335,9 @@ class LlavaForConditionalGenerationModelTest(ModelTesterMixin, unittest.TestCase
                     output_embeds.bias.shape[0], model_vocab_size - 15)
             # Check that the model can still do a forward pass successfully (every parameter should be resized)
             # Input ids should be clamped to the maximum size of the vocabulary
-            inputs_dict["input_ids"].clamp(max=model_vocab_size - 15 - 1)
+            inputs_dict["input_ids"] = inputs_dict["input_ids"].clamp(max=model_vocab_size - 15 - 1)
             if "decoder_input_ids" in inputs_dict:
-                inputs_dict["decoder_input_ids"].clamp(
+                inputs_dict["decoder_input_ids"] = inputs_dict["decoder_input_ids"].clamp(
                     max=model_vocab_size - 15 - 1)
             # Check that the model can still do a forward pass successfully (every parameter should be resized)
             model(**self._prepare_for_class(inputs_dict, model_class))
@@ -365,14 +365,14 @@ class LlavaForConditionalGenerationModelTest(ModelTesterMixin, unittest.TestCase
             config_tied = copy.deepcopy(config)
             config_tied.torchscript = False
             model_tied = model_class(config_tied)
-            params_tied = list(model_tied.parameters())
+            params_tied = list(model_tied.get_parameters())
             # Check that the embedding layer and decoding layer are the same in size and in value
             # self.assertTrue(check_same_values(embeddings, decoding))
 
             # Check that after resize they remain tied.
             model_tied.resize_token_embeddings(
                 config.text_config.vocab_size + 10)
-            params_tied_2 = list(model_tied.parameters())
+            params_tied_2 = list(model_tied.get_parameters())
             self.assertEqual(len(params_tied_2), len(params_tied))
 
 
@@ -540,7 +540,7 @@ class LlavaForConditionalGenerationIntegrationTest(unittest.TestCase):
             padding=True,
         )
 
-        model = model.eval()
+        model = model.set_train(False)
 
         EXPECTED_OUTPUT = [
             "\n \nUSER: What's the the difference of two images?\nASSISTANT: In the two images, the primary difference is the presence of a small dog holding a flower in one",
