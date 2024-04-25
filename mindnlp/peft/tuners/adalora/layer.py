@@ -295,17 +295,13 @@ class RankAllocator:
 
     def update_ipt(self, model,gradient):
         # Update the sensitivity and uncertainty for every weight
-        for p in model.trainable_params():
-            n = p.name
+        for n, p in model.parameters_and_names():
             if "lora_" in n and self.adapter_name in n:
                 if n not in self.ipt:
                     grad = get_grad(gradient, p)
                     self.ipt[n] = ops.zeros_like(p)
                     self.exp_avg_ipt[n] = ops.zeros_like(p)
                     self.exp_avg_unc[n] = ops.zeros_like(p)
-                    print(p.shape)
-                    print(grad.shape)
-                    print(name)
                     self.ipt[n] = (p * grad).abs()
                     # Sensitivity smoothing
                     self.exp_avg_ipt[n] = self.beta1 * self.exp_avg_ipt[n] + (1 - self.beta1) * self.ipt[n]
@@ -318,7 +314,7 @@ class RankAllocator:
         return self.exp_avg_ipt[n] * self.exp_avg_unc[n]
 
     def _combine_ipt(self, ipt_E, ipt_AB):
-        ipt_AB = ipt_AB.sum(axis=1, keepdim=False)
+        ipt_AB = ipt_AB.sum(axis=1, keepdims=False)
         sum_ipt = ipt_E.view(-1) + ipt_AB.view(-1)
         return sum_ipt
 
@@ -353,7 +349,7 @@ class RankAllocator:
         # Calculate the score for each triplet
         for name_m in vector_ipt:
             ipt_E = value_ipt[name_m]
-            ipt_AB = ops.cat(vector_ipt[name_m], dim=1)
+            ipt_AB = ops.cat(vector_ipt[name_m], axis=1)
             sum_ipt = self._combine_ipt(ipt_E, ipt_AB)
             name_E = name_m % "lora_E"
             triplet_ipt[name_E] = sum_ipt.view(-1, 1)
@@ -364,13 +360,13 @@ class RankAllocator:
             ops.cat(all_score),
             k=self.init_bgt - budget,
             largest=False
-        )[0].item()
+        )[0][self.init_bgt - budget-1].item()
 
         rank_pattern = {}
         # Mask the unimportant triplets
         for n, p in model.parameters_and_names():
             if f"lora_E.{self.adapter_name}" in n:
-                p.masked_fill_(triplet_ipt[n] <= mask_threshold, 0.0)
+                p.masked_fill(triplet_ipt[n] <= mask_threshold, 0.0)
                 rank_pattern[n] = (~(triplet_ipt[n] <= mask_threshold)).view(-1).asnumpy().tolist()
         return rank_pattern
 
@@ -396,4 +392,4 @@ class RankAllocator:
             if f"lora_E.{self.adapter_name}" in n:
                 key = n if not is_adapter_name_truncated else n.replace(f".{self.adapter_name}", "")
                 mask = Tensor(rank_pattern[key]).unsqueeze(-1)
-                p.masked_fill_(~mask.bool(), 0.0)
+                p.masked_fill(~mask.bool(), 0.0)

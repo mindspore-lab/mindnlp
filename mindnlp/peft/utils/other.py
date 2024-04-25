@@ -148,7 +148,7 @@ def _freeze_adapter(model, adapter_name):
     """
     freeze adapter
     """
-    for n, p in model.named_parameters():
+    for n, p in model.parameters_and_names():
         if adapter_name in n:
             p.requires_grad = False
 

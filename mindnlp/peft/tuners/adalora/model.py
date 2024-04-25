@@ -289,6 +289,7 @@ class AdaLoraModel(LoraModel):
                     para_cov = p @ p.T if "lora_A" in n else p.T @ p
                     I = ops.eye(*para_cov.shape)  # noqa: E741
                     # TODO I.requires_grad = False
+                    I = ops.stop_gradient(I) 
                     num_param += 1
                     regu_loss += ops.norm(para_cov - I, ord="fro")
             if num_param > 0:
