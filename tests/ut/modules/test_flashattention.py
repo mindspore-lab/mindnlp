@@ -90,6 +90,7 @@ class TestFlashAttention(unittest.TestCase):
             ms.Tensor(K),
             ms.Tensor(V),
         )
+        print(output1_fwd)
         assert np.allclose(
             output1_fwd[0].asnumpy(), output_manual_fwd[0].asnumpy(), atol=1e-02
         )
