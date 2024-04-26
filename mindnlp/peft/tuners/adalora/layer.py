@@ -20,6 +20,7 @@
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=consider-using-dict-items
 # pylint: disable=too-many-locals
+# pylint: disable=simplifiable-if-expression
 "Adalora Layer"
 import warnings
 from typing import Any, List, Optional

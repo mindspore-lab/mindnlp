@@ -81,7 +81,6 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
                 rank_pattern = {k.replace(f".{adapter_name}", ""): v for k, v in rank_pattern.items()}
                 config.rank_pattern = rank_pattern
                 to_return = model.resize_state_dict_by_rank_pattern(rank_pattern, to_return, adapter_name)
-                
     elif config.peft_type == PeftType.ADAPTION_PROMPT:
         to_return = {k: state_dict[k] for k in state_dict if k.split(".")[-1].startswith("adaption_")}
     elif config.peft_type == PeftType.IA3:
@@ -143,16 +142,14 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
             else:
                 peft_model_state_dict[k] = v
         if config.peft_type == PeftType.ADALORA:
-                strict_load = True
-                rank_pattern = config.rank_pattern
-                if rank_pattern is not None:
-                    model.resize_modules_by_rank_pattern(rank_pattern, adapter_name)
-                    
+            strict_load = True
+            rank_pattern = config.rank_pattern
+            if rank_pattern is not None:
+                model.resize_modules_by_rank_pattern(rank_pattern, adapter_name)
     elif config.peft_type == PeftType.ADAPTION_PROMPT:
-        peft_model_state_dict = state_dict 
+        peft_model_state_dict = state_dict
     else:
         raise NotImplementedError
-
     param_not_load, ckpt_not_load = mindspore.load_param_into_net(model, peft_model_state_dict, strict_load=strict_load)
 
     return (param_not_load, ckpt_not_load)
