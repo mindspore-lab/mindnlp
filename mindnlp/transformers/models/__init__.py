@@ -48,9 +48,11 @@ from . import (
     clip,
     codegen,
     convbert,
+    convnext,
     cpm,
     cpmant,
     cpmbee,
+    cvt,
     deberta,
     distilbert,
     efficientnet,
@@ -99,6 +101,7 @@ from . import (
     qwen2,
     qwen2_moe,
     reformer,
+    resnet,
     roberta,
     rwkv,
     sam,
@@ -150,9 +153,11 @@ from .byt5 import *
 from .clip import *
 from .codegen import *
 from .convbert import *
+from .convnext import *
 from .cpm import *
 from .cpmant import *
 from .cpmbee import *
+from .cvt import *
 from .deberta import *
 from .distilbert import *
 from .efficientnet import *
@@ -201,6 +206,7 @@ from .pop2piano import *
 from .qwen2 import *
 from .qwen2_moe import *
 from .reformer import *
+from .resnet import *
 from .roberta import *
 from .rwkv import *
 from .sam import *
@@ -252,9 +258,11 @@ __all__.extend(byt5.__all__)
 __all__.extend(clip.__all__)
 __all__.extend(codegen.__all__)
 __all__.extend(convbert.__all__)
+__all__.extend(convnext.__all__)
 __all__.extend(cpm.__all__)
 __all__.extend(cpmant.__all__)
 __all__.extend(cpmbee.__all__)
+__all__.extend(cvt.__all__)
 __all__.extend(deberta.__all__)
 __all__.extend(distilbert.__all__)
 __all__.extend(efficientnet.__all__)
@@ -303,6 +311,7 @@ __all__.extend(pop2piano.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)
 __all__.extend(reformer.__all__)
+__all__.extend(resnet.__all__)
 __all__.extend(roberta.__all__)
 __all__.extend(rwkv.__all__)
 __all__.extend(sam.__all__)
