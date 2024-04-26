@@ -58,6 +58,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("convbert", "ConvBertConfig"),
         ("cpmant", "CpmAntConfig"),
         ("cpmbee", "CpmBeeConfig"),
+        ("cvt", "CvtConfig"),
         ("deberta", "DebertaConfig"),
         ("distilbert", "DistilBertConfig"),
         ("encodec", "EncodecConfig"),
@@ -88,6 +89,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("qwen2", "Qwen2Config"),
         ("qwen2_moe", "Qwen2MoeConfig"),
         ("reformer", "ReformerConfig"),
+        ("resnet", "ResNetConfig"),
         ("roberta", "RobertaConfig"),
         ("sam", "SamConfig"),
         ("segformer", "SegformerConfig"),
@@ -585,14 +587,14 @@ MODEL_NAMES_MAPPING = OrderedDict(
 )
 
 DEPRECATED_MODELS = [
-    "bort",
-    "mctct",
-    "mmbt",
-    "open_llama",
-    "retribert",
-    "tapex",
-    "trajectory_transformer",
-    "van",
+    # "bort",
+    # "mctct",
+    # "mmbt",
+    # "open_llama",
+    # "retribert",
+    # "tapex",
+    # "trajectory_transformer",
+    # "van",
 ]
 
 SPECIAL_MODEL_TYPE_TO_MODULE_NAME = OrderedDict(

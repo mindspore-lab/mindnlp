@@ -38,6 +38,8 @@ The table below represents the current support in the library for each of those 
 | CLIP                          | ✅                | ❌             |
 | CodeGen                       | ✅                | ❌             |
 | ConvBERT                      | ✅                | ❌             |
+| ConvNext                      | ✅                | ❌             |
+| CVT                           | ✅                | ❌             |
 | CPM                           | ✅                | ❌             |
 | CPM-Ant                       | ✅                | ❌             |
 | CPM-Bee                       | ✅                | ❌             |
@@ -62,6 +64,8 @@ The table below represents the current support in the library for each of those 
 | JetMoE                        | ✅                | ❌             |
 | Llama                         | ✅                | ❌             |
 | Llama2                        | ✅                | ❌             |
+| Llava                         | ✅                | ❌             |
+| Llava_next                    | ✅                | ❌             |
 | CodeLlama                     | ✅                | ❌             |
 | Longformer                    | ✅                | ❌             |
 | LongT5                        | ✅                | ❌             |
@@ -85,7 +89,8 @@ The table below represents the current support in the library for each of those 
 | Qwen2                         | ✅                | ❌             |
 | Qwen2Moe                      | ✅                | ❌             |
 | Reformer                      | ✅                | ❌             |
-| RegNet                        | Todo               | ❌             |
+| RegNet                        | Todo              | ❌             |
+| ResNet                        | ✅                | ❌             |
 | RoBERTa                       | ✅                | ✅             |
 | RWKV                          | ✅                | ❌             |
 | SAM                           | ✅                | ❌             |
@@ -96,7 +101,9 @@ The table below represents the current support in the library for each of those 
 | T5                            | ✅                | ❌             |
 | Timesformer                   | ✅                | ❌             |
 | Tinybert                      | ✅                | ❌             |
-| wav2vec                       | ✅                | ❌             |
+| Wav2vec                       | ✅                | ❌             |
+| VAN                           | ✅                | ❌             |
+| VipLlava                      | ✅                | ❌             |
 | Whisper                       | ✅                | ❌             |
 | XLM                           | ✅                | ❌             |
 | XLM-RoBERTa                   | ✅                | ❌             |
