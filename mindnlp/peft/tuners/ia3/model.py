@@ -220,7 +220,6 @@ class IA3Model(BaseTuner):
                 new_module.base_layer.state = child.state
             else:
                 new_module.state = child.state
-            new_module.to(child.weight.device)
 
 
     def __getattr__(self, name: str):

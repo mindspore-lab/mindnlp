@@ -28,6 +28,8 @@ from .peft_model import (
     PeftModelForTokenClassification,
 )
 from .tuners import (
+    AdaLoraConfig,
+    AdaLoraModel,
     LoraConfig,
     LoraModel,
     AdaptionPromptConfig,
@@ -52,13 +54,13 @@ PEFT_TYPE_TO_CONFIG_MAPPING = {
     # "P_TUNING": PromptEncoderConfig,
     "ADAPTION_PROMPT": AdaptionPromptConfig,
     "LORA": LoraConfig,
-    # "ADALORA": AdaLoraConfig,
+    "ADALORA": AdaLoraConfig,
     "IA3": IA3Config,
 }
 
 PEFT_TYPE_TO_TUNER_MAPPING = {
     "LORA": LoraModel,
-    # "ADALORA": AdaLoraModel,
+    "ADALORA": AdaLoraModel,
     "IA3": IA3Model,
 }
 
