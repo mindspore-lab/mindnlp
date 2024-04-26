@@ -285,11 +285,9 @@ class VipLlavaForConditionalGeneration(VipLlavaPreTrainedModel):
         num_special_image_tokens = ops.sum(special_image_token_mask, dim=-1)
         # Compute the maximum embed dimension
         max_embed_dim = (num_special_image_tokens.max() *
-                         (num_image_patches - 1)) + sequence_length
-        nonzero_result = ops.nonzero(
-            input_ids != self.config.image_token_index)
-        batch_indices = nonzero_result[:, 0]
-        non_image_indices = nonzero_result[:, 1]
+                         (num_image_patches - 1)).item() + sequence_length
+        nonzero = ops.nonzero(input_ids != self.config.image_token_index)
+        batch_indices, non_image_indices = ops.tensor_split(nonzero, 2, -1)
 
         # 2. Compute the positions where text should be written
         # Calculate new positions for text tokens in merged image-text sequence.
@@ -347,13 +345,13 @@ class VipLlavaForConditionalGeneration(VipLlavaPreTrainedModel):
                         1).masked_fill((final_attention_mask == 0), 1)
 
         # 6. Mask out the embedding at padding positions, as we later use the past_key_value value to determine the non-attended tokens.
-        nonzero_result = ops.nonzero(input_ids == self.pad_token_id)
-        batch_indices = nonzero_result[:, 0]
-        pad_indices = nonzero_result[:, 1]
+        nonzero = ops.nonzero(input_ids == self.pad_token_id)
+        batch_indices, pad_indices = ops.tensor_split(nonzero, 2, -1)
         indices_to_mask = new_token_positions[batch_indices, pad_indices]
 
-        final_embedding[batch_indices.asnumpy().tolist(
-        ), indices_to_mask.asnumpy().tolist()] = 0
+
+        if batch_indices.asnumpy() != []:
+            final_embedding[batch_indices, indices_to_mask] = 0
 
         if labels is None:
             final_labels = None
@@ -449,10 +447,8 @@ class VipLlavaForConditionalGeneration(VipLlavaPreTrainedModel):
                     first_layer_past_key_value = past_key_values[0][0][:, :, :, 0]
 
                     # Sum all dimensions of head_dim (-1) to avoid random errors such as: https://github.com/huggingface/transformers/pull/28032#issuecomment-1863691941
-                    nonzero_result = ops.nonzero(
-                        first_layer_past_key_value.float().sum(-2) == 0)
-                    batch_index = nonzero_result[:, 0]
-                    non_attended_tokens = nonzero_result[:, 1]
+                    nonzero = ops.nonzero(first_layer_past_key_value.float().sum(-2) == 0)
+                    batch_index, non_attended_tokens = ops.tensor_split(nonzero, 2, -1)
 
                     target_length = input_ids.shape[1]
                     past_length = first_layer_past_key_value.shape[-1]
