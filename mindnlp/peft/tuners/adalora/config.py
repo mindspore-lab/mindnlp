@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+# pylint: disable=line-too-long
+# pylint: disable=invalid-name
+# pylint: disable=too-many-instance-attributes
 "Adalora Config"
 from dataclasses import dataclass, field
 from typing import Optional

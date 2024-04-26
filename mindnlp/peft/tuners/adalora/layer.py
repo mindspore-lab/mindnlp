@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
-# pylint: disable=line-too-long
+# pylint: disable=invalid-name
 # pylint: disable=arguments-differ
-# pylint: disable=unused-argument
 # pylint: disable=too-many-arguments
+# pylint: disable=unused-argument
+# pylint: disable=missing-function-docstring
+# pylint: disable=too-many-instance-attributes
+# pylint: disable=consider-using-dict-items
+# pylint: disable=too-many-locals
 "Adalora Layer"
 import warnings
 from typing import Any, List, Optional
@@ -26,9 +28,9 @@ from mindspore import nn, ops, Parameter, Tensor, get_grad
 from mindspore.common.initializer import initializer,  Normal
 
 
-from mindnlp.peft.tuners.lora import LoraLayer
 from mindnlp.peft.utils import transpose
 from mindnlp.abc import  ParameterDict, CellDict
+from mindnlp.transformers.ms_utils import Conv1D
 
 from ..tuners_utils import check_adapters_to_merge, BaseTunerLayer
 
@@ -36,6 +38,7 @@ from ..tuners_utils import check_adapters_to_merge, BaseTunerLayer
 
 
 class AdaLoraLayer(BaseTunerLayer):
+    "AdaLoraLayer class for AdaLoraModel."
     # List all names of layers that may contain adapter weights
     # Note: ranknum doesn't need to be included as it is not an nn.Cell
     adapter_layer_names = ("lora_A", "lora_B", "lora_E", "lora_embedding_A", "lora_embedding_B")
@@ -54,7 +57,6 @@ class AdaLoraLayer(BaseTunerLayer):
         # For Embedding layer
         self.lora_embedding_A = CellDict()
         self.lora_embedding_B = CellDict()
-        
         if isinstance(base_layer, nn.Dense):
             in_features, out_features = base_layer.in_channels, base_layer.out_channels
         elif isinstance(base_layer, nn.Conv2d):
@@ -86,20 +88,28 @@ class AdaLoraLayer(BaseTunerLayer):
         self.lora_dropout[adapter_name] = lora_dropout_layer
         # Actual trainable parameters
         # Right singular vectors
-        weight_A = ops.randn((r, self.in_features))
+        if r > 0:
+            weight_A = ops.randn((r, self.in_features))
+            weight_E = ops.randn((r, 1))
+            weight_B = ops.randn((self.out_features, r))
+        else:
+            rank_idx = Tensor([False])
+            weight_A = ops.randn((1, self.in_features))
+            weight_E = ops.randn((1, 1))
+            weight_B = ops.randn((self.out_features, 1))
+            weight_A = weight_A[rank_idx, :]
+            weight_E = weight_E[rank_idx, :]
+            weight_B = weight_B[:, rank_idx]
         self.lora_A.update({adapter_name: Parameter(weight_A)})
         # Singular values
-        weight_E = ops.randn((r, 1))
         self.lora_E.update({adapter_name: Parameter(weight_E)})
         # Left singular vectors
-        weight_B = ops.randn((self.out_features, r))
         self.lora_B.update({adapter_name: Parameter(weight_B)})
         # The current rank
         self.ranknum.update({adapter_name: Parameter(Tensor(float(r)), requires_grad=False)})
         self.scaling[adapter_name] = lora_alpha if lora_alpha > 0 else float(r)
-        if init_lora_weights:
+        if init_lora_weights and r > 0:
             self.reset_lora_parameters(adapter_name)
-            
         # if hasattr(self.get_base_layer(), "qweight"):
         #     # QuantLinear
         #     self.to(self.get_base_layer().qweight.device)
@@ -128,6 +138,7 @@ class AdaLoraLayer(BaseTunerLayer):
 
 
 class SVDLinear(nn.Cell, AdaLoraLayer):
+    "SVD-based adaptation by a dense layer"
     # SVD-based adaptation by a dense layer
     def __init__(
         self,

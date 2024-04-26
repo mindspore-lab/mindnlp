@@ -108,6 +108,7 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
     """
     config = model.peft_config[adapter_name]
     state_dict = {}
+    strict_load = False
     if model.modules_to_save is not None:
         for key, value in peft_model_state_dict.items():
             if any(module_name in key for module_name in model.modules_to_save):
@@ -142,16 +143,17 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
             else:
                 peft_model_state_dict[k] = v
         if config.peft_type == PeftType.ADALORA:
+                strict_load = True
                 rank_pattern = config.rank_pattern
                 if rank_pattern is not None:
                     model.resize_modules_by_rank_pattern(rank_pattern, adapter_name)
                     
     elif config.peft_type == PeftType.ADAPTION_PROMPT:
-        peft_model_state_dict = state_dict
+        peft_model_state_dict = state_dict 
     else:
         raise NotImplementedError
 
-    param_not_load, ckpt_not_load = mindspore.load_param_into_net(model, peft_model_state_dict)
+    param_not_load, ckpt_not_load = mindspore.load_param_into_net(model, peft_model_state_dict, strict_load=strict_load)
 
     return (param_not_load, ckpt_not_load)
 

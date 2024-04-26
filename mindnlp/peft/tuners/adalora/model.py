@@ -15,23 +15,23 @@
 # pylint: disable=arguments-differ
 # pylint: disable=arguments-renamed
 # pylint: disable=useless-parent-delegation
-# pylint: disable=line-too-long
+# pylint: disable=invalid-name
 # pylint: disable=unused-variable
 # pylint: disable=unused-argument
 # pylint: disable=too-many-arguments
 "Adalora Model"
 import warnings
-from mindspore import nn, ops, Tensor
+from mindspore import nn, ops, Tensor, Parameter
 from mindnlp.transformers.ms_utils import Conv1D
 
 from mindnlp.peft.tuners.lora import LoraConfig, LoraModel
-from ..tuners_utils import BaseTunerLayer
 from mindnlp.peft.utils import (
     TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING,
     _freeze_adapter,
     _get_submodules,
 )
 
+from ..tuners_utils import BaseTunerLayer
 from .layer import AdaLoraLayer, RankAllocator, SVDLinear
 
 
@@ -68,8 +68,8 @@ class AdaLoraModel(LoraModel):
         super().__init__(model, config, adapter_name)
 
         traininable_mode_counter = 0
-        for config in self.peft_config.values():
-            if not config.inference_mode:
+        for peft_config in self.peft_config.values():
+            if not peft_config.inference_mode:
                 traininable_mode_counter += 1
 
         if traininable_mode_counter > 1:
@@ -120,11 +120,10 @@ class AdaLoraModel(LoraModel):
                         p.requires_grad = True
             elif bias == "lora_only":
                 for m in model.cells():
-                    if isinstance(m, LoraLayer) and hasattr(m, "bias") and m.bias is not None:
+                    if isinstance(m, AdaLoraLayer) and hasattr(m, "bias") and m.bias is not None:
                         m.bias.requires_grad = True
             else:
                 raise NotImplementedError(f"Requested bias: {bias}, is not implemented.")
-            
     def _create_and_replace(
         self,
         lora_config,
@@ -149,8 +148,6 @@ class AdaLoraModel(LoraModel):
         #         "To use AdaLora with 8-bit quantization, please install the `bitsandbytes` package. "
         #         "You can install it with `pip install bitsandbytes`."
         #     )
-        
-
         # quantization_config = get_quantization_config(self.model, method="gptq")
         # if quantization_config is not None:
         #     kwargs["gptq_quantization_config"] = quantization_config
@@ -233,7 +230,6 @@ class AdaLoraModel(LoraModel):
         new_module = SVDLinear(target, adapter_name, **kwargs)
 
         return new_module
-    
     def _replace_module(self, parent, child_name, new_module, child):
         setattr(parent, child_name, new_module)
 
@@ -252,9 +248,6 @@ class AdaLoraModel(LoraModel):
                 new_module.base_layer.state = child.state
             else:
                 new_module.state = child.state
-
-
-                
     @staticmethod
     def _prepare_adapter_config(peft_config, model_config):
         if peft_config.target_modules is None:
@@ -288,8 +281,7 @@ class AdaLoraModel(LoraModel):
                 if ("lora_A" in n or "lora_B" in n) and self.trainable_adapter_name in n:
                     para_cov = p @ p.T if "lora_A" in n else p.T @ p
                     I = ops.eye(*para_cov.shape)  # noqa: E741
-                    # TODO I.requires_grad = False
-                    I = ops.stop_gradient(I) 
+                    I = ops.stop_gradient(I)
                     num_param += 1
                     regu_loss += ops.norm(para_cov - I, ord="fro")
             if num_param > 0:
@@ -300,10 +292,12 @@ class AdaLoraModel(LoraModel):
         return outputs
 
     def resize_modules_by_rank_pattern(self, rank_pattern, adapter_name):
+        "resize the modules by rank pattern"
         lora_config = self.peft_config[adapter_name]
         for name, rank_idx in rank_pattern.items():
             if isinstance(rank_idx, list):
                 rank = sum(rank_idx)
+                rank_idx = Tensor(rank_idx).view(-1)
             elif isinstance(rank_idx, Tensor):
                 rank_idx = rank_idx.view(-1)
                 rank = rank_idx.sum().item()
@@ -323,26 +317,38 @@ class AdaLoraModel(LoraModel):
                 lora_config.init_lora_weights,
             )
             if rank > 0:
-                target.lora_E[adapter_name].copy_(lora_E_weights)
-                target.lora_A[adapter_name].copy_(lora_A_weights)
-                target.lora_B[adapter_name].copy_(lora_B_weights)
+                target.lora_E.update({adapter_name: Parameter(lora_E_weights)})
+                target.lora_A.update({adapter_name: Parameter(lora_A_weights)})
+                target.lora_B.update({adapter_name: Parameter(lora_B_weights)})
                 # The scaling is exactly as the previous
-                target.ranknum[adapter_name].copy_(ranknum)
+                target.ranknum.update({adapter_name: Parameter(ranknum)})
+
 
     def resize_state_dict_by_rank_pattern(self, rank_pattern, state_dict, adapter_name):
+        "resize the state_dict by rank pattern"
         for name, rank_idx in rank_pattern.items():
             rank = sum(rank_idx)
             prefix = ".".join(name.split(".")[0:-2]) if adapter_name in name else ".".join(name.split(".")[0:-1])
             for layer in ["lora_E", "lora_A", "lora_B"]:
                 key = f"base_model.model.{prefix}.{layer}.{adapter_name}"
                 if layer != "lora_B":
-                    state_dict[key] = (
-                        state_dict[key][rank_idx] if rank != state_dict[key].shape[0] else state_dict[key]
-                    )
+                    if rank != state_dict[key][2].reshape(state_dict[key][0]).shape[0]:
+                        dims = []
+                        data = state_dict[key][2].reshape(state_dict[key][0])
+                        data = data[rank_idx]
+                        state_dict[key][2] = data.reshape(-1)
+                        for dim in data.shape:
+                            dims.append(dim)
+                        state_dict[key][0] = dims
                 else:
-                    state_dict[key] = (
-                        state_dict[key][:, rank_idx] if rank != state_dict[key].shape[1] else state_dict[key]
-                    )
+                    if rank != state_dict[key][2].reshape(state_dict[key][0]).shape[1]:
+                        dims = []
+                        data = state_dict[key][2].reshape(state_dict[key][0])
+                        data = data[:, rank_idx]
+                        state_dict[key][2] = data.reshape(-1)
+                        for dim in data.shape:
+                            dims.append(dim)
+                        state_dict[key][0] = dims
         return state_dict
 
     def update_and_allocate(self, global_step, gradient):
@@ -384,5 +390,3 @@ class AdaLoraModel(LoraModel):
         elif global_step > lora_config.total_step - lora_config.tfinal:
             self.rankallocator.mask_using_rank_pattern(self.model, lora_config.rank_pattern)
         # Pass the function and do forward propagation
-        else:
-            return None
