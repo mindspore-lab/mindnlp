@@ -1,6 +1,7 @@
 import re
 import requests
 import os
+import platform
 
 def gen_url(os_name, py_version):
     hf_url = 'https://hf-mirror.com/lvyufeng/mindspore-daily/resolve/main/'
@@ -8,21 +9,25 @@ def gen_url(os_name, py_version):
     py_version = py_version.replace('.', '')
 
     if os_name == 'ubuntu-latest' or 'linux' in os_name:
-        platform = 'linux_x86_64'
+        os_type = 'linux_x86_64'
     elif os_name == 'macos-latest' or 'mac' in os_name:
-        platform = 'macosx_10_15_x86_64'
+        machine = platform.machine()
+        if machine.startswith('arm'):
+            os_type = 'macosx_10_15_x86_64'
+        else:
+            os_type = 'macosx_11_0_arm64'
     elif os_name == 'windows-latest':
-        platform = 'win_amd64'
+        os_type = 'win_amd64'
     else:
         raise ValueError(f'not support this operate system {os_name}')
     
     py_version2 = py_version if py_version != '37' else py_version + 'm'
-    whl_name = whl_name.format(py_version, py_version2, platform)
+    whl_name = whl_name.format(py_version, py_version2, os_type)
 
     with open('download.txt', 'w', encoding='utf-8') as f:
         f.write(hf_url + whl_name)
 
 if __name__ == '__main__':
-    platform = os.environ['OS']
+    os_type = os.environ['OS']
     python = os.environ['PYTHON']
-    gen_url(platform, python)
+    gen_url(os_type, python)

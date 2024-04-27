@@ -56,6 +56,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("clip_vision_model", "CLIPVisionConfig"),
         ("codegen", "CodeGenConfig"),
         ("convbert", "ConvBertConfig"),
+        ("convnext", "ConvNextConfig"),
         ("cpmant", "CpmAntConfig"),
         ("cpmbee", "CpmBeeConfig"),
         ("cvt", "CvtConfig"),

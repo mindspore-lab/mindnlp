@@ -27,7 +27,7 @@ from mindspore import nn, ops, Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp.utils import logging
-from mindnlp.utils.backbone_utils import BackboneMixin
+from ...backbone_utils import BackboneMixin
 from ...activations import ACT2FN
 from ...modeling_outputs import (
     BackboneOutput,
