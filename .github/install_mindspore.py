@@ -13,9 +13,9 @@ def gen_url(os_name, py_version):
     elif os_name == 'macos-latest' or 'mac' in os_name:
         machine = platform.machine()
         if machine.startswith('arm'):
-            os_type = 'macosx_10_15_x86_64'
-        else:
             os_type = 'macosx_11_0_arm64'
+        else:
+            os_type = 'macosx_10_15_x86_64'
     elif os_name == 'windows-latest':
         os_type = 'win_amd64'
     else:
