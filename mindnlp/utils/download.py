@@ -152,7 +152,7 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None,
         os.makedirs(path)
 
     retry_cnt = 0
-    retry_limit = 3
+    retry_limit = 5
 
     if download_file_name is None:
         name = extract_filename_from_url(url)
@@ -171,6 +171,15 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None,
         else:
             raise HTTPError(
                 f"Download from {url} failed. " "Retry limit reached")
+
+        # get downloaded size
+        tmp_file_path = file_path + "_tmp"
+        if os.path.exists(tmp_file_path):
+            file_size = os.path.getsize(tmp_file_path)
+            headers['Range'] = f'bytes={file_size}-'
+        else:
+            file_size = 0
+
         req = requests.get(url, stream=True, timeout=10, proxies=proxies, headers=headers)
 
         status = req.status_code
@@ -181,25 +190,24 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None,
         if status == 429:
             raise HTTPError('Too many requests.')
         try:
-            tmp_file_path = file_path + "_tmp"
             total_size = req.headers.get("content-length")
-            with open(tmp_file_path, "wb") as file:
+            with open(tmp_file_path, "ab") as file:
                 if total_size:
                     with tqdm(
-                        total=int(total_size), unit="B", unit_scale=True, unit_divisor=1024
+                        total=int(total_size), unit="B", initial=file_size, unit_scale=True, unit_divisor=1024
                     ) as pbar:
                         for chunk in req.iter_content(chunk_size=1024):
                             file.write(chunk)
                             pbar.update(len(chunk))
                 else:
-                    pbar = tqdm(total=total_size, unit='B', unit_scale=True)
+                    pbar = tqdm(total=total_size, unit='B', initial=file_size, unit_scale=True, unit_divisor=1024)
                     for chunk in req.iter_content(chunk_size=1024):
                         if chunk:
                             pbar.update(len(chunk))
                             file.write(chunk)
             shutil.move(tmp_file_path, file_path)
         except requests.exceptions.RequestException as e:
-            if retry_cnt >= retry_limit:
+            if retry_cnt > retry_limit:
                 raise
             print(f"Failed to download: {e}")
             print(f"Retrying... (attempt {retry_cnt}/{retry_limit})")
@@ -589,13 +597,12 @@ def download(
         headers = {
             'authorization': f"Bearer {token}",
         }
-
+    else:
+        headers = {}
     try:
         pointer_path = http_get(url, storage_folder, download_file_name=relative_filename, proxies=proxies, headers=headers)
-    except requests.exceptions.SSLError:
-        if mirror == 'aliendao':
-            pass
-    except (requests.exceptions.ProxyError,
+    except (requests.exceptions.SSLError,
+            requests.exceptions.ProxyError,
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout):
         # Otherwise, our Internet connection is down.
@@ -854,7 +861,6 @@ MIRROR_MAP = {
     'modelscope': MS_URL_BASE,
     'wisemodel': "https://awsdownload.wisemodel.cn/file-proxy/{}/-/raw/{}/{}",
     'gitee': "https://ai.gitee.com/huggingface/{}/resolve/{}/{}",
-    'aliendao': "http://61.133.217.142:20800/download/models/{}/{}",
     'aifast': "https://aifasthub.com/models/{}/{}",
 }
 
@@ -871,7 +877,7 @@ def build_download_url(
     """
     if mirror not in MIRROR_MAP:
         raise ValueError('The mirror name not support, please use one of the mirror website below: '
-                         '["huggingface", "modelscope", "wisemodel", "gitee", "aliendao", "aifast"]')
+                         '["huggingface", "modelscope", "wisemodel", "gitee", "aifast"]')
     if mirror in ('huggingface', 'gitee', 'modelscope', 'wisemodel'):
         return MIRROR_MAP[mirror].format(repo_id, revision, filename)
     if revision is not None and revision != 'main':

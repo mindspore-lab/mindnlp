@@ -29,7 +29,7 @@ from ...modeling_outputs import (
 )
 from ...modeling_utils import PreTrainedModel
 from ....utils import logging
-from ....utils.backbone_utils import BackboneMixin
+from ...backbone_utils import BackboneMixin
 from .configuration_convnext import ConvNextConfig
 
 
