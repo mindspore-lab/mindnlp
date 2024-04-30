@@ -439,24 +439,24 @@ class LoraModel(BaseTuner):
             )
         return active_adapter
 
-    def _mark_only_adapters_as_trainable(self,model) -> None:
+    def _mark_only_adapters_as_trainable(self) -> None:
         """mark_only_lora_as_trainable"""
         # get bias
         active_adapter = self._get_active_adapter()
         bias = self.peft_config[active_adapter].bias
 
-        for n, p in model.parameters_and_names():  # named_parameters() -> parameters_and_names()
+        for n, p in self.model.parameters_and_names():  # named_parameters() -> parameters_and_names()
             if "lora_" not in n:
                 p.requires_grad = False
                 # print(n, p, "requires_grad = False")
         if bias == "none":
             return
         elif bias == "all":
-            for n, p in model.parameters_and_names():
+            for n, p in self.model.parameters_and_names():
                 if "bias" in n:
                     p.requires_grad = True
         elif bias == "lora_only":
-            for m in model.cells():  # .cells() for modules()
+            for m in self.model.cells():  # .cells() for modules()
                 if isinstance(m, LoraLayer) and hasattr(m, "bias") and m.bias is not None:
                     m.bias.requires_grad = True
         else:
@@ -541,7 +541,7 @@ class LoraModel(BaseTuner):
         return new_module
 
 
-class LoraLayer():
+class LoraLayer(BaseTunerLayer):
     """Lora Layer"""
     # TODO add CellDict Support
     def __init__(self, in_features: int, out_features: int, **kwargs):
