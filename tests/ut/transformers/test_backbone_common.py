@@ -18,7 +18,7 @@ import inspect
 import tempfile
 
 from mindnlp.utils.testing_utils import require_mindspore
-from mindnlp.utils.backbone_utils import BackboneType
+from mindnlp.transformers.backbone_utils import BackboneType
 
 
 @require_mindspore

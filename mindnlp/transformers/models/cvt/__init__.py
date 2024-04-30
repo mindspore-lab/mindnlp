@@ -1,4 +1,4 @@
-# Copyright 2023 Huawei Technologies Co., Ltd
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,30 +13,12 @@
 # limitations under the License.
 # ============================================================================
 """
-Peft types and Task types.
+Cvt Model init
 """
-import enum
+from . import configuration_cvt, modeling_cvt
+from .configuration_cvt import *
+from .modeling_cvt import *
 
-class PeftType(str, enum.Enum):
-    """
-    PeftType.
-    """
-    # PROMPT_TUNING = "PROMPT_TUNING"
-    # P_TUNING = "P_TUNING"
-    # PREFIX_TUNING = "PREFIX_TUNING"
-    LORA = "LORA"
-    ADALORA = "ADALORA"
-    ADAPTION_PROMPT = "ADAPTION_PROMPT"
-    IA3 = "IA3"
-
-
-class TaskType(str, enum.Enum):
-    """
-    TaskType
-    """
-    SEQ_CLS = "SEQ_CLS"
-    SEQ_2_SEQ_LM = "SEQ_2_SEQ_LM"
-    CAUSAL_LM = "CAUSAL_LM"
-    TOKEN_CLS = "TOKEN_CLS"
-    QUESTION_ANS = "QUESTION_ANS"
-    FEATURE_EXTRACTION = "FEATURE_EXTRACTION"
+__all__ = []
+__all__.extend(configuration_cvt.__all__)
+__all__.extend(modeling_cvt.__all__)

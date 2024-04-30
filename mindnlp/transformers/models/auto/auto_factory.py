@@ -69,6 +69,8 @@ class _BaseAutoModelClass:
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
         config = kwargs.pop("config", None)
         _ = kwargs.get('from_pt', True)
+        mirror = kwargs.get('mirror', 'huggingface')
+        revision = kwargs.get('revision', 'main')
         token = kwargs.get('token', None)
         if not isinstance(config, PretrainedConfig):
             kwargs_orig = copy.deepcopy(kwargs)
@@ -79,7 +81,6 @@ class _BaseAutoModelClass:
             # to not overwrite the quantization_config if config has a quantization_config
             if kwargs.get("quantization_config", None) is not None:
                 _ = kwargs.pop("quantization_config")
-
             config, kwargs = AutoConfig.from_pretrained(
                 pretrained_model_name_or_path,
                 return_unused_kwargs=True,
@@ -92,6 +93,8 @@ class _BaseAutoModelClass:
                 kwargs["quantization_config"] = kwargs_orig["quantization_config"]
 
         kwargs['token'] = token
+        kwargs['mirror'] = mirror
+        kwargs['revision'] = revision
         if type(config) in cls._model_mapping.keys():
             model_class = _get_model_class(config, cls._model_mapping)
             return model_class.from_pretrained(

@@ -53,7 +53,7 @@ jobs:
     needs: pylint-check
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest] #, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python: [3.8, 3.9]
     runs-on: ${{ matrix.os }}
     steps:
@@ -86,7 +86,7 @@ jobs:
     needs: pylint-check
     strategy:
       matrix:
-        ms_version: ['2.2.11']
+        ms_version: ['2.2.14']
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -101,7 +101,7 @@ jobs:
     - name: Install MindSpore
       shell: bash
       run: |
-        pip install mindspore==${{matrix.ms_version}}
+        pip install https://ms-release.obs.cn-north-4.myhuaweicloud.com/${{matrix.ms_version}}/MindSpore/unified/x86_64/mindspore-${{matrix.ms_version}}-cp39-cp39-linux_x86_64.whl --trusted-host ms-release.obs.cn-north-4.myhuaweicloud.com
     - name: Test with pytest
       run: |
         # pytest -c pytest.ini -m 'not download and not gpu_only' --ignore=tests/ut/transformers tests/ut 
