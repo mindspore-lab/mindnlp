@@ -41,7 +41,7 @@ from ..utils import (
     transpose,
 )
 
-from .tuners_utils import BaseTuner, BaseTunerLayer
+from .tuners_utils import BaseTuner
 
 # if is_bnb_available():
 #     import bitsandbytes as bnb
