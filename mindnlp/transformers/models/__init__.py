@@ -94,6 +94,7 @@ from . import (
     musicgen_melody,
     nezha,
     olmo,
+    openelm,
     opt,
     pegasus,
     phi,
@@ -199,6 +200,7 @@ from .musicgen import *
 from .musicgen_melody import *
 from .nezha import *
 from .olmo import *
+from .openelm import *
 from .opt import *
 from .pegasus import *
 from .phi import *
@@ -304,6 +306,7 @@ __all__.extend(musicgen.__all__)
 __all__.extend(musicgen_melody.__all__)
 __all__.extend(nezha.__all__)
 __all__.extend(olmo.__all__)
+__all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(pegasus.__all__)
 __all__.extend(phi.__all__)

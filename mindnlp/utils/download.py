@@ -174,7 +174,7 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None,
 
         # get downloaded size
         tmp_file_path = file_path + "_tmp"
-        if os.path.exists(tmp_file_path):
+        if os.path.exists(tmp_file_path) and retry_cnt != 0:
             file_size = os.path.getsize(tmp_file_path)
             headers['Range'] = f'bytes={file_size}-'
         else:
@@ -191,7 +191,7 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None,
             raise HTTPError('Too many requests.')
         try:
             total_size = req.headers.get("content-length")
-            with open(tmp_file_path, "ab") as file:
+            with open(tmp_file_path, "ab" if retry_cnt != 0 else "wb") as file:
                 if total_size:
                     with tqdm(
                         total=int(total_size), unit="B", initial=file_size, unit_scale=True, unit_divisor=1024

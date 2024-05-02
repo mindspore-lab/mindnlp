@@ -16,6 +16,7 @@
 from . import models, pipelines
 from .models import *
 from .pipelines import *
+from .generation import *
 from .configuration_utils import PretrainedConfig
 from .modeling_utils import PreTrainedModel
 from .tokenization_utils_base import PreTrainedTokenizerBase, SpecialTokensMixin

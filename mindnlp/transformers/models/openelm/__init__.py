@@ -12,6 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""MindNLP Text2vec"""
-from .sentence_model import SentenceModel
-from .word2vec import Word2Vec
+"""
+OPT Models init
+"""
+from . import configuration_openelm, modeling_openelm
+from .modeling_openelm import *
+from .configuration_openelm import *
+
+__all__ = []
+__all__.extend(modeling_openelm.__all__)
+__all__.extend(configuration_openelm.__all__)
