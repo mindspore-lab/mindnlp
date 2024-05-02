@@ -307,6 +307,13 @@ TOKENIZER_MAPPING_NAMES = OrderedDict(
             ),
         ),
         ("olmo", (None, "GPTNeoXTokenizerFast" if is_tokenizers_available() else None)),
+        (
+            "openelm",
+            (
+                "LlamaTokenizer" if is_sentencepiece_available() else None,
+                "LlamaTokenizerFast" if is_tokenizers_available() else None,
+            ),
+        ),
         ("oneformer", ("CLIPTokenizer", "CLIPTokenizerFast" if is_tokenizers_available() else None)),
         ("opt", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
         ("owlv2", ("CLIPTokenizer", "CLIPTokenizerFast" if is_tokenizers_available() else None)),

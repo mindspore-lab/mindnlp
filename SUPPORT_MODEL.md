@@ -82,6 +82,8 @@ The table below represents the current support in the library for each of those 
 | MusicGen                      | ✅                | ❌             |
 | MusicGen Melody               | ✅                | ❌             |
 | Nezha                         | ✅                | ❌             |
+| Olmo                          | ✅                | ❌             |
+| OpenELM                       | ✅                | ❌             |
 | OPT                           | ✅                | ❌             |
 | Phi2                          | ✅                | ❌             |
 | Pagasus                       | ✅                | ❌             |
