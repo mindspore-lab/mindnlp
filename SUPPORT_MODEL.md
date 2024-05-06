@@ -86,6 +86,7 @@ The table below represents the current support in the library for each of those 
 | OpenELM                       | ✅                | ❌             |
 | OPT                           | ✅                | ❌             |
 | Phi2                          | ✅                | ❌             |
+| Phi3                          | ✅                | ❌             |
 | Pagasus                       | ✅                | ❌             |
 | Pop2piano                     | ✅                | ❌             |
 | Qwen2                         | ✅                | ❌             |
