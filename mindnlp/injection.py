@@ -1084,6 +1084,9 @@ class GroupNorm_hijack(GroupNorm_original):
         super().__init__(num_groups, num_channels, eps, affine, gamma_init, beta_init, dtype)
         self.weight = Parameter(self.gamma.data, name='weight')
         self.bias = Parameter(self.beta.data, name='bias')
+        self.reduce_mean=ops.ReduceMean(keep_dims=True)
+        self.reduce_sum=ops.ReduceSum(keep_dims=True)
+        self.sqrt = ops.Sqrt()
         del self.gamma
         del self.beta
 
