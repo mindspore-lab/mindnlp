@@ -15,7 +15,7 @@
 """"Classes for Metrics RougeN and RougeL"""
 
 import numpy as np
-from mindnlp.abc import Metric
+from mindnlp._legacy.abc import Metric
 from .utils import _check_value_type
 
 

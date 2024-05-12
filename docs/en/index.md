@@ -1,3 +1,7 @@
+---
+hide:
+  - navigation
+---
 # <center> MindNLP
 
 <p align="center">
