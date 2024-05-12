@@ -12,41 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Lora."""
+"""Lokr."""
 import math
-import re
 import warnings
-import tqdm
-from dataclasses import asdict, dataclass, field
-from enum import Enum
-from typing import List, Optional, Union,Any, Set, Tuple ,Dict , Type
+from typing import List, Optional, Union, Any, Set, Tuple
 from abc import abstractmethod
-from itertools import chain
 
 import mindspore as ms
 from mindspore import nn, ops
-from mindspore.common.initializer import initializer, HeUniform, Zero, Normal
+from mindspore.common.initializer import initializer, HeUniform, Zero
 
 # import mindnlp._legacy.functional as F
-from mindnlp.transformers.ms_utils import Conv1D
-from mindnlp.abc import CellDict,ParameterDict
+from mindnlp.abc import ParameterDict
 
-from ...config import PeftConfig
 # from ..import_utils import is_bnb_4bit_available, is_bnb_available
-from ...utils import (
-    # CLAMP_QUANTILE,
-    COMMON_LAYERS_PATTERN,
-    TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING,
-    ModulesToSaveWrapper,
-    PeftType,
-    # _freeze_adapter,
-    _get_submodules,
-    transpose,
+
+from ..tuners_utils import (
+    BaseTunerLayer,
+    check_adapters_to_merge,
 )
 
-from ..tuners_utils import BaseTuner, BaseTunerLayer, check_target_module_exists,check_adapters_to_merge
 
-class LoKrLayer(nn.Cell,BaseTunerLayer):
+class LoKrLayer(nn.Cell, BaseTunerLayer):
     other_param_names = ("r", "alpha", "scaling", "rank_dropout", "module_dropout")
     # All names of layers that may contain adapter weights
     adapter_layer_names = (
@@ -58,7 +45,6 @@ class LoKrLayer(nn.Cell,BaseTunerLayer):
         "lokr_w2_b",
         "lokr_t2",
     )
-    active_adapter = None
     r"""
     A tuner layer mixin that provides the common methods and attributes for all tuners.
 
@@ -100,9 +86,10 @@ class LoKrLayer(nn.Cell,BaseTunerLayer):
         self.merged_adapters = []
 
     @abstractmethod
-    def _get_delta_activations(self, adapter_name: str, x: ms.Tensor, *args: Any, **kwargs: Any) -> ms.Tensor:
+    def _get_delta_activations(
+        self, adapter_name: str, x: ms.Tensor, *args: Any, **kwargs: Any
+    ) -> ms.Tensor:
         """Activations added on top of the base layer output (i.e. after the base layer forward pass)"""
-
 
     @property
     def _available_adapters(self) -> Set[str]:
@@ -115,7 +102,7 @@ class LoKrLayer(nn.Cell,BaseTunerLayer):
             *self.lokr_w2_b,
             *self.lokr_t2,
         }
-    
+
     @property
     def active_adapter(self) -> str:
         # use a property to ensure that active_adapter is not set directly, instead use the set_adapter method
@@ -125,7 +112,6 @@ class LoKrLayer(nn.Cell,BaseTunerLayer):
     def disable_adapters(self) -> bool:
         # use a property to ensure that disable_adapters is not set directly, instead use the enable_adapters method
         return self._disable_adapters
-
 
     @property
     def merged(self) -> bool:
@@ -160,131 +146,174 @@ class LoKrLayer(nn.Cell,BaseTunerLayer):
         use_effective_conv2d: bool,
     ):
         if use_w1:
-            self.lokr_w1[adapter_name] = ms.Parameter(ops.zeros(shape[0][0], shape[1][0]))
+            self.lokr_w1[adapter_name] = ms.Parameter(
+                ops.zeros((shape[0][0], shape[1][0]))
+            )
         else:
-            self.lokr_w1_a[adapter_name] = ms.Parameter(ops.zeros(shape[0][0], r))
-            self.lokr_w1_b[adapter_name] = ms.Parameter(ops.zeros(r, shape[1][0]))
+            self.lokr_w1_a[adapter_name] = ms.Parameter(ops.zeros((shape[0][0], r)))
+            self.lokr_w1_b[adapter_name] = ms.Parameter(ops.zeros((r, shape[1][0])))
 
         if len(shape) == 4:
             # Conv2d
             if use_w2:
-                self.lokr_w2[adapter_name] = ms.Parameter(ops.zeros(shape[0][1], shape[1][1], *shape[2:]))
+                self.lokr_w2[adapter_name] = ms.Parameter(
+                    ops.zeros((shape[0][1], shape[1][1], *shape[2:]))
+                )
             elif use_effective_conv2d:
-                self.lokr_t2[adapter_name] = ms.Parameter(ops.zeros(r, r, shape[2], shape[3]))
-                self.lokr_w2_a[adapter_name] = ms.Parameter(ops.zeros(r, shape[0][1]))  # b, 1-mode
-                self.lokr_w2_b[adapter_name] = ms.Parameter(ops.zeros(r, shape[1][1]))  # d, 2-mode
+                self.lokr_t2[adapter_name] = ms.Parameter(
+                    ops.zeros((r, r, shape[2], shape[3]))
+                )
+                self.lokr_w2_a[adapter_name] = ms.Parameter(
+                    ops.zeros((r, shape[0][1]))
+                )  # b, 1-mode
+                self.lokr_w2_b[adapter_name] = ms.Parameter(
+                    ops.zeros((r, shape[1][1]))
+                )  # d, 2-mode
             else:
-                self.lokr_w2_a[adapter_name] = ms.Parameter(ops.zeros(shape[0][1], r))
-                self.lokr_w2_b[adapter_name] = ms.Parameter(ops.zeros(r, shape[1][1] * shape[2] * shape[3]))
+                self.lokr_w2_a[adapter_name] = ms.Parameter(ops.zeros((shape[0][1], r)))
+                self.lokr_w2_b[adapter_name] = ms.Parameter(
+                    ops.zeros((r, shape[1][1] * shape[2] * shape[3]))
+                )
         else:
             # Linear
             if use_w2:
-                self.lokr_w2[adapter_name] = ms.Parameter(ops.zeros(shape[0][1], shape[1][1]))
+                self.lokr_w2[adapter_name] = ms.Parameter(
+                    ops.zeros((shape[0][1], shape[1][1]))
+                )
             else:
-                self.lokr_w2_a[adapter_name] = ms.Parameter(ops.zeros(shape[0][1], r))
-                self.lokr_w2_b[adapter_name] = ms.Parameter(ops.zeros(r, shape[1][1]))
+                self.lokr_w2_a[adapter_name] = ms.Parameter(ops.zeros((shape[0][1], r)))
+                self.lokr_w2_b[adapter_name] = ms.Parameter(ops.zeros((r, shape[1][1])))
 
     def reset_adapter_parameters(self, adapter_name: str):
         if adapter_name in self.lokr_w1:
-            #nn.init.zeros_(self.lokr_w1[adapter_name])
-            self.lokr_w1[adapter_name].set_data(initializer(
-                Zero(),
-                self.lokr_w1[adapter_name].shape,
-                self.lokr_w1[adapter_name].dtype
-            ))
+            # nn.init.zeros_(self.lokr_w1[adapter_name])
+            self.lokr_w1[adapter_name].set_data(
+                initializer(
+                    Zero(),
+                    self.lokr_w1[adapter_name].shape,
+                    self.lokr_w1[adapter_name].dtype,
+                )
+            )
 
         else:
-            #nn.init.zeros_(self.lokr_w1_a[adapter_name])
-            self.lokr_w1_a[adapter_name].set_data(initializer(
-                Zero(),
-                self.lokr_w1[adapter_name].shape,
-                self.lokr_w1[adapter_name].dtype
-            ))
-            #nn.init.kaiming_uniform_(self.lokr_w1_b[adapter_name], a=math.sqrt(5))
-            self.lokr_w1_b[adapter_name].set_data(initializer(
-                HeUniform(negative_slope=math.sqrt(5)),
-                self.lokr_w1_b[adapter_name].shape,
-                self.lokr_w1_b[adapter_name].dtype
-            ))
+            # nn.init.zeros_(self.lokr_w1_a[adapter_name])
+            self.lokr_w1_a[adapter_name].set_data(
+                initializer(
+                    Zero(),
+                    self.lokr_w1[adapter_name].shape,
+                    self.lokr_w1[adapter_name].dtype,
+                )
+            )
+            # nn.init.kaiming_uniform_(self.lokr_w1_b[adapter_name], a=math.sqrt(5))
+            self.lokr_w1_b[adapter_name].set_data(
+                initializer(
+                    HeUniform(negative_slope=math.sqrt(5)),
+                    self.lokr_w1_b[adapter_name].shape,
+                    self.lokr_w1_b[adapter_name].dtype,
+                )
+            )
         if adapter_name in self.lokr_w2:
-            #nn.init.kaiming_uniform_(self.lokr_w2[adapter_name], a=math.sqrt(5))
-            self.lokr_w2[adapter_name].set_data(initializer(
-                HeUniform(negative_slope=math.sqrt(5)),
-                self.lokr_w2[adapter_name].shape,
-                self.lokr_w2[adapter_name].dtype
-            ))
+            # nn.init.kaiming_uniform_(self.lokr_w2[adapter_name], a=math.sqrt(5))
+            self.lokr_w2[adapter_name].set_data(
+                initializer(
+                    HeUniform(negative_slope=math.sqrt(5)),
+                    self.lokr_w2[adapter_name].shape,
+                    self.lokr_w2[adapter_name].dtype,
+                )
+            )
         else:
-            #nn.init.kaiming_uniform_(self.lokr_w2_a[adapter_name], a=math.sqrt(5))
-            self.lokr_w2_a[adapter_name].set_data(initializer(
-                HeUniform(negative_slope=math.sqrt(5)),
-                self.lokr_w2_a[adapter_name].shape,
-                self.lokr_w2_a[adapter_name].dtype
-            ))
-            #nn.init.kaiming_uniform_(self.lokr_w2_b[adapter_name], a=math.sqrt(5))
-            self.lokr_w2_b[adapter_name].set_data(initializer(
-                HeUniform(negative_slope=math.sqrt(5)),
-                self.lokr_w2_b[adapter_name].shape,
-                self.lokr_w2_b[adapter_name].dtype
-            ))
+            # nn.init.kaiming_uniform_(self.lokr_w2_a[adapter_name], a=math.sqrt(5))
+            self.lokr_w2_a[adapter_name].set_data(
+                initializer(
+                    HeUniform(negative_slope=math.sqrt(5)),
+                    self.lokr_w2_a[adapter_name].shape,
+                    self.lokr_w2_a[adapter_name].dtype,
+                )
+            )
+            # nn.init.kaiming_uniform_(self.lokr_w2_b[adapter_name], a=math.sqrt(5))
+            self.lokr_w2_b[adapter_name].set_data(
+                initializer(
+                    HeUniform(negative_slope=math.sqrt(5)),
+                    self.lokr_w2_b[adapter_name].shape,
+                    self.lokr_w2_b[adapter_name].dtype,
+                )
+            )
 
         if adapter_name in self.lokr_t2:
-            #nn.init.kaiming_uniform_(self.lokr_t2[adapter_name], a=math.sqrt(5))
-            self.lokr_t2[adapter_name].set_data(initializer(
-                HeUniform(negative_slope=math.sqrt(5)),
-                self.lokr_t2[adapter_name].shape,
-                self.lokr_t2[adapter_name].dtype
-            ))
+            # nn.init.kaiming_uniform_(self.lokr_t2[adapter_name], a=math.sqrt(5))
+            self.lokr_t2[adapter_name].set_data(
+                initializer(
+                    HeUniform(negative_slope=math.sqrt(5)),
+                    self.lokr_t2[adapter_name].shape,
+                    self.lokr_t2[adapter_name].dtype,
+                )
+            )
 
     def reset_adapter_parameters_random(self, adapter_name: str):
         if adapter_name in self.lokr_w1:
-            #nn.init.kaiming_uniform_(self.lokr_w1[adapter_name], a=math.sqrt(5))
-            self.lokr_w1[adapter_name].set_data(initializer(
-                HeUniform(negative_slope=math.sqrt(5)),
-                self.lokr_w1[adapter_name].shape,
-                self.lokr_w1[adapter_name].dtype
-            ))
+            # nn.init.kaiming_uniform_(self.lokr_w1[adapter_name], a=math.sqrt(5))
+            self.lokr_w1[adapter_name].set_data(
+                initializer(
+                    HeUniform(negative_slope=math.sqrt(5)),
+                    self.lokr_w1[adapter_name].shape,
+                    self.lokr_w1[adapter_name].dtype,
+                )
+            )
         else:
-            #nn.init.kaiming_uniform_(self.lokr_w1_a[adapter_name], a=math.sqrt(5))
-            self.lokr_w1_a[adapter_name].set_data(initializer(
-                HeUniform(negative_slope=math.sqrt(5)),
-                self.lokr_w1_a[adapter_name].shape,
-                self.lokr_w1_a[adapter_name].dtype
-            ))
-            #nn.init.kaiming_uniform_(self.lokr_w1_b[adapter_name], a=math.sqrt(5))
-            self.lokr_w1_b[adapter_name].set_data(initializer(
-                HeUniform(negative_slope=math.sqrt(5)),
-                self.lokr_w1_b[adapter_name].shape,
-                self.lokr_w1_b[adapter_name].dtype
-            ))
+            # nn.init.kaiming_uniform_(self.lokr_w1_a[adapter_name], a=math.sqrt(5))
+            self.lokr_w1_a[adapter_name].set_data(
+                initializer(
+                    HeUniform(negative_slope=math.sqrt(5)),
+                    self.lokr_w1_a[adapter_name].shape,
+                    self.lokr_w1_a[adapter_name].dtype,
+                )
+            )
+            # nn.init.kaiming_uniform_(self.lokr_w1_b[adapter_name], a=math.sqrt(5))
+            self.lokr_w1_b[adapter_name].set_data(
+                initializer(
+                    HeUniform(negative_slope=math.sqrt(5)),
+                    self.lokr_w1_b[adapter_name].shape,
+                    self.lokr_w1_b[adapter_name].dtype,
+                )
+            )
 
         if adapter_name in self.lokr_w2:
-            #nn.init.kaiming_uniform_(self.lokr_w2[adapter_name], a=math.sqrt(5))
-            self.lokr_w2[adapter_name].set_data(initializer(
-                HeUniform(negative_slope=math.sqrt(5)),
-                self.lokr_w2[adapter_name].shape,
-                self.lokr_w2[adapter_name].dtype
-            ))
+            # nn.init.kaiming_uniform_(self.lokr_w2[adapter_name], a=math.sqrt(5))
+            self.lokr_w2[adapter_name].set_data(
+                initializer(
+                    HeUniform(negative_slope=math.sqrt(5)),
+                    self.lokr_w2[adapter_name].shape,
+                    self.lokr_w2[adapter_name].dtype,
+                )
+            )
         else:
-            #nn.init.kaiming_uniform_(self.lokr_w2_a[adapter_name], a=math.sqrt(5))
-            self.lokr_w2_a[adapter_name].set_data(initializer(
-                HeUniform(negative_slope=math.sqrt(5)),
-                self.lokr_w2_a[adapter_name].shape,
-                self.lokr_w2_a[adapter_name].dtype
-            ))
-            #nn.init.kaiming_uniform_(self.lokr_w2_b[adapter_name], a=math.sqrt(5))
-            self.lokr_w2_b[adapter_name].set_data(initializer(
-                HeUniform(negative_slope=math.sqrt(5)),
-                self.lokr_w2_b[adapter_name].shape,
-                self.lokr_w2_b[adapter_name].dtype
-            ))
+            # nn.init.kaiming_uniform_(self.lokr_w2_a[adapter_name], a=math.sqrt(5))
+            self.lokr_w2_a[adapter_name].set_data(
+                initializer(
+                    HeUniform(negative_slope=math.sqrt(5)),
+                    self.lokr_w2_a[adapter_name].shape,
+                    self.lokr_w2_a[adapter_name].dtype,
+                )
+            )
+            # nn.init.kaiming_uniform_(self.lokr_w2_b[adapter_name], a=math.sqrt(5))
+            self.lokr_w2_b[adapter_name].set_data(
+                initializer(
+                    HeUniform(negative_slope=math.sqrt(5)),
+                    self.lokr_w2_b[adapter_name].shape,
+                    self.lokr_w2_b[adapter_name].dtype,
+                )
+            )
 
         if adapter_name in self.lokr_t2:
-            #nn.init.kaiming_uniform_(self.lokr_t2[adapter_name], a=math.sqrt(5))
-            self.lokr_t2[adapter_name].set_data(initializer(
-                HeUniform(negative_slope=math.sqrt(5)),
-                self.lokr_t2[adapter_name].shape,
-                self.lokr_t2[adapter_name].dtype
-            ))
+            # nn.init.kaiming_uniform_(self.lokr_t2[adapter_name], a=math.sqrt(5))
+            self.lokr_t2[adapter_name].set_data(
+                initializer(
+                    HeUniform(negative_slope=math.sqrt(5)),
+                    self.lokr_t2[adapter_name].shape,
+                    self.lokr_t2[adapter_name].dtype,
+                )
+            )
+
     def update_layer(
         self,
         adapter_name: str,
@@ -312,7 +341,9 @@ class LoKrLayer(nn.Cell,BaseTunerLayer):
             decompose_factor (`int`): Kronecker product decomposition factor.
         """
         if r <= 0:
-            raise ValueError(f"`r` should be a positive integer value but the value passed is {r}")
+            raise ValueError(
+                f"`r` should be a positive integer value but the value passed is {r}"
+            )
 
         self.r[adapter_name] = r
         self.alpha[adapter_name] = alpha
@@ -327,7 +358,10 @@ class LoKrLayer(nn.Cell,BaseTunerLayer):
 
             in_m, in_n = factorization(in_dim, decompose_factor)
             out_l, out_k = factorization(out_dim, decompose_factor)
-            shape = ((out_l, out_k), (in_m, in_n))  # ((a, b), (c, d)), out_dim = a*c, in_dim = b*d
+            shape = (
+                (out_l, out_k),
+                (in_m, in_n),
+            )  # ((a, b), (c, d)), out_dim = a*c, in_dim = b*d
 
             use_w1 = not (decompose_both and r < max(shape[0][0], shape[1][0]) / 2)
             use_w2 = not (r < max(shape[0][1], shape[1][1]) / 2)
@@ -342,12 +376,19 @@ class LoKrLayer(nn.Cell,BaseTunerLayer):
 
             use_w1 = not (decompose_both and r < max(shape[0][0], shape[1][0]) / 2)
             use_w2 = r >= max(shape[0][1], shape[1][1]) / 2
-            use_effective_conv2d = use_effective_conv2d and base_layer.kernel_size != (1, 1)
+            use_effective_conv2d = use_effective_conv2d and base_layer.kernel_size != (
+                1,
+                1,
+            )
         else:
-            raise TypeError(f"LoKr is not implemented for base layers of type {type(base_layer).__name__}")
+            raise TypeError(
+                f"LoKr is not implemented for base layers of type {type(base_layer).__name__}"
+            )
 
         # Create weights with provided shape
-        self.create_adapter_parameters(adapter_name, r, shape, use_w1, use_w2, use_effective_conv2d)
+        self.create_adapter_parameters(
+            adapter_name, r, shape, use_w1, use_w2, use_effective_conv2d
+        )
 
         # Initialize weights
         if init_weights:
@@ -392,13 +433,15 @@ class LoKrLayer(nn.Cell,BaseTunerLayer):
                 if key in adapter_names:
                     # Note: It is possible that not a single layer is called with requires_grad_(True) here. This may
                     # happen if a completely different adapter layer is being activated.
-                    layer.requires_grad=True
+                    layer.requires_grad = True
                 else:
-                    layer.requires_grad=False
+                    layer.requires_grad = False
 
         self._active_adapter = adapter_names
 
-    def merge(self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None) -> None:
+    def merge(
+        self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None
+    ) -> None:
         """
         Merge the active adapter weights into the base weights
 
@@ -443,8 +486,9 @@ class LoKrLayer(nn.Cell,BaseTunerLayer):
         while len(self.merged_adapters) > 0:
             active_adapter = self.merged_adapters.pop()
             if active_adapter in self._available_adapters:
-                self.get_base_layer().weight.data -= self.get_delta_weight(active_adapter)
-
+                self.get_base_layer().weight.data -= self.get_delta_weight(
+                    active_adapter
+                )
 
     def get_delta_weight(self, adapter_name: str) -> ms.Tensor:
         # https://github.com/KohakuBlueleaf/LyCORIS/blob/e4259b870d3354a9615a96be61cb5d07455c58ea/lycoris/modules/lokr.py#L224
@@ -456,7 +500,11 @@ class LoKrLayer(nn.Cell,BaseTunerLayer):
         if adapter_name in self.lokr_w2:
             w2 = self.lokr_w2[adapter_name]
         elif adapter_name in self.lokr_t2:
-            w2 = make_weight_cp(self.lokr_t2[adapter_name], self.lokr_w2_a[adapter_name], self.lokr_w2_b[adapter_name])
+            w2 = make_weight_cp(
+                self.lokr_t2[adapter_name],
+                self.lokr_w2_a[adapter_name],
+                self.lokr_w2_b[adapter_name],
+            )
         else:
             w2 = self.lokr_w2_a[adapter_name] @ self.lokr_w2_b[adapter_name]
 
@@ -494,11 +542,16 @@ class LoKrLayer(nn.Cell,BaseTunerLayer):
                 module_dropout = self.module_dropout[active_adapter]
 
                 # Modify current execution weights
-                if (not self.training) or (self.training and ops.rand(1) > module_dropout):
-                    result = result + self._get_delta_activations(active_adapter, x, *args, **kwargs)
+                if (not self.training) or (
+                    self.training and ops.rand(1) > module_dropout
+                ):
+                    result = result + self._get_delta_activations(
+                        active_adapter, x, *args, **kwargs
+                    )
 
         result = result.to(previous_dtype)
         return result
+
 
 class Dense(LoKrLayer):
     """LoKr implemented in Dense layer"""
@@ -518,18 +571,23 @@ class Dense(LoKrLayer):
 
         # Create adapter and set it active
         self._active_adapter = adapter_name
-        self.update_layer(adapter_name, r, alpha, rank_dropout, module_dropout, init_weights, **kwargs)
+        self.update_layer(
+            adapter_name, r, alpha, rank_dropout, module_dropout, init_weights, **kwargs
+        )
 
     def _get_delta_activations(
         self, adapter_name: str, input: ms.Tensor, *args: Any, **kwargs: Any
     ) -> ms.Tensor:
-        delta_weight = self.get_delta_weight(adapter_name) #Forced synchronization of parameter types, dangerous operation
+        delta_weight = self.get_delta_weight(
+            adapter_name
+        )  # Forced synchronization of parameter types, dangerous operation
         # don't add bias here, because the bias is already included in the output of the base_layer
         return ops.dense(input, delta_weight)
 
     def __repr__(self) -> str:
         rep = super().__repr__()
         return "lokr." + rep
+
 
 class Conv2d(LoKrLayer):
     """LoKr implemented in Conv2d layer"""
@@ -551,7 +609,14 @@ class Conv2d(LoKrLayer):
         # Create adapter and set it active
         self._active_adapter = adapter_name
         self.update_layer(
-            adapter_name, r, alpha, rank_dropout, module_dropout, init_weights, use_effective_conv2d, **kwargs
+            adapter_name,
+            r,
+            alpha,
+            rank_dropout,
+            module_dropout,
+            init_weights,
+            use_effective_conv2d,
+            **kwargs,
         )
 
     def _get_delta_activations(
@@ -572,6 +637,7 @@ class Conv2d(LoKrLayer):
     def __repr__(self) -> str:
         rep = super().__repr__()
         return "lokr." + rep
+
 
 def factorization(dimension: int, factor: int = -1) -> Tuple[int, int]:
     """Factorizes the provided number into the product of two numbers
@@ -624,6 +690,7 @@ def factorization(dimension: int, factor: int = -1) -> Tuple[int, int]:
         n, m = m, n
     return m, n
 
+
 def make_weight_cp(t, wa, wb):
     rebuild2 = ops.einsum("i j k l, i p, j r -> p r k l", t, wa, wb)  # [c, d, k1, k2]
     return rebuild2
@@ -632,8 +699,7 @@ def make_weight_cp(t, wa, wb):
 def make_kron(w1, w2, scale=1.0):
     if len(w2.shape) == 4:
         w1 = w1.unsqueeze(2).unsqueeze(2)
-    #w2 = w2.contiguous()
+    # w2 = w2.contiguous()
     rebuild = ops.kron(w1, w2)
 
     return rebuild * scale
-

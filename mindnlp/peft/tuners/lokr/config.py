@@ -12,39 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Lora."""
-import math
-import re
-import warnings
-import tqdm
-from dataclasses import asdict, dataclass, field
-from enum import Enum
-from typing import List, Optional, Union,Any, Set, Tuple ,Dict , Type
-from abc import abstractmethod
-from itertools import chain
-
-import mindspore as ms
-from mindspore import nn, ops
-from mindspore.common.initializer import initializer, HeUniform, Zero, Normal
-
-# import mindnlp._legacy.functional as F
-from mindnlp.transformers.ms_utils import Conv1D
-from mindnlp.abc import CellDict,ParameterDict
+"""lokr."""
+from dataclasses import dataclass, field
+from typing import List, Optional, Union
 
 from ...config import PeftConfig
-# from ..import_utils import is_bnb_4bit_available, is_bnb_available
-from ...utils import (
-    # CLAMP_QUANTILE,
-    COMMON_LAYERS_PATTERN,
-    TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING,
-    ModulesToSaveWrapper,
-    PeftType,
-    # _freeze_adapter,
-    _get_submodules,
-    transpose,
-)
-
-from ..tuners_utils import BaseTuner, BaseTunerLayer, check_target_module_exists,check_adapters_to_merge
+from ...utils import PeftType
 
 
 @dataclass
@@ -56,18 +29,21 @@ class LoKrConfig(PeftConfig):
         r (`int`): lokr attention dimension.
         target_modules (`Union[List[str],str]`): The names of the modules to apply Lora to.
         lora_alpha (`float`): The alpha parameter for Lokr scaling.
-        rank_dropout (`float`):The dropout probability for rank dimension during training.(新)
+        rank_dropout (`float`):The dropout probability for rank dimension during training.
         module_dropout (`float`): The dropout probability for LoKR layers.
-        use_effective_conv2d (`bool`):Use parameter effective decomposition for Conv2d with ksize > 1 ("Proposition 3" from FedPara paper).(新)
-        decompose_both (`bool`):Perform rank decomposition of left kronecker product matrix.(新)
-        decompose_factor (`int`):Kronecker product decomposition factor.（新）
+        use_effective_conv2d (`bool`):
+            Use parameter effective decomposition for
+            Conv2d with ksize > 1 ("Proposition 3" from FedPara paper).
+        decompose_both (`bool`):Perform rank decomposition of left kronecker product matrix.
+        decompose_factor (`int`):Kronecker product decomposition factor.
 
         bias (`str`): Bias type for Lora. Can be 'none', 'all' or 'lora_only'
-        modules_to_save (`List[str]`):List of modules apart from LoRA layers to be set as trainable
+        modules_to_save (`List[str]`):
+            List of modules apart from LoRA layers to be set as trainable
             and saved in the final checkpoint.
         init_weights (`bool`):
-            Whether to perform initialization of adapter weights. This defaults to `True`, passing `False` is
-            discouraged.
+            Whether to perform initialization of adapter weights. This defaults to `True`, 
+            passing `False` is discouraged.
         layers_to_transform (`Union[List[int],int]`):
             The layer indexes to transform, if this argument is specified, it will apply the LoRA transformations on
             the layer indexes that are specified in this list. If a single integer is passed, it will apply the LoRA
@@ -91,8 +67,11 @@ class LoKrConfig(PeftConfig):
             "For example, ['q', 'v'] or '.*decoder.*(SelfAttention|EncDecAttention).*(q|v)$' "
         },
     )
-    lora_alpha: int = field(default=8, metadata={"help": "lokr alpha"})    
-    rank_dropout: float = field(default=0.0, metadata={"help": "The dropout probability for rank dimension during training"})
+    lora_alpha: int = field(default=8, metadata={"help": "lokr alpha"})
+    rank_dropout: float = field(
+        default=0.0,
+        metadata={"help": "The dropout probability for rank dimension during training"},
+    )
     module_dropout: float = field(default=0.0, metadata={"help": "lokr dropout"})
     use_effective_conv2d: bool = field(
         default=False,
@@ -102,11 +81,18 @@ class LoKrConfig(PeftConfig):
     )
     decompose_both: bool = field(
         default=False,
-        metadata={"help": "Perform rank decomposition of left kronecker product matrix."},
+        metadata={
+            "help": "Perform rank decomposition of left kronecker product matrix."
+        },
     )
-    decompose_factor: int = field(default=-1, metadata={"help": "Kronecker product decomposition factor."})
+    decompose_factor: int = field(
+        default=-1, metadata={"help": "Kronecker product decomposition factor."}
+    )
 
-    bias: str = field(default="none", metadata={"help": "Bias type for Lora. Can be 'none', 'all' or 'lora_only'"})
+    bias: str = field(
+        default="none",
+        metadata={"help": "Bias type for Lora. Can be 'none', 'all' or 'lora_only'"},
+    )
     modules_to_save: Optional[List[str]] = field(
         default=None,
         metadata={
@@ -153,7 +139,6 @@ class LoKrConfig(PeftConfig):
         },
     )
 
-
     def __post_init__(self):
         self.peft_type = PeftType.LOKR
 
@@ -163,4 +148,3 @@ class LoKrConfig(PeftConfig):
         Utility method to check if the configuration is for prompt learning.
         """
         return False
-    

@@ -12,41 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Lora."""
-import math
+"""Lokr."""
 import re
-import warnings
-import tqdm
-from dataclasses import asdict, dataclass, field
-from enum import Enum
-from typing import List, Optional, Union,Any, Set, Tuple ,Dict , Type
-from abc import abstractmethod
+from typing import Optional, Union, Dict, Type
 from itertools import chain
+from tqdm import tqdm
 
-import mindspore as ms
-from mindspore import nn, ops
-from mindspore.common.initializer import initializer, HeUniform, Zero, Normal
+from mindspore import nn
 
-# import mindnlp._legacy.functional as F
-from mindnlp.transformers.ms_utils import Conv1D
-from mindnlp.abc import CellDict,ParameterDict
-
-from ...config import PeftConfig
-# from ..import_utils import is_bnb_4bit_available, is_bnb_available
 from ...utils import (
-    # CLAMP_QUANTILE,
-    COMMON_LAYERS_PATTERN,
-    TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING,
     ModulesToSaveWrapper,
-    PeftType,
-    # _freeze_adapter,
     _get_submodules,
-    transpose,
 )
 
-from ..tuners_utils import BaseTuner, BaseTunerLayer, check_target_module_exists,check_adapters_to_merge
+from ..tuners_utils import (
+    BaseTuner,
+    BaseTunerLayer,
+    check_target_module_exists,
+)
 from .layer import Conv2d, Dense, LoKrLayer
 from .config import LoKrConfig
+
 
 class LoKrModel(BaseTuner):
     """
@@ -119,16 +105,21 @@ class LoKrModel(BaseTuner):
         target_name: str,
         parent: nn.Cell,
         current_key: str,
-        loaded_in_8bit: Optional[bool] = False,  
-        loaded_in_4bit: Optional[bool] = False,  
+        loaded_in_8bit: Optional[bool] = False,
+        loaded_in_4bit: Optional[bool] = False,
     ) -> None:
         """
         A private method to create and replace the target module with the adapter module.
         """
 
         # Regexp matching - Find key which matches current target_name in patterns provided
-        pattern_keys = list(chain(config.rank_pattern.keys(), config.alpha_pattern.keys()))
-        target_name_key = next(filter(lambda key: re.match(rf"(.*\.)?{key}$", current_key), pattern_keys), target_name)
+        pattern_keys = list(
+            chain(config.rank_pattern.keys(), config.alpha_pattern.keys())
+        )
+        target_name_key = next(
+            filter(lambda key: re.match(rf"(.*\.)?{key}$", current_key), pattern_keys),
+            target_name,
+        )
 
         kwargs = config.to_dict()
         kwargs["r"] = config.rank_pattern.get(target_name_key, config.r)
@@ -141,7 +132,9 @@ class LoKrModel(BaseTuner):
             self._replace_module(parent, target_name, new_module, target)
 
     @classmethod
-    def _create_new_module(cls, config: LoKrConfig, adapter_name: str, target: nn.Cell, **kwargs) -> LoKrLayer:
+    def _create_new_module(
+        cls, config: LoKrConfig, adapter_name: str, target: nn.Cell, **kwargs
+    ) -> LoKrLayer:
         # Find corresponding subtype of provided target module
         new_module_cls = None
         for subtype, target_cls in cls.layers_mapping.items():
@@ -159,7 +152,9 @@ class LoKrModel(BaseTuner):
 
         # We didn't find corresponding type, so adapter for this layer is not supported
         if new_module_cls is None:
-            supported_modules = ", ".join(layer.__name__ for layer in cls.layers_mapping.keys())
+            supported_modules = ", ".join(
+                layer.__name__ for layer in cls.layers_mapping.keys()
+            )
             raise ValueError(
                 f"Target module of type {type(target)} not supported, "
                 f"currently only adapters for {supported_modules} are supported"
@@ -175,7 +170,9 @@ class LoKrModel(BaseTuner):
         elif isinstance(target_base_layer, nn.Cell):
             new_module = new_module_cls(target, adapter_name=adapter_name, **kwargs)
         else:
-            supported_modules = ", ".join(layer.__name__ for layer in cls.layers_mapping.keys())
+            supported_modules = ", ".join(
+                layer.__name__ for layer in cls.layers_mapping.keys()
+            )
             raise ValueError(
                 f"Target module of type {type(target)} not supported, "
                 f"currently only adapters for {supported_modules} are supported"
@@ -189,7 +186,7 @@ class LoKrModel(BaseTuner):
             return super().__getattr__(name)  # defer to nn.Module's logic
         except AttributeError:
             return getattr(self.model, name)
-        
+
     def _replace_module(self, parent, child_name, new_module, child):
         setattr(parent, child_name, new_module)
 
@@ -213,7 +210,7 @@ class LoKrModel(BaseTuner):
         for n, p in model.parameters_and_names():
             if self.prefix not in n:
                 p.requires_grad = False
-        
+
     def _set_adapter_layers(self, enabled=True):
         for module in self.model.modules():
             if isinstance(module, (BaseTunerLayer, ModulesToSaveWrapper)):
@@ -228,10 +225,14 @@ class LoKrModel(BaseTuner):
     ):
         if merge:
             if getattr(self.model, "quantization_method", None) == "gptq":
-                raise ValueError("Cannot merge LOHA layers when the model is gptq quantized")
+                raise ValueError(
+                    "Cannot merge LOHA layers when the model is gptq quantized"
+                )
 
         self._unloading_checks(adapter_names)
-        key_list = [key for key, _ in self.model.named_modules() if self.prefix not in key]
+        key_list = [
+            key for key, _ in self.model.named_modules() if self.prefix not in key
+        ]
         desc = "Unloading " + ("and merging " if merge else "") + "model"
         for key in tqdm(key_list, disable=not progressbar, desc=desc):
             try:
@@ -242,14 +243,18 @@ class LoKrModel(BaseTuner):
             if hasattr(target, "base_layer"):
                 if merge:
                     target.merge(safe_merge=safe_merge, adapter_names=adapter_names)
-                self._replace_module(parent, target_name, target.get_base_layer(), target)
+                self._replace_module(
+                    parent, target_name, target.get_base_layer(), target
+                )
             elif isinstance(target, ModulesToSaveWrapper):
                 # save any additional trainable modules part of `modules_to_save`
                 new_module = target.modules_to_save[target.active_adapter]
                 if hasattr(new_module, "base_layer"):
                     # check if the module is itself a tuner layer
                     if merge:
-                        new_module.merge(safe_merge=safe_merge, adapter_names=adapter_names)
+                        new_module.merge(
+                            safe_merge=safe_merge, adapter_names=adapter_names
+                        )
                     new_module = new_module.get_base_layer()
                 setattr(parent, target_name, new_module)
 
@@ -258,10 +263,13 @@ class LoKrModel(BaseTuner):
     def _unloading_checks(self, adapter_names: Optional[list[str]]):
         adapters_to_consider = adapter_names or self.active_adapters
         is_modules_to_save_available = any(
-            self.peft_config[adapter].modules_to_save for adapter in adapters_to_consider
+            self.peft_config[adapter].modules_to_save
+            for adapter in adapters_to_consider
         )
         if is_modules_to_save_available and len(adapters_to_consider) > 1:
-            raise ValueError("Cannot unload multiple adapters that specify `modules_to_save`.")
+            raise ValueError(
+                "Cannot unload multiple adapters that specify `modules_to_save`."
+            )
 
     @staticmethod
     def _prepare_adapter_config(peft_config, model_config):
