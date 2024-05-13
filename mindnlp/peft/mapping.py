@@ -35,6 +35,8 @@ from .tuners import (
     AdaptionPromptConfig,
     IA3Config,
     IA3Model,
+    LoKrConfig,
+    LoKrModel,
 )
 
 MODEL_TYPE_TO_PEFT_MODEL_MAPPING = {
@@ -56,12 +58,14 @@ PEFT_TYPE_TO_CONFIG_MAPPING = {
     "LORA": LoraConfig,
     "ADALORA": AdaLoraConfig,
     "IA3": IA3Config,
+    "LOKR":LoKrConfig,
 }
 
 PEFT_TYPE_TO_TUNER_MAPPING = {
     "LORA": LoraModel,
     "ADALORA": AdaLoraModel,
     "IA3": IA3Model,
+    "LOKR":LoKrModel,
 }
 
 

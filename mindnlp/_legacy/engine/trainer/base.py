@@ -25,7 +25,7 @@ from mindspore.context import K_CONTEXT
 from mindspore.dataset.engine import Dataset, TakeDataset
 
 from mindnlp.injection import set_global_fp16
-from mindnlp.abc import Callback, Metric
+from mindnlp._legacy.abc import Callback, Metric
 from mindnlp.transformers.configuration_utils import PretrainedConfig
 from mindnlp.utils import logging
 from ..callbacks.callback_manager import CallbackManager, RunContext

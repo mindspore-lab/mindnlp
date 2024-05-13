@@ -17,7 +17,7 @@
 import math
 import numpy as np
 from mindspore import Tensor
-from mindnlp.abc import Metric
+from mindnlp._legacy.abc import Metric
 from .utils import _check_value_type, _convert_data_type, _check_onehot_data
 
 

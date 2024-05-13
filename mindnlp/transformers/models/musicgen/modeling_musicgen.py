@@ -1069,7 +1069,7 @@ class MusicgenForCausalLM(MusicgenPreTrainedModel):
         )
 
         if streamer is not None:
-            streamer.put(input_ids.cpu())
+            streamer.put(input_ids)
 
         # stash the delay mask so that we don't have to recompute it in each forward pass
         model_kwargs["delay_pattern_mask"] = delay_pattern_mask
@@ -2124,7 +2124,7 @@ class MusicgenForConditionalGeneration(PreTrainedModel):
 
         # input_ids are ready to be placed on the streamer (if used)
         if streamer is not None:
-            streamer.put(input_ids.asnumpy())
+            streamer.put(input_ids)
 
         # 7. determine generation mode
         is_greedy_gen_mode = (

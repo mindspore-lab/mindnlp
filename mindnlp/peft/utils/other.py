@@ -21,7 +21,7 @@ from mindspore import nn, ops, Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp._legacy.nn import Matmul
-from mindnlp.abc import CellDict
+from mindnlp._legacy.abc import CellDict
 
 def _get_batch_size(input_ids: Optional[Tensor], inputs_embeds: Optional[Tensor]) -> int:
     """Get the batch size based on either input_ids or input_embeds

@@ -174,12 +174,11 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None,
 
         # get downloaded size
         tmp_file_path = file_path + "_tmp"
-        if os.path.exists(tmp_file_path):
+        if os.path.exists(tmp_file_path) and retry_cnt != 0:
             file_size = os.path.getsize(tmp_file_path)
             headers['Range'] = f'bytes={file_size}-'
         else:
             file_size = 0
-
         req = requests.get(url, stream=True, timeout=10, proxies=proxies, headers=headers)
 
         status = req.status_code
@@ -190,21 +189,16 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None,
         if status == 429:
             raise HTTPError('Too many requests.')
         try:
-            total_size = req.headers.get("content-length")
+            total_size = int(req.headers.get('content-length', 0)) + file_size
             with open(tmp_file_path, "ab") as file:
-                if total_size:
-                    with tqdm(
-                        total=int(total_size), unit="B", initial=file_size, unit_scale=True, unit_divisor=1024
-                    ) as pbar:
-                        for chunk in req.iter_content(chunk_size=1024):
-                            file.write(chunk)
-                            pbar.update(len(chunk))
-                else:
-                    pbar = tqdm(total=total_size, unit='B', initial=file_size, unit_scale=True, unit_divisor=1024)
+                with tqdm(
+                    total=int(total_size), unit="B", initial=file_size, unit_scale=True, unit_divisor=1024
+                ) as pbar:
                     for chunk in req.iter_content(chunk_size=1024):
                         if chunk:
-                            pbar.update(len(chunk))
                             file.write(chunk)
+                            pbar.update(len(chunk))
+
             shutil.move(tmp_file_path, file_path)
         except requests.exceptions.RequestException as e:
             if retry_cnt > retry_limit:

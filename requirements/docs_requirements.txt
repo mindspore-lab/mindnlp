@@ -1,29 +1,6 @@
-sphinx == 5.1.1
-recommonmark
-sphinx-markdown-tables
-sphinx_rtd_theme
-IPython
-requests
-tqdm
-ddt
-datasets
-sentencepiece
-regex
-parameterized
-jinja2
-sacremoses
-librosa
-soundfile
-tokenizers
-addict
-safetensors
-ml_dtypes
-cython
-jieba
-pretty_midi
-scipy
-pyctcdecode
-pytesseract
-gensim
-git+https://github.com/mindspore-lab/mindnlp
-https://hf-mirror.com/lvyufeng/mindspore-daily/resolve/main/mindspore-newest-cp37-cp37m-linux_x86_64.whl
+-r ./requirements.txt
+mkdocs>=1.5.2
+mkdocs-material>=9.2.6
+mkdocstrings[python]>=0.22.0
+mkdocs-static-i18n>=1.0.2
+mkdocs-include-markdown-plugin>=6.0.1

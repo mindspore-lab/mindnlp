@@ -94,9 +94,11 @@ from . import (
     musicgen_melody,
     nezha,
     olmo,
+    openelm,
     opt,
     pegasus,
     phi,
+    phi3,
     pop2piano,
     qwen2,
     qwen2_moe,
@@ -199,9 +201,11 @@ from .musicgen import *
 from .musicgen_melody import *
 from .nezha import *
 from .olmo import *
+from .openelm import *
 from .opt import *
 from .pegasus import *
 from .phi import *
+from .phi3 import *
 from .pop2piano import *
 from .qwen2 import *
 from .qwen2_moe import *
@@ -304,9 +308,11 @@ __all__.extend(musicgen.__all__)
 __all__.extend(musicgen_melody.__all__)
 __all__.extend(nezha.__all__)
 __all__.extend(olmo.__all__)
+__all__.extend(openelm.__all__)
 __all__.extend(opt.__all__)
 __all__.extend(pegasus.__all__)
 __all__.extend(phi.__all__)
+__all__.extend(phi3.__all__)
 __all__.extend(pop2piano.__all__)
 __all__.extend(qwen2.__all__)
 __all__.extend(qwen2_moe.__all__)

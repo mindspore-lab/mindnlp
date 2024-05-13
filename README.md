@@ -18,9 +18,6 @@
     </a>
 </p>
 
-[Installation](#installation) |
-[Introduction](#introduction) |
-[Quick Links](#quick-links) |
 
 ### News 📢
 
@@ -28,9 +25,9 @@
 
   * 🤗 Hugging *huggingface* ecosystem, we use **datasets** lib as default dataset loader to support
   mounts of useful datasets.
-  * 📝 MindNLP supports NLP tasks such as *language model*, *machine translation*, *question answering*, *sentiment analysis*, *sequence labeling*, *summarization*, etc. You can access them through [examples](./examples/).
-  * 🚀 MindNLP currently supports industry-leading Large Language Models (LLMs), including **Llama**, **GLM**, **RWKV**, etc. For support related to large language models, including ***pre-training***, ***fine-tuning***, and **inference** demo examples, you can find them in the ["llm" directory](./llm/).
-  * 🤗 Pretrained models support ***huggingface transformers-like apis***, including **60+** models like **[BERT](./mindnlp/transformers/models/bert)**, **[Roberta](./mindnlp/transformers/models/roberta)**, **[GPT2](./mindnlp/transformers/models/gpt2)**, **[T5](./mindnlp/transformers/models/t5)**, etc.
+  * 📝 MindNLP supports NLP tasks such as *language model*, *machine translation*, *question answering*, *sentiment analysis*, *sequence labeling*, *summarization*, etc. You can access them through [examples](https://github.com/mindspore-lab/mindnlp/examples/).
+  * 🚀 MindNLP currently supports industry-leading Large Language Models (LLMs), including **Llama**, **GLM**, **RWKV**, etc. For support related to large language models, including ***pre-training***, ***fine-tuning***, and **inference** demo examples, you can find them in the ["llm" directory](https://github.com/mindspore-lab/mindnlp/llm/).
+  * 🤗 Pretrained models support ***huggingface transformers-like apis***, including **60+** models like **[BERT](https://github.com/mindspore-lab/mindnlp/mindnlp/transformers/models/bert)**, **[Roberta](https://github.com/mindspore-lab/mindnlp/mindnlp/transformers/models/roberta)**, **[GPT2](https://github.com/mindspore-lab/mindnlp/mindnlp/transformers/models/gpt2)**, **[T5](https://github.com/mindspore-lab/mindnlp/mindnlp/transformers/models/t5)**, etc.
     You can use them easily by following code snippet:
     ```python
     from mindnlp.transformers import AutoModel
@@ -84,18 +81,10 @@ The master branch works with **MindSpore master**.
 - **Friendly NLP model toolset**: MindNLP provides various configurable components. It is friendly to customize models using MindNLP.
 - **Easy-to-use engine**: MindNLP simplified complicated training process in MindSpore. It supports Trainer and Evaluator interfaces to train and evaluate models easily.
 
-### Quick Links
-
-- [Documentation](https://mindnlp.cqu.ai/en/latest/)
-- [Tutorials](./tutorials/)
-- [Examples](./examples)
-- [LLMs](./llm)
-- ...
-
 
 ### Supported models
 
-Since there are too many supported models, please check [here](./SUPPORT_MODEL.md)
+Since there are too many supported models, please check [here](https://mindnlp.cqu.ai/supported_models)
 
 <!-- ## Tutorials
 
@@ -124,7 +113,7 @@ If you find this project useful in your research, please consider citing:
 
 ```latex
 @misc{mindnlp2022,
-    title={{MindNLP}: a MindSpore NLP library},
+    title={{MindNLP}: Easy-to-use and high-performance NLP and LLM framework based on MindSpore},
     author={MindNLP Contributors},
     howpublished = {\url{https://github.com/mindlab-ai/mindnlp}},
     year={2022}

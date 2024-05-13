@@ -85,6 +85,8 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
         to_return = {k: state_dict[k] for k in state_dict if k.split(".")[-1].startswith("adaption_")}
     elif config.peft_type == PeftType.IA3:
         to_return = {k: state_dict[k] for k in state_dict if "ia3_" in k}
+    elif config.peft_type == PeftType.LOKR:
+        to_return = {k: state_dict[k] for k in state_dict if "lokr_" in k}
     else:
         raise NotImplementedError
 
@@ -123,12 +125,14 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
         PeftType.LORA,
         PeftType.IA3,
         PeftType.ADALORA,
+        PeftType.LOKR
     ):
         peft_model_state_dict = {}
         parameter_prefix = {
             PeftType.IA3: "ia3_",
             PeftType.LORA: "lora_",
             PeftType.ADALORA: "lora_",
+            PeftType.LOKR:"lokr_"
         }[config.peft_type]
         for k, v in state_dict.items():
             if parameter_prefix in k:

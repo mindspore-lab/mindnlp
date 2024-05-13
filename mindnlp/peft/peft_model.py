@@ -31,6 +31,7 @@ from .tuners import (
     AdaptionPromptModel,
     LoraModel,
     IA3Model,
+    LoKrModel
     # LoraConfig
 )
 from .utils import (
@@ -58,6 +59,7 @@ PEFT_TYPE_TO_MODEL_MAPPING = {
     PeftType.ADAPTION_PROMPT: AdaptionPromptModel,
     PeftType.IA3: IA3Model,
     PeftType.ADALORA: AdaLoraModel,
+    PeftType.LOKR: LoKrModel
 }
 class PeftModel(nn.Cell):
     """
