@@ -16,7 +16,7 @@
 
 from mindspore import nn
 from mindspore import ops
-from mindnlp.abc import EncoderBase
+from mindnlp._legacy.abc import EncoderBase
 
 class CNNEncoder(EncoderBase):
     r"""

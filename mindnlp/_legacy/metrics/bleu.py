@@ -18,7 +18,7 @@
 from collections import Counter
 import numpy as np
 
-from mindnlp.abc import Metric
+from mindnlp._legacy.abc import Metric
 from .utils import _check_value_type
 
 class BleuScore(Metric):
