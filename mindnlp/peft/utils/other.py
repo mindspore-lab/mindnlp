@@ -21,7 +21,6 @@ from mindspore import nn, ops, Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp._legacy.nn import Matmul
-from mindnlp._legacy.abc import CellDict
 
 def _get_batch_size(input_ids: Optional[Tensor], inputs_embeds: Optional[Tensor]) -> int:
     """Get the batch size based on either input_ids or input_embeds
@@ -45,7 +44,7 @@ class ModulesToSaveWrapper(mindspore.nn.Cell):
     def __init__(self, module_to_save, adapter_name):
         super().__init__()
         self.original_module = module_to_save
-        self.modules_to_save = CellDict()
+        self.modules_to_save = nn.CellDict()
         self.update(adapter_name)
         self.active_adapter = adapter_name
         self.disable_adapters = False
@@ -127,7 +126,6 @@ def _set_trainable(model, adapter_name):
             parent, target, target_name = _get_submodules(model, key)
 
             if isinstance(target, ModulesToSaveWrapper):
-                # 判断是否是此数据类型
                 target.update(adapter_name)
             else:
                 for _, param in target.parameters_and_names():
@@ -142,6 +140,9 @@ def _set_trainable(model, adapter_name):
                 if isinstance(parent, nn.SequentialCell):
                     parent.cell_list = list(parent._cells.values())
 
+    for n, p in model.parameters_and_names():
+        if n != p.name:
+            p.name = n
 
 
 def _freeze_adapter(model, adapter_name):
@@ -250,113 +251,3 @@ class Conv1D(mindspore.nn.Cell):
         x = self.matmul(x.view(-1, x.shape[-1]), self.weight) + self.bias
         x = x.view(size_out)
         return x
-
-
-# Target_modules mapping (model -> qkv), which is highly related to **Mindnlp model** implementation.
-# lora
-TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING = {
-    "t5": ["q", "v"],
-    # "mt5": ["q", "v"],
-    "bart": ["q_proj", "v_proj"],
-    "gpt2": ["c_attn"],
-    "bloom": ["query_key_value"],
-    # "blip-2": ["q", "v", "q_proj", "v_proj"],
-    "opt": ["q_proj", "v_proj"],
-    # "gptj": ["q_proj", "v_proj"],
-    # "gpt_neox": ["query_key_value"],
-    "gpt_neo": ["q_proj", "v_proj"],
-    "bert": ["query", "value"],
-    "roberta": ["query", "value"],
-    # "xlm-roberta": ["query", "value"],
-    # "electra": ["query", "value"],
-    # "deberta-v2": ["query_proj", "value_proj"],
-    "deberta": ["in_proj"],
-    # "layoutlm": ["query", "value"],
-    "llama": ["q_proj", "v_proj"],
-    "chatglm": ["query_key_value"],
-    # "gpt_bigcode": ["c_attn"],
-    # "mpt": ["Wqkv"],
-    # "RefinedWebModel": ["query_key_value"],
-    # "RefinedWeb": ["query_key_value"],
-    "falcon": ["query_key_value"],
-    # "btlm": ["c_proj", "c_attn"],
-    # "codegen": ["qkv_proj"],
-}
-
-TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING = {
-    "t5": ["k", "v", "wo"],
-    "mt5": ["k", "v", "wi_1"],
-    "gpt2": ["c_attn", "mlp.c_proj"],
-    "bloom": ["query_key_value", "mlp.dense_4h_to_h"],
-    "roberta": ["key", "value", "output.dense"],
-    "opt": ["q_proj", "k_proj", "fc2"],
-    "gptj": ["q_proj", "v_proj", "fc_out"],
-    "gpt_neox": ["query_key_value", "dense_4h_to_h"],
-    "gpt_neo": ["q_proj", "v_proj", "c_proj"],
-    "bart": ["q_proj", "v_proj", "fc2"],
-    "gpt_bigcode": ["c_attn", "mlp.c_proj"],
-    "llama": ["k_proj", "v_proj", "down_proj"],
-    "mistral": ["k_proj", "v_proj", "down_proj"],
-    "mixtral": ["k_proj", "v_proj", "w2"],
-    "bert": ["key", "value", "output.dense"],
-    "deberta-v2": ["key_proj", "value_proj", "output.dense"],
-    "deberta": ["in_proj", "output.dense"],
-    "RefinedWebModel": ["query_key_value", "dense_4h_to_h"],
-    "RefinedWeb": ["query_key_value", "dense_4h_to_h"],
-    "falcon": ["query_key_value", "dense_4h_to_h"],
-    "phi": ["q_proj", "v_proj", "fc2"],
-    "gemma": ["q_proj", "v_proj", "down_proj"],
-}
-
-TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING = {
-    "t5": ["wo"],
-    "mt5": [],
-    "gpt2": ["mlp.c_proj"],
-    "bloom": ["mlp.dense_4h_to_h"],
-    "roberta": ["output.dense"],
-    "opt": ["fc2"],
-    "gptj": ["fc_out"],
-    "gpt_neox": ["dense_4h_to_h"],
-    "gpt_neo": ["c_proj"],
-    "bart": ["fc2"],
-    "gpt_bigcode": ["mlp.c_proj"],
-    "llama": ["down_proj"],
-    "mistral": ["down_proj"],
-    "mixtral": ["w2"],
-    "bert": ["output.dense"],
-    "deberta-v2": ["output.dense"],
-    "deberta": ["output.dense"],
-    "RefinedWeb": ["dense_4h_to_h"],
-    "RefinedWebModel": ["dense_4h_to_h"],
-    "falcon": ["dense_4h_to_h"],
-    "phi": ["fc2"],
-    "gemma": ["down_proj"],
-}
-COMMON_LAYERS_PATTERN = ["layers", "h", "block", "blocks", "layer"]
-TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING = {
-    "t5": ["q", "k", "v", "o", "wi", "wo"],
-    # "mt5": ["q", "k", "v", "o", "wi_0", "wi_1", "wo"],
-    "bart": ["q_proj", "k_proj", "v_proj", "out_proj", "fc1", "fc2"],
-    "gpt2": ["c_attn"],
-    "bloom": ["query_key_value"],
-    "opt": ["q_proj", "k_proj", "v_proj", "out_proj", "fc1", "fc2"],
-    # "gptj": ["q_proj", "v_proj"],
-    # "gpt_neox": ["query_key_value"],
-    "gpt_neo": ["q_proj", "v_proj"],
-    "llama": ["q_proj", "v_proj"],
-    "bert": ["query", "value"],
-    "roberta": ["query", "key", "value", "dense"],
-    # "xlm-roberta": ["query", "value"],
-    # "electra": ["query", "value"],
-    "deberta-v2": ["query_proj", "key_proj", "value_proj", "dense"],
-    "gpt_bigcode": ["c_attn"],
-    "deberta": ["in_proj"],
-    # "layoutlm": ["query", "value"],
-    "falcon": ["query_key_value"],
-}
-
-
-WEIGHTS_NAME = "adapter_model.ckpt"
-CONFIG_NAME = "adapter_config.json"
-
-CLAMP_QUANTILE = 0.99

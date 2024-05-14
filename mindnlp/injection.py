@@ -17,7 +17,7 @@
 Injection mindspore.nn for MindNLP
 """
 import operator
-from typing import OrderedDict
+from typing import OrderedDict, List
 from functools import reduce, partial
 import math
 import types
@@ -25,18 +25,19 @@ from uuid import uuid4
 import mindspore.experimental
 import mindspore.experimental.optim
 from packaging import version
-
 import numpy as np
 import mindspore
 import mindspore.common.dtype as mstype
 from mindspore._c_expression import Tensor as Tensor_
-from mindspore import nn, ops, Tensor, Parameter
+from mindspore import nn, ops, Tensor, Parameter, ParameterTuple
 from mindspore.common._stub_tensor import StubTensor
 from mindspore.nn.layer.conv import _Conv, _deconv_output_length
 from mindspore.common.initializer import initializer, Normal, HeUniform, Uniform, _calculate_fan_in_and_fan_out
 from mindspore import _checkparam as Validator
 from mindspore.ops import functional as F
 from mindspore.ops._primitive_cache import _get_cache_prim
+from mindspore.common.parameter import PARAMETER_NAME_DEFAULT
+
 from mindnlp._legacy.functional import einsum
 from .utils.logging import get_logger
 from .amp import OP_WHITE_LIST, OP_BLACK_LIST, CELL_WHITE_LIST, get_global_amp
@@ -1201,3 +1202,87 @@ def _cell_call(self, *args, **kwargs):
     return old_cell_call(self, *args, **kwargs)
 
 nn.Cell.__call__ = old_cell_call
+
+def get_cell(self, target):
+    if target == "":
+        return self
+
+    atoms: List[str] = target.split(".")
+    mod: nn.Cell = self
+
+    for item in atoms:
+
+        if not hasattr(mod, item):
+            raise AttributeError(mod._get_name() + " has no "
+                                "attribute `" + item + "`")
+
+        mod = getattr(mod, item)
+
+        if not isinstance(mod, nn.Cell):
+            raise AttributeError("`" + item + "` is not "
+                                "an nn.Cell")
+
+    return mod
+
+nn.Cell.get_cell = get_cell
+
+def _set_attr_for_parameter_in_list_or_tuple(self, name, value):
+    """Set attr for parameter in list or tuple."""
+    for item in value:
+        if item in self.exist_objs:
+            # If there are multiple identical objects, their names only check once.
+            continue
+        self.exist_objs.add(item)
+        if item.name == PARAMETER_NAME_DEFAULT:
+            item.name = item.name + "$" + str(self._id)
+            self._id += 1
+    object.__setattr__(self, name, value)
+
+nn.Cell._set_attr_for_parameter_in_list_or_tuple = _set_attr_for_parameter_in_list_or_tuple
+
+def _set_attr_for_parameter_tuple(self, name, value):
+    """Set attr for parameter in ParameterTuple."""
+    params = self.__dict__.get('_params')
+    params_list = self.__dict__.get('_params_list')
+    if params is None:
+        raise AttributeError("For 'Cell', can not assign params before Cell.__init__() is called.")
+    exist_objs = set()
+    for item in value:
+        if item in exist_objs:
+            # If there are multiple identical objects, their names only check once.
+            continue
+        exist_objs.add(item)
+        if item.name == PARAMETER_NAME_DEFAULT:
+            logger.warning(f"For 'Cell', the parameter definition is deprecated.\n"
+                           f"Please set a unique name for the parameter in ParameterTuple '{value}'.")
+            item.name = item.name + "$" + str(self._id)
+            self._id += 1
+        self.insert_param_to_cell(item.name, item, check_name_contain_dot=False)
+
+    if name in self.__dict__:
+        del self.__dict__[name]
+    if name in params:
+        del params[name]
+    params_list[name] = value
+
+nn.Cell._set_attr_for_parameter_tuple = _set_attr_for_parameter_tuple
+
+def _check_names(self):
+    pass
+
+nn.Cell.check_names = _check_names
+
+def __new__(cls, iterable):
+    """Create instance object of ParameterTuple."""
+    data = tuple(iterable)
+    ids = set()
+    for x in data:
+        if not isinstance(x, Parameter):
+            raise TypeError(f"For ParameterTuple initialization, "
+                            f"ParameterTuple input should be 'Parameter' collection, "
+                            f"but got a {type(iterable)}. ")
+        if id(x) not in ids:
+            ids.add(id(x))
+    return tuple.__new__(ParameterTuple, tuple(data))
+
+ParameterTuple.__new__ = __new__
