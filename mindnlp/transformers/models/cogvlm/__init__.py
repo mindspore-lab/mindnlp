@@ -28,4 +28,3 @@ __all__ = []
 __all__.extend(configuration_cogvlm.__all__)
 __all__.extend(modeling_cogvlm.__all__)
 __all__.extend(visual.__all__)
-

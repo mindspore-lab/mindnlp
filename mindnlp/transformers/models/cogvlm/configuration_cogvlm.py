@@ -1,3 +1,7 @@
+"""
+configuration
+"""
+
 from typing import Literal
 from ...configuration_utils import PretrainedConfig
 
@@ -12,13 +16,11 @@ class CogVLMConfig(PretrainedConfig):
             intermediate_size=11008,
             num_hidden_layers=32,
             num_attention_heads=32,
-            
             hidden_act='silu',
             max_position_embeddings=2048,
             initializer_range=0.02,
             rms_norm_eps=1e-06,
             template_version: Literal["base", "chat"] = "chat",
-
             pad_token_id=0,
             bos_token_id=1,
             eos_token_id=2,
@@ -49,7 +51,7 @@ class CogVLMConfig(PretrainedConfig):
             "num_hidden_layers": 63,
             "num_positions": 1226,
             "patch_size": 14
-        },
+        }
         super().__init__(
             pad_token_id=pad_token_id,
             bos_token_id=bos_token_id,

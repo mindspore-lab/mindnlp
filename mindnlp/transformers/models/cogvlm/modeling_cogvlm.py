@@ -5,9 +5,10 @@ from typing import TYPE_CHECKING, Optional, Tuple, List, Union, Literal, Dict, A
 import math
 import numpy as np
 import mindspore
-from mindspore import ops, nn, Parameter, Tensor
+from mindspore import ops, nn, Tensor
 from mindspore.common.initializer import initializer, Normal
 from mindspore.dataset import transforms,vision
+from mindnlp.modules.functional import finfo
 from ...modeling_utils import PreTrainedModel
 from ...tokenization_utils import PreTrainedTokenizer
 from ...activations import ACT2FN
@@ -15,8 +16,6 @@ from ...modeling_outputs import BaseModelOutputWithPast,CausalLMOutputWithPast
 
 from .configuration_cogvlm import CogVLMConfig
 from .visual import EVA2CLIPModel
-from mindnlp.modules.functional import finfo
-import os
 if TYPE_CHECKING:
     from mindnlp.utils import ModelOutput
 
@@ -231,7 +230,6 @@ class VisionExpertAttention(nn.Cell):
             output_attentions: bool = False,
             use_cache: bool = False,
     ) -> Tuple[mindspore.Tensor, Optional[mindspore.Tensor], Optional[Tuple[mindspore.Tensor]]]:
-        
         bsz, q_len, _ = hidden_states.shape
         vision_token_mask, language_token_mask = get_expert_mask(token_type_ids)
 
@@ -253,7 +251,7 @@ class VisionExpertAttention(nn.Cell):
             kv_seq_len += past_key_value[0].shape[-2]
         cos, sin = self.rotary_emb(value_states, seq_len=position_ids.max() + 1)
 
-        [i.asnumpy() for i in [mixed_raw_layer,query_states, key_states, value_states,cos, sin]]
+        tmp = [i.asnumpy() for i in [mixed_raw_layer,query_states, key_states, value_states,cos, sin]]
 
         query_states, key_states = apply_rotary_pos_emb_index_bhs(query_states, key_states, cos, sin, position_ids)
         if past_key_value is not None:
@@ -450,13 +448,11 @@ class CogVLMModel(CogVLMPreTrainedModel):
             assert input_ids is not None and inputs_embeds is None, f"{input_ids} {inputs_embeds}"
             if not is_empty(images):  # multi-modality
 
-                assert token_type_ids is not None, f"multi-modality requires `token_type_ids`!"
+                assert token_type_ids is not None, "multi-modality requires `token_type_ids`!"
 
                 assert len(input_ids) == len(images), f"{len(input_ids)} {len(images)}"
                 inputs_embeds = self.embed_tokens(input_ids)
                 images_features = self.encode_images(images)
-                import numpy as np
-                
                 images_features = mindspore.Tensor(images_features)
                 images_features = images_features.squeeze(0)
                 #inputs_embeds = inputs_embeds.index_put([token_type_ids == VISION_TOKEN_TYPE], images_features)
@@ -467,7 +463,6 @@ class CogVLMModel(CogVLMPreTrainedModel):
                     token_type_ids = ops.ones_like(input_ids, dtype=mindspore.int64) * LANGUAGE_TOKEN_TYPE
                 assert not (token_type_ids == VISION_TOKEN_TYPE).any(), f"{(token_type_ids == VISION_TOKEN_TYPE).sum()}"
                 inputs_embeds = self.embed_tokens(input_ids)
-
             if position_ids is None:
                 position_ids = build_position_ids(token_type_ids, attention_mask)
 
@@ -571,12 +566,9 @@ class CogVLMModel(CogVLMPreTrainedModel):
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
         hidden_states = self.norm(hidden_states)
-        
-
         next_cache = next_decoder_cache if use_cache else None
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
-        
         out = BaseModelOutputWithPast(
             last_hidden_state=hidden_states,
             past_key_values=next_cache,
@@ -826,10 +818,9 @@ class CogVLMForCausalLM(CogVLMPreTrainedModel):
         image_size: int = self.config.vision_config['image_size']
         patch_size: int = self.config.vision_config['patch_size']
         template_version = template_version or self.config.template_version
-        assert images is None or len(images) <= 1, f"not support multi images by now."
+        assert images is None or len(images) <= 1, "not support multi images by now."
         history = history or []
         text = _history_to_prompt(template_version, history, query)
-
         input_ids = [tokenizer.bos_token_id]
         token_type_ids = [LANGUAGE_TOKEN_TYPE]
         if images is not None and len(images) == 1:
@@ -849,11 +840,9 @@ class CogVLMForCausalLM(CogVLMPreTrainedModel):
             input_ids += [tokenizer.pad_token_id] * vision_token_num
             token_type_ids += [VISION_TOKEN_TYPE] * vision_token_num
         text_ids = tokenizer.encode(text, add_special_tokens=False)
-
         input_ids += text_ids
         token_type_ids += [LANGUAGE_TOKEN_TYPE] * len(text_ids)
         attention_mask = [1] * len(input_ids)
-
         return {
             'input_ids': mindspore.tensor(input_ids, dtype=mindspore.int64),
             'token_type_ids': mindspore.tensor(token_type_ids, dtype=mindspore.int64),

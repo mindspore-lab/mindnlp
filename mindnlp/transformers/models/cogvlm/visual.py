@@ -1,6 +1,9 @@
+"""
+vit part
+"""
+from argparse import Namespace
 import mindspore
 from mindspore import nn,ops
-from argparse import Namespace
 from ...activations import ACT2FN
 
 
@@ -35,7 +38,6 @@ class Attention(nn.Cell):
         qkv = self.query_key_value(x)
         qkv = qkv.reshape(B, L, 3, self.num_heads, -1).permute(2, 0, 3, 1, 4)  # 3, B, H, L, D
         q, k, v = qkv[0], qkv[1], qkv[2]
-        
         out = self.attention(q,k,v)
         output = self.dense(out.view(B, L, -1))
         output = self.output_dropout(output)
