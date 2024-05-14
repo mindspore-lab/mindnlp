@@ -19,7 +19,7 @@ from collections import OrderedDict
 import mindspore
 
 from .peft_types import PeftType
-from .other import WEIGHTS_NAME
+from .constants import WEIGHTS_NAME
 
 def get_data_list(model: mindspore.nn.Cell):
     """Get state dict of the Peft model for saving."""

@@ -18,29 +18,31 @@ import warnings
 import inspect
 from contextlib import contextmanager
 from copy import deepcopy
-from typing import Dict
+from typing import Dict, Optional
 
+import mindspore
 from mindspore import nn, ops
 from mindspore.train.serialization import  _exec_save
-from mindspore.nn import CrossEntropyLoss
 
 from .config import PeftConfig, PromptLearningConfig
+from .._legacy.abc import CellDict
+from ..transformers import PreTrainedModel
 
 from .tuners import (
     AdaLoraModel,
     AdaptionPromptModel,
     LoraModel,
     IA3Model,
-    LoKrModel
-    # LoraConfig
+    LoKrModel,
+    # LoraConfig,
+    PromptEmbedding
 )
 from .utils import (
     # SAFETENSORS_WEIGHTS_NAME,
-    # TRANSFORMERS_MODELS_TO_PREFIX_TUNING_POSTPROCESS_MAPPING,
+    TRANSFORMERS_MODELS_TO_PREFIX_TUNING_POSTPROCESS_MAPPING,
     WEIGHTS_NAME,
     PeftType,
-    # TaskType,
-    # _get_batch_size,
+    TaskType,
     _prepare_prompt_learning_config,
     # _set_adapter,
     _set_trainable,
@@ -50,7 +52,7 @@ from .utils import (
     load_peft_weights,
     set_peft_model_state_dict,
     shift_tokens_right,
-    # _get_batch_size, # will be used for prompt learning methods
+    _get_batch_size, # will be used for prompt learning methods
 )
 
 
@@ -78,7 +80,7 @@ class PeftModel(nn.Cell):
         self.peft_config: Dict[str, PeftConfig] = {}
         self.active_adapter = adapter_name
         self.peft_type = peft_config.peft_type
-        # self.base_model_torch_dtype = getattr(model, "dtype", None)
+        self.base_model_dtype = getattr(model, "dtype", None)
         if not peft_config.is_prompt_learning:
             self.peft_config[adapter_name] = peft_config
             self.base_model = PEFT_TYPE_TO_MODEL_MAPPING[peft_config.peft_type](
@@ -160,6 +162,47 @@ class PeftModel(nn.Cell):
         model.load_adapter(model_id, adapter_name, **kwargs)
         return model
 
+    def _setup_prompt_encoder(self, adapter_name: str):
+        config = self.peft_config[adapter_name]
+        if not hasattr(self, "prompt_encoder"):
+            self.prompt_encoder = CellDict({})
+            self.prompt_tokens = {}
+        transformer_backbone = None
+        for name, module in self.base_model.cells_and_names():
+            for param in module.get_parameters():
+                param.requires_grad = False
+            if isinstance(module, PreTrainedModel):
+                # Make sure to freeze Tranformers model
+                if transformer_backbone is None:
+                    transformer_backbone = module
+                    self.transformer_backbone_name = name
+        if transformer_backbone is None:
+            transformer_backbone = self.base_model
+
+        if config.num_transformer_submodules is None:
+            config.num_transformer_submodules = 2 if config.task_type == TaskType.SEQ_2_SEQ_LM else 1
+
+        for named_param, value in list(transformer_backbone.parameters_and_names()):
+
+            if value.shape[0] == self.base_model.config.vocab_size:
+                self.word_embeddings = transformer_backbone.get_cell(named_param.replace(".weight", ""))
+                break
+
+        if config.peft_type == PeftType.PROMPT_TUNING:
+            prompt_encoder = PromptEmbedding(config, self.word_embeddings)
+        # elif config.peft_type == PeftType.MULTITASK_PROMPT_TUNING:
+        #     prompt_encoder = MultitaskPromptEmbedding(config, self.word_embeddings)
+        # elif config.peft_type == PeftType.P_TUNING:
+        #     prompt_encoder = PromptEncoder(config)
+        # elif config.peft_type == PeftType.PREFIX_TUNING:
+        #     prompt_encoder = PrefixEncoder(config)
+        else:
+            raise ValueError("Not supported")
+
+        self.prompt_encoder.update(CellDict({adapter_name: prompt_encoder}))
+        self.prompt_tokens[adapter_name] = ops.arange(
+            config.num_virtual_tokens * config.num_transformer_submodules
+        ).long()
 
     def load_adapter(self, model_id: str, adapter_name: str, is_trainable: bool = False, **kwargs):
         """load adapter to peft model, called by `model.from_pretrained`."""
@@ -204,6 +247,50 @@ class PeftModel(nn.Cell):
 
         return trainable_params, all_param
 
+    def get_prompt(self, batch_size: int, task_ids: Optional[mindspore.Tensor] = None) -> mindspore.Tensor:
+        """
+        Returns the virtual prompts to use for Peft. Only applicable when using a prompt learning method.
+        """
+        peft_config = self.active_peft_config
+        prompt_encoder = self.prompt_encoder[self.active_adapter]
+        prompt_tokens = (
+            self.prompt_tokens[self.active_adapter]
+            .unsqueeze(0)
+            .expand(batch_size, -1)
+        )
+        if peft_config.peft_type == PeftType.PREFIX_TUNING:
+            prompt_tokens = prompt_tokens[:, : peft_config.num_virtual_tokens]
+            if peft_config.inference_mode:
+                past_key_values = prompt_encoder.embedding.weight.repeat(batch_size, 1, 1)
+            else:
+                past_key_values = prompt_encoder(prompt_tokens)
+            if self.base_model_dtype is not None:
+                past_key_values = past_key_values.to(self.base_model_dtype)
+            past_key_values = past_key_values.view(
+                batch_size,
+                peft_config.num_virtual_tokens,
+                peft_config.num_layers * 2,
+                peft_config.num_attention_heads,
+                peft_config.token_dim // peft_config.num_attention_heads,
+            )
+            if peft_config.num_transformer_submodules == 2:
+                past_key_values = ops.cat([past_key_values, past_key_values], axis=2)
+            past_key_values = past_key_values.permute([2, 0, 3, 1, 4]).split(
+                peft_config.num_transformer_submodules * 2
+            )
+            if TRANSFORMERS_MODELS_TO_PREFIX_TUNING_POSTPROCESS_MAPPING.get(self.config.model_type, None) is not None:
+                post_process_fn = TRANSFORMERS_MODELS_TO_PREFIX_TUNING_POSTPROCESS_MAPPING[self.config.model_type]
+                past_key_values = post_process_fn(past_key_values)
+            return past_key_values
+        else:
+            if peft_config.peft_type == PeftType.MULTITASK_PROMPT_TUNING:
+                prompts = prompt_encoder(prompt_tokens, task_ids)
+            else:
+                if peft_config.inference_mode:
+                    prompts = prompt_encoder.embedding.weight.repeat(batch_size, 1, 1)
+                else:
+                    prompts = prompt_encoder(prompt_tokens)
+            return prompts
 
     def print_trainable_parameters(self):
         """
@@ -345,41 +432,41 @@ class PeftModelForSequenceClassification(PeftModel):
                 **kwargs,
             )
 
-        raise NotImplementedError
-        # batch_size = _get_batch_size(input_ids, inputs_embeds)
-        # if attention_mask is not None:
-        #     # concat prompt attention mask
-        #     prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens)
-        #     attention_mask = ops.cat((prefix_attention_mask, attention_mask), axis=1)
-        # if kwargs.get("position_ids", None) is not None:
-        #     warnings.warn("Position ids are not supported for parameter efficient tuning. Ignoring position ids.")
-        #     kwargs["position_ids"] = None
-        # kwargs.update(
-        #     {
-        #         "attention_mask": attention_mask,
-        #         "labels": labels,
-        #         "output_attentions": output_attentions,
-        #         "output_hidden_states": output_hidden_states,
-        #         "return_dict": return_dict,
-        #     }
-        # )
+        batch_size = _get_batch_size(input_ids, inputs_embeds)
+        if attention_mask is not None:
+            # concat prompt attention mask
+            prefix_attention_mask = ops.ones(batch_size, peft_config.num_virtual_tokens, dtype=attention_mask.dtype)
+            attention_mask = ops.cat((prefix_attention_mask, attention_mask), axis=1)
+        if kwargs.get("position_ids", None) is not None:
+            warnings.warn("Position ids are not supported for parameter efficient tuning. Ignoring position ids.")
+            kwargs["position_ids"] = None
+        kwargs.update(
+            {
+                "attention_mask": attention_mask,
+                "labels": labels,
+                "output_attentions": output_attentions,
+                "output_hidden_states": output_hidden_states,
+                "return_dict": return_dict,
+            }
+        )
 
         # if peft_config.peft_type == PeftType.PREFIX_TUNING:
         #     return self._prefix_tuning_forward(input_ids=input_ids, **kwargs)
-        # if kwargs.get("token_type_ids", None) is not None:
-        #     kwargs["token_type_ids"] = ops.cat(
-        #         (
-        #             ops.zeros(batch_size, peft_config.num_virtual_tokens),
-        #             kwargs["token_type_ids"],
-        #         ),
-        #         axis=1,
-        #     ).long()
-        # if inputs_embeds is None:
-        #     inputs_embeds = self.word_embeddings(input_ids)
-        # prompts = self.get_prompt(batch_size=batch_size)
-        # prompts = prompts.to(inputs_embeds.dtype)
-        # inputs_embeds = ops.cat((prompts, inputs_embeds), axis=1)
-        # return self.base_model(inputs_embeds=inputs_embeds, **kwargs)
+        if kwargs.get("token_type_ids", None) is not None:
+            kwargs["token_type_ids"] = ops.cat(
+                (
+                    ops.zeros(batch_size, peft_config.num_virtual_tokens, dtype=kwargs["token_type_ids"].dtype),
+                    kwargs["token_type_ids"],
+                ),
+                axis=1,
+            )
+        if inputs_embeds is None:
+            inputs_embeds = self.word_embeddings(input_ids)
+        prompts = self.get_prompt(batch_size=batch_size)
+        prompts = prompts.to(inputs_embeds.dtype)
+        inputs_embeds = ops.cat((prompts, inputs_embeds), axis=1)
+        return self.base_model(inputs_embeds=inputs_embeds, **kwargs)
+
 
 class PeftModelForCausalLM(PeftModel):
     """
@@ -849,8 +936,7 @@ class PeftModelForTokenClassification(PeftModel):
 
             loss = None
             if labels is not None:
-                loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = ops.cross_entropy(logits.view(-1, self.num_labels), labels.view(-1))
 
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output

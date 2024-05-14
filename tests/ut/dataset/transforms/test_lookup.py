@@ -15,7 +15,7 @@
 """Test Transform"""
 
 from mindspore.dataset.text import Vocab as msVocab
-from mindnlp import Vocab
+from mindnlp.vocab import Vocab
 from mindnlp.dataset.transforms import Lookup
 
 def test_lookup():
