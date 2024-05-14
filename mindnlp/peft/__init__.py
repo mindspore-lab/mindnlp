@@ -41,6 +41,7 @@ from .tuners import (
     LoKrModel,
     AdaLoraConfig,
     AdaLoraModel,
+    PromptTuningConfig
 )
 
 from .utils import (

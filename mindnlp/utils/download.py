@@ -873,6 +873,8 @@ def build_download_url(
         raise ValueError('The mirror name not support, please use one of the mirror website below: '
                          '["huggingface", "modelscope", "wisemodel", "gitee", "aifast"]')
     if mirror in ('huggingface', 'gitee', 'modelscope', 'wisemodel'):
+        if mirror == 'modelscope' and revision == 'main':
+            revision = 'master'
         return MIRROR_MAP[mirror].format(repo_id, revision, filename)
     if revision is not None and revision != 'main':
         logger.warning(f'`revision` is not support when use "{mirror}" website. '

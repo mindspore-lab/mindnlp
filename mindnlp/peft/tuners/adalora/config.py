@@ -19,8 +19,8 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
-from mindnlp.peft.tuners import LoraConfig
-from mindnlp.peft.utils import PeftType
+from ..lora import LoraConfig
+from ...utils import PeftType
 
 
 @dataclass

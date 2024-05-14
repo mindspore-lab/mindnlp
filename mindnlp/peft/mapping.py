@@ -37,6 +37,7 @@ from .tuners import (
     IA3Model,
     LoKrConfig,
     LoKrModel,
+    PromptTuningConfig,
 )
 
 MODEL_TYPE_TO_PEFT_MODEL_MAPPING = {
@@ -51,7 +52,7 @@ MODEL_TYPE_TO_PEFT_MODEL_MAPPING = {
 
 PEFT_TYPE_TO_CONFIG_MAPPING = {
     # "ADAPTION_PROMPT": AdaptionPromptConfig,
-    # "PROMPT_TUNING": PromptTuningConfig,
+    "PROMPT_TUNING": PromptTuningConfig,
     # "PREFIX_TUNING": PrefixTuningConfig,
     # "P_TUNING": PromptEncoderConfig,
     "ADAPTION_PROMPT": AdaptionPromptConfig,
