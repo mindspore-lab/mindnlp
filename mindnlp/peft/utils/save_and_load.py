@@ -48,7 +48,7 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
     Get the state dict of the Peft model.
 
     Args:
-        model ([`PeftModel`]): The Peft model. 
+        model ([`PeftModel`]): The Peft model.
     """
 
     config = model.peft_config[adapter_name]
@@ -85,6 +85,8 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
         to_return = {k: state_dict[k] for k in state_dict if k.split(".")[-1].startswith("adaption_")}
     elif config.peft_type == PeftType.IA3:
         to_return = {k: state_dict[k] for k in state_dict if "ia3_" in k}
+    elif config.peft_type == PeftType.LOHA:
+        to_return = {k: state_dict[k] for k in state_dict if "loha_" in k}
     else:
         raise NotImplementedError
 
@@ -123,19 +125,23 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
         PeftType.LORA,
         PeftType.IA3,
         PeftType.ADALORA,
+        PeftType.LOHA,
     ):
         peft_model_state_dict = {}
         parameter_prefix = {
             PeftType.IA3: "ia3_",
             PeftType.LORA: "lora_",
             PeftType.ADALORA: "lora_",
+            PeftType.LOHA: "loha_",
         }[config.peft_type]
         for k, v in state_dict.items():
             if parameter_prefix in k:
                 suffix = k.split(parameter_prefix)[1]
                 if "." in suffix:
                     suffix_to_replace = ".".join(suffix.split(".")[1:])
-                    k = k.replace(suffix_to_replace, f"{adapter_name}.{suffix_to_replace}")
+                    k = k.replace(
+                        suffix_to_replace, f"{adapter_name}.{suffix_to_replace}"
+                    )
                 else:
                     k = f"{k}.{adapter_name}"
                 peft_model_state_dict[k] = v

@@ -39,6 +39,8 @@ from .tuners import (
     IA3Model,
     AdaLoraConfig,
     AdaLoraModel,
+    LoHaConfig,
+    LoHaModel,
 )
 
 from .utils import (
