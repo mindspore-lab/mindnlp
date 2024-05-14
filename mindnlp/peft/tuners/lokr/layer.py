@@ -23,7 +23,7 @@ from mindspore import nn, ops
 from mindspore.common.initializer import initializer, HeUniform, Zero
 
 # import mindnlp._legacy.functional as F
-from mindnlp.abc import ParameterDict
+from mindnlp._legacy.abc import ParameterDict
 
 # from ..import_utils import is_bnb_4bit_available, is_bnb_available
 
