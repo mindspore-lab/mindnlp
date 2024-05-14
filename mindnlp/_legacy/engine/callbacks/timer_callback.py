@@ -16,7 +16,7 @@
 Callback for timing.
 """
 import time
-from mindnlp.abc import Callback
+from mindnlp._legacy.abc import Callback
 
 class _Timer:
     """Timer."""

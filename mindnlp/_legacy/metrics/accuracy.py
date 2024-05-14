@@ -17,7 +17,7 @@
 
 import numpy as np
 
-from mindnlp.abc import Metric
+from mindnlp._legacy.abc import Metric
 from .utils import _check_onehot_data, _check_shape, _convert_data_type
 
 def accuracy_fn(preds, labels):

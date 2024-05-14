@@ -26,7 +26,7 @@ from mindspore.common.initializer import initializer, HeUniform, Zero, Normal
 
 # import mindnlp._legacy.functional as F
 from mindnlp.transformers.ms_utils import Conv1D
-from mindnlp.abc import CellDict
+from mindnlp._legacy.abc import CellDict
 
 from ..config import PeftConfig
 # from ..import_utils import is_bnb_4bit_available, is_bnb_available

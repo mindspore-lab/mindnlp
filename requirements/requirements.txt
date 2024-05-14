@@ -1,3 +1,4 @@
+mindspore
 requests
 tqdm
 pylint==2.17

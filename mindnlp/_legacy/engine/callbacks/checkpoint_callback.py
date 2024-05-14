@@ -18,7 +18,7 @@ Callback for saving checkpoint.
 import os
 from pathlib import Path
 import mindspore
-from mindnlp.abc import Callback
+from mindnlp._legacy.abc import Callback
 
 
 class CheckpointCallback(Callback):

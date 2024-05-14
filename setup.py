@@ -128,7 +128,8 @@ setup(
         'addict',
         'ml_dtypes',
         'pyctcdecode',
-        'jieba'
+        'jieba',
+        'pytest==7.2.0'
     ],
     classifiers=[
         'License :: OSI Approved :: Apache Software License'

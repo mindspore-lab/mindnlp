@@ -18,7 +18,7 @@ Callback for saving and loading best model
 import os
 from pathlib import Path
 import mindspore
-from mindnlp.abc import Callback
+from mindnlp._legacy.abc import Callback
 
 class BestModelCallback(Callback):
     r"""

@@ -23,7 +23,7 @@ import numpy as np
 from mindspore import ops
 from mindspore import Tensor
 from mindnlp.utils import get_from_cache, unzip
-from mindnlp.abc.modules.embedding import TokenEmbedding
+from mindnlp._legacy.abc.modules.embedding import TokenEmbedding
 from mindnlp.configs import DEFAULT_ROOT
 from mindnlp._legacy.nn import Dropout
 

@@ -27,7 +27,7 @@ from mindspore.common.initializer import initializer,  Constant
 
 from mindnlp.transformers.ms_utils import Conv1D
 from mindnlp.peft.utils import transpose
-from mindnlp.abc import  ParameterDict
+from mindnlp._legacy.abc import  ParameterDict
 
 from ..tuners_utils import BaseTunerLayer, check_adapters_to_merge
 
