@@ -41,12 +41,12 @@ class AdaLoraModel(LoraModel):
     https://openreview.net/forum?id=lq62uWRJjiY
 
     Args:
-        model ([`transformers.PreTrainedModel`]): The model to be adapted.
+        model ([`mindspore.nn.Cell`]): The model to be adapted.
         config ([`AdaLoraConfig`]): The configuration of the AdaLora model.
         adapter_name (`str`): The name of the adapter, defaults to `"default"`.
 
     Returns:
-        `torch.nn.Module`: The AdaLora model.
+        model ([`mindspore.nn.Cell`]): The AdaLora model.
 
     Example::
 
