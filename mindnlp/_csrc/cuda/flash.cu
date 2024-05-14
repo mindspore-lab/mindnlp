@@ -1,4 +1,17 @@
-// Modified from: https://github.com/tspeterkim/flash-attention-minimal/blob/main/flash.cu
+// Copyright 2024 Huawei Technologies Co., Ltd
+
+// Licensed under the Apache License, Version 2.0(the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+
+// http: // www.apache.org/licenses/LICENSE-2.0
+
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == ==
 #include <stdio.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -28,18 +41,18 @@ __global__ void flash_attn_1_fwd_f32_kernel(
     float *l,
     float *m,
     float *O)
-{ // 1D-Block and 2D-Grid
+{
     int tx = threadIdx.x;
     int bx = blockIdx.x;
-    int by = blockIdx.y; // batch and head index in the grid
+    int by = blockIdx.y; // batch and head index
 
     // Offset into Q,K,V,O,l,m - different for each batch and head
-    int qkv_offset = (bx * gridDim.y + by) * N * d; // gridDim.y = nh  qkv dim: (B, nh, N, d)   it equals to (by * gridDim.x + bx) * N * d
-    int lm_offset = (bx * gridDim.y + by) * N;      // offset for l and m  lm dim: (B, nh, N)
+    int qkv_offset = (bx * gridDim.y * N * d) + (by * N * d); // gridDim.y = nh
+    int lm_offset = (bx * gridDim.y * N) + (by * N);          // offset for l and m
 
     // Define SRAM for Q,K,V,S
     extern __shared__ float sram[];
-    int tile_size = Bc * d; // size of Qi, Kj, Vj , Bc >= Br, so choose consistent Bc as tile_size
+    int tile_size = Bc * d; // size of Qi, Kj, Vj
     float *Qi = sram;
     float *Kj = &sram[tile_size];
     float *Vj = &sram[tile_size * 2];
@@ -48,56 +61,58 @@ __global__ void flash_attn_1_fwd_f32_kernel(
     for (int j = 0; j < Tc; j++)
     {
 
-// Load Kj, Vj to SRAM
-#pragma unroll
-        for (int x = 0; x < d; x++) // one block caculates one tile
-        {                           // tx * d indexes the thread, x indexes the element in the vector
+        // Load Kj, Vj to SRAM
+        for (int x = 0; x < d; x++)
+        {
             Kj[(tx * d) + x] = K[qkv_offset + (tile_size * j) + (tx * d) + x];
             Vj[(tx * d) + x] = V[qkv_offset + (tile_size * j) + (tx * d) + x];
         }
         __syncthreads(); // such that the inner loop can use the correct Kj, Vj
 
-#pragma unroll
-        for (int i = 0; i < Tr; i++)
+        for (int i = j; i < Tr; i++)
         {
+            if (i * Br + tx >= N)
+                break; // break if we are done with the sequence
 
-// Load Qi to SRAM, l and m to registers
-#pragma unroll
+            // Load Qi to SRAM, l and m to registers
             for (int x = 0; x < d; x++)
-            { // one thread caculates one row of Qi
+            {
                 Qi[(tx * d) + x] = Q[qkv_offset + (tile_size * i) + (tx * d) + x];
             }
-            __syncthreads(); // such that the inner loop can use the correct Qi
-
             float row_m_prev = m[lm_offset + (Br * i) + tx];
             float row_l_prev = l[lm_offset + (Br * i) + tx];
 
-            // S = QK^T, row_m = rowmax(S) row-wise
+            // S = QK^T, row_m = rowmax(S)
+            // S[tx][y] = Sum_{x = 0}^{d-1} {Qi[tx][x] * Kj[y][x]}
+            // row_m = Max_{y = 0}^{Bc-1} S[tx][y]
             // with causal masking
             float row_m = -INFINITY;
-#pragma unroll
             for (int y = 0; y < Bc; y++)
             {
+                if (j * Bc + y >= N)
+                    break; // break if we are done with the sequence
                 float sum = 0;
-#pragma unroll
                 for (int x = 0; x < d; x++)
                 {
-                    sum += Qi[(tx * d) + x] * Kj[(y * d) + x]; // a thread caculates one element of S
+                    sum += Qi[(tx * d) + x] * Kj[(y * d) + x];
                 }
                 sum *= softmax_scale;
                 if (i * Br + tx < j * Bc + y)
                     sum = -INFINITY;
-                S[(Bc * tx) + y] = sum; // S dim: (Br, Bc)
+                S[(Bc * tx) + y] = sum;
 
                 if (sum > row_m)
-                    row_m = sum; // every thread hold one row_m
+                    row_m = sum;
             }
 
+            // implement softmax with causal masking
             // P = exp(S - row_m), row_l = rowsum(P)
+            // P[tx][y] = exp(S[tx][y] - row_m)
             float row_l = 0;
-#pragma unroll
             for (int y = 0; y < Bc; y++)
             {
+                if (j * Bc + y >= N)
+                    break; // break if we are done with the sequence
                 if (i * Br + tx < j * Bc + y)
                     S[(Bc * tx) + y] = 0;
                 else
@@ -107,24 +122,20 @@ __global__ void flash_attn_1_fwd_f32_kernel(
 
             // Compute new m and l
             float row_m_new = max(row_m_prev, row_m);
-            float row_l_new = (__expf(row_m_prev - row_m_new) * row_l_prev) +
-                              (__expf(row_m - row_m_new) * row_l);
+            float row_l_new = (__expf(row_m_prev - row_m_new) * row_l_prev) + (__expf(row_m - row_m_new) * row_l);
 
-// Write O, l, m to HBM
-#pragma unroll
+            // Write O, l, m to HBM
             for (int x = 0; x < d; x++)
             {
                 float pv = 0; // Pij * Vj
-#pragma unroll
                 for (int y = 0; y < Bc; y++)
                 {
+                    if (j * Bc + y >= N)
+                        break; // break if we are done with the sequence
                     pv += S[(Bc * tx) + y] * Vj[(y * d) + x];
                 }
-                O[qkv_offset + (tile_size * i) + (tx * d) + x] =
-                    (1 / row_l_new) *
-                    ((row_l_prev * __expf(row_m_prev - row_m_new) *
-                      O[qkv_offset + (tile_size * i) + (tx * d) + x]) +
-                     (__expf(row_m - row_m_new) * pv));
+                O[qkv_offset + (tile_size * i) + (tx * d) + x] = (1 / row_l_new) * ((row_l_prev * __expf(row_m_prev - row_m_new) * O[qkv_offset + (tile_size * i) + (tx * d) + x]) + (__expf(row_m - row_m_new) * pv));
+                // assert(!isnan(O[qkv_offset + (tile_size * i) + (tx * d) + x]));
             }
             m[lm_offset + (Br * i) + tx] = row_m_new;
             l[lm_offset + (Br * i) + tx] = row_l_new;
@@ -626,7 +637,10 @@ extern "C"
 
         // initialize l to 0 and m to -inf
         cudaMemset(l, 0, B * nh * N * sizeof(float));
-        initArray<<<64, 512>>>(m, B * nh * N, -INFINITY);
+        cudaMemset(O, 0, B * nh * N * d * sizeof(float));
+        int blockSize = 32;
+        int numBlocks = (B * nh * N + blockSize - 1) / blockSize;
+        initArray<<<numBlocks, blockSize>>>(m, B * nh * N, -INFINITY);
 
         // set block size, TODO: dynamically set block size
         const int Bc = 32;
@@ -647,6 +661,7 @@ extern "C"
             + (Bc * Br * sizeof(float));        // SRAM size for S
         int max_sram_size;
         cudaDeviceGetAttribute(&max_sram_size, cudaDevAttrMaxSharedMemoryPerBlock, 0);
+        printf("Bc: %d, Br: %d, Tc: %d, Tr: %d \n", Bc, Br, Tc, Tr);
         printf("Max shared memory: %d, requested shared memory: %d \n", max_sram_size, sram_size);
 
         dim3 grid_dim(B, nh); // batch_size x num_heads
@@ -677,6 +692,10 @@ extern "C"
         const int nh = static_cast<int>(shapes[0][1]);
         const int N = static_cast<int>(shapes[0][2]);
         const int d = static_cast<int>(shapes[0][3]);
+
+        // initialize l to 0 and m to -inf
+        cudaMemset(L, 0, B * nh * N * sizeof(float));
+        cudaMemset(O, 0, B * nh * N * d * sizeof(float));
 
         // set block size, TODO: dynamically set block size
         const int Bc = 32;
