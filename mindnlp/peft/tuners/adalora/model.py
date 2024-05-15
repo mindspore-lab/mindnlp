@@ -41,12 +41,12 @@ class AdaLoraModel(LoraModel):
     https://openreview.net/forum?id=lq62uWRJjiY
 
     Args:
-        model ([`transformers.PreTrainedModel`]): The model to be adapted.
+        model ([`mindspore.nn.Cell`]): The model to be adapted.
         config ([`AdaLoraConfig`]): The configuration of the AdaLora model.
         adapter_name (`str`): The name of the adapter, defaults to `"default"`.
 
     Returns:
-        `torch.nn.Module`: The AdaLora model.
+        AdaLoraModel ([`mindspore.nn.Cell`]): The AdaLora model.
 
     Example::
 
@@ -57,9 +57,11 @@ class AdaLoraModel(LoraModel):
             )
         >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base") >>> model = AdaLoraModel(model, config, "default")
 
-    **Attributes**:
-        - **model** ([`transformers.PreTrainedModel`]) -- The model to be adapted.
-        - **peft_config** ([`AdaLoraConfig`]): The configuration of the AdaLora model.
+    > **Attributes**:  
+
+    >   - **model** ([`transformers.PreTrainedModel`])— The model to be adapted. 
+
+    >   - **peft_config** ([`AdaLoraConfig`]): The configuration of the AdaLora model. 
     """
 
     # Note: don't redefine prefix here, it should be inherited from LoraModel
@@ -266,6 +268,7 @@ class AdaLoraModel(LoraModel):
             return getattr(self.model, name)
 
     def construct(self, *args, **kwargs):
+        """The construct method of the model"""
         outputs = self.model(*args, **kwargs)
 
         if (getattr(outputs, "loss", None) is not None) and isinstance(outputs.loss, Tensor):
