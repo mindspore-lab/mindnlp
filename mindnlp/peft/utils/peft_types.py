@@ -21,21 +21,21 @@ class PeftType(str, enum.Enum):
     """
     Enum class for the different types of adapters in PEFT.
 
-    Supported PEFT types:
-    - PROMPT_TUNING
-    - MULTITASK_PROMPT_TUNING
-    - P_TUNING
-    - PREFIX_TUNING
-    - LORA
-    - ADALORA
-    - BOFT
-    - ADAPTION_PROMPT
-    - IA3
-    - LOHA
-    - LOKR
-    - OFT
-    - POLY
-    - LN_TUNING
+    Supported PEFT types: 
+    - PROMPT_TUNING 
+    - MULTITASK_PROMPT_TUNING 
+    - P_TUNING 
+    - PREFIX_TUNING 
+    - LORA 
+    - ADALORA 
+    - BOFT 
+    - ADAPTION_PROMPT 
+    - IA3 
+    - LOHA 
+    - LOKR 
+    - OFT 
+    - POLY 
+    - LN_TUNING 
     """
 
     PROMPT_TUNING = "PROMPT_TUNING"

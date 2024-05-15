@@ -417,6 +417,9 @@ class PeftModelForSequenceClassification(PeftModel):
         return_dict=None,
         **kwargs,
     ):
+        """
+        Forward pass of the model.
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         peft_config = self.active_peft_config
         if not peft_config.is_prompt_learning:
@@ -492,6 +495,9 @@ class PeftModelForCausalLM(PeftModel):
         return_dict=None,
         **kwargs,
     ):
+        """
+        Forward pass of the model.
+        """
         peft_config = self.active_peft_config
         if not isinstance(peft_config, PromptLearningConfig):
             if self.base_model.config.model_type == "mpt":
@@ -636,6 +642,9 @@ class PeftModelForSeq2SeqLM(PeftModel):
         return_dict=None,
         **kwargs,
     ):
+        """
+        Forward pass of the model.
+        """
         peft_config = self.active_peft_config
         if not isinstance(peft_config, PromptLearningConfig):
             return self.base_model(
@@ -845,6 +854,9 @@ class PeftModelForTokenClassification(PeftModel):
         return_dict=None,
         **kwargs,
     ):
+        """
+        Forward pass of the model.
+        """
         peft_config = self.active_peft_config
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
