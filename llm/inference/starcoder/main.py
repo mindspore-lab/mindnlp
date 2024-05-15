@@ -18,9 +18,7 @@ async def api(request: Request):
     json_request: dict = await request.json()
     inputs: str = json_request['inputs']
     parameters: dict = json_request['parameters']
-    logger.info(f'{request.client.host}:{request.client.port} inputs = {json.dumps(inputs)}')
     generated_text: str = generator.generate(inputs, parameters)
-    logger.info(f'{request.client.host}:{request.client.port} generated_text = {json.dumps(generated_text)}')
     return {
         "generated_text": generated_text.replace(inputs, ""),
         "status": 200
