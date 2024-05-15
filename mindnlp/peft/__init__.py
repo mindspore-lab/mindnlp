@@ -17,7 +17,8 @@ from .mapping import (
     MODEL_TYPE_TO_PEFT_MODEL_MAPPING,
     PEFT_TYPE_TO_CONFIG_MAPPING,
     get_peft_config,
-    get_peft_model
+    get_peft_model,
+    inject_adapter_in_model
 )
 
 from .peft_model import (
@@ -54,7 +55,7 @@ from .utils import (
     # prepare_model_for_kbit_training,
     set_peft_model_state_dict,
     shift_tokens_right,
-    # load_peft_weights,
+    load_peft_weights,
 )
 
 from .config import (

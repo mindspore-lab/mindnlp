@@ -44,6 +44,7 @@ from .generation import GenerationMixin
 from .configuration_utils import PretrainedConfig
 from .generation.configuration_utils import GenerationConfig
 from .activations import get_activation
+from .integrations import PeftAdapterMixin
 
 
 logger = logging.get_logger(__name__)
@@ -267,7 +268,7 @@ class CellUtilMixin:
         return head_mask
 
 
-class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin):
+class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin):
     """
     Abstract class for Pretrained models
     """
