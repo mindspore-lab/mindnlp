@@ -362,6 +362,7 @@ class GenerationConfig:
         cache_dir: Optional[Union[str, os.PathLike]] = None,
         force_download: bool = False,
         local_files_only: bool = False,
+        mirror: str = 'huggingface',
         **kwargs,
     ) -> "GenerationConfig":
         r"""
@@ -479,7 +480,8 @@ class GenerationConfig:
                     resume_download=resume_download,
                     local_files_only=local_files_only,
                     subfolder=subfolder,
-                    revision=revision
+                    revision=revision,
+                    mirror=mirror
                 )
             except EnvironmentError:
                 # Raise any environment error raise by `cached_file`. It will have a helpful error message adapted to

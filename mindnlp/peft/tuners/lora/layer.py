@@ -20,6 +20,7 @@ from typing import Any, Optional, Union
 
 import mindspore
 from mindspore import nn, ops, Parameter
+from mindspore.common.initializer import HeUniform, Normal
 from ....transformers.ms_utils import Conv1D
 from ...._legacy.abc import ParameterDict
 from ....modules.functional import normalize, embedding
@@ -122,10 +123,8 @@ class LoraLayer(BaseTunerLayer):
             weight = getattr(self.get_base_layer(), weight_name, None)
             if weight is not None:
                 # the layer is already completely initialized, this is an update
-                if weight.dtype.is_floating_point or weight.dtype.is_complex:
-                    self.to(weight.device, dtype=weight.dtype)
-                else:
-                    self.to(weight.device)
+                if ops.is_floating_point(weight) or ops.is_complex(weight):
+                    self.to(dtype=weight.dtype)
                 break
 
         if use_dora:
@@ -144,16 +143,16 @@ class LoraLayer(BaseTunerLayer):
             if init_lora_weights is True:
                 # initialize A the same way as the default for nn.Dense and B to zero
                 # https://github.com/microsoft/LoRA/blob/a0a92e0f26c067cf94747bdbf1ce73793fa44d19/loralib/layers.py#L124
-                nn.init.kaiming_uniform_(self.lora_A[adapter_name].weight, a=math.sqrt(5))
+                self.lora_A[adapter_name].weight.initialize(HeUniform(math.sqrt(5)))
             elif init_lora_weights.lower() == "gaussian":
-                nn.init.normal_(self.lora_A[adapter_name].weight, std=1 / self.r[adapter_name])
+                self.lora_A[adapter_name].weight.initialize(Normal(1 / self.r[adapter_name]))
             else:
                 raise ValueError(f"Unknown initialization {init_lora_weights=}")
-            nn.init.zeros_(self.lora_B[adapter_name].weight)
+            self.lora_B[adapter_name].weight.initialize('zeros')
         if adapter_name in self.lora_embedding_A.keys():
             # initialize a the same way as the default for nn.Dense and b to zero
-            nn.init.zeros_(self.lora_embedding_A[adapter_name])
-            nn.init.normal_(self.lora_embedding_B[adapter_name])
+            self.lora_embedding_A[adapter_name].initialize('zeros')
+            self.lora_embedding_B[adapter_name].initialize(Normal(1.0))
 
     def _get_weight_norm(self, weight, lora_weight, scaling) -> mindspore.Tensor:
         # calculate L2 norm of weight matrix, column-wise
@@ -392,7 +391,6 @@ class Linear(nn.Cell, LoraLayer):
             adapter (str):
                 The name of the adapter for which the delta weight should be computed.
         """
-        device = self.lora_B[adapter].weight.device
         dtype = self.lora_B[adapter].weight.dtype
 
 
@@ -504,7 +502,7 @@ class Embedding(nn.Cell, LoraLayer):
         weight = getattr(base_layer, "weight", None)
         if weight is not None:
             # the layer is already completely initialized, this is an update
-            self.to(base_layer.weight.device, dtype=weight.dtype)
+            self.to(dtype=weight.dtype)
 
         self.set_adapter(self.active_adapters)
 
@@ -707,7 +705,7 @@ class Conv2d(nn.Cell, LoraLayer):
         weight = getattr(base_layer, "weight", None)
         if weight is not None:
             # the layer is already completely initialized, this is an update
-            self.to(base_layer.weight.device, dtype=weight.dtype)
+            self.to(dtype=weight.dtype)
 
         if use_dora:
             self.dora_init(adapter_name)
@@ -808,7 +806,6 @@ class Conv2d(nn.Cell, LoraLayer):
             adapter (str):
                 The name of the adapter for which the delta weight should be computed.
         """
-        device = self.lora_B[adapter].weight.device
         dtype = self.lora_A[adapter].weight.dtype
 
         # In case users wants to merge the adapter weights that are in

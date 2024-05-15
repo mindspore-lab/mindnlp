@@ -754,7 +754,7 @@ class ChatGLM2Model(ChatGLM2PreTrainedModel):
                 past_key_values = self.get_prompt(batch_size=batch_size,
                                                   dtype=inputs_embeds.dtype)
             if attention_mask is not None:
-                attention_mask = ops.cat([attention_mask.new_ones((batch_size, self.pre_seq_len)),
+                attention_mask = ops.cat([attention_mask.new_ones((batch_size, self.pre_seq_len), dtype=attention_mask.dtype),
                                             attention_mask], axis=-1)
 
         if full_attention_mask is None:
@@ -817,7 +817,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
         if "attention_mask" in model_kwargs:
             attention_mask = model_kwargs["attention_mask"]
             model_kwargs["attention_mask"] = ops.cat(
-                [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1))], axis=-1
+                [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1), dtype=attention_mask.dtype)], axis=-1
             )
 
         # update position ids
@@ -995,7 +995,7 @@ class ChatGLM2ForConditionalGeneration(ChatGLM2PreTrainedModel):
                 past_length -= self.transformer.pre_seq_len
             inputs['position_ids'] = inputs.position_ids + past_length # mindspore do not support `x += 1`
             attention_mask = inputs.attention_mask
-            attention_mask = ops.cat((attention_mask.new_ones((1, past_length)), attention_mask), axis=1)
+            attention_mask = ops.cat((attention_mask.new_ones((1, past_length), dtype=attention_mask.dtype), attention_mask), axis=1)
             inputs['attention_mask'] = attention_mask
         for outputs in self.stream_generate(**inputs, past_key_values=past_key_values,
                                             return_past_key_values=return_past_key_values, **gen_kwargs):

@@ -982,7 +982,7 @@ class HubertForCTC(HubertPreTrainedModel):
         if target_lang is None and getattr(self.config, "adapter_attn_dim", None) is not None:
             logger.info("By default `target_lang` is set to 'eng'.")
         elif target_lang is not None:
-            self.load_adapter(target_lang, force_load=True)
+            self.load_adapter(target_lang)
 
     def freeze_feature_encoder(self):
         """
