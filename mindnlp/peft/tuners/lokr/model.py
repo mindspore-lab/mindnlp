@@ -47,7 +47,7 @@ class LoKrModel(BaseTuner):
         adapter_name (`str`): The name of the adapter, defaults to `"default"`.
 
     Returns:
-        `mindspore.nn.Cell`: The LoKr model.
+        LoKrModel ([`mindspore.nn.Cell`]): The LoKr model.
 
     Example:
         ```py
@@ -86,9 +86,12 @@ class LoKrModel(BaseTuner):
         >>> model.unet = LoKrModel(model.unet, config_unet, "default")
         ```
 
-    **Attributes**:
-        - **model** ([`~nn.Cell`]) -- The model to be adapted.
-        - **peft_config** ([`LoKrConfig`]): The configuration of the LoKr model.
+    > **Attributes**:  
+
+    >   - **model** ([`~nn.Cell`])— The model to be adapted. 
+
+    >   - **peft_config** ([`LoKrConfig`]): The configuration of the LoKr  model. 
+
     """
 
     prefix: str = "lokr_"

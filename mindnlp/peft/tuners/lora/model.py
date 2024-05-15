@@ -66,7 +66,7 @@ class LoraModel(BaseTuner):
         adapter_name (`str`): The name of the adapter, defaults to `"default"`.
 
     Returns:
-        `nn.Cell`: The Lora model.
+        LoraModel ([`mindspore.nn.Cell`]): The Lora model.
 
     Example:
 
@@ -120,9 +120,11 @@ class LoraModel(BaseTuner):
         >>> lora_model = get_peft_model(model, config)
         ```
 
-    **Attributes**:
-        - **model** ([`~transformers.PreTrainedModel`]) -- The model to be adapted.
-        - **peft_config** ([`LoraConfig`]): The configuration of the Lora model.
+    > **Attributes**:  
+
+    >   - **model** ([`transformers.PreTrainedModel`])— The model to be adapted. 
+
+    >   - **peft_config** ([`LoraConfig`]): The configuration of the Lora model.
     """
 
     prefix: str = "lora_"
@@ -153,7 +155,7 @@ class LoraModel(BaseTuner):
         Args:
             peft_config (`PeftConfig`):
                 The prepared adapter config.
-            model (`nn.Module`):
+            model (`nn.Cell`):
                 The model that is going to be adapted.
         """
         if peft_config.layer_replication:

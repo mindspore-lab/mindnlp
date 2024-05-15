@@ -25,7 +25,7 @@ class PromptEmbedding(nn.Cell):
 
     Args:
         config ([`PromptTuningConfig`]): The configuration of the prompt embedding.
-        word_embeddings (`nn.Module`): The word embeddings of the base transformer model.
+        word_embeddings (`nn.Cell`): The word embeddings of the base transformer model.
 
     **Attributes**:
         - **embedding** (`nn.Embedding`) -- The embedding layer of the prompt embedding.

@@ -53,10 +53,10 @@ class LoKrConfig(PeftConfig):
             pattern is not in the common layers pattern.
         rank_pattern (`dict`):
             The mapping from layer names or regexp expression to ranks which are different from the default rank
-            specified by `r`.（新）
+            specified by `r`.
         alpha_pattern (`dict`):
             The mapping from layer names or regexp expression to alphas which are different from the default alpha
-            specified by `alpha`.（新）
+            specified by `alpha`.
     """
 
     r: int = field(default=8, metadata={"help": "lokr attention dimension"})

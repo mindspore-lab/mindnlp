@@ -52,7 +52,7 @@ class IA3Model(BaseTuner):
         adapter_name (`str`): The name of the adapter, defaults to `"default"`.
 
     Returns:
-        `torch.nn.Module`: The (IA)^3 model.
+        IA3Model ([`mindspore.nn.Cell`]): The IA3Lora model.
 
     Example:
 
@@ -70,10 +70,11 @@ class IA3Model(BaseTuner):
         >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base")
         >>> ia3_model = IA3Model(config, model)
         ```
+    > **Attributes**:  
 
-    **Attributes**:
-        - **model** ([`~transformers.PreTrainedModel`]) -- The model to be adapted.
-        - **peft_config** ([`ia3Config`]): The configuration of the (IA)^3 model.
+    >   - **model** ([`transformers.PreTrainedModel`])— The model to be adapted. 
+
+    >   - **peft_config** ([`IA3Config`]): The configuration of the (IA)^3  model. 
     """
 
     prefix: str = "ia3_"
