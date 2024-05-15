@@ -804,7 +804,7 @@ class Pipeline(_ScikitCompat):
         postprocess_params = {**self._postprocess_params, **postprocess_params}
 
         self.call_count += 1
-        if self.call_count > 10 and self.framework == "pt" and self.device.type == "cuda":
+        if self.call_count > 10:
             warnings.warn(
                 "You seem to be using the pipelines sequentially on GPU. In order to maximize efficiency please use a"
                 " dataset",

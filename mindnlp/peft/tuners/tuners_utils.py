@@ -213,7 +213,7 @@ class BaseTuner(nn.Cell):
         target: nn.Cell,
         target_name: str,
         parent: nn.Cell,
-        **optionnal_kwargs: Any,
+        current_key: str,
     ) -> None:
         r"""
         Inplace replacement of the target module with the adapter layer. This method needs to be overriden by all the
@@ -311,7 +311,7 @@ class BaseTuner(nn.Cell):
                 "current_key": key,
             }
             # **finally create or replace target module.**
-            self._create_and_replace(peft_config, adapter_name, target, target_name, parent, **optionnal_kwargs)
+            self._create_and_replace(peft_config, adapter_name, target, target_name, parent, current_key=key)
 
         if not is_target_modules_in_base_model:
             raise ValueError(
