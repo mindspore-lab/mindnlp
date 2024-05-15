@@ -8,9 +8,13 @@ from ...activations import ACT2FN
 
 
 class PatchEmbedding(nn.Cell):
+    """
+    patch embedding
+    """
     def __init__(self, config):
         super().__init__()
-        self.proj = nn.Conv2d(config.in_channels, config.hidden_size, kernel_size=config.patch_size, stride=config.patch_size,pad_mode='valid',has_bias=True)
+        self.proj = nn.Conv2d(config.in_channels, config.hidden_size, kernel_size=config.patch_size, 
+                              stride=config.patch_size,pad_mode='valid',has_bias=True)
         self.cls_embedding = mindspore.Parameter(ops.zeros(1, config.hidden_size))
         self.position_embedding = nn.Embedding(config.num_positions, config.hidden_size)
 
@@ -24,6 +28,9 @@ class PatchEmbedding(nn.Cell):
 
 
 class Attention(nn.Cell):
+    """
+    attention
+    """
     def __init__(self, config):
         super().__init__()
         self.num_heads = config.num_heads
@@ -52,6 +59,9 @@ class Attention(nn.Cell):
 
 
 class MLP(nn.Cell):
+    """
+    MLP
+    """
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -67,6 +77,9 @@ class MLP(nn.Cell):
 
 
 class TransformerLayer(nn.Cell):
+    """
+    transformer layer
+    """
     def __init__(self, config):
         super().__init__()
         self.input_layernorm = nn.LayerNorm(config.hidden_size, epsilon=config.layer_norm_eps)
