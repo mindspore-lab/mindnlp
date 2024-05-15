@@ -13,7 +13,7 @@ class PatchEmbedding(nn.Cell):
     """
     def __init__(self, config):
         super().__init__()
-        self.proj = nn.Conv2d(config.in_channels, config.hidden_size, kernel_size=config.patch_size, 
+        self.proj = nn.Conv2d(config.in_channels, config.hidden_size, kernel_size=config.patch_size,
                               stride=config.patch_size,pad_mode='valid',has_bias=True)
         self.cls_embedding = mindspore.Parameter(ops.zeros(1, config.hidden_size))
         self.position_embedding = nn.Embedding(config.num_positions, config.hidden_size)
