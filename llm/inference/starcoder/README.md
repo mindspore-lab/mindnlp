@@ -23,7 +23,9 @@ starcoder server for [llm-vscode](https://github.com/huggingface/llm-vscode) cus
 3. **Run application on port**
 
     ```shell
-    python main.py --pretrained bigcode/starcoder2-7b
+    python main.py --pretrained bigscience/starcoder2-7b
+    # use mirror if you cannot access huggingface
+    python main.py --pretrained AI-ModelScope/starcoder2-7b --mirror modelscope
     ```
 
     It may take a while to download the model checkpoint for the first time. Please change the mirror address by `--mirror` argument if it takes too long.
@@ -35,7 +37,7 @@ starcoder server for [llm-vscode](https://github.com/huggingface/llm-vscode) cus
     1) Select `Skip TLS verification for insecure connections`.
         ![llm-vscode-settings](./assets/llm-vscode-TLS-verification.png)
     
-    2) Change `Llm:ConfigTemplate` to `Custom`.
+    2) Change `Llm:Backend` to `tgi` and `Llm:ConfigTemplate` to `Custom`.
         ![llm-vscode-settings](./assets/llm-vscode-config-template.png)
     
     3) Select `Edit in settings.json` in `Llm:Url`.
