@@ -2,10 +2,6 @@
 
 starcoder server for [llm-vscode](https://github.com/huggingface/llm-vscode) custom endpoint.
 
-<video id="video" controls="" preload="none" poster="封面">
-      <source id="mp4" src="./assets/starcoder-demo.mp4" type="video/mp4">
-</video>
-
 **Can't handle distributed inference very well yet.**
 
 ## Usage
