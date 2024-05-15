@@ -16,7 +16,17 @@ nav:
       - engine: api/engine.md
       - modules: api/modules.md
       - parallel: api/parallel.md
-      - peft: api/peft.md
+      - peft: 
+          MAIN CLASSES: 
+              PEFT model: api/peft/MAIN_CLASSES/peft_model.md
+              PEFT mapping: api/peft/MAIN_CLASSES/mapping.md
+              Configuration: api/peft/MAIN_CLASSES/config.md
+          ADAPTERS: 
+              AdaLoRA: api/peft/ADAPTERS/AdaLoRA.md
+              Adaption_Prompt: api/peft/ADAPTERS/Adaption_Prompt.md
+              IA3: api/peft/ADAPTERS/IA3.md
+              LoKr: api/peft/ADAPTERS/LoKr.md
+              LoRA: api/peft/ADAPTERS/LoRA.md
       - sentence: api/sentence.md
       - transformers: api/transformers.md
       - trl: api/trl.md
