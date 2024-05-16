@@ -53,6 +53,7 @@ from .question_answering import QuestionAnsweringPipeline
 from .automatic_speech_recognition import AutomaticSpeechRecognitionPipeline
 from .zero_shot_classification import ZeroShotClassificationArgumentHandler, ZeroShotClassificationPipeline
 from .document_question_answering import DocumentQuestionAnsweringPipeline
+from .fill_mask import FillMaskPipeline
 
 from ..models.auto.modeling_auto import (
     # AutoModel,
@@ -60,7 +61,7 @@ from ..models.auto.modeling_auto import (
     AutoModelForCausalLM,
     AutoModelForCTC,
     AutoModelForDocumentQuestionAnswering,
-    # AutoModelForMaskedLM,
+    AutoModelForMaskedLM,
     # AutoModelForMaskGeneration,
     # AutoModelForObjectDetection,
     AutoModelForQuestionAnswering,
@@ -162,7 +163,16 @@ SUPPORTED_TASKS = {
         },
         "type": "multimodal",
     },
-
+    "fill-mask": {
+        "impl": FillMaskPipeline,
+        "ms": (AutoModelForMaskedLM,),
+        "default": {
+            "model": {
+                "ms": ("distilbert/distilroberta-base", "ec58a5b"),
+            }
+        },
+        "type": "text",
+    },
 }
 
 NO_FEATURE_EXTRACTOR_TASKS = set()
@@ -300,7 +310,6 @@ def pipeline(
     ms_dtype=None,
     model_kwargs: Dict[str, Any] = None,
     pipeline_class: Optional[Any] = None,
-    mirror: str = "huggingface",
     **kwargs,
 ) -> Pipeline:
     """
@@ -445,7 +454,7 @@ def pipeline(
     # Instantiate config if needed
     if isinstance(config, str):
         config = AutoConfig.from_pretrained(
-            config, _from_pipeline=task, mirror=mirror, **model_kwargs
+            config, _from_pipeline=task, **model_kwargs
         )
     elif config is None and isinstance(model, str):
         # Check for an adapter file in the model path if PEFT is available
@@ -458,7 +467,7 @@ def pipeline(
                 model = adapter_config["base_model_name_or_path"]
 
         config = AutoConfig.from_pretrained(
-            model, _from_pipeline=task, mirror=mirror, **model_kwargs
+            model, _from_pipeline=task, **model_kwargs
         )
         # hub_kwargs["_commit_hash"] = config._commit_hash
 
@@ -492,7 +501,7 @@ def pipeline(
         model, _ = get_default_model_and_revision(targeted_task, task_options)
 
         if config is None and isinstance(model, str):
-            config = AutoConfig.from_pretrained(model, _from_pipeline=task, mirror=mirror, **model_kwargs)
+            config = AutoConfig.from_pretrained(model, _from_pipeline=task, **model_kwargs)
 
     if ms_dtype is not None:
         if "ms_dtype" in model_kwargs:
@@ -511,7 +520,6 @@ def pipeline(
             model,
             model_classes=model_classes,
             config=config,
-            mirror=mirror,
             **model_kwargs,
         )
 
@@ -570,7 +578,7 @@ def pipeline(
                 tokenizer_kwargs.pop("ms_dtype", None)
 
             tokenizer = AutoTokenizer.from_pretrained(
-                tokenizer_identifier, use_fast=use_fast, _from_pipeline=task, mirror=mirror, **tokenizer_kwargs
+                tokenizer_identifier, use_fast=use_fast, _from_pipeline=task, **tokenizer_kwargs
             )
 
     if task == "translation" and model.config.task_specific_params:
@@ -599,6 +607,7 @@ def pipeline(
 
 __all__ = [
     'CsvPipelineDataFormat',
+    'FillMaskPipeline',
     'JsonPipelineDataFormat',
     'PipedPipelineDataFormat',
     'Pipeline',
