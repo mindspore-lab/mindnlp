@@ -53,6 +53,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("bridgetower", "BridgeTowerModel"),
         ("bros", "BrosModel"),
         ("codegen", "CodeGenModel"),
+        ("cogvlm","CogVLMModel"),
         ("cpmant", "CpmAntModel"),
         ("cpmbee", "CpmBeeModel"),
         ("chatglm", "ChatGLMModel"),
@@ -160,6 +161,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("blenderbot-small", "BlenderbotSmallForCausalLM"),
         ("bloom", "BloomForCausalLM"),
         ("codegen", "CodeGenForCausalLM"),
+        ("cogvlm","CogVLMForCausalLM"),
         ("cpmant", "CpmAntForCausalLM"),
         ("cpmbee", "CpmBeeForCausalLM"),
         ("falcon", "FalconForCausalLM"),
@@ -398,9 +400,10 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("qwen2", "Qwen2ForSequenceClassification"),
         ("qwen2_moe", "Qwen2MoeForSequenceClassification"),
         ("reformer", "ReformerForSequenceClassification"),
+        ("roberta", "RobertaForSequenceClassification"),
         ("starcoder2", "Starcoder2ForSequenceClassification"),
         ("xlm-roberta", "XLMRobertaForSequenceClassification"),
-	("xlnet", "XLNetForSequenceClassification"),
+	    ("xlnet", "XLNetForSequenceClassification"),
     ]
 )
 

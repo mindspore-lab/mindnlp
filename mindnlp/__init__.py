@@ -24,8 +24,7 @@ os.environ["MS_DEV_FORCE_ACL"] = '1'
 from mindspore import jit as ms_jit
 from mindnlp import injection
 from mindnlp import transformers
-from mindnlp.dataset import load_dataset
-from mindnlp.workflow.workflow import Workflow
-from mindnlp.vocab import Vocab
+from mindnlp import dataset
+from mindnlp import evaluate
 
-__all__ = ['ms_jit', 'load_dataset', 'Workflow', 'Vocab']
+__all__ = ['ms_jit']

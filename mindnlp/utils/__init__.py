@@ -27,6 +27,7 @@ is_jieba_available, is_vision_available, is_sudachi_projection_available
 
 from .testing_utils import require_mindspore
 from .save import convert_file_size_to_int
+from .peft_utils import find_adapter_config_file
 
 DUMMY_INPUTS = [[7, 6, 0, 0, 1], [1, 2, 3, 0, 0], [0, 0, 0, 4, 5]]
 DUMMY_MASK = [[1, 1, 1, 1, 1], [1, 1, 1, 0, 0], [0, 0, 0, 1, 1]]

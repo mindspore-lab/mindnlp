@@ -19,16 +19,40 @@ import enum
 
 class PeftType(str, enum.Enum):
     """
-    PeftType.
+    Enum class for the different types of adapters in PEFT.
+
+    Supported PEFT types: 
+    - PROMPT_TUNING 
+    - MULTITASK_PROMPT_TUNING 
+    - P_TUNING 
+    - PREFIX_TUNING 
+    - LORA 
+    - ADALORA 
+    - BOFT 
+    - ADAPTION_PROMPT 
+    - IA3 
+    - LOHA 
+    - LOKR 
+    - OFT 
+    - POLY 
+    - LN_TUNING 
     """
-    # PROMPT_TUNING = "PROMPT_TUNING"
-    # P_TUNING = "P_TUNING"
-    # PREFIX_TUNING = "PREFIX_TUNING"
+
+    PROMPT_TUNING = "PROMPT_TUNING"
+    MULTITASK_PROMPT_TUNING = "MULTITASK_PROMPT_TUNING"
+    P_TUNING = "P_TUNING"
+    PREFIX_TUNING = "PREFIX_TUNING"
     LORA = "LORA"
     ADALORA = "ADALORA"
+    BOFT = "BOFT"
     ADAPTION_PROMPT = "ADAPTION_PROMPT"
     IA3 = "IA3"
-    LOKR= "LOKR"
+    LOHA = "LOHA"
+    LOKR = "LOKR"
+    OFT = "OFT"
+    POLY = "POLY"
+    LN_TUNING = "LN_TUNING"
+    VERA = "VERA"
 
 
 class TaskType(str, enum.Enum):

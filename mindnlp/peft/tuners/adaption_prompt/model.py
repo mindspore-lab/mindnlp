@@ -53,6 +53,7 @@ class AdaptionPromptModel(nn.Cell):
         self._mark_only_adaption_prompts_as_trainable(self.model)
 
     def add_adapter(self, adapter_name: str, config: AdaptionPromptConfig) -> None:
+        """Add an adapter with the given name and config."""
         config = prepare_config(config, self.model)
         if adapter_name in self.peft_config:
             raise ValueError(f"Adapter named '{adapter_name}' already exists.")

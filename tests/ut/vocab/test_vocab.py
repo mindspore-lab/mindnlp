@@ -14,7 +14,7 @@
 # ============================================================================
 """Test Vocab"""
 
-from mindnlp import Vocab
+from mindnlp.vocab import Vocab
 
 def test_vocab_from_list():
     """test vocab from list."""
