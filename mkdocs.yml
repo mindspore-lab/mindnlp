@@ -10,27 +10,38 @@ nav:
   - Supported Models: supported_models.md
   - How-To Contribute:  contribute.md
   - API Reference:
-      - accelerate: api/accelerate.md
-      - data: api/data.md
-      - dataset: api/dataset.md
-      - engine: api/engine.md
-      - modules: api/modules.md
-      - parallel: api/parallel.md
-      - peft: 
-          MAIN CLASSES: 
-              PEFT model: api/peft/MAIN_CLASSES/peft_model.md
-              PEFT mapping: api/peft/MAIN_CLASSES/mapping.md
-              Configuration: api/peft/MAIN_CLASSES/config.md
-          ADAPTERS: 
-              AdaLoRA: api/peft/ADAPTERS/AdaLoRA.md
-              Adaption_Prompt: api/peft/ADAPTERS/Adaption_Prompt.md
-              IA3: api/peft/ADAPTERS/IA3.md
-              LoKr: api/peft/ADAPTERS/LoKr.md
-              LoRA: api/peft/ADAPTERS/LoRA.md
-      - sentence: api/sentence.md
-      - transformers: api/transformers.md
-      - trl: api/trl.md
-      - utils: api/utils.md
+      - Accelerate: api/accelerate.md
+      - Data: api/data.md
+      - Dataset: api/dataset.md
+      - Engine: api/engine.md
+      - Modules: api/modules.md
+      - Parallel: api/parallel.md
+      - PEFT:
+          - api/peft/index.md
+          - tuners: 
+              AdaLoRA: api/peft/tuners/adalora.md
+              Adaption_Prompt: api/peft/tuners/adaption_prompt.md
+              IA3: api/peft/tuners/ia3.md
+              LoKr: api/peft/tuners/lokr.md
+              LoRA: api/peft/tuners/lora.md
+              Prompt tuning: api/peft/tuners/prompt_tuning.md
+          - utils:
+              - merge_utils: api/peft/utils/merge_utils.md
+          - config: api/peft/config.md
+          - mapping: api/peft/mapping.md
+          - peft_model: api/peft/peft_model.md
+
+      - Sentence: api/sentence.md
+      - Transformers:
+          - api/transformers/index.md
+          - generation: 
+              - api/transforemrs/generation/index.md
+          - models:
+              - api/transforemrs/models/index.md
+          - pipeline:
+              - api/transforemrs/pipeline/index.md
+      - TRL: api/trl.md
+      - Utils: api/utils.md
   - Notes:
       - Change Log: notes/changelog.md
       - Code of Conduct: notes/code_of_conduct.md
@@ -41,24 +52,26 @@ theme:
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: black
+      primary: indigo
+      accent: indigo
       toggle:
-        icon: material/weather-sunny
+        icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: black
+      accent: indigo
       toggle:
-        icon: material/weather-night
-        name: Switch to light mode
+        icon: material/brightness-4
+        name: Switch to system preference
   features:
     # - navigation.instant  # see https://github.com/ultrabug/mkdocs-static-i18n/issues/62
     - navigation.tracking
     - navigation.tabs
-    - navigation.sections
     - navigation.indexes
     - navigation.top
     - navigation.footer
+    - navigation.path
     - toc.follow
     - search.highlight
     - search.share
@@ -69,6 +82,9 @@ theme:
     - content.code.copy
     - content.code.select
     - content.code.annotations
+  favicon: assets/favicon.ico
+  icon:
+    logo: logo
 
 markdown_extensions:
   # Officially Supported Extensions
@@ -146,9 +162,9 @@ plugins:
 extra:
   generator: false
   social:
-    # - icon: fontawesome/solid/paper-plane
-    #   link: mailto:mindspore-lab@huawei.com
-    # - icon: fontawesome/brands/github
-    #   link: https://github.com/mindspore-lab/mindcv
-    # - icon: fontawesome/brands/zhihu
-    #   link: https://www.zhihu.com/people/mindsporelab
+    - icon: fontawesome/solid/paper-plane
+      link: mailto:lvyufeng@cqu.edu.cn
+    - icon: fontawesome/brands/github
+      link: https://github.com/mindspore-lab/mindnlp
+    - icon: fontawesome/brands/zhihu
+      link: https://www.zhihu.com/people/lu-yu-feng-46-1

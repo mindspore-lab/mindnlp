@@ -1,2 +1,2 @@
 :::mindnlp.peft.tuners.lokr.config
-::: mindnlp.peft.tuners.lokr.model
+:::mindnlp.peft.tuners.lokr.model
