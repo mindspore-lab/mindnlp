@@ -23,7 +23,6 @@ from .base import GenericTensor, Pipeline, PipelineException
 
 
 if is_mindspore_available():
-    import mindspore as ms
     from mindspore import ops
 
 
@@ -135,6 +134,7 @@ class FillMaskPipeline(Pipeline):
         logits = outputs[0, masked_index, :]
         probs=ops.softmax(logits,axis=-1)
         if target_ids is not None:
+            target_ids=list(target_ids)
             probs = probs[..., target_ids]
 
         values, predictions = probs.topk(top_k)
@@ -189,7 +189,6 @@ class FillMaskPipeline(Pipeline):
                     )
                     continue
                 id_ = input_ids[0]
-                # XXX: If users encounter this pass
                 # it becomes pretty slow, so let's make sure
                 # The warning enables them to fix the input to
                 # get faster performance.

@@ -91,15 +91,9 @@ class FillMaskPipelineTests(unittest.TestCase):
 
 
     def test_fp16_casting(self):
-        pipe = pipeline(
-            "fill-mask",
-            model="hf-internal-testing/tiny-random-distilbert",
-        )
+        pipe = pipeline(task="fill-mask", model="sshleifer/tiny-distilroberta-base")
 
-        # convert model to fp16
-        #pipe.model.half()
-
-        response = pipe("Paris is the [MASK] of France.")
+        response = pipe("Paris is the <mask> of France.")
         # We actually don't care about the result, we just want to make sure
         # it works, meaning the float16 tensor got casted back to float32
         # for postprocessing.
