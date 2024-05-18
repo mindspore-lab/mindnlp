@@ -13,7 +13,18 @@ nav:
       - Accelerate: api/accelerate.md
       - Data: api/data.md
       - Dataset: api/dataset.md
-      - Engine: api/engine.md
+      - Engine:
+          - api/engine/index.md
+          - train_args:
+              base: api/engine/train_args/base.md
+              seq2seq: api/engine/train_args/seq2seq.md
+          - trainer:
+              base: api/engine/trainer/base.md
+              default_func: api/engine/trainer/default_func.md
+          - callbacks: api/engine/callbacks.md
+          - export: api/engine/export.md
+          - utils: api/engine/utils.md
+
       - Modules: api/modules.md
       - Parallel: api/parallel.md
       - PEFT:
