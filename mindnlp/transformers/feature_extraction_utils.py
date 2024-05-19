@@ -408,6 +408,7 @@ class FeatureExtractionMixin():
         from_pipeline = kwargs.pop("_from_pipeline", None)
         from_auto_class = kwargs.pop("_from_auto", False)
         revision = kwargs.pop('revision', 'main')
+        mirror = kwargs.pop('mirror', 'huggingface')
 
         user_agent = {"file_type": "feature extractor", "from_auto_class": from_auto_class}
         if from_pipeline is not None:
@@ -441,6 +442,7 @@ class FeatureExtractionMixin():
                     local_files_only=local_files_only,
                     user_agent=user_agent,
                     revision=revision,
+                    mirror=mirror,
                 )
             except EnvironmentError:
                 # Raise any environment error raise by `cached_file`. It will have a helpful error message adapted to
