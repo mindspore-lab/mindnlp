@@ -62,7 +62,7 @@ class LoKrLayer(nn.Cell, BaseTunerLayer):
     _active_adapter: Union[str, List[str]]
 
     # List all merged adapters
-    merged_adapters: "list[str]" = []
+    merged_adapters: "List[str]" = []
 
     def __init__(self, base_layer: nn.Cell) -> None:
         super().__init__()
@@ -440,7 +440,7 @@ class LoKrLayer(nn.Cell, BaseTunerLayer):
         self._active_adapter = adapter_names
 
     def merge(
-        self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None
+        self, safe_merge: bool = False, adapter_names: Optional[List[str]] = None
     ) -> None:
         """
         Merge the active adapter weights into the base weights

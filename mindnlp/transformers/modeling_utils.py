@@ -1246,6 +1246,7 @@ class PreTrainedModel(nn.Cell, CellUtilMixin, GenerationMixin, PeftAdapterMixin)
                     local_files_only=local_files_only,
                     subfolder=subfolder,
                     revision=revision,
+                    mirror=mirror,
                     **kwargs,
                 )
             except OSError:

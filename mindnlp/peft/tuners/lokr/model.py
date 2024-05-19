@@ -14,7 +14,7 @@
 # ============================================================================
 """Lokr."""
 import re
-from typing import Optional, Union, Dict, Type
+from typing import Optional, Union, Dict, Type, List
 from itertools import chain
 from tqdm import tqdm
 
@@ -224,7 +224,7 @@ class LoKrModel(BaseTuner):
         merge: bool = True,
         progressbar: bool = False,
         safe_merge: bool = False,
-        adapter_names: Optional[list[str]] = None,
+        adapter_names: Optional[List[str]] = None,
     ):
         if merge:
             if getattr(self.model, "quantization_method", None) == "gptq":
@@ -263,7 +263,7 @@ class LoKrModel(BaseTuner):
 
         return self.model
 
-    def _unloading_checks(self, adapter_names: Optional[list[str]]):
+    def _unloading_checks(self, adapter_names: Optional[List[str]]):
         adapters_to_consider = adapter_names or self.active_adapters
         is_modules_to_save_available = any(
             self.peft_config[adapter].modules_to_save
