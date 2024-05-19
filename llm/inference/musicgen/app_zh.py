@@ -11,8 +11,8 @@ from mindnlp.transformers.generation.streamers import BaseStreamer
 
 import gradio as gr
 
-model = MusicgenForConditionalGeneration.from_pretrained("facebook/musicgen-small")
-processor = MusicgenProcessor.from_pretrained("facebook/musicgen-small")
+model = MusicgenForConditionalGeneration.from_pretrained("mindnlp/musicgen-small", mirror='modelscope')
+processor = MusicgenProcessor.from_pretrained("mindnlp/musicgen-small", mirror='modelscope')
 
 title = "MusicGen流式音乐生成"
 
