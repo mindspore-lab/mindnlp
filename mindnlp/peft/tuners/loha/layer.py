@@ -11,11 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""LoHa Layer"""
 import math
-from typing import Any, Set, Tuple
+import mindspore
 
-import mindspore as ms
+from typing import Any, Set, Tuple
 from mindspore import nn, ops
 from mindnlp.abc import ParameterDict
 from mindnlp.peft.tuners.lycoris_utils import LycorisLayer
@@ -62,33 +62,33 @@ class LoHaLayer(nn.Cell, LycorisLayer):
     ):
         # https://github.com/KohakuBlueleaf/LyCORIS/blob/eb460098187f752a5d66406d3affade6f0a07ece/lycoris/modules/loha.py#L130C9-L143C75
         if len(shape) == 4:
-            self.hada_t1[adapter_name] = ms.Parameter(
+            self.hada_t1[adapter_name] = mindspore.Parameter(
                 ops.zeros((r, r, shape[2], shape[3]))
             )
-            self.hada_w1_a[adapter_name] = ms.Parameter(
+            self.hada_w1_a[adapter_name] = mindspore.Parameter(
                 ops.zeros((r, shape[0]))
             )  # out_dim, 1-mode
-            self.hada_w1_b[adapter_name] = ms.Parameter(
+            self.hada_w1_b[adapter_name] = mindspore.Parameter(
                 ops.zeros((r, shape[1]))
             )  # in_dim , 2-mode
 
-            self.hada_t2[adapter_name] = ms.Parameter(
+            self.hada_t2[adapter_name] = mindspore.Parameter(
                 ops.zeros((r, r, shape[2], shape[3]))
             )
-            self.hada_w2_a[adapter_name] = ms.Parameter(
+            self.hada_w2_a[adapter_name] = mindspore.Parameter(
                 ops.zeros((r, shape[0]))
             )  # out_dim, 1-mode
 
-            self.hada_w2_b[adapter_name] = ms.Parameter(
+            self.hada_w2_b[adapter_name] = mindspore.Parameter(
                 ops.zeros((r, shape[1]))
             )  # in_dim , 2-mode
 
         else:
-            self.hada_w1_a[adapter_name] = ms.Parameter(ops.zeros((shape[0], r)))
-            self.hada_w1_b[adapter_name] = ms.Parameter(ops.zeros((r, shape[1])))
+            self.hada_w1_a[adapter_name] = mindspore.Parameter(ops.zeros((shape[0], r)))
+            self.hada_w1_b[adapter_name] = mindspore.Parameter(ops.zeros((r, shape[1])))
 
-            self.hada_w2_a[adapter_name] = ms.Parameter(ops.zeros((shape[0], r)))
-            self.hada_w2_b[adapter_name] = ms.Parameter(ops.zeros((r, shape[1])))
+            self.hada_w2_a[adapter_name] = mindspore.Parameter(ops.zeros((shape[0], r)))
+            self.hada_w2_b[adapter_name] = mindspore.Parameter(ops.zeros((r, shape[1])))
 
     # TODO
     def reset_adapter_parameters(self, adapter_name: str):
@@ -249,7 +249,7 @@ class LoHaLayer(nn.Cell, LycorisLayer):
         #         self.to(weight.device)
         self.set_adapter(self.active_adapters)
 
-    def get_delta_weight(self, adapter_name: str) -> ms.Tensor:
+    def get_delta_weight(self, adapter_name: str) -> mindspore.Tensor:
         # https://github.com/KohakuBlueleaf/LyCORIS/blob/eb460098187f752a5d66406d3affade6f0a07ece/lycoris/modules/loha.py#L178
         if adapter_name in self.hada_t1.keys():
             weight = make_weight_cp(
@@ -259,7 +259,7 @@ class LoHaLayer(nn.Cell, LycorisLayer):
                 self.hada_t2[adapter_name],
                 self.hada_w2_a[adapter_name],
                 self.hada_w2_b[adapter_name],
-                scale=ms.tensor(self.scaling[adapter_name]),
+                scale=mindspore.tensor(self.scaling[adapter_name]),
             )
         else:
             weight = make_weight(
@@ -267,7 +267,7 @@ class LoHaLayer(nn.Cell, LycorisLayer):
                 self.hada_w1_b[adapter_name],
                 self.hada_w2_a[adapter_name],
                 self.hada_w2_b[adapter_name],
-                scale=ms.tensor(self.scaling[adapter_name]),
+                scale=mindspore.tensor(self.scaling[adapter_name]),
             )
 
         base_layer = self.get_base_layer()
@@ -285,7 +285,7 @@ class LoHaLayer(nn.Cell, LycorisLayer):
             weight *= drop
         return weight
 
-    def construct(self, x: ms.Tensor, *args, **kwargs) -> ms.Tensor:
+    def construct(self, x: mindspore.Tensor, *args, **kwargs) -> mindspore.Tensor:
         previous_dtype = x.dtype
 
         if self.disable_adapters:
@@ -339,8 +339,8 @@ class Linear(LoHaLayer):
         )
 
     def _get_delta_activations(
-        self, adapter_name: str, input: ms.Tensor, *args: Any, **kwargs: Any
-    ) -> ms.Tensor:
+        self, adapter_name: str, input: mindspore.Tensor, *args: Any, **kwargs: Any
+    ) -> mindspore.Tensor:
         delta_weight = self.get_delta_weight(adapter_name)
         # don't add bias here, because the bias is already included in the output of the base_layer
         return ops.dense(input, delta_weight)
@@ -381,8 +381,8 @@ class Conv2d(LoHaLayer):
         )
 
     def _get_delta_activations(
-        self, adapter_name: str, input: ms.Tensor, *args: Any, **kwargs: Any
-    ) -> ms.Tensor:
+        self, adapter_name: str, input: mindspore.Tensor, *args: Any, **kwargs: Any
+    ) -> mindspore.Tensor:
         delta_weight = self.get_delta_weight(adapter_name)
         # don't add bias here, because the bias is already included in the output of the base_layer
         base_layer = self.get_base_layer()
@@ -408,7 +408,7 @@ class HadaWeight(nn.Cell):
     def __init__(self):
         super().__init__()
 
-    def construct(self, w1a, w1b, w2a, w2b, scale=ms.tensor(1)):
+    def construct(self, w1a, w1b, w2a, w2b, scale=mindspore.tensor(1)):
         diff_weight = ((w1a @ w1b) * (w2a @ w2b)) * scale
         return diff_weight
 
@@ -429,7 +429,7 @@ class HadaWeightCP(nn.Cell):
     def __init__(self):
         super().__init__()
 
-    def construct(self, t1, w1a, w1b, t2, w2a, w2b, scale=ms.tensor(1)):
+    def construct(self, t1, w1a, w1b, t2, w2a, w2b, scale=mindspore.tensor(1)):
         rebuild1 = ops.einsum("i j k l, j r, i p -> p r k l", t1, w1b, w1a)
         rebuild2 = ops.einsum("i j k l, j r, i p -> p r k l", t2, w2b, w2a)
         return rebuild1 * rebuild2 * scale
