@@ -44,7 +44,7 @@ else:
 # This is a pinned image from a specific revision of a document question answering space, hosted by HuggingFace,
 # so we can expect it to be available.
 INVOICE_URL = (
-    "https://hf-mirror.com/spaces/impira/docquery/resolve/2f6c96314dc84dfda62d40de9da55f2f5165d403/invoice.png"
+    "https://hf.co/spaces/impira/docquery/resolve/2f6c96314dc84dfda62d40de9da55f2f5165d403/invoice.png"
 )
 
 
