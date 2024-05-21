@@ -34,7 +34,7 @@ from ..tuners_utils import (
 
 
 class LoKrLayer(nn.Cell, BaseTunerLayer):
-    other_param_names = ("r", "alpha", "scaling", "rank_dropout", "module_dropout")
+    other_param_names = ("r", "alpha", "scaling", "rank_dropout", "cell_dropout")
     # All names of layers that may contain adapter weights
     adapter_layer_names = (
         "lokr_w1",
@@ -50,7 +50,7 @@ class LoKrLayer(nn.Cell, BaseTunerLayer):
 
     Args:
         is_pluggable (`bool`, *optional*):
-            Whether the adapter layer can be plugged to any pytorch module
+            Whether the adapter layer can be plugged to any pytorch cell
         active_adapters (Union[List[`str`], `str`], *optional*):
             The name of the active adapter.
     """
@@ -79,7 +79,7 @@ class LoKrLayer(nn.Cell, BaseTunerLayer):
         self.alpha = {}
         self.scaling = {}
         self.rank_dropout = {}
-        self.module_dropout = {}
+        self.cell_dropout = {}
 
         # Tuner info
         self._disable_adapters = False
@@ -320,7 +320,7 @@ class LoKrLayer(nn.Cell, BaseTunerLayer):
         r: int,
         alpha: float,
         rank_dropout: float,
-        module_dropout: float,
+        cell_dropout: float,
         init_weights: bool,
         use_effective_conv2d: bool,
         decompose_both: bool,
@@ -334,7 +334,7 @@ class LoKrLayer(nn.Cell, BaseTunerLayer):
             r (`int`): Rank for the added adapter.
             alpha (`float`): Alpha for the added adapter.
             rank_dropout (`float`): The dropout probability for rank dimension during training
-            module_dropout (`float`): The dropout probability for disabling adapter during training.
+            cell_dropout (`float`): The dropout probability for disabling adapter during training.
             init_weights (`bool`): Whether to initialize adapter weights.
             use_effective_conv2d (`bool`): Use parameter effective decomposition for Conv2d with ksize > 1.
             decompose_both (`bool`): Perform rank decomposition of left kronecker product matrix.
@@ -349,7 +349,7 @@ class LoKrLayer(nn.Cell, BaseTunerLayer):
         self.alpha[adapter_name] = alpha
         self.scaling[adapter_name] = alpha / r
         self.rank_dropout[adapter_name] = rank_dropout
-        self.module_dropout[adapter_name] = module_dropout
+        self.cell_dropout[adapter_name] = cell_dropout
         base_layer = self.get_base_layer()
 
         # Determine shape of LoKr weights
@@ -428,8 +428,8 @@ class LoKrLayer(nn.Cell, BaseTunerLayer):
 
         # Deactivate grads on the inactive adapter and activate grads on the active adapter
         for layer_name in self.adapter_layer_names:
-            module_dict = getattr(self, layer_name)
-            for key, layer in module_dict.items():
+            cell_dict = getattr(self, layer_name)
+            for key, layer in cell_dict.items():
                 if key in adapter_names:
                     # Note: It is possible that not a single layer is called with requires_grad_(True) here. This may
                     # happen if a completely different adapter layer is being activated.
@@ -491,7 +491,7 @@ class LoKrLayer(nn.Cell, BaseTunerLayer):
                 )
 
     def get_delta_weight(self, adapter_name: str) -> ms.Tensor:
-        # https://github.com/KohakuBlueleaf/LyCORIS/blob/e4259b870d3354a9615a96be61cb5d07455c58ea/lycoris/modules/lokr.py#L224
+        # https://github.com/KohakuBlueleaf/LyCORIS/blob/e4259b870d3354a9615a96be61cb5d07455c58ea/lycoris/cells/lokr.py#L224
         if adapter_name in self.lokr_w1:
             w1 = self.lokr_w1[adapter_name]
         else:
@@ -539,11 +539,11 @@ class LoKrLayer(nn.Cell, BaseTunerLayer):
                 if active_adapter not in self._available_adapters:
                     continue
 
-                module_dropout = self.module_dropout[active_adapter]
+                cell_dropout = self.cell_dropout[active_adapter]
 
                 # Modify current execution weights
                 if (not self.training) or (
-                    self.training and ops.rand(1) > module_dropout
+                    self.training and ops.rand(1) > cell_dropout
                 ):
                     result = result + self._get_delta_activations(
                         active_adapter, x, *args, **kwargs
@@ -563,7 +563,7 @@ class Dense(LoKrLayer):
         r: int = 0,
         alpha: float = 0.0,
         rank_dropout: float = 0.0,
-        module_dropout: float = 0.0,
+        cell_dropout: float = 0.0,
         init_weights: bool = True,
         **kwargs,
     ):
@@ -572,7 +572,7 @@ class Dense(LoKrLayer):
         # Create adapter and set it active
         self._active_adapter = adapter_name
         self.update_layer(
-            adapter_name, r, alpha, rank_dropout, module_dropout, init_weights, **kwargs
+            adapter_name, r, alpha, rank_dropout, cell_dropout, init_weights, **kwargs
         )
 
     def _get_delta_activations(
@@ -599,7 +599,7 @@ class Conv2d(LoKrLayer):
         r: int = 0,
         alpha: float = 0.0,
         rank_dropout: float = 0.0,
-        module_dropout: float = 0.0,
+        cell_dropout: float = 0.0,
         use_effective_conv2d: bool = False,
         init_weights: bool = True,
         **kwargs,
@@ -613,7 +613,7 @@ class Conv2d(LoKrLayer):
             r,
             alpha,
             rank_dropout,
-            module_dropout,
+            cell_dropout,
             init_weights,
             use_effective_conv2d,
             **kwargs,

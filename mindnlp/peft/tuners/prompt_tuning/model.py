@@ -40,7 +40,7 @@ class PromptEmbedding(nn.Cell):
     ...     task_type="SEQ_2_SEQ_LM",
     ...     num_virtual_tokens=20,
     ...     token_dim=768,
-    ...     num_transformer_submodules=1,
+    ...     num_transformer_subcells=1,
     ...     num_attention_heads=12,
     ...     num_layers=12,
     ...     prompt_tuning_init="TEXT",
@@ -60,7 +60,7 @@ class PromptEmbedding(nn.Cell):
     def __init__(self, config, word_embeddings):
         super().__init__()
 
-        total_virtual_tokens = config.num_virtual_tokens * config.num_transformer_submodules
+        total_virtual_tokens = config.num_virtual_tokens * config.num_transformer_subcells
         self.embedding = nn.Embedding(total_virtual_tokens, config.token_dim)
         if config.prompt_tuning_init == PromptTuningInit.TEXT and not config.inference_mode:
             from ....transformers import AutoTokenizer

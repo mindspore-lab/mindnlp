@@ -14,6 +14,7 @@
 # ============================================================================
 """other utils"""
 import copy
+from contextlib import nullcontext
 from typing import Optional, List
 
 import mindspore
@@ -21,6 +22,7 @@ from mindspore import nn, ops, Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp._legacy.nn import Matmul
+from mindnlp._legacy.abc import ParameterDict
 
 def _get_batch_size(input_ids: Optional[Tensor], inputs_embeds: Optional[Tensor]) -> int:
     """Get the batch size based on either input_ids or input_embeds
@@ -37,29 +39,59 @@ def _get_batch_size(input_ids: Optional[Tensor], inputs_embeds: Optional[Tensor]
         batch_size = inputs_embeds.shape[0]
     return batch_size
 
-class ModulesToSaveWrapper(mindspore.nn.Cell):
-    """
-    save module
-    """
-    def __init__(self, module_to_save, adapter_name):
+class ModulesToSaveWrapper(nn.Cell):
+    def __init__(self, cell_to_save, adapter_name):
         super().__init__()
-        self.original_module = module_to_save
-        self.modules_to_save = nn.CellDict()
+        self.original_cell = cell_to_save
+        self.cells_to_save = nn.CellDict({})
+        self._active_adapter = adapter_name
+        self._disable_adapters = False
         self.update(adapter_name)
-        self.active_adapter = adapter_name
-        self.disable_adapters = False
+        self.check_cell()
+
+    def check_cell(self):
+        """Perform some sanity checks on the cell to ensure that it works"""
+        # Try to anticipate some cells that users could try to target that would not work.
+        # Note: It's not possible to check hasattr(cell, "forward"), since that returns True for ModuleDict and
+        # ModuleList, even though their forward methods cannot be called
+        forbidden_classes = (nn.CellDict, nn.CellList, mindspore.ParameterTuple, ParameterDict)
+        if isinstance(self.original_cell, forbidden_classes):
+            cls_name = self.original_cell.__class__.__name__
+            raise TypeError(f"cells_to_save cannot be applied to cells of type {cls_name}")
+
+    @property
+    def disable_adapters(self) -> bool:
+        # use a property to ensure that disable_adapters is not set directly, instead use the enable_adapters method
+        return self._disable_adapters
+
+    @property
+    def active_adapter(self) -> str:
+        # use a property to ensure that active_adapter is not set directly, instead use the set_adapter method
+        return self._active_adapter
+
+    @property
+    def weight(self):
+        if self.active_adapter not in self.cells_to_save:
+            return self.original_cell.weight
+        return self.cells_to_save[self.active_adapter].weight
 
     def update(self, adapter_name):
-        """
-        update modules_to_save.
-        """
-        self.modules_to_save.update({adapter_name: copy.deepcopy(self.original_module)})
+        context_manager = nullcontext()
+        for _, param in self.original_cell.parameters_and_names():
+            num_params = param.numel()
 
-    #     if hasattr(self.modules_to_save[adapter_name], "_hf_hook"):
-    #         old_hook = self.modules_to_save[adapter_name]._hf_hook
-    #         new_hook = self._create_new_hook(old_hook)
-    #         remove_hook_from_module(self.modules_to_save[adapter_name])
-    #         add_hook_to_module(self.modules_to_save[adapter_name], new_hook)
+        with context_manager:
+            self.cells_to_save.update(nn.CellDict({adapter_name: copy.deepcopy(self.original_cell)}))
+
+        if hasattr(self.cells_to_save[adapter_name], "_hf_hook"):
+            old_hook = self.cells_to_save[adapter_name]._hf_hook
+            new_hook = self._create_new_hook(old_hook)
+            # remove_hook_from_cell(self.cells_to_save[adapter_name])
+            # add_hook_to_cell(self.cells_to_save[adapter_name], new_hook)
+
+        self.original_cell.requires_grad_(False)
+        if adapter_name == self.active_adapter:
+            self.cells_to_save[adapter_name].requires_grad_(True)
 
     # def _create_new_hook(self, old_hook):
     #     r"""
@@ -75,15 +107,58 @@ class ModulesToSaveWrapper(mindspore.nn.Cell):
     #     new_hook = old_hook_cls(**filtered_old_hook_attr)
     #     return new_hook
 
-    def construct(self, X):
-        # TODO:*args, **kwargs
-        if self.disable_adapters or (self.active_adapter not in self.modules_to_save.keys()):
-            return self.original_module(X)
-        return self.modules_to_save[self.active_adapter](X)
+    def construct(self, *args, **kwargs):
+        if self.disable_adapters or (self.active_adapter not in self.cells_to_save):
+            return self.original_cell(*args, **kwargs)
+        return self.cells_to_save[self.active_adapter](*args, **kwargs)
 
-def custom_get_submodule(model: mindspore.nn.Cell, target: str) -> mindspore.nn.Cell:
+    def enable_adapters(self, enabled: bool):
+        """Toggle the enabling and disabling of adapters
+
+        Takes care of setting the requires_grad flag for the adapter weights.
+
+        Args:
+            enabled (bool): True to enable adapters, False to disable adapters
+        """
+        if self._disable_adapters is not enabled:
+            # already in the desired state, do nothing
+            return
+
+        if enabled:
+            self.original_cell.requires_grad_(False)
+            self.cells_to_save[self.active_adapter].requires_grad_(True)
+            self._disable_adapters = False
+        else:
+            self.original_cell.requires_grad_(True)
+            self.cells_to_save.requires_grad_(False)
+            self._disable_adapters = True
+
+    def set_adapter(self, adapter_name: str):
+        """Set the active adapter
+
+        Additionally, this function will set the specified adapter to trainable (i.e., requires_grad=True). If this is
+        not desired, use the following code.
+
+        ```py
+        >>> for name, param in model_peft.named_parameters():
+        ...     if ...:  # some check on name (ex. if 'lora' in name)
+        ...         param.requires_grad = False
+        ```
+
+        Args:
+            adapter_name (str): The name of the adapter to set as active
+        """
+        if adapter_name not in self.cells_to_save:
+            raise ValueError(f"Adapter {adapter_name} not found in {self.cells_to_save.keys()}")
+
+        self.cells_to_save[self.active_adapter].requires_grad_(False)
+        self.cells_to_save[adapter_name].requires_grad_(True)
+        self._active_adapter = adapter_name
+
+
+def custom_get_subcell(model: mindspore.nn.Cell, target: str) -> mindspore.nn.Cell:
     """
-    Returns the submodule given by ``target`` if it exists, otherwise throws an error.
+    Returns the subcell given by ``target`` if it exists, otherwise throws an error.
     功能和 torch.nn.Module 相似
     """
     if target == "":
@@ -103,14 +178,14 @@ def custom_get_submodule(model: mindspore.nn.Cell, target: str) -> mindspore.nn.
 
     return mod
 
-def _get_submodules(model, key):
+def _get_subcells(model, key):
     """
-    get submodules
+    get subcells
     """
     parent_key = ".".join(key.split(".")[:-1])
-    parent = custom_get_submodule(model, parent_key)
+    parent = custom_get_subcell(model, parent_key)
     target_name = key.split(".")[-1]
-    target = custom_get_submodule(model, key)
+    target = custom_get_subcell(model, key)
 
     return parent, target, target_name
 
@@ -119,11 +194,11 @@ def _set_trainable(model, adapter_name):
     """
     set trainable
     """
-    key_list = [key for key, _ in model.cells_and_names()]  # named_modules cells_and_names
+    key_list = [key for key, _ in model.cells_and_names()]  # named_cells cells_and_names
     for key in key_list:
-        target_module_found = any(key.endswith(target_key) for target_key in model.modules_to_save)
-        if target_module_found:
-            parent, target, target_name = _get_submodules(model, key)
+        target_cell_found = any(key.endswith(target_key) for target_key in model.cells_to_save)
+        if target_cell_found:
+            parent, target, target_name = _get_subcells(model, key)
 
             if isinstance(target, ModulesToSaveWrapper):
                 target.update(adapter_name)
@@ -155,9 +230,9 @@ def _freeze_adapter(model, adapter_name):
 
 
 def _set_adapter(model, adapter_name):
-    for module in model.modules():
-        if isinstance(module, ModulesToSaveWrapper):
-            module.active_adapter = adapter_name
+    for cell in model.cells():
+        if isinstance(cell, ModulesToSaveWrapper):
+            cell.active_adapter = adapter_name
 
 
 def _prepare_prompt_learning_config(peft_config, model_config):

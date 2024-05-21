@@ -1272,6 +1272,13 @@ def _check_names(self):
 
 nn.Cell.check_names = _check_names
 
+def requires_grad_(self, requires_grad: bool = True):
+    for p in self.get_parameters():
+        p.requires_grad = requires_grad
+    return self
+
+nn.Cell.requires_grad_ = requires_grad_
+
 def __new__(cls, iterable):
     """Create instance object of ParameterTuple."""
     data = tuple(iterable)
