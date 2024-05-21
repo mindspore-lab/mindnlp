@@ -18,7 +18,7 @@ Evaluator for testing.
 from inspect import signature
 from tqdm.autonotebook import tqdm
 from mindnlp import ms_jit
-from mindnlp.abc import Metric
+from mindnlp._legacy.abc import Metric
 from .callbacks.callback_manager import CallbackManager, RunContext
 from ...utils import ModelOutput, logging
 

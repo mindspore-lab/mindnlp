@@ -27,7 +27,7 @@ from mindspore.common.initializer import initializer,  Constant
 
 from mindnlp.transformers.ms_utils import Conv1D
 from mindnlp.peft.utils import transpose
-from mindnlp.abc import  ParameterDict
+from mindnlp._legacy.abc import  ParameterDict
 
 from ..tuners_utils import BaseTunerLayer, check_adapters_to_merge
 
@@ -90,7 +90,7 @@ class Linear(nn.Cell, IA3Layer):
         adapter_name: str,
         fan_in_fan_out: bool = False,  # Set this to True if the layer to replace stores weight like (fan_in, fan_out)
         is_feedforward: bool = False,  # Set to True if the layer is treated as a feedforward layer
-        is_target_conv_1d_layer: bool = False,  # whether target module is a conv1d layer. useful while unloading later
+        is_target_conv_1d_layer: bool = False,  # whether target cell is a conv1d layer. useful while unloading later
         init_ia3_weights: bool = True,  # whether to initialize IA3 weights
         **kwargs,
     ) -> None:

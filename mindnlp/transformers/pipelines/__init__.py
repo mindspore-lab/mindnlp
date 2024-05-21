@@ -53,6 +53,7 @@ from .question_answering import QuestionAnsweringPipeline
 from .automatic_speech_recognition import AutomaticSpeechRecognitionPipeline
 from .zero_shot_classification import ZeroShotClassificationArgumentHandler, ZeroShotClassificationPipeline
 from .document_question_answering import DocumentQuestionAnsweringPipeline
+from .fill_mask import FillMaskPipeline
 
 from ..models.auto.modeling_auto import (
     # AutoModel,
@@ -60,7 +61,7 @@ from ..models.auto.modeling_auto import (
     AutoModelForCausalLM,
     AutoModelForCTC,
     AutoModelForDocumentQuestionAnswering,
-    # AutoModelForMaskedLM,
+    AutoModelForMaskedLM,
     # AutoModelForMaskGeneration,
     # AutoModelForObjectDetection,
     AutoModelForQuestionAnswering,
@@ -162,7 +163,16 @@ SUPPORTED_TASKS = {
         },
         "type": "multimodal",
     },
-
+    "fill-mask": {
+        "impl": FillMaskPipeline,
+        "ms": (AutoModelForMaskedLM,),
+        "default": {
+            "model": {
+                "ms": ("distilbert/distilroberta-base", "ec58a5b"),
+            }
+        },
+        "type": "text",
+    },
 }
 
 NO_FEATURE_EXTRACTOR_TASKS = set()
@@ -597,6 +607,7 @@ def pipeline(
 
 __all__ = [
     'CsvPipelineDataFormat',
+    'FillMaskPipeline',
     'JsonPipelineDataFormat',
     'PipedPipelineDataFormat',
     'Pipeline',

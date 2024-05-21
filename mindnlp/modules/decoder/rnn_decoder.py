@@ -19,7 +19,7 @@ RNN Decoder modules
 from mindspore import nn
 from mindspore import ops
 import mindspore.numpy as mnp
-from mindnlp.abc import DecoderBase
+from mindnlp._legacy.abc import DecoderBase
 from mindnlp._legacy.nn import Dropout
 
 class RNNDecoder(DecoderBase):

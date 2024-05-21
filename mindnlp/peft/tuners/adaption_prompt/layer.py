@@ -21,7 +21,7 @@ from .config import TRANSFORMERS_MODEL_CONFIG
 
 
 class AdaptedAttention(nn.Cell):
-    """This module wraps a LLamaAttention module and injects adaption prompts."""
+    """This cell wraps a LLamaAttention cell and injects adaption prompts."""
 
     def __init__(self, model_type: str, adapter_len: int, model):
         """
@@ -31,7 +31,7 @@ class AdaptedAttention(nn.Cell):
             model_type: The transformer model type. This is used to retrieve the right method to
                 compute query states.
             adapter_len: The length of the adaption prompt to insert.
-            model: The original transformer attention module that is being wrapped.
+            model: The original transformer attention cell that is being wrapped.
         """
         super(AdaptedAttention, self).__init__()
         self.model_type = model_type
@@ -48,9 +48,9 @@ class AdaptedAttention(nn.Cell):
         self.adaption_gate = Parameter(Tensor(zero_values, dtype=mstype.float32), name="adaption_gate")
     def construct(self, **kwargs):
         """
-        Forward pass for the adapter which wraps the original LlamaAttention module.
+        Forward pass for the adapter which wraps the original LlamaAttention cell.
         Args:
-            kwargs: See the original LlamaAttention module.
+            kwargs: See the original LlamaAttention cell.
         """
         if kwargs.get("output_attention", False):
             raise NotImplementedError("output_attention is not currently supported.")

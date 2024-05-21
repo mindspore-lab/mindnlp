@@ -12,10 +12,55 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Tuners"""
+"""Parameter effcient fine tuning cells, like huggingface peft."""
+from .mapping import (
+    MODEL_TYPE_TO_PEFT_MODEL_MAPPING,
+    PEFT_TYPE_TO_CONFIG_MAPPING,
+    get_peft_config,
+    get_peft_model,
+    inject_adapter_in_model,
+)
 
-from .lora import LoraConfig, LoraModel
-from .ia3 import IA3Config, IA3Model
-from .adaption_prompt import AdaptionPromptConfig, AdaptionPromptModel
-from .adalora import AdaLoraConfig, AdaLoraModel
-from .loha import LoHaConfig, LoHaModel
+from .peft_model import (
+    PeftModel,
+    PeftModelForCausalLM,
+    # PeftModelForFeatureExtraction,
+    # PeftModelForQuestionAnswering,
+    PeftModelForSeq2SeqLM,
+    PeftModelForSequenceClassification,
+    PeftModelForTokenClassification,
+)
+
+from .tuners import (
+    AdaptionPromptConfig,
+    AdaptionPromptModel,
+    LoraConfig,
+    LoraModel,
+    IA3Config,
+    IA3Model,
+    LoKrConfig,
+    LoKrModel,
+    AdaLoraConfig,
+    AdaLoraModel,
+    PromptTuningConfig,
+    LoHaConfig,
+    LoHaModel,
+)
+
+from .utils import (
+    # TRANSFORMERS_MODELS_TO_PREFIX_TUNING_POSTPROCESS_MAPPING,
+    PeftType,
+    TaskType,
+    # bloom_model_postprocess_past_key_value,
+    get_peft_model_state_dict,
+    # prepare_model_for_int8_training,
+    # prepare_model_for_kbit_training,
+    set_peft_model_state_dict,
+    shift_tokens_right,
+    load_peft_weights,
+)
+
+from .config import (
+    PeftConfig,
+    PromptLearningConfig,
+)

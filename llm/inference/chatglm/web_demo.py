@@ -2,9 +2,9 @@ from mindnlp.transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 import gradio as gr
 import mdtex2html
 
-model = AutoModelForSeq2SeqLM.from_pretrained("THUDM/chatglm-6b").half()
+model = AutoModelForSeq2SeqLM.from_pretrained("ZhipuAI/ChatGLM-6B", mirror='modelscope').half()
 model.set_train(False)
-tokenizer = AutoTokenizer.from_pretrained("THUDM/chatglm-6b")
+tokenizer = AutoTokenizer.from_pretrained("ZhipuAI/ChatGLM-6B", mirror='modelscope')
 
 """Override Chatbot.postprocess"""
 
@@ -81,8 +81,7 @@ with gr.Blocks() as demo:
     with gr.Row():
         with gr.Column(scale=4):
             with gr.Column(scale=12):
-                user_input = gr.Textbox(show_label=False, placeholder="Input...", lines=10).style(
-                    container=False)
+                user_input = gr.Textbox(show_label=False, placeholder="Input...", lines=10, container=False)
             with gr.Column(min_width=32, scale=1):
                 submitBtn = gr.Button("Submit", variant="primary")
         with gr.Column(scale=1):

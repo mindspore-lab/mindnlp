@@ -16,7 +16,7 @@
 
 import string
 import re
-from mindnlp.abc import Metric
+from mindnlp._legacy.abc import Metric
 from .utils import _check_value_type
 
 def _compute_exact(y_pred, y_true):

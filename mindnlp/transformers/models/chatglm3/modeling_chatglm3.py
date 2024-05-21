@@ -105,7 +105,7 @@ class ChatGLM3ForConditionalGeneration(ChatGLM2ForConditionalGeneration):
                 past_length -= self.transformer.pre_seq_len
             inputs['position_ids'] = inputs.position_ids + past_length
             attention_mask = inputs.attention_mask
-            attention_mask = ops.cat((attention_mask.new_ones((1, past_length)), attention_mask), axis=1)
+            attention_mask = ops.cat((attention_mask.new_ones((1, past_length), dtype=attention_mask.dtype), attention_mask), axis=1)
             inputs['attention_mask'] = attention_mask
         history.append({"role": role, "content": query})
         for outputs in self.stream_generate(**inputs, past_key_values=past_key_values,

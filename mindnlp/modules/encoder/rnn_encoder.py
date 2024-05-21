@@ -14,7 +14,7 @@
 # ============================================================================
 """RNN encoder modules"""
 
-from mindnlp.abc import EncoderBase
+from mindnlp._legacy.abc import EncoderBase
 from mindnlp.modules.rnns import _RNNBase
 
 class RNNEncoder(EncoderBase):

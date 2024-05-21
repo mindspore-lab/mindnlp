@@ -15,7 +15,7 @@
 """
 Callback Manager.
 """
-from mindnlp.abc import Callback
+from mindnlp._legacy.abc import Callback
 
 def _transfer(func):
     """

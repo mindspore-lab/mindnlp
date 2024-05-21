@@ -1,0 +1,1 @@
+:::mindnlp.engine.trainer.default_func

@@ -1,0 +1,181 @@
+site_name: MindNLP Docs
+repo_url: https://github.com/mindspore-lab/mindnlp
+repo_name: mindspore-lab/mindnlp
+copyright: Copyright &copy; 2022 - 2024 MindSpore Lab and CQU NLP Team.
+
+nav:
+  - Home: index.md
+  - Quick Start: quick_start.md
+  - Tutorials:  tutorials.md
+  - Supported Models: supported_models.md
+  - How-To Contribute:  contribute.md
+  - API Reference:
+      - Accelerate: api/accelerate.md
+      - Data: api/data.md
+      - Dataset: api/dataset.md
+      - Engine:
+          - api/engine/index.md
+          - train_args:
+              base: api/engine/train_args/base.md
+              seq2seq: api/engine/train_args/seq2seq.md
+          - trainer:
+              base: api/engine/trainer/base.md
+              default_func: api/engine/trainer/default_func.md
+          - callbacks: api/engine/callbacks.md
+          - export: api/engine/export.md
+          - utils: api/engine/utils.md
+
+      - Modules: api/modules.md
+      - Parallel: api/parallel.md
+      - PEFT:
+          - api/peft/index.md
+          - tuners: 
+              AdaLoRA: api/peft/tuners/adalora.md
+              Adaption_Prompt: api/peft/tuners/adaption_prompt.md
+              IA3: api/peft/tuners/ia3.md
+              LoKr: api/peft/tuners/lokr.md
+              LoRA: api/peft/tuners/lora.md
+              Prompt tuning: api/peft/tuners/prompt_tuning.md
+          - utils:
+              - merge_utils: api/peft/utils/merge_utils.md
+          - config: api/peft/config.md
+          - mapping: api/peft/mapping.md
+          - peft_model: api/peft/peft_model.md
+
+      - Sentence: api/sentence.md
+      - Transformers:
+          - api/transformers/index.md
+          - generation: 
+              - api/transforemrs/generation/index.md
+          - models:
+              - api/transforemrs/models/index.md
+          - pipeline:
+              - api/transforemrs/pipeline/index.md
+      - TRL: api/trl.md
+      - Utils: api/utils.md
+  - Notes:
+      - Change Log: notes/changelog.md
+      - Code of Conduct: notes/code_of_conduct.md
+      - FAQ: notes/faq.md
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+  features:
+    # - navigation.instant  # see https://github.com/ultrabug/mkdocs-static-i18n/issues/62
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - navigation.path
+    - toc.follow
+    - search.highlight
+    - search.share
+    - search.suggest
+    - content.action.view
+    - content.action.edit
+    - content.tabs.link
+    - content.code.copy
+    - content.code.select
+    - content.code.annotations
+  favicon: assets/favicon.ico
+  icon:
+    logo: logo
+
+markdown_extensions:
+  # Officially Supported Extensions
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - meta
+  - sane_lists
+  - tables
+  - toc:
+      permalink: true
+  - wikilinks
+  # Third Party Extensions(Bundles, PyMdown Extensions)
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+
+plugins:
+  - search
+  - include-markdown
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            # Headings
+            show_root_heading: true
+            show_root_toc_entry: true
+            show_object_full_path: true
+            # Members
+            show_submodules: false
+            # Docstrings
+            docstring_section_style: spacy
+  - i18n:
+      docs_structure: folder
+      fallback_to_default: true
+      languages:
+        - locale: en
+          default: true
+          name: English
+        - locale: zh
+          default: false
+          name: 中文
+          nav_translations:
+            Home: 主页
+            Tutorials: 教程
+            Quick Start: 快速开始
+            Supported Models: 模型列表
+            Notes: 说明
+            How-To Contribute: 代码贡献
+            API Reference: API文档
+            Change Log: 更新日志
+            Code of Conduct: 行为准则
+            FAQ: 常见问题
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/solid/paper-plane
+      link: mailto:lvyufeng@cqu.edu.cn
+    - icon: fontawesome/brands/github
+      link: https://github.com/mindspore-lab/mindnlp
+    - icon: fontawesome/brands/zhihu
+      link: https://www.zhihu.com/people/lu-yu-feng-46-1

@@ -15,7 +15,7 @@
 """Test Glove Vocab"""
 
 import pytest
-from mindnlp import Vocab
+from mindnlp.vocab import Vocab
 
 
 @pytest.mark.download

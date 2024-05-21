@@ -15,7 +15,7 @@
 """"Class for Metric Distinct"""
 
 
-from mindnlp.abc import Metric
+from mindnlp._legacy.abc import Metric
 from .utils import _check_value_type
 
 def distinct_fn(cand_list, n_size=2):

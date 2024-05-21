@@ -16,7 +16,7 @@
 Callback for Early Stop.
 """
 from mindspore import log
-from mindnlp.abc import Callback
+from mindnlp._legacy.abc import Callback
 
 class EarlyStopCallback(Callback):
     """

@@ -30,7 +30,7 @@ from mindspore.common.initializer import initializer,  Normal
 
 
 from mindnlp.peft.utils import transpose
-from mindnlp.abc import  ParameterDict, CellDict
+from mindnlp._legacy.abc import  ParameterDict, CellDict
 from mindnlp.transformers.ms_utils import Conv1D
 
 from ..tuners_utils import check_adapters_to_merge, BaseTunerLayer

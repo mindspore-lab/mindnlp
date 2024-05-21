@@ -16,7 +16,7 @@
 """
 Engine of text.
 """
-from .trainer import *
-from .train_args import *
 from .utils import *
+from .train_args import *
 from .callbacks import *
+from .trainer import *

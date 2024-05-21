@@ -153,6 +153,8 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None,
 
     retry_cnt = 0
     retry_limit = 5
+    chunk_size = 1024
+    total_size = 0
 
     if download_file_name is None:
         name = extract_filename_from_url(url)
@@ -166,12 +168,6 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None,
         os.makedirs(file_path[:file_path.rfind('/')])
 
     while not (os.path.exists(file_path) and check_md5(file_path, md5sum)):
-        if retry_cnt < retry_limit:
-            retry_cnt += 1
-        else:
-            raise HTTPError(
-                f"Download from {url} failed. " "Retry limit reached")
-
         # get downloaded size
         tmp_file_path = file_path + "_tmp"
         if os.path.exists(tmp_file_path) and retry_cnt != 0:
@@ -189,12 +185,20 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None,
         if status == 429:
             raise HTTPError('Too many requests.')
         try:
-            total_size = int(req.headers.get('content-length', 0)) + file_size
-            with open(tmp_file_path, "ab") as file:
+            if file_size == 0:
+                total_size = int(req.headers.get('content-length', 0))
+            else:
+                if int(req.headers.get('content-length', 0)) == total_size:
+                    total_size = int(req.headers.get('content-length', 0))
+                    file_size = 0
+                else:
+                    total_size = int(req.headers.get('content-length', 0)) + file_size
+
+            with open(tmp_file_path, "ab" if file_size != 0 else "wb") as file:
                 with tqdm(
                     total=int(total_size), unit="B", initial=file_size, unit_scale=True, unit_divisor=1024
                 ) as pbar:
-                    for chunk in req.iter_content(chunk_size=1024):
+                    for chunk in req.iter_content(chunk_size=chunk_size):
                         if chunk:
                             file.write(chunk)
                             pbar.update(len(chunk))
@@ -206,6 +210,12 @@ def http_get(url, path=None, md5sum=None, download_file_name=None, proxies=None,
             print(f"Failed to download: {e}")
             print(f"Retrying... (attempt {retry_cnt}/{retry_limit})")
             time.sleep(1)  # Add a small delay before retrying
+
+        if retry_cnt < retry_limit:
+            retry_cnt += 1
+        else:
+            raise HTTPError(
+                f"Download from {url} failed. " "Retry limit reached")
 
     return file_path
 
@@ -873,6 +883,8 @@ def build_download_url(
         raise ValueError('The mirror name not support, please use one of the mirror website below: '
                          '["huggingface", "modelscope", "wisemodel", "gitee", "aifast"]')
     if mirror in ('huggingface', 'gitee', 'modelscope', 'wisemodel'):
+        if mirror == 'modelscope' and revision == 'main':
+            revision = 'master'
         return MIRROR_MAP[mirror].format(repo_id, revision, filename)
     if revision is not None and revision != 'main':
         logger.warning(f'`revision` is not support when use "{mirror}" website. '

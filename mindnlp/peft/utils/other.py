@@ -14,6 +14,7 @@
 # ============================================================================
 """other utils"""
 import copy
+from contextlib import nullcontext
 from typing import Optional, List
 
 import mindspore
@@ -21,7 +22,8 @@ from mindspore import ops, Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp._legacy.nn import Matmul
-from mindnlp.abc import CellDict
+from mindnlp._legacy.abc import ParameterDict
+from mindnlp._legacy.abc import ParameterDict
 
 
 def _get_batch_size(
@@ -42,43 +44,68 @@ def _get_batch_size(
     return batch_size
 
 
-class ModulesToSaveWrapper(mindspore.nn.Cell):
-    """
-    save module
-    """
-
-    def __init__(self, module_to_save, adapter_name):
+class ModulesToSaveWrapper(nn.Cell):
+    def __init__(self, cell_to_save, adapter_name):
         super().__init__()
-        self.original_module = module_to_save
-        self.modules_to_save = CellDict()
-        self.active_adapter = adapter_name
-        self.disable_adapters = False
+        self.original_cell = cell_to_save
+        self.cells_to_save = nn.CellDict({})
+        self._active_adapter = adapter_name
+        self._disable_adapters = False
         self.update(adapter_name)
+        self.check_cell()
+
+    def check_cell(self):
+        """Perform some sanity checks on the cell to ensure that it works"""
+        # Try to anticipate some cells that users could try to target that would not work.
+        # Note: It's not possible to check hasattr(cell, "forward"), since that returns True for ModuleDict and
+        # ModuleList, even though their forward methods cannot be called
+        forbidden_classes = (
+            nn.CellDict,
+            nn.CellList,
+            mindspore.ParameterTuple,
+            ParameterDict,
+        )
+        if isinstance(self.original_cell, forbidden_classes):
+            cls_name = self.original_cell.__class__.__name__
+            raise TypeError(
+                f"cells_to_save cannot be applied to cells of type {cls_name}"
+            )
+
+    @property
+    def disable_adapters(self) -> bool:
+        # use a property to ensure that disable_adapters is not set directly, instead use the enable_adapters method
+        return self._disable_adapters
+
+    @property
+    def active_adapter(self) -> str:
+        # use a property to ensure that active_adapter is not set directly, instead use the set_adapter method
+        return self._active_adapter
 
     @property
     def weight(self):
-        if self.active_adapter not in self.modules_to_save:
-            return self.original_module.weight
-        return self.modules_to_save[self.active_adapter].weight
+        if self.active_adapter not in self.cells_to_save:
+            return self.original_cell.weight
+        return self.cells_to_save[self.active_adapter].weight
 
     def update(self, adapter_name):
-        """
-        update modules_to_save.
-        """
-        self.modules_to_save.update({adapter_name: copy.deepcopy(self.original_module)})
-        # for n, p in self.original_module.parameters_and_names():
-        #     p.name = n
-        #     p.requires_grad = False
-        # self.original_module.requires_grad = False
+        context_manager = nullcontext()
+        for _, param in self.original_cell.parameters_and_names():
+            num_params = param.numel()
 
+        with context_manager:
+            self.cells_to_save.update(
+                nn.CellDict({adapter_name: copy.deepcopy(self.original_cell)})
+            )
+
+        if hasattr(self.cells_to_save[adapter_name], "_hf_hook"):
+            old_hook = self.cells_to_save[adapter_name]._hf_hook
+            new_hook = self._create_new_hook(old_hook)
+            # remove_hook_from_cell(self.cells_to_save[adapter_name])
+            # add_hook_to_cell(self.cells_to_save[adapter_name], new_hook)
+
+        self.original_cell.requires_grad_(False)
         if adapter_name == self.active_adapter:
-            self.modules_to_save[adapter_name].requires_grad = True
-
-    #     if hasattr(self.modules_to_save[adapter_name], "_hf_hook"):
-    #         old_hook = self.modules_to_save[adapter_name]._hf_hook
-    #         new_hook = self._create_new_hook(old_hook)
-    #         remove_hook_from_module(self.modules_to_save[adapter_name])
-    #         add_hook_to_module(self.modules_to_save[adapter_name], new_hook)
+            self.cells_to_save[adapter_name].requires_grad_(True)
 
     # def _create_new_hook(self, old_hook):
     #     r"""
@@ -117,13 +144,10 @@ class ModulesToSaveWrapper(mindspore.nn.Cell):
         self.modules_to_save[adapter_name].requires_grad = True
         self.active_adapter = adapter_name
 
-    def construct(self, X):
-        # TODO:*args, **kwargs
-        if self.disable_adapters or (
-            self.active_adapter not in self.modules_to_save.keys()
-        ):
-            return self.original_module(X)
-        return self.modules_to_save[self.active_adapter](X)
+    def construct(self, *args, **kwargs):
+        if self.disable_adapters or (self.active_adapter not in self.cells_to_save):
+            return self.original_cell(*args, **kwargs)
+        return self.cells_to_save[self.active_adapter](*args, **kwargs)
 
     def enable_adapters(self, enabled: bool):
         """Toggle the enabling and disabling of adapters
@@ -133,20 +157,49 @@ class ModulesToSaveWrapper(mindspore.nn.Cell):
         Args:
             enabled (bool): True to enable adapters, False to disable adapters
         """
-        if self.disable_adapters is not enabled:
+        if self._disable_adapters is not enabled:
             # already in the desired state, do nothing
             return
+
         if enabled:
-            self.original_module.requires_grad = False
-            self.modules_to_save[self.active_adapter].requires_grad = True
-            self.disable_adapters = False
+            self.original_cell.requires_grad_(False)
+            self.cells_to_save[self.active_adapter].requires_grad_(True)
+            self._disable_adapters = False
         else:
-            self.original_module.requires_grad = True
-            self.modules_to_save.requires_grad = False
-            self.disable_adapters = True
+            self.original_cell.requires_grad_(True)
+            self.cells_to_save.requires_grad_(False)
+            self._disable_adapters = True
+
+    def set_adapter(self, adapter_name: str):
+        """Set the active adapter
+
+        Additionally, this function will set the specified adapter to trainable (i.e., requires_grad=True). If this is
+        not desired, use the following code.
+
+        ```py
+        >>> for name, param in model_peft.named_parameters():
+        ...     if ...:  # some check on name (ex. if 'lora' in name)
+        ...         param.requires_grad = False
+        ```
+
+        Args:
+            adapter_name (str): The name of the adapter to set as active
+        """
+        if adapter_name not in self.cells_to_save:
+            raise ValueError(
+                f"Adapter {adapter_name} not found in {self.cells_to_save.keys()}"
+            )
+
+        self.cells_to_save[self.active_adapter].requires_grad_(False)
+        self.cells_to_save[adapter_name].requires_grad_(True)
+        self._active_adapter = adapter_name
 
 
-def custom_get_submodule(model: mindspore.nn.Cell, target: str) -> mindspore.nn.Cell:
+def custom_get_subcell(model: mindspore.nn.Cell, target: str) -> mindspore.nn.Cell:
+    """
+    Returns the subcell given by ``target`` if it exists, otherwise throws an error.
+    功能和 torch.nn.Module 相似
+    """
     if target == "":
         return model
 
@@ -165,33 +218,47 @@ def custom_get_submodule(model: mindspore.nn.Cell, target: str) -> mindspore.nn.
     return mod
 
 
-def _get_submodules(model, key):
+def _get_subcells(model, key):
     """
-    get submodules
+    get subcells
     """
     parent_key = ".".join(key.split(".")[:-1])
-    parent = custom_get_submodule(model, parent_key)
+    parent = custom_get_subcell(model, parent_key)
     target_name = key.split(".")[-1]
-    target = custom_get_submodule(model, key)
+    target = custom_get_subcell(model, key)
 
     return parent, target, target_name
 
 
 def _set_trainable(model, adapter_name):
-    key_list = [key for key, _ in model.cells_and_names()]
+    """
+    set trainable
+    """
+    key_list = [
+        key for key, _ in model.cells_and_names()
+    ]  # named_cells cells_and_names
     for key in key_list:
-        target_module_found = any(
-            key.endswith(target_key) for target_key in model.modules_to_save
+        target_cell_found = any(
+            key.endswith(target_key) for target_key in model.cells_to_save
         )
-        if target_module_found:
-            parent, target, target_name = _get_submodules(model, key)
+        if target_cell_found:
+            parent, target, target_name = _get_subcells(model, key)
+
             if isinstance(target, ModulesToSaveWrapper):
                 target.update(adapter_name)
                 target.set_adapter(target.active_adapter)
             else:
-                new_module = ModulesToSaveWrapper(target, adapter_name)
-                new_module.set_adapter(adapter_name)
-                setattr(parent, target_name, new_module)
+                for _, param in target.parameters_and_names():
+                    param.requires_grad = True
+                warp_cell = ModulesToSaveWrapper(target, adapter_name)
+                # parent[int(target_name)] = warp_cell
+                setattr(parent, target_name, warp_cell)
+
+                # TODO:the implemtation of mindspore, __setitem__ is not consistent with __setattr__ here.
+                # self.cell_list is not set correctly if __setattr__'s value type is SequentialCell.
+                # Thus we set it apparently here. This line may be removed later.
+                if isinstance(parent, nn.SequentialCell):
+                    parent.cell_list = list(parent._cells.values())
 
 
 def _freeze_adapter(model, adapter_name):
@@ -204,9 +271,9 @@ def _freeze_adapter(model, adapter_name):
 
 
 def _set_adapter(model, adapter_name):
-    for module in model.modules():
-        if isinstance(module, ModulesToSaveWrapper):
-            module.active_adapter = adapter_name
+    for cell in model.cells():
+        if isinstance(cell, ModulesToSaveWrapper):
+            cell.active_adapter = adapter_name
 
 
 def _prepare_prompt_learning_config(peft_config, model_config):
@@ -305,112 +372,3 @@ class Conv1D(mindspore.nn.Cell):
         x = self.matmul(x.view(-1, x.shape[-1]), self.weight) + self.bias
         x = x.view(size_out)
         return x
-
-
-# Target_modules mapping (model -> qkv), which is highly related to **Mindnlp model** implementation.
-# lora
-TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING = {
-    "t5": ["q", "v"],
-    # "mt5": ["q", "v"],
-    "bart": ["q_proj", "v_proj"],
-    "gpt2": ["c_attn"],
-    "bloom": ["query_key_value"],
-    # "blip-2": ["q", "v", "q_proj", "v_proj"],
-    "opt": ["q_proj", "v_proj"],
-    # "gptj": ["q_proj", "v_proj"],
-    # "gpt_neox": ["query_key_value"],
-    "gpt_neo": ["q_proj", "v_proj"],
-    "bert": ["query", "value"],
-    "roberta": ["query", "value"],
-    # "xlm-roberta": ["query", "value"],
-    # "electra": ["query", "value"],
-    # "deberta-v2": ["query_proj", "value_proj"],
-    "deberta": ["in_proj"],
-    # "layoutlm": ["query", "value"],
-    "llama": ["q_proj", "v_proj"],
-    "chatglm": ["query_key_value"],
-    # "gpt_bigcode": ["c_attn"],
-    # "mpt": ["Wqkv"],
-    # "RefinedWebModel": ["query_key_value"],
-    # "RefinedWeb": ["query_key_value"],
-    "falcon": ["query_key_value"],
-    # "btlm": ["c_proj", "c_attn"],
-    # "codegen": ["qkv_proj"],
-}
-
-TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING = {
-    "t5": ["k", "v", "wo"],
-    "mt5": ["k", "v", "wi_1"],
-    "gpt2": ["c_attn", "mlp.c_proj"],
-    "bloom": ["query_key_value", "mlp.dense_4h_to_h"],
-    "roberta": ["key", "value", "output.dense"],
-    "opt": ["q_proj", "k_proj", "fc2"],
-    "gptj": ["q_proj", "v_proj", "fc_out"],
-    "gpt_neox": ["query_key_value", "dense_4h_to_h"],
-    "gpt_neo": ["q_proj", "v_proj", "c_proj"],
-    "bart": ["q_proj", "v_proj", "fc2"],
-    "gpt_bigcode": ["c_attn", "mlp.c_proj"],
-    "llama": ["k_proj", "v_proj", "down_proj"],
-    "mistral": ["k_proj", "v_proj", "down_proj"],
-    "mixtral": ["k_proj", "v_proj", "w2"],
-    "bert": ["key", "value", "output.dense"],
-    "deberta-v2": ["key_proj", "value_proj", "output.dense"],
-    "deberta": ["in_proj", "output.dense"],
-    "RefinedWebModel": ["query_key_value", "dense_4h_to_h"],
-    "RefinedWeb": ["query_key_value", "dense_4h_to_h"],
-    "falcon": ["query_key_value", "dense_4h_to_h"],
-    "phi": ["q_proj", "v_proj", "fc2"],
-    "gemma": ["q_proj", "v_proj", "down_proj"],
-}
-
-TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING = {
-    "t5": ["wo"],
-    "mt5": [],
-    "gpt2": ["mlp.c_proj"],
-    "bloom": ["mlp.dense_4h_to_h"],
-    "roberta": ["output.dense"],
-    "opt": ["fc2"],
-    "gptj": ["fc_out"],
-    "gpt_neox": ["dense_4h_to_h"],
-    "gpt_neo": ["c_proj"],
-    "bart": ["fc2"],
-    "gpt_bigcode": ["mlp.c_proj"],
-    "llama": ["down_proj"],
-    "mistral": ["down_proj"],
-    "mixtral": ["w2"],
-    "bert": ["output.dense"],
-    "deberta-v2": ["output.dense"],
-    "deberta": ["output.dense"],
-    "RefinedWeb": ["dense_4h_to_h"],
-    "RefinedWebModel": ["dense_4h_to_h"],
-    "falcon": ["dense_4h_to_h"],
-    "phi": ["fc2"],
-    "gemma": ["down_proj"],
-}
-COMMON_LAYERS_PATTERN = ["layers", "h", "block", "blocks", "layer"]
-TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING = {
-    "t5": ["q", "k", "v", "o", "wi", "wo"],
-    # "mt5": ["q", "k", "v", "o", "wi_0", "wi_1", "wo"],
-    "bart": ["q_proj", "k_proj", "v_proj", "out_proj", "fc1", "fc2"],
-    "gpt2": ["c_attn"],
-    "bloom": ["query_key_value"],
-    "opt": ["q_proj", "k_proj", "v_proj", "out_proj", "fc1", "fc2"],
-    # "gptj": ["q_proj", "v_proj"],
-    # "gpt_neox": ["query_key_value"],
-    "gpt_neo": ["q_proj", "v_proj"],
-    "llama": ["q_proj", "v_proj"],
-    "bert": ["query", "value"],
-    "roberta": ["query", "key", "value", "dense"],
-    # "xlm-roberta": ["query", "value"],
-    # "electra": ["query", "value"],
-    "deberta-v2": ["query_proj", "key_proj", "value_proj", "dense"],
-    "gpt_bigcode": ["c_attn"],
-    "deberta": ["in_proj"],
-    # "layoutlm": ["query", "value"],
-    "falcon": ["query_key_value"],
-}
-
-WEIGHTS_NAME = "adapter_model.ckpt"
-CONFIG_NAME = "adapter_config.json"
-
-CLAMP_QUANTILE = 0.99
