@@ -48,7 +48,7 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
     Get the state dict of the Peft model.
 
     Args:
-        model ([`PeftModel`]): The Peft model. 
+        model ([`PeftModel`]): The Peft model.
     """
 
     config = model.peft_config[adapter_name]
@@ -125,14 +125,16 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
         PeftType.LORA,
         PeftType.IA3,
         PeftType.ADALORA,
-        PeftType.LOKR
+        PeftType.LOKR,
+        PeftType.LOHA,
     ):
         peft_model_state_dict = {}
         parameter_prefix = {
             PeftType.IA3: "ia3_",
             PeftType.LORA: "lora_",
             PeftType.ADALORA: "lora_",
-            PeftType.LOKR:"lokr_"
+            PeftType.LOKR: "lokr_",
+            PeftType.LOHA: "loha_",
         }[config.peft_type]
         for k, v in state_dict.items():
             if parameter_prefix in k:
@@ -152,6 +154,8 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
                 model.resize_cells_by_rank_pattern(rank_pattern, adapter_name)
     elif config.peft_type == PeftType.ADAPTION_PROMPT:
         peft_model_state_dict = state_dict
+    elif config.peft_type == PeftType.LOHA:
+        to_return = {k: state_dict[k] for k in state_dict if "loha_" in k}
     else:
         raise NotImplementedError
     param_not_load, ckpt_not_load = mindspore.load_param_into_net(model, peft_model_state_dict, strict_load=strict_load)

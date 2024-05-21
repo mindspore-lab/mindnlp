@@ -16,13 +16,13 @@
 import os
 import warnings
 import inspect
+import mindspore
 from contextlib import contextmanager
 from copy import deepcopy
 from typing import Dict, Optional
 
-import mindspore
 from mindspore import nn, ops
-from mindspore.train.serialization import  _exec_save
+from mindspore.train.serialization import _exec_save
 
 from .config import PeftConfig, PromptLearningConfig
 from .._legacy.abc import CellDict
@@ -35,7 +35,8 @@ from .tuners import (
     IA3Model,
     LoKrModel,
     # LoraConfig,
-    PromptEmbedding
+    PromptEmbedding,
+    LoHaModel,
 )
 from .utils import (
     # SAFETENSORS_WEIGHTS_NAME,
@@ -61,7 +62,8 @@ PEFT_TYPE_TO_MODEL_MAPPING = {
     PeftType.ADAPTION_PROMPT: AdaptionPromptModel,
     PeftType.IA3: IA3Model,
     PeftType.ADALORA: AdaLoraModel,
-    PeftType.LOKR: LoKrModel
+    PeftType.LOKR: LoKrModel,
+    PeftType.LOHA: LoHaModel,
 }
 class PeftModel(nn.Cell):
     """
@@ -94,8 +96,6 @@ class PeftModel(nn.Cell):
         #     model = self._prepare_model_for_gradient_checkpointing(model)
         # if hasattr(self.base_model, "config") and hasattr(self.base_model.config, "pretraining_tp"):
         #     self.base_model.config.pretraining_tp = 1
-
-
 
     def save_pretrained(self, save_directory, **kwargs):
         r"""

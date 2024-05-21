@@ -38,6 +38,8 @@ from .tuners import (
     LoKrConfig,
     LoKrModel,
     PromptTuningConfig,
+    LoHaConfig,
+    LoHaModel,
 )
 
 MODEL_TYPE_TO_PEFT_MODEL_MAPPING = {
@@ -59,14 +61,16 @@ PEFT_TYPE_TO_CONFIG_MAPPING = {
     "LORA": LoraConfig,
     "ADALORA": AdaLoraConfig,
     "IA3": IA3Config,
-    "LOKR":LoKrConfig,
+    "LOKR": LoKrConfig,
+    "LOHA": LoHaConfig,
 }
 
 PEFT_TYPE_TO_TUNER_MAPPING = {
     "LORA": LoraModel,
     "ADALORA": AdaLoraModel,
     "IA3": IA3Model,
-    "LOKR":LoKrModel,
+    "LOKR": LoKrModel,
+    "LOHA": LoHaModel,
 }
 
 
