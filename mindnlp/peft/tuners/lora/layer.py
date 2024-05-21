@@ -124,7 +124,8 @@ class LoraLayer(BaseTunerLayer):
             if weight is not None:
                 # the layer is already completely initialized, this is an update
                 if ops.is_floating_point(weight) or ops.is_complex(weight):
-                    self.to(dtype=weight.dtype)
+                    for param in self.get_parameters():
+                        param.set_data(param.astype(weight.dtype))
                 break
 
         if use_dora:
@@ -916,7 +917,7 @@ def dispatch_default(
     lora_config: LoraConfig,
     **kwargs,
 ) -> Optional[nn.Cell]:
-    new_module = None
+    new_cell = None
 
     if isinstance(target, BaseTunerLayer):
         target_base_layer = target.get_base_layer()
@@ -927,26 +928,26 @@ def dispatch_default(
         embedding_kwargs = kwargs.copy()
         embedding_kwargs.pop("fan_in_fan_out", None)
         embedding_kwargs.update(lora_config.loftq_config)
-        new_module = Embedding(target, adapter_name, **embedding_kwargs)
+        new_cell = Embedding(target, adapter_name, **embedding_kwargs)
     elif isinstance(target_base_layer, nn.Conv2d):
         kwargs.update(lora_config.loftq_config)
-        new_module = Conv2d(target, adapter_name, **kwargs)
+        new_cell = Conv2d(target, adapter_name, **kwargs)
     elif isinstance(target_base_layer, nn.Dense):
         if kwargs["fan_in_fan_out"]:
             warnings.warn(
-                "fan_in_fan_out is set to True but the target module is `torch.nn.Dense`. "
+                "fan_in_fan_out is set to True but the target cell is `torch.nn.Dense`. "
                 "Setting fan_in_fan_out to False."
             )
             kwargs["fan_in_fan_out"] = lora_config.fan_in_fan_out = False
         kwargs.update(lora_config.loftq_config)
-        new_module = Linear(target, adapter_name, **kwargs)
+        new_cell = Linear(target, adapter_name, **kwargs)
     elif isinstance(target_base_layer, Conv1D):
         if not kwargs["fan_in_fan_out"]:
             warnings.warn(
-                "fan_in_fan_out is set to False but the target module is `Conv1D`. Setting fan_in_fan_out to True."
+                "fan_in_fan_out is set to False but the target cell is `Conv1D`. Setting fan_in_fan_out to True."
             )
             kwargs["fan_in_fan_out"] = lora_config.fan_in_fan_out = True
         kwargs.update(lora_config.loftq_config)
-        new_module = Linear(target, adapter_name, is_target_conv_1d_layer=True, **kwargs)
+        new_cell = Linear(target, adapter_name, is_target_conv_1d_layer=True, **kwargs)
 
-    return new_module
+    return new_cell

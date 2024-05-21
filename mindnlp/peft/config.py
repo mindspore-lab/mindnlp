@@ -154,7 +154,7 @@ class PromptLearningConfig(PeftConfig):
     Args:
         num_virtual_tokens (`int`): The number of virtual tokens to use.
         token_dim (`int`): The hidden embedding dimension of the base transformer model.
-        num_transformer_submodules (`int`): The number of transformer submodules in the base transformer model.
+        num_transformer_subcells (`int`): The number of transformer subcells in the base transformer model.
         num_attention_heads (`int`): The number of attention heads in the base transformer model.
         num_layers (`int`): The number of layers in the base transformer model.
     """
@@ -163,8 +163,8 @@ class PromptLearningConfig(PeftConfig):
     token_dim: int = field(
         default=None, metadata={"help": "The hidden embedding dimension of the base transformer model"}
     )
-    num_transformer_submodules: Optional[int] = field(
-        default=None, metadata={"help": "Number of transformer submodules"}
+    num_transformer_subcells: Optional[int] = field(
+        default=None, metadata={"help": "Number of transformer subcells"}
     )
     num_attention_heads: Optional[int] = field(default=None, metadata={"help": "Number of attention heads"})
     num_layers: Optional[int] = field(default=None, metadata={"help": "Number of transformer layers"})

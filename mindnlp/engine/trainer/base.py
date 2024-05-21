@@ -47,7 +47,6 @@ from ...dataset import BaseMapFuction
 from ...utils import logging, find_labels, can_return_loss
 from ...utils.serialization import safe_load_file, safe_save_file
 from ...utils.import_utils import is_safetensors_available
-from ...modules.optimization import get_scheduler
 from ...transformers.modeling_utils import PreTrainedModel
 from ...transformers.configuration_utils import PretrainedConfig
 from ...transformers.tokenization_utils_base import PreTrainedTokenizerBase
@@ -491,6 +490,7 @@ class Trainer:
             num_training_steps (int): The number of training steps to do.
         """
         if self.lr_scheduler is None:
+            from ...modules.optimization import get_scheduler
             self.lr_scheduler = get_scheduler(
                 self.args.lr_scheduler_type,
                 optimizer=self.optimizer if optimizer is None else optimizer,

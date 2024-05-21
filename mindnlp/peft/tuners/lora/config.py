@@ -48,14 +48,14 @@ class LoraConfig(PeftConfig):
     Args:
         r (`int`):
             Lora attention dimension (the "rank").
-        target_modules (`Optional[Union[List[str], str]]`):
-            The names of the modules to apply the adapter to. If this is specified, only the modules with the specified
+        target_cells (`Optional[Union[List[str], str]]`):
+            The names of the cells to apply the adapter to. If this is specified, only the cells with the specified
             names will be replaced. When passing a string, a regex match will be performed. When passing a list of
-            strings, either an exact match will be performed or it is checked if the name of the module ends with any
-            of the passed strings. If this is specified as 'all-linear', then all linear/Conv1D modules are chosen,
-            excluding the output layer. If this is not specified, modules will be chosen according to the model
+            strings, either an exact match will be performed or it is checked if the name of the cell ends with any
+            of the passed strings. If this is specified as 'all-linear', then all linear/Conv1D cells are chosen,
+            excluding the output layer. If this is not specified, cells will be chosen according to the model
             architecture. If the architecture is not known, an error will be raised -- in this case, you should specify
-            the target modules manually.
+            the target cells manually.
         lora_alpha (`int`):
             The alpha parameter for Lora scaling.
         lora_dropout (`float`):
@@ -71,8 +71,8 @@ class LoraConfig(PeftConfig):
             When set to True, uses <a href='https://doi.org/10.48550/arXiv.2312.03732'>Rank-Stabilized LoRA</a> which
             sets the adapter scaling factor to `lora_alpha/math.sqrt(r)`, since it was proven to work better.
             Otherwise, it will use the original default value of `lora_alpha/r`.
-        modules_to_save (`List[str]`):
-            List of modules apart from adapter layers to be set as trainable and saved in the final checkpoint.
+        cells_to_save (`List[str]`):
+            List of cells apart from adapter layers to be set as trainable and saved in the final checkpoint.
         init_lora_weights (`bool` | `Literal["gaussian", "loftq"]`):
             How to initialize the weights of the adapter layers. Passing True (default) results in the default
             initialization from the reference implementation from Microsoft. Passing 'gaussian' results in Gaussian
@@ -96,7 +96,7 @@ class LoraConfig(PeftConfig):
             The arguments will be used to initialize the TransformerConfig of Megatron. You need to specify this
             parameter when you want to apply LoRA to the ColumnParallelLinear and RowParallelLinear layers of megatron.
         megatron_core (`Optional[str]`):
-            The core module from Megatron to use, defaults to `"megatron.core"`.
+            The core cell from Megatron to use, defaults to `"megatron.core"`.
         loftq_config (`Optional[LoftQConfig]`):
             The configuration of LoftQ. If this is not None, then LoftQ will be used to quantize the backbone weights
             and initialize Lora layers. Also pass `init_lora_weights='loftq'`. Note that you should not pass a
@@ -115,15 +115,15 @@ class LoraConfig(PeftConfig):
     """
 
     r: int = field(default=8, metadata={"help": "Lora attention dimension"})
-    target_modules: Optional[Union[list[str], str]] = field(
+    target_cells: Optional[Union[list[str], str]] = field(
         default=None,
         metadata={
             "help": (
-                "List of module names or regex expression of the module names to replace with LoRA."
+                "List of cell names or regex expression of the cell names to replace with LoRA."
                 "For example, ['q', 'v'] or '.*decoder.*(SelfAttention|EncDecAttention).*(q|v)$'."
                 "This can also be a wildcard 'all-linear' which matches all linear/Conv1D layers except the output layer."
-                "If not specified, modules will be chosen according to the model architecture, If the architecture is "
-                "not known, an error will be raised -- in this case, you should specify the target modules manually."
+                "If not specified, cells will be chosen according to the model architecture, If the architecture is "
+                "not known, an error will be raised -- in this case, you should specify the target cells manually."
             ),
         },
     )
@@ -147,10 +147,10 @@ class LoraConfig(PeftConfig):
             )
         },
     )
-    modules_to_save: Optional[list[str]] = field(
+    cells_to_save: Optional[list[str]] = field(
         default=None,
         metadata={
-            "help": "List of modules apart from LoRA layers to be set as trainable and saved in the final checkpoint. "
+            "help": "List of cells apart from LoRA layers to be set as trainable and saved in the final checkpoint. "
             "For example, in Sequence Classification or Token Classification tasks, "
             "the final layer `classifier/score` are randomly initialized and as such need to be trainable and saved."
         },
@@ -172,14 +172,14 @@ class LoraConfig(PeftConfig):
         metadata={
             "help": "The layer indexes to transform, is this argument is specified, PEFT will transform only the layers indexes that are specified inside this list. "
             "If a single integer is passed, PEFT will transform only the layer at this index. "
-            "This only works when target_modules is a list of str."
+            "This only works when target_cells is a list of str."
         },
     )
     layers_pattern: Optional[Union[list[str], str]] = field(
         default=None,
         metadata={
             "help": "The layer pattern name, used only if `layers_to_transform` is different to None and if the layer pattern is not in the common layers pattern."
-            "This only works when target_modules is a list of str."
+            "This only works when target_cells is a list of str."
         },
     )
     rank_pattern: Optional[dict] = field(
@@ -220,8 +220,8 @@ class LoraConfig(PeftConfig):
         default="megatron.core",
         metadata={
             "help": (
-                "The core module from Megatron, it is used to create LoRA's parallel linear layer. "
-                "It only needs to be passed in when you need to use your own modified megatron core module. "
+                "The core cell from Megatron, it is used to create LoRA's parallel linear layer. "
+                "It only needs to be passed in when you need to use your own modified megatron core cell. "
                 "Otherwise, it will use the default value `megatron.core`. "
             )
         },
@@ -256,7 +256,7 @@ class LoraConfig(PeftConfig):
             "help": (
                 "This enables using LoRA to effectively expand a transformer model to a larger size by repeating some layers. "
                 "The transformation handles models (currently Llama, Bert or Falcon compatible architectures) with "
-                "a module list in the model which it modifies to expand the number of modules. "
+                "a cell list in the model which it modifies to expand the number of cells. "
                 "Base weights are shared so the memory usage is close to the original model. The intended use is these base weights "
                 "remain fixed during finetuning but each layer has a separate LoRA adapter so the layers can be specialed via "
                 "the adapter layers fit during fine tuning."
@@ -272,16 +272,16 @@ class LoraConfig(PeftConfig):
 
     def __post_init__(self):
         self.peft_type = PeftType.LORA
-        self.target_modules = (
-            set(self.target_modules) if isinstance(self.target_modules, list) else self.target_modules
+        self.target_cells = (
+            set(self.target_cells) if isinstance(self.target_cells, list) else self.target_cells
         )
-        # if target_modules is a regex expression, then layers_to_transform should be None
-        if isinstance(self.target_modules, str) and self.layers_to_transform is not None:
-            raise ValueError("`layers_to_transform` cannot be used when `target_modules` is a str.")
+        # if target_cells is a regex expression, then layers_to_transform should be None
+        if isinstance(self.target_cells, str) and self.layers_to_transform is not None:
+            raise ValueError("`layers_to_transform` cannot be used when `target_cells` is a str.")
 
-        # if target_modules is a regex expression, then layers_pattern should be None
-        if isinstance(self.target_modules, str) and self.layers_pattern is not None:
-            raise ValueError("`layers_pattern` cannot be used when `target_modules` is a str.")
+        # if target_cells is a regex expression, then layers_pattern should be None
+        if isinstance(self.target_cells, str) and self.layers_pattern is not None:
+            raise ValueError("`layers_pattern` cannot be used when `target_cells` is a str.")
 
         if self.use_dora and self.megatron_config:
             raise ValueError("DoRA does not support megatron_core, please set `use_dora=False`.")

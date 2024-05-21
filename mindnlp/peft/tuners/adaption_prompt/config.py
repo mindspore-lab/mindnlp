@@ -24,8 +24,8 @@ from .utils import llama_compute_query_states
 class AdaptionPromptConfig(PeftConfig):
     """Stores the configuration of an [`AdaptionPromptModel`]."""
 
-    target_modules: str = field(
-        default=None, metadata={"help": "Name of the attention submodules to insert adaption prompts into."}
+    target_cells: str = field(
+        default=None, metadata={"help": "Name of the attention subcells to insert adaption prompts into."}
     )
     adapter_len: int = field(default=None, metadata={"help": "Number of adapter tokens to insert"})
     adapter_layers: int = field(default=None, metadata={"help": "Number of adapter layers (from the top)"})
@@ -41,21 +41,21 @@ class AdaptionPromptConfig(PeftConfig):
 
 # Contains the config that is specific to a transformers model type.
 ModelTypeConfig = namedtuple(
-    "ModelTypeConfig", ["compute_query_states", "target_modules", "k_proj_layer", "v_proj_layer", "o_proj_layer"]
+    "ModelTypeConfig", ["compute_query_states", "target_cells", "k_proj_layer", "v_proj_layer", "o_proj_layer"]
 )
 
 # Mapping of transformers model types to their specific configuration.
 TRANSFORMERS_MODEL_CONFIG = {
     "llama": ModelTypeConfig(
         compute_query_states=llama_compute_query_states,
-        target_modules="self_attn",
+        target_cells="self_attn",
         k_proj_layer="k_proj",
         v_proj_layer="v_proj",
         o_proj_layer="o_proj",
     ),
     "mistral": ModelTypeConfig(  # same as llama,
         compute_query_states=llama_compute_query_states,
-        target_modules="self_attn",
+        target_cells="self_attn",
         k_proj_layer="k_proj",
         v_proj_layer="v_proj",
         o_proj_layer="o_proj",
@@ -73,7 +73,7 @@ def prepare_config(
 
     model_config = TRANSFORMERS_MODEL_CONFIG[model.config.model_type]
 
-    if peft_config.target_modules is None:
-        peft_config.target_modules = model_config.target_modules
+    if peft_config.target_cells is None:
+        peft_config.target_cells = model_config.target_cells
 
     return peft_config

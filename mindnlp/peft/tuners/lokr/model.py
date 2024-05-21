@@ -22,13 +22,13 @@ from mindspore import nn
 
 from ...utils import (
     ModulesToSaveWrapper,
-    _get_submodules,
+    _get_subcells,
 )
 
 from ..tuners_utils import (
     BaseTuner,
     BaseTunerLayer,
-    check_target_module_exists,
+    check_target_cell_exists,
 )
 from .layer import Conv2d, Dense, LoKrLayer
 from .config import LoKrConfig
@@ -39,7 +39,7 @@ class LoKrModel(BaseTuner):
     Creates Low-Rank Kronecker Product model from a pretrained model. The original method is partially described in
     https://arxiv.org/abs/2108.06098 and in https://arxiv.org/abs/2309.14859 Current implementation heavily borrows
     from
-    https://github.com/KohakuBlueleaf/LyCORIS/blob/eb460098187f752a5d66406d3affade6f0a07ece/lycoris/modules/lokr.py
+    https://github.com/KohakuBlueleaf/LyCORIS/blob/eb460098187f752a5d66406d3affade6f0a07ece/lycoris/cells/lokr.py
 
     Args:
         model (`mindspore.nn.Cell`): The model to which the adapter tuner layers will be attached.
@@ -57,15 +57,15 @@ class LoKrModel(BaseTuner):
         >>> config_te = LoKrConfig(
         ...     r=8,
         ...     lora_alpha=32,
-        ...     target_modules=["k_proj", "q_proj", "v_proj", "out_proj", "fc1", "fc2"],
+        ...     target_cells=["k_proj", "q_proj", "v_proj", "out_proj", "fc1", "fc2"],
         ...     rank_dropout=0.0,
-        ...     module_dropout=0.0,
+        ...     cell_dropout=0.0,
         ...     init_weights=True,
         ... )
         >>> config_unet = LoKrConfig(
         ...     r=8,
         ...     lora_alpha=32,
-        ...     target_modules=[
+        ...     target_cells=[
         ...         "proj_in",
         ...         "proj_out",
         ...         "to_k",
@@ -76,7 +76,7 @@ class LoKrModel(BaseTuner):
         ...         "ff.net.2",
         ...     ],
         ...     rank_dropout=0.0,
-        ...     module_dropout=0.0,
+        ...     cell_dropout=0.0,
         ...     init_weights=True,
         ...     use_effective_conv2d=True,
         ... )
@@ -112,7 +112,7 @@ class LoKrModel(BaseTuner):
         loaded_in_4bit: Optional[bool] = False,
     ) -> None:
         """
-        A private method to create and replace the target module with the adapter module.
+        A private method to create and replace the target cell with the adapter cell.
         """
 
         # Regexp matching - Find key which matches current target_name in patterns provided
@@ -131,15 +131,15 @@ class LoKrModel(BaseTuner):
         if isinstance(target, LoKrLayer):
             target.update_layer(adapter_name, **kwargs)
         else:
-            new_module = self._create_new_module(config, adapter_name, target, **kwargs)
-            self._replace_module(parent, target_name, new_module, target)
+            new_cell = self._create_new_cell(config, adapter_name, target, **kwargs)
+            self._replace_cell(parent, target_name, new_cell, target)
 
     @classmethod
-    def _create_new_module(
+    def _create_new_cell(
         cls, config: LoKrConfig, adapter_name: str, target: nn.Cell, **kwargs
     ) -> LoKrLayer:
-        # Find corresponding subtype of provided target module
-        new_module_cls = None
+        # Find corresponding subtype of provided target cell
+        new_cell_cls = None
         for subtype, target_cls in cls.layers_mapping.items():
             if (
                 hasattr(target, "base_layer")
@@ -147,20 +147,20 @@ class LoKrModel(BaseTuner):
                 and isinstance(target, BaseTunerLayer)
             ):
                 # nested tuner layers are allowed
-                new_module_cls = target_cls
+                new_cell_cls = target_cls
                 break
             elif isinstance(target, subtype):
-                new_module_cls = target_cls
+                new_cell_cls = target_cls
                 break
 
         # We didn't find corresponding type, so adapter for this layer is not supported
-        if new_module_cls is None:
-            supported_modules = ", ".join(
+        if new_cell_cls is None:
+            supported_cells = ", ".join(
                 layer.__name__ for layer in cls.layers_mapping.keys()
             )
             raise ValueError(
-                f"Target module of type {type(target)} not supported, "
-                f"currently only adapters for {supported_modules} are supported"
+                f"Target cell of type {type(target)} not supported, "
+                f"currently only adapters for {supported_cells} are supported"
             )
 
         if isinstance(target, BaseTunerLayer):
@@ -169,45 +169,45 @@ class LoKrModel(BaseTuner):
             target_base_layer = target
 
         if isinstance(target_base_layer, nn.Cell):
-            new_module = new_module_cls(target, adapter_name=adapter_name, **kwargs)
+            new_cell = new_cell_cls(target, adapter_name=adapter_name, **kwargs)
         elif isinstance(target_base_layer, nn.Cell):
-            new_module = new_module_cls(target, adapter_name=adapter_name, **kwargs)
+            new_cell = new_cell_cls(target, adapter_name=adapter_name, **kwargs)
         else:
-            supported_modules = ", ".join(
+            supported_cells = ", ".join(
                 layer.__name__ for layer in cls.layers_mapping.keys()
             )
             raise ValueError(
-                f"Target module of type {type(target)} not supported, "
-                f"currently only adapters for {supported_modules} are supported"
+                f"Target cell of type {type(target)} not supported, "
+                f"currently only adapters for {supported_cells} are supported"
             )
 
-        return new_module
+        return new_cell
 
     def __getattr__(self, name: str):
-        """Forward missing attributes to the wrapped module."""
+        """Forward missing attributes to the wrapped cell."""
         try:
             return super().__getattr__(name)  # defer to nn.Module's logic
         except AttributeError:
             return getattr(self.model, name)
 
-    def _replace_module(self, parent, child_name, new_module, child):
-        setattr(parent, child_name, new_module)
+    def _replace_cell(self, parent, child_name, new_cell, child):
+        setattr(parent, child_name, new_cell)
 
-        # child layer wraps the original module, unpack it
+        # child layer wraps the original cell, unpack it
         if hasattr(child, "base_layer"):
             child = child.base_layer
 
         # layers with base_layer don't need the weight to be copied, as they have a reference already
-        if not hasattr(new_module, "base_layer"):
-            new_module.weight = child.weight
+        if not hasattr(new_cell, "base_layer"):
+            new_cell.weight = child.weight
             if hasattr(child, "bias"):
-                new_module.bias = child.bias
+                new_cell.bias = child.bias
 
         if getattr(child, "state", None) is not None:
-            if hasattr(new_module, "base_layer"):
-                new_module.base_layer.state = child.state
+            if hasattr(new_cell, "base_layer"):
+                new_cell.base_layer.state = child.state
             else:
-                new_module.state = child.state
+                new_cell.state = child.state
 
     def _mark_only_adapters_as_trainable(self, model: nn.Cell) -> None:
         for n, p in model.parameters_and_names():
@@ -215,9 +215,9 @@ class LoKrModel(BaseTuner):
                 p.requires_grad = False
 
     def _set_adapter_layers(self, enabled=True):
-        for module in self.model.modules():
-            if isinstance(module, (BaseTunerLayer, ModulesToSaveWrapper)):
-                module.enable_adapters(enabled)
+        for cell in self.model.cells():
+            if isinstance(cell, (BaseTunerLayer, ModulesToSaveWrapper)):
+                cell.enable_adapters(enabled)
 
     def _unload_and_optionally_merge(
         self,
@@ -234,52 +234,52 @@ class LoKrModel(BaseTuner):
 
         self._unloading_checks(adapter_names)
         key_list = [
-            key for key, _ in self.model.named_modules() if self.prefix not in key
+            key for key, _ in self.model.named_cells() if self.prefix not in key
         ]
         desc = "Unloading " + ("and merging " if merge else "") + "model"
         for key in tqdm(key_list, disable=not progressbar, desc=desc):
             try:
-                parent, target, target_name = _get_submodules(self.model, key)
+                parent, target, target_name = _get_subcells(self.model, key)
             except AttributeError:
                 continue
 
             if hasattr(target, "base_layer"):
                 if merge:
                     target.merge(safe_merge=safe_merge, adapter_names=adapter_names)
-                self._replace_module(
+                self._replace_cell(
                     parent, target_name, target.get_base_layer(), target
                 )
             elif isinstance(target, ModulesToSaveWrapper):
-                # save any additional trainable modules part of `modules_to_save`
-                new_module = target.modules_to_save[target.active_adapter]
-                if hasattr(new_module, "base_layer"):
-                    # check if the module is itself a tuner layer
+                # save any additional trainable cells part of `cells_to_save`
+                new_cell = target.cells_to_save[target.active_adapter]
+                if hasattr(new_cell, "base_layer"):
+                    # check if the cell is itself a tuner layer
                     if merge:
-                        new_module.merge(
+                        new_cell.merge(
                             safe_merge=safe_merge, adapter_names=adapter_names
                         )
-                    new_module = new_module.get_base_layer()
-                setattr(parent, target_name, new_module)
+                    new_cell = new_cell.get_base_layer()
+                setattr(parent, target_name, new_cell)
 
         return self.model
 
     def _unloading_checks(self, adapter_names: Optional[List[str]]):
         adapters_to_consider = adapter_names or self.active_adapters
-        is_modules_to_save_available = any(
-            self.peft_config[adapter].modules_to_save
+        is_cells_to_save_available = any(
+            self.peft_config[adapter].cells_to_save
             for adapter in adapters_to_consider
         )
-        if is_modules_to_save_available and len(adapters_to_consider) > 1:
+        if is_cells_to_save_available and len(adapters_to_consider) > 1:
             raise ValueError(
-                "Cannot unload multiple adapters that specify `modules_to_save`."
+                "Cannot unload multiple adapters that specify `cells_to_save`."
             )
 
     @staticmethod
     def _prepare_adapter_config(peft_config, model_config):
-        if peft_config.target_modules is None:
-            raise ValueError("Please specify `target_modules` in `peft_config`")
+        if peft_config.target_cells is None:
+            raise ValueError("Please specify `target_cells` in `peft_config`")
         return peft_config
 
     @staticmethod
-    def _check_target_module_exists(LoKR_config, key):
-        return check_target_module_exists(LoKR_config, key)
+    def _check_target_cell_exists(LoKR_config, key):
+        return check_target_cell_exists(LoKR_config, key)
