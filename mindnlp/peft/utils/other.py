@@ -17,13 +17,16 @@ import copy
 from typing import Optional, List
 
 import mindspore
-from mindspore import nn, ops, Parameter, Tensor
+from mindspore import ops, Parameter, Tensor
 from mindspore.common.initializer import initializer, Normal
 
 from mindnlp._legacy.nn import Matmul
 from mindnlp.abc import CellDict
 
-def _get_batch_size(input_ids: Optional[Tensor], inputs_embeds: Optional[Tensor]) -> int:
+
+def _get_batch_size(
+    input_ids: Optional[Tensor], inputs_embeds: Optional[Tensor]
+) -> int:
     """Get the batch size based on either input_ids or input_embeds
 
     Raises an ValueError if both are None.
@@ -38,23 +41,38 @@ def _get_batch_size(input_ids: Optional[Tensor], inputs_embeds: Optional[Tensor]
         batch_size = inputs_embeds.shape[0]
     return batch_size
 
+
 class ModulesToSaveWrapper(mindspore.nn.Cell):
     """
     save module
     """
+
     def __init__(self, module_to_save, adapter_name):
         super().__init__()
         self.original_module = module_to_save
         self.modules_to_save = CellDict()
-        self.update(adapter_name)
         self.active_adapter = adapter_name
         self.disable_adapters = False
+        self.update(adapter_name)
+
+    @property
+    def weight(self):
+        if self.active_adapter not in self.modules_to_save:
+            return self.original_module.weight
+        return self.modules_to_save[self.active_adapter].weight
 
     def update(self, adapter_name):
         """
         update modules_to_save.
         """
         self.modules_to_save.update({adapter_name: copy.deepcopy(self.original_module)})
+        # for n, p in self.original_module.parameters_and_names():
+        #     p.name = n
+        #     p.requires_grad = False
+        # self.original_module.requires_grad = False
+
+        if adapter_name == self.active_adapter:
+            self.modules_to_save[adapter_name].requires_grad = True
 
     #     if hasattr(self.modules_to_save[adapter_name], "_hf_hook"):
     #         old_hook = self.modules_to_save[adapter_name]._hf_hook
@@ -75,18 +93,60 @@ class ModulesToSaveWrapper(mindspore.nn.Cell):
     #             filtered_old_hook_attr[k] = old_hook_attr[k]
     #     new_hook = old_hook_cls(**filtered_old_hook_attr)
     #     return new_hook
+    def set_adapter(self, adapter_name: str):
+        """Set the active adapter
+
+        Additionally, this function will set the specified adapter to trainable (i.e., requires_grad=True). If this is
+        not desired, use the following code.
+
+        ```py
+        >>> for name, param in model_peft.named_parameters():
+        ...     if ...:  # some check on name (ex. if 'lora' in name)
+        ...         param.requires_grad = False
+        ```
+
+        Args:
+            adapter_name (str): The name of the adapter to set as active
+        """
+        if adapter_name not in self.modules_to_save:
+            raise ValueError(
+                f"Adapter {adapter_name} not found in {self.modules_to_save.keys()}"
+            )
+
+        self.modules_to_save[self.active_adapter].requires_grad = False
+        self.modules_to_save[adapter_name].requires_grad = True
+        self.active_adapter = adapter_name
 
     def construct(self, X):
         # TODO:*args, **kwargs
-        if self.disable_adapters or (self.active_adapter not in self.modules_to_save.keys()):
+        if self.disable_adapters or (
+            self.active_adapter not in self.modules_to_save.keys()
+        ):
             return self.original_module(X)
         return self.modules_to_save[self.active_adapter](X)
 
+    def enable_adapters(self, enabled: bool):
+        """Toggle the enabling and disabling of adapters
+
+        Takes care of setting the requires_grad flag for the adapter weights.
+
+        Args:
+            enabled (bool): True to enable adapters, False to disable adapters
+        """
+        if self.disable_adapters is not enabled:
+            # already in the desired state, do nothing
+            return
+        if enabled:
+            self.original_module.requires_grad = False
+            self.modules_to_save[self.active_adapter].requires_grad = True
+            self.disable_adapters = False
+        else:
+            self.original_module.requires_grad = True
+            self.modules_to_save.requires_grad = False
+            self.disable_adapters = True
+
+
 def custom_get_submodule(model: mindspore.nn.Cell, target: str) -> mindspore.nn.Cell:
-    """
-    Returns the submodule given by ``target`` if it exists, otherwise throws an error.
-    功能和 torch.nn.Module 相似
-    """
     if target == "":
         return model
 
@@ -104,6 +164,7 @@ def custom_get_submodule(model: mindspore.nn.Cell, target: str) -> mindspore.nn.
 
     return mod
 
+
 def _get_submodules(model, key):
     """
     get submodules
@@ -117,31 +178,20 @@ def _get_submodules(model, key):
 
 
 def _set_trainable(model, adapter_name):
-    """
-    set trainable
-    """
-    key_list = [key for key, _ in model.cells_and_names()]  # named_modules cells_and_names
+    key_list = [key for key, _ in model.cells_and_names()]
     for key in key_list:
-        target_module_found = any(key.endswith(target_key) for target_key in model.modules_to_save)
+        target_module_found = any(
+            key.endswith(target_key) for target_key in model.modules_to_save
+        )
         if target_module_found:
             parent, target, target_name = _get_submodules(model, key)
-
             if isinstance(target, ModulesToSaveWrapper):
-                # 判断是否是此数据类型
                 target.update(adapter_name)
+                target.set_adapter(target.active_adapter)
             else:
-                for _, param in target.parameters_and_names():
-                    param.requires_grad = True
-                warp_cell = ModulesToSaveWrapper(target, adapter_name)
-                # parent[int(target_name)] = warp_cell
-                setattr(parent, target_name, warp_cell)
-
-                # TODO:the implemtation of mindspore, __setitem__ is not consistent with __setattr__ here.
-                # self.cell_list is not set correctly if __setattr__'s value type is SequentialCell.
-                # Thus we set it apparently here. This line may be removed later.
-                if isinstance(parent, nn.SequentialCell):
-                    parent.cell_list = list(parent._cells.values())
-
+                new_module = ModulesToSaveWrapper(target, adapter_name)
+                new_module.set_adapter(adapter_name)
+                setattr(parent, target_name, new_module)
 
 
 def _freeze_adapter(model, adapter_name):
@@ -209,7 +259,9 @@ def transpose(weight, fan_in_fan_out):
     # return ops.transpose(weight, input_perm=?) if fan_in_fan_out else weight
 
 
-def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_start_token_id: int):
+def shift_tokens_right(
+    input_ids: mindspore.Tensor, pad_token_id: int, decoder_start_token_id: int
+):
     """
     Shift input ids one token to the right.
 
@@ -229,6 +281,7 @@ def shift_tokens_right(input_ids: mindspore.Tensor, pad_token_id: int, decoder_s
 
     return shifted_input_ids
 
+
 class Conv1D(mindspore.nn.Cell):
     """
     1D-convolutional layer Basically works like a linear layer but the weights are transposed.
@@ -241,7 +294,9 @@ class Conv1D(mindspore.nn.Cell):
     def __init__(self, n_out, n_in):
         super().__init__()
         self.n_out = n_out
-        self.weight = Parameter(initializer(Normal(sigma=0.02), (n_in, n_out), mindspore.float32))
+        self.weight = Parameter(
+            initializer(Normal(sigma=0.02), (n_in, n_out), mindspore.float32)
+        )
         self.bias = Parameter(ops.zeros(n_out, mindspore.float32))
         self.matmul = Matmul()
 
@@ -354,7 +409,6 @@ TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING = {
     # "layoutlm": ["query", "value"],
     "falcon": ["query_key_value"],
 }
-
 
 WEIGHTS_NAME = "adapter_model.ckpt"
 CONFIG_NAME = "adapter_config.json"

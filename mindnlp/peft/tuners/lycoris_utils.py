@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Lycoris Utils"""
+from __future__ import annotations
 import warnings
 import mindspore
 
-from __future__ import annotations
 from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Optional, Union
