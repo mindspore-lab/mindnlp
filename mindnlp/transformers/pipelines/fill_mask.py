@@ -42,22 +42,34 @@ class FillMaskPipeline(Pipeline):
 
     >>> fill_masker = pipeline(model="google-bert/bert-base-uncased")
     >>> fill_masker("This is a simple [MASK].")
-    [{'score': 0.042, 'token': 3291, 'token_str': 'problem', 'sequence': 'this is a simple problem.'}, {'score': 0.031, 'token': 3160, 'token_str': 'question', 'sequence': 'this is a simple question.'}, {'score': 0.03, 'token': 8522, 'token_str': 'equation', 'sequence': 'this is a simple equation.'}, {'score': 0.027, 'token': 2028, 'token_str': 'one', 'sequence': 'this is a simple one.'}, {'score': 0.024, 'token': 3627, 'token_str': 'rule', 'sequence': 'this is a simple rule.'}]
+    [{'score': 0.042, 'token': 3291, 'token_str': 'problem',
+    'sequence': 'this is a simple problem.'},
+    {'score': 0.031, 'token': 3160, 'token_str': 'question',
+    'sequence': 'this is a simple question.'},
+    {'score': 0.03, 'token': 8522, 'token_str': 'equation',
+    'sequence': 'this is a simple equation.'},
+    {'score': 0.027, 'token': 2028, 'token_str': 'one', 'sequence': 'this is a simple one.'},
+    {'score': 0.024, 'token': 3627, 'token_str': 'rule', 'sequence': 'this is a simple rule.'}]
     ```
 
     Learn more about the basics of using a pipeline in the [pipeline tutorial](../pipeline_tutorial)
 
-    This mask filling pipeline can currently be loaded from [`pipeline`] using the following task identifier:
+    This mask filling pipeline can currently be loaded from [`pipeline`]
+    using the following task identifier:
     `"fill-mask"`.
 
-    The models that this pipeline can use are models that have been trained with a masked language modeling objective,
-    which includes the bi-directional models in the library. See the up-to-date list of available models on
+    The models that this pipeline can use are models
+    that have been trained with a masked language modeling objective,
+    which includes the bi-directional models in the library.
+    See the up-to-date list of available models on
     [huggingface.co/models](https://huggingface.co/models?filter=fill-mask).
 
     <Tip>
 
-    This pipeline only works for inputs with exactly one token masked. Experimental: We added support for multiple
-    masks. The returned values are raw model output, and correspond to disjoint probabilities where one might expect
+    This pipeline only works for inputs with exactly one token masked.
+    Experimental: We added support for multiple
+    masks. The returned values are raw model output,
+    and correspond to disjoint probabilities where one might expect
     joint probabilities (See [discussion](https://github.com/huggingface/transformers/pull/10222)).
 
     </Tip>
@@ -156,7 +168,8 @@ class FillMaskPipeline(Pipeline):
                 # For multi masks though, the other [MASK] would be removed otherwise
                 # making the output look odd, so we add them back
                 sequence = self.tokenizer.decode(tokens, skip_special_tokens=single_mask)
-                proposition = {"score": v, "token": p, "token_str": self.tokenizer.decode([p]), "sequence": sequence}
+                proposition = {"score": v, "token": p,
+                               "token_str": self.tokenizer.decode([p]), "sequence": sequence}
                 row.append(proposition)
             result.append(row)
         if single_mask:
@@ -184,7 +197,8 @@ class FillMaskPipeline(Pipeline):
                 )["input_ids"]
                 if len(input_ids) == 0:
                     logger.warning(
-                        f"The specified target token `{target}` does not exist in the model vocabulary. "
+                        f"The specified target token `{target}` "
+                        f"does not exist in the model vocabulary. "
                         "We cannot replace it with anything meaningful, ignoring it"
                     )
                     continue
@@ -193,7 +207,8 @@ class FillMaskPipeline(Pipeline):
                 # The warning enables them to fix the input to
                 # get faster performance.
                 logger.warning(
-                    f"The specified target token `{target}` does not exist in the model vocabulary. "
+                    f"The specified target token `{target}` does not exist "
+                    f"in the model vocabulary. "
                     f"Replacing with `{self.tokenizer.convert_ids_to_tokens(id_)}`."
                 )
             target_ids.append(id_)
