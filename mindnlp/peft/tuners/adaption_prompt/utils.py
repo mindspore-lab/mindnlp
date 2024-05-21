@@ -89,5 +89,5 @@ def llama_compute_query_states(model: nn.Cell, **kwargs) -> Tensor:
 
 
 def is_adaption_prompt_trainable(params: str) -> bool:
-    """Return True if module is trainable under adaption prompt fine-tuning."""
+    """Return True if cell is trainable under adaption prompt fine-tuning."""
     return params.split(".")[-1].startswith("adaption_")

@@ -28,7 +28,7 @@ from mindnlp.peft.tuners.lora import LoraConfig, LoraModel
 from mindnlp.peft.utils import (
     TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING,
     _freeze_adapter,
-    _get_submodules,
+    _get_subcells,
 )
 
 from ..tuners_utils import BaseTunerLayer
@@ -52,7 +52,7 @@ class AdaLoraModel(LoraModel):
 
         >>> from transformers import AutoModelForSeq2SeqLM, LoraConfig >>> from peft import AdaLoraModel, AdaLoraConfig
         >>> config = AdaLoraConfig(
-                peft_type="ADALORA", task_type="SEQ_2_SEQ_LM", r=8, lora_alpha=32, target_modules=["q", "v"],
+                peft_type="ADALORA", task_type="SEQ_2_SEQ_LM", r=8, lora_alpha=32, target_cells=["q", "v"],
                 lora_dropout=0.01,
             )
         >>> model = AutoModelForSeq2SeqLM.from_pretrained("t5-base") >>> model = AdaLoraModel(model, config, "default")
@@ -154,10 +154,10 @@ class AdaLoraModel(LoraModel):
         # if quantization_config is not None:
         #     kwargs["gptq_quantization_config"] = quantization_config
 
-        # If it is not an AdaLoraLayer, create a new module, else update it with new adapters
+        # If it is not an AdaLoraLayer, create a new cell, else update it with new adapters
         if not isinstance(target, AdaLoraLayer):
-            new_module = self._create_new_module(lora_config, adapter_name, target, **kwargs)
-            self._replace_module(parent, target_name, new_module, target)
+            new_cell = self._create_new_cell(lora_config, adapter_name, target, **kwargs)
+            self._replace_cell(parent, target_name, new_cell, target)
         else:
             target.update_layer(
                 adapter_name,
@@ -168,7 +168,7 @@ class AdaLoraModel(LoraModel):
             )
 
     @staticmethod
-    def _create_new_module(lora_config, adapter_name, target, **kwargs):
+    def _create_new_cell(lora_config, adapter_name, target, **kwargs):
         # avoid eager bnb import
         # if is_bnb_available():
         #     import bitsandbytes as bnb
@@ -197,7 +197,7 @@ class AdaLoraModel(LoraModel):
         #             "index": target_base_layer.index,
         #         }
         #     )
-        #     new_module = SVDLinear8bitLt(target, adapter_name, **kwargs)
+        #     new_cell = SVDLinear8bitLt(target, adapter_name, **kwargs)
         # elif loaded_in_4bit and is_bnb_4bit_available() and isinstance(target_base_layer, bnb.nn.Linear4bit):
         #     fourbit_kwargs = kwargs.copy()
         #     fourbit_kwargs.update(
@@ -207,61 +207,61 @@ class AdaLoraModel(LoraModel):
         #             "quant_type": target_base_layer.weight.quant_type,
         #         }
         #     )
-        #     new_module = SVDLinear4bit(target, adapter_name, **fourbit_kwargs)
+        #     new_cell = SVDLinear4bit(target, adapter_name, **fourbit_kwargs)
         # elif AutoGPTQQuantLinear is not None and isinstance(target, AutoGPTQQuantLinear):
-        #     new_module = SVDQuantLinear(target, adapter_name, **kwargs)
+        #     new_cell = SVDQuantLinear(target, adapter_name, **kwargs)
         if isinstance(target_base_layer, nn.Dense):
             if kwargs["fan_in_fan_out"]:
                 warnings.warn(
-                    "fan_in_fan_out is set to True but the target module is `torch.nn.Linear`. "
+                    "fan_in_fan_out is set to True but the target cell is `torch.nn.Linear`. "
                     "Setting fan_in_fan_out to False."
                 )
                 kwargs["fan_in_fan_out"] = lora_config.fan_in_fan_out = False
         elif isinstance(target_base_layer, Conv1D):
             if not kwargs["fan_in_fan_out"]:
                 warnings.warn(
-                    "fan_in_fan_out is set to False but the target module is `Conv1D`. "
+                    "fan_in_fan_out is set to False but the target cell is `Conv1D`. "
                     "Setting fan_in_fan_out to True."
                 )
                 kwargs["fan_in_fan_out"] = lora_config.fan_in_fan_out = True
         else:
             raise ValueError(
-                f"Target module {target} is not supported. "
+                f"Target cell {target} is not supported. "
                 f"Currently, only `torch.nn.Linear` and `Conv1D` are supported."
             )
-        new_module = SVDLinear(target, adapter_name, **kwargs)
+        new_cell = SVDLinear(target, adapter_name, **kwargs)
 
-        return new_module
-    def _replace_module(self, parent, child_name, new_module, child):
-        setattr(parent, child_name, new_module)
+        return new_cell
+    def _replace_cell(self, parent, child_name, new_cell, child):
+        setattr(parent, child_name, new_cell)
 
-        # child layer wraps the original module, unpack it
+        # child layer wraps the original cell, unpack it
         if hasattr(child, "base_layer"):
             child = child.base_layer
 
         # layers with base_layer don't need the weight to be copied, as they have a reference already
-        if not hasattr(new_module, "base_layer"):
-            new_module.weight = child.weight
+        if not hasattr(new_cell, "base_layer"):
+            new_cell.weight = child.weight
             if hasattr(child, "bias"):
-                new_module.bias = child.bias
+                new_cell.bias = child.bias
 
         if getattr(child, "state", None) is not None:
-            if hasattr(new_module, "base_layer"):
-                new_module.base_layer.state = child.state
+            if hasattr(new_cell, "base_layer"):
+                new_cell.base_layer.state = child.state
             else:
-                new_module.state = child.state
+                new_cell.state = child.state
     @staticmethod
     def _prepare_adapter_config(peft_config, model_config):
-        if peft_config.target_modules is None:
+        if peft_config.target_cells is None:
             if model_config["model_type"] not in TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING:
-                raise ValueError("Please specify `target_modules` in `peft_config`")
-            peft_config.target_modules = TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING[
+                raise ValueError("Please specify `target_cells` in `peft_config`")
+            peft_config.target_cells = TRANSFORMERS_MODELS_TO_ADALORA_TARGET_MODULES_MAPPING[
                 model_config["model_type"]
             ]
         return peft_config
 
     def __getattr__(self, name: str):
-        """Forward missing attributes to the wrapped module."""
+        """Forward missing attributes to the wrapped cell."""
         try:
             return super().__getattr__(name)  # defer to nn.Module's logic
         except AttributeError:
@@ -294,8 +294,8 @@ class AdaLoraModel(LoraModel):
             outputs.loss += orth_reg_weight * regu_loss
         return outputs
 
-    def resize_modules_by_rank_pattern(self, rank_pattern, adapter_name):
-        "resize the modules by rank pattern"
+    def resize_cells_by_rank_pattern(self, rank_pattern, adapter_name):
+        "resize the cells by rank pattern"
         lora_config = self.peft_config[adapter_name]
         for name, rank_idx in rank_pattern.items():
             if isinstance(rank_idx, list):
@@ -307,7 +307,7 @@ class AdaLoraModel(LoraModel):
             else:
                 raise ValueError("Unexpected type of rank_idx")
             key = ".".join(name.split(".")[0:-2]) if adapter_name in name else ".".join(name.split(".")[0:-1])
-            _, target, _ = _get_submodules(self.model, key)
+            _, target, _ = _get_subcells(self.model, key)
             lora_E_weights = target.lora_E[adapter_name][rank_idx]
             lora_A_weights = target.lora_A[adapter_name][rank_idx]
             lora_B_weights = target.lora_B[adapter_name][:, rank_idx]
@@ -385,7 +385,7 @@ class AdaLoraModel(LoraModel):
         elif global_step == lora_config.total_step - lora_config.tfinal:
             _, rank_pattern = self.rankallocator.update_and_allocate(self.model, global_step, gradient,force_mask=True)
             # for some reason, this freezes the trainable parameters and nothing gets updates
-            # self.resize_modules_by_rank_pattern(rank_pattern, self.trainable_adapter_name)
+            # self.resize_cells_by_rank_pattern(rank_pattern, self.trainable_adapter_name)
             lora_config.rank_pattern = rank_pattern
             self.rankallocator.reset_ipt()
         # Currently using inefficient way to mask the unimportant weights using the rank pattern

@@ -76,7 +76,7 @@ class PeftModel(nn.Cell):
         super().__init__()
         self.base_model = model
         self.config = getattr(self.base_model, "config", {"model_type": "custom"})
-        self.modules_to_save = None
+        self.cells_to_save = None
         self.peft_config: Dict[str, PeftConfig] = {}
         self.active_adapter = adapter_name
         self.peft_type = peft_config.peft_type
@@ -86,7 +86,7 @@ class PeftModel(nn.Cell):
             self.base_model = PEFT_TYPE_TO_MODEL_MAPPING[peft_config.peft_type](
                 self.base_model, self.peft_config, adapter_name
             )
-            self.set_additional_trainable_modules(peft_config, adapter_name)
+            self.set_additional_trainable_cells(peft_config, adapter_name)
         else:
             self.add_adapter(adapter_name, peft_config)
 
@@ -168,19 +168,19 @@ class PeftModel(nn.Cell):
             self.prompt_encoder = CellDict({})
             self.prompt_tokens = {}
         transformer_backbone = None
-        for name, module in self.base_model.cells_and_names():
-            for param in module.get_parameters():
+        for name, cell in self.base_model.cells_and_names():
+            for param in cell.get_parameters():
                 param.requires_grad = False
-            if isinstance(module, PreTrainedModel):
+            if isinstance(cell, PreTrainedModel):
                 # Make sure to freeze Tranformers model
                 if transformer_backbone is None:
-                    transformer_backbone = module
+                    transformer_backbone = cell
                     self.transformer_backbone_name = name
         if transformer_backbone is None:
             transformer_backbone = self.base_model
 
-        if config.num_transformer_submodules is None:
-            config.num_transformer_submodules = 2 if config.task_type == TaskType.SEQ_2_SEQ_LM else 1
+        if config.num_transformer_subcells is None:
+            config.num_transformer_subcells = 2 if config.task_type == TaskType.SEQ_2_SEQ_LM else 1
 
         for named_param, value in list(transformer_backbone.parameters_and_names()):
 
@@ -201,7 +201,7 @@ class PeftModel(nn.Cell):
 
         self.prompt_encoder.update(CellDict({adapter_name: prompt_encoder}))
         self.prompt_tokens[adapter_name] = ops.arange(
-            config.num_virtual_tokens * config.num_transformer_submodules
+            config.num_virtual_tokens * config.num_transformer_subcells
         ).long()
 
     def load_adapter(self, model_id: str, adapter_name: str, is_trainable: bool = False, **kwargs):
@@ -216,7 +216,7 @@ class PeftModel(nn.Cell):
         load_result = set_peft_model_state_dict(self, adapters_weights, adapter_name=adapter_name)
         # TODO: add parallel logic & offload logic & device map logic(dispatch_model)
 
-        # Set model in evaluation mode to deactivate Dropout modules by default
+        # Set model in evaluation mode to deactivate Dropout cells by default
         if not is_trainable:
             self.set_train(False)
 
@@ -273,10 +273,10 @@ class PeftModel(nn.Cell):
                 peft_config.num_attention_heads,
                 peft_config.token_dim // peft_config.num_attention_heads,
             )
-            if peft_config.num_transformer_submodules == 2:
+            if peft_config.num_transformer_subcells == 2:
                 past_key_values = ops.cat([past_key_values, past_key_values], axis=2)
             past_key_values = past_key_values.permute([2, 0, 3, 1, 4]).split(
-                peft_config.num_transformer_submodules * 2
+                peft_config.num_transformer_subcells * 2
             )
             if TRANSFORMERS_MODELS_TO_PREFIX_TUNING_POSTPROCESS_MAPPING.get(self.config.model_type, None) is not None:
                 post_process_fn = TRANSFORMERS_MODELS_TO_PREFIX_TUNING_POSTPROCESS_MAPPING[self.config.model_type]
@@ -303,7 +303,7 @@ class PeftModel(nn.Cell):
         )
 
     def __getattr__(self, name: str):
-        """Forward missing attributes to the wrapped module."""
+        """Forward missing attributes to the wrapped cell."""
         try:
             return super().__getattr__(name)  # defer to nn.Module's logic
         except AttributeError:
@@ -319,7 +319,7 @@ class PeftModel(nn.Cell):
     @contextmanager
     def disable_adapter(self):
         """
-        Disables the adapter module.
+        Disables the adapter cell.
         """
         try:
             self.base_model.disable_adapter_layers()
@@ -363,16 +363,16 @@ class PeftModel(nn.Cell):
             del self.peft_config[adapter_name]
             raise
 
-        self.set_additional_trainable_modules(peft_config, adapter_name)
+        self.set_additional_trainable_cells(peft_config, adapter_name)
 
 
-    def set_additional_trainable_modules(self, peft_config, adapter_name):
+    def set_additional_trainable_cells(self, peft_config, adapter_name):
         """set additional trainable cells"""
-        if getattr(peft_config, "modules_to_save", None) is not None:
-            if self.modules_to_save is None:
-                self.modules_to_save = set(peft_config.modules_to_save)
+        if getattr(peft_config, "cells_to_save", None) is not None:
+            if self.cells_to_save is None:
+                self.cells_to_save = set(peft_config.cells_to_save)
             else:
-                self.modules_to_save.update(peft_config.modules_to_save)
+                self.cells_to_save.update(peft_config.cells_to_save)
             _set_trainable(self, adapter_name)
 
     @property
@@ -393,13 +393,13 @@ class PeftModelForSequenceClassification(PeftModel):
 
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
         super().__init__(model, peft_config, adapter_name)
-        if self.modules_to_save is None:
-            self.modules_to_save = {"classifier", "score"}
+        if self.cells_to_save is None:
+            self.cells_to_save = {"classifier", "score"}
         else:
-            self.modules_to_save.update({"classifier", "score"})
+            self.cells_to_save.update({"classifier", "score"})
 
         for name, _ in self.base_model.cells_and_names():
-            if any(module_name in name for module_name in self.modules_to_save):
+            if any(cell_name in name for cell_name in self.cells_to_save):
                 self.cls_layer_name = name
                 break
 
@@ -724,17 +724,17 @@ class PeftModelForSeq2SeqLM(PeftModel):
                 kwargs["attention_mask"] = ops.cat((prefix_attention_mask, attention_mask), axis=1)
             # concat prompt labels
             if labels is not None:
-                if peft_config.num_transformer_submodules == 1:
+                if peft_config.num_transformer_subcells == 1:
                     kwargs["labels"] = labels
-                elif peft_config.num_transformer_submodules == 2:
+                elif peft_config.num_transformer_subcells == 2:
                     prefix_labels = ops.full((batch_size, peft_config.num_virtual_tokens), -100).to(labels.device)
                     kwargs["labels"] = ops.cat((prefix_labels, labels), axis=1)
             prompts = self.get_prompt(batch_size=batch_size)
             prompts = prompts.to(inputs_embeds.dtype)
             inputs_embeds = ops.cat((prompts[:, : peft_config.num_virtual_tokens], inputs_embeds), axis=1)
-            if peft_config.num_transformer_submodules == 1:
+            if peft_config.num_transformer_subcells == 1:
                 return self.base_model(inputs_embeds=inputs_embeds, **kwargs)
-            elif peft_config.num_transformer_submodules == 2:
+            elif peft_config.num_transformer_subcells == 2:
                 decoder_inputs_embeds = ops.cat(
                     (prompts[:, peft_config.num_virtual_tokens :], decoder_inputs_embeds), axis=1
                 )
@@ -830,13 +830,13 @@ class PeftModelForTokenClassification(PeftModel):
 
     def __init__(self, model, peft_config: PeftConfig = None, adapter_name="default"):
         super().__init__(model, peft_config, adapter_name)
-        if self.modules_to_save is None:
-            self.modules_to_save = {"classifier", "score"}
+        if self.cells_to_save is None:
+            self.cells_to_save = {"classifier", "score"}
         else:
-            self.modules_to_save.update({"classifier", "score"})
+            self.cells_to_save.update({"classifier", "score"})
 
         for name, _ in self.base_model.cells_and_names():
-            if any(module_name in name for module_name in self.modules_to_save):
+            if any(cell_name in name for cell_name in self.cells_to_save):
                 self.cls_layer_name = name
                 break
 
@@ -936,7 +936,7 @@ class PeftModelForTokenClassification(PeftModel):
         if "past_key_values" in fwd_params:
             return self.base_model(labels=labels, **kwargs)
         else:
-            transformer_backbone_name = self.base_model.get_submodule(self.transformer_backbone_name)
+            transformer_backbone_name = self.base_model.get_subcell(self.transformer_backbone_name)
             fwd_params = list(inspect.signature(transformer_backbone_name.forward).parameters.keys())
             if "past_key_values" not in fwd_params:
                 raise ValueError("Model does not support past key values which are required for prefix tuning.")
@@ -944,7 +944,7 @@ class PeftModelForTokenClassification(PeftModel):
             sequence_output = outputs[0]
             if "dropout" in [name for name, _ in list(self.base_model.cells_and_names())]:
                 sequence_output = self.base_model.dropout(sequence_output)
-            logits = self.base_model.get_submodule(self.cls_layer_name)(sequence_output)
+            logits = self.base_model.get_subcell(self.cls_layer_name)(sequence_output)
 
             loss = None
             if labels is not None:

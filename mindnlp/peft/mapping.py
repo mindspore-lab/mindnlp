@@ -129,7 +129,7 @@ def inject_adapter_in_model(
 
     tuner_cls = PEFT_TYPE_TO_TUNER_MAPPING[peft_config.peft_type]
 
-    # By instantiating a peft model we are injecting randomly initialized LoRA layers into the model's modules.
+    # By instantiating a peft model we are injecting randomly initialized LoRA layers into the model's cells.
     peft_model = tuner_cls(model, peft_config, adapter_name=adapter_name)
 
     return peft_model.model
