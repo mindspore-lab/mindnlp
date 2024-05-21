@@ -90,7 +90,6 @@ class LoHaLayer(nn.Cell, LycorisLayer):
             self.hada_w2_a[adapter_name] = mindspore.Parameter(ops.zeros((shape[0], r)))
             self.hada_w2_b[adapter_name] = mindspore.Parameter(ops.zeros((r, shape[1])))
 
-    # TODO
     def reset_adapter_parameters(self, adapter_name: str):
         # Original implementation performs initialization with normal distribution
         # https://github.com/KohakuBlueleaf/LyCORIS/blob/3549fdef8f564761d68b695a08ef88b1122fdedc/lycoris/modules/loha.py#L158
@@ -238,7 +237,6 @@ class LoHaLayer(nn.Cell, LycorisLayer):
             self.reset_adapter_parameters(adapter_name)
         else:
             self.reset_adapter_parameters_random(adapter_name)
-        # TODO
         # Move new weights to device
         # weight = getattr(self.get_base_layer(), "weight", None)
         # if weight is not None:

@@ -14,6 +14,7 @@
 """Lycoris Utils"""
 import warnings
 import mindspore
+
 from __future__ import annotations
 from abc import abstractmethod
 from dataclasses import dataclass, field
@@ -55,7 +56,8 @@ class LycorisConfig(PeftConfig):
         default_factory=dict,
         metadata={
             "help": (
-                "The mapping from layer names or regexp expression to alphas which are different from the default alpha specified by `alpha`. "
+                "The mapping from layer names or regexp expression to alphas"
+                "which are different from the default alpha specified by `alpha`. "
                 "For example, `{model.decoder.layers.0.encoder_attn.k_proj: 32`}"
             )
         },
@@ -102,14 +104,15 @@ class LycorisLayer(BaseTunerLayer):
     def create_adapter_parameters(self, adapter_name: str, r: int, **kwargs): ...
 
     # TODO: refactor LoRA to use the same approach
+
     @abstractmethod
     def _get_delta_activations(
-        self, adapter_name: str, x: ms.Tensor, *args: Any, **kwargs: Any
-    ) -> ms.Tensor:
+        self, adapter_name: str, x: mindspore.Tensor, *args: Any, **kwargs: Any
+    ) -> mindspore.Tensor:
         """Activations added on top of the base layer output (i.e. after the base layer forward pass)"""
 
     @abstractmethod
-    def get_delta_weight(self, adapter_name: str) -> ms.Tensor: ...
+    def get_delta_weight(self, adapter_name: str) -> mindspore.Tensor: ...
 
     def merge(
         self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None
