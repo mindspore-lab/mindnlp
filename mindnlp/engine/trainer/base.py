@@ -43,7 +43,7 @@ from mindspore.nn.learning_rate_schedule import LearningRateSchedule
 from ...peft import PeftModel
 from ...configs import WEIGHTS_NAME, CONFIG_NAME, ADAPTER_WEIGHTS_NAME, ADAPTER_SAFE_WEIGHTS_NAME, \
     WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_NAME, SAFE_WEIGHTS_INDEX_NAME
-from ...dataset import BaseMapFuction
+from ...dataset import BaseMapFunction
 from ...utils import logging, find_labels, can_return_loss
 from ...utils.serialization import safe_load_file, safe_save_file
 from ...utils.import_utils import is_safetensors_available
@@ -120,7 +120,7 @@ class Trainer:
         self,
         model: Union[PreTrainedModel, nn.Cell] = None,
         args: TrainingArguments = None,
-        map_fn: Optional[Union[Callable, BaseMapFuction]] = None,
+        map_fn: Optional[Union[Callable, BaseMapFunction]] = None,
         train_dataset: Optional[Dataset] = None,
         eval_dataset: Optional[Union[Dataset, Dict[str, Dataset]]] = None,
         tokenizer: Optional[PreTrainedTokenizerBase] = None,

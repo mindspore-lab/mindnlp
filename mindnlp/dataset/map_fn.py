@@ -15,7 +15,7 @@
 """
 Map fuction init
 """
-class BaseMapFuction:
+class BaseMapFunction:
     def __init__(self, input_colums, output_columns):
         self.input_columns = input_colums
         self.output_columns = output_columns
