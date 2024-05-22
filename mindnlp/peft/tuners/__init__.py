@@ -20,3 +20,4 @@ from .adaption_prompt import AdaptionPromptConfig, AdaptionPromptModel
 from .adalora import AdaLoraConfig, AdaLoraModel
 from .lokr import LoKrConfig, LoKrModel
 from .prompt_tuning import PromptEmbedding, PromptTuningConfig, PromptTuningInit
+from .loha import LoHaConfig, LoHaModel

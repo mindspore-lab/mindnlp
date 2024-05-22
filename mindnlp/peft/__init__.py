@@ -18,7 +18,7 @@ from .mapping import (
     PEFT_TYPE_TO_CONFIG_MAPPING,
     get_peft_config,
     get_peft_model,
-    inject_adapter_in_model
+    inject_adapter_in_model,
 )
 
 from .peft_model import (
@@ -42,7 +42,9 @@ from .tuners import (
     LoKrModel,
     AdaLoraConfig,
     AdaLoraModel,
-    PromptTuningConfig
+    PromptTuningConfig,
+    LoHaConfig,
+    LoHaModel,
 )
 
 from .utils import (
