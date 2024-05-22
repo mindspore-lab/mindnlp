@@ -222,7 +222,7 @@ class TrainingArguments:
             checkpoints are saved: the last one and the best one (if they are different).
         save_safetensors (`bool`, *optional*, defaults to `True`):
             Use [safetensors](https://huggingface.co/docs/safetensors) saving and loading for state dicts instead of
-            default `torch.load` and `torch.save`.
+            default `mindspore.load_checkpoint` and `mindspore.save_checkpoint`.
         save_on_each_node (`bool`, *optional*, defaults to `False`):
             When doing multi-node distributed training, whether to save models and checkpoints on each node, or only on
             the main one.
@@ -244,10 +244,9 @@ class TrainingArguments:
             same seed as `seed`. This can be used to ensure reproducibility of data sampling, independent of the model
             seed.
         jit_mode_eval (`bool`, *optional*, defaults to `False`):
-            Whether or not to use PyTorch jit trace for inference.
+            Whether or not to use MindSpore jit trace for inference.
         use_ipex (`bool`, *optional*, defaults to `False`):
-            Use Intel extension for PyTorch when it is available. [IPEX
-            installation](https://github.com/intel/intel-extension-for-pytorch).
+            Use Intel extension for MindSpore when it is available.
         bf16 (`bool`, *optional*, defaults to `False`):
             Whether to use bf16 16-bit (mixed) precision training instead of 32-bit training. Requires Ampere or higher
             NVIDIA architecture or using CPU (use_cpu) or Ascend NPU. This is an experimental API and it may change.
@@ -260,7 +259,7 @@ class TrainingArguments:
             This argument is deprecated. Use `half_precision_backend` instead.
         half_precision_backend (`str`, *optional*, defaults to `"auto"`):
             The backend to use for mixed precision training. Must be one of `"auto", "apex", "cpu_amp"`. `"auto"` will
-            use CPU/CUDA AMP or APEX depending on the PyTorch version detected, while the other choices will force the
+            use CPU/CUDA AMP or APEX depending on the MindSpore version detected, while the other choices will force the
             requested backend.
         bf16_full_eval (`bool`, *optional*, defaults to `False`):
             Whether to use full bfloat16 evaluation instead of 32-bit. This will be faster and save memory but can harm
@@ -282,7 +281,7 @@ class TrainingArguments:
             value as `logging_steps` if not set. Should be an integer or a float in range `[0,1)`. If smaller than 1,
             will be interpreted as ratio of total training steps.
         dataloader_num_workers (`int`, *optional*, defaults to 0):
-            Number of subprocesses to use for data loading (PyTorch only). 0 means that the data will be loaded in the
+            Number of subprocesses to use for data loading (MindSpore only). 0 means that the data will be loaded in the
             main process.
         past_index (`int`, *optional*, defaults to -1):
             Some models like [TransformerXL](../model_doc/transformerxl) or [XLNet](../model_doc/xlnet) can make use of
@@ -335,7 +334,7 @@ class TrainingArguments:
             stage as in the previous training. If set to `True`, the training will begin faster (as that skipping step
             can take a long time) but will not yield the same results as the interrupted training would have.
         fsdp (`bool`, `str` or list of [`~trainer_utils.FSDPOption`], *optional*, defaults to `''`):
-            Use PyTorch Distributed Parallel Training (in distributed training only).
+            Use MindSpore Distributed Parallel Training (in distributed training only).
 
             A list of options along the following:
 
@@ -347,7 +346,7 @@ class TrainingArguments:
               `"shard_grad_op"`).
             - `"auto_wrap"`: Automatically recursively wrap layers with FSDP using `default_auto_wrap_policy`.
         fsdp_config (`str` or `dict`, *optional*):
-            Config to be used with fsdp (Pytorch Distributed Parallel Training). The value is either a location of
+            Config to be used with fsdp (MindSpore Distributed Parallel Training). The value is either a location of
             fsdp json config file (e.g., `fsdp_config.json`) or an already loaded json file as `dict`.
 
             A List of config and its options:
@@ -379,9 +378,7 @@ class TrainingArguments:
                      all-gathers.
                 - use_orig_params (`bool`, *optional*, defaults to `True`)
                     If `"True"`, allows non-uniform `requires_grad` during init, which means support for interspersed
-                    frozen and trainable paramteres. Useful in cases such as parameter-efficient fine-tuning. Please
-                    refer this
-                    [blog](https://dev-discuss.pytorch.org/t/rethinking-pytorch-fully-sharded-data-parallel-fsdp-from-first-principles/1019
+                    frozen and trainable paramteres. Useful in cases such as parameter-efficient fine-tuning.
                 - sync_module_states (`bool`, *optional*, defaults to `True`)
                     If `"True"`, each individually wrapped FSDP unit will broadcast module parameters from rank 0 to
                     ensure they are the same across all ranks after initialization
@@ -390,13 +387,10 @@ class TrainingArguments:
                     certain layers and recomputing them during a backward pass. Effectively, this trades extra
                     computation time for reduced memory usage.
                 - xla (`bool`, *optional*, defaults to `False`):
-                    Whether to use PyTorch/XLA Fully Sharded Data Parallel Training. This is an experimental feature
+                    Whether to use MindSpore/XLA Fully Sharded Data Parallel Training. This is an experimental feature
                     and its API may evolve in the future.
                 - xla_fsdp_settings (`dict`, *optional*)
                     The value is a dictionary which stores the XLA FSDP wrapping parameters.
-
-                    For a complete list of options, please see [here](
-                    https://github.com/pytorch/xla/blob/master/torch_xla/distributed/fsdp/xla_fully_sharded_data_parallel.py).
                 - xla_fsdp_grad_ckpt (`bool`, *optional*, defaults to `False`):
                     Will use gradient checkpointing over each nested XLA FSDP wrapped layer. This setting can only be
                     used when the xla flag is set to true, and an auto wrapping policy is specified through
@@ -446,9 +440,8 @@ class TrainingArguments:
             - `"tpu_metrics_debug"`: print debug metrics on TPU
 
             The options should be separated by whitespaces.
-        optim (`str` or [`training_args.OptimizerNames`], *optional*, defaults to `"adamw_torch"`):
-            The optimizer to use: adamw_hf, adamw_torch, adamw_torch_fused, adamw_apex_fused, adamw_anyprecision or
-            adafactor.
+        optim (`str` or [`training_args.OptimizerNames`], *optional*, defaults to `"adamw"`):
+            The optimizer to use: adamw, sgd.
         optim_args (`str`, *optional*):
             Optional arguments that are supplied to AnyPrecisionAdamW.
         group_by_length (`bool`, *optional*, defaults to `False`):
@@ -541,9 +534,6 @@ class TrainingArguments:
         full_determinism (`bool`, *optional*, defaults to `False`)
             If `True`, [`enable_full_determinism`] is called instead of [`set_seed`] to ensure reproducible results in
             distributed training. Important: this will negatively impact the performance, so only use it for debugging.
-        torchdynamo (`str`, *optional*):
-            If set, the backend compiler for TorchDynamo. Possible choices are `"eager"`, `"aot_eager"`, `"inductor"`,
-            `"nvfuser"`, `"aot_nvfuser"`, `"aot_cudagraphs"`, `"ofi"`, `"fx2trt"`, `"onnxrt"` and `"ipex"`.
         ray_scope (`str`, *optional*, defaults to `"last"`):
             The scope to use when doing hyperparameter search with Ray. By default, `"last"` will be used. Ray will
             then use the last checkpoint of all trials, compare those, and select the best one. However, other options
@@ -551,32 +541,26 @@ class TrainingArguments:
             https://docs.ray.io/en/latest/tune/api_docs/analysis.html#ray.tune.ExperimentAnalysis.get_best_trial) for
             more options.
         ddp_timeout (`int`, *optional*, defaults to 1800):
-            The timeout for `torch.distributed.init_process_group` calls, used to avoid GPU socket timeouts when
-            performing slow operations in distributed runnings. Please refer the [PyTorch documentation]
-            (https://pytorch.org/docs/stable/distributed.html#torch.distributed.init_process_group) for more
-            information.
+            The timeout for `mindspore.communication.init` calls, used to avoid GPU socket timeouts when
+            performing slow operations in distributed runnings.
         use_mps_device (`bool`, *optional*, defaults to `False`):
             This argument is deprecated.`mps` device will be used if it is available similar to `cuda` device.
-        torch_compile (`bool`, *optional*, defaults to `False`):
-            Whether or not to compile the model using PyTorch 2.0
-            [`torch.compile`](https://pytorch.org/get-started/pytorch-2.0/).
-
-            This will use the best defaults for the [`torch.compile`
-            API](https://pytorch.org/docs/stable/generated/torch.compile.html?highlight=torch+compile#torch.compile).
-            You can customize the defaults with the argument `torch_compile_backend` and `torch_compile_mode` but we
-            don't guarantee any of them will work as the support is progressively rolled in in PyTorch.
+        nn_compile (`bool`, *optional*, defaults to `False`):
+            This will use the best defaults for the [`mindspore.nn.Cell.compile`]
+            You can customize the defaults with the argument `nn_compile_backend` and `nn_compile_mode` but we
+            don't guarantee any of them will work as the support is progressively rolled in in MindSpore.
 
             This flag and the whole compile API is experimental and subject to change in future releases.
-        torch_compile_backend (`str`, *optional*):
-            The backend to use in `torch.compile`. If set to any value, `torch_compile` will be set to `True`.
+        nn_compile_backend (`str`, *optional*):
+            The backend to use in `mindspore.nn.Cell.compile`. If set to any value, `mindspore.nn.Cell.compile` will be set to `True`.
 
-            Refer to the PyTorch doc for possible values and note that they may change across PyTorch versions.
+            Refer to the MindSpore doc for possible values and note that they may change across MindSpore versions.
 
             This flag is experimental and subject to change in future releases.
-        torch_compile_mode (`str`, *optional*):
-            The mode to use in `torch.compile`. If set to any value, `torch_compile` will be set to `True`.
+        nn_compile_mode (`str`, *optional*):
+            The mode to use in `mindspore.nn.Cell.compile`. If set to any value, `mindspore.nn.Cell.compile` will be set to `True`.
 
-            Refer to the PyTorch doc for possible values and note that they may change across PyTorch versions.
+            Refer to the MindSpore doc for possible values and note that they may change across MindSpore versions.
 
             This flag is experimental and subject to change in future releases.
         split_batches (`bool`, *optional*):
@@ -759,7 +743,7 @@ class TrainingArguments:
     save_safetensors: Optional[bool] = field(
         default=True,
         metadata={
-            "help": "Use safetensors saving and loading for state dicts instead of default torch.load and torch.save."
+            "help": "Use safetensors saving and loading for state dicts instead of default mindspore.load_checkpoint and mindspore.save_checkpoint."
         },
     )
     save_on_each_node: bool = field(
@@ -791,7 +775,7 @@ class TrainingArguments:
     seed: int = field(default=42, metadata={"help": "Random seed that will be set at the beginning of training."})
     data_seed: Optional[int] = field(default=None, metadata={"help": "Random seed to be used with data samplers."})
     jit_mode_eval: bool = field(
-        default=False, metadata={"help": "Whether or not to use PyTorch jit trace for inference"}
+        default=False, metadata={"help": "Whether or not to use MindSpore jit trace for inference"}
     )
     bf16: bool = field(
         default=False,
@@ -853,7 +837,7 @@ class TrainingArguments:
         default=1,
         metadata={
             "help": (
-                "Number of subprocesses to use for data loading (PyTorch only). 0 means that the data will be loaded"
+                "Number of subprocesses to use for data loading (MindSpore only). 0 means that the data will be loaded"
                 " in the main process."
             )
         },
@@ -942,7 +926,7 @@ class TrainingArguments:
     recompute_kwargs: Optional[dict] = field(
         default=None,
         metadata={
-            "help": "Gradient checkpointing key word arguments such as `use_reentrant`. Will be passed to `torch.utils.checkpoint.checkpoint` through `model.recompute_enable`."
+            "help": "Gradient checkpointing key word arguments such as `use_reentrant`. Will be passed to `mindspore.nn.Cell.recompute` through `model.recompute_enable`."
         },
     )
     include_inputs_for_metrics: bool = field(
@@ -1118,7 +1102,7 @@ class TrainingArguments:
             if self.evaluation_strategy == IntervalStrategy.NO:
                 raise ValueError("lr_scheduler_type reduce_lr_on_plateau requires an eval strategy")
             if not is_mindspore_available():
-                raise ValueError("lr_scheduler_type reduce_lr_on_plateau requires torch>=0.2.0")
+                raise ValueError("lr_scheduler_type reduce_lr_on_plateau requires mindspore")
 
         self.optim = OptimizerNames(self.optim)
 
@@ -1183,7 +1167,7 @@ class TrainingArguments:
     @property
     def ddp_timeout_delta(self) -> timedelta:
         """
-        The actual timeout for torch.distributed.init_process_group since it expects a timedelta variable.
+        The actual timeout for mindspore.communication.init since it expects a timedelta variable.
         """
         return timedelta(seconds=self.ddp_timeout)
 
@@ -1193,9 +1177,9 @@ class TrainingArguments:
         The current mode used for parallelism if multiple GPUs/TPU cores are available. One of:
 
         - `ParallelMode.NOT_PARALLEL`: no parallelism (CPU or one GPU).
-        - `ParallelMode.NOT_DISTRIBUTED`: several GPUs in one single process (uses `torch.nn.DataParallel`).
+        - `ParallelMode.NOT_DISTRIBUTED`: several GPUs in one single process (uses `nn.DataParallel`).
         - `ParallelMode.DISTRIBUTED`: several GPUs, each having its own process (uses
-          `torch.nn.DistributedDataParallel`).
+          `nn.DistributedDataParallel`).
         - `ParallelMode.TPU`: several TPU cores.
         """
 
@@ -1267,7 +1251,7 @@ class TrainingArguments:
     @contextlib.contextmanager
     def main_process_first(self, local=True, desc="work"):
         """
-        A context manager for torch distributed environment where on needs to do something on the main process, while
+        A context manager for MindSpore distributed environment where on needs to do something on the main process, while
         blocking replicas, and when it's finished releasing the replicas.
 
         One such use is for `datasets`'s `map` feature which to be efficient should be run once on the main process,
@@ -1459,7 +1443,7 @@ class TrainingArguments:
             loss_only (`bool`, *optional*, defaults to `False`):
                 Ignores all outputs except the loss.
             jit_mode (`bool`, *optional*):
-                Whether or not to use PyTorch jit trace for inference.
+                Whether or not to use MindSpore jit trace for inference.
 
         Example:
 
@@ -1505,7 +1489,7 @@ class TrainingArguments:
             loss_only (`bool`, *optional*, defaults to `False`):
                 Ignores all outputs except the loss.
             jit_mode (`bool`, *optional*):
-                Whether or not to use PyTorch jit trace for inference.
+                Whether or not to use MindSpore jit trace for inference.
 
         Example:
 
@@ -1650,7 +1634,7 @@ class TrainingArguments:
 
     def set_optimizer(
         self,
-        name: Union[str, OptimizerNames] = "adamw_torch",
+        name: Union[str, OptimizerNames] = "adamw",
         learning_rate: float = 5e-5,
         weight_decay: float = 0,
         beta1: float = 0.9,
@@ -1662,9 +1646,8 @@ class TrainingArguments:
         A method that regroups all arguments linked to the optimizer and its hyperparameters.
 
         Args:
-            name (`str` or [`training_args.OptimizerNames`], *optional*, defaults to `"adamw_torch"`):
-                The optimizer to use: `"adamw_hf"`, `"adamw_torch"`, `"adamw_torch_fused"`, `"adamw_apex_fused"`,
-                `"adamw_anyprecision"` or `"adafactor"`.
+            name (`str` or [`training_args.OptimizerNames`], *optional*, defaults to `"adamw"`):
+                The optimizer to use: `"adamw"`, `"sgd"`.
             learning_rate (`float`, *optional*, defaults to 5e-5):
                 The initial learning rate.
             weight_decay (`float`, *optional*, defaults to 0):
@@ -1685,9 +1668,9 @@ class TrainingArguments:
         >>> from transformers import TrainingArguments
 
         >>> args = TrainingArguments("working_dir")
-        >>> args = args.set_optimizer(name="adamw_torch", beta1=0.8)
+        >>> args = args.set_optimizer(name="adamw", beta1=0.8)
         >>> args.optim
-        'adamw_torch'
+        'adamw'
         ```
         """
         self.optim = OptimizerNames(name)
@@ -1765,7 +1748,7 @@ class TrainingArguments:
                 Whether to drop the last incomplete batch (if the length of the dataset is not divisible by the batch
                 size) or not.
             num_workers (`int`, *optional*, defaults to 0):
-                Number of subprocesses to use for data loading (PyTorch only). 0 means that the data will be loaded in
+                Number of subprocesses to use for data loading (MindSpore only). 0 means that the data will be loaded in
                 the main process.
             pin_memory (`bool`, *optional*, defaults to `True`):
                 Whether you want to pin memory in data loaders or not. Will default to `True`.

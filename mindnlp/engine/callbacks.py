@@ -185,17 +185,17 @@ class TrainerCallback:
             The current state of the [`Trainer`].
         control ([`TrainerControl`]):
             The object that is returned to the [`Trainer`] and can be used to make some decisions.
-        model ([`PreTrainedModel`] or `torch.nn.Module`):
+        model ([`PreTrainedModel`] or `mindspore.nn.cell`):
             The model being trained.
         tokenizer ([`PreTrainedTokenizer`]):
             The tokenizer used for encoding the data.
-        optimizer (`torch.optim.Optimizer`):
+        optimizer (`mindspore.nn.Optimizer`):
             The optimizer used for the training steps.
-        lr_scheduler (`torch.optim.lr_scheduler.LambdaLR`):
+        lr_scheduler (`mindspore.experimental.optim.lr_scheduler.LambdaLR`):
             The scheduler used for setting the learning rate.
-        train_dataset (`torch.utils.data.DataLoader`, *optional*):
+        train_dataset (`mindspore.dataset.GeneratorDataset`, *optional*):
             The current dataloader used for training.
-        eval_dataset (`torch.utils.data.DataLoader`, *optional*):
+        eval_dataset (`mindspore.dataset.GeneratorDataset`, *optional*):
             The current dataloader used for training.
         metrics (`Dict[str, float]`):
             The metrics computed by the last evaluation phase.
