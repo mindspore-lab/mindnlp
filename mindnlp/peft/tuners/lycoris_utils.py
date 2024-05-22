@@ -1,4 +1,4 @@
-# Copyright 2023-present the HuggingFace Inc. team.
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,15 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+LycorisConfig and LycorisLayer class for LyCORIS like adapters.
+"""
 from __future__ import annotations
-
-import warnings
-import mindspore
-
 from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Optional, Union
 
+import warnings
+import mindspore
 from mindspore import ops, nn
 from tqdm import tqdm
 
@@ -95,7 +96,7 @@ class LycorisLayer(BaseTunerLayer):
         # Instead of this approach, it would be possible to bypass the __init__ of the class but that runs the risk of
         # omitting important logic inside that __init__.
         kwargs = kwargs.copy()
-        final_device = kwargs.pop("device", "cpu")
+        # final_device = kwargs.pop("device", "cpu")
         cls.__init__(self, *args, device="meta", **kwargs)
         # self.to_empty(device=final_device)
 
@@ -206,13 +207,13 @@ class LycorisTuner(BaseTuner):
     prefix: str
     layers_mapping: dict[type[nn.Cell], type[LycorisLayer]]
 
-    def __init__(self, model, config, adapter_name):
-        super().__init__(model, config, adapter_name)
+    # def __init__(self, model, config, adapter_name):
+    #     super().__init__(model, config, adapter_name)
 
     def __getattr__(self, name: str):
         """Forward missing attributes to the wrapped module."""
         try:
-            return super().__getattr__(name)  # defer to nn.Module's logic
+            return super().__getattr__(name)
         except AttributeError:
             return getattr(self.model, name)
 
@@ -338,7 +339,7 @@ class LycorisTuner(BaseTuner):
         desc = "Unloading " + ("and merging " if merge else "") + "model"
         for key in tqdm(key_list, disable=not progressbar, desc=desc):
             try:
-                parent, target, target_name = _get_sub(self.model, key)
+                parent, target, target_name = _get_subcells(self.model, key)
             except AttributeError:
                 continue
 
@@ -350,7 +351,7 @@ class LycorisTuner(BaseTuner):
                 )
             elif isinstance(target, ModulesToSaveWrapper):
                 # save any additional trainable modules part of `modules_to_save`
-                new_module = target.modules_to_save[target.active_adapter]
+                new_module = target.cells_to_save[target.active_adapter]
                 if hasattr(new_module, "base_layer"):
                     # check if the module is itself a tuner layer
                     if merge:

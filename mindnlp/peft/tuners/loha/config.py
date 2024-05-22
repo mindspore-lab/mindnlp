@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""loha config"""
 from dataclasses import dataclass, field
 from typing import List, Optional, Union
 
@@ -100,7 +101,9 @@ class LoHaConfig(LycorisConfig):
     layers_to_transform: Optional[Union[List[int], int]] = field(
         default=None,
         metadata={
-            "help": "The layer indexes to transform, is this argument is specified, PEFT will transform only the layers indexes that are specified inside this list. If a single integer is passed, PEFT will transform only the layer at this index."
+            "help": "The layer indexes to transform, is this argument is specified,"
+            "PEFT will transform only the layers indexes that are specified inside this list. "
+            "If a single integer is passed, PEFT will transform only the layer at this index."
         },
     )
     layers_pattern: Optional[str] = field(

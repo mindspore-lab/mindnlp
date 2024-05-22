@@ -1,4 +1,4 @@
-# Copyright 2023-present the HuggingFace Inc. team.
+# Copyright 2023 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,15 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""loha layer"""
 import math
-import mindspore
-
 from typing import Any, Set, Tuple
+from mindspore.common.initializer import HeUniform, initializer
+
+import mindspore
 from mindspore import nn, ops
 from mindnlp._legacy.abc import ParameterDict
 from mindnlp.peft.tuners.lycoris_utils import LycorisLayer
-from mindspore.common.initializer import HeUniform, initializer
 
 
 class LoHaLayer(nn.Cell, LycorisLayer):

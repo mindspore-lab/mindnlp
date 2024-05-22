@@ -16,11 +16,11 @@
 import os
 import warnings
 import inspect
-import mindspore
 from contextlib import contextmanager
 from copy import deepcopy
 from typing import Dict, Optional
 
+import mindspore
 from mindspore import nn, ops
 from mindspore.train.serialization import _exec_save
 
@@ -65,6 +65,7 @@ PEFT_TYPE_TO_MODEL_MAPPING = {
     PeftType.LOKR: LoKrModel,
     PeftType.LOHA: LoHaModel,
 }
+
 class PeftModel(nn.Cell):
     """
     Base model encompassing various Peft methods.
