@@ -6,7 +6,10 @@ copyright: Copyright &copy; 2022 - 2024 MindSpore Lab and CQU NLP Team.
 nav:
   - Home: index.md
   - Quick Start: quick_start.md
-  - Tutorials:  tutorials.md
+  - Tutorials:
+      - Quick Start: tutorials/quick_start.md
+      - Data Preprocess: tutorials/data_preprocess.md
+      - Use Trainer: tutorials/use_trainer.md
   - Supported Models: supported_models.md
   - How-To Contribute:  contribute.md
   - API Reference:
@@ -29,7 +32,7 @@ nav:
       - Parallel: api/parallel.md
       - PEFT:
           - api/peft/index.md
-          - tuners: 
+          - tuners:
               AdaLoRA: api/peft/tuners/adalora.md
               Adaption_Prompt: api/peft/tuners/adaption_prompt.md
               IA3: api/peft/tuners/ia3.md
@@ -45,7 +48,7 @@ nav:
       - Sentence: api/sentence.md
       - Transformers:
           - api/transformers/index.md
-          - generation: 
+          - generation:
               - api/transforemrs/generation/index.md
           - models:
               - api/transforemrs/models/index.md
