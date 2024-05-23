@@ -162,7 +162,6 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
 
     return (param_not_load, ckpt_not_load)
 
-
 def load_peft_weights(model_id: str,) -> dict:
     r"""
     A helper method to load the PEFT weights from local storage. Add download logic later.
@@ -173,9 +172,8 @@ def load_peft_weights(model_id: str,) -> dict:
     """
     path = model_id
 
-    if os.path.exists(os.path.join(path, WEIGHTS_NAME)):
-        filename = os.path.join(path, WEIGHTS_NAME)
-    else:
+    filename = os.path.join(path, WEIGHTS_NAME)
+    if not os.path.exists(filename):
         # TODO: add download logic later
         raise ValueError(f"load peft model failed, peft model file: {filename} not exists.")
 

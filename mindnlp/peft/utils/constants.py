@@ -207,7 +207,7 @@ TRANSFORMERS_MODELS_TO_VERA_TARGET_MODULES_MAPPING = {
     # "gemma": ["q_proj", "v_proj"],  # tested, does not work because of different shapes
 }
 
-WEIGHTS_NAME = "adapter_model.bin"
+WEIGHTS_NAME = "adapter_model.ckpt"
 SAFETENSORS_WEIGHTS_NAME = "adapter_model.safetensors"
 CONFIG_NAME = "adapter_config.json"
 EMBEDDING_LAYER_NAMES = ["embed_tokens", "lm_head"]

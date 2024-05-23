@@ -2,7 +2,7 @@ import functools
 import random
 import numpy as np
 from tqdm import tqdm
-from mindspore.dataset import GeneratorDataset, SequentialSampler
+from mindspore.dataset import GeneratorDataset
 from datasets import load_dataset
 from mindspore import Tensor
 import mindspore
