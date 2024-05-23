@@ -13,7 +13,7 @@ The following is a code snippet that instantiate a `TrainingArugments` object:
 
 
 ```python
-from transformers import TrainingArguments
+from mindnlp.engine import TrainingArguments
 
 training_args = TrainingArguments(
     output_dir="../../output",
