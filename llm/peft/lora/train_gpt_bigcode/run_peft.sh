@@ -24,7 +24,6 @@ python train.py \
     --lora_r 32 \
     --lora_alpha 64 \
     --lora_dropout 0.0 \
-    --lora_target_modules "c_proj,c_attn,q_attn,c_fc,c_proj" \
     --use_4bit_qunatization \
     --use_nested_quant \
     --bnb_4bit_compute_dtype "bfloat16" \
