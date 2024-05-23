@@ -112,7 +112,7 @@ def _is_peft_model(model):
 
 class Trainer:
     """
-    Trainer is a simple but feature-complete training and eval loop for PyTorch, optimized for 🤗 Transformers.
+    Trainer is a simple but feature-complete training and eval loop for MindSpore, optimized for 🤗 Transformers.
     """
 
     from ..utils import _get_learning_rate
@@ -473,9 +473,9 @@ class Trainer:
             optimizer_cls = mindspore.experimental.optim.SGD
         # TODO: support Adagrad and Rmsporp
         # elif args.optim == OptimizerNames.ADAGRAD:
-        #     optimizer_cls = torch.optim.Adagrad
+        #     optimizer_cls = mindspore.nn.Adagrad
         # elif args.optim == OptimizerNames.RMSPROP:
-        #     optimizer_cls = torch.optim.RMSprop
+        #     optimizer_cls = mindspore.nn.RMSprop
         else:
             raise ValueError(f"Trainer cannot instantiate unsupported optimizer: {args.optim}")
         return optimizer_cls, optimizer_kwargs
@@ -503,14 +503,14 @@ class Trainer:
 
     def num_examples(self, dataset: 'mindspore.dataset.Dataset') -> int:
         """
-        Helper to get number of samples in a [`~torch.utils.data.DataLoader`] by accessing its dataset. When
+        Helper to get number of samples in a [`~mindspore.dataset.GeneratorDataset`] by accessing its dataset. When
         dataloader.dataset does not exist or has no length, estimates as best it can
         """
         return dataset.get_dataset_size() * dataset.get_batch_size()
 
     def num_tokens(self, train_ds: 'mindspore.dataset.Dataset', max_steps: Optional[int] = None) -> int:
         """
-        Helper to get number of tokens in a [`~torch.utils.data.DataLoader`] by enumerating dataloader.
+        Helper to get number of tokens in a [`~mindspore.dataset.GeneratorDataset`] by enumerating dataloader.
         """
         train_tokens = 0
         try:
@@ -539,7 +539,7 @@ class Trainer:
     @lru_cache
     def get_train_dataset(self) -> Dataset:
         """
-        Returns the training [`~torch.utils.data.DataLoader`].
+        Returns the training [`~mindspore.dataset.GeneratorDataset`].
 
         Will use no sampler if `train_dataset` does not implement `__len__`, a random sampler (adapted to distributed
         training if necessary) otherwise.
@@ -571,12 +571,12 @@ class Trainer:
     @lru_cache
     def get_test_dataset(self, test_dataset: Dataset) -> Dataset:
         """
-        Returns the test [`~torch.utils.data.DataLoader`].
+        Returns the test [`~mindspore.dataset.GeneratorDataset`].
 
         Subclass and override this method if you want to inject some custom behavior.
 
         Args:
-            test_dataset (`torch.utils.data.Dataset`, *optional*):
+            test_dataset (`mindspore.dataset`, *optional*):
                 The test dataset to use. If it is a [`~datasets.Dataset`], columns not accepted by the
                 `model.forward()` method are automatically removed. It must implement `__len__`.
         """
@@ -592,12 +592,12 @@ class Trainer:
     @lru_cache
     def get_eval_dataset(self, eval_dataset: Dataset = None) -> Dataset:
         """
-        Returns the test [`~torch.utils.data.DataLoader`].
+        Returns the test [`~mindspore.dataset.GeneratorDataset`].
 
         Subclass and override this method if you want to inject some custom behavior.
 
         Args:
-            test_dataset (`torch.utils.data.Dataset`, *optional*):
+            test_dataset (`mindspore.dataset`, *optional*):
                 The test dataset to use. If it is a [`~datasets.Dataset`], columns not accepted by the
                 `model.forward()` method are automatically removed. It must implement `__len__`.
         """
@@ -1124,7 +1124,7 @@ class Trainer:
                     weights_file,
                 )
 
-            # workaround for FSDP bug https://github.com/pytorch/pytorch/issues/82963
+            # workaround for FSDP bug
             # which takes *args instead of **kwargs
             load_result = model.load_state_dict(state_dict, False)
             # release memory
@@ -1386,7 +1386,7 @@ class Trainer:
             self.tokenizer.save_pretrained(output_dir)
 
         # # Good practice: save your training arguments together with the trained model
-        # torch.save(self.args, os.path.join(output_dir, TRAINING_ARGS_NAME))
+        # mindspore.save_checkpoint(save_obj, ckpt_file_name, integrated_save=True, async_save=False, append_dict=None, enc_key=None, enc_mode='AES-GCM', choice_func=None, **kwargs)
 
     def _save_optimizer_and_scheduler(self, output_dir):
         if self.args.should_save:
@@ -1835,7 +1835,7 @@ class Trainer:
         Subclass and override to inject custom behavior.
 
         Args:
-            model (`nn.Module`):
+            model (`nn.cell`):
                 The model to evaluate.
             inputs (`Dict[str, Union[mindspore.Tensor, Any]]`):
                 The inputs and targets of the model.
@@ -1962,13 +1962,13 @@ def load_sharded_checkpoint(model, folder, strict=True, prefer_safe=True):
     loaded in the model.
 
     Args:
-        model (`torch.nn.Module`): The model in which to load the checkpoint.
+        model (`mindspore.nn.cell`): The model in which to load the checkpoint.
         folder (`str` or `os.PathLike`): A path to a folder containing the sharded checkpoint.
         strict (`bool`, *optional`, defaults to `True`):
             Whether to strictly enforce that the keys in the model state dict match the keys in the sharded checkpoint.
         prefer_safe (`bool`, *optional*, defaults to `False`)
-            If both safetensors and PyTorch save files are present in checkpoint and `prefer_safe` is True, the
-            safetensors files will be loaded. Otherwise, PyTorch files are always loaded when possible.
+            If both safetensors and MindSpore save files are present in checkpoint and `prefer_safe` is True, the
+            safetensors files will be loaded. Otherwise, MindSpore files are always loaded when possible.
 
     Returns:
         `NamedTuple`: A named tuple with `missing_keys` and `unexpected_keys` fields
