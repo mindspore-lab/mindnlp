@@ -1634,7 +1634,7 @@ class TrainingArguments:
 
     def set_optimizer(
         self,
-        name: Union[str, OptimizerNames] = "adamw",
+        name: Union[str, OptimizerNames] = "adamw_torch",
         learning_rate: float = 5e-5,
         weight_decay: float = 0,
         beta1: float = 0.9,
