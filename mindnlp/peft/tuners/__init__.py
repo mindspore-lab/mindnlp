@@ -19,5 +19,8 @@ from .ia3 import IA3Config, IA3Model
 from .adaption_prompt import AdaptionPromptConfig, AdaptionPromptModel
 from .adalora import AdaLoraConfig, AdaLoraModel
 from .lokr import LoKrConfig, LoKrModel
-from .prompt_tuning import PromptEmbedding, PromptTuningConfig, PromptTuningInit
 from .loha import LoHaConfig, LoHaModel
+from .p_tuning import PromptEncoder, PromptEncoderConfig, PromptEncoderReparameterizationType
+from .prefix_tuning import PrefixTuningConfig, PrefixEncoder
+from .prompt_tuning import PromptEmbedding, PromptTuningConfig, PromptTuningInit
+from .multitask_prompt_tuning import MultitaskPromptEmbedding, MultitaskPromptTuningConfig, MultitaskPromptTuningInit
