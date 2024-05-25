@@ -5,7 +5,6 @@ copyright: Copyright &copy; 2022 - 2024 MindSpore Lab and CQU NLP Team.
 
 nav:
   - Home: index.md
-  - Quick Start: quick_start.md
   - Tutorials:
       - Quick Start: tutorials/quick_start.md
       - Data Preprocess: tutorials/data_preprocess.md
@@ -164,7 +163,6 @@ plugins:
           nav_translations:
             Home: 主页
             Tutorials: 教程
-            Quick Start: 快速开始
             Supported Models: 模型列表
             Notes: 说明
             How-To Contribute: 代码贡献
