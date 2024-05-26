@@ -63,6 +63,32 @@ class TinyBertConfig(PretrainedConfig):
                  pre_trained='',
                  training='',
                  **kwargs):
+
+        """
+        Initializes a new instance of the TinyBertConfig class.
+        
+        Args:
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 21128.
+            hidden_size (int, optional): The size of the hidden layers. Defaults to 768.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 12.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 12.
+            intermediate_size (int, optional): The size of the intermediate layer. Defaults to 3072.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
+            hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Defaults to 0.1.
+            attention_probs_dropout_prob (float, optional): The dropout probability for the attention probabilities. Defaults to 0.1.
+            max_position_embeddings (int, optional): The maximum number of tokens in a sequence. Defaults to 512.
+            type_vocab_size (int, optional): The size of the type vocabulary. Defaults to 2.
+            initializer_range (float, optional): The range of the initializer. Defaults to 0.02.
+            pre_trained (str, optional): The path to a pre-trained model. Defaults to ''.
+            training (str, optional): The training option. Defaults to ''.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__()
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size

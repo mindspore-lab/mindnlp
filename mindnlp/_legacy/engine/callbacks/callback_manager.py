@@ -45,6 +45,20 @@ class CallbackManager(Callback):
     """
 
     def __init__(self, callbacks):
+
+        r"""
+        Initializes an instance of the 'CallbackManager' class.
+        
+        Args:
+            self: An instance of the 'CallbackManager' class.
+            callbacks (list): A list of callback functions. Defaults to an empty list if not provided.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         self.callbacks = callbacks
         if callbacks is None:
             self.callbacks = []
@@ -134,6 +148,21 @@ class RunContext:
             engine_args (dict): Holding the related information of model.
     """
     def __init__(self, engine_args):
+
+        r"""
+        Initializes a new instance of the RunContext class.
+        
+        Args:
+            self: The instance of the RunContext class.
+            engine_args (dict): A dictionary containing engine arguments to be set as attributes of the instance. 
+                It should be of type dict and must not be None.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            TypeError: If the 'engine_args' parameter is not of type dict, a TypeError is raised with a descriptive message.
+        """
         if not isinstance(engine_args, dict):
             raise TypeError(f"The argument 'original_args' of RunContext should be dict type, "
                             f"but got {type(engine_args)}.")

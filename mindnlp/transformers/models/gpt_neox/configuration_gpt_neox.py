@@ -58,6 +58,39 @@ class GPTNeoXConfig(PretrainedConfig):
         attention_bias=True,
         **kwargs,
     ):
+
+        """
+        Initialize a new GPTNeoXConfig instance.
+        
+        Args:
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 50432.
+            hidden_size (int, optional): The hidden size of the model. Defaults to 6144.
+            num_hidden_layers (int, optional): The number of hidden layers in the model. Defaults to 44.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 64.
+            intermediate_size (int, optional): The size of the intermediate layer in the model. Defaults to 24576.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
+            rotary_pct (float, optional): The percentage of rotary embeddings. Defaults to 0.25.
+            rotary_emb_base (int, optional): The base value for rotary embeddings. Defaults to 10000.
+            attention_dropout (float, optional): The dropout rate for attention layers. Defaults to 0.0.
+            hidden_dropout (float, optional): The dropout rate for hidden layers. Defaults to 0.0.
+            classifier_dropout (float, optional): The dropout rate for the classifier layer. Defaults to 0.1.
+            max_position_embeddings (int, optional): The maximum position embeddings. Defaults to 2048.
+            initializer_range (float, optional): The range for parameter initialization. Defaults to 0.02.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Defaults to 1e-05.
+            use_cache (bool, optional): Whether to use cache for decoding. Defaults to True.
+            bos_token_id (int, optional): The beginning of sequence token id. Defaults to 0.
+            eos_token_id (int, optional): The end of sequence token id. Defaults to 2.
+            tie_word_embeddings (bool, optional): Whether to tie word embeddings. Defaults to False.
+            use_parallel_residual (bool, optional): Whether to use parallel residual connections. Defaults to True.
+            rope_scaling (NoneType, optional): The scaling factor for the relative position encoding. Defaults to None.
+            attention_bias (bool, optional): Whether to use attention bias. Defaults to True.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If the hidden size is not divisible by the number of attention heads.
+        """
         super().__init__(bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings

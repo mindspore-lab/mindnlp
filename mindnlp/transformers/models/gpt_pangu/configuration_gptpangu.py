@@ -43,6 +43,40 @@ class GPTPanguConfig(PretrainedConfig):
         eos_token_id=9,
         **kwargs,
     ):
+
+        """
+        This method initializes an instance of the GPTPanguConfig class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 40000.
+            max_position_embeddings (int, optional): The maximum position index. Defaults to 1024.
+            hidden_size (int, optional): The hidden size of the model. Defaults to 2560.
+            intermediate_size (int, optional): The size of the intermediate layer in the transformer encoder. Defaults to None.
+            num_layers (int, optional): The number of layers in the transformer encoder. Defaults to 32.
+            num_heads (int, optional): The number of attention heads in the transformer encoder. Defaults to 32.
+            activation_function (str, optional): The activation function used in the transformer layers. Defaults to 'gelu'.
+            resid_pdrop (float, optional): The dropout probability for the residual connections. Defaults to 0.1.
+            embd_pdrop (float, optional): The dropout probability for the embedding layer. Defaults to 0.1.
+            attn_pdrop (float, optional): The dropout probability for the attention layers. Defaults to 0.1.
+            layer_norm_epsilon (float, optional): The epsilon value for layer normalization. Defaults to 1e-05.
+            scale_attn_weights (bool, optional): Whether to scale the attention weights. Defaults to True.
+            initializer_range (float, optional): The range of the initializer. Defaults to 0.02.
+            summary_type (str, optional): The type of summary produced by the model. Defaults to 'cls_index'.
+            summary_use_proj (bool, optional): Whether to use projection in the summary. Defaults to True.
+            summary_activation (str, optional): The activation function used in the summary. Defaults to None.
+            summary_proj_to_labels (bool, optional): Whether to project to labels in the summary. Defaults to True.
+            summary_first_dropout (float, optional): The dropout probability for the first summary layer. Defaults to 0.1.
+            use_cache (bool, optional): Whether to use cache in the model. Defaults to True.
+            bos_token_id (int, optional): The beginning of sequence token id. Defaults to 9.
+            eos_token_id (int, optional): The end of sequence token id. Defaults to 9.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None
+        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.hidden_size = hidden_size

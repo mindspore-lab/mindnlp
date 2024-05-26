@@ -137,6 +137,44 @@ class PegasusConfig(PretrainedConfig):
         forced_eos_token_id=1,
         **kwargs,
     ):
+
+        """
+        Initializes a new PegasusConfig object with the provided configuration parameters.
+        
+        Args:
+            self: The instance of the class.
+            vocab_size (int, optional): The size of the vocabulary. Default is 50265.
+            max_position_embeddings (int, optional): The maximum number of tokens in a sequence. Default is 1024.
+            encoder_layers (int, optional): The number of layers in the encoder. Default is 12.
+            encoder_ffn_dim (int, optional): The dimension of the feedforward network in the encoder layers. Default is 4096.
+            encoder_attention_heads (int, optional): The number of attention heads in the encoder layers. Default is 16.
+            decoder_layers (int, optional): The number of layers in the decoder. Default is 12.
+            decoder_ffn_dim (int, optional): The dimension of the feedforward network in the decoder layers. Default is 4096.
+            decoder_attention_heads (int, optional): The number of attention heads in the decoder layers. Default is 16.
+            encoder_layerdrop (float, optional): The probability of dropping a layer in the encoder. Default is 0.0.
+            decoder_layerdrop (float, optional): The probability of dropping a layer in the decoder. Default is 0.0.
+            use_cache (bool, optional): Whether to use caching for the model. Default is True.
+            is_encoder_decoder (bool, optional): Whether the model is an encoder-decoder model. Default is True.
+            activation_function (str, optional): The activation function to be used. Default is 'gelu'.
+            d_model (int, optional): The dimension of the model. Default is 1024.
+            dropout (float, optional): The dropout probability. Default is 0.1.
+            attention_dropout (float, optional): The dropout probability for attention layers. Default is 0.0.
+            activation_dropout (float, optional): The dropout probability for activation layers. Default is 0.0.
+            init_std (float, optional): The standard deviation for weight initialization. Default is 0.02.
+            initializer_range (float, optional): The range for weight initialization. Default is 0.02.
+            decoder_start_token_id (int, optional): The token id for the start of the decoder sequence. Default is 0.
+            scale_embedding (bool, optional): Whether to scale embeddings. Default is False.
+            pad_token_id (int, optional): The token id for padding. Default is 0.
+            eos_token_id (int, optional): The token id for end of sequence. Default is 1.
+            forced_eos_token_id (int, optional): The token id for forced end of sequence. Default is 1.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.d_model = d_model
@@ -168,8 +206,49 @@ class PegasusConfig(PretrainedConfig):
 
     @property
     def num_attention_heads(self) -> int:
+
+        """
+        Returns the number of attention heads in the Pegasus model's encoder.
+        
+        Args:
+            self (PegasusConfig): The current instance of the PegasusConfig class.
+        
+        Returns:
+            int: The number of attention heads used in the encoder of the Pegasus model.
+        
+        Raises:
+            None.
+        
+        
+        The `num_attention_heads` method returns an integer value representing the number of attention heads used in the encoder of the Pegasus model. Attention heads are a key component of transformer models, and they enable the model to focus on different parts of the input sequence during processing. By varying the number of attention heads, the model can capture different levels of information and dependencies in the input data.
+        
+        This method is a property, which means that it can be accessed as an attribute without needing to call it explicitly as a function. When accessed, it directly returns the number of attention heads specified in the `encoder_attention_heads` attribute of the current instance of the PegasusConfig class.
+        
+        Note that the `num_attention_heads` method does not take any additional parameters beyond the `self` parameter, as it is designed to provide information specific to the current instance of the class.
+        
+        Example usage:
+            >>> config = PegasusConfig()
+            >>> num_heads = config.num_attention_heads
+            >>> print(num_heads)
+            12
+        
+        In this example, a new instance of the PegasusConfig class is created. The `num_attention_heads` property is accessed as an attribute (`config.num_attention_heads`), and the resulting number of attention heads (12 in this case) is printed.
+        """
         return self.encoder_attention_heads
 
     @property
     def hidden_size(self) -> int:
+
+        """
+        Returns the hidden size of the PegasusConfig object.
+        
+        Args:
+            self: The PegasusConfig object.
+        
+        Returns:
+            int: The hidden size of the PegasusConfig object. This value represents the size of the hidden state in the model.
+        
+        Raises:
+            None.
+        """
         return self.d_model

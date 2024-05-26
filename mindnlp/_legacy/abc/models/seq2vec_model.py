@@ -29,6 +29,23 @@ class Seq2vecModel(BaseModel):
     """
 
     def __init__(self, encoder, head, dropout: float = None):
+
+        r""" 
+        Initializes a Seq2vecModel instance.
+        
+        Args:
+            self: The instance of the Seq2vecModel class.
+            encoder: The encoder used in the model.
+            head: The head component of the model.
+            dropout: The dropout rate for regularization. If not provided, dropout is set to None.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - TypeError: If encoder or head is not provided.
+            - ValueError: If dropout value is invalid.
+        """
         super().__init__()
         self.encoder = encoder
         self.head = head

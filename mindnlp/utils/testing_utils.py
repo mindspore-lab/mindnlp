@@ -102,6 +102,23 @@ def is_pipeline_test(test_case):
             return pytest.mark.is_pipeline_test()(test_case)
 
 def parse_flag_from_env(key, default=False):
+
+    """
+    Parses a flag value from the environment variable.
+    
+    Args:
+        key (str): The name of the environment variable to retrieve the flag value from.
+        default (bool, optional): The default flag value to return if the environment variable is not set. Defaults to False.
+    
+    Returns:
+        bool: The parsed flag value. Returns the default value if the environment variable is not set or if its value cannot be parsed.
+    
+    Raises:
+        ValueError: If the environment variable value is set but cannot be parsed as a boolean ('yes' or 'no').
+    
+    Note:
+        The flag value is retrieved from the environment variable specified by `key`. If the environment variable is not set, the default value is returned. If the environment variable value is set, it is parsed as a boolean using the `strtobool` function from the `distutils.util` module. If the parsing fails, a `ValueError` is raised with a descriptive error message indicating that the value must be either 'yes' or 'no'.
+    """
     try:
         value = os.environ[key]
     except KeyError:
@@ -140,6 +157,19 @@ def tooslow(test_case):
     return unittest.skipUnless(_run_too_slow_tests, "test is too slow")(test_case)
 
 def parse_int_from_env(key, default=None):
+
+    """Parses an integer value from the specified environment variable.
+    
+    Args:
+        key (str): The name of the environment variable to retrieve the integer value from.
+        default (int, optional): The default integer value to return if the environment variable is not set or cannot be converted to an integer. Defaults to None.
+    
+    Returns:
+        int or None: The integer value parsed from the environment variable or the default value if provided. Returns None if the environment variable is not set and no default value is specified.
+    
+    Raises:
+        ValueError: If the value retrieved from the environment variable cannot be converted to an integer.
+    """
     try:
         value = os.environ[key]
     except KeyError:
@@ -232,6 +262,19 @@ def require_pytesseract(test_case):
 
 
 def cmd_exists(cmd):
+
+    """
+    Check if a command exists in the system PATH.
+    
+    Args:
+        cmd (str): The name of the command to check for existence in the system PATH.
+    
+    Returns:
+        None: Returns None if the command exists in the system PATH, otherwise returns False.
+    
+    Raises:
+        None.
+    """
     return shutil.which(cmd) is not None
 #
 # Helper functions for dealing with testing text outputs
@@ -249,10 +292,37 @@ def cmd_exists(cmd):
 # final message
 # it can handle a single string or a multiline buffer
 def apply_print_resets(buf):
+
+    """
+    Apply print resets by removing any characters before the last carriage return in the given buffer.
+    
+    Args:
+        buf (str): The input buffer containing text data.
+        
+    Returns:
+        None. The function modifies the buffer in place.
+    
+    Raises:
+        None.
+    """
     return re.sub(r"^.*\r", "", buf, 0, re.M)
 
 
 def assert_screenout(out, what):
+
+    """
+    This function asserts the presence of a specified string within the provided output.
+    
+    Args:
+        out (str): The output string to be checked for the presence of the specified string.
+        what (str): The string to be searched for within the output.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        AssertionError: If the specified string 'what' is not found within the output string 'out'.
+    """
     out_pr = apply_print_resets(out).lower()
     match_str = out_pr.find(what.lower())
     assert match_str != -1, f"expecting to find {what} in output: f{out_pr}"
@@ -308,6 +378,27 @@ class CaptureStd:
     ```"""
 
     def __init__(self, out=True, err=True, replay=True):
+
+        """Initialize a CaptureStd object.
+        
+        Args:
+            self (CaptureStd): The instance of the CaptureStd class.
+            out (bool): Flag indicating whether to capture stdout. Default is True.
+            err (bool): Flag indicating whether to capture stderr. Default is True.
+            replay (bool): Flag indicating whether to replay captured output. Default is True.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        
+        This method initializes a CaptureStd object with the given parameters. The 'out' parameter determines whether to capture stdout, while the 'err' parameter determines whether to capture stderr. By default, both 'out' and 'err' are set to True. If 'out' is True, a StringIO object is created to capture stdout. If 'out' is False, stdout is not captured and the 'out' attribute is set to 'not capturing stdout'. The same logic applies to 'err' and stderr.
+        
+        The 'replay' parameter determines whether the captured output should be replayed. By default, 'replay' is set to True.
+        
+        Note: If 'out' or 'err' is set to True, but the CaptureStd context is not finished yet (i.e., __exit__ is not called), an error message is set to the corresponding attribute indicating that the context was called too early.
+        """
         self.replay = replay
 
         if out:
@@ -325,6 +416,19 @@ class CaptureStd:
             self.err = "not capturing stderr"
 
     def __enter__(self):
+
+        """
+        The '__enter__' method is used as a context manager to redirect the standard output and standard error streams to the provided buffers.
+        
+        Args:
+            self: An instance of the 'CaptureStd' class.
+        
+        Returns:
+            None. This method does not return any value explicitly.
+        
+        Raises:
+            None.
+        """
         if self.out_buf:
             self.out_old = sys.stdout
             sys.stdout = self.out_buf
@@ -336,6 +440,19 @@ class CaptureStd:
         return self
 
     def __exit__(self, *exc):
+
+        """
+        This method __exit__ is called automatically when exiting a 'with' block that uses the CaptureStd context manager.
+        
+        Args:
+            self: An instance of the CaptureStd class that represents the current context manager. It is used to access the attributes and buffers within the context manager.
+        
+        Returns:
+            None. The method does not explicitly return a value.
+        
+        Raises:
+            This method does not raise any exceptions explicitly. However, exceptions may be raised if there are errors during the execution of the code within the method.
+        """
         if self.out_buf:
             sys.stdout = self.out_old
             captured = self.out_buf.getvalue()
@@ -351,6 +468,34 @@ class CaptureStd:
             self.err = captured
 
     def __repr__(self):
+
+        """
+        Returns a string representation of the CaptureStd object.
+        
+        Args:
+            self: The instance of the CaptureStd class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        Description:
+            The __repr__ method is called when the repr() function is used on an instance of the CaptureStd class. It generates a string representation of the object, which includes the captured stdout and stderr outputs, if any. The generated string representation is returned by the method.
+        
+            This method checks if the 'out_buf' attribute of the CaptureStd object is not empty. If it is not empty, the captured stdout output is added to the message string. Similarly, if the 'err_buf' attribute is not empty, the captured stderr output is added to the message string. The final message string is then returned by the method.
+        
+            Note that the stdout and stderr outputs are represented as 'stdout: <output>' and 'stderr: <output>' respectively in the message string.
+        
+        Example Usage:
+            capture = CaptureStd()
+            capture.capture_stdout('Hello, world!')
+            capture.capture_stderr('Oops, an error occurred.')
+            repr_str = repr(capture)
+            print(repr_str)
+            # Output: "stdout: Hello, world!\nstderr: Oops, an error occurred.\n"
+        """
         msg = ""
         if self.out_buf:
             msg += f"stdout: {self.out}\n"
@@ -369,6 +514,22 @@ class CaptureStdout(CaptureStd):
     """Same as CaptureStd but captures only stdout"""
 
     def __init__(self, replay=True):
+
+        """
+        Initializes an instance of the CaptureStdout class.
+        
+        Args:
+            self: The instance of the class.
+            replay (bool): A boolean flag indicating whether the captured output should be replayed. 
+                           Defaults to True. If set to True, the captured output will be replayed.
+                           If set to False, the captured output will not be replayed.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         super().__init__(err=False, replay=replay)
 
 
@@ -376,49 +537,115 @@ class CaptureStderr(CaptureStd):
     """Same as CaptureStd but captures only stderr"""
 
     def __init__(self, replay=True):
+
+        """
+        Initializes an instance of the CaptureStderr class.
+        
+        Args:
+            self (CaptureStderr): The current object.
+            replay (bool): Indicates whether to replay the captured stderr output. Default is True.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         super().__init__(out=False, replay=replay)
 
 
 class CaptureLogger:
     """
-    Context manager to capture `logging` streams
+     Context manager to capture `logging` streams
 
-    Args:
-        logger: 'logging` logger object
+     Args:
+         logger: 'logging` logger object
 
-    Returns:
-        The captured output is available via `self.out`
+     Returns:
+         The captured output is available via `self.out`
 
-    Example:
+     Example:
 
-    ```python
-    >>> from transformers import logging
-    >>> from transformers.testing_utils import CaptureLogger
+     ```python
+     >>> from transformers import logging
+     >>> from transformers.testing_utils import CaptureLogger
 
-    >>> msg = "Testing 1, 2, 3"
-    >>> logging.set_verbosity_info()
-    >>> logger = logging.get_logger("transformers.models.bart.tokenization_bart")
-    >>> with CaptureLogger(logger) as cl:
-    ...     logger.info(msg)
-    >>> assert cl.out, msg + "\n"
-    ```
-    """
-
+     >>> msg = "Testing 1, 2, 3"
+     >>> logging.set_verbosity_info()
+     >>> logger = logging.get_logger("transformers.models.bart.tokenization_bart")
+     >>> with CaptureLogger(logger) as cl:
+     ...     logger.info(msg)
+     >>> assert cl.out, msg + "\n"
+     ```
+     """
     def __init__(self, logger):
+
+        """
+        Initializes a new instance of the CaptureLogger class.
+        
+        Args:
+            self: The instance of the class.
+            logger: An object representing the logger to be used for capturing logs. It should be an instance of a logger class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         self.logger = logger
         self.io = StringIO()
         self.sh = logging.StreamHandler(self.io)
         self.out = ""
 
     def __enter__(self):
+
+        """
+        This method is an implementation of the context manager protocol for the CaptureLogger class.
+        
+        Args:
+            self: An instance of the CaptureLogger class. It represents the current object that the method is being called upon.
+        
+        Returns:
+            None. The method does not explicitly return any value, but it adds a handler to the logger associated with the CaptureLogger instance.
+        
+        Raises:
+            This method does not raise any exceptions under normal circumstances. However, potential exceptions could be raised if there are issues with adding the handler to the logger, such as improper configuration of the logging system.
+        """
         self.logger.addHandler(self.sh)
         return self
 
     def __exit__(self, *exc):
+
+        """
+        This method __exit__ is called automatically when exiting a 'with' block in the CaptureLogger class.
+        
+        Args:
+            self (CaptureLogger): An instance of the CaptureLogger class. It is used to access the logger and the captured output.
+            
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            This method does not raise any exceptions explicitly. However, exceptions may be raised internally if there are issues with removing the handler or getting the captured output.
+        """
         self.logger.removeHandler(self.sh)
         self.out = self.io.getvalue()
 
     def __repr__(self):
+
+        """
+        Return a string representation of the CaptureLogger object.
+        
+        Args:
+            self (CaptureLogger): The instance of the CaptureLogger class.
+        
+        Returns:
+            None: This method does not explicitly return any value, as it returns None.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return f"captured: {self.out}\n"
 
 
@@ -545,6 +772,38 @@ class TestCasePlus(unittest.TestCase):
     ```"""
 
     def setUp(self):
+
+        """
+        Set up the necessary environment for the TestCasePlus class.
+        
+        Args:
+            self: The instance of the TestCasePlus class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If the root directory of the repository cannot be determined from the test file path.
+        
+        Description:
+        This method is called before each test case to set up the required environment for the TestCasePlus class. It initializes various directories and paths based on the current test file's location. The method performs the following steps:
+        
+        1. Sets up a list to keep track of temporary directories that need to be cleaned up later.
+        2. Retrieves the path of the test file using the inspect module.
+        3. Resolves the absolute path of the test file.
+        4. Determines the parent directory of the test file.
+        5. Checks if there are 'src' and 'tests' directories in any of the parent directories up to three levels above the test file.
+        6. If such directories are found, the loop breaks and the repository root directory is set as the temporary directory.
+        7. If no valid temporary directory is found, a ValueError is raised indicating that the root directory of the repository could not be determined.
+        8. Sets the paths for the 'tests', 'examples', and 'src' directories within the repository root directory.
+        
+        Note:
+        This method assumes a specific directory structure for the repository, where 'src' and 'tests' directories exist at an appropriate level above the test file.
+        
+        Example usage:
+            test_case = TestCasePlus()
+            test_case.setUp()
+        """
         # get_auto_remove_tmp_dir feature:
         self.teardown_tmp_dirs = []
 
@@ -566,50 +825,232 @@ class TestCasePlus(unittest.TestCase):
 
     @property
     def test_file_path(self):
+
+        """
+        Returns the test file path.
+        
+        Args:
+            self: An instance of the TestCasePlus class.
+        
+        Returns:
+            None. The method does not return any value.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
         return self._test_file_path
 
     @property
     def test_file_path_str(self):
+
+        """
+        Method to retrieve the string representation of the test file path.
+        
+        Args:
+            self: Instance of the TestCasePlus class.
+                - Type: object
+                - Purpose: Represents the current instance of the class.
+                - Restrictions: None
+        
+        Returns:
+            The method returns a string representing the test file path.
+                - Type: str
+                - Purpose: Provides the string representation of the test file path.
+        
+        Raises:
+            No exceptions are raised by this method.
+        """
         return str(self._test_file_path)
 
     @property
     def test_file_dir(self):
+
+        """
+        This method retrieves the directory path where test files are located.
+        
+        Args:
+            self: An instance of the TestCasePlus class.
+                This parameter refers to the current instance of the TestCasePlus class.
+        
+        Returns:
+            None. The method does not return any value explicitly but retrieves and returns the test file directory path.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
         return self._test_file_dir
 
     @property
     def test_file_dir_str(self):
+
+        """
+        Method test_file_dir_str in the class TestCasePlus.
+        
+        Args:
+            self: Represents the instance of the class. No additional parameters are required.
+        
+        Returns:
+            str: A string representation of the _test_file_dir attribute of the instance.
+        
+        Raises:
+            None.
+        """
         return str(self._test_file_dir)
 
     @property
     def tests_dir(self):
+
+        """
+        Method: tests_dir
+        
+        Description:
+        Returns the tests directory path used by the TestCasePlus class.
+        
+        Args:
+        - self (object): The instance of the TestCasePlus class.
+        
+        Returns:
+        - None: This method does not return any value explicitly.
+        
+        Raises:
+        - None
+        """
         return self._tests_dir
 
     @property
     def tests_dir_str(self):
+
+        """
+        Returns the tests directory as a string.
+        
+        Args:
+            self: An instance of the TestCasePlus class.
+        
+        Returns:
+            str: The tests directory path converted to a string.
+        
+        Raises:
+            None.
+        
+        This method returns the tests directory path as a string. The tests directory is obtained from the '_tests_dir' attribute of the TestCasePlus class. The returned string represents the absolute path of the tests directory.
+        
+        Example usage:
+            >>> test_case = TestCasePlus()
+            >>> test_case.tests_dir_str()
+            '/path/to/tests/directory'
+        """
         return str(self._tests_dir)
 
     @property
     def examples_dir(self):
+
+        """
+        Method to get the examples directory path.
+        
+        Args:
+            self: The instance of the class.
+            
+        Returns:
+            None. The method returns the examples directory path.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
         return self._examples_dir
 
     @property
     def examples_dir_str(self):
+
+        """
+        Method examples_dir_str in the class TestCasePlus returns the string representation of the _examples_dir attribute.
+        
+        Args:
+            self: An instance of the TestCasePlus class.
+                Purpose: Represents the current instance of the class.
+                Restrictions: None.
+        
+        Returns:
+            str: A string representation of the _examples_dir attribute.
+                Purpose: Provides a human-readable string representation of the _examples_dir attribute.
+        
+        Raises:
+            None.
+        """
         return str(self._examples_dir)
 
     @property
     def repo_root_dir(self):
+
+        """
+        Method to retrieve the root directory of the repository.
+        
+        Args:
+            self (TestCasePlus): The instance of the TestCasePlus class.
+                This parameter is required to access the instance attributes and methods.
+        
+        Returns:
+            None. The method returns the value of the '_repo_root_dir' attribute of the instance.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
         return self._repo_root_dir
 
     @property
     def repo_root_dir_str(self):
+
+        """
+        Method to retrieve the repository root directory as a string.
+        
+        Args:
+            self: The instance of the class TestCasePlus.
+                This parameter is automatically passed and refers to the instance itself.
+        
+        Returns:
+            str: A string representing the repository root directory.
+                This method returns the repository root directory as a string.
+        
+        Raises:
+            None.
+        """
         return str(self._repo_root_dir)
 
     @property
     def src_dir(self):
+
+        """
+        Returns the source directory path for the TestCasePlus class.
+        
+        Args:
+            self (TestCasePlus): An instance of the TestCasePlus class.
+        
+        Returns:
+            None: The method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return self._src_dir
 
     @property
     def src_dir_str(self):
+
+        """
+        Method to retrieve the source directory path as a string representation.
+        
+        Args:
+            self: An instance of the TestCasePlus class.
+                This parameter refers to the current object instance.
+                It is used to access the source directory path stored in the _src_dir attribute.
+        
+        Returns:
+            None
+            This method returns the source directory path as a string. If the source directory path does not exist or is empty, None is returned.
+        
+        Raises:
+            None
+            This method does not raise any exceptions.
+        """
         return str(self._src_dir)
 
     def get_env(self):
@@ -734,6 +1175,19 @@ class TestCasePlus(unittest.TestCase):
         return max_rss
 
     def tearDown(self):
+
+        """
+        Tears down the test case by cleaning up temporary directories.
+        
+        Args:
+            self (TestCasePlus): The instance of the TestCasePlus class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         # get_auto_remove_tmp_dir feature: remove registered temp dirs
         for path in self.teardown_tmp_dirs:
             shutil.rmtree(path, ignore_errors=True)
@@ -946,13 +1400,54 @@ def pytest_terminal_summary_main(tr, ids):
 
 # adapted from https://stackoverflow.com/a/59041913/9201239
 class _RunOutput:
+
+    """
+    Represents the output of a command execution, including the return code, standard output, and standard error.
+    
+    Attributes:
+        returncode (int): The return code of the executed command.
+        stdout (str): The standard output captured from the command execution.
+        stderr (str): The standard error captured from the command execution.
+    """
     def __init__(self, returncode, stdout, stderr):
+
+        """
+        __init__(self, returncode, stdout, stderr)
+        
+        Initializes the _RunOutput class instance with the provided return code, standard output, and standard error.
+        
+        Args:
+            self (_RunOutput): The instance of the _RunOutput class.
+            returncode (int): The return code from the executed command.
+            stdout (str): The standard output generated by the executed command.
+            stderr (str): The standard error generated by the executed command.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         self.returncode = returncode
         self.stdout = stdout
         self.stderr = stderr
 
 
 async def _read_stream(stream, callback):
+
+    """
+    Docstring for _read_stream function:
+    
+    Args:
+        stream (stream): The input stream from which the function reads data.
+        callback (function): The callback function to be executed for each line read from the stream.
+    
+    Returns:
+        None. The function does not return any value.
+    
+    Raises:
+        No specific exceptions are raised by this function.
+    """
     while True:
         line = await stream.readline()
         if line:
@@ -962,6 +1457,26 @@ async def _read_stream(stream, callback):
 
 
 async def _stream_subprocess(cmd, env=None, stdin=None, timeout=None, quiet=False, echo=False) -> _RunOutput:
+
+    """
+    This function runs a subprocess and captures its standard output and error streams.
+    
+    Args:
+    - cmd (List[str]): A list of command and arguments to be executed.
+    - env (Optional[Dict[str, str]]): A dictionary of environment variables to be used for the subprocess.
+    - stdin (Optional[asyncio.subprocess.StreamReader]): A stream representing the standard input for the subprocess.
+    - timeout (Optional[float]): The maximum time in seconds to wait for the subprocess to complete.
+    - quiet (bool): If True, suppresses the output of the subprocess.
+    - echo (bool): If True, prints the command being executed.
+    
+    Returns:
+    _RunOutput: An object containing the return code of the subprocess, its standard output, and standard error.
+    
+    Raises:
+    - asyncio.TimeoutError: If the subprocess execution exceeds the specified timeout.
+    - OSError: If an OS-related error occurs during the subprocess execution.
+    - ValueError: If the provided command is invalid or the arguments are of the wrong type.
+    """
     if echo:
         print("\nRunning: ", " ".join(cmd))
 
@@ -1002,6 +1517,22 @@ async def _stream_subprocess(cmd, env=None, stdin=None, timeout=None, quiet=Fals
 
 
 def execute_subprocess_async(cmd, env=None, stdin=None, timeout=180, quiet=False, echo=True) -> _RunOutput:
+
+    """
+    Args:
+        cmd (List[str]): A list of strings representing the command and its arguments to be executed.
+        env (Optional[Dict[str, str]]): A dictionary of environment variables to be passed to the subprocess.
+        stdin (Optional[Union[str, bytes]]): The input to be passed to the subprocess.
+        timeout (int): The maximum time in seconds to wait for the subprocess to complete.
+        quiet (bool): If True, suppresses output from the subprocess.
+        echo (bool): If True, prints the subprocess output to the console.
+    
+    Returns:
+        _RunOutput: An object containing the output of the executed subprocess, including stdout, stderr, and returncode.
+    
+    Raises:
+        RuntimeError: If the subprocess fails with a non-zero return code or produces no output.
+    """
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(
         _stream_subprocess(cmd, env=env, stdin=stdin, timeout=timeout, quiet=quiet, echo=echo)
@@ -1073,6 +1604,21 @@ def nested_simplify(obj, decimals=3):
 
 
 def to_2tuple(x):
+
+    """
+    Converts the input value to a 2-tuple.
+    
+    Args:
+        x: The value to be converted. It can be of any type.
+    
+    Returns:
+        A 2-tuple with the input value. If the input value is already an iterable, it is returned as is.
+        Otherwise, a 2-tuple is created with the input value repeated twice.
+    
+    Raises:
+        None.
+    
+    """
     if isinstance(x, collections.abc.Iterable):
         return x
     return (x, x)
@@ -1117,12 +1663,38 @@ class RequestCounter:
     """
 
     def __enter__(self):
+
+        """
+        __enter__
+        
+        Args:
+            self: The instance of the RequestCounter class.
+        
+        Returns:
+            None. This method does not explicitly return a value.
+        
+        Raises:
+            No specific exceptions are raised within this method.
+        """
         self._counter = defaultdict(int)
         self.patcher = patch.object(urllib3.connectionpool.log, "debug", wraps=urllib3.connectionpool.log.debug)
         self.mock = self.patcher.start()
         return self
 
     def __exit__(self, *args, **kwargs) -> None:
+
+        """
+        This method '__exit__' in the class 'RequestCounter' is called upon exiting a context manager. It updates the request counters based on the logged HTTP methods.
+        
+        Args:
+        - self: An instance of the 'RequestCounter' class. It represents the current instance of the class.
+        
+        Returns:
+        - None: This method does not return any value.
+        
+        Raises:
+        This method does not explicitly raise any exceptions.
+        """
         for call in self.mock.call_args_list:
             log = call.args[0] % call.args[1:]
             for method in ("HEAD", "GET", "POST", "PUT", "DELETE", "CONNECT", "OPTIONS", "TRACE", "PATCH"):
@@ -1132,10 +1704,39 @@ class RequestCounter:
         self.patcher.stop()
 
     def __getitem__(self, key: str) -> int:
+
+        """
+        Retrieve the count associated with the specified key from the RequestCounter.
+        
+        Args:
+            self (RequestCounter): An instance of the RequestCounter class.
+            key (str): The key for which the count needs to be retrieved. It should be a string representing the identifier of the request.
+        
+        Returns:
+            int: The count associated with the specified key. This count indicates the number of times the request identified by the key has been made.
+        
+        Raises:
+            KeyError: If the specified key does not exist in the RequestCounter, a KeyError is raised indicating that the count for the key cannot be retrieved.
+        """
         return self._counter[key]
 
     @property
     def total_calls(self) -> int:
+
+        """ 
+        Method to calculate the total number of calls made to the RequestCounter instance.
+        
+        Args:
+            self (RequestCounter): The instance of the RequestCounter class.
+                This parameter is automatically passed when calling the method.
+            
+        Returns:
+            int: The total number of calls made to the RequestCounter instance.
+                It is the sum of all the values stored in the internal counter.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         return sum(self._counter.values())
 
 def is_flaky(max_attempts: int = 5, wait_before_retry: Optional[float] = None, description: Optional[str] = None):
@@ -1307,6 +1908,20 @@ class HfDoctestModule(Module):
     """
 
     def collect(self) -> Iterable[DoctestItem]:
+
+        """
+        Collects doctests from the specified module.
+        
+        Args:
+            self (HfDoctestModule): The instance of the HfDoctestModule class.
+        
+        Returns:
+            Iterable[DoctestItem]: A collection of doctests represented as DoctestItem objects.
+        
+        Raises:
+            ImportError: If the module cannot be imported and the 'doctest_ignore_import_errors' configuration option is not set.
+            Skip: If the 'doctest_ignore_import_errors' configuration option is set and the module cannot be imported.
+        """
         class MockAwareDocTestFinder(doctest.DocTestFinder):
             """A hackish doctest finder that overrides stdlib internals to fix a stdlib bug.
 
@@ -1377,6 +1992,20 @@ class HfDoctestModule(Module):
 
 
 def _device_agnostic_dispatch(device: str, dispatch_table: Dict[str, Callable], *args, **kwargs):
+
+    """
+    Executes a device-agnostic dispatch based on the given device and dispatch table.
+    
+    Args:
+        device (str): The device for which the dispatch is performed.
+        dispatch_table (Dict[str, Callable]): A dictionary containing the dispatch functions for different devices.
+    
+    Returns:
+        None: Returns None if the dispatch function for the given device is None.
+    
+    Raises:
+        None: This function does not raise any exceptions.
+    """
     if device not in dispatch_table:
         return dispatch_table["default"](*args, **kwargs)
 
@@ -1410,6 +2039,21 @@ def get_tests_dir(append_path=None):
     return tests_dir
 
 def check_json_file_has_correct_format(file_path):
+
+    '''
+    Check if the provided JSON file has the correct format.
+    
+    Args:
+        file_path (str): The path to the JSON file to be checked.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        AssertionError: If the JSON file does not have the correct format as per the specified conditions.
+        FileNotFoundError: If the specified file_path does not exist.
+        UnicodeDecodeError: If the file cannot be decoded using the specified encoding.
+    '''
     with open(file_path, "r", encoding='utf-8') as f:
         lines = f.readlines()
         if len(lines) == 1:

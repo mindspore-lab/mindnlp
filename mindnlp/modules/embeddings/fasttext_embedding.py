@@ -56,6 +56,27 @@ class Fasttext(TokenEmbedding):
     dims = [300]
 
     def __init__(self, init_embed, requires_grad: bool = True, dropout=0.0):
+
+        r"""
+        Initializes a Fasttext object with the provided parameters.
+        
+        Args:
+            self (Fasttext): The Fasttext object instance.
+            init_embed (numpy.ndarray): The initial embedding matrix for the Fasttext model.
+                This matrix represents the embeddings for the vocabulary words.
+            requires_grad (bool, optional): A flag indicating whether the embedding matrix requires gradient computation during training.
+                Defaults to True.
+            dropout (float, optional): The dropout probability for the dropout layer in the model.
+                Defaults to 0.0.
+        
+        Returns:
+            None. This method initializes the Fasttext object with the given parameters.
+        
+        Raises:
+            ValueError: If the provided init_embed is not a valid numpy array.
+            TypeError: If the requires_grad parameter is not a boolean value.
+            ValueError: If the dropout value is not within the range [0.0, 1.0].
+        """
         super().__init__(init_embed)
 
         self._embed_len = init_embed.shape[0]

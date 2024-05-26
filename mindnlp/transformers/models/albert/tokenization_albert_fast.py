@@ -139,6 +139,31 @@ class AlbertTokenizerFast(PreTrainedTokenizerFast):
         mask_token="[MASK]",
         **kwargs,
     ):
+
+        """
+        Initialize the AlbertTokenizerFast class.
+        
+        Args:
+            self (object): The instance of the class.
+            vocab_file (str, optional): The file containing the vocabulary. Defaults to None.
+            tokenizer_file (str, optional): The file containing the tokenizer. Defaults to None.
+            do_lower_case (bool, optional): Flag to indicate if text should be lowercased. Defaults to True.
+            remove_space (bool, optional): Flag to indicate if spaces should be removed. Defaults to True.
+            keep_accents (bool, optional): Flag to indicate if accents should be kept. Defaults to False.
+            bos_token (str, optional): The beginning of sequence token. Defaults to '[CLS]'.
+            eos_token (str, optional): The end of sequence token. Defaults to '[SEP]'.
+            unk_token (str, optional): The unknown token. Defaults to '<unk>'.
+            sep_token (str, optional): The separator token. Defaults to '[SEP]'.
+            pad_token (str, optional): The padding token. Defaults to '<pad>'.
+            cls_token (str, optional): The classification token. Defaults to '[CLS]'.
+            mask_token (str or AddedToken, optional): The masking token. Defaults to '[MASK]'.
+        
+        Returns:
+            None. This method initializes the AlbertTokenizerFast class.
+        
+        Raises:
+            TypeError: If mask_token is not a string or an AddedToken.
+        """
         # Mask token behave like a normal word, i.e. include the space before it and
         # is included in the raw text, there should be a match in a non-normalized sentence.
         mask_token = (
@@ -170,6 +195,21 @@ class AlbertTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
+
+        """
+        Method to check if the slow tokenizer can be saved.
+        
+        Args:
+            self (AlbertTokenizerFast): The instance of the AlbertTokenizerFast class.
+                It is the current instance of the class to which this method belongs.
+        
+        Returns:
+            bool: Returns a boolean value indicating whether the slow tokenizer can be saved.
+                True if the vocab file exists, False if the vocab file does not exist.
+        
+        Raises:
+            None
+        """
         return os.path.isfile(self.vocab_file) if self.vocab_file else False
 
     def build_inputs_with_special_tokens(
@@ -228,6 +268,23 @@ class AlbertTokenizerFast(PreTrainedTokenizerFast):
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+
+        """
+        Save the vocabulary file for a fast tokenizer.
+        
+        Args:
+            self: Instance of the AlbertTokenizerFast class.
+            save_directory (str): The directory where the vocabulary file will be saved.
+            filename_prefix (Optional[str]): An optional prefix to be added to the vocabulary file name. Default is None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for a slow tokenizer.
+            FileNotFoundError: If the specified save_directory does not exist.
+            OSError: If an error occurs while copying the vocabulary file to the save_directory.
+        """
         if not self.can_save_slow_tokenizer:
             raise ValueError(
                 "Your fast tokenizer does not have the necessary information to save the vocabulary for a slow "

@@ -109,6 +109,34 @@ class ASTConfig(PretrainedConfig):
         num_mel_bins=128,
         **kwargs,
     ):
+
+        """
+        Initializes an instance of ASTConfig.
+        
+        Args:
+            self: The object itself.
+            hidden_size (int, optional): The size of the hidden layers. Defaults to 768.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 12.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 12.
+            intermediate_size (int, optional): The size of the intermediate layer. Defaults to 3072.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
+            hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Defaults to 0.0.
+            attention_probs_dropout_prob (float, optional): The dropout probability for the attention probabilities. Defaults to 0.0.
+            initializer_range (float, optional): The range for parameter initialization. Defaults to 0.02.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Defaults to 1e-12.
+            patch_size (int, optional): The size of the patch. Defaults to 16.
+            qkv_bias (bool, optional): Whether to include bias in the query, key, and value tensors. Defaults to True.
+            frequency_stride (int, optional): The stride for frequency. Defaults to 10.
+            time_stride (int, optional): The stride for time. Defaults to 10.
+            max_length (int, optional): The maximum length. Defaults to 1024.
+            num_mel_bins (int, optional): The number of Mel bins. Defaults to 128.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(**kwargs)
 
         self.hidden_size = hidden_size

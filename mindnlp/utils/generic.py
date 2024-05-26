@@ -49,6 +49,19 @@ def is_tensor(x):
 
 def _is_mindspore(x):
 
+    """
+    Checks if the input x is a MindSpore tensor.
+    
+    Args:
+        x (object): The input object to be checked.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        None: This function does not raise any exceptions.
+    """
+
     return isinstance(x, mindspore.Tensor)
 
 
@@ -65,6 +78,20 @@ class ExplicitEnum(str, Enum):
 
     @classmethod
     def _missing_(cls, value):
+
+        """
+        This method `_missing_` in the class `ExplicitEnum` is a class method used to handle missing values in the ExplicitEnum class.
+        
+        Args:
+            cls (class): The class itself, used for referring to the class instance inside the method.
+            value (any): The value that was not found in the ExplicitEnum class.
+            
+        Returns:
+            None: This method does not return any value as it raises an exception when called.
+        
+        Raises:
+            ValueError: If the value provided is not a valid member of the Enum class, a ValueError is raised with a message listing the valid options to choose from.
+        """
         raise ValueError(
             f"{value} is not a valid {cls.__name__}, please select one of {list(cls._value2member_map_.keys())}"
         )
@@ -104,6 +131,22 @@ class ModelOutput(OrderedDict):
     """
 
     def __post_init__(self):
+
+        """Perform post-initialization actions for the ModelOutput class.
+        
+        This method is automatically called after the initialization of a ModelOutput object.
+        
+        Args:
+            self: An instance of the ModelOutput class.
+        
+        Returns:
+            None
+        
+        Raises:
+            ValueError: If the ModelOutput object has no fields or more than one required field.
+            ValueError: If a key/value pair in the first field is not a tuple or if it does not follow the format (key, value).
+            ValueError: If the key/value pair cannot be set for a given element in the first field.
+        """
         class_fields = fields(self)
 
         # Safety and consistency checks
@@ -156,30 +199,141 @@ class ModelOutput(OrderedDict):
                     self[field.name] = v
 
     def __delitem__(self, *args, **kwargs):
+
+        """
+        __delitem__
+        
+        Deletes an item from the ModelOutput instance.
+        
+        Args:
+            self (ModelOutput): The ModelOutput instance from which the item will be deleted.
+        
+        Returns:
+            None. This method does not return a value.
+        
+        Raises:
+            RuntimeError: If the '__delitem__' method is attempted to be used on a ModelOutput instance, a RuntimeError is raised with a message indicating that this method cannot be used on the instance.
+        """
         raise RuntimeError(f"You cannot use ``__delitem__`` on a {self.__class__.__name__} instance.")
 
     def setdefault(self, *args, **kwargs):
+
+        """
+        Sets a default value in the ModelOutput instance.
+        
+        Args:
+            self: The ModelOutput instance itself.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            RuntimeError: This exception is raised if the method 'setdefault' is called on a ModelOutput instance. The message in the exception states that the 'setdefault' method cannot be used on a ModelOutput instance.
+        
+        Note:
+            The 'setdefault' method is not supported for ModelOutput instances as it can only be used on dictionary objects.
+        """
         raise RuntimeError(f"You cannot use ``setdefault`` on a {self.__class__.__name__} instance.")
 
     def pop(self, *args, **kwargs):
+
+        """
+        Method that raises a RuntimeError to prevent the use of 'pop' on a ModelOutput instance.
+        
+        Args:
+            self (object): The ModelOutput instance on which 'pop' is being called. 
+                           This parameter is required and represents the current instance of the class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            RuntimeError: Raised when attempting to use 'pop' method on a ModelOutput instance. The exception message
+                          specifies that 'pop' cannot be used on a ModelOutput instance to prevent unintended behavior.
+        """
         raise RuntimeError(f"You cannot use ``pop`` on a {self.__class__.__name__} instance.")
 
     def update(self, *args, **kwargs):
+
+        """
+        Updates the current instance of the ModelOutput class.
+        
+        Args:
+            self (ModelOutput): The instance of the ModelOutput class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            RuntimeError: If the method is called on an instance of the ModelOutput class. This is to prevent using the 'update' method on a ModelOutput instance, as it is not allowed.
+        
+        Note:
+            The 'update' method is not allowed to be used on a ModelOutput instance. If called, it will raise a RuntimeError.
+        """
         raise RuntimeError(f"You cannot use ``update`` on a {self.__class__.__name__} instance.")
 
     def __getitem__(self, k):
+
+        """
+        This method allows accessing the elements of the ModelOutput object using the square bracket notation.
+        
+        Args:
+            self (ModelOutput): The instance of the ModelOutput class.
+            k (str or int): The key or index for accessing the element. If k is a string, it is used as a key to retrieve the corresponding value. If k is an integer, it is used as an index to retrieve the element. 
+        
+        Returns:
+            None: This method does not return any value directly. The retrieved value is returned based on the input key or index.
+        
+        Raises:
+            TypeError: If the input parameter k is not a string or an integer.
+            KeyError: If the input key k is not found in the internal dictionary when k is a string.
+            IndexError: If the input index k is out of range when k is an integer.
+        """
         if isinstance(k, str):
             inner_dict = dict(self.items())
             return inner_dict[k]
         return self.to_tuple()[k]
 
     def __setattr__(self, name, value):
+
+        """
+        Method __setattr__ in the class ModelOutput sets the value for the specified attribute name.
+        
+        Args:
+            self (object): The instance of the ModelOutput class.
+            name (str): The name of the attribute to be set.
+            value (any): The value to be assigned to the attribute. It can be of any type.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method. However, if the attribute name is not in the keys of the object, it will be added as a new attribute. If the value is None, the attribute will be set to None.
+        """
         if name in self.keys() and value is not None:
             # Don't call self.__setitem__ to avoid recursion errors
             super().__setitem__(name, value)
         super().__setattr__(name, value)
 
     def __setitem__(self, key, value):
+
+        """
+        This method '__setitem__' in the class 'ModelOutput' allows setting key-value pairs in the model output object.
+        
+        Args:
+            self (ModelOutput): The instance of the ModelOutput class.
+            key (Any): The key to be set in the model output object.
+            value (Any): The value corresponding to the key to be set in the model output object.
+        
+        Returns:
+            None. This method does not return any value explicitly.
+        
+        Raises:
+            This method may raise the following exceptions:
+            - TypeError: If the key is not of a valid type.
+            - ValueError: If the value is not acceptable for the given key.
+            - Other exceptions related to the internal implementation of the ModelOutput class.
+        """
         # Will raise a KeyException if needed
         super().__setitem__(key, value)
         # Don't call self.__setattr__ to avoid recursion errors
@@ -215,6 +369,21 @@ class cached_property(property):
     """
 
     def __get__(self, obj, objtype=None):
+
+        """ 
+        Method '__get__' in the class 'cached_property'.
+        
+        Args:
+            self (object): The current instance of the class.
+            obj (object): The object on which the method is being called.
+            objtype (object): The type of the object, if available. Defaults to None.
+        
+        Returns:
+            None: The method returns a value of type None.
+        
+        Raises:
+            AttributeError: If the attribute is unreadable, this exception is raised.
+        """
         # See docs.python.org/3/howto/descriptor.html#properties
         if obj is None:
             return self
@@ -228,6 +397,19 @@ class cached_property(property):
         return cached
 
 def _is_numpy(x):
+
+    """
+    This function checks if the input is a NumPy array.
+    
+    Args:
+        x (any): The input to be checked for being a NumPy array.
+    
+    Returns:
+        None: This function does not return a value.
+    
+    Raises:
+        None
+    """
     return isinstance(x, np.ndarray)
 
 
@@ -322,14 +504,56 @@ class ContextManagers:
     """
 
     def __init__(self, context_managers: List[ContextManager]):
+
+        """
+        __init__
+        
+        Args:
+            self: The instance of the class.
+            context_managers (List[ContextManager]): A list of context managers to be initialized.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         self.context_managers = context_managers
         self.stack = ExitStack()
 
     def __enter__(self):
+
+        """
+        Method '__enter__' in the class 'ContextManagers'.
+        
+        Args:
+            self (object): The instance of the ContextManagers class on which the method is called. It is used to access the instance attributes and methods.
+            
+        Returns:
+            None. This method does not return any value explicitly, it performs context management operations within the class.
+            
+        Raises:
+            This method may raise exceptions if the context managers encountered during the iteration in the for loop raise any exceptions. Ensure proper error handling is in place to catch and handle any exceptions that may occur during the context management operations.
+        """
         for context_manager in self.context_managers:
             self.stack.enter_context(context_manager)
 
     def __exit__(self, *args, **kwargs):
+
+        """
+        __exit__
+        
+        Method in the class ContextManagers.
+        
+        Args:
+            self: (object) The instance of the class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            This method does not explicitly raise any exceptions.
+        """
         self.stack.__exit__(*args, **kwargs)
 
 def no_grad(func):

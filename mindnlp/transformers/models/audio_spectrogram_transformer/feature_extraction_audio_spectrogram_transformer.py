@@ -79,6 +79,28 @@ class ASTFeatureExtractor(SequenceFeatureExtractor):
         return_attention_mask=False,
         **kwargs,
     ):
+
+        """
+        Initializes an instance of the ASTFeatureExtractor class.
+        
+        Args:
+            self: The instance of the class.
+            feature_size (int, optional): The size of the input features. Defaults to 1.
+            sampling_rate (int, optional): The sampling rate of the audio. Defaults to 16000.
+            num_mel_bins (int, optional): The number of mel bins for mel filtering. Defaults to 128.
+            max_length (int, optional): The maximum length of the input. Defaults to 1024.
+            padding_value (float, optional): The value used for padding sequences. Defaults to 0.0.
+            do_normalize (bool, optional): Whether to normalize the input features. Defaults to True.
+            mean (float, optional): The mean value for input feature normalization. Defaults to -4.2677393.
+            std (float, optional): The standard deviation value for input feature normalization. Defaults to 4.5689974.
+            return_attention_mask (bool, optional): Whether to return attention mask. Defaults to False.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(feature_size=feature_size, sampling_rate=sampling_rate, padding_value=padding_value, **kwargs)
         self.num_mel_bins = num_mel_bins
         self.max_length = max_length
@@ -144,6 +166,23 @@ class ASTFeatureExtractor(SequenceFeatureExtractor):
         return fbank
 
     def normalize(self, input_values: np.ndarray) -> np.ndarray:
+
+        """
+        Normalize the input values using the mean and standard deviation stored in the ASTFeatureExtractor instance.
+        
+        Args:
+            self (ASTFeatureExtractor): An instance of the ASTFeatureExtractor class.
+                It holds the mean and standard deviation values necessary for normalization.
+            input_values (np.ndarray): A NumPy array containing the input values to be normalized.
+                The shape of the array must be compatible with the mean and standard deviation arrays stored in the ASTFeatureExtractor instance.
+        
+        Returns:
+            np.ndarray: A NumPy array with the normalized values.
+                The normalization is performed by subtracting the mean value and dividing by twice the standard deviation value.
+        
+        Raises:
+            None
+        """
         return (input_values - (self.mean)) / (self.std * 2)
 
     def __call__(

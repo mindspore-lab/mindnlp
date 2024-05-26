@@ -114,6 +114,34 @@ class CLIPTextConfig(PretrainedConfig):
         eos_token_id=49407,
         **kwargs,
     ):
+
+        """
+        Initialize CLIPTextConfig.
+        
+        Args:
+            vocab_size (int, optional): The size of the vocabulary. Default is 49408.
+            hidden_size (int, optional): The size of the hidden layers. Default is 512.
+            intermediate_size (int, optional): The size of the intermediate layers. Default is 2048.
+            projection_dim (int, optional): The projection dimension. Default is 512.
+            num_hidden_layers (int, optional): The number of hidden layers. Default is 12.
+            num_attention_heads (int, optional): The number of attention heads. Default is 8.
+            max_position_embeddings (int, optional): The maximum position embeddings. Default is 77.
+            hidden_act (str, optional): The type of activation function for the hidden layers. Default is 'quick_gelu'.
+            layer_norm_eps (float, optional): Epsilon value for layer normalization. Default is 1e-05.
+            attention_dropout (float, optional): The dropout rate for attention layers. Default is 0.0.
+            initializer_range (float, optional): The range for parameter initializers. Default is 0.02.
+            initializer_factor (float, optional): The factor for parameter initializers. Default is 1.0.
+            pad_token_id (int, optional): The ID of the padding token. Default is 1.
+            bos_token_id (int, optional): The ID of the beginning of sequence token. Default is 49406.
+            eos_token_id (int, optional): The ID of the end of sequence token. Default is 49407.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
 
         self.vocab_size = vocab_size
@@ -131,6 +159,22 @@ class CLIPTextConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
+
+        """
+        Creates a CLIPTextConfig instance from a pretrained model.
+        
+        Args:
+            cls (type): The class object.
+            pretrained_model_name_or_path (Union[str, os.PathLike]): The name or path of the pretrained model.
+            
+        Returns:
+            PretrainedConfig: A CLIPTextConfig instance initialized with the configuration specified by the pretrained model.
+        
+        Raises:
+            TypeError: If the input parameters are not of the expected types.
+            ValueError: If the configuration dictionary does not contain the required information.
+            Warning: If the model type being used for instantiation does not match the class's model type, which may lead to errors.
+        """
         config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
 
         # get the text config dict if we are loading from CLIPConfig
@@ -220,6 +264,31 @@ class CLIPVisionConfig(PretrainedConfig):
         initializer_factor=1.0,
         **kwargs,
     ):
+
+        """
+        Initialize a CLIPVisionConfig object with the provided configuration parameters.
+        
+        Args:
+        - hidden_size (int): The size of the hidden layers in the network.
+        - intermediate_size (int): The size of the intermediate hidden layers in the network.
+        - projection_dim (int): The dimension of the projected embeddings.
+        - num_hidden_layers (int): The number of hidden layers in the network.
+        - num_attention_heads (int): The number of attention heads in the network.
+        - num_channels (int): The number of channels in the input image.
+        - image_size (int): The size of the input image.
+        - patch_size (int): The size of the image patch used in the network.
+        - hidden_act (str): The activation function used in the hidden layers.
+        - layer_norm_eps (float): The epsilon value for layer normalization.
+        - attention_dropout (float): The dropout rate for attention layers.
+        - initializer_range (float): The range for parameter initialization.
+        - initializer_factor (float): The factor for parameter initialization.
+        
+        Returns:
+        None. This method initializes the CLIPVisionConfig object with the provided configuration parameters.
+        
+        Raises:
+        - ValueError: If any of the input parameters are invalid or out of range.
+        """
         super().__init__(**kwargs)
 
         self.hidden_size = hidden_size
@@ -238,6 +307,40 @@ class CLIPVisionConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
+
+        """
+        Load a pretrained configuration from a given model name or path.
+        
+        Args:
+            cls (class): The class object.
+            pretrained_model_name_or_path (Union[str, os.PathLike]): The name or path of the pretrained model.
+                It can be either a string representing the name of the model or a path-like object pointing to the model location.
+        
+        Returns:
+            PretrainedConfig: The loaded pretrained configuration.
+        
+        Raises:
+            None.
+        
+        This method is a class method that allows loading a pretrained configuration. It takes in the class object 'cls'
+        and the name or path of the pretrained model 'pretrained_model_name_or_path' as parameters. The method returns an instance
+        of type 'PretrainedConfig', which represents the loaded pretrained configuration.
+        
+        The 'pretrained_model_name_or_path' parameter can be either a string representing the name of the pretrained model
+        or a path-like object pointing to the location of the model. It is used to identify and locate the pretrained model
+        that needs to be loaded.
+        
+        Note: If the loaded configuration belongs to the 'clip' model type, the 'config_dict' will be updated to use the
+        'vision_config' sub-dictionary. Additionally, if the 'model_type' attribute is present in the 'cls' class and
+        the loaded configuration's 'model_type' is different from 'cls.model_type', a warning will be logged indicating
+        that instantiating a model of different types may lead to errors.
+        
+        Example usage:
+            config = CLIPVisionConfig.from_pretrained("clip_model")
+        
+            In the above example, the 'from_pretrained' method is called on the 'CLIPVisionConfig' class to load the pretrained
+            configuration of the 'clip_model'. The resulting configuration is stored in the 'config' variable.
+        """
         config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
 
         # get the vision config dict if we are loading from CLIPConfig
@@ -304,6 +407,26 @@ class CLIPConfig(PretrainedConfig):
     def __init__(
         self, text_config=None, vision_config=None, projection_dim=512, logit_scale_init_value=2.6592, **kwargs
     ):
+
+        """
+        Initializes a new instance of CLIPConfig.
+        
+        Args:
+        - self: The instance of the class.
+        - text_config (dict): The configuration for text inputs. If provided, overrides default values. Default is None.
+        - vision_config (dict): The configuration for vision inputs. If provided, overrides default values. Default is None.
+        - projection_dim (int): The dimension of the projection. Default is 512.
+        - logit_scale_init_value (float): The initial value for logit scaling. Default is 2.6592.
+        
+        Returns:
+        None
+        
+        Raises:
+        - TypeError: If text_config or vision_config are not of type dict.
+        - ValueError: If projection_dim or logit_scale_init_value are not of type int or float respectively.
+        - KeyError: If 'transformers_version' key is present in text_config or vision_config.
+        - AttributeError: If 'id2label' key is not present in vision_config.
+        """
         # If `_config_dict` exist, we use them for the backward compatibility.
         # We pop out these 2 attributes before calling `super().__init__` to avoid them being saved (which causes a lot
         # of confusion!).

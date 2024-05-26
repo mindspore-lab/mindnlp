@@ -56,20 +56,76 @@ class _OutputTo32(nn.Cell):
     "Wrap cell for amp. Cast network output back to float32"
 
     def __init__(self, op):
+
+        r"""
+        Initializes an instance of the '_OutputTo32' class.
+        
+        Args:
+            self: The instance of the class.
+            op: An object representing the operation to be performed.
+        
+        Returns:
+            None.
+        
+        Raises:
+            None.
+        """
         super().__init__(auto_prefix=False)
         self._op = op
 
     def construct(self, *x):
+
+        r"""
+        Constructs and returns a float32 tensor.
+        
+        Args:
+            *x (tuple): The input tensor(s) to be cast to float32. Variable number of tensor inputs can be passed as arguments.
+        
+        Returns:
+            None. The method returns the constructed float32 tensor.
+        
+        Raises:
+            - TypeError: If the input tensor(s) cannot be cast to float32.
+            - ValueError: If the input tensor(s) are of inappropriate shape or type for casting to float32.
+        """
         return ops.cast(self._op(*x), mstype.float32)
 
 class _OutputTo16(nn.Cell):
     "Wrap cell for amp. Cast network output back to float32"
 
     def __init__(self, op):
+
+        r"""
+        Initialize an instance of the _OutputTo16 class.
+        
+        Args:
+            self (object): The instance of the class.
+            op (any): The operation to be assigned to the instance.
+            
+        Returns:
+            None. This method initializes the _OutputTo16 instance with the provided operation.
+            
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         super().__init__(auto_prefix=False)
         self._op = op
 
     def construct(self, *x):
+
+        r"""
+        This method constructs a new instance of _OutputTo16 class.
+        
+        Args:
+            *x: Variable length argument list. The input values to be cast to float16.
+                 The type of each input value should be compatible with the cast operation.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            - TypeError: If the input values are not compatible with the cast operation.
+        """
         return ops.cast(self._op(*x), mstype.float16)
 
 def auto_mixed_precision(network, amp_level='O1'):
@@ -131,11 +187,29 @@ _partial = ops.Partial()
 
 @constexpr
 def _ascend_target():
+
+    r"""
+    Checks if the current device target is set to 'Ascend'.
+    
+    Returns:
+        None
+    
+    Raises:
+        None
+    """
     return context.get_context("device_target") == "Ascend"
 
 
 @constexpr
 def _gpu_target():
+
+    r"""
+    This function checks whether the device target context is set to 'GPU'.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    """
     return context.get_context("device_target") == "GPU"
 
 def _grad_unscale(scale, grad):
@@ -188,6 +262,23 @@ class LossScaler():
     Basic LossScaler.
     """
     def __init__(self, scale_value):
+
+        r"""
+        __init__
+        
+        Initializes a new instance of the LossScaler class.
+        
+        Args:
+            self: The instance of the LossScaler class.
+            scale_value (float): The value used to scale the loss. Must be a floating point number.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            TypeError: If the scale_value is not a floating point number.
+            ValueError: If the scale_value is invalid or out of range.
+        """
         super().__init__()
         self.scale_value = Parameter(Tensor(scale_value, dtype=mstype.float32), name="scale_value")
         self.counter = Parameter(Tensor(0, dtype=mstype.int32), name="counter")
@@ -209,15 +300,98 @@ class NoLossScaler(LossScaler):
     No LossScaler
     """
     def __init__(self):
+
+        r"""
+        Initializes the NoLossScaler class instance.
+        
+        Args:
+            self: The instance of the NoLossScaler class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            This method does not explicitly raise any exceptions.
+        """
         super().__init__(1)
 
     def scale(self, inputs):
+
+        r"""
+        Method: scale
+        
+        Description:
+        This method scales the input data.
+        
+        Args:
+        - self (object): The instance of the NoLossScaler class.
+        - inputs (object): The input data to be scaled.
+        
+        Returns:
+        - None: This method does not return any value.
+        
+        Raises:
+        - None: This method does not raise any exceptions.
+        """
         return inputs
 
     def unscale(self, inputs):
+
+        """
+        Unscales the given inputs.
+        
+        Args:
+            self (NoLossScaler): An instance of the NoLossScaler class.
+                - This parameter represents the current instance of the NoLossScaler class.
+                - It is used to access the attributes and methods of the class.
+        
+            inputs: The inputs to be unscaled.
+                - This parameter represents the inputs that need to be unscaled.
+                - It can be of any type.
+        
+        Returns:
+            None. This method modifies the inputs in place.
+                - This method does not return any value.
+                - It modifies the 'inputs' parameter directly.
+        
+        Raises:
+            N/A
+                - This method does not raise any exceptions.
+        """
+
+        
+        def unscale(self, inputs):
+            """
+            Unscales the given inputs.
+        
+            Args:
+                self (NoLossScaler): An instance of the NoLossScaler class.
+                inputs: The inputs to be unscaled.
+        
+            Returns:
+                None. This method modifies the inputs in place.
+        
+            Raises:
+                N/A
+            """
+        
         return inputs
 
     def adjust(self, grads_finite):
+
+        r"""
+        Adjusts the value of the finite gradients.
+        
+        Args:
+            self (NoLossScaler): An instance of the NoLossScaler class.
+            grads_finite (float): The finite gradients to be adjusted.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return
 
 class StaticLossScaler(LossScaler):
@@ -225,12 +399,58 @@ class StaticLossScaler(LossScaler):
     Static LossScaler.
     """
     def scale(self, inputs):
+
+        r"""
+        Method to scale the inputs using a static loss scaler.
+        
+        Args:
+            self (StaticLossScaler): Instance of the StaticLossScaler class.
+                The StaticLossScaler object that contains the scale value used for scaling.
+            inputs (list): List of input values to be scaled.
+                The inputs to be scaled using the specified scale value.
+        
+        Returns:
+            None
+            This method does not return any value. It scales the input values in place.
+        
+        Raises:
+            None
+            This method does not raise any exceptions.
+        """
         return _hypermap(_partial(_grad_scale, self.scale_value), inputs)
 
     def unscale(self, inputs):
+
+        r"""
+        Unscale the inputs using the specified scale value.
+        
+        Args:
+            self (StaticLossScaler): An instance of the StaticLossScaler class.
+            inputs: The inputs to be unscaled.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return _hypermap(_partial(_grad_unscale, self.scale_value), inputs)
 
     def adjust(self, grads_finite):
+
+        r"""
+        Method 'adjust' in the class 'StaticLossScaler'.
+        
+        Args:
+            self (object): The instance of the StaticLossScaler class.
+            grads_finite (list): A list of gradients for adjustment.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         return
 
 class DynamicLossScaler(LossScaler):
@@ -238,17 +458,84 @@ class DynamicLossScaler(LossScaler):
     Dynamic LossScaler
     """
     def __init__(self, scale_value, scale_factor, scale_window):
+
+        r"""
+        Initializes an instance of the DynamicLossScaler class.
+        
+        Args:
+            self (DynamicLossScaler): The current instance of the DynamicLossScaler class.
+            scale_value (float): The initial scale value for the loss scaling.
+            scale_factor (float): The factor by which the scale value is multiplied after each successful iteration.
+            scale_window (int): The number of iterations for which the scale value remains unchanged before it is updated.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         super().__init__(scale_value)
         self.scale_factor = scale_factor
         self.scale_window = scale_window
 
     def scale(self, inputs):
+
+        
+        """
+        This method scales the inputs using a dynamic loss scaler value.
+        
+        Args:
+            self (DynamicLossScaler): An instance of the DynamicLossScaler class.
+                This parameter represents the current instance of the DynamicLossScaler class.
+            inputs (list): A list of input values to be scaled.
+                The inputs should be in a format compatible with the scaling operation.
+        
+        Returns:
+            None. This method does not return any value explicitly but modifies the inputs in-place.
+        
+        Raises:
+            - TypeError: If the inputs are not provided in a list format.
+            - ValueError: If there is an issue with the scaling process.
+        """
+        
         return _hypermap(_partial(_grad_scale, self.scale_value), inputs)
 
     def unscale(self, inputs):
+
+        r"""
+        Unscale the input values using the specified scaling factor.
+        
+        Args:
+            self (DynamicLossScaler): An instance of the DynamicLossScaler class.
+                This parameter is automatically passed when calling the method.
+            inputs: The input values to be unscaled. It can be a single value or an iterable.
+                The values should be of a numeric type and within the range supported by the scaling factor.
+        
+        Returns:
+            None. This method does not return anything.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         return _hypermap(_partial(_grad_unscale, self.scale_value), inputs)
 
     def adjust(self, grads_finite):
+
+        
+        """
+        Adjusts the dynamic loss scaling value based on the gradients and internal state.
+        
+        Args:
+            self (DynamicLossScaler): The instance of the DynamicLossScaler class.
+            grads_finite (bool): A boolean indicating whether the gradients are finite.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
+        
         one = ops.ones((), self.scale_value.dtype)
         scale_mul_factor = self.scale_value * self.scale_factor
         scale_value = ops.select(

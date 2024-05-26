@@ -91,6 +91,32 @@ class VanConfig(PretrainedConfig):
         dropout_rate=0.0,
         **kwargs,
     ):
+
+        """
+        Initializes a new instance of the VanConfig class.
+        
+        Args:
+            self (object): The instance of the class.
+            image_size (int): The size of the input image (default is 224).
+            num_channels (int): The number of channels in the input image (default is 3).
+            patch_sizes (list): List of patch sizes for each layer in the model (default is [7, 3, 3, 3]).
+            strides (list): List of stride values for each layer in the model (default is [4, 2, 2, 2]).
+            hidden_sizes (list): List of hidden layer sizes for each layer in the model (default is [64, 128, 320, 512]).
+            depths (list): List of depths for each layer in the model (default is [3, 3, 12, 3]).
+            mlp_ratios (list): List of MLP ratio values for each layer in the model (default is [8, 8, 4, 4]).
+            hidden_act (str): The activation function to be used in hidden layers (default is 'gelu').
+            initializer_range (float): The range for weight initialization (default is 0.02).
+            layer_norm_eps (float): The epsilon value for layer normalization (default is 1e-06).
+            layer_scale_init_value (float): The initial value for layer scale (default is 0.01).
+            drop_path_rate (float): The rate for drop path regularization (default is 0.0).
+            dropout_rate (float): The dropout rate (default is 0.0).
+        
+        Returns:
+            None. The method initializes the instance variables of the class.
+        
+        Raises:
+            None.
+        """
         super().__init__(**kwargs)
         self.image_size = image_size
         self.num_channels = num_channels

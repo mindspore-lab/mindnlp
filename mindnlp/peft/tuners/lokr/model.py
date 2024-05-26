@@ -138,6 +138,23 @@ class LoKrModel(BaseTuner):
     def _create_new_cell(
         cls, config: LoKrConfig, adapter_name: str, target: nn.Cell, **kwargs
     ) -> LoKrLayer:
+
+        r"""
+        This method creates a new LoKrLayer instance based on the provided parameters.
+        
+        Args:
+            cls (class): The class reference. It is used to access the class-level layers_mapping attribute.
+            config (LoKrConfig): The configuration object used for creating the new cell.
+            adapter_name (str): The name of the adapter to be associated with the new cell.
+            target (nn.Cell): The target cell for which the new cell is being created.
+        
+        Returns:
+            LoKrLayer: Returns a new instance of LoKrLayer representing the created cell.
+        
+        Raises:
+            ValueError: If the target cell type is not supported, an exception is raised, indicating the unsupported cell type. 
+                This occurs when the target cell type does not match any of the supported cell types in the layers_mapping attribute.
+        """
         # Find corresponding subtype of provided target cell
         new_cell_cls = None
         for subtype, target_cls in cls.layers_mapping.items():
@@ -191,6 +208,23 @@ class LoKrModel(BaseTuner):
             return getattr(self.model, name)
 
     def _replace_cell(self, parent, child_name, new_cell, child):
+
+        r"""
+        Replaces a cell in the LoKrModel with a new cell.
+        
+        Args:
+            self (LoKrModel): The instance of the LoKrModel class.
+            parent: The parent object containing the cell to be replaced.
+            child_name: The name of the child object to be replaced.
+            new_cell: The new cell object to be assigned.
+            child: The child object to be replaced.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         setattr(parent, child_name, new_cell)
 
         # child layer wraps the original cell, unpack it
@@ -210,11 +244,39 @@ class LoKrModel(BaseTuner):
                 new_cell.state = child.state
 
     def _mark_only_adapters_as_trainable(self, model: nn.Cell) -> None:
+
+        r"""
+        The _mark_only_adapters_as_trainable method in the LoKrModel class marks only the adapters in the provided model as trainable, by setting the requires_grad attribute to False for parameters not containing the specified prefix.
+        
+        Args:
+            self (LoKrModel): The instance of the LoKrModel class.
+            model (nn.Cell): The model for which the adapters are to be marked as trainable.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None
+        """
         for n, p in model.parameters_and_names():
             if self.prefix not in n:
                 p.requires_grad = False
 
     def _set_adapter_layers(self, enabled=True):
+
+        r"""
+        Sets the adapter layers in the LoKrModel by enabling or disabling them.
+        
+        Args:
+            self (LoKrModel): The instance of the LoKrModel class.
+            enabled (bool, optional): Indicates whether to enable or disable the adapter layers. Defaults to True.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         for cell in self.model.cells():
             if isinstance(cell, (BaseTunerLayer, ModulesToSaveWrapper)):
                 cell.enable_adapters(enabled)
@@ -226,6 +288,27 @@ class LoKrModel(BaseTuner):
         safe_merge: bool = False,
         adapter_names: Optional[List[str]] = None,
     ):
+
+        
+        """
+        Method to unload and optionally merge the model.
+        
+        Args:
+            self (LoKrModel): The current instance of the LoKrModel class.
+            merge (bool): A flag indicating whether to merge the model. Defaults to True.
+            progressbar (bool): A flag indicating whether to display a progress bar. Defaults to False.
+            safe_merge (bool): A flag indicating whether to perform a safe merge. Defaults to False.
+            adapter_names (Optional[List[str]]): A list of adapter names. Defaults to None.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the model is gptq quantized and merge is True, it raises a ValueError with the message 
+            "Cannot merge LOHA layers when the model is gptq quantized".
+            AttributeError: If an attribute error occurs during the method execution.
+        """
+        
         if merge:
             if getattr(self.model, "quantization_method", None) == "gptq":
                 raise ValueError(
@@ -264,6 +347,24 @@ class LoKrModel(BaseTuner):
         return self.model
 
     def _unloading_checks(self, adapter_names: Optional[List[str]]):
+
+        r"""
+        Perform unloading checks for the LoKrModel class.
+        
+        This method checks if multiple adapters with `cells_to_save` specified can be unloaded.
+        If any of the specified adapters have cells to save, unloading multiple adapters is not allowed.
+        
+        Args:
+            self (LoKrModel): An instance of the LoKrModel class.
+            adapter_names (Optional[List[str]]): A list of adapter names to consider for unloading. If not provided, all active adapters will be considered.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If multiple adapters with `cells_to_save` specified are attempted to be unloaded.
+        
+        """
         adapters_to_consider = adapter_names or self.active_adapters
         is_cells_to_save_available = any(
             self.peft_config[adapter].cells_to_save
@@ -276,10 +377,40 @@ class LoKrModel(BaseTuner):
 
     @staticmethod
     def _prepare_adapter_config(peft_config, model_config):
+
+        r"""
+        Prepare adapter configuration based on PEFT and model configurations.
+        
+        Args:
+            peft_config (object): The configuration object for PEFT.
+                It should contain information about the target cells.
+                Required parameter. Must not be None.
+            model_config (object): The configuration object for the model.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If `target_cells` is not specified in `peft_config`.
+        """
         if peft_config.target_cells is None:
             raise ValueError("Please specify `target_cells` in `peft_config`")
         return peft_config
 
     @staticmethod
     def _check_target_cell_exists(LoKR_config, key):
+
+        r"""
+        Checks if a target cell exists in the LoKR configuration.
+        
+        Args:
+            LoKR_config (dict): The LoKR configuration dictionary containing information about the target cells.
+            key (str): The key corresponding to the target cell to be checked.
+        
+        Returns:
+            None. Returns None if the target cell exists in the LoKR configuration; otherwise, raises an exception.
+        
+        Raises:
+            This method does not raise any exceptions explicitly. However, if the target cell does not exist in the LoKR configuration, further handling may be required based on the context in which this method is used.
+        """
         return check_target_cell_exists(LoKR_config, key)

@@ -132,6 +132,31 @@ class ConvBertTokenizer(PreTrainedTokenizer):
         strip_accents=None,
         **kwargs,
     ):
+
+        """
+        Initializes an instance of the ConvBertTokenizer class.
+        
+        Args:
+            self: (ConvBertTokenizer) The instance of the ConvBertTokenizer class.
+            vocab_file: (str) The path to the vocabulary file.
+            do_lower_case: (bool, optional) Whether to convert all characters to lowercase. Defaults to True.
+            do_basic_tokenize: (bool, optional) Whether to perform basic tokenization. Defaults to True.
+            never_split: (list, optional) A list of tokens that should never be split during tokenization. Defaults to None.
+            unk_token: (str, optional) The token representation for unknown tokens. Defaults to '[UNK]'.
+            sep_token: (str, optional) The token representation for separating tokens. Defaults to '[SEP]'.
+            pad_token: (str, optional) The token representation for padding tokens. Defaults to '[PAD]'.
+            cls_token: (str, optional) The token representation for classification tokens. Defaults to '[CLS]'.
+            mask_token: (str, optional) The token representation for masked tokens. Defaults to '[MASK]'.
+            tokenize_chinese_chars: (bool, optional) Whether to tokenize Chinese characters. Defaults to True.
+            strip_accents: (bool, optional) Whether to remove accents during tokenization. Defaults to None.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None
+        
+        Raises:
+            ValueError: If the vocabulary file cannot be found at the specified path.
+        """
         if not os.path.isfile(vocab_file):
             raise ValueError(
                 f"Can't find a vocabulary file at path '{vocab_file}'. To load the vocabulary from a Google pretrained"
@@ -173,12 +198,66 @@ class ConvBertTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
+
+        """
+        Method to retrieve the size of the vocabulary.
+        
+        Args:
+            self (ConvBertTokenizer): An instance of the ConvBertTokenizer class.
+                This parameter represents the current ConvBertTokenizer object.
+        
+        Returns:
+            None. The method returns the length of the vocabulary stored in the ConvBertTokenizer object.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         return len(self.vocab)
 
     def get_vocab(self):
+
+        """
+        This method returns the vocabulary, including any added tokens, as a dictionary.
+        
+        Args:
+            self (ConvBertTokenizer): The instance of the ConvBertTokenizer class.
+            
+        Returns:
+            dict: A dictionary containing the vocabulary, including any added tokens.
+        
+        Raises:
+            None
+        """
         return dict(self.vocab, **self.added_tokens_encoder)
 
     def _tokenize(self, text, split_special_tokens=False):
+
+        """
+        Tokenizes the given text into a list of tokens using basic or wordpiece tokenization.
+        
+        Args:
+            self (ConvBertTokenizer): An instance of the ConvBertTokenizer class.
+            text (str): The input text to be tokenized.
+            split_special_tokens (bool, optional): Whether to split special tokens. Defaults to False.
+        
+        Returns:
+            list: A list of tokens generated from the text. If split_special_tokens is True, the special tokens are split as well.
+        
+        Raises:
+            None.
+        
+        Note:
+            The basic tokenization splits the text into tokens using the basic_tokenizer, and then applies wordpiece tokenization to tokens
+            that are not in the never_split list. If split_special_tokens is True, all special tokens are split as well. The wordpiece tokenization
+            is applied to the entire text in case do_basic_tokenize is set to False.
+        
+        Example:
+            >>> tokenizer = ConvBertTokenizer()
+            >>> text = "Hello world!"
+            >>> tokens = tokenizer._tokenize(text)
+            >>> print(tokens)
+            ['Hello', 'world', '!']
+        """
         split_tokens = []
         if self.do_basic_tokenize:
             for token in self.basic_tokenizer.tokenize(
@@ -289,6 +368,22 @@ class ConvBertTokenizer(PreTrainedTokenizer):
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+
+        """
+        Save the vocabulary to a file in the specified directory.
+        
+        Args:
+            self: An instance of the ConvBertTokenizer class.
+            save_directory (str): The directory where the vocabulary file will be saved. Must be a valid directory path.
+            filename_prefix (Optional[str]): A prefix to be added to the filename. Default is None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            OSError: If the specified save_directory is not a valid directory path.
+            IOError: If there are issues with writing to the vocabulary file.
+        """
         index = 0
         if os.path.isdir(save_directory):
             vocab_file = os.path.join(
@@ -339,6 +434,24 @@ class BasicTokenizer():
         strip_accents=None,
         do_split_on_punc=True,
     ):
+
+        """
+        Initializes a BasicTokenizer object with the specified parameters.
+        
+        Args:
+            self (object): The instance of the BasicTokenizer class.
+            do_lower_case (bool, optional): Indicates whether the text should be converted to lowercase. Default is True.
+            never_split (list, optional): A list of tokens that should never be split during tokenization. Default is an empty list.
+            tokenize_chinese_chars (bool, optional): Indicates whether Chinese characters should be tokenized individually. Default is True.
+            strip_accents (None or str, optional): Specifies whether to strip accents from the text. Default is None.
+            do_split_on_punc (bool, optional): Indicates whether to split tokens on punctuation marks. Default is True.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None.
+        """
         if never_split is None:
             never_split = []
         self.do_lower_case = do_lower_case
@@ -475,6 +588,22 @@ class WordpieceTokenizer():
     """Runs WordPiece tokenization."""
 
     def __init__(self, vocab, unk_token, max_input_chars_per_word=100):
+
+        '''
+        Initializes a new instance of the WordpieceTokenizer class.
+        
+        Args:
+            self (WordpieceTokenizer): The current instance of the WordpieceTokenizer class.
+            vocab (list): A list containing the vocabulary of the tokenizer.
+            unk_token (str): The token to be used for unknown words in the vocabulary.
+            max_input_chars_per_word (int, optional): The maximum number of characters allowed for an input word. Defaults to 100.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            N/A
+        '''
         self.vocab = vocab
         self.unk_token = unk_token
         self.max_input_chars_per_word = max_input_chars_per_word

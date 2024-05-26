@@ -47,6 +47,20 @@ def compute_gating(k: int, num_experts: int, top_k_gates: mindspore.Tensor, top_
 
 
 class ParallelExperts(nn.Cell):
+
+    """
+    Represents a module for parallel experts within a neural network architecture. 
+    
+    This class inherits from nn.Cell and provides functionality for parallel processing of inputs by multiple experts. 
+    The ParallelExperts module initializes with the specified number of experts, input size, and output size. 
+    It includes methods for the forward pass operation to process input tensors through the experts and generate an output tensor.
+    
+    Methods:
+    - __init__(self, num_experts, input_size, output_size): Initializes the ParallelExperts module with the given parameters.
+    - extra_repr(self): Returns a string representation of the module with details on num_experts, input_size, and output_size.
+    - construct(self, inputs, expert_size): Performs the forward pass operation by splitting input tensors among experts,
+      applying operations for each expert using the weight parameters, and concatenating the outputs to form the final result tensor.
+    """
     def __init__(self, num_experts, input_size, output_size) -> None:
         """
         Initialize the ParallelExperts module.
@@ -64,6 +78,24 @@ class ParallelExperts(nn.Cell):
         self.output_size = output_size
 
     def extra_repr(self):
+
+        """
+        Method 'extra_repr' in the class 'ParallelExperts' generates a string representation of the object for debugging and logging purposes.
+        
+        Args:
+            self: An instance of the 'ParallelExperts' class.
+                Type: Object
+                Purpose: Represents the current instance of the class.
+                Restrictions: None
+        
+        Returns:
+            A formatted string containing information about the number of experts, input size, and output size of the object.
+                Type: None
+                Purpose: Returns None as the formatted string is directly printed or used for logging purposes.
+        
+        Raises:
+            None
+        """
         return "num_experts={}, input_size={}, output_size={}".format(
             self.num_experts, self.input_size, self.output_size
         )

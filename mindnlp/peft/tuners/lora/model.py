@@ -49,6 +49,22 @@ from .layer import Conv2d, LoraLayer, dispatch_default
 
 
 def _adapter_names_pre_forward_hook(target, args, kwargs, adapter_names):
+
+    
+    """
+    Args:
+        target (object): The target object to which the hook is applied.
+        args (tuple): The positional arguments passed to the function.
+        kwargs (dict): The keyword arguments passed to the function.
+        adapter_names (list): The list of adapter names.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        None
+    """
+    
     # pre-forward hook to inject the adapter_names argument when using mixed adapter batches inference
     kwargs["adapter_names"] = adapter_names
     return args, kwargs
@@ -146,6 +162,35 @@ class LoraModel(BaseTuner):
 
     @staticmethod
     def _check_target_cell_exists(lora_config, key):
+
+        r"""
+        Checks if the target cell exists in the LoRa configuration.
+        
+        Args:
+            lora_config (dict): A dictionary containing the LoRa configuration.
+                This dictionary should have the following structure:
+                {
+                    "target_cells": {
+                        "cell1": {
+                            ...
+                        },
+                        "cell2": {
+                            ...
+                        },
+                        ...
+                    },
+                    ...
+                }
+                The 'target_cells' key should contain the target cell information.
+            key (str): The key to identify the target cell.
+                The key should be a string that matches the key used in the 'target_cells' dictionary.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return check_target_cell_exists(lora_config, key)
 
     def _prepare_model(self, peft_config: LoraConfig, model: nn.Module):
@@ -170,6 +215,42 @@ class LoraModel(BaseTuner):
         parent,
         current_key,
     ):
+
+        r"""
+        Creates a new cell and replaces an existing cell in the LoraModel.
+        
+        Args:
+            self (LoraModel): The instance of the LoraModel class.
+            lora_config (LoraConfig): The LoraConfig object containing Lora configuration parameters.
+            adapter_name (str): The name of the adapter.
+            target (LoraLayer): The target LoraLayer or AdaLoraLayer object to update or replace.
+            target_name (str): The name of the target layer.
+            parent (nn.Module): The parent module to which the target layer belongs.
+            current_key: The current key used for matching patterns.
+        
+        Returns:
+            None. The method modifies the LoraModel by creating and replacing cells.
+        
+        Raises:
+            ValueError: If the current_key is None.
+        
+        Note:
+            This method dynamically determines the appropriate rank (r) and alpha (lora_alpha) values
+            based on the current_key and the pattern keys defined in the lora_config. It then creates
+            a new cell with the specified lora configuration parameters and replaces the existing
+            cell with the new cell in the LoraModel.
+        
+            If the target is an instance of LoraLayer (but not AdaLoraLayer), the method updates
+            the layer with the specified adapter_name, rank (r), lora_alpha, lora_dropout,
+            init_lora_weights, use_rslora, and use_dora parameters.
+        
+            If the target is not an instance of LoraLayer, the method creates a new cell using the
+            _create_new_cell method with the specified lora configuration parameters. If the adapter_name
+            is not in the active_adapters list, the requires_grad attribute of the new cell is set to False.
+        
+            The method then replaces the existing cell in the parent module with the new cell using
+            the _replace_cell method.
+        """
         if current_key is None:
             raise ValueError("Current Key shouldn't be `None`")
 
@@ -218,6 +299,23 @@ class LoraModel(BaseTuner):
             self._replace_cell(parent, target_name, new_cell, target)
 
     def _replace_cell(self, parent, child_name, new_cell, child):
+
+        r"""
+        This method replaces a cell within the LoraModel by updating the specified child of the parent with a new cell.
+        
+        Args:
+            self (object): The instance of the LoraModel class.
+            parent (object): The parent object where the cell replacement will occur.
+            child_name (str): The name of the child attribute within the parent object.
+            new_cell (object): The new cell object that will replace the existing child within the parent.
+            child (object): The existing child object that will be replaced by the new_cell.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised within this method.
+        """
         setattr(parent, child_name, new_cell)
         # It's not necessary to set requires_grad here, as that is handled by
         # _mark_only_adapters_as_trainable
@@ -238,6 +336,20 @@ class LoraModel(BaseTuner):
                 new_cell.state = child.state
 
     def _mark_only_adapters_as_trainable(self, model: nn.Module) -> None:
+
+        r"""
+        Marks only specific adapters in the model as trainable based on the specified bias configuration.
+        
+        Args:
+            self (LoraModel): The instance of the LoraModel class.
+            model (nn.Module): The neural network model on which to apply the trainable markings.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            NotImplementedError: If the requested bias configuration is not implemented.
+        """
         for n, p in model.parameters_and_names():
             if self.prefix not in n:
                 p.requires_grad = False
@@ -260,6 +372,21 @@ class LoraModel(BaseTuner):
 
     @staticmethod
     def _create_new_cell(lora_config, adapter_name, target, **kwargs):
+
+        r"""
+        Method to create a new cell based on the provided parameters.
+        
+        Args:
+            lora_config (dict): The configuration parameters for the Lora model.
+            adapter_name (str): The name of the adapter to be used.
+            target (torch.nn.Module): The target cell for which a new cell needs to be created.
+        
+        Returns:
+            None. Returns the newly created cell based on the specified target.
+        
+        Raises:
+            ValueError: If the target cell is not supported. Currently supported cells include `torch.nn.Linear`, `torch.nn.Embedding`, `torch.nn.Conv2d`, and `transformers.pytorch_utils.Conv1D`.
+        """
         # Collect dispatcher functions to decide what backend to use for the replaced LoRA layer. The order matters,
         # because the first match is always used. Therefore, the default layers should be checked last.
         dispatchers = [dispatch_default]
@@ -288,6 +415,38 @@ class LoraModel(BaseTuner):
             return getattr(self.model, name)
 
     def get_peft_config_as_dict(self, inference: bool = False):
+
+        r"""
+        Returns a dictionary representation of the PEFT config.
+        
+        Args:
+            self: An instance of the LoraModel class.
+            inference (bool): A flag indicating whether the method is called for inference. Default is False.
+        
+        Returns:
+            dict: A dictionary containing the PEFT config. The keys represent the configuration options, and the values
+                  represent their corresponding values. If 'inference' is True, the dictionary will also include the
+                  'inference_mode' key set to True.
+        
+        Raises:
+            None.
+        
+        Note:
+            - The method uses the 'peft_config' attribute of the LoraModel instance to create the dictionary.
+            - If a value in the 'peft_config' attribute is an instance of Enum, its value will be extracted using the
+              'value' attribute.
+            - The 'config_dict' dictionary will only contain one key-value pair. If the 'inference' flag is True, the
+              'config_dict' will be updated to include the 'inference_mode' key.
+        
+        Example usage:
+            model = LoraModel()
+            config = model.get_peft_config_as_dict(inference=True)
+            print(config)  # {'inference_mode': True}
+        
+            config = model.get_peft_config_as_dict()
+            print(config)  # {}
+        
+        """
         config_dict = {}
         for key, value in self.peft_config.items():
             config = {k: v.value if isinstance(v, Enum) else v for k, v in asdict(value).items()}
@@ -297,6 +456,20 @@ class LoraModel(BaseTuner):
         return config
 
     def _set_adapter_layers(self, enabled: bool = True) -> None:
+
+        r"""
+        Sets the adapter layers for the LoraModel.
+        
+        Args:
+            self (LoraModel): The instance of the LoraModel class.
+            enabled (bool, optional): A flag to enable or disable the adapter layers. Defaults to True.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         for cell in self.model.cells():
             if isinstance(cell, (BaseTunerLayer, ModulesToSaveWrapper)):
                 cell.enable_adapters(enabled)
@@ -348,6 +521,19 @@ class LoraModel(BaseTuner):
 
     @contextmanager
     def _enable_peft_forward_hooks(self, *args, **kwargs):
+
+        r"""
+        Enable PEFT forward hooks for the LoraModel class.
+        
+        Args:
+            self (LoraModel): The instance of the LoraModel class.
+            
+        Returns:
+            None. This method is intended to be used as a context manager and does not explicitly return a value.
+        
+        Raises:
+            ValueError: If the 'adapter_names' parameter is provided while the model is in training mode.
+        """
         # If adapter_names is passed as an argument, we inject it into the forward arguments.
         adapter_names = kwargs.pop("adapter_names", None)
         if adapter_names is None:
@@ -382,6 +568,25 @@ class LoraModel(BaseTuner):
 
     @staticmethod
     def _prepare_adapter_config(peft_config, model_config):
+
+        r"""
+        Prepare the adapter configuration for a LoraModel.
+        
+        This method takes two parameters, peft_config and model_config, and returns None.
+        
+        Args:
+            peft_config (PeftConfig): The configuration for the adapter.
+                - target_cells (set): The target cells for the adapter. If not specified, it will be determined based on the model type.
+            model_config (dict): The configuration for the model.
+                - model_type (str): The type of the model.
+        
+        Returns:
+            None. The method does not return any value.
+        
+        Raises:
+            ValueError: If the target_cells is not specified in peft_config and the model_type is not found in the TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING.
+        
+        """
         if peft_config.target_cells is None:
             if model_config["model_type"] not in TRANSFORMERS_MODELS_TO_LORA_TARGET_MODULES_MAPPING:
                 raise ValueError("Please specify `target_cells` in `peft_config`")
@@ -397,6 +602,23 @@ class LoraModel(BaseTuner):
         safe_merge: bool = False,
         adapter_names: Optional[list[str]] = None,
     ):
+
+        r"""
+        Method to unload and optionally merge a LoraModel.
+        
+        Args:
+        - self: The instance of the LoraModel class.
+        - merge (bool): Flag indicating whether to perform a merge operation.
+        - progressbar (bool): Flag indicating whether to display a progress bar during unloading.
+        - safe_merge (bool): Flag indicating whether to perform a safe merge operation.
+        - adapter_names (Optional[list[str]]): List of names of adapters to consider during unloading.
+        
+        Returns:
+        None. The method modifies the model in place.
+        
+        Raises:
+        - AttributeError: If an attribute error occurs during the unloading process.
+        """
         if merge:
             self._check_merge_allowed()
 
@@ -637,6 +859,39 @@ class LoraModel(BaseTuner):
         clamp=None,
         full_matrices=True,
     ):
+
+        r"""Perform a Singular Value Decomposition (SVD) with various combination types on the given parameters.
+        
+        Args:
+            self (LoraModel): The instance of the LoraModel class.
+            combination_type (str): The type of combination to perform. Valid options are:
+                - 'svd': Standard SVD combination.
+                - 'ties_svd': Combination with ties.
+                - 'dare_linear_svd': Combination with DARE (Density-Aware Ranking Evaluation) using linear interpolation.
+                - 'dare_ties_svd': Combination with DARE (Density-Aware Ranking Evaluation) using ties.
+                - 'magnitude_prune_svd': Combination with magnitude pruning.
+            adapters (list): A list of adapters to consider for the combination.
+            weights (list): A list of weights corresponding to the adapters.
+            new_rank (int): The desired new rank after the combination.
+            target: The target object.
+            target_lora_A: The target LoRA A object.
+            target_lora_B: The target LoRA B object.
+            density (float): The density parameter used in combination types 'ties_svd', 'dare_linear_svd', 'dare_ties_svd', and 'magnitude_prune_svd'.
+            majority_sign_method (str): The majority sign method used in combination types 'ties_svd' and 'dare_ties_svd'. Valid options are:
+                - 'positive': Majority sign is positive.
+                - 'negative': Majority sign is negative.
+                - 'absolute': Majority sign is absolute.
+            clamp (float, optional): The clamping value. Defaults to None.
+            full_matrices (bool, optional): Whether to compute full matrices in the SVD computation. Defaults to True.
+        
+        Returns:
+            None
+        
+        Raises:
+            ValueError: If no matching LoRAs are found.
+            ValueError: If an invalid value is passed to the combination_type parameter.
+        
+        """
         valid_adapters = []
         valid_weights = []
         is_embedding = any(adapter in target.lora_embedding_A for adapter in adapters)
@@ -699,6 +954,35 @@ class LoraModel(BaseTuner):
         density,
         majority_sign_method,
     ):
+
+        r"""
+        Generalized Task Arithmetic Weighted Adapter.
+        
+        This method performs a weighted combination of task arithmetic operations on the given adapters and their corresponding weights.
+        The combination type determines the specific arithmetic operation to be applied.
+        
+        Args:
+            self (LoraModel): The instance of the LoraModel class.
+            combination_type (str): The type of combination to be performed. Valid values are:
+                - 'linear': Perform a linear combination of the task tensors.
+                - 'ties': Perform a combination of task tensors with tie handling.
+                - 'dare_linear': Perform a linear combination of task tensors with density-aware regularization.
+                - 'dare_ties': Perform a combination of task tensors with tie handling and density-aware regularization.
+                - 'magnitude_prune': Perform a combination of task tensors with magnitude pruning.
+            adapters (list): A list of adapter names.
+            weights (list): A list of weights corresponding to the adapters.
+            target (Target): The target object containing the lora_A, lora_B, lora_embedding_A, and lora_embedding_B attributes.
+            density (float): The density parameter for density-aware regularization.
+            majority_sign_method (str): The method to determine the sign of the majority in tie handling. Valid values are:
+                - 'positive': The majority is considered positive.
+                - 'negative': The majority is considered negative.
+        
+        Returns:
+            list: A list containing the combined task tensors for lora_A and lora_B.
+        
+        Raises:
+            ValueError: If the combination_type parameter is not one of the valid combination types.
+        """
         # account weights for LoRA A and B layers.
         valid_weights = []
         lora_A_deltas = []

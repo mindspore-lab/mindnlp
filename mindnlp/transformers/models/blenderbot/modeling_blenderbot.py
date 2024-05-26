@@ -88,6 +88,26 @@ class BlenderbotAttention(nn.Cell):
         is_causal: bool = False,
         config: Optional[BlenderbotConfig] = None,
     ):
+
+        """
+        Initializes the BlenderbotAttention class.
+        
+        Args:
+            self: The instance of the class.
+            embed_dim (int): The dimension of the input embeddings.
+            num_heads (int): The number of attention heads.
+            dropout (float, optional): The dropout probability. Default is 0.0.
+            is_decoder (bool, optional): Indicates if the attention mechanism is used as a decoder. Default is False.
+            bias (bool, optional): Indicates whether the linear layers have bias. Default is True.
+            is_causal (bool, optional): Indicates if the attention is causal. Default is False.
+            config (Optional[BlenderbotConfig], optional): The configuration for the Blenderbot model. Default is None.
+        
+        Returns:
+            None. This method initializes the instance of the class without returning any value.
+        
+        Raises:
+            ValueError: If embed_dim is not divisible by num_heads.
+        """
         super().__init__()
         self.embed_dim = embed_dim
         self.num_heads = num_heads
@@ -110,6 +130,26 @@ class BlenderbotAttention(nn.Cell):
         self.out_proj = nn.Dense(embed_dim, embed_dim, has_bias=bias)
 
     def _shape(self, tensor: mindspore.Tensor, seq_len: int, bsz: int):
+
+        """
+        Reshapes the input tensor according to the specified dimensions.
+        
+        Args:
+            self (BlenderbotAttention): An instance of the BlenderbotAttention class.
+            tensor (mindspore.Tensor): The input tensor to be reshaped.
+            seq_len (int): The length of the sequence in the input tensor.
+            bsz (int): The batch size of the input tensor.
+        
+        Returns:
+            None. The method modifies the input tensor in-place.
+        
+        Raises:
+            None.
+        
+        This method reshapes the input tensor using the provided dimensions. The tensor is reshaped into a new shape where the batch size is `bsz`, the sequence length is `seq_len`, and the number of heads is `self.num_heads`. The reshaping operation is performed by calling the `view` method of the input tensor, which returns a new view of the tensor with the specified dimensions. Additionally, the `swapaxes` method is called on the reshaped tensor to swap the dimensions at index 1 and index 2.
+        
+        Note that this method modifies the input tensor in-place and does not return any value.
+        """
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).swapaxes(1, 2)
 
     def construct(
@@ -238,7 +278,56 @@ BLENDERBOT_ATTENTION_CLASSES = {"eager": BlenderbotAttention}
 
 # Copied from transformers.models.mbart.modeling_mbart.MBartEncoderLayer with MBart->Blenderbot, MBART->BLENDERBOT
 class BlenderbotEncoderLayer(nn.Cell):
+
+    """
+    This class represents a single layer of the BlenderbotEncoder. It is responsible for processing the input hidden states and applying self-attention, feed-forward neural network (FFN) layers, and layer normalization.
+    
+    The BlenderbotEncoderLayer class inherits from the nn.Cell class.
+    
+    Attributes:
+        embed_dim (int): The dimension of the input hidden states.
+        self_attn (nn.Layer): The self-attention layer used to capture dependencies between different positions within the input hidden states.
+        self_attn_layer_norm (nn.LayerNorm): The layer normalization applied to the output of the self-attention layer.
+        dropout (float): The dropout probability applied to the output of the self-attention layer.
+        activation_fn (function): The activation function applied to the output of the FFN layers.
+        activation_dropout (float): The dropout probability applied to the output of the activation function.
+        fc1 (nn.Dense): The first linear transformation layer in the FFN.
+        fc2 (nn.Dense): The second linear transformation layer in the FFN.
+        final_layer_norm (nn.LayerNorm): The layer normalization applied to the output of the FFN layers.
+    
+    Methods:
+        construct(hidden_states, attention_mask, layer_head_mask, output_attentions=False):
+            Applies the processing steps of the encoder layer to the input hidden states.
+            Args:
+                hidden_states (mindspore.Tensor): The input hidden states of shape (batch, seq_len, embed_dim).
+                attention_mask (mindspore.Tensor): The attention mask of shape (batch, 1, tgt_len, src_len), where padding elements are indicated by very large negative values.
+                layer_head_mask (mindspore.Tensor): The mask for attention heads in a given layer of size (encoder_attention_heads,).
+                output_attentions (bool, optional): Whether or not to return the attention tensors of all attention layers. Defaults to False.
+            Returns:
+                outputs (Tuple[mindspore.Tensor]): The processed hidden states. If output_attentions is True, the attention weights are also returned.
+    """
     def __init__(self, config: BlenderbotConfig):
+
+        """
+        Initializes a new instance of the BlenderbotEncoderLayer class.
+        
+        Args:
+            self: The object itself.
+            config (BlenderbotConfig): The configuration object for Blenderbot, which contains various settings for the encoder layer.
+                - config.d_model (int): The embedding dimension.
+                - config.encoder_attention_heads (int): The number of attention heads in the self-attention mechanism.
+                - config.attention_dropout (float): The dropout probability for the attention weights.
+                - config.dropout (float): The dropout probability for the output of each sub-layer.
+                - config.activation_function (str): The type of activation function used in the feed-forward neural network.
+                - config.activation_dropout (float): The dropout probability for the activation output.
+                - config.encoder_ffn_dim (int): The dimension of the feed-forward neural network intermediate layer.
+        
+        Returns:
+            None.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         self.embed_dim = config.d_model
 
@@ -309,7 +398,64 @@ class BlenderbotEncoderLayer(nn.Cell):
 
 # Copied from transformers.models.mbart.modeling_mbart.MBartDecoderLayer with MBart->Blenderbot, MBART->BLENDERBOT
 class BlenderbotDecoderLayer(nn.Cell):
+
+    """
+    A BlenderbotDecoderLayer represents a single layer of the Blenderbot decoder model. It is used to decode the input sequence and generate the output sequence. This class inherits from nn.Cell and contains various components such as self-attention, encoder attention, feed-forward networks, and layer normalization.
+    
+    Attributes:
+        - embed_dim (int): The embedding dimension of the layer.
+        - self_attn (nn.Layer): The self-attention mechanism used in the layer.
+        - dropout (float): The dropout rate used in the layer.
+        - activation_fn (function): The activation function used in the feed-forward networks.
+        - activation_dropout (float): The dropout rate used in the activation function.
+        - self_attn_layer_norm (nn.LayerNorm): The layer normalization applied after the self-attention.
+        - encoder_attn (nn.Layer): The encoder attention mechanism used in the layer.
+        - encoder_attn_layer_norm (nn.LayerNorm): The layer normalization applied after the encoder attention.
+        - fc1 (nn.Dense): The first feed-forward network.
+        - fc2 (nn.Dense): The second feed-forward network.
+        - final_layer_norm (nn.LayerNorm): The final layer normalization applied after the feed-forward networks.
+    
+    Methods:
+        - construct(hidden_states, attention_mask, encoder_hidden_states, encoder_attention_mask, layer_head_mask, cross_attn_layer_head_mask, past_key_value, output_attentions, use_cache):
+            Constructs the decoder layer by applying the self-attention, encoder attention, feed-forward networks, and layer normalization to the given hidden states. It returns the output hidden states and optional intermediate tensors such as attention weights and present key-value states.
+    
+    Parameters:
+        - hidden_states (mindspore.Tensor): The input to the layer of shape (batch, seq_len, embed_dim).
+        - attention_mask (mindspore.Tensor): The attention mask of size (batch, 1, tgt_len, src_len) where padding elements are indicated by very large negative values.
+        - encoder_hidden_states (mindspore.Tensor): The cross-attention input to the layer of shape (batch, seq_len, embed_dim).
+        - encoder_attention_mask (mindspore.Tensor): The encoder attention mask of size (batch, 1, tgt_len, src_len) where padding elements are indicated by very large negative values.
+        - layer_head_mask (mindspore.Tensor): The mask for attention heads in a given layer of size (encoder_attention_heads,).
+        - cross_attn_layer_head_mask (mindspore.Tensor): The mask for cross-attention heads in a given layer of size (decoder_attention_heads,).
+        - past_key_value (Tuple(mindspore.Tensor)): The cached past key and value projection states.
+        - output_attentions (bool, optional): Whether or not to return the attentions tensors of all attention layers.
+        - use_cache (bool, optional): Whether or not to use caching.
+    
+    Returns:
+        - outputs (mindspore.Tensor or Tuple): The output hidden states and optional intermediate tensors such as attention weights and present key-value states. The shape and contents of the output depend on the input arguments and the configuration of the layer.
+    """
     def __init__(self, config: BlenderbotConfig):
+
+        """
+        Initialize a BlenderbotDecoderLayer object.
+        
+        Args:
+            self (BlenderbotDecoderLayer): The instance of the BlenderbotDecoderLayer class.
+            config (BlenderbotConfig): An object containing configuration settings for the decoder layer.
+                - config.d_model (int): The embedding dimension to be used.
+                - config.decoder_attention_heads (int): The number of attention heads for decoder self-attention.
+                - config.attention_dropout (float): The dropout rate for attention weights.
+                - config.activation_function (str): The name of the activation function to be used.
+                - config.activation_dropout (float): The dropout rate for activation functions.
+                - config.decoder_ffn_dim (int): The dimensionality of the feedforward network.
+        
+        Returns:
+            None. This method initializes various attributes of the BlenderbotDecoderLayer instance.
+        
+        Raises:
+            ValueError: If any of the input parameters are invalid or missing.
+            KeyError: If the provided activation function is not found in the predefined mapping.
+            NotImplementedError: If the attention mechanism specified is not implemented in the BLENDERBOT_ATTENTION_CLASSES dictionary.
+        """
         super().__init__()
         self.embed_dim = config.d_model
 
@@ -429,6 +575,16 @@ class BlenderbotDecoderLayer(nn.Cell):
 
 
 class BlenderbotPreTrainedModel(PreTrainedModel):
+
+    """
+    BlenderbotPreTrainedModel is a Python class representing a pre-trained model for Blenderbot. This class inherits from PreTrainedModel and includes methods for initializing weights and providing dummy inputs. 
+    
+    The _init_weights method initializes the weights of the model based on the specified standard deviation and cell type, ensuring proper initialization for both Dense and Embedding cells. 
+    
+    The dummy_inputs method generates a set of dummy inputs for the model, including attention mask, input IDs, and decoder input IDs, with consideration for padding tokens. 
+    
+    This class provides essential functionality for initializing model weights and generating dummy inputs, making it a crucial component for working with pre-trained Blenderbot models.
+    """
     config_class = BlenderbotConfig
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
@@ -452,6 +608,24 @@ class BlenderbotPreTrainedModel(PreTrainedModel):
 
     @property
     def dummy_inputs(self):
+
+        """
+        This method generates dummy inputs for the BlenderbotPreTrainedModel.
+        
+        Args:
+            self: The instance of the BlenderbotPreTrainedModel class.
+            
+        Returns:
+            A dictionary containing dummy inputs in the following format:
+            {
+                'attention_mask': A tensor representing the attention mask where pad tokens are masked,
+                'input_ids': A tensor representing the input IDs,
+                'decoder_input_ids': A tensor representing the decoder input IDs
+            }
+            
+        Raises:
+            None
+        """
         pad_token = self.config.pad_token_id
         input_ids = mindspore.tensor([[0, 6, 10, 4, 2], [0, 8, 12, 2, pad_token]])
         dummy_inputs = {
@@ -473,6 +647,21 @@ class BlenderbotEncoder(BlenderbotPreTrainedModel):
     """
 
     def __init__(self, config: BlenderbotConfig, embed_tokens: Optional[nn.Embedding] = None):
+
+        """
+        Initializes a BlenderbotEncoder instance.
+        
+        Args:
+            self (BlenderbotEncoder): The instance of the BlenderbotEncoder class.
+            config (BlenderbotConfig): An instance of BlenderbotConfig containing configuration settings.
+            embed_tokens (Optional[nn.Embedding]): Optional parameter representing embedding tokens. Defaults to None.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         super().__init__(config)
 
         self.dropout = config.dropout
@@ -643,6 +832,22 @@ class BlenderbotDecoder(BlenderbotPreTrainedModel):
     """
 
     def __init__(self, config: BlenderbotConfig, embed_tokens: Optional[nn.Embedding] = None):
+
+        """
+        Initializes a new instance of the BlenderbotDecoder class.
+        
+        Args:
+            self: The instance of the class.
+            config (BlenderbotConfig): An object containing configuration settings for the BlenderbotDecoder.
+            embed_tokens (Optional[nn.Embedding]): An optional embedding tensor. If provided, it will be used as the embedding tokens. 
+                Defaults to None.
+        
+        Returns:
+            None. This method initializes the instance of the BlenderbotDecoder class.
+        
+        Raises:
+            None.
+        """
         super().__init__(config)
         self.dropout = config.dropout
         self.layerdrop = config.decoder_layerdrop
@@ -667,9 +872,39 @@ class BlenderbotDecoder(BlenderbotPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
+
+        """
+        Method to retrieve the input embeddings from the BlenderbotDecoder.
+        
+        Args:
+            self (BlenderbotDecoder): The instance of the BlenderbotDecoder class.
+                This parameter is used to access the embed_tokens attribute.
+                
+        Returns:
+            None: This method returns the embed_tokens attribute, which represents the input embeddings.
+            
+        Raises:
+            None
+        """
         return self.embed_tokens
 
     def set_input_embeddings(self, value):
+
+        """
+        Method to set input embeddings for the BlenderbotDecoder class.
+        
+        Args:
+            self (BlenderbotDecoder): An instance of the BlenderbotDecoder class.
+                This parameter refers to the current instance of the class.
+            value: The input embeddings value to be set for the instance.
+                It can be of any valid data type and is used to set the embed_tokens attribute.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         self.embed_tokens = value
 
     def construct(
@@ -888,9 +1123,62 @@ class BlenderbotDecoder(BlenderbotPreTrainedModel):
 
 
 class BlenderbotModel(BlenderbotPreTrainedModel):
+
+    """
+        The `BlenderbotModel` class represents a model for generating responses in conversational AI systems. It is a subclass of `BlenderbotPreTrainedModel` and inherits its functionality.
+    
+        Args:
+            config (BlenderbotConfig): The configuration class that contains the model's hyperparameters.
+    
+        Attributes:
+            shared (nn.Embedding): The shared embedding layer used for both the encoder and decoder.
+            encoder (BlenderbotEncoder): The encoder module of the model.
+            decoder (BlenderbotDecoder): The decoder module of the model.
+    
+        Methods:
+            __init__(self, config: BlenderbotConfig): Initializes the `BlenderbotModel` instance.
+            get_input_embeddings(self): Retrieves the shared embedding layer.
+            set_input_embeddings(self, value): Sets the shared embedding layer to a new value.
+            get_encoder(self): Retrieves the encoder module.
+            get_decoder(self): Retrieves the decoder module.
+            construct(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, decoder_input_ids: Optional[mindspore.Tensor] = None, decoder_attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, decoder_head_mask: Optional[mindspore.Tensor] = None, cross_attn_head_mask: Optional[mindspore.Tensor] = None, encoder_outputs: Optional[Union[Tuple, BaseModelOutput]] = None, past_key_values: Optional[List[mindspore.Tensor]] = None, inputs_embeds: Optional[mindspore.Tensor] = None, decoder_inputs_embeds: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None): Constructs the model and performs the forward pass.
+    
+        Returns:
+            Union[Tuple[mindspore.Tensor], Seq2SeqModelOutput]: The output of the forward pass, including the last hidden state, past key values, decoder hidden states, decoder attentions, cross attentions, encoder last hidden state, encoder hidden states, and encoder attentions.
+    
+        Examples:
+            
+            >>> from transformers import AutoTokenizer, BlenderbotModel
+    
+            >>> model = BlenderbotModel.from_pretrained("facebook/blenderbot-400M-distill")
+            >>> tokenizer = AutoTokenizer.from_pretrained("facebook/blenderbot-400M-distill")
+    
+            >>> inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
+            >>> decoder_input_ids = tokenizer("Studies show that", return_tensors="pt").input_ids  # Batch size 1
+            >>> outputs = model(input_ids=inputs.input_ids, decoder_input_ids=decoder_input_ids)
+    
+            >>> last_hidden_states = outputs.last_hidden_state
+            >>> list(last_hidden_states.shape)
+            [1, 6, 1280]
+            
+        """
     _tied_weights_keys = ["decoder.embed_tokens.weight", "encoder.embed_tokens.weight"]
 
     def __init__(self, config: BlenderbotConfig):
+
+        """
+        This method initializes a new instance of the BlenderbotModel class.
+        
+        Args:
+            self: The instance of the BlenderbotModel class.
+            config (BlenderbotConfig): An instance of the BlenderbotConfig class containing configuration parameters for the model.
+            
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(config)
 
         padding_idx, vocab_size = config.pad_token_id, config.vocab_size
@@ -903,17 +1191,70 @@ class BlenderbotModel(BlenderbotPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
+
+        """
+        This method retrieves the input embeddings from the BlenderbotModel.
+        
+        Args:
+            self: BlenderbotModel instance. The instance of the BlenderbotModel class.
+        
+        Returns:
+            None. This method returns the shared input embeddings.
+        
+        Raises:
+            N/A. This method does not raise any exceptions.
+        """
         return self.shared
 
     def set_input_embeddings(self, value):
+
+        """
+        Sets the input embeddings for the BlenderbotModel.
+        
+        Args:
+            self (BlenderbotModel): The instance of the BlenderbotModel class.
+            value: The input embeddings to be set. It should be a tensor of shape (vocab_size, embeddings_dim).
+            
+        Returns:
+            None.
+            
+        Raises:
+            None.
+        """
         self.shared = value
         self.encoder.embed_tokens = self.shared
         self.decoder.embed_tokens = self.shared
 
     def get_encoder(self):
+
+        """
+        Returns the encoder used in the BlenderbotModel.
+        
+        Args:
+            self (BlenderbotModel): An instance of the BlenderbotModel class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return self.encoder
 
     def get_decoder(self):
+
+        """
+        This method returns the decoder used in the BlenderbotModel.
+        
+        Args:
+            self: The instance of the BlenderbotModel class.
+        
+        Returns:
+            None: This method returns the decoder used in the BlenderbotModel. It returns None if the decoder is not set.
+        
+        Raises:
+            None.
+        """
         return self.decoder
 
     def construct(
@@ -1010,10 +1351,46 @@ class BlenderbotModel(BlenderbotPreTrainedModel):
 
 
 class BlenderbotForConditionalGeneration(BlenderbotPreTrainedModel):
+
+    """
+    A class for generating text using the Blenderbot model with conditional generation. This class inherits from BlenderbotPreTrainedModel and provides methods for preparing inputs for generation and reordering cache.
+    
+    Attributes:
+        model (BlenderbotModel): A model instance of the BlenderbotModel class.
+        final_logits_bias (mindspore.Tensor): A tensor representing the final logits bias.
+        lm_head (mindspore.nn.Dense): A fully connected linear layer for the language modeling head.
+    
+    Methods:
+        __init__(self, config: BlenderbotConfig): Initializes the class with a BlenderbotConfig instance.
+        get_encoder(self): Returns the encoder from the model.
+        get_decoder(self): Returns the decoder from the model.
+        resize_token_embeddings(self, new_num_tokens: int, pad_to_multiple_of: Optional[int] = None) -> nn.Embedding: Resizes the token embeddings.
+        _resize_final_logits_bias(self, new_num_tokens: int) -> None: Resizes the final logits bias.
+        get_output_embeddings(self): Returns the output embeddings.
+        set_output_embeddings(self, new_embeddings): Sets the output embeddings.
+        construct(self, input_ids: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, decoder_input_ids: Optional[mindspore.Tensor] = None, decoder_attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, decoder_head_mask: Optional[mindspore.Tensor] = None, cross_attn_head_mask: Optional[mindspore.Tensor] = None, encoder_outputs: Optional[Union[Tuple, BaseModelOutput]] = None, past_key_values: Optional[List[mindspore.Tensor]] = None, inputs_embeds: Optional[mindspore.Tensor] = None, decoder_inputs_embeds: Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None) -> Union[Tuple[mindspore.Tensor], Seq2SeqLMOutput]: Constructs the model for generation.
+        prepare_inputs_for_generation(self, decoder_input_ids, past_key_values=None, attention_mask=None, head_mask=None, decoder_head_mask=None, cross_attn_head_mask=None, use_cache=None, encoder_outputs=None, **kwargs): Prepares the inputs for generation.
+        _reorder_cache(past_key_values, beam_idx): Reorders the cache.
+    
+    """
     base_model_prefix = "model"
     _tied_weights_keys = ["decoder.embed_tokens.weight", "encoder.embed_tokens.weight", "lm_head.weight"]
 
     def __init__(self, config: BlenderbotConfig):
+
+        """
+        Initializes a new instance of the BlenderbotForConditionalGeneration class.
+        
+        Args:
+            self: The instance of the class.
+            config (BlenderbotConfig): An instance of the BlenderbotConfig class containing the configuration settings for the model.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         super().__init__(config)
         self.model = BlenderbotModel(config)
         self.final_logits_bias = ops.zeros((1, self.model.shared.vocab_size))
@@ -1023,17 +1400,99 @@ class BlenderbotForConditionalGeneration(BlenderbotPreTrainedModel):
         self.post_init()
 
     def get_encoder(self):
+
+        """
+        This method returns the encoder of the BlenderbotForConditionalGeneration model.
+        
+        Args:
+            self: The instance of the BlenderbotForConditionalGeneration class.
+        
+        Returns:
+            None: This method returns the encoder of the model as an object of type 'None'.
+        
+        Raises:
+            None
+        """
         return self.model.get_encoder()
 
     def get_decoder(self):
+
+        """
+        Returns the decoder of the BlenderbotForConditionalGeneration model.
+        
+        Args:
+            self: An instance of the BlenderbotForConditionalGeneration class.
+        
+        Returns:
+            None. The method returns the decoder of the model, which is of type None.
+        
+        Raises:
+            None.
+        
+        Note:
+            The decoder is a component of the BlenderbotForConditionalGeneration model that is responsible for generating responses based on the input.
+        
+        Example usage:
+            >>> blenderbot = BlenderbotForConditionalGeneration()
+            >>> decoder = blenderbot.get_decoder()
+            >>> print(decoder)
+            None
+        """
         return self.model.get_decoder()
 
     def resize_token_embeddings(self, new_num_tokens: int, pad_to_multiple_of: Optional[int] = None) -> nn.Embedding:
+
+        """
+        Resize the token embeddings of the Blenderbot model.
+        
+        Args:
+            self (BlenderbotForConditionalGeneration): The instance of the BlenderbotForConditionalGeneration class.
+            new_num_tokens (int): The desired number of tokens for the resized embeddings.
+            pad_to_multiple_of (Optional[int], optional): If provided, the number of tokens will be padded to a multiple of this value. Defaults to None.
+        
+        Returns:
+            nn.Embedding: The new resized token embeddings.
+        
+        Raises:
+            None.
+        """
         new_embeddings = super().resize_token_embeddings(new_num_tokens, pad_to_multiple_of)
         self._resize_final_logits_bias(new_embeddings.weight.shape[0])
         return new_embeddings
 
     def _resize_final_logits_bias(self, new_num_tokens: int) -> None:
+
+        """
+        Resizes the final logits bias of the BlenderbotForConditionalGeneration model.
+        
+        Args:
+            self (BlenderbotForConditionalGeneration): The instance of the BlenderbotForConditionalGeneration class.
+            new_num_tokens (int): The desired number of tokens for the resized final logits bias. 
+        
+        Returns:
+            None. This method modifies the 'final_logits_bias' attribute of the BlenderbotForConditionalGeneration instance.
+        
+        Raises:
+            None.
+        
+        Description:
+        This method resizes the 'final_logits_bias' attribute of the BlenderbotForConditionalGeneration model. The 'final_logits_bias' is a tensor that represents the bias to be added to the final logits of the model. 
+        
+        If the desired number of tokens, given by 'new_num_tokens', is less than or equal to the current number of tokens in the 'final_logits_bias', no resizing is performed. In this case, the 'final_logits_bias' is sliced to retain the desired number of tokens.
+        
+        If the desired number of tokens is greater than the current number of tokens, the 'final_logits_bias' is extended by appending zero-valued bias columns. The number of extra tokens is calculated as 'new_num_tokens - old_num_tokens', where 'old_num_tokens' is the current number of tokens in the 'final_logits_bias'. The extra bias columns are created using ops.zeros() function and then concatenated with the existing 'final_logits_bias' tensor using ops.cat() function along the last axis.
+        
+        The 'final_logits_bias' attribute is updated with the resized tensor.
+        
+        Note: This method does not perform any validation on the inputs or check for any specific restrictions.
+        
+        Example:
+            # Create an instance of the BlenderbotForConditionalGeneration model
+            model = BlenderbotForConditionalGeneration()
+        
+            # Resize the final_logits_bias to have 100 tokens
+            model._resize_final_logits_bias(100)
+        """
         old_num_tokens = self.final_logits_bias.shape[-1]
         if new_num_tokens <= old_num_tokens:
             new_bias = self.final_logits_bias[:, :new_num_tokens]
@@ -1043,9 +1502,37 @@ class BlenderbotForConditionalGeneration(BlenderbotPreTrainedModel):
         self.final_logits_bias = new_bias
 
     def get_output_embeddings(self):
+
+        """ 
+        This method retrieves the output embeddings from the BlenderbotForConditionalGeneration model.
+        
+        Args:
+            self (BlenderbotForConditionalGeneration): The instance of the BlenderbotForConditionalGeneration class.
+                It is used to access the lm_head attribute, which contains the output embeddings.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
+
+        """
+        Sets the output embeddings for the Blenderbot model.
+        
+        Args:
+            self (BlenderbotForConditionalGeneration): The instance of the BlenderbotForConditionalGeneration class.
+            new_embeddings: The new embeddings to be set as the output embeddings. This parameter can be of any type.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         self.lm_head = new_embeddings
 
     def construct(
@@ -1137,6 +1624,27 @@ class BlenderbotForConditionalGeneration(BlenderbotPreTrainedModel):
         encoder_outputs=None,
         **kwargs,
     ):
+
+        """
+        This method prepares inputs for generation in the BlenderbotForConditionalGeneration class.
+        
+        Args:
+        - self: The instance of the class.
+        - decoder_input_ids (Tensor): The input tensor for the decoder.
+        - past_key_values (Tuple): A tuple of past key values for attention mechanism.
+        - attention_mask (Tensor, optional): An optional tensor for attention mask.
+        - head_mask (Tensor, optional): An optional tensor for head mask.
+        - decoder_head_mask (Tensor, optional): An optional tensor for decoder head mask.
+        - cross_attn_head_mask (Tensor, optional): An optional tensor for cross-attention head mask.
+        - use_cache (bool, optional): A flag indicating whether to use cache.
+        - encoder_outputs (Dict, optional): A dictionary containing encoder outputs.
+        
+        Returns:
+        - Dict: A dictionary containing the prepared inputs for generation including 'input_ids', 'encoder_outputs', 'past_key_values', 'decoder_input_ids', 'attention_mask', 'head_mask', 'decoder_head_mask', 'cross_attn_head_mask', and 'use_cache'.
+        
+        Raises:
+        - None
+        """
         # cut decoder_input_ids if past is used
         if past_key_values is not None:
             past_length = past_key_values[0][0].shape[2]
@@ -1164,6 +1672,25 @@ class BlenderbotForConditionalGeneration(BlenderbotPreTrainedModel):
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
+
+        """
+        Reorders the past key values according to the beam index.
+        
+        Args:
+            past_key_values (Tuple): A tuple of past key values for each layer of the model.
+                Each past key value is a tuple with three elements:
+                - A tensor of shape (batch_size * beam_size, sequence_length, hidden_size)
+                - A tensor of shape (batch_size * beam_size, hidden_size)
+                - A tensor of shape (batch_size * beam_size, sequence_length)
+                
+            beam_idx (Tensor): A tensor of shape (batch_size, beam_size) containing the indices to reorder the past key values.
+        
+        Returns:
+            None. This method returns the reordered past key values as a tuple.
+        
+        Raises:
+            None.
+        """
         reordered_past = ()
         for layer_past in past_key_values:
             # cached cross_attention states don't have to be reordered -> they are always the same
@@ -1182,18 +1709,79 @@ class BlenderbotDecoderWrapper(BlenderbotPreTrainedModel):
     """
 
     def __init__(self, config):
+
+        """
+        Initializes a new instance of the BlenderbotDecoderWrapper class.
+        
+        Args:
+            self: The instance of the class.
+            config: The configuration object for initializing the BlenderbotDecoderWrapper.
+                Type: object
+                Purpose: Specifies the configuration settings for the BlenderbotDecoderWrapper.
+                Restrictions: Must be a valid configuration object.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(config)
         self.decoder = BlenderbotDecoder(config)
 
     def construct(self, *args, **kwargs):
+
+        """
+        Method 'construct' in the class 'BlenderbotDecoderWrapper'.
+            
+        Args:
+            self (BlenderbotDecoderWrapper): The instance of BlenderbotDecoderWrapper.
+                It is used to access the methods and attributes of the class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None.
+        """
         return self.decoder(*args, **kwargs)
 
 
 # Copied from transformers.models.bart.modeling_bart.BartForCausalLM with Bart->Blenderbot, facebook/bart-base->facebook/blenderbot-400M-distill
 class BlenderbotForCausalLM(BlenderbotPreTrainedModel):
+
+    """
+    Represents the Blenderbot model for causal language modeling.
+    
+    This class provides the functionality to initialize the model, set input and output embeddings, set the decoder, and construct the model. It also includes methods for preparing inputs for generation and reordering cache.
+    
+    The `construct` method takes various input arguments and returns the model outputs. The `prepare_inputs_for_generation` method prepares inputs for generation, and the `_reorder_cache` method reorders the cache.
+    
+    The class inherits from `BlenderbotPreTrainedModel` and includes detailed explanations of the input arguments, return values, and examples for usage.
+    
+    For consistency, the docstring follows the triple double quotes format.
+    """
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config):
+
+        """
+        Initializes a new instance of the BlenderbotForCausalLM class.
+        
+        Args:
+            self: The object instance.
+            config (obj): The configuration object containing various settings for the model. It must have the following attributes:
+                - is_decoder (bool): Specifies whether the model is a decoder. Must be set to True.
+                - is_encoder_decoder (bool): Specifies whether the model is an encoder-decoder. Must be set to False.
+                - hidden_size (int): The size of the hidden states.
+                - vocab_size (int): The size of the vocabulary.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         config = copy.deepcopy(config)
         config.is_decoder = True
         config.is_encoder_decoder = False
@@ -1206,21 +1794,115 @@ class BlenderbotForCausalLM(BlenderbotPreTrainedModel):
         self.post_init()
 
     def get_input_embeddings(self):
+
+        """
+        Retrieves the input embeddings from the BlenderbotForCausalLM model.
+        
+        Args:
+            self (BlenderbotForCausalLM): The instance of the BlenderbotForCausalLM class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            N/A: This method does not raise any exceptions.
+        
+        This method retrieves the input embeddings from the decoder of the BlenderbotForCausalLM model. The input embeddings are used to convert the input tokens into continuous vector representations. These embeddings capture the semantic meaning of the input tokens and are essential for the model's understanding and generation of text.
+        
+        Note:
+            The input embeddings are accessed using the 'embed_tokens' attribute of the model's decoder.
+        """
         return self.model.decoder.embed_tokens
 
     def set_input_embeddings(self, value):
+
+        """
+        Method to set the input embeddings for the BlenderbotForCausalLM model.
+        
+        Args:
+            self (BlenderbotForCausalLM): The instance of BlenderbotForCausalLM class.
+                This parameter is always implicitly passed and refers to the current instance of the class.
+            value (torch.Tensor): The input embeddings to be set for the model.
+                This parameter should be a torch.Tensor containing the input embeddings.
+                
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         self.model.decoder.embed_tokens = value
 
     def get_output_embeddings(self):
+
+        """
+        Method to retrieve the output embeddings from the BlenderbotForCausalLM model.
+        
+        Args:
+            self (BlenderbotForCausalLM): The instance of the BlenderbotForCausalLM class.
+                This parameter refers to the current instance of the model.
+        
+        Returns:
+            None: This method returns the output embeddings represented by the lm_head attribute.
+                The output embeddings are used for generating the model's output.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings):
+
+        """
+        Sets the output embeddings of the BlenderbotForCausalLM model.
+        
+        Args:
+            self (BlenderbotForCausalLM): The instance of the BlenderbotForCausalLM class.
+            new_embeddings (torch.nn.Embedding): The new embeddings to be set as the output embeddings. 
+                It should be an instance of `torch.nn.Embedding` class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        """
         self.lm_head = new_embeddings
 
     def set_decoder(self, decoder):
+
+        """
+        Method to set the decoder for the BlenderbotForCausalLM model.
+        
+        Args:
+            self (BlenderbotForCausalLM): The instance of the BlenderbotForCausalLM class.
+                This parameter refers to the current instance of the class.
+            decoder: The decoder object to be set for the model.
+                It should be a valid decoder object compatible with the model.
+                
+        Returns:
+            None: This method does not return any value. It updates the decoder for the model in-place.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         self.model.decoder = decoder
 
     def get_decoder(self):
+
+        """
+        Returns the decoder of the BlenderbotForCausalLM model.
+        
+        Args:
+            self: An instance of the BlenderbotForCausalLM class.
+        
+        Returns:
+            None. This method returns the decoder of the BlenderbotForCausalLM model. The decoder is responsible for decoding the input sequence into a generated response.
+        
+        Raises:
+            None.
+        """
         return self.model.decoder
 
     def construct(
@@ -1368,6 +2050,24 @@ class BlenderbotForCausalLM(BlenderbotPreTrainedModel):
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, use_cache=None, **kwargs
     ):
+
+        """
+        This method prepares inputs for generation in the BlenderbotForCausalLM class.
+        
+        Args:
+        - self: The instance of the class.
+        - input_ids (torch.Tensor): The input tensor containing token ids for the input sequence.
+        - past_key_values (Tuple[torch.Tensor]): Optional past key values for caching attention weights.
+        - attention_mask (torch.Tensor): Optional tensor specifying which elements of the input sequence should be attended to.
+        - use_cache (bool): Flag indicating whether to use caching for efficient generation.
+        
+        Returns:
+        - dict: A dictionary containing the updated input_ids, attention_mask, past_key_values, and use_cache.
+        
+        Raises:
+        - ValueError: If input_ids or attention_mask is not provided.
+        - IndexError: If the input_ids shape does not match the past key values.
+        """
         # if model is used as a decoder in encoder-decoder model, the decoder attention mask is created on the fly
         if attention_mask is None:
             attention_mask = input_ids.new_ones(input_ids.shape)
@@ -1393,6 +2093,21 @@ class BlenderbotForCausalLM(BlenderbotPreTrainedModel):
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
+
+        """
+        Method to reorder cache for beam search in the BlenderbotForCausalLM class.
+        
+        Args:
+            past_key_values (tuple): Tuple containing past key-value states for each layer.
+            beam_idx (Tensor): Index tensor specifying the order for reordering the past states.
+        
+        Returns:
+            None. This method modifies the past_key_values in-place to reorder the cache according to the beam_idx.
+        
+        Raises:
+            IndexError: If the provided beam_idx is out of bounds or not compatible with past_key_values.
+            ValueError: If the input parameters are not in the expected format or do not meet the requirements.
+        """
         reordered_past = ()
         for layer_past in past_key_values:
             reordered_past += (

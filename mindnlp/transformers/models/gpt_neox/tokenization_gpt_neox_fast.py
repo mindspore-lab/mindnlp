@@ -103,6 +103,28 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
         add_prefix_space=False,
         **kwargs,
     ):
+
+        """Initialize a new instance of the GPTNeoXTokenizerFast class.
+        
+        Args:
+            self (GPTNeoXTokenizerFast): The instance of the class.
+            vocab_file (str, optional): The file path to the vocabulary file. Defaults to None.
+            merges_file (str, optional): The file path to the merges file. Defaults to None.
+            tokenizer_file (str, optional): The file path to the tokenizer file. Defaults to None.
+            unk_token (str, optional): The unknown token. Defaults to 'endoftext'.
+            bos_token (str, optional): The beginning of sentence token. Defaults to 'endoftext'.
+            eos_token (str, optional): The end of sentence token. Defaults to 'endoftext'.
+            pad_token (str, optional): The padding token. Defaults to None.
+            add_bos_token (bool, optional): Whether to add the beginning of sentence token. Defaults to False.
+            add_eos_token (bool, optional): Whether to add the end of sentence token. Defaults to False.
+            add_prefix_space (bool, optional): Whether to add prefix space. Defaults to False.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__(
             vocab_file,
             merges_file,
@@ -131,19 +153,97 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def add_eos_token(self):
+
+        """
+        Adds an end-of-sequence (EOS) token to the tokenizer.
+        
+        Args:
+            self: The current instance of the GPTNeoXTokenizerFast class.
+                Type: GPTNeoXTokenizerFast
+                Purpose: Represents the tokenizer instance to which the end-of-sequence token is added.
+        
+        Returns:
+            None. The method does not return any value.
+        
+        Raises:
+            No specific exceptions are documented to be raised by this method.
+        """
         return self._add_eos_token
 
     @property
     def add_bos_token(self):
+
+        """
+        Adds a beginning of sentence (BOS) token to the tokenizer.
+        
+        Args:
+            self: An instance of the GPTNeoXTokenizerFast class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        This method adds a BOS token to the tokenizer. The BOS token is used to indicate the start of a sentence or a sequence.
+        
+        Note:
+            The BOS token is specific to the GPTNeoXTokenizerFast class and cannot be used with other tokenizers.
+        """
         return self._add_bos_token
 
     @add_eos_token.setter
     def add_eos_token(self, value):
+
+        """
+        Method to set the flag for adding an end-of-sequence token in the GPTNeoXTokenizerFast class.
+        
+        Args:
+            self (GPTNeoXTokenizerFast): An instance of the GPTNeoXTokenizerFast class.
+                Represents the tokenizer object on which the end-of-sequence token flag is being set.
+            value (bool): A boolean value indicating whether to add an end-of-sequence token.
+                If True, an end-of-sequence token will be added; if False, it will not be added.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
         self._add_eos_token = value
         self.update_post_processor()
 
     @add_bos_token.setter
     def add_bos_token(self, value):
+
+        """
+        Sets the value of the 'add_bos_token' attribute and updates the post-processor.
+        
+        Args:
+            self (GPTNeoXTokenizerFast): The instance of the GPTNeoXTokenizerFast class.
+            value: The new value to be assigned to the 'add_bos_token' attribute.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        Description:
+            This method is a setter for the 'add_bos_token' attribute of the GPTNeoXTokenizerFast class. It allows setting a new value for the attribute and automatically triggers the update_post_processor method.
+        
+            The 'add_bos_token' attribute determines whether to add a beginning of sentence (BOS) token during tokenization. When 'add_bos_token' is set to True, a BOS token will be added at the beginning of each tokenized sequence. When 'add_bos_token' is set to False, no BOS token will be added.
+        
+            After setting the new value for 'add_bos_token', the update_post_processor method is called to update the post-processor based on the new value. The update_post_processor method handles any necessary adjustments to the post-processing logic, if required.
+        
+            Note that changing the 'add_bos_token' attribute value will impact the tokenization process and the resulting tokenized sequences.
+        
+        Example usage:
+            >>> tokenizer = GPTNeoXTokenizerFast()
+            >>> tokenizer.add_bos_token = True
+        
+            In the above example, the 'add_bos_token' attribute of the 'tokenizer' instance is set to True, which enables the addition of BOS tokens during tokenization.
+        """
         self._add_bos_token = value
         self.update_post_processor()
 
@@ -214,6 +314,21 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
 
     # Copied from transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast.build_inputs_with_special_tokens
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
+
+        """
+        This method builds inputs with special tokens for the GPTNeoXTokenizerFast class.
+        
+        Args:
+            self (GPTNeoXTokenizerFast): The instance of the GPTNeoXTokenizerFast class.
+            token_ids_0 (list): The list of token IDs for the first input sequence.
+            token_ids_1 (list, optional): The list of token IDs for the second input sequence. Defaults to None.
+        
+        Returns:
+            list: The list of token IDs with special tokens added based on the configuration of the tokenizer.
+        
+        Raises:
+            None
+        """
         bos_token_id = [self.bos_token_id] if self.add_bos_token else []
         eos_token_id = [self.eos_token_id] if self.add_eos_token else []
 
@@ -225,6 +340,24 @@ class GPTNeoXTokenizerFast(PreTrainedTokenizerFast):
         return output
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+
+        """
+        Save the vocabulary files of the GPTNeoXTokenizerFast model to the specified directory.
+        
+        Args:
+            self (GPTNeoXTokenizerFast): The instance of the GPTNeoXTokenizerFast class.
+            save_directory (str): The directory path where the vocabulary files will be saved.
+            filename_prefix (Optional[str]): An optional prefix to be added to the generated vocabulary files.
+                Defaults to None if not provided.
+        
+        Returns:
+            Tuple[str]: A tuple containing the file paths of the saved vocabulary files.
+        
+        Raises:
+            - IOError: If there are issues with saving the vocabulary files to the specified directory.
+            - ValueError: If the provided save_directory is invalid or inaccessible.
+            - TypeError: If the provided filename_prefix is not a string.
+        """
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)
 

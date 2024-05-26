@@ -25,6 +25,19 @@ from .tensor_utils import tensor_tree_map, tree_map
 
 
 def _fetch_dims(tree: Union[dict, list, tuple, mindspore.Tensor]) -> List[Tuple[int, ...]]:
+
+    """
+    Fetches the dimensions of a given tree structure.
+    
+    Args:
+        tree (Union[dict, list, tuple, mindspore.Tensor]): The input tree structure to fetch dimensions from.
+    
+    Returns:
+        List[Tuple[int, ...]]: A list of tuples representing the dimensions of the elements in the input tree.
+    
+    Raises:
+        ValueError: If the input tree structure is not supported.
+    """
     shapes = []
     if isinstance(tree, dict):
         for v in tree.values():
@@ -41,6 +54,21 @@ def _fetch_dims(tree: Union[dict, list, tuple, mindspore.Tensor]) -> List[Tuple[
 
 
 def _flat_idx_to_idx(flat_idx: int, dims: Tuple[int, ...]) -> Tuple[int, ...]:
+
+    """
+    Converts a flat index to a multidimensional index.
+    
+    Args:
+        flat_idx (int): The flat index to be converted to a multidimensional index.
+        dims (Tuple[int, ...]): The dimensions of the multidimensional space.
+    
+    Returns:
+        Tuple[int, ...]: The multidimensional index corresponding to the given flat index.
+    
+    Raises:
+        ValueError: If the flat index is negative or exceeds the product of the dimensions.
+        TypeError: If the dimensions are not provided as a tuple of integers.
+    """
     idx = []
     for d in reversed(dims):
         idx.append(flat_idx % d)
@@ -312,17 +340,66 @@ def chunk_layer(
 
 
 class ChunkSizeTuner:
+
+    """
+    The ChunkSizeTuner class represents a utility for tuning chunk size to optimize the performance of a given function with specified arguments. It provides methods for determining a favorable chunk size and comparing argument caches to ensure consistency.
+    
+    Attributes:
+        max_chunk_size (int): The maximum chunk size allowed for tuning.
+        cached_chunk_size (Optional[int]): The cached chunk size determined during tuning.
+        cached_arg_data (Optional[tuple]): The cached argument data used for comparison.
+    
+    Methods:
+        _determine_favorable_chunk_size(fn: Callable, args: tuple, min_chunk_size: int) -> int: 
+            Determines a favorable chunk size for the given function and arguments, based on a minimum chunk size.
+        _compare_arg_caches(ac1: Iterable, ac2: Iterable) -> bool:
+            Compares argument caches to check for consistency.
+        tune_chunk_size(representative_fn: Callable, args: tuple, min_chunk_size: int) -> int:
+            Tunes the chunk size based on the representative function, arguments, and minimum chunk size.
+    
+    Note: This class does not inherit from any other class.
+    """
     def __init__(
         self,
         # Heuristically, runtimes for most of the modules in the network
         # plateau earlier than this on all GPUs I've run the model on.
         max_chunk_size: int = 512,
     ):
+
+        """
+        Initializes an instance of the ChunkSizeTuner class.
+        
+        Args:
+            max_chunk_size (int): The maximum size of the chunk. Defaults to 512 if not provided.
+                This parameter specifies the maximum size of the chunk that can be processed.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         self.max_chunk_size = max_chunk_size
         self.cached_chunk_size: Optional[int] = None
         self.cached_arg_data: Optional[tuple] = None
 
     def _determine_favorable_chunk_size(self, fn: Callable, args: tuple, min_chunk_size: int) -> int:
+
+        """
+        Determines the favorable chunk size for a given function based on the provided parameters.
+        
+        Args:
+            self (ChunkSizeTuner): The instance of the ChunkSizeTuner class.
+            fn (Callable): The function for which the chunk size is being determined.
+            args (tuple): The arguments to be passed to the function 'fn'.
+            min_chunk_size (int): The minimum chunk size to consider for optimization. It should be a positive integer.
+        
+        Returns:
+            int: The favorable chunk size determined for the function 'fn' based on the provided parameters.
+        
+        Raises:
+            RuntimeError: If an error occurs during the testing of a specific chunk size.
+        """
         logging.info("Tuning chunk size...")
 
         if min_chunk_size >= self.max_chunk_size:
@@ -353,6 +430,22 @@ class ChunkSizeTuner:
         return candidates[min_viable_chunk_size_index]
 
     def _compare_arg_caches(self, ac1: Iterable, ac2: Iterable) -> bool:
+
+        """
+        This method compares two argument caches for consistency.
+        
+        Args:
+            self (ChunkSizeTuner): The instance of the ChunkSizeTuner class.
+            ac1 (Iterable): The first argument cache to be compared.
+            ac2 (Iterable): The second argument cache to be compared.
+        
+        Returns:
+            bool: Returns a boolean value indicating the consistency of the argument caches. 
+                True if the argument caches are consistent, False otherwise.
+        
+        Raises:
+            AssertionError: If the types of the argument caches are not consistent during the comparison process.
+        """
         consistent = True
         for a1, a2 in zip(ac1, ac2):
             assert type(ac1) == type(ac2)
@@ -373,6 +466,23 @@ class ChunkSizeTuner:
         args: tuple,
         min_chunk_size: int,
     ) -> int:
+
+        """
+        This method tunes the chunk size based on the provided representative function, arguments, and minimum chunk size.
+        
+        Args:
+        - self: ChunkSizeTuner object, the instance of the class.
+        - representative_fn: Callable, a function that represents the computation to be performed.
+        - args: tuple, arguments passed to the representative function.
+        - min_chunk_size: int, the minimum chunk size to consider for tuning.
+        
+        Returns:
+        - int: The tuned chunk size determined by the method.
+        
+        Raises:
+        - AssertionError: If the cached argument data length does not match the length of the current argument data.
+        - AssertionError: If the cached chunk size is None after tuning.
+        """
         consistent = True
         arg_data: tuple = tree_map(lambda a: a.shape if isinstance(a, mindspore.Tensor) else a, args, object)
         if self.cached_arg_data is not None:

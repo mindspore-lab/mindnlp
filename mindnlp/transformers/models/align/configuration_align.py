@@ -116,6 +116,34 @@ class AlignTextConfig(PretrainedConfig):
         use_cache=True,
         **kwargs,
     ):
+
+        """
+        Initializes a new instance of the AlignTextConfig class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 30522.
+            hidden_size (int, optional): The size of the hidden layers. Defaults to 768.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 12.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 12.
+            intermediate_size (int, optional): The size of the intermediate layer in the transformer encoder. Defaults to 3072.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
+            hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Defaults to 0.1.
+            attention_probs_dropout_prob (float, optional): The dropout probability for the attention probabilities. Defaults to 0.1.
+            max_position_embeddings (int, optional): The maximum number of positions for the positional embeddings. Defaults to 512.
+            type_vocab_size (int, optional): The size of the type vocabulary. Defaults to 2.
+            initializer_range (float, optional): The range for the weight initializers. Defaults to 0.02.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Defaults to 1e-12.
+            pad_token_id (int, optional): The token id for padding. Defaults to 0.
+            position_embedding_type (str, optional): The type of position embedding to use (e.g., 'absolute'). Defaults to 'absolute'.
+            use_cache (bool, optional): Whether to use cache for the transformer encoder. Defaults to True.
+        
+        Returns:
+            None. The method initializes the instance attributes with the provided values.
+        
+        Raises:
+            ValueError: If any of the provided parameters are not of the expected type or value range.
+        """
         super().__init__(**kwargs)
 
         self.vocab_size = vocab_size
@@ -136,6 +164,24 @@ class AlignTextConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
+
+        """
+        Loads a pretrained model configuration from a given model name or file path.
+        
+        Args:
+            cls (class): The class object itself.
+            pretrained_model_name_or_path (Union[str, os.PathLike]): The name or path of the pretrained model.
+                It can be either a string representing the model name or an os.PathLike object representing the file path.
+                Note that the model should be of type 'align' according to the configuration.
+                Using a model of different type may cause errors in some configurations.
+        
+        Returns:
+            PretrainedConfig: The loaded pretrained model configuration.
+        
+        Raises:
+            None.
+        
+        """
         config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
 
         # get the text config dict if we are loading from AlignConfig
@@ -247,6 +293,41 @@ class AlignVisionConfig(PretrainedConfig):
         drop_connect_rate: float = 0.2,
         **kwargs,
     ):
+
+        """
+        Initializes an instance of the `AlignVisionConfig` class.
+        
+        Args:
+            self: The instance of the class itself.
+            num_channels (int): The number of channels in the input image. Default is 3.
+            image_size (int): The size of the input image. Default is 600.
+            width_coefficient (float): The width coefficient for scaling the number of channels in each layer. Default is 2.0.
+            depth_coefficient (float): The depth coefficient for scaling the number of layers. Default is 3.1.
+            depth_divisor (int): The divisor for computing the number of output channels in each layer. Default is 8.
+            kernel_sizes (List[int]): The list of kernel sizes for each layer. Default is [3, 3, 5, 3, 5, 5, 3].
+            in_channels (List[int]): The list of input channels for each layer. Default is [32, 16, 24, 40, 80, 112, 192].
+            out_channels (List[int]): The list of output channels for each layer. Default is [16, 24, 40, 80, 112, 192, 320].
+            depthwise_padding (List[int]): The list of padding values for depthwise convolution layers. Default is [].
+            strides (List[int]): The list of stride values for each layer. Default is [1, 2, 2, 2, 1, 2, 1].
+            num_block_repeats (List[int]): The list of repeat counts for each block. Default is [1, 2, 2, 3, 3, 4, 1].
+            expand_ratios (List[int]): The list of expansion ratios for each block. Default is [1, 6, 6, 6, 6, 6, 6].
+            squeeze_expansion_ratio (float): The expansion ratio for the squeeze layer. Default is 0.25.
+            hidden_act (str): The activation function for the hidden layers. Default is 'swish'.
+            hidden_dim (int): The dimension of the hidden layers. Default is 2560.
+            pooling_type (str): The type of pooling to use. Default is 'mean'.
+            initializer_range (float): The range of the initializer. Default is 0.02.
+            batch_norm_eps (float): The epsilon value for batch normalization. Default is 0.001.
+            batch_norm_momentum (float): The momentum value for batch normalization. Default is 0.99.
+            drop_connect_rate (float): The rate at which to drop connections. Default is 0.2.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        """
         super().__init__(**kwargs)
 
         self.num_channels = num_channels
@@ -273,6 +354,22 @@ class AlignVisionConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
+
+        """
+        This method creates an instance of AlignVisionConfig from a pretrained model configuration.
+        
+        Args:
+            cls (class): The class object itself.
+            pretrained_model_name_or_path (Union[str, os.PathLike]): The name or path of the pretrained model configuration.
+                It can be either a string or a path-like object.
+            
+        Returns:
+            PretrainedConfig: An instance of PretrainedConfig class representing the configuration of the pretrained model.
+        
+        Raises:
+            - Warning: If the model type specified in the configuration is different from the model type of the class, a warning is issued
+                        because using a different model type may lead to errors in some configurations of models.
+        """
         config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
 
         # get the vision config dict if we are loading from AlignConfig
@@ -347,6 +444,23 @@ class AlignConfig(PretrainedConfig):
         initializer_range=0.02,
         **kwargs,
     ):
+
+        """Initializes an instance of the AlignConfig class.
+        
+        Args:
+            self: The instance of the AlignConfig class.
+            text_config (dict, optional): A dictionary containing configurations for text alignment. Defaults to None.
+            vision_config (dict, optional): A dictionary containing configurations for vision alignment. Defaults to None.
+            projection_dim (int, optional): The dimension of the projection. Defaults to 640.
+            temperature_init_value (float, optional): The initial value for temperature. Defaults to 1.0.
+            initializer_range (float, optional): The range for initializing variables. Defaults to 0.02.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         super().__init__(**kwargs)
 
         if text_config is None:

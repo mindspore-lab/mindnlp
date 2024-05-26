@@ -121,6 +121,38 @@ class OPTConfig(PretrainedConfig):
         layer_norm_elementwise_affine=True,
         **kwargs,
     ):
+
+        ''' 
+        Initializes an instance of the OPTConfig class.
+        
+        Args:
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 50272.
+            hidden_size (int, optional): The size of the hidden layers. Defaults to 768.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 12.
+            ffn_dim (int, optional): The size of the feed-forward network. Defaults to 3072.
+            max_position_embeddings (int, optional): The maximum position embeddings. Defaults to 2048.
+            do_layer_norm_before (bool, optional): Whether to apply layer normalization before the attention layer. Defaults to True.
+            _remove_final_layer_norm (bool, optional): Whether to remove the final layer normalization. Defaults to False.
+            word_embed_proj_dim (int, optional): The dimension of word embedding projection. Defaults to None.
+            dropout (float, optional): The dropout rate. Defaults to 0.1.
+            attention_dropout (float, optional): The attention dropout rate. Defaults to 0.0.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 12.
+            activation_function (str, optional): The activation function. Defaults to 'relu'.
+            layerdrop (float, optional): The layer drop rate. Defaults to 0.0.
+            init_std (float, optional): The standard deviation for weight initialization. Defaults to 0.02.
+            use_cache (bool, optional): Whether to use cache. Defaults to True.
+            pad_token_id (int, optional): The ID for padding token. Defaults to 1.
+            bos_token_id (int, optional): The ID for beginning of sequence token. Defaults to 2.
+            eos_token_id (int, optional): The ID for end of sequence token. Defaults to 2.
+            enable_bias (bool, optional): Whether to enable bias. Defaults to True.
+            layer_norm_elementwise_affine (bool, optional): Whether to apply element-wise affine transformation for layer normalization. Defaults to True.
+        
+        Returns:
+            None. 
+        
+        Raises:
+            No specific exceptions are raised.
+        '''
         super().__init__(
             pad_token_id=pad_token_id,
             bos_token_id=bos_token_id,

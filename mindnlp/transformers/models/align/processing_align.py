@@ -40,6 +40,21 @@ class AlignProcessor(ProcessorMixin):
     tokenizer_class = ("BertTokenizer", "BertTokenizerFast")
 
     def __init__(self, image_processor, tokenizer):
+
+        """
+        Initializes an AlignProcessor object.
+        
+        Args:
+            self (object): The instance of the class.
+            image_processor (object): An object of the image processor class that handles image processing.
+            tokenizer (object): An object of the tokenizer class that handles text tokenization.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         super().__init__(image_processor, tokenizer)
 
     def __call__(self, text=None, images=None, padding="max_length", max_length=64, return_tensors=None, **kwargs):
@@ -116,6 +131,19 @@ class AlignProcessor(ProcessorMixin):
 
     @property
     def model_input_names(self):
+
+        """
+        This method retrieves the input names required for the model from the tokenizer and image processor.
+        
+        Args:
+            self: The instance of the AlignProcessor class.
+            
+        Returns:
+            list: A list of unique input names required for the model, which are obtained by combining the input names from the tokenizer and image processor.
+        
+        Raises:
+            None
+        """
         tokenizer_input_names = self.tokenizer.model_input_names
         image_processor_input_names = self.image_processor.model_input_names
         return list(dict.fromkeys(tokenizer_input_names + image_processor_input_names))

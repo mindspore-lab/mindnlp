@@ -206,6 +206,33 @@ class Conv2d(_UniformOperator):
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  data_format: str = 'NCHW') -> None:
+
+        r"""
+        Initializes a Conv2d layer.
+        
+        Args:
+        - self: The instance of the Conv2d class.
+        - in_channels (int): Number of input channels.
+        - out_channels (int): Number of output channels.
+        - kernel_size (_size_2_t): Size of the convolutional kernel.
+        - stride (_size_2_t): Stride of the convolution operation.
+        - pad_mode (str): Padding mode for the convolution operation.
+        - padding (_size_2_t): Padding size.
+        - dilation (_size_2_t): Dilation rate for the convolution operation.
+        - group (int): Number of groups for grouped convolution.
+        - has_bias (bool): Whether to include bias in the convolution operation.
+        - weight_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization method for the weights.
+        - bias_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization method for the bias.
+        - data_format (str): Format of the input data (e.g., 'NCHW').
+        
+        Returns:
+        None. This method does not return anything.
+        
+        Raises:
+        - ValueError: If an invalid parameter value is provided.
+        - TypeError: If the input parameters are of incorrect types.
+        - NotImplementedError: If certain functionality is not yet implemented.
+        """
         super(Conv2d, self).__init__(HConv2d,
                                      ConvImpl,
                                      in_channels=in_channels,
@@ -357,6 +384,30 @@ class Conv1d(_UniformOperator):
                  has_bias: bool = False,
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros') -> None:
+
+        r"""
+        Initializes a 1D convolutional layer.
+        
+        Args:
+            self: The object instance itself.
+            in_channels (int): The number of channels in the input tensor.
+            out_channels (int): The number of channels produced by the convolution.
+            kernel_size (_size_1_t): The size of the convolutional kernel.
+            stride (_size_1_t, optional): The stride of the convolution. Defaults to 1.
+            pad_mode (str, optional): The padding mode. Defaults to 'same'.
+            padding (_size_1_t, optional): The size of the padding. Defaults to 0.
+            dilation (_size_1_t, optional): The spacing between kernel elements. Defaults to 1.
+            group (int, optional): Number of blocked connections from input channels to output channels. Defaults to 1.
+            has_bias (bool, optional): Indicates whether the layer uses a bias. Defaults to False.
+            weight_init (Union[Tensor, str, Initializer, numbers.Number], optional): The weight initialization. Defaults to 'normal'.
+            bias_init (Union[Tensor, str, Initializer, numbers.Number], optional): The bias initialization. Defaults to 'zeros'.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super(Conv1d, self).__init__(HConv1d,
                                      ConvImpl,
                                      in_channels=in_channels,
@@ -549,6 +600,31 @@ class Conv3d(_UniformOperator):
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  data_format: str = 'NCDHW') -> None:
+
+        r"""
+        Initializes a Conv3d layer.
+        
+        Args:
+            self: The object instance.
+            in_channels (int): Number of channels in the input tensor.
+            out_channels (int): Number of channels produced by the convolution.
+            kernel_size (_size_3_t): Size of the convolution kernel.
+            stride (_size_3_t): Stride of the convolution. Default is 1.
+            pad_mode (str): Padding mode. Default is 'same'.
+            padding (_size_3_t): Padding added to all sides of the input. Default is 0.
+            dilation (_size_3_t): Spacing between kernel elements. Default is 1.
+            group (int): Number of blocked connections from input channels to output channels. Default is 1.
+            has_bias (bool): Whether the layer uses a bias vector. Default is False.
+            weight_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization method for the weight tensor. Default is 'normal'.
+            bias_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization method for the bias tensor. Default is 'zeros'.
+            data_format (str): Format of the input data. Default is 'NCDHW'.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None
+        """
         super(Conv3d, self).__init__(HConv3d,
                                      ConvImpl,
                                      in_channels=in_channels,
@@ -654,6 +730,27 @@ class BatchNorm1d(_UniformOperator):
                  moving_mean_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
                  use_batch_statistics: bool = True) -> None:
+
+        r"""
+        Initialize the BatchNorm1d layer.
+        
+        Args:
+        - num_features (int): Number of features in the input tensor.
+        - eps (float, optional): The epsilon value used for numerical stability in the calculation. Default is 1e-05.
+        - momentum (float, optional): The momentum value for moving average calculation. Default is 0.9.
+        - affine (bool, optional): If True, learnable affine parameters are applied. Default is True.
+        - gamma_init (Union[Tensor, str, Initializer, numbers.Number], optional): Initialization for the gamma parameter. Default is 'ones'.
+        - beta_init (Union[Tensor, str, Initializer, numbers.Number], optional): Initialization for the beta parameter. Default is 'zeros'.
+        - moving_mean_init (Union[Tensor, str, Initializer, numbers.Number], optional): Initialization for the moving mean parameter. Default is 'zeros'.
+        - moving_var_init (Union[Tensor, str, Initializer, numbers.Number], optional): Initialization for the moving variance parameter. Default is 'ones'.
+        - use_batch_statistics (bool, optional): If True, use batch statistics during training. Default is True.
+        
+        Returns:
+        - None: This method does not return any value.
+        
+        Raises:
+        - None
+        """
         super(BatchNorm1d, self).__init__(HBatchNorm1d,
                                           BatchNormImpl,
                                           num_features=num_features,
@@ -760,6 +857,29 @@ class BatchNorm2d(_UniformOperator):
                  moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
                  use_batch_statistics: bool = True,
                  data_format='NCHW') -> None:
+
+        r"""
+        Initializes a BatchNorm2d object.
+        
+        Args:
+            self: The instance of the BatchNorm2d class.
+            num_features (int): The number of features in the input tensor.
+            eps (float, optional): A value added to the denominator for numerical stability. Default is 1e-05.
+            momentum (float, optional): The value used for the running mean and variance computation. Default is 0.9.
+            affine (bool, optional): If set to True, the module has learnable affine parameters. Default is True.
+            gamma_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value or method for the gamma parameter. Default is 'ones'.
+            beta_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value or method for the beta parameter. Default is 'zeros'.
+            moving_mean_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value or method for the moving mean parameter. Default is 'zeros'.
+            moving_var_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value or method for the moving variance parameter. Default is 'ones'.
+            use_batch_statistics (bool, optional): If set to True, batch statistics are used during training. Default is True.
+            data_format (str, optional): The input format of the data. Default is 'NCHW'.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         super(BatchNorm2d, self).__init__(HBatchNorm2d,
                                           BatchNormImpl,
                                           num_features=num_features,
@@ -866,6 +986,31 @@ class BatchNorm3d(_UniformOperator):
                  moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
                  use_batch_statistics: bool = True,
                  data_format='NCDHW') -> None:
+
+        
+        """
+        Initializes a BatchNorm3d instance.
+        
+        Args:
+            self: The object itself.
+            num_features (int): The number of input features.
+            eps (float): The value added to the denominator for numerical stability (default is 1e-05).
+            momentum (float): The value used for the running mean and variance computation (default is 0.9).
+            affine (bool): A boolean value indicating whether to learn the affine parameters (default is True).
+            gamma_init (Union[Tensor, str, Initializer, numbers.Number]): The initializer for the gamma tensor (default is 'ones').
+            beta_init (Union[Tensor, str, Initializer, numbers.Number]): The initializer for the beta tensor (default is 'zeros').
+            moving_mean_init (Union[Tensor, str, Initializer, numbers.Number]): The initializer for the moving mean (default is 'zeros').
+            moving_var_init (Union[Tensor, str, Initializer, numbers.Number]): The initializer for the moving variance (default is 'ones').
+            use_batch_statistics (bool): A boolean value indicating whether to use batch statistics during training (default is True).
+            data_format (str): The format of input data, either 'NCDHW' or 'NDHWC' (default is 'NCDHW').
+        
+        Returns:
+            None. This method initializes a BatchNorm3d instance.
+        
+        Raises:
+            None.
+        """
+        
         super(BatchNorm3d, self).__init__(HBatchNorm3d,
                                           BatchNormImpl,
                                           num_features=num_features,
@@ -949,6 +1094,26 @@ class Dense(_UniformOperator):
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  has_bias: bool = True) -> None:
+
+        r"""
+        __init__
+        
+        Initializes a Dense layer.
+        
+        Args:
+            self: The instance of the class.
+            in_channels (int): The number of input channels.
+            out_channels (int): The number of output channels.
+            weight_init (Union[Tensor, str, Initializer, numbers.Number], optional): The weight initialization method. Default is 'normal'.
+            bias_init (Union[Tensor, str, Initializer, numbers.Number], optional): The bias initialization method. Default is 'zeros'.
+            has_bias (bool, optional): Indicates whether the layer has bias. Default is True.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super(Dense, self).__init__(HDense,
                                     DenseImpl,
                                     in_channels=in_channels,

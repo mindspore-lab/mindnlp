@@ -69,6 +69,29 @@ class InternLMTokenizer(PreTrainedTokenizer):
         clean_up_tokenization_spaces=False,
         **kwargs,
     ):
+
+        """
+        Initializes an instance of the InternLMTokenizer class.
+        
+        Args:
+            self: An instance of the InternLMTokenizer class.
+            vocab_file (str): The path to the vocabulary file.
+            unk_token (str, optional): The unknown token. Defaults to '<unk>'.
+            bos_token (str, optional): The beginning of sentence token. Defaults to '<s>'.
+            eos_token (str, optional): The end of sentence token. Defaults to '</s>'.
+            pad_token (str, optional): The padding token. Defaults to None.
+            sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional keyword arguments for the SentencePieceProcessor. Defaults to None.
+            add_bos_token (bool, optional): Whether to add the bos_token to the vocabulary. Defaults to True.
+            add_eos_token (bool, optional): Whether to add the eos_token to the vocabulary. Defaults to False.
+            clean_up_tokenization_spaces (bool, optional): Whether to clean up tokenization spaces. Defaults to False.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         self.sp_model_kwargs = {} if sp_model_kwargs is None else sp_model_kwargs
         self.sp_model = spm.SentencePieceProcessor(**self.sp_model_kwargs)
         self.sp_model.Load(vocab_file)
@@ -93,11 +116,38 @@ class InternLMTokenizer(PreTrainedTokenizer):
         self.add_eos_token = add_eos_token
 
     def __getstate__(self):
+
+        """
+        Method '__getstate__' in the class 'InternLMTokenizer' is used to retrieve the state of the object for pickling or serialization purposes.
+        
+        Args:
+            self: An instance of the 'InternLMTokenizer' class.
+        
+        Returns:
+            None: This method does not explicitly return any value. However, it modifies the state of the object by setting the 'sp_model' attribute to None and returns the modified state as a dictionary.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         state = self.__dict__.copy()
         state["sp_model"] = None
         return state
 
     def __setstate__(self, d):
+
+        """
+        Sets the state of the InternLMTokenizer object.
+        
+        Args:
+            self (InternLMTokenizer): The instance of the InternLMTokenizer class.
+            d (dict): The dictionary containing the state information to be set. The dictionary should have the '__dict__' attribute which stores the internal state of the object.
+            
+        Returns:
+            None: This method does not return any value.
+            
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         self.__dict__ = d
         self.sp_model = spm.SentencePieceProcessor(**self.sp_model_kwargs)
         self.sp_model.Load(self.vocab_file)
@@ -173,6 +223,21 @@ class InternLMTokenizer(PreTrainedTokenizer):
         return (out_vocab_file,)
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
+
+        """
+        Method to build input tokens with special tokens for an internal language model tokenizer.
+        
+        Args:
+            self (InternLMTokenizer): The instance of the InternLMTokenizer class.
+            token_ids_0 (list): List of token IDs for the first input sequence.
+            token_ids_1 (list, optional): List of token IDs for the second input sequence. Defaults to None.
+        
+        Returns:
+            list: A list of token IDs with special tokens added at the beginning and end of each input sequence.
+        
+        Raises:
+            None
+        """
         bos_token_id = [self.bos_token_id] if self.add_bos_token else []
         eos_token_id = [self.eos_token_id] if self.add_eos_token else []
 

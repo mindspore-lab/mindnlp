@@ -42,8 +42,51 @@ class _UniformOperator(Cell):
                  hc_op,
                  hc_impl,
                  **kwargs) -> None:
+
+        r"""
+        Initializes an instance of the '_UniformOperator' class.
+        
+        Args:
+            self: The instance of the class (automatically passed).
+            hc_op: The class or function representing the high-level operation to be performed.
+                   This parameter is required and must be a callable object.
+            hc_impl: The object implementing the high-level operation.
+                     This parameter is required and must be an instance of a class or a callable object.
+            **kwargs: Additional keyword arguments that might be required by the 'hc_op' implementation.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        Note:
+            This method initializes the instance by assigning the 'hc_op' and 'hc_impl' parameters
+            to the instance attributes 'op' and 'hc_impl' respectively. These attributes can be accessed
+            throughout the class to perform the desired high-level operation.
+        
+        Example:
+            hc_op = HighLevelOperation()  # Create a high-level operation object
+            hc_impl = HighLevelImplementation()  # Create a high-level implementation object
+            
+            uniform_operator = _UniformOperator(hc_op, hc_impl)  # Initialize the '_UniformOperator' instance
+        """
         super().__init__()
         self.op = hc_op(hc_impl, **kwargs)
 
     def construct(self, x):
+
+        r"""
+        Construct a new instance of the _UniformOperator class.
+        
+        Args:
+            self (_UniformOperator): The instance of the _UniformOperator class.
+            x: The input value for the construction.
+        
+        Returns:
+            None: This method returns None.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
         return self.op(x)

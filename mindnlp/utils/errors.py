@@ -36,6 +36,21 @@ class MSHTTPError(HTTPError):
     server_message: Optional[str] = None
 
     def __init__(self, message: str, response: Optional[Response] = None):
+
+        """
+        Initializes an instance of MSHTTPError.
+        
+        Args:
+            self: The instance of the MSHTTPError class.
+            message (str): The error message associated with the HTTP error.
+            response (Optional[Response]): The optional response object received during the HTTP request. Defaults to None.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            JSONDecodeError: If an error occurs while decoding the JSON response.
+        """
         # Parse server information if any.
         if response is not None:
             self.request_id = response.headers.get("X-Request-Id")
@@ -145,6 +160,19 @@ class LocalEntryNotFoundError(EntryNotFoundError, FileNotFoundError, ValueError)
     """
 
     def __init__(self, message: str):
+
+        """Initialize a LocalEntryNotFoundError object.
+        
+        Args:
+            self (LocalEntryNotFoundError): The instance of the LocalEntryNotFoundError class.
+            message (str): The error message associated with the exception.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         super().__init__(message, response=None)
 
 

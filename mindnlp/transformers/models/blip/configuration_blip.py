@@ -121,6 +121,39 @@ class BlipTextConfig(PretrainedConfig):
         label_smoothing=0.0,
         **kwargs,
     ):
+
+        """
+        Initializes a BlipTextConfig object with the given parameters.
+        
+        Args:
+            self: The BlipTextConfig instance.
+            vocab_size (int, optional): The size of the vocabulary. Default is 30524.
+            hidden_size (int, optional): The size of the hidden layers. Default is 768.
+            encoder_hidden_size (int, optional): The size of the encoder hidden layers. Default is 768.
+            intermediate_size (int, optional): The size of the intermediate layers. Default is 3072.
+            projection_dim (int, optional): The projection dimension. Default is 768.
+            num_hidden_layers (int, optional): The number of hidden layers. Default is 12.
+            num_attention_heads (int, optional): The number of attention heads. Default is 8.
+            max_position_embeddings (int, optional): The maximum position embeddings. Default is 512.
+            hidden_act (str, optional): The activation function for the hidden layers. Default is 'gelu'.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Default is 1e-12.
+            hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Default is 0.0.
+            attention_probs_dropout_prob (float, optional): The dropout probability for attention probabilities. Default is 0.0.
+            initializer_range (float, optional): The range for weight initialization. Default is 0.02.
+            bos_token_id (int, optional): The ID of the beginning of sentence token. Default is 30522.
+            eos_token_id (int, optional): The ID of the end of sentence token. Default is 2.
+            pad_token_id (int, optional): The ID of the padding token. Default is 0.
+            sep_token_id (int, optional): The ID of the separator token. Default is 102.
+            is_decoder (bool, optional): Whether the model is a decoder. Default is True.
+            use_cache (bool, optional): Whether to use cache for faster decoding. Default is True.
+            label_smoothing (float, optional): The label smoothing factor. Default is 0.0.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__(
             pad_token_id=pad_token_id,
             bos_token_id=bos_token_id,
@@ -148,6 +181,22 @@ class BlipTextConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
+
+        """
+        This method 'from_pretrained' in the class 'BlipTextConfig' is used to instantiate a model configuration object based on a pretrained model name or path.
+        
+        Args:
+            cls (class): The class object itself.
+            pretrained_model_name_or_path (Union[str, os.PathLike]): A string representing the name of a pretrained model or a valid path to a pretrained model configuration file. This parameter is mandatory and required for initializing the configuration object.
+        
+        Returns:
+            PretrainedConfig: An instance of 'PretrainedConfig' class representing the configuration settings of the pretrained model. The method returns the configuration object based on the provided pretrained model name or path.
+        
+        Raises:
+            - TypeError: If the provided 'pretrained_model_name_or_path' is not a string or a valid path-like object.
+            - KeyError: If the 'model_type' key is missing from the configuration dictionary.
+            - Warning: If the model type in the configuration dictionary does not match the class model type, a warning message is logged as this may lead to errors during instantiation.
+        """
         config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
 
         # get the text config dict if we are loading from BlipConfig
@@ -229,6 +278,30 @@ class BlipVisionConfig(PretrainedConfig):
         initializer_range=1e-10,
         **kwargs,
     ):
+
+        '''
+        Initializes a BlipVisionConfig instance.
+        
+        Args:
+            self: The object instance.
+            hidden_size (int, optional): The size of the hidden layers. Defaults to 768.
+            intermediate_size (int, optional): The size of the intermediate layers. Defaults to 3072.
+            projection_dim (int, optional): The dimension of the projected output. Defaults to 512.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 12.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 12.
+            image_size (int, optional): The size of the input image. Defaults to 384.
+            patch_size (int, optional): The size of the image patch. Defaults to 16.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Defaults to 1e-05.
+            attention_dropout (float, optional): The dropout rate for attention layers. Defaults to 0.0.
+            initializer_range (float, optional): The range for parameter initialization. Defaults to 1e-10.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        '''
         super().__init__(**kwargs)
 
         self.hidden_size = hidden_size
@@ -245,6 +318,25 @@ class BlipVisionConfig(PretrainedConfig):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: Union[str, os.PathLike], **kwargs) -> "PretrainedConfig":
+
+        """
+        This method 'from_pretrained' in the class 'BlipVisionConfig' is used to create a new instance of the class by loading a pretrained model configuration.
+        
+        Args:
+            cls (class): The class object itself, automatically passed as the first argument.
+            pretrained_model_name_or_path (Union[str, os.PathLike]): A string representing the name or path of the pretrained model. It can be either a string or a PathLike object. This parameter is used to fetch the configuration dictionary for the pretrained model.
+        
+        Returns:
+            PretrainedConfig: An instance of the 'PretrainedConfig' class representing the configuration of the pretrained model. The method returns this configuration for further use.
+        
+        Raises:
+            No specific exceptions are documented to be raised by this method based on the provided code snippet. However, potential exceptions might include:
+            - KeyError: If the 'model_type' key is missing in the configuration dictionary.
+            - AttributeError: If the 'model_type' attribute is not present in the class.
+            - Warning: If the model type being used is different from the expected model type, a warning message is logged.
+        
+        Note: It is recommended to handle exceptions that may occur during the execution of this method to ensure proper error handling and flow control.
+        """
         config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
 
         # get the vision config dict if we are loading from BlipConfig
@@ -323,6 +415,25 @@ class BlipConfig(PretrainedConfig):
         label_smoothing=0.0,
         **kwargs,
     ):
+
+        """
+        Initializes a BlipConfig object with the provided parameters.
+        
+        Args:
+            self (BlipConfig): The instance of the BlipConfig class.
+            text_config (dict, optional): Configuration parameters for text. Defaults to None.
+            vision_config (dict, optional): Configuration parameters for vision. Defaults to None.
+            projection_dim (int, optional): The dimension of the projection. Defaults to 512.
+            logit_scale_init_value (float, optional): The initial value for logit scaling. Defaults to 2.6592.
+            image_text_hidden_size (int, optional): The size of the hidden layer for image and text. Defaults to 256.
+            label_smoothing (float, optional): The amount of label smoothing. Defaults to 0.0.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(**kwargs)
 
         if text_config is None:

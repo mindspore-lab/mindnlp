@@ -67,6 +67,25 @@ class SchemaTree:
     """
 
     def __init__(self, name="root", children=None):
+
+        """
+        Initializes an instance of the SchemaTree class.
+        
+        Args:
+            self: The instance of the class (automatically passed).
+            name (str, optional): The name of the SchemaTree instance. Defaults to 'root'.
+            children (list, optional): A list of child SchemaTree instances. Defaults to None.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        This method initializes a SchemaTree instance with the provided name and children. If no name is provided, the default name is set to 'root'. If no children are provided, an empty list is assigned to the 'children' attribute. The 'prefix', 'parent_relations', and 'parent' attributes are also initialized with None.
+        
+        If children are provided, each child is added to the instance using the add_child() method.
+        """
         self.name = name
         self.children = []
         self.prefix = None
@@ -77,6 +96,20 @@ class SchemaTree:
                 self.add_child(child)
 
     def __repr__(self):
+
+        """
+        Args:
+            self: SchemaTree
+                The instance of the SchemaTree class for which the representation is being generated.
+                This parameter is automatically passed in when the method is called and should not be explicitly provided.
+        
+        Returns:
+            None
+            This method returns None as it is used to generate a string representation of the SchemaTree instance.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         return self.name
 
     def add_child(self, node):

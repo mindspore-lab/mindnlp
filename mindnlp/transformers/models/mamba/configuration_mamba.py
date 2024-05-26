@@ -130,6 +130,42 @@ class MambaConfig(PretrainedConfig):
         use_cache=True,
         **kwargs,
     ):
+
+        '''
+        Initializes a new instance of the MambaConfig class.
+        
+        Args:
+            self (MambaConfig): The current instance of the MambaConfig class.
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 50280.
+            hidden_size (int, optional): The size of the hidden state. Defaults to 768.
+            state_size (int, optional): The size of the state. Defaults to 16.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 32.
+            layer_norm_epsilon (float, optional): The epsilon value for layer normalization. Defaults to 1e-05.
+            pad_token_id (int, optional): The token ID for padding. Defaults to 0.
+            bos_token_id (int, optional): The token ID for the beginning of sequence. Defaults to 0.
+            eos_token_id (int, optional): The token ID for the end of sequence. Defaults to 0.
+            expand (int, optional): The expansion factor. Defaults to 2.
+            conv_kernel (int, optional): The kernel size for convolution. Defaults to 4.
+            use_bias (bool, optional): Whether to use bias. Defaults to False.
+            use_conv_bias (bool, optional): Whether to use bias in convolution. Defaults to True.
+            hidden_act (str, optional): The activation function for hidden layers. Defaults to 'silu'.
+            initializer_range (float, optional): The range for weight initialization. Defaults to 0.1.
+            residual_in_fp32 (bool, optional): Whether to keep residual in FP32. Defaults to True.
+            time_step_rank (str or int, optional): The rank or 'auto' for time step. Defaults to 'auto'.
+            time_step_scale (float, optional): The scale factor for time step. Defaults to 1.0.
+            time_step_min (float, optional): The minimum value for time step. Defaults to 0.001.
+            time_step_max (float, optional): The maximum value for time step. Defaults to 0.1.
+            time_step_init_scheme (str, optional): The initialization scheme for time step. Defaults to 'random'.
+            time_step_floor (float, optional): The floor value for time step. Defaults to 0.0001.
+            rescale_prenorm_residual (bool, optional): Whether to rescale pre-norm residuals. Defaults to False.
+            use_cache (bool, optional): Whether to use cache. Defaults to True.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        '''
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
         self.state_size = state_size

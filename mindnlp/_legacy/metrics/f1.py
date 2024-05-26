@@ -117,6 +117,20 @@ class F1Score(Metric):
 
     """
     def __init__(self, name='F1Score'):
+
+        r"""
+        Initializes an instance of the F1Score class.
+        
+        Args:
+            self: The instance of the F1Score class.
+            name (str, optional): The name of the F1Score instance. Defaults to 'F1Score'.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         self._name = name
         self.epsilon = sys.float_info.min

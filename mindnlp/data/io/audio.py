@@ -352,15 +352,46 @@ SUPPORTED_WAVE_FORMATS = {WaveFormat.PCM, WaveFormat.IEEE_FLOAT}
 
 
 class WavFileWarning(UserWarning):
+
+    r"""
+    Represents a warning related to WAV file operations.
+    
+    This class inherits from UserWarning and is used to indicate warnings specific to WAV file handling in Python.
+    """
     pass
 
 
 class Endian:
+
+    r"""
+    The Endian class represents a utility for handling endianness in binary data.
+    
+    This class provides methods for converting between little-endian and big-endian representations of binary data.
+    
+    The Endian class inherits from the base class Object.
+    """
     big_endian = "big endian"
     small_endian = "small endian"
 
 
 def _fmt_chunk(file_to_read, endian):
+
+    
+    """
+    This function reads and validates the chunk of a wave file.
+    
+    Args:
+        file_to_read (file object): The file object representing the wave file to be read.
+        endian (Endian): The endian type (big or little) to be used for interpreting binary data.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        ValueError: If the binary structure of the wave file is not compliant with the expected format.
+        ValueError: If the wave file format is unknown or not supported.
+    """
+    
     if endian == Endian.big_endian:
         fmt = ">"
     else:
@@ -450,6 +481,28 @@ def _data_chunk(
     offset,
     duration,
 ):
+
+    r"""
+    Args:
+        file_to_read (file object): The file object representing the WAV file to read.
+        format_tag (int): The format tag indicating the type of waveform data in the WAV file.
+        channels (int): The number of audio channels in the WAV file.
+        bit_depth (int): The number of bits per sample in the audio data.
+        endian (Enum 'Endian'): The endianess of the audio data in the WAV file.
+        samplerate (int): The sample rate of the audio data in the WAV file.
+        block_align (int): The block alignment value of the audio data in the WAV file.
+        offset (float): The offset in seconds from where to start reading audio data.
+        duration (float): The duration in seconds for which to read audio data.
+    
+    Returns:
+        None. The function processes the audio data from the WAV file.
+    
+    Raises:
+        ValueError: 
+            - If the bit depth is unsupported for PCM or IEEE_FLOAT format.
+            - If the wave file format is unknown or not supported.
+        io.UnsupportedOperation: If there is an issue reading the file data.
+    """
     if endian == Endian.big_endian:
         fmt = ">"
     else:
@@ -544,6 +597,21 @@ def _data_chunk(
 
 
 def _skip_unknown_chunk(file_to_read, endian):
+
+    
+    """
+    Args:
+        file_to_read (file object): The file to read from.
+        endian (int): The endian format to use for reading the file. Should be either Endian.big_endian or Endian.little_endian.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        IOError: If an I/O error occurs while reading the file.
+        struct.error: If there is an error in unpacking the data.
+    """
+    
     if endian == Endian.big_endian:
         fmt = ">I"
     else:
@@ -901,6 +969,16 @@ PaddedData = collections.namedtuple("PaddedData", ["data", "lengths"])
 
 
 def pin_memory(data):
+
+    r"""
+    This function takes a parameter 'data' which can be of any data type. It is used to pin the memory of the input data for efficient transfer between CPU and GPU. 
+    
+    Returns:
+    None
+    
+    Raises:
+    No specific exceptions are raised by this function.
+    """
     string_classes = (str, bytes)
     if isinstance(data, np.ndarray):
         return data.pin_memory()

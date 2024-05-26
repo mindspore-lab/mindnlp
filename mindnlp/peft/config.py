@@ -37,6 +37,19 @@ class PeftConfigMixin():
 
     @property
     def __dict__(self):
+
+        r"""
+        Method '__dict__' in the class 'PeftConfigMixin' returns a dictionary representation of the object using the 'asdict' function.
+        
+        Args:
+            self: The instance of the class. This parameter represents the object for which the dictionary representation is generated.
+        
+        Returns:
+            None. The method does not return any value explicitly, as the dictionary representation is retrieved internally.
+        
+        Raises:
+            No exceptions are explicitly raised by this method.
+        """
         return asdict(self)
 
     def to_dict(self):

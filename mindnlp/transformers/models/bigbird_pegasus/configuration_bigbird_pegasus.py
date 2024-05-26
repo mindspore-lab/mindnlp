@@ -141,6 +141,47 @@ class BigBirdPegasusConfig(PretrainedConfig):
         use_bias=False,
         **kwargs,
     ):
+
+        """
+        Initializes a new instance of the BigBirdPegasusConfig class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 96103.
+            max_position_embeddings (int, optional): The maximum number of positional embeddings. Defaults to 4096.
+            encoder_layers (int, optional): The number of encoder layers. Defaults to 16.
+            encoder_ffn_dim (int, optional): The dimension of the encoder feed-forward network. Defaults to 4096.
+            encoder_attention_heads (int, optional): The number of attention heads in the encoder. Defaults to 16.
+            decoder_layers (int, optional): The number of decoder layers. Defaults to 16.
+            decoder_ffn_dim (int, optional): The dimension of the decoder feed-forward network. Defaults to 4096.
+            decoder_attention_heads (int, optional): The number of attention heads in the decoder. Defaults to 16.
+            encoder_layerdrop (float, optional): The probability of dropping an encoder layer. Defaults to 0.0.
+            decoder_layerdrop (float, optional): The probability of dropping a decoder layer. Defaults to 0.0.
+            use_cache (bool, optional): Whether to use cache. Defaults to True.
+            is_encoder_decoder (bool, optional): Whether the model is an encoder-decoder. Defaults to True.
+            activation_function (str, optional): The activation function to be used. Defaults to 'gelu_new'.
+            d_model (int, optional): The model dimension. Defaults to 1024.
+            dropout (float, optional): The dropout probability. Defaults to 0.1.
+            attention_dropout (float, optional): The dropout probability for attention layers. Defaults to 0.0.
+            activation_dropout (float, optional): The dropout probability for activation layers. Defaults to 0.0.
+            init_std (float, optional): The standard deviation for weight initialization. Defaults to 0.02.
+            decoder_start_token_id (int, optional): The start token id for the decoder. Defaults to 2.
+            classifier_dropout (float, optional): The dropout probability for the classifier. Defaults to 0.0.
+            scale_embedding (bool, optional): Whether to scale the embeddings. Defaults to True.
+            pad_token_id (int, optional): The id for padding tokens. Defaults to 0.
+            bos_token_id (int, optional): The id for the beginning of sequence token. Defaults to 2.
+            eos_token_id (int, optional): The id for the end of sequence token. Defaults to 1.
+            attention_type (str, optional): The type of attention mechanism. Defaults to 'block_sparse'.
+            block_size (int, optional): The size of blocks for block_sparse attention. Defaults to 64.
+            num_random_blocks (int, optional): The number of random blocks for block_sparse attention. Defaults to 3.
+            use_bias (bool, optional): Whether to use bias. Defaults to False.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.d_model = d_model

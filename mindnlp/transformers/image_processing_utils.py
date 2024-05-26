@@ -464,6 +464,22 @@ class ImageProcessingMixin:
             writer.write(self.to_json_string())
 
     def __repr__(self):
+
+        """
+        __repr__
+        
+        This method returns a string representation of the ImageProcessingMixin object.
+        
+        Args:
+            self (ImageProcessingMixin): The instance of the ImageProcessingMixin class.
+                This parameter is used to reference the current instance of the ImageProcessingMixin class.
+        
+        Returns:
+            None: This method does not return any value explicitly, as it returns a string representation of the object.
+        
+        Raises:
+            No specific exceptions are documented to be raised by this method.
+        """
         return f"{self.__class__.__name__} {self.to_json_string()}"
 
     @classmethod
@@ -515,11 +531,42 @@ class ImageProcessingMixin:
 
 
 class BaseImageProcessor(ImageProcessingMixin):
+
+    """
+    Represents a base image processor that provides methods for image preprocessing operations such as rescaling, normalization, and center cropping.
+    
+    This class inherits from ImageProcessingMixin and serves as a template for concrete image processor implementations. Concrete image processors must implement their own preprocess method.
+    
+    Attributes:
+        Inherits all attributes from ImageProcessingMixin.
+    
+    Methods:
+        - __call__(self, images, **kwargs) -> BatchFeature: Preprocess an image or a batch of images.
+        - preprocess(self, images, **kwargs) -> BatchFeature: Abstract method to be implemented by concrete image processors.
+        - rescale(self, image, scale, data_format=None, input_data_format=None, **kwargs) -> np.ndarray: Rescale an image by a scale factor.
+        - normalize(self, image, mean, std, data_format=None, input_data_format=None, **kwargs) -> np.ndarray: Normalize an image using mean and standard deviation.
+        - center_crop(self, image, size, data_format=None, input_data_format=None, **kwargs) -> np.ndarray: Center crop an image to a specified size.
+    """
     def __call__(self, images, **kwargs) -> BatchFeature:
         """Preprocess an image or a batch of images."""
         return self.preprocess(images, **kwargs)
 
     def preprocess(self, images, **kwargs) -> BatchFeature:
+
+        """
+        Preprocess the given images using the implemented image processor.
+        
+        Args:
+            self (BaseImageProcessor): An instance of the BaseImageProcessor class.
+            images (list): A list of images to be preprocessed.
+        
+        Returns:
+            BatchFeature: The preprocessed images as a BatchFeature object.
+        
+        Raises:
+            NotImplementedError: If the preprocess method is not implemented in the specific image processor.
+        
+        """
         raise NotImplementedError("Each image processor must implement its own preprocess method")
 
     def rescale(
@@ -635,6 +682,18 @@ VALID_SIZE_DICT_KEYS = ({"height", "width"}, {"shortest_edge"}, {"shortest_edge"
 
 
 def is_valid_size_dict(size_dict):
+
+    """
+    Args:
+        size_dict (dict): A dictionary containing size information.
+            The keys in the dictionary should match a predefined set of valid keys.
+    
+    Returns:
+        None: Returns None if the size_dict is not a valid size dictionary.
+    
+    Raises:
+        None
+    """
     if not isinstance(size_dict, dict):
         return False
 
@@ -648,6 +707,40 @@ def is_valid_size_dict(size_dict):
 def convert_to_size_dict(
     size, max_size: Optional[int] = None, default_to_square: bool = True, height_width_order: bool = True
 ):
+
+    """
+    Converts a size input into a dictionary representation.
+    
+    Args:
+        size (int or tuple/list): The size input to be converted.
+            - If an integer is provided and `default_to_square` is True, it creates a square size dictionary with both height and width values set to the given size.
+            - If an integer is provided and `default_to_square` is False, it creates a size dictionary with the shortest edge set to the given size. Optionally, the longest edge can be specified using the `max_size` parameter.
+            - If a tuple or list is provided and `height_width_order` is True, it creates a size dictionary with the first element representing the height and the second element representing the width.
+            - If a tuple or list is provided and `height_width_order` is False, it creates a size dictionary with the first element representing the width and the second element representing the height.
+            - If `size` is None and `max_size` is not None, it creates a size dictionary with the longest edge set to the `max_size`. Note that `default_to_square` must be False in this case.
+    
+        max_size (int, optional): The maximum size for the longest edge. Defaults to None.
+            - This parameter is only used when `size` is an integer and `default_to_square` is False.
+    
+        default_to_square (bool): A flag indicating whether the size dictionary should default to a square shape when `size` is an integer. Defaults to True.
+            - If True, the size dictionary will have both height and width values set to the provided size.
+            - If False, the size dictionary will have the shortest edge set to the provided size. Optionally, the longest edge can be specified using the `max_size` parameter.
+    
+        height_width_order (bool): A flag indicating whether the height and width order should follow the order of elements in the `size` tuple/list. Defaults to True.
+            - If True, the first element of the `size` tuple/list will be considered as the height and the second element as the width.
+            - If False, the first element of the `size` tuple/list will be considered as the width and the second element as the height.
+    
+    Returns:
+        dict or None: A dictionary representation of the converted size input.
+            - The dictionary will have the following keys:
+                - 'height' and 'width' (int): Representing the height and width of the size, respectively.
+                - 'shortest_edge' (int): Representing the size of the shortest edge, when `size` is an integer and `default_to_square` is False.
+                - 'longest_edge' (int): Representing the size of the longest edge, when `size` is an integer and `default_to_square` is False and `max_size` is provided.
+    
+    Raises:
+        ValueError: If the input combination is invalid and cannot be converted to a size dictionary.
+    
+    """
     # By default, if size is an int we assume it represents a tuple of (size, size).
     if isinstance(size, int) and default_to_square:
         if max_size is not None:

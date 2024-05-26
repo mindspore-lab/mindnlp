@@ -119,6 +119,37 @@ class BioGptConfig(PretrainedConfig):
         eos_token_id=2,
         **kwargs,
     ):
+
+        """
+        Initializes a new instance of the BioGptConfig class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_size (int): The size of the vocabulary. Defaults to 42384.
+            hidden_size (int): The size of the hidden layers. Defaults to 1024.
+            num_hidden_layers (int): The number of hidden layers. Defaults to 24.
+            num_attention_heads (int): The number of attention heads. Defaults to 16.
+            intermediate_size (int): The size of the intermediate layers. Defaults to 4096.
+            hidden_act (str): The activation function for the hidden layers. Defaults to 'gelu'.
+            hidden_dropout_prob (float): The dropout probability for the hidden layers. Defaults to 0.1.
+            attention_probs_dropout_prob (float): The dropout probability for the attention probabilities. Defaults to 0.1.
+            max_position_embeddings (int): The maximum number of position embeddings. Defaults to 1024.
+            initializer_range (float): The range for the initializer. Defaults to 0.02.
+            layer_norm_eps (float): The epsilon value for layer normalization. Defaults to 1e-12.
+            scale_embedding (bool): Whether to scale the embedding. Defaults to True.
+            use_cache (bool): Whether to use caching. Defaults to True.
+            layerdrop (float): The probability of dropping a layer. Defaults to 0.0.
+            activation_dropout (float): The dropout probability for the activation. Defaults to 0.0.
+            pad_token_id (int): The id of the padding token. Defaults to 1.
+            bos_token_id (int): The id of the beginning-of-sentence token. Defaults to 0.
+            eos_token_id (int): The id of the end-of-sentence token. Defaults to 2.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.hidden_size = hidden_size

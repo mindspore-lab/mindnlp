@@ -51,6 +51,25 @@ class VocabParallelEmbedding(nn.Cell):
         init_method: Union[str, Initializer] = Zero(),
         dtype: mindspore.dtype = mindspore.float32,
     ) -> None:
+
+        r"""
+        Args:
+            vocab_size (int): The size of the vocabulary.
+            embedding_size (int): The size of the word embeddings.
+            padding_idx (Optional[int], optional): The index for padding. Defaults to None.
+            init_method (Union[str, Initializer]): The method for initializing the embedding weights. Can be a string representing the method (e.g., 'Zero') or an instance of the Initializer class.
+            dtype (mindspore.dtype): The data type of the embedding weights. Defaults to mindspore.float32.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If vocab_size is not a positive integer.
+            ValueError: If embedding_size is not a positive integer.
+            ValueError: If padding_idx is not None or a positive integer.
+            TypeError: If init_method is not a string or an instance of Initializer.
+            ValueError: If dtype is not a valid mindspore data type.
+        """
         super().__init__()
         # Keep the input dimensions.
         self.vocab_size = vocab_size
@@ -71,6 +90,34 @@ class VocabParallelEmbedding(nn.Cell):
                                 "weight")
 
     def construct(self, input_: Tensor) -> Tensor:  # type: ignore
+
+        r"""
+        Constructs a parallel embedding for the given input tensor.
+        
+        Args:
+            self (VocabParallelEmbedding): An instance of the VocabParallelEmbedding class.
+            input_ (Tensor): The input tensor to construct the parallel embedding for.
+        
+        Returns:
+            Tensor: A tensor representing the parallel embedding of the input tensor.
+        
+        Raises:
+            None
+        
+        This method constructs a parallel embedding for the input tensor by performing the following steps:
+        
+        1. Create an input mask by checking if each element in the input tensor is less than the vocab start index or greater than or equal to the vocab end index.
+        2. Subtract the vocab start index from the input tensor to obtain a masked input tensor.
+        3. Replace the masked elements in the input tensor with 0 using the input mask.
+        4. Get the shape of the masked input tensor.
+        5. Gather the embedding weights from the VocabParallelEmbedding instance using the masked input tensor as indices.
+        6. Reshape the gathered embedding weights to match the original shape of the masked input tensor.
+        7. Fill the masked elements in the gathered embedding weights with 0.0 using the input mask.
+        8. Reduce the output tensor from the model parallel region using the output_parallel tensor.
+        9. Return the final output tensor.
+        
+        Note: The vocab start index and vocab end index are properties of the VocabParallelEmbedding class, and the embedding size is also a property of the class.
+        """
         # Build the mask.
         input_mask = (input_ < self.vocab_start_index) | (
             input_ >= self.vocab_end_index
@@ -111,6 +158,24 @@ class ParallelEmbedding(nn.Cell):
         init_method: Union[str, Initializer] = Zero(),
         dtype: mindspore.dtype = mindspore.float32,
     ) -> None:
+
+        r"""Initialize the ParallelEmbedding class.
+        
+        Args:
+            vocab_size (int): The size of the vocabulary.
+            embedding_size (int): The size of each embedding vector.
+            padding_idx (Optional[int], optional): The index used for padding. Defaults to None.
+            init_method (Union[str, Initializer], optional): The method used for initializing the weight tensor. 
+                Can be a string representing the method name or an instance of mindspore.nn.initializer.Initializer.
+                Defaults to Zero().
+            dtype (mindspore.dtype, optional): The data type of the weight tensor. Defaults to mindspore.float32.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__()
         # Keep the input dimensions.
         self.vocab_size = vocab_size
@@ -128,6 +193,22 @@ class ParallelEmbedding(nn.Cell):
                                 "weight")
 
     def construct(self, input_: Tensor) -> Tensor:  # type: ignore
+
+        r"""
+        Constructs the parallel embedding for the given input tensor.
+        
+        Args:
+            self (ParallelEmbedding): The instance of the ParallelEmbedding class.
+            input_ (Tensor): The input tensor for which the parallel embedding is to be constructed. It should be a tensor compatible with the model parallel region.
+        
+        Returns:
+            Tensor: The constructed parallel embedding tensor of type Tensor. The shape and size of the tensor are determined by the input tensor and the embedding size per partition.
+        
+        Raises:
+            ModelParallelRegionError: If the input tensor is not compatible with the model parallel region.
+            TensorShapeError: If the shape of the input tensor does not match the expected shape for constructing the parallel embedding.
+            UnsupportedOperationError: If the operation is not supported for the given input tensor or embedding size per partition.
+        """
         input_parallel = copy_to_model_parallel_region(input_)
         ori_shape = input_parallel.shape
         output_parallel = ops.gather(self.weight, input_parallel.view(-1), 0).view(
@@ -169,6 +250,31 @@ class ColumnParallelLinear(nn.Cell):
         stride: int = 1,
         keep_master_weight_for_test: bool = False,
     ) -> None:
+
+        r"""
+        __init__
+        
+        Initialize the ColumnParallelLinear class.
+        
+        Args:
+            self: The object itself.
+            in_features (int): The size of each input sample.
+            out_features (int): The size of each output sample.
+            bias (bool, optional): If set to True, a bias term is included. Default is True.
+            gather_output (bool, optional): If set to True, the output from all devices will be gathered. Default is True.
+            init_method (Union[str, Initializer]): The method used for weight initialization. It can be a string specifying the method or an instance of Initializer. Default is Zero().
+            dtype (mindspore.dtype): The data type of the parameters. Default is mindspore.float32.
+            stride (int, optional): The stride of the convolution. Default is 1.
+            keep_master_weight_for_test (bool, optional): If set to True, master weight will be kept for testing. Default is False.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            - TypeError: If in_features, out_features, stride are not integers or if dtype is not a valid mindspore data type.
+            - ValueError: If out_features is not divisible by the rank size or if init_method is not a valid initialization method.
+            - RuntimeError: If an error occurs during parameter initialization.
+        """
         super().__init__()
 
         # Keep input parameters
@@ -198,6 +304,20 @@ class ColumnParallelLinear(nn.Cell):
         return gather_from_model_parallel_region(self.weight).swapaxes(0, 1)
 
     def construct(self, input_: Tensor) -> Tensor:  # type: ignore
+
+        r"""
+        Constructs the ColumnParallelLinear layer.
+        
+        Args:
+            self (ColumnParallelLinear): An instance of the ColumnParallelLinear class.
+            input_ (Tensor): The input tensor to the layer. It must have the shape (batch_size, input_dim).
+        
+        Returns:
+            Tensor: The output tensor of the layer. It will have the shape (batch_size, output_dim).
+        
+        Raises:
+            None.
+        """
         # Set up backprop all-reduce.
         input_parallel = copy_to_model_parallel_region(input_)
         # Matrix multiply.
@@ -250,6 +370,33 @@ class RowParallelLinear(nn.Cell):
         stride: int = 1,
         keep_master_weight_for_test: bool = False,
     ):
+
+        r"""
+        Initializes a RowParallelLinear object.
+        
+        Args:
+            in_features (int): Number of input features.
+            out_features (int): Number of output features.
+            bias (bool, optional): Whether to include bias in the linear transformation. Default is True.
+            input_is_parallel (bool, optional): Whether the input is parallelized. Default is False.
+            init_method (Union[str, Initializer], optional): Initialization method for weights. Default is Zero().
+            dtype (mindspore.dtype, optional): Data type of the tensors. Default is mindspore.float32.
+            stride (int, optional): Stride value for the linear transformation. Default is 1.
+            keep_master_weight_for_test (bool, optional): Whether to keep the master weight for testing. Default is False.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            - ValueError: If 'in_features' or 'out_features' is not an integer.
+            - TypeError: If 'bias', 'input_is_parallel', 'stride', or 'keep_master_weight_for_test' is not a boolean value.
+            - TypeError: If 'init_method' is not a string or an Initializer object.
+            - ValueError: If 'dtype' is not a valid mindspore data type.
+            - ValueError: If 'rank_size' cannot be determined.
+            - ValueError: If there is a remainder when dividing 'in_features' by 'rank_size'.
+            - ValueError: If the shape of the weight tensor does not match the calculated size per partition.
+            - ValueError: If the shape of the bias tensor does not match the number of output features.
+        """
         super().__init__()
 
         # Keep input parameters
@@ -278,6 +425,21 @@ class RowParallelLinear(nn.Cell):
         return gather_from_model_parallel_region(self.weight).swapaxes(0, 1)
 
     def construct(self, input_: Tensor) -> Tensor:  # type:ignore
+
+        r"""
+        This method constructs a linear layer operation in a row-parallel fashion.
+        
+        Args:
+            self (RowParallelLinear): The instance of the RowParallelLinear class.
+            input_ (Tensor): The input tensor to the linear layer operation. It should be of type Tensor.
+        
+        Returns:
+            Tensor: The output tensor resulting from the linear layer operation.
+        
+        Raises:
+            ValueError: If the input tensor is not of the expected type.
+            RuntimeError: If any runtime error occurs during the linear layer operation.
+        """
         # Set up backprop all-reduce.
         if self.input_is_parallel:
             input_parallel = input_

@@ -91,6 +91,28 @@ class Pop2PianoFeatureExtractor(SequenceFeatureExtractor):
         num_bars: int = 2,
         **kwargs,
     ):
+
+        """
+        Initializes a Pop2PianoFeatureExtractor object.
+        
+        Args:
+            self: The Pop2PianoFeatureExtractor object itself.
+            sampling_rate (int, optional): The sampling rate of the audio signal in Hz. Defaults to 22050.
+            padding_value (int, optional): The value used for padding the audio signal. Defaults to 0.
+            window_size (int, optional): The size of the analysis window in samples. Defaults to 4096.
+            hop_length (int, optional): The number of samples between successive frames. Defaults to 1024.
+            min_frequency (float, optional): The minimum frequency in Hz for the mel filters. Defaults to 10.0.
+            feature_size (int, optional): The size of the output feature representation. Defaults to 512.
+            num_bars (int, optional): The number of bars in each feature representation. Defaults to 2.
+            **kwargs: Additional keyword arguments to be passed to the parent class constructor.
+        
+        Returns:
+            None. This method does not return anything.
+        
+        Raises:
+            None.
+        
+        """
         super().__init__(
             feature_size=feature_size,
             sampling_rate=sampling_rate,
@@ -234,6 +256,25 @@ class Pop2PianoFeatureExtractor(SequenceFeatureExtractor):
         return padded_batch, extrapolated_beatstep
 
     def _pad(self, features: np.ndarray, add_zero_line=True):
+
+        """
+        Method _pad in class Pop2PianoFeatureExtractor.
+        
+        This method pads the input features and attention masks to ensure that they have the same shape for further processing.
+        
+        Args:
+            self (Pop2PianoFeatureExtractor): The instance of the Pop2PianoFeatureExtractor class.
+            features (np.ndarray): An array containing the input features to be padded. The shape of each feature should be consistent within the array.
+            add_zero_line (bool): A flag indicating whether to add a zero line at the end of each padded feature. Defaults to True.
+        
+        Returns:
+            tuple: A tuple containing the padded features and attention masks. The padded features are of type np.ndarray and have been concatenated along the 0th axis. The attention masks are also of type np.ndarray and have been concatenated along the 0th axis.
+        
+        Raises:
+            ValueError: If the input features are not of type np.ndarray or if the feature shapes are inconsistent.
+            TypeError: If the input features or attention masks are not of type np.ndarray.
+            ValueError: If the add_zero_line parameter is not a boolean value.
+        """
         features_shapes = [each_feature.shape for each_feature in features]
         attention_masks, padded_features = [], []
         for i, each_feature in enumerate(features):

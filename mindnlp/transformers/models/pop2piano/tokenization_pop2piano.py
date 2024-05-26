@@ -43,6 +43,19 @@ PRETRAINED_VOCAB_FILES_MAP = {
 }
 
 def token_time_to_note(number, cutoff_time_idx, current_idx):
+
+    """
+    Args:
+        number (int): The amount to increment the current index by.
+        cutoff_time_idx (int or None): The maximum index value allowed, can be None.
+        current_idx (int): The current index value.
+    
+    Returns:
+        None: The updated current index value, respecting the cutoff_time_idx if provided.
+    
+    Raises:
+        None
+    """
     current_idx += number
     if cutoff_time_idx is not None:
         current_idx = min(current_idx, cutoff_time_idx)
@@ -50,6 +63,24 @@ def token_time_to_note(number, cutoff_time_idx, current_idx):
     return current_idx
 
 def token_note_to_note(number, current_velocity, default_velocity, note_onsets_ready, current_idx, notes):
+
+    """
+    This function updates the notes list based on the given parameters.
+    
+    Args:
+        number (int): The number of the note.
+        current_velocity (int): The current velocity of the note.
+        default_velocity (int): The default velocity for the note.
+        note_onsets_ready (list or None): A list containing the onset index for each note. If an onset index is None, it means that the note has not yet started.
+        current_idx (int): The current index.
+        notes (list): A list containing the notes and their properties.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        None: This function does not raise any exceptions.
+    """
     if note_onsets_ready[number] is not None:
         # offset with onset
         onset_idx = note_onsets_ready[number]
@@ -94,6 +125,27 @@ class Pop2PianoTokenizer(PreTrainedTokenizer):
         bos_token="2",
         **kwargs,
     ):
+
+        """
+        This method initializes an instance of the Pop2PianoTokenizer class.
+        
+        Args:
+            self: The instance of the Pop2PianoTokenizer class.
+            vocab (str): The path to the vocabulary file.
+            default_velocity (int): The default velocity for the tokenizer, default value is 77.
+            num_bars (int): The number of bars.
+            unk_token (str or AddedToken): The unknown token for the tokenizer. If str, it will be converted to an AddedToken.
+            eos_token (str or AddedToken): The end-of-sequence token for the tokenizer. If str, it will be converted to an AddedToken.
+            pad_token (str or AddedToken): The padding token for the tokenizer. If str, it will be converted to an AddedToken.
+            bos_token (str or AddedToken): The beginning-of-sequence token for the tokenizer. If str, it will be converted to an AddedToken.
+        
+        Returns:
+            None. This method initializes the Pop2PianoTokenizer instance.
+        
+        Raises:
+            FileNotFoundError: If the 'vocab' file is not found.
+            JSONDecodeError: If there is an error decoding the JSON data from the 'vocab' file.
+        """
         unk_token = AddedToken(unk_token, lstrip=False, rstrip=False) if isinstance(unk_token, str) else unk_token
         eos_token = AddedToken(eos_token, lstrip=False, rstrip=False) if isinstance(eos_token, str) else eos_token
         pad_token = AddedToken(pad_token, lstrip=False, rstrip=False) if isinstance(pad_token, str) else pad_token

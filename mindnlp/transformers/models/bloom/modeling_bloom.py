@@ -118,7 +118,35 @@ def dropout_add(x: mindspore.Tensor, residual: mindspore.Tensor, prob: float, tr
 
 
 class BloomAttention(nn.Cell):
+
+    """
+    BloomAttention class represents an attention mechanism used in neural network models for processing sequential data. 
+    This class inherits from nn.Cell and includes methods for initializing the attention mechanism, splitting and merging heads, 
+    and constructing the attention mechanism for a specific layer. The attention mechanism involves performing operations on 
+    query, key, and value tensors to compute attention scores and produce context layers. Additionally, it supports features 
+    such as caching past layers, applying attention masks, and handling head masks. The class also provides options for 
+    fine-tuning the attention mechanism based on pretraining steps and optimization preferences.
+    """
     def __init__(self, config: BloomConfig):
+
+        """
+        Initialize the BloomAttention class.
+        
+        Args:
+            self: The instance of the BloomAttention class.
+            config (BloomConfig): An object of type BloomConfig that holds configuration parameters for the attention mechanism.
+                - pretraining_tp (bool): Indicates whether pretraining is used.
+                - slow_but_exact (bool): Indicates if the model focuses on accuracy even if it's slower.
+                - hidden_size (int): The size of the hidden layers in the model.
+                - n_head (int): The number of attention heads to be used.
+                - hidden_dropout (float): The dropout probability for hidden layers.
+        
+        Returns:
+            None. This method initializes various attributes of the BloomAttention instance.
+        
+        Raises:
+            ValueError: If the `hidden_size` is not divisible by `num_heads`, indicating an incompatible configuration.
+        """
         super().__init__()
 
         self.pretraining_tp = config.pretraining_tp
@@ -196,6 +224,27 @@ class BloomAttention(nn.Cell):
         use_cache: bool = False,
         output_attentions: bool = False,
     ):
+
+        """
+        Method 'construct' in the class 'BloomAttention'.
+        
+        Args:
+            self (BloomAttention): The instance of the BloomAttention class.
+            hidden_states (mindspore.Tensor): The input tensor representing the hidden states.
+            residual (mindspore.Tensor): The input tensor representing the residual connection.
+            alibi (mindspore.Tensor): The tensor used in the computation.
+            attention_mask (mindspore.Tensor): The tensor containing attention mask values.
+            layer_past (Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]): Tuple containing past key and value tensors. Default is None.
+            head_mask (Optional[mindspore.Tensor]): The tensor representing head mask. Default is None.
+            use_cache (bool): Flag indicating whether to use cache. Default is False.
+            output_attentions (bool): Flag indicating whether to output attention scores. Default is False.
+        
+        Returns:
+            None. This method does not return a value.
+        
+        Raises:
+            None specified.
+        """
         fused_qkv = self.query_key_value(hidden_states)  # [batch_size, seq_length, 3 x hidden_size]
 
         # 3 x [batch_size, seq_length, num_heads, head_dim]
@@ -278,7 +327,47 @@ class BloomAttention(nn.Cell):
 
 
 class BloomMLP(nn.Cell):
+
+    """
+    BloomMLP is a multi-layer perceptron (MLP) that is used for pre-training in natural language processing (NLP) tasks. This class inherits from nn.Cell and implements the forward propagation logic for the MLP. 
+    
+    Attributes:
+        pretraining_tp (int): The number of times the MLP will be pre-trained.
+        slow_but_exact (bool): Flag to indicate if the MLP should be trained slowly for accuracy.
+        hidden_dropout (float): The probability of an element being zeroed in the hidden layer during training.
+    
+    Methods:
+        __init__(self, config: BloomConfig): Initializes the BloomMLP object with the provided configuration.
+        construct(self, hidden_states: mindspore.Tensor, residual: mindspore.Tensor) -> mindspore.Tensor: Implements the forward propagation logic for the MLP. 
+    
+    Example usage:
+        config = BloomConfig(hidden_size=768, pretraining_tp=3, slow_but_exact=True, hidden_dropout=0.1)
+        mlp = BloomMLP(config)
+        hidden_states = mindspore.Tensor(shape=(1, 768, 10), dtype=mindspore.float32)
+        residual = mindspore.Tensor(shape=(1, 768, 10), dtype=mindspore.float32)
+        output = mlp.construct(hidden_states, residual)
+    
+    Note: The shapes of hidden_states and residual tensors must match for the forward propagation to work correctly.
+    """
     def __init__(self, config: BloomConfig):
+
+        """
+        Initializes an instance of the BloomMLP class.
+        
+        Args:
+            self: The instance of the class.
+            config (BloomConfig): The configuration object for the BloomMLP. It specifies the parameters and settings for the model.
+                - `hidden_size` (int): The size of the hidden layer.
+                - `pretraining_tp` (bool): A flag indicating whether the model is in pretraining mode.
+                - `slow_but_exact` (bool): A flag indicating whether the model should prioritize accuracy over speed.
+                - `hidden_dropout` (float): The dropout rate for the hidden layer.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         hidden_size = config.hidden_size
 
@@ -290,6 +379,23 @@ class BloomMLP(nn.Cell):
         self.hidden_dropout = config.hidden_dropout
 
     def construct(self, hidden_states: mindspore.Tensor, residual: mindspore.Tensor) -> mindspore.Tensor:
+
+        """
+        Constructs the output tensor for the BloomMLP model.
+        
+        Args:
+        - hidden_states (mindspore.Tensor): The input tensor representing hidden states.
+          This tensor is processed through the model to generate the final output.
+        - residual (mindspore.Tensor): The residual tensor to be added to the final output.
+          This tensor contains additional information to be incorporated in the output.
+        
+        Returns:
+        - mindspore.Tensor: The output tensor generated by the BloomMLP model.
+          This tensor represents the final result after processing the hidden states.
+        
+        Raises:
+        - N/A
+        """
         hidden_states = self.gelu_impl(self.dense_h_to_4h(hidden_states))
 
         if self.pretraining_tp > 1 and self.slow_but_exact:
@@ -309,7 +415,53 @@ class BloomMLP(nn.Cell):
 
 
 class BloomBlock(nn.Cell):
+
+    """
+    This class represents a block of the Bloom transformer model. It contains layers for self-attention and multi-layer perceptron (MLP) operations.
+    
+    Attributes:
+        input_layernorm (nn.LayerNorm): Layer normalization for the input hidden states.
+        num_heads (int): Number of attention heads.
+        self_attention (BloomAttention): Self-attention mechanism.
+        post_attention_layernorm (nn.LayerNorm): Layer normalization after the self-attention layer.
+        mlp (BloomMLP): Multi-layer perceptron for further processing.
+        apply_residual_connection_post_layernorm (bool): Flag indicating whether to apply residual connection after the post-attention layer normalization.
+        hidden_dropout (float): Dropout probability for the hidden states.
+    
+    Methods:
+        construct(hidden_states, alibi, attention_mask, layer_past, head_mask, use_cache, output_attentions):
+            Constructs the forward pass of the BloomBlock.
+            Args:
+                hidden_states (mindspore.Tensor): Input hidden states.
+                alibi (mindspore.Tensor): Tensor containing alibi information.
+                attention_mask (mindspore.Tensor): Tensor for masking attention scores.
+                layer_past (Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]): Past layer hidden states and attention masks.
+                head_mask (Optional[mindspore.Tensor]): Mask for attention heads.
+                use_cache (bool): Flag indicating whether to use cached values.
+                output_attentions (bool): Flag indicating whether to output attention scores.
+            Returns:
+                outputs (Tuple[mindspore.Tensor, ...]): Tuple containing the output tensor(s) and cached values, if applicable.
+    """
     def __init__(self, config: BloomConfig):
+
+        """
+        Initializes a BloomBlock object with the provided configuration.
+        
+        Args:
+            self (BloomBlock): The instance of the BloomBlock class.
+            config (BloomConfig): An object of type BloomConfig containing configuration parameters for the block.
+                - hidden_size (int): The size of the hidden layer.
+                - n_head (int): The number of attention heads.
+                - layer_norm_epsilon (float): The epsilon value for LayerNorm.
+                - apply_residual_connection_post_layernorm (bool): Flag indicating whether to apply residual connection post LayerNorm.
+                - hidden_dropout (float): The dropout rate for the hidden layers.
+        
+        Returns:
+            None. This method initializes the BloomBlock object with the specified configuration.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         hidden_size = config.hidden_size
 
@@ -333,6 +485,28 @@ class BloomBlock(nn.Cell):
         use_cache: bool = False,
         output_attentions: bool = False,
     ):
+
+        """
+        Constructs the BloomBlock.
+        
+        This method applies the BloomBlock layer to the input hidden states and returns the outputs. The BloomBlock applies self-attention mechanism followed by a feed-forward neural network.
+        
+        Args:
+            self (BloomBlock): The instance of the BloomBlock class.
+            hidden_states (mindspore.Tensor): The input hidden states tensor of shape (batch_size, sequence_length, hidden_size).
+            alibi (mindspore.Tensor): The alibi tensor of shape (batch_size, sequence_length, hidden_size).
+            attention_mask (mindspore.Tensor): The attention mask tensor of shape (batch_size, sequence_length).
+            layer_past (Optional[Tuple[mindspore.Tensor, mindspore.Tensor]]): Optional. The cached key-value pairs of the previous attention layers. Defaults to None.
+            head_mask (Optional[mindspore.Tensor]): Optional. The mask tensor to nullify selected heads of the self-attention layer. Defaults to None.
+            use_cache (bool): Optional. Whether to use cache for the attention layers. Defaults to False.
+            output_attentions (bool): Optional. Whether to output the attentions. Defaults to False.
+        
+        Returns:
+            Tuple[mindspore.Tensor, ...]: The outputs of the BloomBlock layer. The first element is the output tensor of shape (batch_size, sequence_length, hidden_size), followed by other optional outputs if `output_attentions` is True.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         # hidden_states: [batch_size, seq_length, hidden_size]
 
         # Layer norm at the beginning of the transformer layer.
@@ -380,6 +554,10 @@ class BloomBlock(nn.Cell):
 
 
 class BloomPreTrainedModel(PreTrainedModel):
+
+    """
+    BloomPreTrainedModel is a Python class that extends the functionality of PreTrainedModel. It provides methods for initializing weights and converting cache formats to be compatible with the Bloom model. The class includes functions for initializing weights based on the type of neural network cell and for standardizing or converting cache formats to match specific implementations. Utilize this class to facilitate pre-training tasks in NLP models with MindSpore framework.
+    """
     config_class = BloomConfig
     base_model_prefix = "transformer"
     supports_gradient_checkpointing = False
@@ -447,7 +625,49 @@ class BloomPreTrainedModel(PreTrainedModel):
 
 
 class BloomModel(BloomPreTrainedModel):
+
+    """
+    This class represents a custom implementation of a transformer model called BloomModel. 
+    It inherits from the BloomPreTrainedModel class and includes functionalities for building the model architecture, setting and getting input embeddings, and constructing the model for inference or training. 
+    
+    Attributes:
+        - embed_dim (int): The dimension of the word embeddings.
+        - num_heads (int): The number of attention heads in the model.
+        - word_embeddings (nn.Embedding): The word embeddings layer.
+        - word_embeddings_layernorm (nn.LayerNorm): Layer normalization for word embeddings.
+        - h (nn.CellList): List of BloomBlocks representing the hidden layers of the model.
+        - ln_f (nn.LayerNorm): Layer normalization for the final hidden states.
+        - gradient_checkpointing (bool): Flag indicating whether gradient checkpointing is enabled.
+    
+    Methods:
+        - build_alibi_tensor: Builds an alibi tensor for the model.
+        - get_input_embeddings: Retrieves the current input embeddings.
+        - set_input_embeddings: Updates the input embeddings with new values.
+        - construct: Constructs the model for inference or training, handling various input parameters and configurations.
+    
+    Note: This class is designed for custom transformer-based models and may require specific configurations and input formats.
+    """
     def __init__(self, config: BloomConfig):
+
+        """
+        Initialize the BloomModel with the provided configuration.
+        
+        Args:
+            self (BloomModel): The instance of the BloomModel class.
+            config (BloomConfig): An object containing configuration settings for the BloomModel.
+                - BloomConfig should include the following attributes:
+                - hidden_size (int): The size of the hidden layer.
+                - n_head (int): The number of attention heads.
+                - vocab_size (int): The size of the vocabulary.
+                - num_hidden_layers (int): The number of hidden layers.
+                - layer_norm_epsilon (float): The epsilon value for layer normalization.
+        
+        Returns:
+            None. This method initializes the BloomModel instance with the provided configuration settings.
+        
+        Raises:
+            None.
+        """
         super().__init__(config)
 
         self.embed_dim = config.hidden_size
@@ -469,12 +689,60 @@ class BloomModel(BloomPreTrainedModel):
         self.post_init()
 
     def build_alibi_tensor(self, attention_mask: mindspore.Tensor, num_heads: int, dtype) -> mindspore.Tensor:
+
+        '''
+        This method builds an alibi tensor based on the provided attention_mask, number of heads, and data type.
+        
+        Args:
+            self (BloomModel): The instance of the BloomModel class.
+            attention_mask (mindspore.Tensor): A tensor representing the attention mask.
+            num_heads (int): The number of attention heads to use in building the alibi tensor.
+            dtype: The data type of the tensor.
+        
+        Returns:
+            mindspore.Tensor: A tensor representing the built alibi tensor.
+        
+        Raises:
+            - ValueError: If the attention_mask is not a valid mindspore.Tensor.
+            - TypeError: If the num_heads is not an integer or if the dtype is not a valid data type.
+        '''
         return build_alibi_tensor(attention_mask, num_heads, dtype)
 
     def get_input_embeddings(self):
+
+        """
+        Returns the input embeddings of the BloomModel.
+        
+        Args:
+            self: An instance of the BloomModel class.
+        
+        Returns:
+            Returns the word embeddings of the input tokens.
+        
+        Raises:
+            None.
+        """
         return self.word_embeddings
 
     def set_input_embeddings(self, new_embeddings: mindspore.Tensor):
+
+        """
+        Sets the input embeddings for the BloomModel class.
+        
+        Args:
+            self (BloomModel): The instance of the BloomModel class.
+            new_embeddings (mindspore.Tensor): The new embeddings to set as input.
+                It should be a tensor representing the word embeddings.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        This method sets the word_embeddings attribute of the BloomModel instance to the provided new_embeddings.
+        The word_embeddings attribute is used as input for the model during forward propagation.
+        """
         self.word_embeddings = new_embeddings
 
     def construct(
@@ -490,6 +758,33 @@ class BloomModel(BloomPreTrainedModel):
         return_dict: Optional[bool] = None,
         **deprecated_arguments,
     ) -> Union[Tuple[mindspore.Tensor, ...], BaseModelOutputWithPastAndCrossAttentions]:
+
+        """
+        Constructs the BLOOM model based on the input parameters.
+        
+        Args:
+            self (BloomModel): An instance of the BloomModel class.
+            input_ids (Optional[mindspore.Tensor]): Input tensor of shape (batch_size, seq_length) containing the input tokens.
+            past_key_values (Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]]): Tuple of length 'n_layer' where each tuple contains two tensors of shape (batch_size, num_heads, seq_length, hidden_size//num_heads) representing the past key and value respectively. If not provided, initialized with None.
+            attention_mask (Optional[mindspore.Tensor]): Input tensor of shape (batch_size, seq_length) containing the attention mask values. If None, initialized with ones tensor of shape (batch_size, seq_length + past_key_values_length) where past_key_values_length is the length of past_key_values. Default: None.
+            head_mask (Optional[mindspore.Tensor]): Input tensor of shape (n_layer, num_heads) containing the mask values for each head in each layer. If None, initialized with None. Default: None.
+            inputs_embeds (Optional[mindspore.Tensor]): Input tensor of shape (batch_size, seq_length, hidden_size) containing the embedded input tokens. If None, initialized with the embeddings of input_ids. Default: None.
+            use_cache (Optional[bool]): Whether to use past_key_values for faster decoding. If None, initialized with the value from the model config. Default: None.
+            output_attentions (Optional[bool]): Whether to return the attentions tensors of all attention layers. If None, initialized with the value from the model config. Default: None.
+            output_hidden_states (Optional[bool]): Whether to return the hidden states tensors of all layers. If None, initialized with the value from the model config. Default: None.
+            return_dict (Optional[bool]): Whether to return a BaseModelOutputWithPastAndCrossAttentions object as the output instead of a tuple. If None, initialized with the value from the model config. Default: None.
+        
+        Returns:
+            Union[Tuple[mindspore.Tensor, ...], BaseModelOutputWithPastAndCrossAttentions]: A tuple of the following tensors depending on the value of 'return_dict':
+                - hidden_states (mindspore.Tensor): Output tensor of shape (batch_size, seq_length, hidden_size) containing the output features of the last layer.
+                - presents (Tuple[mindspore.Tensor, ...]): Tuple of length 'n_layer' containing tuples of two tensors of shape (batch_size, num_heads, seq_length + past_key_values_length, hidden_size//num_heads) representing the present key and value respectively.
+                - all_hidden_states (Tuple[mindspore.Tensor, ...]): Tuple of length 'n_layer+1' containing the hidden states tensors of all layers including the input embeddings. Each tensor has shape (batch_size, seq_length, hidden_size).
+                - all_self_attentions (Tuple[mindspore.Tensor, ...]): Tuple of length 'n_layer' containing the attention tensors of all attention layers. Each tensor has shape (batch_size, num_heads, seq_length + past_key_values_length, seq_length + past_key_values_length).
+        
+        Raises:
+            ValueError: If both input_ids and inputs_embeds are provided or neither of them are provided, or if there are any unexpected arguments passed in.
+            FutureWarning: If position_ids argument is provided (now deprecated), a warning is issued indicating that it has no functionality in BLOOM and will be removed in v5.0.0.
+        """
         if deprecated_arguments.pop("position_ids", False) is not False:
             # `position_ids` could have been `mindspore.Tensor` or `None` so defaulting pop to `False` allows to detect if users were passing explicitly `None`
             warnings.warn(
@@ -592,9 +887,48 @@ class BloomModel(BloomPreTrainedModel):
 
 
 class BloomForCausalLM(BloomPreTrainedModel):
+
+    """
+    The `BloomForCausalLM` class is a subclass of `BloomPreTrainedModel` and represents a model for causal language modeling using the BLOOM architecture.
+    
+    Causal language modeling is the task of predicting the next token in a sequence given the previous tokens. The BLOOM architecture is specifically designed for this task, utilizing a transformer model with an additional language modeling head.
+    
+    The class has the following methods:
+    
+    - `__init__(self, config: BloomConfig)`: Initializes the `BloomForCausalLM` instance with a configuration object.
+    
+    - `get_output_embeddings(self)`: Returns the language modeling head.
+    
+    - `set_output_embeddings(self, new_embeddings: mindspore.Tensor)`: Sets the language modeling head to the provided embeddings.
+    
+    - `prepare_inputs_for_generation(self, input_ids: mindspore.Tensor, past_key_values: Optional[mindspore.Tensor] = None, attention_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None, **kwargs) -> dict`: Prepares the inputs for generation by removing the prefix length from the input sequence and converting the past key values to BLOOM cache format.
+    
+    - `construct(self, input_ids: Optional[mindspore.Tensor] = None, past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None, attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None, **deprecated_arguments) -> Union[Tuple[mindspore.Tensor], CausalLMOutputWithCrossAttentions]`: Constructs the BLOOM model by passing the inputs through the transformer and language modeling head. Optionally computes the loss if labels are provided.
+    
+    - `_reorder_cache(self, past: Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...], beam_idx: mindspore.Tensor) -> Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]`: Reorders the past key values cache to match the beam indices during beam search or beam sampling.
+    
+    Additionally, the class inherits all the properties and methods from the `BloomPreTrainedModel` class.
+    
+    Note: The `labels` parameter in the `construct` method is for language modeling labels, and the `position_ids` parameter is deprecated and will be removed in the future.
+    
+    """
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config: BloomConfig):
+
+        """
+        Initializes a new instance of the BloomForCausalLM class.
+        
+        Args:
+            self: The current object instance.
+            config (BloomConfig): The configuration object containing the model's hyperparameters and settings.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(config)
         self.transformer = BloomModel(config)
         self.lm_head = nn.Dense(config.hidden_size, config.vocab_size, has_bias=False)
@@ -603,9 +937,36 @@ class BloomForCausalLM(BloomPreTrainedModel):
         self.post_init()
 
     def get_output_embeddings(self):
+
+        """
+        Returns the output embeddings of the BloomForCausalLM model.
+        
+        Args:
+            self (BloomForCausalLM): The instance of the BloomForCausalLM class.
+        
+        Returns:
+            None: The method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return self.lm_head
 
     def set_output_embeddings(self, new_embeddings: mindspore.Tensor):
+
+        """
+        Sets the output embeddings for the BloomForCausalLM model.
+        
+        Args:
+            self (BloomForCausalLM): The instance of the BloomForCausalLM class.
+            new_embeddings (mindspore.Tensor): The new embeddings to be set for the model's lm_head.
+            
+        Returns:
+            None. This method does not return any value.
+            
+        Raises:
+            None.
+        """
         self.lm_head = new_embeddings
 
     def prepare_inputs_for_generation(
@@ -616,6 +977,26 @@ class BloomForCausalLM(BloomPreTrainedModel):
         inputs_embeds: Optional[mindspore.Tensor] = None,
         **kwargs,
     ) -> dict:
+
+        """
+        Prepare inputs for generation.
+        
+        This method takes 5 parameters: self, input_ids, past_key_values, attention_mask, inputs_embeds. It returns a dictionary containing the model inputs.
+        
+        Args:
+            self (BloomForCausalLM): The instance of the BloomForCausalLM class.
+            input_ids (mindspore.Tensor): The input tensor containing the tokenized input sequence.
+            past_key_values (Optional[mindspore.Tensor]): The optional tensor containing the cached key-value pairs from previous generation steps.
+            attention_mask (Optional[mindspore.Tensor]): The optional tensor representing the attention mask for the input sequence.
+            inputs_embeds (Optional[mindspore.Tensor]): The optional tensor containing the embedded input sequence.
+        
+        Returns:
+            dict: A dictionary containing the model inputs. It may include either 'input_ids' or 'inputs_embeds' depending on the availability of 'inputs_embeds' and 'past_key_values'. It also includes 'past_key_values', 'use_cache', and 'attention_mask' if provided.
+        
+        Raises:
+            None
+        
+        """
         # only last tokens for input_ids if past is not None
         if past_key_values is not None:
             past_length = past_key_values[0][0].shape[2]
@@ -741,7 +1122,32 @@ class BloomForCausalLM(BloomPreTrainedModel):
 
 
 class BloomForSequenceClassification(BloomPreTrainedModel):
+
+    """
+    The 'BloomForSequenceClassification' class represents a fine-tuned sequence classification model based on the Bloom architecture. This class inherits from the 'BloomPreTrainedModel' and includes methods for model initialization and inference. It provides functionality for computing sequence classification/regression loss and handling batch processing. The class also supports different problem types such as regression, single-label classification, and multi-label classification.
+    
+    The class includes the 'construct' method for generating model outputs and computing loss based on the input data. It also handles deprecated arguments and provides warnings for functionality that will be removed in future versions. Additionally, the method supports the use of padding tokens and provides appropriate error handling for different scenarios.
+    
+    The 'BloomForSequenceClassification' class is designed to be used for sequence classification tasks and provides flexibility in handling various types of input data and problem types.
+    
+    For detailed information on the methods and parameters of this class, please refer to the method docstrings and the class code.
+    """
     def __init__(self, config: BloomConfig):
+
+        """
+        Initializes an instance of the BloomForSequenceClassification class with the provided configuration.
+        
+        Args:
+            self: The current instance of the class.
+            config (BloomConfig): The configuration object for the BloomForSequenceClassification model. It contains various settings and hyperparameters.
+                - num_labels (int): The number of labels for the classification task.
+            
+        Returns:
+            None
+            
+        Raises:
+            None
+        """
         super().__init__(config)
         self.num_labels = config.num_labels
         self.transformer = BloomModel(config)
@@ -856,7 +1262,56 @@ class BloomForSequenceClassification(BloomPreTrainedModel):
 
 
 class BloomForTokenClassification(BloomPreTrainedModel):
+
+    """
+    The `BloomForTokenClassification` class is a Python class that represents a model for token classification using the BLOOM architecture. This class inherits from the `BloomPreTrainedModel` class.
+    
+    Class Attributes:
+        - `num_labels`: The number of labels for the token classification task.
+        - `transformer`: An instance of the `BloomModel` class that represents the BLOOM transformer model.
+        - `dropout`: An instance of the `Dropout` class from the `nn` module for applying dropout regularization.
+        - `classifier`: An instance of the `Dense` class from the `nn` module for the final classification layer.
+    
+    Methods:
+        - `__init__(self, config: BloomConfig)`: Initializes a new instance of the `BloomForTokenClassification` class. It takes a `BloomConfig` object as input and sets the necessary attributes.
+        - `construct(self, input_ids: Optional[mindspore.Tensor] = None, past_key_values: Optional[Tuple[Tuple[mindspore.Tensor, mindspore.Tensor], ...]] = None, attention_mask: Optional[mindspore.Tensor] = None, head_mask: Optional[mindspore.Tensor] = None, inputs_embeds: Optional[mindspore.Tensor] = None, labels: Optional[mindspore.Tensor] = None, use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None, **deprecated_arguments) -> Union[Tuple[mindspore.Tensor], TokenClassifierOutput]`: 
+            Constructs the BLOOM model for token classification. It takes various input tensors and arguments and returns the model output.
+            
+            Parameters:
+                - `input_ids` (Optional): Tensor containing the input token IDs.
+                - `past_key_values` (Optional): Tuple of past key-value tensors.
+                - `attention_mask` (Optional): Tensor containing the attention mask.
+                - `head_mask` (Optional): Tensor containing the head mask.
+                - `inputs_embeds` (Optional): Tensor containing the input embeddings.
+                - `labels` (Optional): Tensor containing the labels for computing the loss.
+                - `use_cache` (Optional): Boolean indicating whether to use cache.
+                - `output_attentions` (Optional): Boolean indicating whether to output attentions.
+                - `output_hidden_states` (Optional): Boolean indicating whether to output hidden states.
+                - `return_dict` (Optional): Boolean indicating whether to return the output as a `TokenClassifierOutput` object.
+                - `**deprecated_arguments`: Deprecated arguments that will be ignored.
+            
+            Returns:
+                - If `return_dict` is False, returns a tuple containing the logits and other model outputs.
+                - If `return_dict` is True, returns a `TokenClassifierOutput` object containing the loss, logits, hidden states, and attentions.
+    """
     def __init__(self, config: BloomConfig):
+
+        """
+        Initializes an instance of BloomForTokenClassification.
+        
+        Args:
+            self: The instance of the class.
+            config (BloomConfig): The configuration object containing settings for the model.
+                It must be an instance of BloomConfig class.
+                This parameter is required.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            TypeError: If the config parameter is not an instance of BloomConfig.
+            AttributeError: If the config object does not contain the required attributes.
+        """
         super().__init__(config)
         self.num_labels = config.num_labels
 
@@ -941,7 +1396,34 @@ class BloomForTokenClassification(BloomPreTrainedModel):
 
 
 class BloomForQuestionAnswering(BloomPreTrainedModel):
+
+    """
+    This class represents a Bloom model for question answering tasks. It is a subclass of BloomPreTrainedModel, which provides the basic structure and functionality for pre-trained models. The BloomForQuestionAnswering class includes methods for model construction and inference.
+    
+    Attributes:
+        - transformer: An instance of the BloomModel class, which is responsible for the main transformer architecture of the model.
+        - qa_outputs: A neural network layer that takes the output of the transformer and produces logits for start and end positions of the answer span.
+        
+    Methods:
+        - __init__(self, config): Initializes the BloomForQuestionAnswering instance with a given configuration.
+        - construct(self, input_ids, attention_mask, position_ids, head_mask, inputs_embeds, start_positions, end_positions, output_attentions, output_hidden_states, return_dict): 
+            Constructs the model for question answering based on the given inputs and returns the predicted start and end logits of the answer span, as well as other optional outputs.
+    """
     def __init__(self, config):
+
+        """
+        Initializes the BloomForQuestionAnswering class.
+        
+        Args:
+            self: The object instance.
+            config: A dictionary containing the configuration parameters for the model.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(config)
         self.transformer = BloomModel(config)
         self.qa_outputs = nn.Dense(config.hidden_size, 2)

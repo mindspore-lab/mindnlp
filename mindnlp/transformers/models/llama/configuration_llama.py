@@ -138,6 +138,38 @@ class LlamaConfig(PretrainedConfig):
         attention_dropout=0.0,
         **kwargs,
     ):
+
+        """
+        This method initializes an instance of the LlamaConfig class.
+        
+        Args:
+            vocab_size (int, optional): The size of the vocabulary. Default is 32000.
+            hidden_size (int, optional): The size of the hidden layers. Default is 4096.
+            intermediate_size (int, optional): The size of the intermediate layers. Default is 11008.
+            num_hidden_layers (int, optional): The number of hidden layers. Default is 32.
+            num_attention_heads (int, optional): The number of attention heads. Default is 32.
+            num_key_value_heads (int, optional): The number of key and value heads. If not provided, it defaults to num_attention_heads.
+            hidden_act (str, optional): The activation function for the hidden layers. Default is 'silu'.
+            max_position_embeddings (int, optional): The maximum position embeddings. Default is 2048.
+            initializer_range (float, optional): The range for weight initialization. Default is 0.02.
+            rms_norm_eps (float, optional): The epsilon value for RMS normalization. Default is 1e-06.
+            pretraining_tp (int, optional): The pretraining TP value. Default is 1.
+            use_cache (bool, optional): Indicates whether to use cache. Default is True.
+            pad_token_id (int, optional): The ID of the padding token.
+            bos_token_id (int, optional): The ID of the beginning of sequence token. Default is 1.
+            eos_token_id (int, optional): The ID of the end of sequence token. Default is 2.
+            tie_word_embeddings (bool, optional): Indicates whether to tie word embeddings. Default is False.
+            rope_theta (float, optional): The theta value for ROPE. Default is 10000.0.
+            rope_scaling (None or float, optional): The scaling value for ROPE. If provided, it should be validated.
+            attention_bias (bool, optional): Indicates whether to use attention bias. Default is False.
+            attention_dropout (float, optional): The dropout rate for attention. Default is 0.0.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If rope_scaling is provided and it does not pass the validation.
+        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.hidden_size = hidden_size

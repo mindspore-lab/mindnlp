@@ -139,6 +139,40 @@ class PhiConfig(PretrainedConfig):
         eos_token_id=2,
         **kwargs,
     ):
+
+        """
+        Initializes an instance of the PhiConfig class.
+        
+        Args:
+            self: The instance of the PhiConfig class.
+            vocab_size (int): The size of the vocabulary. Default is 51200.
+            hidden_size (int): The size of the hidden layer. Default is 2048.
+            intermediate_size (int): The size of the intermediate layer. Default is 8192.
+            num_hidden_layers (int): The number of hidden layers. Default is 24.
+            num_attention_heads (int): The number of attention heads. Default is 32.
+            num_key_value_heads (int): The number of key-value heads. Default is the same as num_attention_heads.
+            resid_pdrop (float): The dropout probability for residual connections. Default is 0.0.
+            embd_pdrop (float): The dropout probability for embedding layer. Default is 0.0.
+            attention_dropout (float): The dropout probability for attention layers. Default is 0.0.
+            hidden_act (str): The activation function for the hidden layer. Default is 'gelu_new'.
+            max_position_embeddings (int): The maximum position embeddings. Default is 2048.
+            initializer_range (float): The range of the initializer. Default is 0.02.
+            layer_norm_eps (float): The epsilon value for layer normalization. Default is 1e-05.
+            use_cache (bool): Whether to use cache for transformer layers. Default is True.
+            tie_word_embeddings (bool): Whether to tie word embeddings. Default is False.
+            rope_theta (float): The theta value for rope positional encoding. Default is 10000.0.
+            rope_scaling (None or float): The scaling factor for rope positional encoding. Default is None.
+            partial_rotary_factor (float): The factor for partial rotary positional encoding. Default is 0.5.
+            qk_layernorm (bool): Whether to apply layer normalization on query-key vectors. Default is False.
+            bos_token_id (int): The ID of the beginning-of-sequence token. Default is 1.
+            eos_token_id (int): The ID of the end-of-sequence token. Default is 2.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
         self.intermediate_size = intermediate_size

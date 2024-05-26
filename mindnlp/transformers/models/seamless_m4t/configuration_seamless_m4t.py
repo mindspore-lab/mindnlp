@@ -324,6 +324,91 @@ class SeamlessM4TConfig(PretrainedConfig):
         vocoder_offset=4,
         **kwargs,
     ):
+
+        """
+        Initializes a SeamlessM4TConfig object with the specified configuration parameters.
+        
+        Args:
+        - self (object): The instance of the class.
+        - vocab_size (int): The size of the vocabulary.
+        - t2u_vocab_size (int): The size of the T2U vocabulary.
+        - hidden_size (int): The size of the hidden layers.
+        - initializer_range (float): The range for weight initialization.
+        - layer_norm_eps (float): The epsilon value for layer normalization.
+        - use_cache (bool): Flag to indicate whether to use cache.
+        - max_position_embeddings (int): The maximum position embeddings.
+        - is_encoder_decoder (bool): Flag to indicate if it's an encoder-decoder model.
+        - encoder_layerdrop (float): The layer drop rate for encoder layers.
+        - decoder_layerdrop (float): The layer drop rate for decoder layers.
+        - activation_function (str): The activation function to use.
+        - dropout (float): The dropout rate.
+        - attention_dropout (float): The dropout rate for attention layers.
+        - activation_dropout (float): The dropout rate for activation layers.
+        - scale_embedding (bool): Flag to indicate whether to scale embeddings.
+        - encoder_layers (int): The number of encoder layers.
+        - encoder_ffn_dim (int): The dimension of the encoder feed-forward network.
+        - encoder_attention_heads (int): The number of attention heads for encoder.
+        - decoder_layers (int): The number of decoder layers.
+        - decoder_ffn_dim (int): The dimension of the decoder feed-forward network.
+        - decoder_attention_heads (int): The number of attention heads for decoder.
+        - decoder_start_token_id (int): The start token ID for decoder.
+        - max_new_tokens (int): The maximum number of new tokens.
+        - pad_token_id (int): The ID of the padding token.
+        - bos_token_id (int): The ID of the beginning of sentence token.
+        - eos_token_id (int): The ID of the end of sentence token.
+        - speech_encoder_layers (int): The number of layers in the speech encoder.
+        - speech_encoder_attention_heads (int): The number of attention heads for speech encoder.
+        - speech_encoder_intermediate_size (int): The size of the intermediate layer in speech encoder.
+        - speech_encoder_hidden_act (str): The activation function for the hidden layers in speech encoder.
+        - speech_encoder_dropout (float): The dropout rate for the speech encoder.
+        - add_adapter (bool): Flag to indicate whether to add adapter layers.
+        - speech_encoder_layerdrop (float): The layer drop rate for speech encoder.
+        - feature_projection_input_dim (int): The input dimension for feature projection.
+        - num_conv_pos_embeddings (int): The number of convolutional positional embeddings.
+        - num_conv_pos_embedding_groups (int): The number of groups for convolutional positional embeddings.
+        - adaptor_kernel_size (int): The kernel size for the adaptor.
+        - adaptor_stride (int): The stride for the adaptor.
+        - adaptor_dropout (float): The dropout rate for the adaptor.
+        - num_adapter_layers (int): The number of adapter layers.
+        - position_embeddings_type (str): The type of position embeddings.
+        - rotary_embedding_base (int): The base value for rotary embeddings.
+        - max_source_positions (int): The maximum source positions.
+        - conv_depthwise_kernel_size (int): The kernel size for depthwise convolution.
+        - t2u_bos_token_id (int): The ID of the beginning of sentence token for T2U.
+        - t2u_pad_token_id (int): The ID of the padding token for T2U.
+        - t2u_eos_token_id (int): The ID of the end of sentence token for T2U.
+        - t2u_decoder_start_token_id (int): The start token ID for the T2U decoder.
+        - t2u_max_new_tokens (int): The maximum number of new tokens for T2U.
+        - t2u_encoder_layers (int): The number of layers in the T2U encoder.
+        - t2u_encoder_ffn_dim (int): The dimension of the T2U encoder feed-forward network.
+        - t2u_encoder_attention_heads (int): The number of attention heads for T2U encoder.
+        - t2u_decoder_layers (int): The number of layers in the T2U decoder.
+        - t2u_decoder_ffn_dim (int): The dimension of the T2U decoder feed-forward network.
+        - t2u_decoder_attention_heads (int): The number of attention heads for T2U decoder.
+        - t2u_max_position_embeddings (int): The maximum position embeddings for T2U.
+        - sampling_rate (int): The sampling rate for audio processing.
+        - upsample_initial_channel (int): The initial number of channels for upsampling.
+        - upsample_rates (list): The rates for upsampling.
+        - upsample_kernel_sizes (list): The kernel sizes for upsampling.
+        - resblock_kernel_sizes (list): The kernel sizes for the residual blocks.
+        - resblock_dilation_sizes (list): The dilation sizes for the residual blocks.
+        - leaky_relu_slope (float): The slope for leaky ReLU activation.
+        - unit_hifi_gan_vocab_size (int): The vocabulary size for the HiFi-GAN unit.
+        - unit_embed_dim (int): The embedding dimension for the HiFi-GAN unit.
+        - lang_embed_dim (int): The embedding dimension for language.
+        - spkr_embed_dim (int): The embedding dimension for speaker.
+        - vocoder_num_langs (int): The number of languages for the vocoder.
+        - vocoder_num_spkrs (int): The number of speakers for the vocoder.
+        - variance_predictor_kernel_size (int): The kernel size for the variance predictor.
+        - var_pred_dropout (float): The dropout rate for the variance predictor.
+        - vocoder_offset (int): The offset value for the vocoder.
+        
+        Returns:
+        - None. This method initializes the SeamlessM4TConfig object with the specified parameters.
+        
+        Raises:
+        - None.
+        """
         # overall_config
         self.vocab_size = vocab_size
         self.t2u_vocab_size = t2u_vocab_size

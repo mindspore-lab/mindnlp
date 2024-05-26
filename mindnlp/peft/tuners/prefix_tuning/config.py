@@ -38,4 +38,17 @@ class PrefixTuningConfig(PromptLearningConfig):
     )
 
     def __post_init__(self):
+
+        """
+        The '__post_init__' method is a special method in the 'PrefixTuningConfig' class that is automatically called after the initialization of a new instance of the class.
+        
+        Args:
+            self: An instance of the 'PrefixTuningConfig' class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
         self.peft_type = PeftType.PREFIX_TUNING

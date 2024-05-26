@@ -134,6 +134,37 @@ class CodeGenConfig(PretrainedConfig):
         tie_word_embeddings=False,
         **kwargs,
     ):
+
+        """
+        Initializes an instance of the CodeGenConfig class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 50400.
+            n_positions (int, optional): The number of positions. Defaults to 2048.
+            n_ctx (int, optional): The context size. Defaults to 2048.
+            n_embd (int, optional): The embedding size. Defaults to 4096.
+            n_layer (int, optional): The number of layers. Defaults to 28.
+            n_head (int, optional): The number of attention heads. Defaults to 16.
+            rotary_dim (int, optional): The dimension for rotary positional embeddings. Defaults to 64.
+            n_inner (int, optional): The inner size of the feed-forward networks. Defaults to None.
+            activation_function (str, optional): The activation function to use. Defaults to 'gelu_new'.
+            resid_pdrop (float, optional): The dropout rate for residual connections. Defaults to 0.0.
+            embd_pdrop (float, optional): The dropout rate for embeddings. Defaults to 0.0.
+            attn_pdrop (float, optional): The dropout rate for attention probabilities. Defaults to 0.0.
+            layer_norm_epsilon (float, optional): The epsilon value for layer normalization. Defaults to 1e-05.
+            initializer_range (float, optional): The range for weight initialization. Defaults to 0.02.
+            use_cache (bool, optional): Whether to use caching. Defaults to True.
+            bos_token_id (int, optional): The ID of the beginning-of-sentence token. Defaults to 50256.
+            eos_token_id (int, optional): The ID of the end-of-sentence token. Defaults to 50256.
+            tie_word_embeddings (bool, optional): Whether to tie word embeddings. Defaults to False.
+        
+        Returns:
+            None. This method does not return a value.
+        
+        Raises:
+            N/A
+        """
         self.vocab_size = vocab_size
         self.n_ctx = n_ctx
         self.n_positions = n_positions

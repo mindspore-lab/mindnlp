@@ -117,6 +117,20 @@ class PearsonCorrelation(Metric):
 
     """
     def __init__(self, name='PearsonCorrelation'):
+
+        r"""
+        Initializes a new instance of PearsonCorrelation.
+        
+        Args:
+            self (object): The instance of the class.
+            name (str, optional): The name of the PearsonCorrelation instance. Defaults to 'PearsonCorrelation'.
+        
+        Returns:
+            None. This method initializes the instance with the provided or default name and initializes empty lists for preds and labels.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         super().__init__()
         self._name = name
         self.preds = []

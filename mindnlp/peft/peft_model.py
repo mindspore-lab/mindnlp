@@ -76,6 +76,26 @@ class PeftModel(nn.Cell):
     """
 
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
+
+        r"""
+        __init__
+        
+        This method initializes an instance of the PeftModel class.
+        
+        Args:
+            self: The instance of the PeftModel class.
+            model: The base model used for the PeftModel instance.
+            peft_config (PeftConfig): An instance of PeftConfig class containing configuration for the PEFT (Prompt-based Entity Fine-Tuning) process.
+            adapter_name (str, optional): The name of the adapter being used. Defaults to 'default'.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - TypeError: If the provided model is not of the expected type.
+            - ValueError: If the provided peft_config is not valid or does not contain necessary information.
+            - KeyError: If there is an issue with accessing or setting attributes.
+        """
         super().__init__()
         self.base_model = model
         self.config = getattr(self.base_model, "config", {"model_type": "custom"})
@@ -164,6 +184,20 @@ class PeftModel(nn.Cell):
         return model
 
     def _setup_prompt_encoder(self, adapter_name: str):
+
+        r"""
+        This method '_setup_prompt_encoder' in the class 'PeftModel' is responsible for setting up the prompt encoder based on the provided adapter name.
+        
+        Args:
+        - self: The instance of the 'PeftModel' class.
+        - adapter_name (str): The name of the adapter for which the prompt encoder is being set up. It is used to fetch configuration settings related to the specified adapter.
+        
+        Returns:
+        None. This method does not return any value.
+        
+        Raises:
+        - ValueError: Raised when the provided 'peft_type' in the configuration is not supported by the method.
+        """
         config = self.peft_config[adapter_name]
         if not hasattr(self, "prompt_encoder"):
             self.prompt_encoder = CellDict({})
@@ -393,6 +427,24 @@ class PeftModelForSequenceClassification(PeftModel):
     """
 
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
+
+        
+        """
+        Initializes a new instance of the PeftModelForSequenceClassification class.
+        
+        Args:
+            self: The instance of the PeftModelForSequenceClassification class.
+            model: The base model to be used for sequence classification (e.g., a pre-trained language model).
+            peft_config (PeftConfig): The configuration for the PEFT (Probing and Evaluation for Transformers) model.
+            adapter_name (str, optional): The name of the adapter to be used. Defaults to 'default'.
+        
+        Returns:
+            None. This method initializes the instance with the specified parameters.
+        
+        Raises:
+            None.
+        """
+        
         super().__init__(model, peft_config, adapter_name)
         if self.cells_to_save is None:
             self.cells_to_save = {"classifier", "score"}
@@ -482,6 +534,22 @@ class PeftModelForCausalLM(PeftModel):
     """
 
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
+
+        r"""
+        Initializes a new instance of the PeftModelForCausalLM class.
+        
+        Args:
+            self: The instance itself.
+            model: The underlying model for the adapter.
+            peft_config (PeftConfig): The configuration for the PEFT (Plug and Fine-tune) adapter.
+            adapter_name (str): The name of the adapter. Defaults to 'default'.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         super().__init__(model, peft_config, adapter_name)
         self.base_model_prepare_inputs_for_generation = self.base_model.prepare_inputs_for_generation
 
@@ -623,6 +691,22 @@ class PeftModelForSeq2SeqLM(PeftModel):
     """
 
     def __init__(self, model, peft_config: PeftConfig, adapter_name="default"):
+
+        r"""
+        Initialize a new PeftModelForSeq2SeqLM object.
+        
+        Args:
+            self: The instance of the PeftModelForSeq2SeqLM class.
+            model: The model to be used for the PeftModelForSeq2SeqLM.
+            peft_config (PeftConfig): The configuration object for the PeftModelForSeq2SeqLM.
+            adapter_name (str): The name of the adapter to be used, defaults to 'default'.
+        
+        Returns:
+            None. This method initializes the PeftModelForSeq2SeqLM object.
+        
+        Raises:
+            None.
+        """
         super().__init__(model, peft_config, adapter_name)
         self.base_model_prepare_inputs_for_generation = self.base_model.prepare_inputs_for_generation
         self.base_model_prepare_encoder_decoder_kwargs_for_generation = (
@@ -830,6 +914,22 @@ class PeftModelForTokenClassification(PeftModel):
     """
 
     def __init__(self, model, peft_config: PeftConfig = None, adapter_name="default"):
+
+        r"""
+        Initializes a new instance of the PeftModelForTokenClassification class.
+        
+        Args:
+            self: The instance of the PeftModelForTokenClassification class.
+            model: The model used for token classification.
+            peft_config (PeftConfig, optional): The configuration for the Peft model. Defaults to None.
+            adapter_name (str, optional): The name of the adapter. Defaults to 'default'.
+        
+        Returns:
+            None. This method does not return a value.
+        
+        Raises:
+            N/A
+        """
         super().__init__(model, peft_config, adapter_name)
         if self.cells_to_save is None:
             self.cells_to_save = {"classifier", "score"}
@@ -920,6 +1020,27 @@ class PeftModelForTokenClassification(PeftModel):
         return_dict=None,
         **kwargs,
     ):
+
+        r"""
+        Performs the forward pass for the prefix tuning task in the PeftModelForTokenClassification class.
+        
+        Args:
+            self (PeftModelForTokenClassification): The instance of the PeftModelForTokenClassification class.
+            input_ids (torch.Tensor): The input token IDs tensor of shape [batch_size, sequence_length].
+            attention_mask (torch.Tensor): The attention mask tensor of shape [batch_size, sequence_length].
+            inputs_embeds (torch.Tensor): The input embeddings tensor of shape [batch_size, sequence_length, hidden_size].
+            labels (torch.Tensor): The labels tensor of shape [batch_size, sequence_length].
+            output_attentions (bool): Whether to output attentions. Defaults to None.
+            output_hidden_states (bool): Whether to output hidden states. Defaults to None.
+            return_dict (bool): Whether to return a dictionary. Defaults to None.
+        
+        Returns:
+            None: This method does not return any value. Instead, it updates the internal state of the model.
+        
+        Raises:
+            ValueError: If the model does not support past key values which are required for prefix tuning.
+        
+        """
         batch_size = input_ids.shape[0]
         past_key_values = self.get_prompt(batch_size)
         fwd_params = list(inspect.signature(self.base_model.forward).parameters.keys())

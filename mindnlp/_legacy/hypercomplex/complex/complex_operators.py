@@ -233,6 +233,32 @@ class Conv2d(_UniformOperator):
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  data_format: str = 'NCHW',
                  use_karatsuba: bool = False) -> None:
+
+        r"""
+        Initializes a Conv2d layer.
+        
+        Args:
+            self: The object instance.
+            in_channels (int): Number of input channels.
+            out_channels (int): Number of output channels.
+            kernel_size (_size_2_t): Size of the convolutional kernel.
+            stride (_size_2_t): Stride of the convolution operation. Default is 1.
+            pad_mode (str): Padding mode for the convolution operation. Default is 'same'.
+            padding (_size_2_t): Padding size. Default is 0.
+            dilation (_size_2_t): Dilation rate for the convolution operation. Default is 1.
+            group (int): Number of groups for grouped convolution. Default is 1.
+            has_bias (bool): Whether bias is used in the convolution operation. Default is False.
+            weight_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization method for weights. Default is 'normal'.
+            bias_init (Union[Tensor, str, Initializer, numbers.Number]): Initialization method for bias. Default is 'zeros'.
+            data_format (str): Format of input data. Default is 'NCHW'.
+            use_karatsuba (bool): Whether to use Karatsuba algorithm for convolution.
+        
+        Returns:
+            None
+        
+        Raises:
+            - NotImplementedError: If the specified convolution implementation is not supported.
+        """
         if use_karatsuba:
             super(Conv2d, self).__init__(HConv2d,
                                          KaratsubaConvImpl,
@@ -424,6 +450,34 @@ class Conv1d(_UniformOperator):
                  weight_init: Union[Tensor, str, Initializer, numbers.Number] = 'normal',
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  use_karatsuba: bool = False) -> None:
+
+        
+        """
+        Initializes a 1D convolutional layer.
+        
+        Args:
+            self: The instance of the class.
+            in_channels (int): The number of input channels.
+            out_channels (int): The number of output channels.
+            kernel_size (_size_1_t): The size of the convolutional kernel.
+            stride (_size_1_t, optional): The stride of the convolution operation. Defaults to 1.
+            pad_mode (str, optional): The padding mode. Defaults to 'same'.
+            padding (_size_1_t, optional): The amount of padding. Defaults to 0.
+            dilation (_size_1_t, optional): The dilation rate. Defaults to 1.
+            group (int, optional): The number of groups for grouped convolution. Defaults to 1.
+            has_bias (bool, optional): Indicates whether the layer uses bias. Defaults to False.
+            weight_init (Union[Tensor, str, Initializer, numbers.Number], optional): The weight initialization method. Defaults to 'normal'.
+            bias_init (Union[Tensor, str, Initializer, numbers.Number], optional): The bias initialization method. Defaults to 'zeros'.
+            use_karatsuba (bool, optional): Indicates whether to use the Karatsuba algorithm for convolution. Defaults to False.
+        
+        Returns:
+            None. This method initializes the Conv1d layer.
+        
+        Raises:
+            - ValueError: If an invalid value is provided for any parameter.
+            - TypeError: If the type of any parameter is incorrect.
+        """
+        
         if use_karatsuba:
             super(Conv1d, self).__init__(HConv1d,
                                          KaratsubaConvImpl,
@@ -652,6 +706,34 @@ class Conv3d(_UniformOperator):
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  data_format: str = 'NCDHW',
                  use_karatsuba: bool = False) -> None:
+
+        
+        """
+        Initializes a Conv3d instance.
+        
+        Args:
+            self: The object instance.
+            in_channels (int): The number of input channels.
+            out_channels (int): The number of output channels.
+            kernel_size (_size_3_t): The size of the kernel for the convolution.
+            stride (_size_3_t, optional): The stride for the convolution operation. Default is 1.
+            pad_mode (str): The padding mode to be used. Default is 'same'.
+            padding (_size_3_t, optional): The amount of padding to be applied. Default is 0.
+            dilation (_size_3_t, optional): The dilation for the convolution operation. Default is 1.
+            group (int, optional): The number of groups for grouped convolution. Default is 1.
+            has_bias (bool, optional): Indicates whether bias is used. Default is False.
+            weight_init (Union[Tensor, str, Initializer, numbers.Number], optional): The weight initialization method. Default is 'normal'.
+            bias_init (Union[Tensor, str, Initializer, numbers.Number], optional): The bias initialization method. Default is 'zeros'.
+            data_format (str, optional): The data format. Default is 'NCDHW'.
+            use_karatsuba (bool, optional): Indicates whether to use the Karatsuba algorithm for convolution. Default is False.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            <Document any exceptions that the function may raise here>
+        """
+        
         if use_karatsuba:
             super(Conv3d, self).__init__(HConv3d,
                                          KaratsubaConvImpl,
@@ -777,6 +859,58 @@ class BatchNorm1d(_UniformOperator):
                  moving_mean_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
                  use_batch_statistics: bool = True) -> None:
+
+        r"""
+        Initializes an instance of the BatchNorm1d class.
+        
+        Args:
+            self: The instance of the class.
+            num_features (int): The number of features in the input data.
+            eps (float, optional): A small value added to the denominator for numerical stability. Defaults to 1e-05.
+            momentum (float, optional): The value used for the running mean and variance computation. Defaults to 0.9.
+            affine (bool, optional): If set to True, the module has learnable affine parameters. Defaults to True.
+            gamma_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value for the scale parameter. 
+                Defaults to 'ones'.
+            beta_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value for the shift parameter. 
+                Defaults to 'zeros'.
+            moving_mean_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value for the running mean. 
+                Defaults to 'zeros'.
+            moving_var_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value for the running variance. 
+                Defaults to 'ones'.
+            use_batch_statistics (bool, optional): If set to True, the module uses batch statistics during training. Defaults to True.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
+
+        
+        def __init__(self, num_features: int, eps: float = 1e-05, momentum: float = 0.9, affine: bool = True, gamma_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones', beta_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros', moving_mean_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros', moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones', use_batch_statistics: bool = True) -> None:
+            """
+            Initializes an instance of the BatchNorm1d class.
+        
+            Args:
+                self: The instance of the class.
+                num_features (int): The number of features in the input data.
+                eps (float, optional): A small value added to the denominator for numerical stability. Defaults to 1e-05.
+                momentum (float, optional): The value used for the running mean and variance computation. Defaults to 0.9.
+                affine (bool, optional): If set to True, the module has learnable affine parameters. Defaults to True.
+                gamma_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value for the scale parameter. Defaults to 'ones'.
+                beta_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value for the shift parameter. Defaults to 'zeros'.
+                moving_mean_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value for the running mean. Defaults to 'zeros'.
+                moving_var_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value for the running variance. Defaults to 'ones'.
+                use_batch_statistics (bool, optional): If set to True, the module uses batch statistics during training. Defaults to True.
+        
+            Returns:
+                None
+        
+            Raises:
+                None
+            """
+            super(BatchNorm1d, self).__init__(HBatchNorm1d, BatchNormImpl, num_features=num_features, eps=eps, momentum=momentum, affine=affine, gamma_init=gamma_init, beta_init=beta_init, moving_mean_init=moving_mean_init, moving_var_init=moving_var_init, use_batch_statistics=use_batch_statistics)
+        
         super(BatchNorm1d, self).__init__(HBatchNorm1d,
                                           BatchNormImpl,
                                           num_features=num_features,
@@ -888,6 +1022,32 @@ class BatchNorm2d(_UniformOperator):
                  moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
                  use_batch_statistics: bool = True,
                  data_format='NCHW') -> None:
+
+        
+        """
+        Initializes a BatchNorm2d layer.
+        
+        Args:
+            self: The object itself.
+            num_features (int): The number of input features.
+            eps (float, optional): The small value added to the denominator for numerical stability (default is 1e-05).
+            momentum (float, optional): The value used for the running mean and variance computation (default is 0.9).
+            affine (bool, optional): A boolean value indicating whether to apply learnable affine transformation (default is True).
+            gamma_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value for the gamma weight. It can be a Tensor, string, Initializer, or a number (default is 'ones').
+            beta_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value for the beta weight. It can be a Tensor, string, Initializer, or a number (default is 'zeros').
+            moving_mean_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value for the moving mean. It can be a Tensor, string, Initializer, or a number (default is 'zeros').
+            moving_var_init (Union[Tensor, str, Initializer, numbers.Number], optional): The initialization value for the moving variance. It can be a Tensor, string, Initializer, or a number (default is 'ones').
+            use_batch_statistics (bool, optional): A boolean value indicating whether to use batch statistics during training (default is True).
+            data_format (str, optional): The data format. Supported values are 'NCHW' and 'NHWC' (default is 'NCHW').
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            TypeError: If num_features is not an integer or if eps, momentum, gamma_init, beta_init, moving_mean_init, or moving_var_init is not a float or a valid initializer value.
+            ValueError: If num_features is less than or equal to 0 or if data_format is not supported.
+        """
+        
         super(BatchNorm2d, self).__init__(HBatchNorm2d,
                                           BatchNormImpl,
                                           num_features=num_features,
@@ -995,6 +1155,28 @@ class BatchNorm3d(_UniformOperator):
                  moving_var_init: Union[Tensor, str, Initializer, numbers.Number] = 'ones',
                  use_batch_statistics: bool = True,
                  data_format='NCDHW') -> None:
+
+        r"""
+        Initializes a BatchNorm3d layer.
+        
+        Args:
+        - num_features (int): Number of features in the input tensor.
+        - eps (float, optional): Small value added to the denominator for numerical stability. Default is 1e-05.
+        - momentum (float, optional): Momentum factor for running mean and variance computation. Default is 0.9.
+        - affine (bool, optional): If True, learnable affine parameters are added. Default is True.
+        - gamma_init (Union[Tensor, str, Initializer, numbers.Number], optional): Initialization value for the gamma parameter. Default is 'ones'.
+        - beta_init (Union[Tensor, str, Initializer, numbers.Number], optional): Initialization value for the beta parameter. Default is 'zeros'.
+        - moving_mean_init (Union[Tensor, str, Initializer, numbers.Number], optional): Initialization value for the moving mean. Default is 'zeros'.
+        - moving_var_init (Union[Tensor, str, Initializer, numbers.Number], optional): Initialization value for the moving variance. Default is 'ones'.
+        - use_batch_statistics (bool, optional): If True, use batch statistics during training. Default is True.
+        - data_format (str, optional): Format of the input data. Default is 'NCDHW'.
+        
+        Returns:
+        - None: This method does not return any value.
+        
+        Raises:
+        - None: This method does not raise any exceptions.
+        """
         super(BatchNorm3d, self).__init__(HBatchNorm3d,
                                           BatchNormImpl,
                                           num_features=num_features,
@@ -1100,6 +1282,27 @@ class Dense(_UniformOperator):
                  bias_init: Union[Tensor, str, Initializer, numbers.Number] = 'zeros',
                  has_bias: bool = True,
                  use_karatsuba: bool = False) -> None:
+
+        
+        """
+        Initializes a Dense layer.
+        
+        Args:
+            self: The object itself.
+            in_channels (int): The number of input channels.
+            out_channels (int): The number of output channels.
+            weight_init (Union[Tensor, str, Initializer, numbers.Number], optional): The weight initialization method. Defaults to 'normal'.
+            bias_init (Union[Tensor, str, Initializer, numbers.Number], optional): The bias initialization method. Defaults to 'zeros'.
+            has_bias (bool, optional): Indicates if the layer uses bias. Defaults to True.
+            use_karatsuba (bool, optional): Indicates whether to use Karatsuba algorithm. Defaults to False.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None
+        """
+        
         if use_karatsuba:
             super(Dense, self).__init__(HDense,
                                         KaratsubaDenseImpl,

@@ -27,11 +27,37 @@ from .utils import concat_tensor_along_last_dim, split_tensor_along_last_dim, ge
 
 @constexpr
 def _get_rank(group=GlobalComm.WORLD_COMM_GROUP):
+
+    r"""
+    This function returns the rank of the current process within the specified communication group.
+    
+    Args:
+        group (int): The communication group to which the process belongs. Defaults to GlobalComm.WORLD_COMM_GROUP.
+        
+    Returns:
+        None: This function does not return a value.
+    
+    Raises:
+        None: This function does not raise any exceptions.
+    """
     return get_rank(group)
 
 
 @constexpr
 def _get_group_size(group=GlobalComm.WORLD_COMM_GROUP):
+
+    r"""
+    This function retrieves the size of the specified communication group.
+    
+    Args:
+        group (object): The communication group for which the size needs to be retrieved. Defaults to GlobalComm.WORLD_COMM_GROUP.
+    
+    Returns:
+        None: This function does not return a value.
+    
+    Raises:
+        None: This function does not raise any exceptions.
+    """
     return get_group_size(group)
 
 
@@ -80,6 +106,20 @@ def _gather(input_: mindspore.Tensor) -> mindspore.Tensor:
 class _CopyToModelParallelRegion(nn.Cell):
     """Pass the input to the model parallel region."""
     def construct(self, input_):
+
+        r"""
+        Constructs a new instance of the '_CopyToModelParallelRegion' class.
+        
+        Args:
+            self (object): The instance of the '_CopyToModelParallelRegion' class.
+            input_ (Any): The input value to be processed.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return input_
 
     def bprop(self, input_, out, dout):
@@ -90,6 +130,20 @@ class _CopyToModelParallelRegion(nn.Cell):
 class _ReduceFromModelParallelRegion(nn.Cell):
     """All-redcue the input from the model parallel region."""
     def construct(self, input_):
+
+        r"""
+        Constructs a new instance of '_ReduceFromModelParallelRegion' class.
+        
+        Args:
+            self (object): The instance of the '_ReduceFromModelParallelRegion' class.
+            input_ (any): The input data to be processed by the method.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return _reduce(input_)
 
     def bprop(self, input_, out, dout):
@@ -100,6 +154,20 @@ class _ReduceFromModelParallelRegion(nn.Cell):
 class _ScatterToModelParallelRegion(nn.Cell):
     """Split the input and keep only the corresponding chuck to the rank."""
     def construct(self, input_):
+
+        r"""
+        Constructs a scatter to model parallel region within the _ScatterToModelParallelRegion class.
+        
+        Args:
+            self (_ScatterToModelParallelRegion): The instance of the _ScatterToModelParallelRegion class.
+            input_ (any): The input data to be processed.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         return _split(input_)
 
     def bprop(self, input_, out, dout):
@@ -110,6 +178,20 @@ class _GatherFromModelParallelRegion(nn.Cell):
     """Gather the input from model parallel region and concatinate."""
 
     def construct(self, input_):
+
+        r"""
+        This method constructs a gather operation from the input.
+        
+        Args:
+            self (_GatherFromModelParallelRegion): The instance of the _GatherFromModelParallelRegion class.
+            input_ (object): The input data to be gathered.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            - Any exceptions raised by the _gather function when processing the input data.
+        """
         return _gather(input_)
 
     def bprop(self, input_, out, dout):

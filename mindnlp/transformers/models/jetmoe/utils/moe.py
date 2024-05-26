@@ -47,6 +47,25 @@ class MoE(nn.Cell):
         activation=None,
         glu=True,
     ):
+
+        """
+        Initializes the MoE (Mixture of Experts) model with the specified parameters.
+        
+        Args:
+            input_size (int): The size of the input feature vector.
+            hidden_size (int): The size of the hidden layer.
+            num_experts (int): The number of experts in the model.
+            top_k (int): The top-k value used for expert selection.
+            bias (bool): Indicates whether to include bias in the model.
+            activation (str): The activation function to be applied. Default is None.
+            glu (bool): Indicates whether to use Gated Linear Units (GLU) in the model.
+        
+        Returns:
+            None. This method initializes the MoE model with the specified parameters.
+        
+        Raises:
+            N/A
+        """
         super(MoE, self).__init__()
 
         self.num_experts = num_experts
@@ -71,6 +90,20 @@ class MoE(nn.Cell):
         )
 
     def extra_repr(self):
+
+        """
+        This method generates a string representation of the MoE (Mixture of Experts) class instance.
+        
+        Args:
+            self: MoE class instance. Represents the current instance of the MoE class.
+        
+        Returns:
+            None. The method does not return any value directly but generates a formatted string representation 
+            containing the top_k and num_experts attributes of the MoE instance.
+        
+        Raises:
+            No exceptions raised by this method.
+        """
         return "k={}, e={}".format(self.top_k, self.num_experts)
 
     def get_aux_loss_and_clear(self):
@@ -84,6 +117,28 @@ class MoE(nn.Cell):
         return self.gate.get_aux_loss_and_clear()
 
     def compute_gate(self, x):
+
+        """
+        Compute the gate for selecting the expert to route the input data to.
+        
+        Args:
+            self (MoE): An instance of the MoE class.
+            x: The input data to be routed to an expert. It should be a tensor of shape (batch_size, input_size).
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        
+        This method computes the gate for selecting the expert to route the input data to. It follows the following steps:
+        1. Calls the 'router' function to obtain the top-k indices and top-k gates.
+        2. Calls the 'compute_gating' function to compute the batch-level gates, batch index, expert size, and sorted expert indices.
+        3. Converts the expert size to a list.
+        4. Returns the loss obtained from the 'router' function.
+        
+        Note: The 'router' and 'compute_gating' functions are assumed to be defined elsewhere in the code.
+        """
         top_k_indices, self.top_k_gates = self.router(x)
 
         self.batch_gates, self.batch_index, expert_size, self.index_sorted_experts = compute_gating(
@@ -130,6 +185,28 @@ class MoE(nn.Cell):
         return y, loss
 
     def single_forward(self, x):
+
+        """
+        This method performs a single forward pass through the Mixture of Experts (MoE) layer.
+        
+        Args:
+            self (object): The instance of the MoE class.
+                This parameter is a reference to the current instance of the MoE class.
+                It is used to access the attributes and methods of the class.
+            x (tensor): Input tensor of shape (batch_size, sequence_length, embedding_size).
+                This tensor represents the input data to be processed by the MoE layer.
+                The batch_size denotes the number of samples in a batch.
+                The sequence_length denotes the length of each input sequence.
+                The embedding_size represents the dimension of the input embeddings.
+        
+        Returns:
+            None
+            This method does not return any value but updates the internal state of the MoE layer.
+        
+        Raises:
+            AttributeError: If the router or activation functions are not properly defined.
+            ValueError: If the input tensor shape is not compatible with the expected dimensions.
+        """
         bsz, length, emb_size = x.shape
 
         x = x.reshape(1, self.input_size)
@@ -173,6 +250,21 @@ class MoE(nn.Cell):
             return self.batch_forward(x)
 
     def single_map(self, x):
+
+        """
+        This method 'single_map' is a part of the 'MoE' class and is used to perform a single mapping operation in the Mixture of Experts (MoE) model.
+        
+        Args:
+            self (object): The instance of the MoE class.
+            x (tensor): The input tensor representing the input data for the single mapping operation. It should have a shape of (bsz, length, emb_size), where 'bsz' is the batch size, 'length' is the length of input sequence, and 'emb_size' is the embedding size.
+        
+        Returns:
+            y (tensor): The output tensor representing the result of the single mapping operation. It has a shape of (bsz, length, self.top_k, -1), where 'bsz' is the batch size, 'length' is the length of input sequence, and 'self.top_k' is the number of top-k expert indices, and '-1' represents the output dimension.
+            loss (float): The loss value associated with the single mapping operation.
+        
+        Raises:
+            This method does not explicitly raise any exceptions.
+        """
         bsz, length, emb_size = x.shape
 
         x = x.reshape(1, self.input_size)
@@ -246,6 +338,25 @@ class MoE(nn.Cell):
             return self.batch_map(x)
 
     def single_reduce(self, x):
+
+        """
+        Reduces the input tensor 'x' using a single mixture of experts (MoE) layer.
+        
+        Args:
+            self (MoE): An instance of the MoE class.
+            x (torch.Tensor): The input tensor of shape (batch_size, length, k, emb_size), where
+                              - batch_size: The number of sequences in a batch.
+                              - length: The length of each sequence.
+                              - k: The number of experts.
+                              - emb_size: The size of the embedding vector.
+                              The input tensor represents the embeddings for each sequence.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         bsz, length, k, emb_size = x.shape
 
         x = x.reshape(k, emb_size)

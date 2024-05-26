@@ -56,6 +56,42 @@ class MobileBertConfig(PretrainedConfig):
         classifier_dropout=None,
         **kwargs,
     ):
+
+        """
+        Initializes a new instance of the MobileBertConfig class.
+        
+        Args:
+            self (MobileBertConfig): The current instance of the MobileBertConfig class.
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 30522.
+            hidden_size (int, optional): The size of the hidden layers. Defaults to 512.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 24.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 4.
+            intermediate_size (int, optional): The size of the intermediate layer. Defaults to 512.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'relu'.
+            hidden_dropout_prob (float, optional): The dropout probability for the hidden layers. Defaults to 0.0.
+            attention_probs_dropout_prob (float, optional): The dropout probability for the attention layer. Defaults to 0.1.
+            max_position_embeddings (int, optional): The maximum number of position embeddings. Defaults to 512.
+            type_vocab_size (int, optional): The size of the type vocabulary. Defaults to 2.
+            initializer_range (float, optional): The range for random weight initialization. Defaults to 0.02.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Defaults to 1e-12.
+            pad_token_id (int, optional): The token ID for padding. Defaults to 0.
+            embedding_size (int, optional): The size of the embeddings. Defaults to 128.
+            trigram_input (bool, optional): Whether to use trigram input. Defaults to True.
+            use_bottleneck (bool, optional): Whether to use a bottleneck layer. Defaults to True.
+            intra_bottleneck_size (int, optional): The size of the bottleneck layer. Defaults to 128.
+            use_bottleneck_attention (bool, optional): Whether to use bottleneck attention. Defaults to False.
+            key_query_shared_bottleneck (bool, optional): Whether to share the bottleneck between key and query. Defaults to True.
+            num_feedforward_networks (int, optional): The number of feedforward networks. Defaults to 4.
+            normalization_type (str, optional): The type of normalization to apply. Defaults to 'no_norm'.
+            classifier_activation (bool, optional): Whether to apply activation to the classifier layer. Defaults to True.
+            classifier_dropout (float, optional): The dropout probability for the classifier layer. Defaults to None.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(pad_token_id=pad_token_id, **kwargs)
 
         self.vocab_size = vocab_size

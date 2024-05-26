@@ -88,6 +88,28 @@ class BlenderbotSmallTokenizer(PreTrainedTokenizer):
         pad_token="__null__",
         **kwargs,
     ):
+
+        """
+        Initializes a BlenderbotSmallTokenizer instance with the provided parameters.
+        
+        Args:
+            self (BlenderbotSmallTokenizer): The instance of the BlenderbotSmallTokenizer class.
+            vocab_file (str): The file path to the vocabulary file containing encoding information.
+            merges_file (str): The file path to the merges file containing BPE merges information.
+            bos_token (str, optional): The beginning of sentence token. Defaults to '__start__'.
+            eos_token (str, optional): The end of sentence token. Defaults to '__end__'.
+            unk_token (str, optional): The unknown token. Defaults to '__unk__'.
+            pad_token (str, optional): The padding token. Defaults to '__null__'.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method initializes the BlenderbotSmallTokenizer instance with the provided parameters.
+        
+        Raises:
+            FileNotFoundError: If either vocab_file or merges_file is not found.
+            JSONDecodeError: If there is an issue decoding the vocabulary file.
+            IndexError: If there is an issue accessing elements during initialization.
+        """
         with open(vocab_file, encoding="utf-8") as vocab_handle:
             self.encoder = json.load(vocab_handle)
         self.decoder = {v: k for k, v in self.encoder.items()}
@@ -100,12 +122,71 @@ class BlenderbotSmallTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self) -> int:
+
+        """
+        Returns the size of the vocabulary used by the BlenderbotSmallTokenizer instance.
+        
+        Args:
+            self: The instance of the BlenderbotSmallTokenizer class.
+        
+        Returns:
+            An integer representing the size of the vocabulary.
+        
+        Raises:
+            None.
+        """
         return len(self.encoder)
 
     def get_vocab(self) -> Dict:
+
+        """
+        Retrieve the vocabulary of the BlenderbotSmallTokenizer.
+        
+        Args:
+            self (BlenderbotSmallTokenizer): The instance of the BlenderbotSmallTokenizer class.
+        
+        Returns:
+            Dict: A dictionary representing the vocabulary of the tokenizer, containing the encoder and added tokens encoder.
+        
+        Raises:
+            None.
+        """
         return dict(self.encoder, **self.added_tokens_encoder)
 
     def bpe(self, token: str) -> str:
+
+        """
+        The 'bpe' method in the 'BlenderbotSmallTokenizer' class performs Byte Pair Encoding (BPE) on a given token.
+        
+        Args:
+            self (BlenderbotSmallTokenizer): An instance of the BlenderbotSmallTokenizer class.
+            token (str): The input token to be processed with BPE.
+        
+        Returns:
+            str: The token after BPE processing.
+        
+        Raises:
+            None.
+        
+        This method applies the following steps to perform BPE:
+        1. Checks if the token exists in the cache. If yes, returns the cached value.
+        2. Applies regular expression substitution to separate certain punctuation marks from the token.
+        3. Replaces single quotes with spaces around them.
+        4. Reduces consecutive whitespace characters to a single space.
+        5. If the token contains a newline character, replaces it with '__newln__'.
+        6. Splits the token into a list of individual words.
+        7. Processes each word in the list:
+            - Converts the word to lowercase.
+            - Converts the word into a tuple.
+            - Appends '</w>' to the last character of the tuple.
+            - Retrieves the pairs of characters in the word.
+            - If no pairs are found, appends the original word to the final list and continues to the next word.
+            - Continues to find and merge the most frequent pair of characters in the word until no more relevant pairs are found.
+            - Joins the merged characters with '@@ ' and removes the '</w>' suffix.
+            - Caches the processed word for future use.
+            - Appends the processed word to the final list.
+        8. Joins all the words in the final list with a space separator and returns the result.
+        """
         if token in self.cache:
             return self.cache[token]
         token = re.sub("([.,!?()])", r" \1", token)
@@ -190,6 +271,23 @@ class BlenderbotSmallTokenizer(PreTrainedTokenizer):
         return out_string
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+
+        """
+        Save the vocabulary and merge files for the BlenderbotSmallTokenizer.
+        
+        Args:
+            self (BlenderbotSmallTokenizer): An instance of the BlenderbotSmallTokenizer class.
+            save_directory (str): The directory where the vocabulary and merge files will be saved.
+            filename_prefix (Optional[str], optional): A prefix to be added to the filename. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the paths of the saved vocabulary and merge files.
+        
+        Raises:
+            FileNotFoundError: If the specified save_directory does not exist.
+            TypeError: If the save_directory is not of type str.
+            ValueError: If the save_directory is not a valid directory path.
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return

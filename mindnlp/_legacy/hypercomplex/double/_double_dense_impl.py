@@ -62,6 +62,22 @@ class _DenseImpl(BaseDenseImpl):
     def construct(self,
                   real: Tensor,
                   double: Tensor) -> Tuple[Tensor, Tensor]:
+
+        r"""
+        Constructs the output tensors based on the input real and double tensors.
+        
+        Args:
+            self (object): The instance of the _DenseImpl class.
+            real (Tensor): The input tensor representing real values.
+            double (Tensor): The input tensor representing double values.
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple containing two tensors: the first tensor represents the sum of the matrix multiplications of (real + double) with the transposed weight_x,
+            and the second tensor represents the difference of the matrix multiplications of (real - double) with the transposed weight_y.
+        
+        Raises:
+            None.
+        """
         u1 = real + double
         u2 = real - double
 
@@ -115,6 +131,27 @@ class _J1J2DenseImpl(BaseDenseImpl):
     def construct(self,
                   u1: Tensor,
                   u2: Tensor) -> Tuple[Tensor, Tensor]:
+
+        r"""
+        Constructs the output tensors for the _J1J2DenseImpl class.
+        
+        Args:
+            self: _J1J2DenseImpl
+                The instance of the _J1J2DenseImpl class.
+        
+            u1: Tensor
+                The input tensor 'u1' used in the computation.
+        
+            u2: Tensor
+                The input tensor 'u2' used in the computation.
+        
+        Returns:
+            Tuple[Tensor, Tensor]
+                Returns a tuple of two tensors, 'out1' and 'out2', representing the output of the computation.
+        
+        Raises:
+            N/A
+        """
 
         out1 = P.matmul(u1, self.weight_x.transpose())
         out2 = P.matmul(u2, self.weight_y.transpose())

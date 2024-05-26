@@ -130,6 +130,39 @@ class OlmoConfig(PretrainedConfig):
         clip_qkv=None,
         **kwargs,
     ):
+
+        """
+        Initializes an instance of the OlmoConfig class.
+        
+        Args:
+            self (OlmoConfig): The instance of the OlmoConfig class.
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 50304.
+            hidden_size (int, optional): The size of the hidden layers. Defaults to 4096.
+            intermediate_size (int, optional): The size of the intermediate layers. Defaults to 11008.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 32.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 32.
+            num_key_value_heads (int, optional): The number of key and value heads. Defaults to None.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'silu'.
+            max_position_embeddings (int, optional): The maximum number of position embeddings. Defaults to 2048.
+            initializer_range (float, optional): The range for the weight initializer. Defaults to 0.02.
+            use_cache (bool, optional): Whether to use caching. Defaults to True.
+            pad_token_id (int, optional): The ID of the padding token. Defaults to 1.
+            bos_token_id (int, optional): The ID of the beginning-of-sentence token. Defaults to None.
+            eos_token_id (int, optional): The ID of the end-of-sentence token. Defaults to 50279.
+            tie_word_embeddings (bool, optional): Whether to tie word embeddings. Defaults to False.
+            rope_theta (float, optional): The theta value for the rope attention. Defaults to 10000.0.
+            rope_scaling (None or float, optional): The scaling factor for rope attention. Defaults to None.
+            attention_bias (bool, optional): Whether to use attention bias. Defaults to False.
+            attention_dropout (float, optional): The dropout rate for attention. Defaults to 0.0.
+            clip_qkv (None or float, optional): The clip value for query, key, and value. Defaults to None.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None.
+        
+        Raises:
+            None.
+        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.hidden_size = hidden_size

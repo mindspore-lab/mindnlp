@@ -110,6 +110,42 @@ class LongT5Config(PretrainedConfig):
         eos_token_id=1,
         **kwargs,
     ):
+
+        """Initialize the LongT5Config object.
+        
+        Args:
+            self (LongT5Config): The LongT5Config instance.
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 32128.
+            d_model (int, optional): The dimensionality of the model. Defaults to 512.
+            d_kv (int, optional): The dimensionality of the key and value vectors. Defaults to 64.
+            d_ff (int, optional): The dimensionality of the feed-forward layer. Defaults to 2048.
+            num_layers (int, optional): The number of layers in the model. Defaults to 6.
+            num_decoder_layers (int, optional): The number of decoder layers. 
+                If not provided, it is set to the value of num_layers. Defaults to None.
+            num_heads (int, optional): The number of attention heads. Defaults to 8.
+            local_radius (int, optional): The radius of local attention. Defaults to 127.
+            global_block_size (int, optional): The block size for global attention. Defaults to 16.
+            relative_attention_num_buckets (int, optional): The number of buckets for relative attention. Defaults to 32.
+            relative_attention_max_distance (int, optional): The maximum distance for relative attention. Defaults to 128.
+            dropout_rate (float, optional): The dropout rate. Defaults to 0.1.
+            layer_norm_epsilon (float, optional): The epsilon value for layer normalization. Defaults to 1e-06.
+            initializer_factor (float, optional): The factor for initializing the model parameters. Defaults to 1.0.
+            feed_forward_proj (str, optional): The activation function for the feed-forward layer.
+                Valid options are 'gated-gelu', 'relu', etc. Defaults to 'relu'.
+            is_encoder_decoder (bool, optional): Whether the model is an encoder-decoder model. Defaults to True.
+            encoder_attention_type (str, optional): The attention type for the encoder. 
+                Valid options are 'local', 'global', etc. Defaults to 'local'.
+            use_cache (bool, optional): Whether to use cache in the model. Defaults to True.
+            pad_token_id (int, optional): The token ID for padding. Defaults to 0.
+            eos_token_id (int, optional): The token ID for end of sequence. Defaults to 1.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If the `feed_forward_proj` parameter is not in the correct format or is not a valid activation function.
+        
+        """
         self.vocab_size = vocab_size
         self.d_model = d_model
         self.d_kv = d_kv

@@ -42,6 +42,21 @@ logger = logging.get_logger(__name__)
 def _is_package_available(
         pkg_name: str, return_version: bool = False
 ) -> Union[Tuple[bool, str], bool]:
+
+    """
+    Checks if a specified package is available and optionally returns its version.
+    
+    Args:
+        pkg_name (str): The name of the package to check for availability.
+        return_version (bool, optional): Indicates whether to return the package version along with availability status. Defaults to False.
+    
+    Returns:
+        Union[Tuple[bool, str], bool]: If return_version is True, returns a tuple containing a boolean indicating package availability and a string representing the package version. 
+        If return_version is False, returns a boolean indicating package availability.
+    
+    Raises:
+        No specific exceptions are raised within this function.
+    """
     # Check we're not importing a "pkg_name" directory somewhere but the actual library by trying to grab the version
     package_exists = importlib.util.find_spec(pkg_name) is not None
     package_version = "N/A"
@@ -90,14 +105,44 @@ except importlib_metadata.PackageNotFoundError:
     _essentia_version = False
 
 def is_sudachi_available():
+
+    """
+    Checks if SudachiPy is available for use.
+    
+    Returns:
+        None: Indicates whether SudachiPy is available or not.
+    
+    """
     return _sudachipy_available
 
 
 def get_sudachi_version():
+
+    '''
+    Returns the version of SudachiPy.
+    
+    Returns:
+        None: This function does not take any parameters.
+    
+    Raises:
+        None
+    '''
     return _sudachipy_version
 
 
 def is_sudachi_projection_available():
+
+    """
+    Checks if Sudachi projection is available.
+    
+    This function checks if Sudachi is available and if the Sudachi version is equal to or greater than 0.6.8.
+    
+    Returns:
+        None
+    
+    Raises:
+        None
+    """
     if not is_sudachi_available():
         return False
 
@@ -106,81 +151,268 @@ def is_sudachi_projection_available():
     return version.parse(_sudachipy_version) >= version.parse("0.6.8")
 
 def is_sacremoses_available():
+
+    """
+    Checks if the sacremoses library is available in the current environment.
+    
+    Returns:
+        None: Indicates whether the sacremoses library is available or not.
+    
+    Raises:
+        None.
+    """
     return _sacremoses_available
 
 
 def is_mindspore_available():
+
+    '''
+    Checks if MindSpore is available.
+    
+    Args:
+        None
+    
+    Returns:
+        None: Indicates that the function does not return any value.
+    
+    Raises:
+        None: No exceptions are raised by this function.
+    '''
     return _mindspore_available
 
 
 def get_mindspore_version():
+
+    """
+    Returns the current version of MindSpore.
+    
+    Args:
+    
+    Returns:
+        None: This function does not take any parameters.
+    
+    Raises:
+        None: This function does not raise any exceptions.
+    """
     return _mindspore_version
 
 
 def is_datasets_available():
+
+    """
+    Checks if datasets are available.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        None: This function does not raise any exceptions.
+    """
     return _datasets_available
 
 
 def is_sentencepiece_available():
+
+    """
+    Checks if SentencePiece library is available.
+    
+    Returns:
+        None: Indicates whether the SentencePiece library is available or not.
+    
+    Raises:
+        None.
+    """
     return _sentencepiece_available
 
 
 def is_tokenizers_available():
+
+    """Check if tokenizers are available.
+    
+    This function checks if tokenizers are available for use. It does not take any parameters.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        None: This function does not raise any exceptions.
+    """
     return _tokenizers_available
 
 
 def is_safetensors_available():
+
+    """
+    Checks if SafeTensors is available in the current environment.
+    
+    Returns:
+        None: Indicates whether SafeTensors is available or not.
+    
+    """
     return _safetensors_available
 
 
 def is_modelscope_available():
+
+    '''
+    Checks if the model scope is available.
+    
+    Returns:
+        None: Indicates whether the model scope is available or not.
+    '''
     return _modelscope_available
 
 
 def is_cython_available():
+
+    """
+    Checks if Cython is available in the current environment.
+    
+    Returns:
+        None: Indicates whether Cython is available or not.
+    
+    Raises:
+        None
+    """
     return importlib.util.find_spec("pyximport") is not None
 
 
 def is_protobuf_available():
+
+    """
+    Checks if the Google Protocol Buffers (protobuf) library is available.
+    
+    Returns:
+        bool: True if the protobuf library is available, False otherwise.
+    
+    Raises:
+        No specific exceptions are raised by this function.
+    """
     if importlib.util.find_spec("google") is None:
         return False
     return importlib.util.find_spec("google.protobuf") is not None
 
 
 def is_pytest_available():
+
+    """
+    Check if the pytest library is available.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    """
     return _pytest_available
 
 
 def is_pretty_midi_available():
+
+    """
+    Checks if the 'pretty_midi' library is available.
+    
+    Returns:
+        None
+    
+    Raises:
+        None
+    """
     return _pretty_midi_available
 
 
 def is_librosa_available():
+
+    """
+    Checks if the 'librosa' library is available.
+    
+    Returns:
+        None
+    
+    Raises:
+        None
+    """
     return _librosa_available
 
 
 def is_essentia_available():
+
+    """
+    Checks if the 'essentia' library is available.
+    
+    Returns:
+        None.
+    
+    Raises:
+        None.
+    """
     return _essentia_available
 
 
 def is_pyctcdecode_available():
+
+    """
+    Check if the PyCTCDecode library is available.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        None
+    """
     return _pyctcdecode_available
 
 
 def is_scipy_available():
+
+    """
+    Checks if the SciPy library is available.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        None: This function does not raise any exceptions.
+    """
     return _scipy_available
 
 
 def is_jieba_available():
+
+    ''' 
+    Checks if the Jieba library is available.
+    
+    Returns:
+        None: The function does not return any value.
+    
+    '''
     return _jieba_available
 
 
 def is_pytesseract_available():
+
+    """
+    Check if pytesseract library is available.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        None: This function does not raise any exceptions.
+    """
     return _pytesseract_available
 
 
 @lru_cache()
 def is_vision_available():
+
+    """
+    Checks if the Pillow library is available for image processing.
+    
+    Returns:
+        bool: True if Pillow library is available, False otherwise.
+    
+    Raises:
+        PackageNotFoundError: If Pillow or Pillow-SIMD package is not found.
+    """
     _pil_available = importlib.util.find_spec("PIL") is not None
     if _pil_available:
         try:
@@ -195,6 +427,18 @@ def is_vision_available():
 
 
 def is_in_notebook():
+
+    """
+    This function checks if the code is running in a Jupyter notebook environment by examining the current execution environment and relevant environment variables.
+    
+    Returns:
+        bool: Returns True if the code is running in a Jupyter notebook environment, otherwise False.
+    
+    Raises:
+        AttributeError: If an attribute error occurs during the execution of the function.
+        ImportError: If the code is running in the console, VS Code, or Databricks environment, respective ImportError with the environment name is raised.
+        KeyError: If a key error occurs during the execution of the function.
+    """
     try:
         # Test adapted from tqdm.autonotebook: https://github.com/tqdm/tqdm/blob/master/tqdm/autonotebook.py
         get_ipython = sys.modules["IPython"].get_ipython
@@ -332,6 +576,20 @@ BACKENDS_MAPPING = OrderedDict(
 
 
 def requires_backends(obj, backends):
+
+    """
+    Function to check if the specified backends are available for the given object.
+    
+    Args:
+        obj (object): The object for which backends availability needs to be checked.
+        backends (list or tuple or str): The backend(s) to be checked for availability. Can be a single backend as a string or a list/tuple of backends.
+    
+    Returns:
+        None. This function does not return any value.
+    
+    Raises:
+        ImportError: If any of the specified backends are not available for the object.
+    """
     if not isinstance(backends, (list, tuple)):
         backends = [backends]
 
@@ -350,12 +608,40 @@ class DummyObject(type):
     """
 
     def __getattribute__(cls, key):
+
+        """
+        This method is called automatically when an attribute is accessed on the 'DummyObject' class or any of its subclasses.
+        
+        Args:
+            cls (type): The class object that the method was called on.
+            key (str): The name of the attribute being accessed.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         if key.startswith("_") and key != "_from_config":
             return super().__getattribute__(key)
         requires_backends(cls, cls._backends)
 
 
 def mindspore_required(func):
+
+    """
+    This function decorates another function to require the presence of MindSpore framework. 
+    
+    Args:
+        func (function): The function to be decorated. 
+    
+    Returns:
+        None. The function returns None.
+    
+    Raises:
+        FutureWarning: If the method `torch_required` is deprecated and will be removed in v4.36. 
+        ImportError: If the decorated function requires MindSpore but MindSpore is not available.
+    """
     warnings.warn(
         "The method `torch_required` is deprecated and will be removed in v4.36. Use `requires_backends` instead.",
         FutureWarning,

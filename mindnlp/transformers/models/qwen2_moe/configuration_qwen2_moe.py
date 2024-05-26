@@ -141,6 +141,43 @@ class Qwen2MoeConfig(PretrainedConfig):
         router_aux_loss_coef=0.001,
         **kwargs,
     ):
+
+        """
+        Initializes a Qwen2MoeConfig object with the specified parameters.
+        
+        Args:
+            vocab_size (int): The size of the vocabulary.
+            hidden_size (int): The size of the hidden layers.
+            intermediate_size (int): The size of the intermediate layers.
+            num_hidden_layers (int): The number of hidden layers.
+            num_attention_heads (int): The number of attention heads.
+            num_key_value_heads (int): The number of key and value heads.
+            hidden_act (str): The activation function for the hidden layers.
+            max_position_embeddings (int): The maximum position embeddings.
+            initializer_range (float): The range for weight initialization.
+            rms_norm_eps (float): The epsilon value for RMS normalization.
+            use_cache (bool): Whether to use caching.
+            tie_word_embeddings (bool): Whether to tie word embeddings.
+            rope_theta (float): The theta value for rope.
+            use_sliding_window (bool): Whether to use sliding window.
+            sliding_window (int): The size of the sliding window.
+            max_window_layers (int): The maximum number of window layers.
+            attention_dropout (float): The dropout rate for attention.
+            decoder_sparse_step (int): The step size for decoder sparsity.
+            moe_intermediate_size (int): The size of intermediate layers for Mixture of Experts.
+            shared_expert_intermediate_size (int): The size of shared expert intermediate layers.
+            num_experts_per_tok (int): The number of experts per token.
+            num_experts (int): The total number of experts.
+            norm_topk_prob (bool): Whether to normalize top-k probabilities.
+            output_router_logits (bool): Whether to output router logits.
+            router_aux_loss_coef (float): The coefficient for router auxiliary loss.
+        
+        Returns:
+            None. This method initializes the Qwen2MoeConfig object.
+        
+        Raises:
+            None.
+        """
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.hidden_size = hidden_size

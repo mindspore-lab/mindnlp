@@ -122,6 +122,25 @@ class LoHaConfig(LycorisConfig):
     )
 
     def __post_init__(self):
+
+        r"""
+        This method initializes the attributes of a LoHaConfig object after its creation.
+        
+        Args:
+            self: The instance of the LoHaConfig class.
+                Type: LoHaConfig
+                Purpose: Represents the current instance of the LoHaConfig class.
+                Restrictions: This parameter is required and should always be the first parameter of the method.
+        
+        Returns:
+            None: This method does not return any value.
+                Type: None
+                Purpose: The method sets the 'peft_type' attribute to PeftType.LOHA and initializes the 'target_cells' attribute
+                as a set if the 'target_cells' attribute is of type list; otherwise, it leaves the 'target_cells' attribute unchanged.
+        
+        Raises:
+            None
+        """
         self.peft_type = PeftType.LOHA
         self.target_cells = (
             set(self.target_cells)

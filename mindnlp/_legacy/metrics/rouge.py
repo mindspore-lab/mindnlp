@@ -192,6 +192,23 @@ class RougeN(Metric):
 
     """
     def __init__(self, n_size=1, name='RougeN'):
+
+        r"""
+        Initializes an instance of the RougeN class.
+        
+        Args:
+            self: The current instance of the class.
+            n_size (int): The size of the n-gram. Default value is 1.
+                          Must be an integer.
+            name (str): The name of the RougeN instance. Default value is 'RougeN'.
+                        Must be a string.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         self._name = name
         self.n_size = _check_value_type("n_size", n_size, [int])
@@ -295,6 +312,23 @@ class RougeL(Metric):
 
     """
     def __init__(self, beta=1.2, name='RougeL'):
+
+        r"""
+        Initializes an instance of the 'RougeL' class.
+        
+        Args:
+            self: The current instance of the 'RougeL' class.
+            beta (optional): A float value representing the beta parameter (default: 1.2).
+                This parameter is used for calculating the bias and should be a non-negative float value.
+            name (optional): A string representing the name of the 'RougeL' instance (default: 'RougeL').
+        
+        Returns:
+            None
+        
+        Raises:
+            TypeError: If beta is not a float value.
+        
+        """
         super().__init__()
         self._name = name
         self.bias = _check_value_type("beta", beta, [float])

@@ -27,23 +27,97 @@ from mindnlp.configs import DEFAULT_ROOT
 class TransferIterableDataset():
     """TransferDataset for Huggingface Dataset."""
     def __init__(self, arrow_ds, column_names):
+
+        r"""
+        Initializes a new instance of TransferIterableDataset.
+        
+        Args:
+            self (TransferIterableDataset): The instance of the TransferIterableDataset class.
+            arrow_ds (ArrowDataset): The Arrow dataset to be used for transferring data.
+            column_names (list): A list of column names to be used for data transfer.
+        
+        Returns:
+            None. The method initializes the TransferIterableDataset instance with the provided parameters.
+        
+        Raises:
+            No specific exceptions are raised within this method.
+        """
         self.ds = arrow_ds
         self.column_names = column_names
 
     def __iter__(self):
+
+        r"""
+        Method '__iter__' in the class 'TransferIterableDataset'.
+        
+        Args:
+            self: TransferIterableDataset
+                The instance of TransferIterableDataset.
+                This parameter is required to iterate over the dataset.
+                
+        Returns:
+            None
+                This method does not return any explicit value.
+        
+        Raises:
+            None
+        """
         for data in self.ds:
             yield tuple(data[name] for name in self.column_names)
 
 class TransferDataset():
     """TransferDataset for Huggingface Dataset."""
     def __init__(self, arrow_ds, column_names):
+
+        r"""
+        __init__ method in the TransferDataset class.
+        
+        Args:
+            self (object): The instance of the TransferDataset class.
+            arrow_ds (object): An Arrow Dataset representing the data to be transferred.
+            column_names (list): A list of column names to be included in the transfer.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         self.ds = arrow_ds
         self.column_names = column_names
 
     def __getitem__(self, index):
+
+        r"""
+        Retrieve the item at the specified index.
+        
+        Args:
+            self (TransferDataset): The TransferDataset instance from which to retrieve the item.
+            index (int): The index of the item to retrieve. It should be a non-negative integer within the valid range of indices for the dataset.
+        
+        Returns:
+            tuple: A tuple containing the values of the item at the specified index for each column in the dataset.
+        
+        Raises:
+            IndexError: If the index is out of range or not a valid integer.
+            KeyError: If the column name is not found in the dataset.
+        """
         return tuple(self.ds[int(index)][name] for name in self.column_names)
 
     def __len__(self):
+
+        r"""
+        This method '__len__' is implemented in the class 'TransferDataset' to return the number of rows in the dataset.
+        
+        Args:
+            self: Represents the instance of the class. It is used to access the dataset stored in the class. No restrictions.
+        
+        Returns:
+            None. This method does not return any value directly to the caller but rather accesses the 'num_rows' attribute of the dataset stored in the class.
+        
+        Raises:
+            No exceptions are explicitly raised by this method. However, if the 'num_rows' attribute is not properly initialized or if there are any issues with accessing the dataset, unexpected errors might occur.
+        """
         return self.ds.num_rows
 
 

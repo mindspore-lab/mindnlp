@@ -165,6 +165,32 @@ class UIEWork(Work):
     }
 
     def __init__(self, work, model, schema=None, **kwargs):
+
+        """
+        Initialize a new instance of the UIEWork class.
+        
+        Args:
+            self (UIEWork): The instance of the UIEWork class.
+            work (str): The type of work being processed.
+            model (str): The model being used for processing.
+            schema (optional): The schema for the work (default is None).
+            **kwargs: Additional keyword arguments.
+                max_seq_len (int): Maximum sequence length (default is 512).
+                dynamic_max_length (int): Dynamic maximum length of sequences (default is None).
+                batch_size (int): Batch size for processing (default is 16).
+                split_sentence (bool): Flag indicating whether to split sentences (default is False).
+                position_prob (float): Probability of positions in the model (default is 0.5).
+                num_workers (int): Number of workers for processing (default is 1).
+                schema_lang (str): Language of the schema (default is 'ch').
+        
+        Returns:
+            None. This method initializes the UIEWork instance.
+        
+        Raises:
+            FileNotFoundError: If the configuration file is not found.
+            KeyError: If 'architectures' key is missing in the configuration file.
+            Warning: If the schema is not set, a warning is logged.
+        """
         super().__init__(work=work, model=model, **kwargs)
 
         self._max_seq_len = kwargs.get("max_seq_len", 512)
@@ -473,6 +499,22 @@ class UIEWork(Work):
         return concat_results
 
     def _run_model(self, inputs):
+
+        """
+        Method _run_model in class UIEWork.
+        
+        This method processes the input text data through a multi-stage prediction process.
+        
+        Args:
+            self: The instance of the UIEWork class.
+            inputs (dict): A dictionary containing the input data. It must have a key 'text' with the value representing the input text.
+        
+        Returns:
+            None: This method does not return any value. Instead, it modifies the 'result' key in the inputs dictionary with the prediction results.
+        
+        Raises:
+            No specific exceptions are documented to be raised by this method.
+        """
         raw_inputs = inputs["text"]
         _inputs = self._parse_inputs(raw_inputs)
         results = self._multi_stage_predict(_inputs)
@@ -480,6 +522,26 @@ class UIEWork(Work):
         return inputs
 
     def _parse_inputs(self, inputs):
+
+        """
+        This method '_parse_inputs' in the class 'UIEWork' processes the input data for further use.
+        
+        Args:
+            self: An instance of the 'UIEWork' class.
+                  Type: UIEWork
+                  Purpose: Represents the current instance of the class.
+        
+            inputs: The input data to be processed.
+                    Type: List
+                    Purpose: Contains input data in the form of dictionaries or strings.
+                    Restrictions: Should be a list of dictionaries or strings. If a dictionary is provided, it should have a 'text' key.
+        
+        Returns:
+            None
+        
+        Raises:
+            - None
+        """
         _inputs = []
         for d in inputs:
             if isinstance(d, dict):

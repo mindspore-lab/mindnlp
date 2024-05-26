@@ -155,6 +155,23 @@ class CpmTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
+
+        """
+        Method: can_save_slow_tokenizer
+        
+        Description:
+        This method checks if the slow tokenizer can be saved by verifying the existence of the vocabulary file.
+        
+        Args:
+        - self: The instance of the CpmTokenizerFast class.
+        
+        Returns:
+        - bool: Returns a boolean value indicating whether the slow tokenizer can be saved. 
+          Returns True if the vocabulary file exists, otherwise False.
+        
+        Raises:
+        This method does not raise any exceptions.
+        """
         return os.path.isfile(self.vocab_file) if self.vocab_file else False
 
     # Copied from transformers.models.xlnet.tokenization_xlnet_fast.XLNetTokenizerFast.build_inputs_with_special_tokens
@@ -216,6 +233,29 @@ class CpmTokenizerFast(PreTrainedTokenizerFast):
 
     # Copied from transformers.models.xlnet.tokenization_xlnet_fast.XLNetTokenizerFast.save_vocabulary
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+
+        """
+        Saves the vocabulary of a fast tokenizer to a specified directory.
+        
+        Args:
+            self (CpmTokenizerFast): The instance of the fast tokenizer.
+            save_directory (str): The directory where the vocabulary will be saved.
+            filename_prefix (Optional[str], optional): The prefix to be added to the filename. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            ValueError: Raised if the fast tokenizer does not have the necessary information to save the vocabulary for a slow tokenizer.
+            OSError: Raised if the save_directory is not a valid directory.
+        
+        Note:
+            The method assumes that the fast tokenizer has the required information to save the vocabulary for a slow tokenizer. If this is not the case, a ValueError is raised.
+        
+        Example:
+            tokenizer = CpmTokenizerFast()
+            tokenizer.save_vocabulary('path/to/save', 'vocab')
+        """
         if not self.can_save_slow_tokenizer:
             raise ValueError(
                 "Your fast tokenizer does not have the necessary information to save the vocabulary for a slow "
@@ -235,6 +275,29 @@ class CpmTokenizerFast(PreTrainedTokenizerFast):
         return (out_vocab_file,)
 
     def _batch_encode_plus(self, batch_text_or_text_pairs, *args, **kwargs):
+
+        """
+        Performs batch encoding of text or text pairs using the CpmTokenizerFast class.
+        
+        Args:
+            self (CpmTokenizerFast): An instance of the CpmTokenizerFast class.
+            batch_text_or_text_pairs (list or tuple): A list or tuple containing either text or text pairs to encode.
+                If a list of text is provided, each text item will be encoded individually.
+                If a list of text pairs is provided, each pair will be encoded as a single unit.
+                The text can be in any language, but it must be preprocessed and tokenized before passing it to this method.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        
+        Note:
+            - This method internally uses the _batch_encode_plus method of the superclass.
+            - The text is preprocessed using the jieba library to tokenize Chinese text.
+            - The translator attribute of the CpmTokenizerFast instance is used to remove certain characters from the text.
+            - Other arguments and keyword arguments passed to this method will be forwarded to the superclass method.
+        """
         batch_text_or_text_pairs = [
             " ".join([x.translate(self.translator) for x in self.jieba.cut(text, cut_all=False)])
             for text in batch_text_or_text_pairs
@@ -242,6 +305,19 @@ class CpmTokenizerFast(PreTrainedTokenizerFast):
         return super()._batch_encode_plus(batch_text_or_text_pairs, *args, **kwargs)
 
     def _decode(self, *args, **kwargs):
+
+        """
+        Decodes the text representation of a CpmTokenizerFast object.
+        
+        Args:
+            self: An instance of the CpmTokenizerFast class.
+            
+        Returns:
+            None. This method modifies the text representation of the CpmTokenizerFast object in-place.
+            
+        Raises:
+            None.
+        """
         text = super()._decode(*args, **kwargs)
         text = text.replace(" ", "").replace("\u2582", " ").replace("\u2583", "\n")
         return text

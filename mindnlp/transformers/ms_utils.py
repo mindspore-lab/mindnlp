@@ -35,6 +35,21 @@ class Conv1D(nn.Cell):
     """
 
     def __init__(self, n_out, n_in):
+
+        """
+        Initialize the Conv1D class with the specified number of output channels and input channels.
+        
+        Args:
+            self (object): The instance of the Conv1D class.
+            n_out (int): The number of output channels for the convolution operation.
+            n_in (int): The number of input channels for the convolution operation.
+        
+        Returns:
+            None. This method initializes the Conv1D object with the provided parameters.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         self.n_out = n_out
         self.weight = Parameter(initializer(Normal(sigma=0.02), (n_in, n_out), mindspore.float32))
@@ -42,6 +57,22 @@ class Conv1D(nn.Cell):
         self.matmul = Matmul()
 
     def construct(self, x):
+
+        """
+        Constructs the 1D convolutional operation on the input tensor x.
+        
+        Args:
+            self (Conv1D): An instance of the Conv1D class.
+            x (torch.Tensor): The input tensor on which the convolution operation is applied. 
+                Should have a shape of (batch_size, sequence_length, input_channels).
+                
+        Returns:
+            None. The method modifies the input tensor x in place by performing the convolution operation.
+        
+        Raises:
+            - ValueError: If the shape of the input tensor x is not as expected for a 1D convolution operation.
+            - RuntimeError: If there are any runtime issues during the convolution operation.
+        """
         size_out = x.shape[:-1] + (self.n_out,)
         x = self.matmul(x.view(-1, x.shape[-1]), self.weight) + self.bias
         x = x.view(size_out)

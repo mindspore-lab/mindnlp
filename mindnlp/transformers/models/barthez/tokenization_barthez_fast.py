@@ -129,6 +129,27 @@ class BarthezTokenizerFast(PreTrainedTokenizerFast):
         mask_token="<mask>",
         **kwargs,
     ):
+
+        """
+        Initialize a BarthezTokenizerFast object.
+        
+        Args:
+        - vocab_file (str): Path to the vocabulary file. Default is None.
+        - tokenizer_file (str): Path to the tokenizer file. Default is None.
+        - bos_token (str): Beginning of sentence token. Default is '<s>'.
+        - eos_token (str): End of sentence token. Default is '</s>'.
+        - sep_token (str): Separator token. Default is '</s>'.
+        - cls_token (str): Classification token. Default is '<s>'.
+        - unk_token (str): Token for unknown words. Default is '<unk>'.
+        - pad_token (str): Padding token. Default is '<pad>'.
+        - mask_token (str): Mask token. Default is '<mask>'.
+        
+        Returns:
+        - None: This method does not return any value.
+        
+        Raises:
+        - TypeError: If mask_token is not a string.
+        """
         # Mask token behave like a normal word, i.e. include the space before it
         mask_token = AddedToken(mask_token, lstrip=True, rstrip=False) if isinstance(mask_token, str) else mask_token
 
@@ -149,6 +170,21 @@ class BarthezTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
+
+        """
+        Method to check if the slow tokenizer can be saved.
+        
+        Args:
+            self (BarthezTokenizerFast): An instance of the BarthezTokenizerFast class.
+                Represents the current object to check whether the slow tokenizer can be saved.
+                
+        Returns:
+            bool: Returns a boolean value indicating whether the slow tokenizer can be saved.
+                True if the vocab file exists, False if the vocab file does not exist or is not provided.
+        
+        Raises:
+            None.
+        """
         return os.path.isfile(self.vocab_file) if self.vocab_file else False
 
     def build_inputs_with_special_tokens(
@@ -200,6 +236,34 @@ class BarthezTokenizerFast(PreTrainedTokenizerFast):
         return len(cls + token_ids_0 + sep + sep + token_ids_1 + sep) * [0]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+
+        """
+        Save the vocabulary for a slow tokenizer.
+        
+        Args:
+            self (BarthezTokenizerFast): The instance of the BarthezTokenizerFast class.
+            save_directory (str): The directory where the vocabulary will be saved.
+            filename_prefix (Optional[str], optional): The prefix to be added to the filename (default: None).
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for a slow tokenizer.
+            OSError: If the provided save_directory is not a valid directory.
+            IOError: If there is an error while copying the vocabulary file.
+        
+        Note:
+            - The fast tokenizer must have the necessary information to save the vocabulary for a slow tokenizer.
+            - The save_directory should be a valid directory.
+            - The vocabulary file will be copied to the save_directory with an optional filename_prefix.
+        
+        Example:
+            >>> tokenizer = BarthezTokenizerFast()
+            >>> tokenizer.save_vocabulary('/path/to/save')
+            ('/path/to/save/vocab.txt', )
+        
+        """
         if not self.can_save_slow_tokenizer:
             raise ValueError(
                 "Your fast tokenizer does not have the necessary information to save the vocabulary for a slow "

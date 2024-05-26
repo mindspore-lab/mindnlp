@@ -114,6 +114,20 @@ class Precision(Metric):
 
     """
     def __init__(self, name='Precision'):
+
+        r"""
+        Initializes an instance of the Precision class.
+        
+        Args:
+            self: The instance of the Precision class.
+            name (str, optional): The name of the Precision instance. Defaults to 'Precision'.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         super().__init__()
         self._name = name
         self.epsilon = sys.float_info.min

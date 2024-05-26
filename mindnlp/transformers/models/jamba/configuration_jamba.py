@@ -159,6 +159,53 @@ class JambaConfig(PretrainedConfig):
             mamba_inner_layernorms=True,
             **kwargs,
     ):
+
+        """
+        Initializes a new instance of the JambaConfig class.
+        
+        Args:
+            self: The object instance.
+            vocab_size (int, optional): The size of the vocabulary. Default is 65536.
+            tie_word_embeddings (bool, optional): Whether to tie the word embeddings. Default is False.
+            hidden_size (int, optional): The size of the hidden layers. Default is 4096.
+            intermediate_size (int, optional): The size of the intermediate layers. Default is 14336.
+            num_hidden_layers (int, optional): The number of hidden layers. Default is 32.
+            num_attention_heads (int, optional): The number of attention heads. Default is 32.
+            num_key_value_heads (int, optional): The number of key-value heads. Default is 8.
+            hidden_act (str, optional): The activation function for the hidden layers. Default is 'silu'.
+            initializer_range (float, optional): The range for weight initialization. Default is 0.02.
+            rms_norm_eps (float, optional): The epsilon value for RMS normalization. Default is 1e-06.
+            use_cache (bool, optional): Whether to use cache for attention layers. Default is True.
+            calc_logits_for_entire_prompt (bool, optional): Whether to calculate logits for the entire prompt. Default is False.
+            output_router_logits (bool, optional): Whether to output router logits. Default is False.
+            router_aux_loss_coef (float, optional): The coefficient for the router auxiliary loss. Default is 0.001.
+            pad_token_id (int, optional): The token ID for padding. Default is 0.
+            bos_token_id (int, optional): The token ID for the beginning of sentence. Default is 1.
+            eos_token_id (int, optional): The token ID for the end of sentence. Default is 2.
+            sliding_window (None or int, optional): The size of the sliding window. Default is None.
+            n_ctx (int, optional): The size of the context window. Default is 262144.
+            attention_dropout (float, optional): The dropout rate for attention layers. Default is 0.0.
+            num_experts_per_tok (int, optional): The number of experts per token. Default is 2.
+            num_experts (int, optional): The total number of experts. Default is 16.
+            expert_layer_period (int, optional): The period for expert layers. Default is 2.
+            expert_layer_offset (int, optional): The offset for expert layers. Default is 1.
+            attn_layer_period (int, optional): The period for attention layers. Default is 8.
+            attn_layer_offset (int, optional): The offset for attention layers. Default is 4.
+            use_mamba_kernels (bool, optional): Whether to use Mamba kernels. Default is True.
+            mamba_d_state (int, optional): The state dimension for Mamba. Default is 16.
+            mamba_d_conv (int, optional): The convolutional dimension for Mamba. Default is 4.
+            mamba_expand (int, optional): The expansion factor for Mamba. Default is 2.
+            mamba_dt_rank (int or 'auto', optional): The rank for Mamba's data tensors. Default is 'auto'.
+            mamba_conv_bias (bool, optional): Whether to include biases in Mamba's convolution layers. Default is True.
+            mamba_proj_bias (bool, optional): Whether to include biases in Mamba's projection layers. Default is False.
+            mamba_inner_layernorms (bool, optional): Whether to use inner layer normalization in Mamba. Default is True.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         self.vocab_size = vocab_size
         self.tie_word_embeddings = tie_word_embeddings
         self.hidden_size = hidden_size

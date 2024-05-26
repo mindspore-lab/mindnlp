@@ -61,6 +61,23 @@ class CNNEncoder(EncoderBase):
     """
 
     def __init__(self, embedding, convs, conv_layer_activation=nn.Tanh(), output_dim=None):
+
+        r"""
+        This method initializes an instance of the CNNEncoder class.
+        
+        Args:
+            self: The instance of the CNNEncoder class.
+            embedding: An object representing the embedding.
+            convs: A list of convolutional layers.
+            conv_layer_activation: An activation function for the convolutional layers. It defaults to nn.Tanh().
+            output_dim: An integer representing the output dimension. It is optional and defaults to None.
+        
+        Returns:
+            None. This method initializes the CNNEncoder instance and does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(embedding)
         self.emb_axis = self.embedding.embedding_size
         self.act = conv_layer_activation

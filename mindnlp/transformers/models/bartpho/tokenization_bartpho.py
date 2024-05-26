@@ -132,6 +132,30 @@ class BartphoTokenizer(PreTrainedTokenizer):
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
+
+        """
+        Initializes a new instance of the BartphoTokenizer class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_file (str): The path to the vocabulary file.
+            monolingual_vocab_file (str): The path to the monolingual vocabulary file.
+            bos_token (str, optional): The beginning of sentence token. Defaults to '<s>'.
+            eos_token (str, optional): The end of sentence token. Defaults to '</s>'.
+            sep_token (str, optional): The separator token. Defaults to '</s>'.
+            cls_token (str, optional): The classification token. Defaults to '<s>'.
+            unk_token (str, optional): The unknown token. Defaults to '<unk>'.
+            pad_token (str, optional): The padding token. Defaults to '<pad>'.
+            mask_token (str, optional): The masking token. Defaults to '<mask>'.
+            sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional keyword arguments for the SentencePieceProcessor. Defaults to None.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         # Mask token behave like a normal word, i.e. include the space before it
         mask_token = AddedToken(mask_token, lstrip=True, rstrip=False) if isinstance(mask_token, str) else mask_token
 
@@ -173,12 +197,39 @@ class BartphoTokenizer(PreTrainedTokenizer):
         )
 
     def __getstate__(self):
+
+        """
+        This method '__getstate__' in the class 'BartphoTokenizer' is used to provide the state of the object for pickling.
+        
+        Args:
+            self: An instance of the BartphoTokenizer class. Represents the current object whose state needs to be retrieved.
+        
+        Returns:
+            None: This method returns None after setting the 'sp_model' attribute to None and serializing the 'sp_model_proto' attribute.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
         state = self.__dict__.copy()
         state["sp_model"] = None
         state["sp_model_proto"] = self.sp_model.serialized_model_proto()
         return state
 
     def __setstate__(self, d):
+
+        """
+        This method '__setstate__' is defined within the class 'BartphoTokenizer' and is used to restore the object's state from a dictionary representation. It takes two parameters, 'self' which refers to the instance of the class, and 'd' which is a dictionary representing the state to be restored.
+        
+        Args:
+            self (BartphoTokenizer): The instance of the BartphoTokenizer class.
+            d (dict): A dictionary representing the state to be restored. It contains the data necessary to reconstruct the object's state.
+        
+        Returns:
+            None: This method does not return any value explicitly.
+        
+        Raises:
+            No specific exceptions are documented to be raised by this method. However, potential exceptions that could arise during the execution of this method may include, but are not limited to, those related to the initialization of the 'SentencePieceProcessor' instance or its 'LoadFromSerializedProto' method.
+        """
         self.__dict__ = d
 
         # for backward compatibility
@@ -269,14 +320,56 @@ class BartphoTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
+
+        """
+        Returns the size of the vocabulary used by the BartphoTokenizer.
+        
+        Args:
+            self: An instance of the BartphoTokenizer class.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         return len(self.fairseq_ids_to_tokens)
 
     def get_vocab(self):
+
+        """
+        Retrieves the vocabulary dictionary of the BartphoTokenizer instance.
+        
+        Args:
+            self (BartphoTokenizer): The instance of the BartphoTokenizer class.
+        
+        Returns:
+            vocab (dict): A dictionary containing the vocabulary of the tokenizer. The keys represent the tokens,
+                and the values represent their associated IDs. The dictionary includes both the original vocabulary
+                defined by the tokenizer as well as any additional tokens that have been added.
+        
+        Raises:
+            None.
+        """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
         vocab.update(self.added_tokens_encoder)
         return vocab
 
     def _tokenize(self, text: str) -> List[str]:
+
+        """
+        Tokenizes the input text using the SentencePiece model.
+        
+        Args:
+            self (BartphoTokenizer): The instance of the BartphoTokenizer class.
+            text (str): The input text to be tokenized.
+            
+        Returns:
+            List[str]: A list of tokenized strings representing the text.
+        
+        Raises:
+            N/A
+        """
         return self.sp_model.encode(text, out_type=str)
 
     def _convert_token_to_id(self, token):
@@ -296,6 +389,22 @@ class BartphoTokenizer(PreTrainedTokenizer):
         return out_string
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+
+        """
+            Saves the vocabulary files to the specified directory.
+        
+            Args:
+                self (BartphoTokenizer): An instance of the BartphoTokenizer class.
+                save_directory (str): The directory where the vocabulary files will be saved.
+                filename_prefix (Optional[str], optional): The prefix to be added to the filenames (default: None).
+        
+            Returns:
+                Tuple[str]: A tuple containing the paths of the saved vocabulary files.
+        
+            Raises:
+                FileNotFoundError: If the save_directory does not exist.
+                IsADirectoryError: If the specified save_directory is not a directory.
+            """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return

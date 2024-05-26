@@ -104,6 +104,30 @@ class BitImageProcessor(BaseImageProcessor):
         do_convert_rgb: bool = True,
         **kwargs,
     ) -> None:
+
+        """
+        Initializes a BitImageProcessor instance.
+        
+        Args:
+            self: The BitImageProcessor instance.
+            do_resize (bool, optional): Whether to resize the image. Defaults to True.
+            size (Dict[str, int], optional): The target size of the image. Defaults to None.
+            resample (PILImageResampling, optional): The resampling filter to use when resizing the image. Defaults to PILImageResampling.BICUBIC.
+            do_center_crop (bool, optional): Whether to perform center cropping. Defaults to True.
+            crop_size (Dict[str, int], optional): The size for center cropping. Defaults to None.
+            do_rescale (bool, optional): Whether to rescale the image. Defaults to True.
+            rescale_factor (Union[int, float], optional): The rescaling factor. Defaults to 1 / 255.
+            do_normalize (bool, optional): Whether to normalize the image. Defaults to True.
+            image_mean (Optional[Union[float, List[float]]], optional): The mean value for image normalization. Defaults to None.
+            image_std (Optional[Union[float, List[float]]], optional): The standard deviation for image normalization. Defaults to None.
+            do_convert_rgb (bool, optional): Whether to convert the image to RGB format. Defaults to True.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(**kwargs)
         size = size if size is not None else {"shortest_edge": 224}
         size = get_size_dict(size, default_to_square=False)

@@ -61,6 +61,35 @@ class BertConfig(PretrainedConfig):
         classifier_dropout=None,
         **kwargs,
     ):
+
+        """
+        Initialize a BertConfig object with the specified parameters.
+        
+        Args:
+            self (object): The object instance.
+            vocab_size (int): The size of the vocabulary. Defaults to 30522.
+            hidden_size (int): The size of the hidden layers. Defaults to 768.
+            num_hidden_layers (int): The number of hidden layers. Defaults to 12.
+            num_attention_heads (int): The number of attention heads. Defaults to 12.
+            intermediate_size (int): The size of the intermediate layer in the transformer encoder. Defaults to 3072.
+            hidden_act (str): The activation function for the hidden layers. Defaults to 'gelu'.
+            hidden_dropout_prob (float): The dropout probability for the hidden layers. Defaults to 0.1.
+            attention_probs_dropout_prob (float): The dropout probability for the attention probabilities. Defaults to 0.1.
+            max_position_embeddings (int): The maximum position index. Defaults to 512.
+            type_vocab_size (int): The size of the type vocabulary. Defaults to 2.
+            initializer_range (float): The range for weight initialization. Defaults to 0.02.
+            layer_norm_eps (float): The epsilon value for layer normalization. Defaults to 1e-12.
+            pad_token_id (int): The token ID for padding. Defaults to 0.
+            position_embedding_type (str): The type of position embeddings. Defaults to 'absolute'.
+            use_cache (bool): Whether to use cache during inference. Defaults to True.
+            classifier_dropout (float): The dropout probability for the classifier layer. Defaults to None.
+        
+        Returns:
+            None. This method initializes the BertConfig object with the specified parameters.
+        
+        Raises:
+            ValueError: If any of the input parameters are invalid or out of range.
+        """
         super().__init__(pad_token_id=pad_token_id, **kwargs)
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size

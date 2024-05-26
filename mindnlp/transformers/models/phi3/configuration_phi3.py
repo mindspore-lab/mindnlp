@@ -139,6 +139,42 @@ class Phi3Config(PretrainedConfig):
         sliding_window=None,
         **kwargs,
     ):
+
+        """
+        This method initializes an instance of the Phi3Config class with the provided parameters.
+        
+        Args:
+        - self: The instance of the class.
+        - vocab_size (int): The size of the vocabulary. Default is 32064.
+        - hidden_size (int): The size of the hidden layers in the model. Default is 3072.
+        - intermediate_size (int): The size of the intermediate layers in the model. Default is 8192.
+        - num_hidden_layers (int): The number of hidden layers in the model. Default is 32.
+        - num_attention_heads (int): The number of attention heads. Default is 32.
+        - num_key_value_heads (int): The number of key and value heads. If None, it defaults to num_attention_heads.
+        - resid_pdrop (float): The dropout probability for residual connections. Default is 0.0.
+        - embd_pdrop (float): The dropout probability for the embeddings. Default is 0.0.
+        - attention_dropout (float): The dropout probability for attention layers. Default is 0.0.
+        - hidden_act (str): The activation function for the hidden layers. Default is 'silu'.
+        - max_position_embeddings (int): The maximum position embeddings. Default is 4096.
+        - original_max_position_embeddings (int): The original maximum position embeddings. Default is 4096.
+        - initializer_range (float): The range for parameter initializations. Default is 0.02.
+        - rms_norm_eps (float): The epsilon value for RMS normalization. Default is 1e-05.
+        - use_cache (bool): Indicates whether caching is used. Default is True.
+        - tie_word_embeddings (bool): Indicates whether word embeddings are tied. Default is False.
+        - rope_theta (float): The theta value for ROPE. Default is 10000.0.
+        - rope_scaling (float): The scaling factor for ROPE.
+        - bos_token_id (int): The beginning of sequence token id. Default is 1.
+        - eos_token_id (int): The end of sequence token id. Default is 32000.
+        - pad_token_id (int): The padding token id. Default is 32000.
+        - sliding_window: Not specified.
+        
+        Returns:
+        None: This method does not return any value.
+        
+        Raises:
+        - ValueError: If rope_scaling is provided without rope_theta or vice versa.
+        - TypeError: If any of the input parameters have an unexpected type.
+        """
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
         self.intermediate_size = intermediate_size

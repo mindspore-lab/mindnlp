@@ -144,6 +144,36 @@ class XLNetTokenizerFast(PreTrainedTokenizerFast):
         additional_special_tokens=["<eop>", "<eod>"],
         **kwargs,
     ):
+
+        """
+        __init__
+        
+        Initializes an instance of the XLNetTokenizerFast class.
+        
+        Args:
+        - self: The instance of the class.
+        - vocab_file (str, optional): The path to the vocabulary file. Defaults to None.
+        - tokenizer_file (str, optional): The path to the tokenizer file. Defaults to None.
+        - do_lower_case (bool, optional): Whether to convert tokens to lowercase. Defaults to False.
+        - remove_space (bool, optional): Whether to remove spaces from tokens. Defaults to True.
+        - keep_accents (bool, optional): Whether to keep accents in tokens. Defaults to False.
+        - bos_token (str, optional): The beginning of sentence token. Defaults to '<s>'.
+        - eos_token (str, optional): The end of sentence token. Defaults to '</s>'.
+        - unk_token (str, optional): The unknown token. Defaults to '<unk>'.
+        - sep_token (str, optional): The separator token. Defaults to '<sep>'.
+        - pad_token (str, optional): The padding token. Defaults to '<pad>'.
+        - cls_token (str, optional): The classification token. Defaults to '<cls>'.
+        - mask_token (str or AddedToken, optional): The mask token. Defaults to '<mask>'.
+        - additional_special_tokens (list, optional): Additional special tokens. Defaults to ['<eop>', '<eod>'].
+        - **kwargs: Additional keyword arguments.
+        
+        Returns:
+        None. The method initializes the XLNetTokenizerFast instance.
+        
+        Raises:
+        - ValueError: If invalid input is provided for the parameters.
+        - TypeError: If the input type for the parameters is incorrect.
+        """
         # Mask token behave like a normal word, i.e. include the space before it
         mask_token = AddedToken(mask_token, lstrip=True, rstrip=False) if isinstance(mask_token, str) else mask_token
 
@@ -172,6 +202,23 @@ class XLNetTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
+
+        """
+        Checks if the slow tokenizer can be saved.
+        
+        Args:
+            self (XLNetTokenizerFast): An instance of the XLNetTokenizerFast class.
+        
+        Returns:
+            bool: Returns True if the slow tokenizer can be saved, False otherwise.
+        
+        Raises:
+            None.
+        
+        The 'can_save_slow_tokenizer' method checks if the slow tokenizer can be saved by verifying the existence of the vocabulary file. It returns a boolean value indicating whether the slow tokenizer can be saved or not. If the 'vocab_file' attribute is not set or if the file does not exist, the method returns False. Otherwise, it returns True.
+        
+        Note that this method does not raise any exceptions.
+        """
         return os.path.isfile(self.vocab_file) if self.vocab_file else False
 
     def build_inputs_with_special_tokens(
@@ -230,6 +277,22 @@ class XLNetTokenizerFast(PreTrainedTokenizerFast):
         return len(token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1] + cls_segment_id
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+
+        """Save the vocabulary for a fast tokenizer to a specified directory.
+        
+        Args:
+            self (XLNetTokenizerFast): The instance of the XLNetTokenizerFast class.
+            save_directory (str): The directory path where the vocabulary will be saved.
+            filename_prefix (Optional[str]): A prefix for the filename. Defaults to None. 
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for a slow tokenizer.
+            OSError: If the save_directory does not exist or is not a valid directory.
+            IOError: If an error occurs while copying the vocabulary file to the specified directory.
+        """
         if not self.can_save_slow_tokenizer:
             raise ValueError(
                 "Your fast tokenizer does not have the necessary information to save the vocabulary for a slow "

@@ -19,6 +19,19 @@ from mindspore import nn, ops
 from mindnlp.modules.functional import normalize
 
 class top_k_gating(nn.Cell):
+
+    """
+    This class represents a top-k gating mechanism for selecting a subset of experts based on input logits. The gating mechanism uses the top-k experts to make predictions and can be used for model ensembling or expert selection. The class inherits from nn.Cell and implements methods for initializing the mechanism, computing auxiliary loss, and constructing the top-k gating for input data. Additionally, the class provides a method for returning an extra representation string for the module.
+    
+    The top_k_gating class provides the following methods:
+    
+    - __init__(input_size, num_experts, top_k): Initialize the top-k gating mechanism with specified input size, number of experts, and top-k value.
+    - extra_repr(): Return extra representation string for the module, specifically the top-k value and number of experts.
+    - compute_aux_loss(probs, logits, gates): Calculate and return the auxiliary loss based on the accumulated statistics.
+    - construct(x): Compute the top-k gating for the input and return the top-k indices, top-k gating values, probability values for each expert, gates, and load.
+    
+    For more details, refer to the paper: https://arxiv.org/abs/1701.06538.
+    """
     def __init__(
         self,
         input_size,
