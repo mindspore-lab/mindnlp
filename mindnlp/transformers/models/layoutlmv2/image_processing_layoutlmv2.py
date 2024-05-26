@@ -137,6 +137,26 @@ class LayoutLMv2ImageProcessor(BaseImageProcessor):
             tesseract_config: Optional[str] = "",
             **kwargs,
     ) -> None:
+
+        """
+        Initializes a LayoutLMv2ImageProcessor object.
+        
+        Args:
+            self: The LayoutLMv2ImageProcessor instance.
+            do_resize (bool): Indicates whether to perform image resizing. Defaults to True.
+            size (Dict[str, int]): A dictionary specifying the height and width for resizing the image. Defaults to {'height': 224, 'width': 224}.
+            resample (PILImageResampling): The resampling filter to use when resizing the image. Defaults to PILImageResampling.BILINEAR.
+            apply_ocr (bool): Indicates whether optical character recognition (OCR) should be applied. Defaults to True.
+            ocr_lang (Optional[str]): The language for OCR. If None, the default language is used. Defaults to None.
+            tesseract_config (Optional[str]): Configuration options for the Tesseract OCR engine. Defaults to an empty string.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(**kwargs)
         size = size if size is not None else {"height": 224, "width": 224}
         size = get_size_dict(size)

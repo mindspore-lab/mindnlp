@@ -39,6 +39,21 @@ class SeamlessM4TProcessor(ProcessorMixin):
     tokenizer_class = ("SeamlessM4TTokenizer", "SeamlessM4TTokenizerFast")
 
     def __init__(self, feature_extractor, tokenizer):
+
+        """
+        Initializes a SeamlessM4TProcessor instance.
+        
+        Args:
+            self (SeamlessM4TProcessor): The instance of the SeamlessM4TProcessor class.
+            feature_extractor (object): The feature extractor object used for processing.
+            tokenizer (object): The tokenizer object used for processing.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(feature_extractor, tokenizer)
 
     def __call__(self, text=None, audios=None, src_lang=None, tgt_lang=None, **kwargs):
@@ -109,6 +124,21 @@ class SeamlessM4TProcessor(ProcessorMixin):
 
     @property
     def model_input_names(self):
+
+        """
+        Returns a list of unique model input names required by the SeamlessM4TProcessor.
+        
+        Args:
+            self (SeamlessM4TProcessor): An instance of the SeamlessM4TProcessor class.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        
+        This method retrieves the model input names from the tokenizer and feature extractor used by the SeamlessM4TProcessor. It then combines these names into a single list and removes any duplicates, returning the final list of model input names.
+        """
         tokenizer_input_names = self.tokenizer.model_input_names
         feature_extractor_input_names = self.feature_extractor.model_input_names
         return list(dict.fromkeys(tokenizer_input_names + feature_extractor_input_names))

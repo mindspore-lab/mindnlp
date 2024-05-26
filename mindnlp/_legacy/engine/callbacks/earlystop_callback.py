@@ -27,6 +27,21 @@ class EarlyStopCallback(Callback):
         larger_better (bool): Whether the larger value of the metric is better. Default:True.
     """
     def __init__(self, patience=10, larger_better=True):
+
+        r"""
+        Initializes an instance of the EarlyStopCallback class.
+        
+        Args:
+            self: The instance of the class.
+            patience (int): The number of epochs with no improvement after which training will be stopped. Default is 10.
+            larger_better (bool): Indicates whether larger metric values are considered better. Default is True.
+        
+        Returns:
+            None. This method only initializes instance variables.
+        
+        Raises:
+            No specific exceptions are raised within this method.
+        """
         self.wait = 0
         self.patience = patience
         self.best_metrics_values = []

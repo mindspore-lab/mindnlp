@@ -48,6 +48,21 @@ def _weight_norm(weight_v:Tensor, weight_g:Tensor, dim:int=-1) -> Tensor:
 
 
 def recompute_weight(cell:nn.Cell):
+
+    
+    """
+    Recomputes the weight of a neural network cell.
+    
+    Args:
+        cell (nn.Cell): The neural network cell for which the weight needs to be recomputed.
+    
+    Returns:
+        None. The function updates the weight of the input cell in-place.
+    
+    Raises:
+        AssertionError: If the weight property specified by the cell's wn_name is not found.
+    """
+    
     name: str = cell.wn_name
     g = getattr(cell, f'{name}_g')
     v = getattr(cell, f'{name}_v')
@@ -58,6 +73,26 @@ def recompute_weight(cell:nn.Cell):
 
 
 def weight_norm(cell:nn.Cell, name:str='weight', dim:int=-1, axis:int=None) -> nn.Cell:
+
+    r"""
+    Applies weight normalization to a neural network cell.
+    
+    Args:
+        cell (nn.Cell): The neural network cell to apply weight normalization to.
+        name (str, optional): The name of the weight property. Defaults to 'weight'.
+        dim (int, optional): The dimension along which the normalization is computed. Defaults to -1.
+        axis (int, optional): An alternative way to specify the dimension along which the normalization is computed. 
+            If provided, it overrides the value of 'dim'. Defaults to None.
+    
+    Returns:
+        nn.Cell: The neural network cell with weight normalization applied.
+    
+    Raises:
+        AssertionError: If the weight property with the specified name is not found.
+    
+    Note:
+        The 'cell' parameter is modified in-place by adding additional properties and methods to enable weight normalization.
+    """
     if axis is not None:
         dim = axis     # compat fix
     weight: Parameter = getattr(cell, name, None)
@@ -77,6 +112,26 @@ def weight_norm(cell:nn.Cell, name:str='weight', dim:int=-1, axis:int=None) -> n
 
 
 def remove_weight_norm(cell:nn.Cell) -> nn.Cell:
+
+    r"""
+    Removes weight normalization from the given neural network cell.
+    
+    Args:
+        cell (nn.Cell): The neural network cell from which weight normalization will be removed.
+    
+    Returns:
+        nn.Cell: The modified neural network cell with weight normalization removed.
+    
+    Raises:
+        None.
+    
+    Note:
+        This function assumes that the input cell has weight normalization applied. If the cell does not have any weight normalization, it returns the cell as is.
+    
+    Example:
+        >>> cell = MyNeuralNetworkCell()
+        >>> cell = remove_weight_norm(cell)
+    """
     if getattr(cell, 'wn_name', None) is None:
         return cell
 

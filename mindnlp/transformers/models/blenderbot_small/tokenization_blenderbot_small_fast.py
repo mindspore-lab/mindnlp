@@ -54,6 +54,29 @@ class BlenderbotSmallTokenizerFast(PreTrainedTokenizerFast):
         trim_offsets=True,
         **kwargs,
     ):
+
+        """
+        Initializes a BlenderbotSmallTokenizerFast object.
+        
+        Args:
+        - self: The instance of the class.
+        - vocab_file (str): Path to the vocabulary file. Default is None.
+        - merges_file (str): Path to the merges file. Default is None.
+        - unk_token (str): The unknown token. Default is 'endoftext'.
+        - bos_token (str): The beginning of sentence token. Default is 'endoftext'.
+        - eos_token (str): The end of sentence token. Default is 'endoftext'.
+        - add_prefix_space (bool): Whether to add prefix space. Default is False.
+        - trim_offsets (bool): Whether to trim offsets. Default is True.
+        - **kwargs: Additional keyword arguments.
+        
+        Returns:
+        None. This method initializes a BlenderbotSmallTokenizerFast object.
+        
+        Raises:
+        - ValueError: If the vocab_file or merges_file is not provided.
+        - TypeError: If unk_token, bos_token, eos_token are not strings.
+        - ValueError: If add_prefix_space or trim_offsets are not boolean values.
+        """
         super().__init__(
             ByteLevelBPETokenizer(
                 vocab=vocab_file,
@@ -69,6 +92,21 @@ class BlenderbotSmallTokenizerFast(PreTrainedTokenizerFast):
         self.add_prefix_space = add_prefix_space
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
+
+        """
+        This method builds inputs with special tokens for the BlenderbotSmallTokenizerFast class.
+        
+        Args:
+            self: The instance of the class.
+            token_ids_0 (list): The token IDs for the first input sequence.
+            token_ids_1 (list, optional): The token IDs for the second input sequence. Defaults to None.
+        
+        Returns:
+            None. The method modifies the input sequences by adding special tokens.
+        
+        Raises:
+            None.
+        """
         output = [self.bos_token_id] + token_ids_0 + [self.eos_token_id]
         if token_ids_1 is None:
             return output

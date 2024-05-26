@@ -38,6 +38,28 @@ class Work(metaclass=abc.ABCMeta):
     """
 
     def __init__(self, model, work, **kwargs):
+
+        """
+        The __init__ method initializes an instance of the Work class.
+        
+        Args:
+            self: The instance of the Work class.
+            model (str): The model being used for the work.
+            work (str): The type of work being performed.
+            **kwargs: Additional keyword arguments. 
+                home_path (str, optional): The home path for the work. Defaults to DEFAULT_ROOT.
+                work_flag (str, optional): The work flag. Defaults to the specified model.
+                from_hf_hub (bool, optional): Flag indicating whether the model is from the Hugging Face Hub.
+                work_path (str, optional): The custom work path.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            KeyError: If the required 'home_path' or 'work_flag' is not provided in kwargs.
+            ValueError: If an invalid value is provided for any of the parameters.
+            OSError: If an error occurs while creating the work path.
+        """
         self.model = model
         self.work = work
         self.kwargs = kwargs
@@ -216,6 +238,21 @@ class Work(metaclass=abc.ABCMeta):
         print(f"Examples:\n{self._usage}")
 
     def __call__(self, *args):
+
+        """ 
+        Method '__call__' in the class 'Work'.
+        
+        This method acts as the entry point when an instance of the 'Work' class is called as a function.
+        
+        Args:
+            self (Work): The instance of the 'Work' class. It is automatically passed when the method is called.
+            
+        Returns:
+            None. This method does not return any value explicitly. The results of the operation are returned through the 'results' variable.
+        
+        Raises:
+            This method does not explicitly raise any exceptions. However, exceptions may be raised within the '_preprocess', '_run_model', or '_postprocess' methods called internally.
+        """
         inputs = self._preprocess(*args)
         outputs = self._run_model(inputs)
         results = self._postprocess(outputs)

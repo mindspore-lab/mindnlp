@@ -44,6 +44,21 @@ class Blip2Processor(ProcessorMixin):
 
     # Copied from transformers.models.blip.processing_blip.BlipProcessor.__init__
     def __init__(self, image_processor, tokenizer):
+
+        """
+        Initializes a new instance of the Blip2Processor class.
+        
+        Args:
+            self: The instance of the class.
+            image_processor: An object representing the image processor to be used. It should have the necessary methods and attributes required for image processing.
+            tokenizer: An object representing the tokenizer to be used. It should have the necessary methods and attributes required for tokenization. The 'return_token_type_ids' attribute of the tokenizer will be set to False.
+        
+        Returns:
+            None.
+        
+        Raises:
+            None.
+        """
         tokenizer.return_token_type_ids = False
         super().__init__(image_processor, tokenizer)
         self.current_processor = self.image_processor
@@ -150,6 +165,19 @@ class Blip2Processor(ProcessorMixin):
     @property
     # Copied from transformers.models.blip.processing_blip.BlipProcessor.model_input_names
     def model_input_names(self):
+
+        """
+        Retrieves the names of the model inputs for the 'Blip2Processor' class.
+        
+        Args:
+            self: An instance of the 'Blip2Processor' class.
+        
+        Returns:
+            A list of strings containing the names of the model inputs.
+        
+        Raises:
+            None.
+        """
         tokenizer_input_names = self.tokenizer.model_input_names
         image_processor_input_names = self.image_processor.model_input_names
         return list(dict.fromkeys(tokenizer_input_names + image_processor_input_names))

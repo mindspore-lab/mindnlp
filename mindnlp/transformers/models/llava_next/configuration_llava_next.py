@@ -89,6 +89,27 @@ class LlavaNextConfig(PretrainedConfig):
         image_grid_pinpoints=None,
         **kwargs,
     ):
+
+        """
+        This method initializes an instance of the LlavaNextConfig class with the provided parameters.
+        
+        Args:
+        - self: The instance of the class.
+        - vision_config (dict, optional): Configuration settings for the vision model. If not provided, default settings will be used.
+        - text_config (dict, optional): Configuration settings for the text model. If not provided, default settings will be used.
+        - ignore_index (int, optional): Index to ignore during computation. Default is -100.
+        - image_token_index (int, optional): Index for image token. Default is 32000.
+        - projector_hidden_act (str, optional): Activation function for hidden layers in projector. Default is 'gelu'.
+        - vision_feature_select_strategy (str): Strategy for selecting vision features. Should be one of 'default' or 'full'.
+        - vision_feature_layer (int, optional): Layer to extract features from in the vision model.
+        - image_grid_pinpoints (list of lists, optional): Coordinates for image grid pinpoints. Default is [[336, 672], [672, 336], [672, 672], [1008, 336], [336, 1008].
+        
+        Returns:
+        None
+        
+        Raises:
+        - ValueError: If vision_feature_select_strategy is not 'default' or 'full'.
+        """
         self.ignore_index = ignore_index
         self.image_token_index = image_token_index
         self.projector_hidden_act = projector_hidden_act

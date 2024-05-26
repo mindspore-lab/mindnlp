@@ -189,6 +189,21 @@ class Dense(nn.Cell):
         return out
 
     def extend_repr(self):
+
+        r"""
+        Dense.extend_repr(self)
+            
+        Args:
+            self (object): The instance of the Dense class.
+                Purpose: This parameter refers to the current instance of the Dense class.
+                Restrictions: None.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None.
+        """
         s = 'input_channels={}, output_channels={}'.format(self.in_channels, self.out_channels)
         if self.has_bias:
             s += ', has_bias={}'.format(self.has_bias)

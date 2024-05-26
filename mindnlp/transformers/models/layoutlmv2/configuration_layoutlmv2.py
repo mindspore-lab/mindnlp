@@ -147,6 +147,45 @@ class LayoutLMv2Config(PretrainedConfig):
             detectron2_config_args=None,
             **kwargs,
     ):
+
+        """
+        Initializes a LayoutLMv2Config object with the specified parameters.
+        
+        Args:
+            vocab_size (int): The size of the vocabulary.
+            hidden_size (int): The hidden size for the model.
+            num_hidden_layers (int): The number of hidden layers in the model.
+            num_attention_heads (int): The number of attention heads in the model.
+            intermediate_size (int): The size of the intermediate layer in the model.
+            hidden_act (str): The activation function for the hidden layers.
+            hidden_dropout_prob (float): The dropout probability for the hidden layers.
+            attention_probs_dropout_prob (float): The dropout probability for the attention probabilities.
+            max_position_embeddings (int): The maximum position embeddings allowed.
+            type_vocab_size (int): The size of the type vocabulary.
+            initializer_range (float): The range for parameter initialization.
+            layer_norm_eps (float): The epsilon value for layer normalization.
+            pad_token_id (int): The token ID for padding.
+            max_2d_position_embeddings (int): The maximum 2D position embeddings allowed.
+            max_rel_pos (int): The maximum relative position.
+            rel_pos_bins (int): The number of relative position bins.
+            fast_qkv (bool): Flag to enable fast query, key, value computation.
+            max_rel_2d_pos (int): The maximum relative 2D position.
+            rel_2d_pos_bins (int): The number of relative 2D position bins.
+            image_feature_pool_shape (list): The shape of the image feature pool.
+            coordinate_size (int): The size of coordinates.
+            shape_size (int): The size of shapes.
+            has_relative_attention_bias (bool): Flag indicating if relative attention bias is used.
+            has_spatial_attention_bias (bool): Flag indicating if spatial attention bias is used.
+            has_visual_segment_embedding (bool): Flag indicating if visual segment embedding is used.
+            use_visual_backbone (bool): Flag indicating if visual backbone is used.
+            detectron2_config_args (dict): Additional arguments for the Detectron2 configuration.
+        
+        Returns:
+            None. This method initializes the LayoutLMv2Config object with the provided parameters.
+        
+        Raises:
+            None.
+        """
         super().__init__(
             vocab_size=vocab_size,
             hidden_size=hidden_size,
@@ -182,6 +221,19 @@ class LayoutLMv2Config(PretrainedConfig):
 
     @classmethod
     def get_default_detectron2_config(cls):
+
+        '''
+        This method returns a dictionary containing the default configuration for the Detectron2 model. The configuration includes various settings related to the model's architecture, backbone, region of interest (ROI) heads, and other parameters.
+        
+        Args:
+            cls (class): The class object.
+        
+        Returns:
+            dict: A dictionary containing the default configuration for the Detectron2 model.
+        
+        Raises:
+            None.
+        '''
         return {
             "MODEL.MASK_ON": True,
             "MODEL.PIXEL_STD": [57.375, 57.120, 58.395],
@@ -212,6 +264,19 @@ class LayoutLMv2Config(PretrainedConfig):
         }
 
     def get_detectron2_config(self):
+
+        """
+        This method generates a Detectron2 configuration for the LayoutLMv2 model.
+        
+        Args:
+            self: The instance of the LayoutLMv2Config class.
+            
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None
+        """
         detectron2_config = Dict(
             {
                 "MODEL": {

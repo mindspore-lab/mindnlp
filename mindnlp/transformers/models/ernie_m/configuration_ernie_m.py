@@ -103,6 +103,34 @@ class ErnieMConfig(PretrainedConfig):
         act_dropout=0.0,
         **kwargs,
     ):
+
+        """
+        This method initializes an instance of the ErnieMConfig class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_size (int): The size of the vocabulary. Default is 250002.
+            hidden_size (int): The size of the hidden layers. Default is 768.
+            num_hidden_layers (int): The number of hidden layers. Default is 12.
+            num_attention_heads (int): The number of attention heads. Default is 12.
+            intermediate_size (int): The size of the intermediate layer in the transformer. Default is 3072.
+            hidden_act (str): The activation function for the hidden layers. Default is 'gelu'.
+            hidden_dropout_prob (float): The dropout probability for the hidden layers. Default is 0.1.
+            attention_probs_dropout_prob (float): The dropout probability for the attention probabilities. Default is 0.1.
+            max_position_embeddings (int): The maximum position for the embeddings. Default is 514.
+            initializer_range (float): The range for the weight initializers. Default is 0.02.
+            pad_token_id (int): The ID for padding tokens. Default is 1.
+            layer_norm_eps (float): The epsilon value for layer normalization. Default is 1e-05.
+            classifier_dropout (None): The dropout rate for the classifier layer. Default is None.
+            is_decoder (bool): Whether the model is a decoder. Default is False.
+            act_dropout (float): The dropout rate for the activation function. Default is 0.0.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None
+        """
         super().__init__(pad_token_id=pad_token_id, **kwargs)
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size

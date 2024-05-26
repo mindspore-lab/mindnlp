@@ -76,6 +76,25 @@ class Wav2Vec2FeatureExtractor(SequenceFeatureExtractor):
         do_normalize=True,
         **kwargs,
     ):
+
+        """
+        Initialize the Wav2Vec2FeatureExtractor class.
+        
+        Args:
+            self (object): The instance of the class.
+            feature_size (int, optional): The size of the input features. Defaults to 1.
+            sampling_rate (int, optional): The sampling rate of the audio data. Defaults to 16000.
+            padding_value (float, optional): The value used for padding sequences. Defaults to 0.0.
+            return_attention_mask (bool, optional): Whether to return the attention mask. Defaults to False.
+            do_normalize (bool, optional): Whether to normalize the input features. Defaults to True.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method initializes the Wav2Vec2FeatureExtractor class.
+        
+        Raises:
+            None.
+        """
         super().__init__(feature_size=feature_size, sampling_rate=sampling_rate, padding_value=padding_value, **kwargs)
         self.return_attention_mask = return_attention_mask
         self.do_normalize = do_normalize

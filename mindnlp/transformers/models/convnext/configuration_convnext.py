@@ -98,6 +98,31 @@ class ConvNextConfig(BackboneConfigMixin, PretrainedConfig):
         out_indices=None,
         **kwargs,
     ):
+
+        """
+        Initialize a ConvNextConfig object.
+        
+        Args:
+        - num_channels (int): Number of input channels. Default is 3.
+        - patch_size (int): Patch size used in the model. Default is 4.
+        - num_stages (int): Number of stages in the model. Default is 4.
+        - hidden_sizes (list): List of hidden layer sizes for each stage. Default is [96, 192, 384, 768].
+        - depths (list): List of depths for each stage. Default is [3, 3, 9, 3].
+        - hidden_act (str): Activation function for hidden layers. Default is 'gelu'.
+        - initializer_range (float): Range for weight initialization. Default is 0.02.
+        - layer_norm_eps (float): Epsilon value for layer normalization. Default is 1e-12.
+        - layer_scale_init_value (float): Initial value for layer scale. Default is 1e-06.
+        - drop_path_rate (float): Rate of drop path regularization. Default is 0.0.
+        - image_size (int): Size of input images. Default is 224.
+        - out_features (list): List of output features.
+        - out_indices (list): List of output indices.
+        
+        Returns:
+        - None
+        
+        Raises:
+        - None
+        """
         super().__init__(**kwargs)
 
         self.num_channels = num_channels

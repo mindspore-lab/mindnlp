@@ -360,6 +360,19 @@ class PeftAdapterMixin:
         return active_adapters
 
     def active_adapter(self) -> str:
+
+        """
+        Retrieve the active adapter.
+        
+        Args:
+            self: An instance of the PeftAdapterMixin class.
+        
+        Returns:
+            A string representing the active adapter.
+        
+        Raises:
+            FutureWarning: If the `active_adapter` method is deprecated and will be removed in a future version.
+        """
         warnings.warn(
             "The `active_adapter` method is deprecated and will be removed in a future version.", FutureWarning
         )

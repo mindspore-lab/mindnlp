@@ -27,6 +27,20 @@ class EncoderBase(nn.Cell):
     """
 
     def __init__(self, embedding):
+
+        r"""
+        Initializes an instance of the EncoderBase class.
+        
+        Args:
+            self: The instance of the class.
+            embedding: The embedding to be used for encoding. Should be a valid embedding object.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         super().__init__()
         self.embedding = embedding
 

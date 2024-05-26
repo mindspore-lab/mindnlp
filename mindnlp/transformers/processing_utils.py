@@ -50,6 +50,20 @@ class ProcessorMixin:
 
     # args have to match the attributes class attribute
     def __init__(self, *args, **kwargs):
+
+        """
+        This method initializes an instance of the ProcessorMixin class.
+        
+        Args:
+        - self (ProcessorMixin): The instance of the ProcessorMixin class.
+          
+        Returns:
+        None. This method does not return any value.
+        
+        Raises:
+        - TypeError: Raised if an unexpected keyword argument is provided, if multiple values are provided for a single argument, or if the arguments provided do not match the required attributes of the processor.
+        - ValueError: Raised if the number of arguments provided does not match the required number of attributes for the processor, or if the type of the argument does not match the expected class type.
+        """
         # Sanitize args and kwargs
         for key in kwargs:
             if key not in self.attributes:
@@ -83,6 +97,19 @@ class ProcessorMixin:
             setattr(self, attribute_name, arg)
 
     def __repr__(self):
+
+        """
+        Method '__repr__' in the class 'ProcessorMixin' generates a string representation of the object.
+        
+        Args:
+            self: ProcessorMixin instance. Represents the object for which the string representation is being generated.
+        
+        Returns:
+            str: A formatted string representation of the object containing its class name and attributes. Returns None if there are no attributes to represent.
+        
+        Raises:
+            None.
+        """
         attributes_repr = [f"- {name}: {repr(getattr(self, name))}" for name in self.attributes]
         attributes_repr = "\n".join(attributes_repr)
         return f"{self.__class__.__name__}:\n{attributes_repr}"
@@ -212,6 +239,20 @@ class ProcessorMixin:
 
     @classmethod
     def _get_arguments_from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
+
+        """
+        A method to obtain arguments from a pre-trained model or path.
+        
+        Args:
+            cls (class): The class object.
+            pretrained_model_name_or_path (str): The name or path of the pre-trained model.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         args = []
         for attribute_name in cls.attributes:
             class_name = getattr(cls, f"{attribute_name}_class")
@@ -230,5 +271,18 @@ class ProcessorMixin:
 
     @property
     def model_input_names(self):
+
+        """
+        Retrieve the model input names from the first attribute of the ProcessorMixin instance.
+        
+        Args:
+            self (ProcessorMixin): The instance of the ProcessorMixin class.
+            
+        Returns:
+            None: Returns the model input names from the first attribute of the ProcessorMixin instance if available, otherwise returns None.
+            
+        Raises:
+            None.
+        """
         first_attribute = getattr(self, self.attributes[0])
         return getattr(first_attribute, "model_input_names", None)

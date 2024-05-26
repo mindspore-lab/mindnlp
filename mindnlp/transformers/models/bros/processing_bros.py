@@ -39,6 +39,20 @@ class BrosProcessor(ProcessorMixin):
     tokenizer_class = ("BertTokenizer", "BertTokenizerFast")
 
     def __init__(self, tokenizer=None, **kwargs):
+
+        """
+        Initializes an instance of the BrosProcessor class.
+        
+        Args:
+            self: The instance of the BrosProcessor class.
+            tokenizer: An optional tokenizer object used for tokenizing the input. If not provided, a ValueError is raised.
+        
+        Returns:
+            None
+        
+        Raises:
+            ValueError: If the tokenizer parameter is not specified.
+        """
         if tokenizer is None:
             raise ValueError("You need to specify a `tokenizer`.")
 
@@ -105,6 +119,20 @@ class BrosProcessor(ProcessorMixin):
 
     @property
     def model_input_names(self):
+
+        """
+        This method returns a list of unique model input names used by the BrosProcessor's tokenizer.
+        
+        Args:
+            self: BrosProcessor instance.
+                The self parameter refers to the current BrosProcessor object.
+        
+        Returns:
+            None.
+        
+        Raises:
+            No exceptions are raised within this method.
+        """
         tokenizer_input_names = self.tokenizer.model_input_names
         return list(dict.fromkeys(tokenizer_input_names))
 

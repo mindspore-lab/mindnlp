@@ -148,6 +148,29 @@ class XLMRobertaTokenizerFast(PreTrainedTokenizerFast):
         mask_token="<mask>",
         **kwargs,
     ):
+
+        """
+        Initializes an instance of the XLMRobertaTokenizerFast class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_file (str): The path to the vocabulary file. If not provided, the tokenizer will use the default vocabulary.
+            tokenizer_file (str): The path to the tokenizer file. If not provided, the tokenizer will use the default tokenizer.
+            bos_token (str): The beginning of sentence token. Defaults to '<s>'.
+            eos_token (str): The end of sentence token. Defaults to '</s>'.
+            sep_token (str): The separator token. Defaults to '</s>'.
+            cls_token (str): The classification token. Defaults to '<s>'.
+            unk_token (str): The unknown token. Defaults to '<unk>'.
+            pad_token (str): The padding token. Defaults to '<pad>'.
+            mask_token (str or AddedToken): The mask token. Defaults to '<mask>'. If a str is provided, it will be converted to an AddedToken instance with lstrip=True and rstrip=False.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         # Mask token behave like a normal word, i.e. include the space before it
         mask_token = AddedToken(mask_token, lstrip=True, rstrip=False) if isinstance(mask_token, str) else mask_token
 
@@ -168,6 +191,21 @@ class XLMRobertaTokenizerFast(PreTrainedTokenizerFast):
 
     @property
     def can_save_slow_tokenizer(self) -> bool:
+
+        """
+        This method checks whether the slow tokenizer can be saved.
+        
+        Args:
+            self (XLMRobertaTokenizerFast): The instance of the XLMRobertaTokenizerFast class.
+                It represents the tokenizer object for which the method is being called.
+        
+        Returns:
+            bool: Returns a boolean value indicating whether the slow tokenizer can be saved. 
+                True if the vocabulary file exists, otherwise False.
+        
+        Raises:
+            None
+        """
         return os.path.isfile(self.vocab_file) if self.vocab_file else False
 
     def build_inputs_with_special_tokens(
@@ -222,6 +260,22 @@ class XLMRobertaTokenizerFast(PreTrainedTokenizerFast):
         return len(cls + token_ids_0 + sep + sep + token_ids_1 + sep) * [0]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+
+        """
+        Save the vocabulary to a specified directory with an optional filename prefix.
+        
+        Args:
+            self (XLMRobertaTokenizerFast): The instance of the XLMRobertaTokenizerFast class.
+            save_directory (str): The directory path where the vocabulary will be saved.
+            filename_prefix (Optional[str]): An optional prefix to be added to the filename. Default is None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            ValueError: If the fast tokenizer does not have the necessary information to save the vocabulary for a slow tokenizer.
+            FileNotFoundError: If the save_directory does not exist.
+        """
         if not self.can_save_slow_tokenizer:
             raise ValueError(
                 "Your fast tokenizer does not have the necessary information to save the vocabulary for a slow "

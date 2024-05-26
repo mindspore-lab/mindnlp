@@ -110,6 +110,20 @@ def _check_shape(y_pred, y_true, n_class=None):
 
 
 def _get_rank(raw_list):
+
+    r"""
+    This function calculates the rank of each element in the given raw_list.
+    
+    Args:
+        raw_list (array-like): An array-like object containing the raw data elements.
+    
+    Returns:
+        numpy.ndarray: An array of integers representing the ranks of the elements in the raw_list. The rank of an element is determined by its position when the raw_list is sorted in descending order.
+    
+    Raises:
+        None.
+    
+    """
     raw_x = np.array(raw_list)
     rank_x = np.empty(raw_x.shape, dtype=int)
     sort_x = np.argsort(-raw_x)

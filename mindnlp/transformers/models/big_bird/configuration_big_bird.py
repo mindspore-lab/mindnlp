@@ -130,6 +130,41 @@ class BigBirdConfig(PretrainedConfig):
         classifier_dropout=None,
         **kwargs,
     ):
+
+        """
+        Initializes a new instance of the BigBirdConfig class.
+        
+        Args:
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 50358.
+            hidden_size (int, optional): The size of the hidden layer. Defaults to 768.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 12.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 12.
+            intermediate_size (int, optional): The size of the intermediate layer in the transformer. Defaults to 3072.
+            hidden_act (str, optional): The activation function for the hidden layer. Defaults to 'gelu_new'.
+            hidden_dropout_prob (float, optional): The dropout probability for the hidden layer. Defaults to 0.1.
+            attention_probs_dropout_prob (float, optional): The dropout probability for the attention probabilities. Defaults to 0.1.
+            max_position_embeddings (int, optional): The maximum number of positions for the embeddings. Defaults to 4096.
+            type_vocab_size (int, optional): The size of the type vocabulary. Defaults to 2.
+            initializer_range (float, optional): The range for the initializer. Defaults to 0.02.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Defaults to 1e-12.
+            use_cache (bool, optional): Whether to use cache in the transformer layers. Defaults to True.
+            pad_token_id (int, optional): The token id for padding. Defaults to 0.
+            bos_token_id (int, optional): The token id for the beginning of sentence. Defaults to 1.
+            eos_token_id (int, optional): The token id for the end of sentence. Defaults to 2.
+            sep_token_id (int, optional): The token id for the separator. Defaults to 66.
+            attention_type (str, optional): The type of attention mechanism. Defaults to 'block_sparse'.
+            use_bias (bool, optional): Whether to use bias in the transformer layers. Defaults to True.
+            rescale_embeddings (bool, optional): Whether to rescale the embeddings. Defaults to False.
+            block_size (int, optional): The size of each block in block sparse attention. Defaults to 64.
+            num_random_blocks (int, optional): The number of random blocks in block sparse attention. Defaults to 3.
+            classifier_dropout (float, optional): The dropout probability for the classifier layer. Defaults to None.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__(
             pad_token_id=pad_token_id,
             bos_token_id=bos_token_id,

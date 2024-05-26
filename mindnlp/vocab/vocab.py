@@ -34,6 +34,21 @@ class Vocab:
                  special_tokens: Union[list, tuple] = None,
                  special_first: bool = True):
 
+        """
+        Initialize the Vocab class with the provided list or dictionary of tokens along with optional special tokens.
+        
+        Args:
+        - list_or_dict (Union[list, dict]): A list or dictionary containing tokens. If a list is provided, each token will be assigned a unique index. If a dictionary is provided, keys must be strings and values must be integers representing token indices.
+        - special_tokens (Union[list, tuple], optional): A list or tuple containing special tokens to be included in the vocabulary. Defaults to None.
+        - special_first (bool, optional): A boolean flag indicating whether special tokens should be added at the beginning of the vocabulary. Defaults to True.
+        
+        Returns:
+        None. This method initializes the Vocab object with the provided tokens and special tokens.
+        
+        Raises:
+        - ValueError: Raised if keys in the dictionary are not strings, values in the dictionary are not integers, or if the input is not a list or dictionary.
+        """
+
         self._token_dict = {}
 
         sp_len = len(special_tokens) if special_tokens is not None and special_first else 0
@@ -88,6 +103,22 @@ class Vocab:
 
 
     def __call__(self, token_or_id):
+
+        """
+        The __call__ method in the Vocab class retrieves token information based on the provided token or token ID.
+        
+        Args:
+            self (Vocab): The instance of the Vocab class.
+            token_or_id (str or int): The token or token ID for which information is to be retrieved. 
+                If a string is provided, the method attempts to retrieve the token information using the token as a key in the _token_dict. 
+                If an integer is provided, the method attempts to retrieve the token information using the token ID as a key in the _index_dict.
+        
+        Returns:
+            None: If the token or token ID is not found in the respective dictionaries, the method returns None.
+        
+        Raises:
+            ValueError: If the token_or_id parameter is not a string or integer, a ValueError is raised with a message indicating the unsupported token type.
+        """
         if isinstance(token_or_id, str):
             return self._token_dict.get(token_or_id, None)
         if isinstance(token_or_id, int):

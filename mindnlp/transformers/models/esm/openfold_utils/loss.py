@@ -21,6 +21,17 @@ from mindspore import ops
 
 
 def _calculate_bin_centers(boundaries: mindspore.Tensor) -> mindspore.Tensor:
+
+    """
+    Args:
+        boundaries (mindspore.Tensor): A 1D tensor representing the boundaries of the bins. It defines the range for binning data. It should be a sorted tensor.
+    
+    Returns:
+        mindspore.Tensor: A 1D tensor containing the calculated bin centers based on the input boundaries. The bin centers are used for binning data.
+    
+    Raises:
+        None
+    """
     step = boundaries[1] - boundaries[0]
     bin_centers = boundaries + step / 2
     bin_centers = ops.cat([bin_centers, (bin_centers[-1] + step).unsqueeze(-1)], axis=0)
@@ -31,6 +42,18 @@ def _calculate_expected_aligned_error(
     alignment_confidence_breaks: mindspore.Tensor,
     aligned_distance_error_probs: mindspore.Tensor,
 ) -> Tuple[mindspore.Tensor, mindspore.Tensor]:
+
+    """
+    Args:
+        alignment_confidence_breaks (mindspore.Tensor): A tensor containing the confidence breaks for alignment.
+        aligned_distance_error_probs (mindspore.Tensor): A tensor containing the probabilities of aligned distance errors.
+    
+    Returns:
+        Tuple[mindspore.Tensor, mindspore.Tensor]: A tuple containing the sum of aligned distance error probabilities multiplied by bin centers and the last element of the bin centers.
+    
+    Raises:
+        None
+    """
     bin_centers = _calculate_bin_centers(alignment_confidence_breaks)
     return (
         ops.sum(aligned_distance_error_probs * bin_centers, dim=-1),
@@ -81,6 +104,32 @@ def compute_tm(
     eps: float = 1e-8,
     **kwargs,
 ) -> mindspore.Tensor:
+
+    """
+    Compute the predicted transmembrane (TM) term for a given set of logits.
+    
+    Args:
+        logits (mindspore.Tensor): The input logits tensor of shape (..., N), where N is the number of classes.
+        residue_weights (Optional[mindspore.Tensor], optional): The weights assigned to each residue. If not provided, default weights of ones will be used. Defaults to None.
+        max_bin (int, optional): The maximum bin value. Defaults to 31.
+        no_bins (int, optional): The number of bins. Defaults to 64.
+        eps (float, optional): A small value added to the denominator to avoid division by zero. Defaults to 1e-08.
+    
+    Returns:
+        mindspore.Tensor: The predicted TM term of shape (...,), representing the TM term for the most probable alignment.
+    
+    Raises:
+        None
+    
+    Note:
+        - The residue_weights argument is used to assign weights to each residue in the computation of the TM term.
+        - The boundaries and bin_centers are calculated based on the max_bin and no_bins parameters.
+        - The computation of the predicted TM term involves applying a softmax function to the logits, followed by calculating the TM term for each bin and summing them up.
+        - The normed_residue_mask is calculated by normalizing the residue_weights by their sum.
+        - The weighted array is obtained by multiplying the per_alignment values with the corresponding residue_weights.
+        - The argmax represents the index of the maximum value in the weighted array.
+        - The return value is the per_alignment value corresponding to the argmax index.
+    """
     if residue_weights is None:
         residue_weights = logits.new_ones(logits.shape[-2])
 

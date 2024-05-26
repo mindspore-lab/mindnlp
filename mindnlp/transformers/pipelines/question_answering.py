@@ -156,6 +156,24 @@ class QuestionAnsweringArgumentHandler(ArgumentHandler):
     """
 
     def normalize(self, item):
+
+        """
+        Method: normalize
+        
+        Description:
+        This method in the class QuestionAnsweringArgumentHandler is used to normalize the input item for question answering.
+        
+        Args:
+        - self: (object) The instance of the QuestionAnsweringArgumentHandler class.
+        - item: (SquadExample or dict) The input item to be normalized. If the item is a SquadExample instance, it is returned as is. If it is a dictionary, it should contain keys 'question' and 'context'. The 'question' key should not be None or empty. The 'context' key should not be None or empty. The item can also be a dictionary to create a SquadExample using QuestionAnsweringPipeline.create_sample method.
+        
+        Returns:
+        - None: This method does not return any value explicitly.
+        
+        Raises:
+        - KeyError: Raised if the input dictionary does not contain the keys 'question' and 'context'.
+        - ValueError: Raised if the 'question' or 'context' key is None or empty in the input dictionary. Also raised if the item is a string and its length is 0. Additionally, raised if the input item is not of type SquadExample or dict.
+        """
         if isinstance(item, SquadExample):
             return item
         elif isinstance(item, dict):
@@ -171,6 +189,21 @@ class QuestionAnsweringArgumentHandler(ArgumentHandler):
         raise ValueError(f"{item} argument needs to be of type (SquadExample, dict)")
 
     def __call__(self, *args, **kwargs):
+
+        """
+        This method handles various input types and formats for Question Answering (QA) arguments and normalizes them for processing.
+        
+        Args:
+            self (QuestionAnsweringArgumentHandler): The instance of the QuestionAnsweringArgumentHandler class.
+            
+        Returns:
+            list: A list of normalized inputs for Question Answering.
+        
+        Raises:
+            ValueError: If the arguments cannot be understood or are invalid.
+            ValueError: If questions and contexts don't have the same lengths.
+            ValueError: If unknown arguments are provided.
+        """
         # Detect where the actual inputs are
         if args is not None and len(args) > 0:
             if len(args) == 1:
@@ -244,6 +277,25 @@ class QuestionAnsweringPipeline(ChunkPipeline):
             task: str = "",
             **kwargs,
     ):
+
+        """
+        Initializes a QuestionAnsweringPipeline object.
+        
+        Args:
+            self (QuestionAnsweringPipeline): The QuestionAnsweringPipeline instance.
+            model (PreTrainedModel): The pre-trained model to be used for question answering.
+            tokenizer (PreTrainedTokenizer): The tokenizer associated with the pre-trained model.
+            modelcard (Optional[ModelCard], optional): The model card providing details about the model. Defaults to None.
+            framework (Optional[str], optional): The framework used for the model. Defaults to None.
+            task (str): The specific task to be performed by the pipeline.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method initializes the QuestionAnsweringPipeline object.
+        
+        Raises:
+            None.
+        """
         super().__init__(
             model=model,
             tokenizer=tokenizer,
@@ -290,6 +342,29 @@ class QuestionAnsweringPipeline(ChunkPipeline):
             align_to_words=None,
             **kwargs,
     ):
+
+        """
+        Sanitizes the parameters for the QuestionAnsweringPipeline class.
+        
+        Args:
+            self (QuestionAnsweringPipeline): An instance of the QuestionAnsweringPipeline class.
+            padding (str, optional): The padding method to be used. Defaults to None.
+            topk (int, optional): [DEPRECATED] The number of top answers to consider. Use top_k instead. Defaults to None.
+            top_k (int, optional): The number of top answers to consider. Defaults to None.
+            doc_stride (int, optional): The stride between chunks when splitting a long document into chunks. Defaults to None.
+            max_answer_len (int, optional): The maximum length of the generated answer. Defaults to None.
+            max_seq_len (int, optional): The maximum sequence length. Defaults to None.
+            max_question_len (int, optional): The maximum length of the question. Defaults to None.
+            handle_impossible_answer (bool, optional): Whether to handle impossible answers. Defaults to None.
+            align_to_words (bool, optional): Whether to align the answer to whole words. Defaults to None.
+        
+        Returns:
+            tuple: A tuple containing the preprocessed parameters, an empty dictionary, and the postprocessed parameters.
+        
+        Raises:
+            ValueError: If top_k or max_answer_len is less than 1.
+            UserWarning: If topk parameter is used instead of top_k, a warning is raised.
+        """
         # Set defaults values
         preprocess_params = {}
         if padding is not None:
@@ -374,6 +449,24 @@ class QuestionAnsweringPipeline(ChunkPipeline):
         return super().__call__(examples, **kwargs)
 
     def preprocess(self, example, padding="do_not_pad", doc_stride=None, max_question_len=64, max_seq_len=None):
+
+        ''' 
+        The preprocess method performs preprocessing for a Question Answering task and yields processed features.
+        
+        Args:
+            self (object): The instance of the QuestionAnsweringPipeline class.
+            example (dict or SquadExample): The input example for the Question Answering task. This can be provided as a dictionary with keys: 'question' and 'context', or as a SquadExample object.
+            padding (str): Determines the padding strategy. It can take the values 'do_not_pad' or other padding strategies supported by the tokenizer.
+            doc_stride (int): The maximum distance between chunks of input context when splitting long contexts for processing. If not provided, it defaults to half of the max_seq_len or 128, whichever is smaller.
+            max_question_len (int): The maximum length allowed for the input question. If the input question exceeds this length, it will be truncated.
+            max_seq_len (int): The maximum length allowed for the input sequence. If not provided, it defaults to the minimum of the maximum length supported by the tokenizer and 384.
+        
+        Returns:
+            None: This method yields processed features and does not return any value directly.
+        
+        Raises:
+            ValueError: If the provided doc_stride is larger than max_seq_len.
+        '''
         if isinstance(example, dict):
             example = SquadExample(None, example["question"], example["context"], None, None, None)
 
@@ -482,6 +575,22 @@ class QuestionAnsweringPipeline(ChunkPipeline):
             yield {"example": example, "is_last": is_last, **fw_args, **others}
 
     def _forward(self, inputs):
+
+        """
+        Forward method for the QuestionAnsweringPipeline class.
+        
+        This method processes the input data and performs the forward pass through the model to generate predictions for question answering.
+        
+        Args:
+            self (QuestionAnsweringPipeline): An instance of the QuestionAnsweringPipeline class.
+            inputs (dict): A dictionary containing the input data for the model.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         example = inputs["example"]
         model_inputs = {k: inputs[k] for k in self.tokenizer.model_input_names}
         output = self.model(**model_inputs)
@@ -499,6 +608,24 @@ class QuestionAnsweringPipeline(ChunkPipeline):
             max_answer_len=15,
             align_to_words=True,
     ):
+
+        """
+        This method postprocess is a part of the class QuestionAnsweringPipeline.
+        
+        Args:
+        - self: Represents the instance of the class.
+        - model_outputs: A list of dictionaries representing the output from the model. Each dictionary contains keys 'start', 'end', 'example', 'p_mask', and 'attention_mask'.
+        - top_k: An integer specifying the maximum number of top answers to consider. Defaults to 1.
+        - handle_impossible_answer: A boolean indicating whether to handle impossible answer scenarios.
+        - max_answer_len: An integer defining the maximum length of the answer.
+        - align_to_words: A boolean flag indicating whether to align answers to words.
+        
+        Returns:
+        - This method does not return a value directly. If successful, it updates the answers list based on the processing logic.
+        
+        Raises:
+        - No specific exceptions are documented to be raised by this method.
+        """
         min_null_score = 1000000  # large and positive
         answers = []
         for output in model_outputs:
@@ -579,6 +706,24 @@ class QuestionAnsweringPipeline(ChunkPipeline):
     def get_indices(
             self, enc: "tokenizers.Encoding", s: int, e: int, sequence_index: int, align_to_words: bool
     ) -> Tuple[int, int]:
+
+        """
+        This method retrieves the start and end character indices corresponding to the specified token indices within a given sequence.
+        
+        Args:
+        - self: The instance of the QuestionAnsweringPipeline class.
+        - enc (tokenizers.Encoding): An instance of the tokenizers.Encoding class containing the encoded tokens.
+        - s (int): The start token index within the encoded sequence.
+        - e (int): The end token index within the encoded sequence.
+        - sequence_index (int): The index of the sequence within the encoding to consider.
+        - align_to_words (bool): A flag indicating whether to align the indices to words within the encoding.
+        
+        Returns:
+        - Tuple[int, int]: A tuple containing the start and end character indices within the specified sequence.
+        
+        Raises:
+        - Exception: If an error occurs during the process of retrieving the character indices, an Exception is raised. This may occur if the token-to-word or word-to-chars mappings are not available or encounter an unexpected issue.
+        """
         if align_to_words:
             try:
                 start_word = enc.token_to_word(s)

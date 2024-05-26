@@ -82,6 +82,31 @@ class MBartTokenizer(PreTrainedTokenizer):
         additional_special_tokens=None,
         **kwargs,
     ):
+
+        """
+        This method initializes an instance of the MBartTokenizer class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_file (str): The path to the vocabulary file.
+            bos_token (str, optional): The beginning of sentence token. Defaults to '<s>'.
+            eos_token (str, optional): The end of sentence token. Defaults to '</s>'.
+            sep_token (str, optional): The separator token. Defaults to '</s>'.
+            cls_token (str, optional): The classification token. Defaults to '<s>'.
+            unk_token (str, optional): The unknown token. Defaults to '<unk>'.
+            pad_token (str, optional): The padding token. Defaults to '<pad>'.
+            mask_token (str, optional): The mask token. Defaults to '<mask>'.
+            src_lang (str, optional): The source language. Defaults to None.
+            tgt_lang (str, optional): The target language. Defaults to None.
+            sp_model_kwargs (Optional[Dict[str, Any]], optional): Additional SentencePiece model arguments. Defaults to None.
+            additional_special_tokens (list, optional): Additional special tokens. Defaults to None.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         # Mask token behave like a normal word, i.e. include the space before it
         mask_token = (
             AddedToken(mask_token, lstrip=True, normalized=False) if isinstance(mask_token, str) else mask_token
@@ -143,12 +168,41 @@ class MBartTokenizer(PreTrainedTokenizer):
         self.set_src_lang_special_tokens(self._src_lang)
 
     def __getstate__(self):
+
+        """
+        __getstate__
+        
+        This method returns the state of the MBartTokenizer object for serialization.
+        
+        Args:
+            self: The instance of the MBartTokenizer class.
+        
+        Returns:
+            None: This method returns None.
+        
+        Raises:
+            No specific exceptions are documented to be raised by this method.
+        """
         state = self.__dict__.copy()
         state["sp_model"] = None
         state["sp_model_proto"] = self.sp_model.serialized_model_proto()
         return state
 
     def __setstate__(self, _d):
+
+        """
+        Sets the state of the MBartTokenizer object during unpickling.
+        
+        Args:
+            self (MBartTokenizer): The instance of the MBartTokenizer class.
+            _d (dict): The dictionary containing the state of the object.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         self.__dict__ = _d
 
         # for backward compatibility
@@ -160,6 +214,19 @@ class MBartTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
+
+        """
+        Returns the total vocabulary size of the MBartTokenizer.
+        
+        Args:
+            self (MBartTokenizer): The instance of the MBartTokenizer class.
+        
+        Returns:
+            int: The total vocabulary size of the MBartTokenizer.
+            
+        Raises:
+            None.
+        """
         return len(self.sp_model) + len(self.lang_code_to_id) + self.fairseq_offset + 1  # Plus 1 for the mask token
 
     @property
@@ -169,6 +236,24 @@ class MBartTokenizer(PreTrainedTokenizer):
 
     @src_lang.setter
     def src_lang(self, new_src_lang: str) -> None:
+
+        """
+        Sets the source language for the MBartTokenizer.
+        
+        Args:
+            self: An instance of the MBartTokenizer class.
+            new_src_lang (str): The new source language to be set. It should be a string representing the language code.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        Note:
+            This method updates the source language attribute (_src_lang) of the MBartTokenizer instance. It also calls the 
+            set_src_lang_special_tokens method to update the special tokens related to the new source language.
+        """
         self._src_lang = new_src_lang
         self.set_src_lang_special_tokens(self._src_lang)
 
@@ -267,11 +352,51 @@ class MBartTokenizer(PreTrainedTokenizer):
         return inputs
 
     def get_vocab(self):
+
+        """
+        Retrieves the vocabulary of the MBartTokenizer instance.
+        
+        Args:
+            self (MBartTokenizer): The instance of the MBartTokenizer class.
+        
+        Returns:
+            dict: A dictionary containing the vocabulary of the tokenizer. The keys are the tokens in the vocabulary, and the values are their corresponding token IDs.
+        
+        Raises:
+            None
+        
+        Note:
+            The vocabulary includes both the tokens from the original MBart model and any additional tokens that have been added using the `add_tokens` method.
+        
+        Example:
+            >>> tokenizer = MBartTokenizer.from_pretrained('facebook/mbart-large-cc25')
+            >>> vocab = tokenizer.get_vocab()
+            >>> print(vocab)
+            {'<s>': 0, '</s>': 1, '<pad>': 2, '<unk>': 3, '<mask>': 4, '▁': 5, 'a': 6, 'b': 7, 'c': 8, ...}
+        
+        """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
         vocab.update(self.added_tokens_encoder)
         return vocab
 
     def _tokenize(self, text: str) -> List[str]:
+
+        """
+        Tokenizes the given text into a list of strings using the mBART tokenizer.
+        
+        Args:
+            self: An instance of the MBartTokenizer class.
+            text (str): The text to be tokenized.
+        
+        Returns:
+            List[str]: A list of strings representing the tokenized text.
+        
+        Raises:
+            None.
+        
+        This method takes in a text and tokenizes it into a list of strings using the mBART tokenizer. The tokenizer uses the sp_model 
+        to encode the text into a string representation. The encoded text is then returned as a list of strings.
+        """
         return self.sp_model.encode(text, out_type=str)
 
     def _convert_token_to_id(self, token):
@@ -295,6 +420,26 @@ class MBartTokenizer(PreTrainedTokenizer):
         return out_string
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+
+        """
+        Save the tokenizer's vocabulary to a file in the specified directory.
+        
+        Args:
+            self (MBartTokenizer): An instance of the MBartTokenizer class.
+            save_directory (str): The directory where the vocabulary file will be saved.
+            filename_prefix (Optional[str], default=None): An optional prefix for the filename.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            TypeError: If the save_directory parameter is not a string.
+            NotADirectoryError: If the save_directory does not exist or is not a directory.
+            FileExistsError: If the output vocabulary file already exists.
+            FileNotFoundError: If the input vocabulary file does not exist.
+            IOError: If there is an error while copying the input vocabulary file to the output file.
+            IOError: If there is an error while writing the serialized model to the output file.
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return None
@@ -319,14 +464,68 @@ class MBartTokenizer(PreTrainedTokenizer):
         tgt_lang: str = "ro_RO",
         **kwargs,
     ) -> BatchEncoding:
+
+        """
+        Prepare and encode a batch of sequences for sequence-to-sequence (seq2seq) model input.
+        
+        Args:
+            self (MBartTokenizer): The instance of the MBartTokenizer class.
+            src_texts (List[str]): A list of source language texts to be encoded.
+            src_lang (str): The source language code. Defaults to 'en_XX'.
+            tgt_texts (Optional[List[str]]): An optional list of target language texts to be encoded. Defaults to None.
+            tgt_lang (str): The target language code. Defaults to 'ro_RO'.
+            **kwargs: Additional keyword arguments to be passed to the superclass method.
+        
+        Returns:
+            BatchEncoding: A batch encoding object containing the encoded source and target sequences.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         self.src_lang = src_lang
         self.tgt_lang = tgt_lang
         return super().prepare_seq2seq_batch(src_texts, tgt_texts, **kwargs)
 
     def _switch_to_input_mode(self):
+
+        """
+        Switch to input mode by setting the source language special tokens.
+        
+        Args:
+            self (MBartTokenizer): An instance of the MBartTokenizer class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return self.set_src_lang_special_tokens(self.src_lang)
 
     def _switch_to_target_mode(self):
+
+        """
+        Switches the tokenizer to the target mode by setting the target language special tokens.
+        
+        Args:
+            self (MBartTokenizer): An instance of the MBartTokenizer class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        Description:
+        This method is used to switch the tokenizer to the target mode. It sets the target language special tokens using the 
+        `set_tgt_lang_special_tokens` method with the target language specified during initialization.
+        
+        The `self` parameter is the instance of the MBartTokenizer class that the method is called on.
+        
+        Example:
+            tokenizer = MBartTokenizer()
+            tokenizer._switch_to_target_mode()
+        """
         return self.set_tgt_lang_special_tokens(self.tgt_lang)
 
     def set_src_lang_special_tokens(self, src_lang) -> None:

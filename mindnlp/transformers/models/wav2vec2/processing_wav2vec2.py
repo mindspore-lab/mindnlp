@@ -46,12 +46,42 @@ class Wav2Vec2Processor(ProcessorMixin):
     tokenizer_class = "AutoTokenizer"
 
     def __init__(self, feature_extractor, tokenizer):
+
+        """
+        Initializes a new instance of the Wav2Vec2Processor class.
+        
+        Args:
+            self (Wav2Vec2Processor): The current instance of the Wav2Vec2Processor class.
+            feature_extractor (object): The feature extractor used for processing input data. It should be an instance of a feature extraction class.
+            tokenizer (object): The tokenizer used for tokenizing input data. It should be an instance of a tokenizer class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         super().__init__(feature_extractor, tokenizer)
         self.current_processor = self.feature_extractor
         self._in_target_context_manager = False
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
+
+        """
+        This method creates an instance of the Wav2Vec2Processor class from a pre-trained model.
+        
+        Args:
+            cls (class): The class itself.
+            pretrained_model_name_or_path (str): The name or path of the pre-trained model to load.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            OSError: If an OSError occurs during the loading process.
+            FutureWarning: If the tokenizer is being loaded from a config that does not include a `tokenizer_class` attribute, a FutureWarning is issued. It advises adding a `'tokenizer_class': 'Wav2Vec2CTCTokenizer'` attribute to either the `config.json` or `tokenizer_config.json` file to suppress the warning.
+        """
         try:
             return super().from_pretrained(pretrained_model_name_or_path, **kwargs)
         except OSError:

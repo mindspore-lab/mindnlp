@@ -42,10 +42,29 @@ def _weight_norm(weight_v, weight_g, dim):
 
 
 class WeightNorm:
+
+    r"""
+    The 'WeightNorm' class implements weight normalization for neural network modules. It provides methods to compute normalized weights, apply weight normalization to a cell, wrap a function, and remove weight bias from a cell. The class also contains an initializer for the name and dimension of the weight parameters, as well as a method to compute the weight using the normalized parameters. Additionally, it includes a method to remove the weight bias and a wrapper function for transposing cell_id to cell. 
+    """
     name: str
     dim: int
 
     def __init__(self, name: str, dim: int) -> None:
+
+        r"""
+        Initializes an instance of the WeightNorm class.
+        
+        Args:
+            self: The instance of the WeightNorm class.
+            name (str): The name of the instance.
+            dim (int): The dimension of the instance. If not provided, it defaults to -1.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         if dim is None:
             dim = -1
         self.name = name
@@ -53,6 +72,23 @@ class WeightNorm:
 
     # TODO Make return type more specific
     def compute_weight(self, module: nn.Cell) -> Any:
+
+        
+        """
+        Method to compute the weight using weight normalization for a given module.
+        
+        Args:
+            self (WeightNorm): An instance of the WeightNorm class.
+            module (nn.Cell): The neural network module for which the weight is to be computed. It should be an instance of nn.Cell.
+            
+        Returns:
+            Any: A value representing the computed weight after applying weight normalization to the module.
+        
+        Raises:
+            - AttributeError: If the specified attributes 'self.name + '_g'' or 'self.name + '_v'' are not found in the module.
+            - Exception: Any other unexpected errors during the weight computation process.
+        """
+        
         g = getattr(module, self.name + '_g')
         v = getattr(module, self.name + '_v')
         return Parameter(_weight_norm(v, g, self.dim), 'weight')
@@ -100,6 +136,21 @@ class WeightNorm:
         setattr(cell, self.name, Parameter(weight.data))
 
     def __call__(self, module: nn.Cell, inputs: Any) -> None:
+
+        r"""
+        This method '__call__' in the class 'WeightNorm' applies weight normalization to a neural network module.
+        
+        Args:
+        - self (WeightNorm): The current instance of the WeightNorm class.
+        - module (nn.Cell): The neural network module to which weight normalization will be applied.
+        - inputs (Any): Additional inputs that may be required for weight normalization.
+        
+        Returns:
+        - None: This method does not return any value. It sets the normalized weights to the specified module.
+        
+        Raises:
+        - None: This method does not raise any exceptions.
+        """
         setattr(module, self.name, self.compute_weight(module))
 
 

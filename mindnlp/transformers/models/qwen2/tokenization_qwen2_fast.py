@@ -100,6 +100,33 @@ class Qwen2TokenizerFast(PreTrainedTokenizerFast):
         pad_token="<|endoftext|>",
         **kwargs,
     ):
+
+        """
+        Initializes a new instance of the Qwen2TokenizerFast class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_file (str, optional): The path to the vocabulary file. Default is None.
+            merges_file (str, optional): The path to the merges file. Default is None.
+            tokenizer_file (str, optional): The path to the tokenizer file. Default is None.
+            unk_token (str, optional): The unknown token. Default is 'endoftext'.
+            bos_token (str or AddedToken, optional): The beginning of sequence token. Default is None.
+            eos_token (str or AddedToken, optional): The end of sequence token. Default is 'endoftext'.
+            pad_token (str or AddedToken, optional): The padding token. Default is 'endoftext'.
+            
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        Note:
+            - The bos_token, eos_token, unk_token, and pad_token parameters can be either a string or an instance of the AddedToken class.
+            - If any of the bos_token, eos_token, unk_token, or pad_token parameters are provided as strings, they will be converted to AddedToken instances with default properties.
+            - The vocab_file, merges_file, and tokenizer_file parameters are used to load the respective files for the tokenizer.
+            - The unk_token, bos_token, eos_token, and pad_token parameters are used to set the respective tokens in the tokenizer.
+            - Additional keyword arguments can be provided and will be passed to the base class constructor.
+        """
         # We need to at least pass vocab_file and merges_file to base class
         # in case a slow tokenizer needs to be initialized; other can be
         # configured through files.
@@ -139,6 +166,21 @@ class Qwen2TokenizerFast(PreTrainedTokenizerFast):
 
     # Copied from transformers.models.gpt2.tokenization_gpt2_fast.GPT2TokenizerFast.save_vocabulary
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+
+        """
+        Save the vocabulary of the Qwen2TokenizerFast model to the specified directory.
+        
+        Args:
+            self: The instance of the Qwen2TokenizerFast class.
+            save_directory (str): The directory where the vocabulary files will be saved.
+            filename_prefix (Optional[str]): An optional prefix to be added to the vocabulary filenames. Default is None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the filenames of the saved vocabulary files.
+        
+        Raises:
+            This method does not explicitly raise any exceptions.
+        """
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)
 

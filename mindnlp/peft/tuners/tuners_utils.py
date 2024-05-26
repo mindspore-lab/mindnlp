@@ -135,6 +135,25 @@ class BaseTuner(nn.Cell):
     """
 
     def __init__(self, model, peft_config: Union[PeftConfig, dict[str, PeftConfig]], adapter_name: str) -> None:
+
+        r"""
+        __init__
+        
+        Initializes an instance of the BaseTuner class.
+        
+        Args:
+        - self: The instance of the class.
+        - model: The model to be tuned.
+        - peft_config: A Union of PeftConfig or a dictionary of adapter names to PeftConfig objects. It specifies the configuration for the adapter.
+        - adapter_name: A string representing the name of the adapter.
+        
+        Returns:
+        None. The method initializes the instance of the BaseTuner class.
+        
+        Raises:
+        - AttributeError: If the 'peft_config' attribute is already found in the model, indicating the presence of multiple adapters in the model.
+        - TypeError: If the 'peft_config' parameter is not of type PeftConfig or dictionary of adapter names to PeftConfig objects.
+        """
         super().__init__()
         # self.peft_config = config
         # self.add_adapter(adapter_name, self.peft_config[adapter_name])
@@ -168,12 +187,39 @@ class BaseTuner(nn.Cell):
 
     @property
     def active_adapters(self) -> list[str]:
+
+        r"""
+        Method to retrieve the active adapters.
+        
+        Args:
+            self: BaseTuner object. The instance of the BaseTuner class.
+            
+        Returns:
+            list[str]: A list of active adapters. If the active_adapter attribute is a string, it is returned as a single-element list. 
+            Otherwise, the active_adapter attribute itself is returned.
+            
+        Raises:
+            None
+        """
         if isinstance(self.active_adapter, str):
             return [self.active_adapter]
         # is already a list of str
         return self.active_adapter
 
     def construct(self, *args: Any, **kwargs: Any):
+
+        r"""
+        This method constructs an instance of the BaseTuner class.
+        
+        Args:
+            self: The instance of the BaseTuner class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         return self.model.construct(*args, **kwargs)
 
     def _prepare_adapter_config(self, peft_config: PeftConfig, model_config: dict) -> PeftConfig:
@@ -382,6 +428,19 @@ class BaseTunerLayer(ABC):
 
     @property
     def weight(self) -> Tensor:
+
+        r"""
+        Returns the weight of the base layer.
+        
+        Args:
+            self: The instance of the BaseTunerLayer class.
+        
+        Returns:
+            A Tensor object representing the weight of the base layer.
+        
+        Raises:
+            None.
+        """
         # This is required for some transformers code, e.g. for T5, weight is accessed as:
         #     self.wo.weight
         # where "wo" is the adapter layer.
@@ -393,31 +452,139 @@ class BaseTunerLayer(ABC):
 
     @property
     def bias(self) -> Tensor:
+
+        r"""
+        This method retrieves the bias tensor from the base layer.
+        
+        Args:
+            self: An instance of the BaseTunerLayer class.
+        
+        Returns:
+            Tensor: The bias tensor obtained from the base layer.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
         base_layer = self.get_base_layer()
         return base_layer.bias
 
     def merge(self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None) -> None:
+
+        r"""
+        Merge the current layer with other layers.
+        
+        Args:
+            self (BaseTunerLayer): The instance of the BaseTunerLayer class.
+            safe_merge (bool): A flag indicating whether to perform a safe merge. Defaults to False.
+            adapter_names (Optional[list[str]]): A list of adapter names. Defaults to None.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            NotImplementedError: If the method is called without being implemented.
+        """
         raise NotImplementedError
 
     def unmerge(self) -> None:
+
+        r"""
+        unmerge(self)
+            This method unmerges the current instance of BaseTunerLayer.
+        
+        Args:
+            self: BaseTunerLayer - The instance of BaseTunerLayer to be unmerged.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            NotImplementedError: If the method is called, a NotImplementedError is raised as this method is not implemented.
+        """
         raise NotImplementedError
 
     @property
     def merged(self) -> bool:
+
+        r"""
+        Returns whether the current instance of the BaseTunerLayer class has merged adapters.
+        
+        Args:
+            self (BaseTunerLayer): The current instance of the BaseTunerLayer class.
+        
+        Returns:
+            bool: A boolean value indicating whether the current instance has merged adapters. 
+            Returns True if there are merged adapters, and False otherwise.
+        
+        Raises:
+            None.
+        
+        """
         return bool(self.merged_adapters)
 
     @property
     def disable_adapters(self) -> bool:
+
+        r"""
+        Disables the adapters in the BaseTunerLayer.
+        
+        Args:
+            self: An instance of the BaseTunerLayer class.
+        
+        Returns:
+            bool: Returns a boolean value indicating whether the adapters were successfully disabled.
+        
+        Raises:
+            None.
+        
+        This method disables the adapters in the BaseTunerLayer. Adapters are components that allow communication between different systems or modules. By disabling the adapters, the BaseTunerLayer restricts any further communication or interaction with external systems.
+        
+        Note:
+            The disable_adapters method does not remove or delete the adapters from the BaseTunerLayer instance. It only disables their functionality temporarily. To enable the adapters again, use the enable_adapters method.
+        
+        Example:
+            >>> tuner_layer = BaseTunerLayer()
+            >>> tuner_layer.disable_adapters()
+            True
+        """
         # use a property to ensure that disable_adapters is not set directly, instead use the enable_adapters method
         return self._disable_adapters
 
     @property
     def active_adapter(self) -> str | list[str]:
+
+        r"""Return the active adapter.
+        
+        This method is a property of the BaseTunerLayer class. It returns the active adapter, which can be either a string or a list of strings.
+        
+        Args:
+            self: An instance of the BaseTunerLayer class.
+        
+        Returns:
+            str | list[str]: The active adapter. If there is only one active adapter, it is returned as a string. If there are multiple active adapters, they are returned as a list of strings.
+        
+        Raises:
+            None.
+        
+        """
         # use a property to ensure that active_adapter is not set directly, instead use the set_adapter method
         return self._active_adapter
 
     @property
     def active_adapters(self):
+
+        r"""
+        Returns a list of active adapters.
+        
+        Args:
+            self (BaseTunerLayer): The instance of the BaseTunerLayer class.
+        
+        Returns:
+            list: A list of active adapters. If the active_adapter attribute is a string, it will be returned as a single-item list. Otherwise, the active_adapter attribute will be returned as is.
+        
+        Raises:
+            None.
+        """
         if isinstance(self.active_adapter, str):
             return [self.active_adapter]
         # is already a list of str

@@ -706,6 +706,22 @@ class GenerationMixin:
     def _prepare_input_ids_for_generation(
         self, bos_token_id: Optional[int], encoder_outputs
     ) -> mindspore.Tensor:
+
+        """
+        This method _prepare_input_ids_for_generation is defined in the class GenerationMixin.
+        
+        Args:
+            self: The instance of the class.
+            bos_token_id (int): The beginning of sentence token id. If provided, it is used for generation.
+            encoder_outputs: The outputs of the encoder. It is optional if the model is an encoder-decoder model.
+        
+        Returns:
+            mindspore.Tensor: A tensor representing the prepared input ids for generation.
+        
+        Raises:
+            ValueError: Raised when `bos_token_id` is not defined and no `input_ids` are provided.
+        
+        """
         if self.config.is_encoder_decoder and encoder_outputs is not None:
             # make dummy input_ids with value -100, as a sanity check ensuring that they won't be used for encoding
             shape = encoder_outputs.last_hidden_state.shape[:-1]
@@ -721,6 +737,28 @@ class GenerationMixin:
         pad_token_id: Optional[int],
         eos_token_id: Optional[Union[int, List[int]]],
     ) -> mindspore.Tensor:
+
+        """
+        Prepare the attention mask for generation.
+        
+        Args:
+            self (GenerationMixin): The instance of the GenerationMixin class.
+            inputs (mindspore.Tensor): The input tensor representing the sequence.
+                It should be a 2D tensor with data type int64 or float32.
+            pad_token_id (Optional[int]): The token ID representing padding. If not provided, set to None.
+            eos_token_id (Optional[Union[int, List[int]]]): The token ID or list of token IDs representing end-of-sequence.
+                If provided as a single int, it will be converted to a list.
+                If not provided, set to None.
+        
+        Returns:
+            mindspore.Tensor: The attention mask tensor generated based on the input parameters.
+                It is a 2D tensor of the same shape as the input tensor, with data type int64.
+        
+        Raises:
+            - ValueError: If the input tensor shape is not 2D or the data type is not int64 or float32.
+            - ValueError: If the pad_token_id is provided and found in the input tensor.
+            - ValueError: If the pad_token_id is the same as any of the eos_token_id values.
+        """
         is_input_ids = len(inputs.shape) == 2 and inputs.dtype in [mindspore.int64, mindspore.float32]
         is_pad_token_in_inputs = (pad_token_id is not None) and (ops.any(inputs == pad_token_id))
         if isinstance(eos_token_id, int):
@@ -735,6 +773,22 @@ class GenerationMixin:
     def _prepare_encoder_decoder_kwargs_for_generation(
         self, inputs_tensor: mindspore.Tensor, model_kwargs, model_input_name: Optional[str] = None
     ) -> Dict[str, Any]:
+
+        """
+        Prepares encoder-decoder keyword arguments for generation.
+        
+        Args:
+            self (GenerationMixin): The instance of the GenerationMixin class.
+            inputs_tensor (mindspore.Tensor): The input tensor for the model generation.
+            model_kwargs (dict): A dictionary containing keyword arguments for the model.
+            model_input_name (Optional[str]): The name of the model input. Defaults to None. If provided, overrides the main input name.
+        
+        Returns:
+            Dict[str, Any]: A dictionary containing the prepared encoder-decoder keyword arguments for model generation.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         # 1. get encoder
         encoder = self.get_encoder()
         # 2. Prepare encoder args and encoder kwargs from model kwargs.
@@ -820,6 +874,21 @@ class GenerationMixin:
         return decoder_input_ids, model_kwargs
 
     def _get_decoder_start_token_id(self, decoder_start_token_id: int = None, bos_token_id: int = None) -> int:
+
+        """
+        This method, '_get_decoder_start_token_id', is defined in the 'GenerationMixin' class. It takes three parameters: self, decoder_start_token_id, and bos_token_id. The method returns an integer value.
+        
+        Args:
+            - self: The instance of the class.
+            - decoder_start_token_id (int, optional): The ID of the decoder start token. If provided, it overrides the value set in 'generation_config.decoder_start_token_id'. Default is None.
+            - bos_token_id (int, optional): The ID of the beginning-of-sentence token. If provided, it overrides the value set in 'generation_config.bos_token_id'. Default is None.
+        
+        Returns:
+            int: The selected decoder start token ID. If 'decoder_start_token_id' is not None, it is returned. Otherwise, if 'bos_token_id' is not None, it is returned. If neither is defined, a ValueError is raised.
+        
+        Raises:
+            ValueError: If neither 'decoder_start_token_id' nor 'bos_token_id' is defined, this exception is raised to indicate that at least one of them must be defined for encoder-decoder generation.
+        """
         decoder_start_token_id = (
             decoder_start_token_id
             if decoder_start_token_id is not None
@@ -866,6 +935,22 @@ class GenerationMixin:
         return input_ids, model_kwargs
 
     def _extract_past_from_model_output(self, outputs: ModelOutput, standardize_cache_format: bool = False):
+
+        """
+        Extracts the past key values from the model output based on specific criteria and standardizes the cache format if required.
+        
+        Args:
+            self: The GenerationMixin instance.
+            outputs (ModelOutput): The model output containing information such as past key values, mems, or past bucket states.
+            standardize_cache_format (bool, optional): Flag indicating whether to standardize the cache format. Defaults to False.
+        
+        Returns:
+            None: If no past key values are found in the model output, the function returns None. Otherwise, it returns the extracted past key values.
+        
+        Raises:
+            AttributeError: If the 'outputs' object does not have the required attributes.
+            ValueError: If the 'batch_size' is not available when standardizing the cache format.
+        """
         past_key_values = None
         if "past_key_values" in outputs:
             past_key_values = outputs.past_key_values
@@ -887,6 +972,23 @@ class GenerationMixin:
         is_encoder_decoder: bool = False,
         standardize_cache_format: bool = False,
     ) -> Dict[str, Any]:
+
+        """
+        This method updates the model keyword arguments for generation.
+        
+        Args:
+            self: The GenerationMixin instance.
+            outputs (Any): The model outputs used to update the model keyword arguments.
+            model_kwargs (Dict[str, Any]): The model keyword arguments to be updated.
+            is_encoder_decoder (bool): A flag indicating whether the model is an encoder-decoder architecture. Defaults to False.
+            standardize_cache_format (bool): A flag indicating whether to standardize the cache format. Defaults to False.
+        
+        Returns:
+            Dict[str, Any]: The updated model keyword arguments.
+        
+        Raises:
+            None.
+        """
         # update past_key_values
         model_kwargs["past_key_values"] = self._extract_past_from_model_output(
             outputs, standardize_cache_format=standardize_cache_format
@@ -916,6 +1018,22 @@ class GenerationMixin:
         return model_kwargs
 
     def _reorder_cache(self, past, beam_idx):
+
+        """
+        Reorders the cache for beam search in the 'GenerationMixin' class.
+        
+        Args:
+            self (GenerationMixin): An instance of the 'GenerationMixin' class.
+            past (object): The past state of the model's generation.
+            beam_idx (int): The index of the beam to reorder the cache for.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            NotImplementedError: If a `_reorder_cache` function is not correctly implemented in the 'GenerationMixin' class.
+                                  This is required to enable beam search for the 'GenerationMixin' class.
+        """
         raise NotImplementedError(
             f"Make sure that a `_reorder_cache` function is correctly implemented in {self.__class__.__module__} to"
             f" enable beam search for {self.__class__}"
@@ -1103,6 +1221,26 @@ class GenerationMixin:
     def _get_stopping_criteria(
         self, generation_config: GenerationConfig, stopping_criteria: Optional[StoppingCriteriaList]
     ) -> StoppingCriteriaList:
+
+        """
+        This method is responsible for generating the stopping criteria list based on the provided generation configuration and additional stopping criteria list.
+        
+        Args:
+            self (GenerationMixin): The instance of the GenerationMixin class.
+            generation_config (GenerationConfig): The generation configuration containing parameters for stopping criteria generation.
+                This parameter includes information such as the maximum length and maximum time for generation.
+                max_length (int): The maximum length allowed for the generated output.
+                max_time (int): The maximum time allowed for the generation process.
+            stopping_criteria (Optional[StoppingCriteriaList]): Additional stopping criteria to be included in the final list.
+                This parameter is optional and can be used to provide custom stopping criteria.
+        
+        Returns:
+            StoppingCriteriaList: The generated list of stopping criteria based on the provided generation configuration and additional stopping criteria.
+            Each stopping criterion in the list is an instance of a specific stopping criteria class, such as MaxLengthCriteria or MaxTimeCriteria.
+        
+        Raises:
+            None
+        """
         criteria = StoppingCriteriaList()
         if generation_config.max_length is not None:
             criteria.append(MaxLengthCriteria(max_length=generation_config.max_length))
@@ -1117,6 +1255,21 @@ class GenerationMixin:
         default_list: Union[LogitsProcessorList, StoppingCriteriaList],
         custom_list: Union[LogitsProcessorList, StoppingCriteriaList],
     ) -> Union[LogitsProcessorList, StoppingCriteriaList]:
+
+        """
+        Merges the default and custom criteria processor or stopping criteria lists.
+        
+        Args:
+            self: The instance of the GenerationMixin class.
+            default_list (Union[LogitsProcessorList, StoppingCriteriaList]): The default list of criteria processors or stopping criteria.
+            custom_list (Union[LogitsProcessorList, StoppingCriteriaList]): The custom list of criteria processors or stopping criteria.
+        
+        Returns:
+            Union[LogitsProcessorList, StoppingCriteriaList]: The merged list of criteria processors or stopping criteria.
+        
+        Raises:
+            ValueError: If a custom stopping criteria or logits processor of the same type as the default already exists, with detailed information about the conflicting objects and a suggestion for resolving the conflict.
+        """
         if len(custom_list) == 0:
             return default_list
         for default in default_list:
@@ -1249,6 +1402,22 @@ class GenerationMixin:
         return generation_mode
 
     def _extend_attention_mask(self, model_kwargs: Dict[str, Any], new_mask_length: int) -> Dict[str, Any]:
+
+        """
+        This method extends the attention mask in the model keyword arguments to a specified length.
+        
+        Args:
+            self: The instance of the GenerationMixin class.
+            model_kwargs (Dict[str, Any]): A dictionary containing keyword arguments for the model.
+                It should include the attention mask or decoder attention mask based on the model configuration.
+            new_mask_length (int): The desired length to which the attention mask should be extended.
+        
+        Returns:
+            Dict[str, Any]: A dictionary containing the updated model keyword arguments with the extended attention mask.
+        
+        Raises:
+            ValueError: Raised if the calculated mask extension length is negative, indicating an attempt to extend the mask to a shorter length than it already is.
+        """
         if self.config.is_encoder_decoder:
             key = "decoder_attention_mask"
         else:
@@ -1271,6 +1440,23 @@ class GenerationMixin:
         return model_kwargs
 
     def _extend_token_type_ids(self, model_kwargs: Dict[str, Any], new_length: int) -> Dict[str, Any]:
+
+        """
+        Method to extend the token type IDs in the model's keyword arguments to match a new length.
+        
+        Args:
+            self: Instance of the GenerationMixin class.
+            model_kwargs (Dict[str, Any]): A dictionary containing keyword arguments for the model.
+                It should include the 'token_type_ids' key with the token type IDs to be extended.
+            new_length (int): The desired new length to which the token type IDs should be extended.
+        
+        Returns:
+            Dict[str, Any]: A modified dictionary of model keyword arguments after extending the token type IDs.
+            If the 'token_type_ids' key is not present in model_kwargs or is None, the method returns the original model_kwargs.
+        
+        Raises:
+            N/A
+        """
         if "token_type_ids" not in model_kwargs or model_kwargs["token_type_ids"] is None:
             return model_kwargs
 

@@ -38,6 +38,28 @@ def load(
     revision: Optional[Union[str, Version]] = None,
     **init_kwargs,
 ) -> EvaluationModule:
+
+    r"""
+    Args:
+        path (str): The path to the file or directory to be loaded.
+        config_name (str, optional): The name of the configuration to be used. Default is None.
+        module_type (str, optional): The type of module to be loaded. Default is None.
+        process_id (int): The ID of the current process. Default is 0.
+        num_process (int): The total number of processes. Default is 1.
+        cache_dir (str, optional): The directory where cached files are stored. Default is None.
+        experiment_id (str, optional): The ID of the experiment. Default is None.
+        keep_in_memory (bool): Whether to keep the loaded data in memory. Default is False.
+        download_config (DownloadConfig, optional): The download configuration. Default is None.
+        download_mode (DownloadMode, optional): The download mode. Default is None.
+        revision (str or Version, optional): The revision or version of the loaded data. Default is None.
+        **init_kwargs: Additional keyword arguments to be passed to the evaluation module.
+    
+    Returns:
+        EvaluationModule: The loaded evaluation module.
+    
+    Raises:
+        None
+    """
     return eval_load(
         path,
         config_name,

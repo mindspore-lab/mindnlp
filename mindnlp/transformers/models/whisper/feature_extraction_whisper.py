@@ -67,6 +67,26 @@ class WhisperFeatureExtractor(SequenceFeatureExtractor):
         return_attention_mask=False,  # pad inputs to max length with silence token (zero) and no attention mask
         **kwargs,
     ):
+
+        """
+        Initializes a WhisperFeatureExtractor object.
+        
+        Args:
+            self: The instance of the class.
+            feature_size (int): The size of the feature vector.
+            sampling_rate (int): The sampling rate of the audio signal.
+            hop_length (int): The hop length for the short-time Fourier transform.
+            chunk_length (int): The length of each audio chunk in seconds.
+            n_fft (int): The number of FFT points.
+            padding_value (float): The value used for padding.
+            return_attention_mask (bool): Flag indicating whether to return an attention mask.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(
             feature_size=feature_size,
             sampling_rate=sampling_rate,

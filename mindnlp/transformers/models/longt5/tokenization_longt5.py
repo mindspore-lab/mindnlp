@@ -83,6 +83,28 @@ class LongT5Tokenizer(PreTrainedTokenizer):
         legacy=None,
         **kwargs,
     ) -> None:
+
+        """
+        Initializes a LongT5Tokenizer object.
+        
+        Args:
+        - self (object): The instance of the class.
+        - vocab_file (str): Path to the vocabulary file.
+        - eos_token (str, optional): End-of-sequence token. Default is '</s>'.
+        - unk_token (str, optional): Token for unknown words. Default is '<unk>'.
+        - pad_token (str, optional): Token for padding. Default is '<pad>'.
+        - extra_ids (int): Number of additional special tokens.
+        - additional_special_tokens (List[str], optional): List of additional special tokens.
+        - sp_model_kwargs (Optional[Dict[str, Any]], optional): Optional arguments for the SentencePiece model.
+        - legacy (bool, optional): Flag to indicate whether to use legacy behavior.
+        
+        Returns:
+        - None: This method does not return any value.
+        
+        Raises:
+        - ValueError: If both extra_ids and additional_special_tokens are provided, and they are not consistent.
+        - Exception: If an unexpected error occurs during the execution of the method.
+        """
         pad_token = AddedToken(pad_token, special=True) if isinstance(pad_token, str) else pad_token
         unk_token = AddedToken(unk_token, special=True) if isinstance(unk_token, str) else unk_token
         eos_token = AddedToken(eos_token, special=True) if isinstance(eos_token, str) else eos_token
@@ -144,6 +166,20 @@ class LongT5Tokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.t5.tokenization_t5.T5Tokenizer.get_spm_processor
     def get_spm_processor(self, from_slow=False):
+
+        """
+        This method retrieves a SentencePieceProcessor object for tokenization.
+        
+        Args:
+            self: An instance of the LongT5Tokenizer class.
+            from_slow (bool): A flag indicating whether to load the tokenizer from a slow source. Defaults to False.
+        
+        Returns:
+            None: This method does not return any value directly. It loads the tokenizer object for further processing.
+        
+        Raises:
+            N/A
+        """
         tokenizer = spm.SentencePieceProcessor(**self.sp_model_kwargs)
         if self.legacy or from_slow:  # no dependency on protobuf
             tokenizer.Load(self.vocab_file)
@@ -162,6 +198,26 @@ class LongT5Tokenizer(PreTrainedTokenizer):
 
     @staticmethod
     def _eventually_correct_t5_max_length(pretrained_model_name_or_path, max_model_length, init_max_model_length):
+
+        """
+        This method '_eventually_correct_t5_max_length' is defined in the 'LongT5Tokenizer' class and is used to handle the correction of the maximum model length for T5 tokenizer. 
+        
+        Args:
+            pretrained_model_name_or_path (str): The name or path of the pretrained model. 
+                This parameter specifies the model for which the maximum length correction is to be applied.
+            max_model_length (int): The maximum model length to be used.
+                This parameter represents the maximum allowed input sequence length for the model.
+            init_max_model_length (int or None): The initial maximum model length.
+                This parameter defines the initial maximum length that may need correction.
+        
+        Returns:
+            None: This method does not return any value; it modifies the 'max_model_length' parameter in-place.
+        
+        Raises:
+            FutureWarning: This method may raise a FutureWarning if the tokenizer was incorrectly instantiated with a model max length that needs correction. The warning provides guidance on how to avoid the warning and properly handle the model max length.
+            Warning: This method may raise a generic Warning if the 'init_max_model_length' is not None and does not match the 'max_model_length', indicating a potential issue with the maximum model length.
+        
+        """
         if pretrained_model_name_or_path in LongT5Tokenizer.max_model_input_sizes:
             deprecated_max_model_length = LongT5Tokenizer.max_model_input_sizes[pretrained_model_name_or_path]
             if init_max_model_length is not None and init_max_model_length != max_model_length:
@@ -184,9 +240,47 @@ class LongT5Tokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
+
+        """
+        Method to retrieve the vocabulary size of the LongT5Tokenizer.
+        
+        Args:
+            self (LongT5Tokenizer): An instance of the LongT5Tokenizer class.
+                Represents the tokenizer object.
+        
+        Returns:
+            int: The vocabulary size of the tokenizer retrieved from the sp_model.
+        
+        Raises:
+            None.
+        """
         return self.sp_model.get_piece_size()
 
     def get_vocab(self):
+
+        """
+        Retrieves the vocabulary dictionary used by the LongT5Tokenizer.
+        
+        Args:
+            self (LongT5Tokenizer): An instance of the LongT5Tokenizer class.
+        
+        Returns:
+            dict: The vocabulary dictionary containing token-to-index mappings. The keys are tokens (str) and the values are their respective indices (int).
+        
+        Raises:
+            None.
+        
+        Note:
+            The method combines the default vocabulary dictionary generated from the `vocab_size` parameter and any additional tokens that have been added using the `add_tokens` method. The additional tokens are included in the vocabulary dictionary with their respective indices.
+        
+        Example:
+            >>> tokenizer = LongT5Tokenizer()
+            >>> vocab = tokenizer.get_vocab()
+            >>> vocab
+            {'<pad>': 0, '<unk>': 1, '<s>': 2, '</s>': 3, '<extra_id_0>': 4, '<extra_id_1>': 5, ...}
+        
+            In this example, the vocabulary dictionary contains the default tokens as well as any additional tokens that have been added to the tokenizer.
+        """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
         vocab.update(self.added_tokens_encoder)
         return vocab
@@ -220,11 +314,47 @@ class LongT5Tokenizer(PreTrainedTokenizer):
         return ([0] * len(token_ids_0)) + [1] + ([0] * len(token_ids_1)) + [1]
 
     def get_sentinel_tokens(self):
+
+        """
+            Retrieves sentinel tokens from the additional special tokens of the LongT5Tokenizer class.
+        
+            Args:
+                self: An instance of the LongT5Tokenizer class.
+        
+            Returns:
+                None. This method returns a list of sentinel tokens found in the additional special tokens of the tokenizer.
+        
+            Raises:
+                None.
+        
+            Example:
+                tokenizer = LongT5Tokenizer()
+                tokens = tokenizer.get_sentinel_tokens()
+        """
         return list(
             set(filter(lambda x: bool(re.search(r"<extra_id_\d+>", x)) is not None, self.additional_special_tokens))
         )
 
     def get_sentinel_token_ids(self):
+
+        """
+        Returns a list of token IDs corresponding to the sentinel tokens in the input sequence.
+        
+        Args:
+            self (LongT5Tokenizer): An instance of the LongT5Tokenizer class.
+            
+        Returns:
+            list: A list of integer values representing the token IDs of the sentinel tokens.
+            
+        Raises:
+            None
+        
+        This method retrieves the sentinel tokens from the input sequence using the 'get_sentinel_tokens' method and converts each token into its corresponding token ID using the 'convert_tokens_to_ids' method. The resulting token IDs are then returned as a list.
+        
+        Note:
+        - The 'get_sentinel_tokens' method should be implemented in the 'LongT5Tokenizer' class.
+        - The 'convert_tokens_to_ids' method should be implemented in the same class or inherited from a parent class.
+        """
         return [self.convert_tokens_to_ids(token) for token in self.get_sentinel_tokens()]
 
     def _add_eos_if_not_present(self, token_ids: List[int]) -> List[int]:
@@ -285,11 +415,40 @@ class LongT5Tokenizer(PreTrainedTokenizer):
         return token_ids_0 + token_ids_1
 
     def __getstate__(self):
+
+        """
+        __getstate__
+        
+        Method in the class 'LongT5Tokenizer' that returns a picklable representation of the object's state, excluding the 'sp_model' attribute.
+        
+        Args:
+            self: An instance of the 'LongT5Tokenizer' class.
+        
+        Returns:
+            None: The method does not explicitly return a value, but it modifies and returns the object's state.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         state = self.__dict__.copy()
         state["sp_model"] = None
         return state
 
     def __setstate__(self, d):
+
+        """
+        This method '__setstate__' in the class 'LongT5Tokenizer' allows for setting the state of the tokenizer object.
+        
+        Args:
+            self (object): The instance of the LongT5Tokenizer class.
+            d (dict): A dictionary containing the state information to be set on the tokenizer object. It should include attributes that represent the state of the tokenizer.
+        
+        Returns:
+            None: This method does not return any value explicitly.
+        
+        Raises:
+            No specific exceptions are raised by this method under normal operation. However, potential exceptions could be raised during the execution of the method if there are issues related to setting the state attributes or loading the vocab file using SentencePieceProcessor. It is recommended to handle exceptions related to attribute assignment or file loading gracefully in the surrounding code.
+        """
         self.__dict__ = d
 
         # for backward compatibility
@@ -316,6 +475,22 @@ class LongT5Tokenizer(PreTrainedTokenizer):
 
     @property
     def unk_token_length(self):
+
+        """
+        This method returns the length of the encoded unknown token in the LongT5Tokenizer.
+        
+        Args:
+            self (object): An instance of the LongT5Tokenizer class.
+                Purpose: This parameter refers to the instance of the LongT5Tokenizer class, allowing access to its attributes and methods.
+                Restrictions: This parameter is mandatory for the method to operate correctly.
+        
+        Returns:
+            int: The length of the encoded unknown token.
+                Purpose: This method returns the length of the encoded unknown token.
+                
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return len(self.sp_model.encode(str(self.unk_token)))
 
     def _tokenize(self, text, **kwargs):
@@ -368,6 +543,22 @@ class LongT5Tokenizer(PreTrainedTokenizer):
         return out_string.strip()
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+
+        """
+        Saves the vocabulary files to the specified directory with an optional filename prefix.
+        
+        Args:
+            self (LongT5Tokenizer): The instance of the LongT5Tokenizer class.
+            save_directory (str): The directory path where the vocabulary files will be saved.
+            filename_prefix (Optional[str]): An optional prefix to be added to the filename. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            ValueError: If the save_directory is not a valid directory path.
+            IOError: If an error occurs while copying or writing the vocabulary file.
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return

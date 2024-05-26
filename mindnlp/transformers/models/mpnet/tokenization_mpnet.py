@@ -151,6 +151,33 @@ class MPNetTokenizer(PreTrainedTokenizer):
         strip_accents=None,
         **kwargs,
     ):
+
+        """
+        This method initializes an instance of the MPNetTokenizer class.
+        
+        Args:
+        - self: The instance of the class.
+        - vocab_file (str): Path to the vocabulary file.
+        - do_lower_case (bool, optional): Whether to convert tokens to lowercase. Defaults to True.
+        - do_basic_tokenize (bool, optional): Whether to perform basic tokenization. Defaults to True.
+        - never_split (list, optional): List of tokens that should not be split. Defaults to None.
+        - bos_token (str, optional): Beginning of sequence token. Defaults to '<s>'.
+        - eos_token (str, optional): End of sequence token. Defaults to '</s>'.
+        - sep_token (str, optional): Separator token. Defaults to '</s>'.
+        - cls_token (str, optional): Classification token. Defaults to '<s>'.
+        - unk_token (str, optional): Token for unknown words. Defaults to '[UNK]'.
+        - pad_token (str, optional): Padding token. Defaults to '<pad>'.
+        - mask_token (str, optional): Mask token. Defaults to '<mask>'.
+        - tokenize_chinese_chars (bool, optional): Whether to tokenize Chinese characters. Defaults to True.
+        - strip_accents (str, optional): Method for stripping accents. Defaults to None.
+        - **kwargs: Additional keyword arguments.
+        
+        Returns:
+        - None. This method does not return any value.
+        
+        Raises:
+        - ValueError: If the vocabulary file specified by 'vocab_file' cannot be found.
+        """
         bos_token = AddedToken(bos_token, special=True) if isinstance(bos_token, str) else bos_token
         eos_token = AddedToken(eos_token, special=True) if isinstance(eos_token, str) else eos_token
         sep_token = AddedToken(sep_token, special=True) if isinstance(sep_token, str) else sep_token
@@ -196,19 +223,74 @@ class MPNetTokenizer(PreTrainedTokenizer):
 
     @property
     def do_lower_case(self):
+
+        """
+        Method 'do_lower_case' in the class 'MPNetTokenizer'.
+        This method converts the text to lowercase using the basic tokenizer provided by the MPNetTokenizer.
+        
+        Args:
+            self: An instance of the MPNetTokenizer class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None
+        """
         return self.basic_tokenizer.do_lower_case
 
     @property
     def vocab_size(self):
+
+        """
+        Returns the size of the vocabulary.
+        
+        Args:
+            self (MPNetTokenizer): An instance of the MPNetTokenizer class.
+        
+        Returns:
+            int: The size of the vocabulary.
+        
+        Raises:
+            None.
+        """
         return len(self.vocab)
 
     def get_vocab(self):
+
+        """
+        Method to retrieve the vocabulary from the MPNetTokenizer.
+        
+        Args:
+            self: The instance of the MPNetTokenizer class.
+        
+        Returns:
+            dict: A dictionary containing the combined vocabulary of added tokens and the original vocabulary.
+        
+        Raises:
+            None
+        """
         # "<mask>" is part of the vocab, but was wrongfully added at a wrong index in the fast saved version
         vocab = self.added_tokens_encoder.copy()
         vocab.update(self.vocab)
         return vocab
 
     def _tokenize(self, text):
+
+        """
+        Method to tokenize the input text using basic or wordpiece tokenizer.
+        
+        Args:
+            self (MPNetTokenizer): An instance of the MPNetTokenizer class.
+            text (str): The input text to be tokenized.
+            
+        Returns:
+            list: A list of tokens after tokenization. If basic tokenization is enabled, tokens are split based on basic rules.
+            If basic tokenization is disabled, tokens are split using the wordpiece tokenizer.
+        
+        Raises:
+            None.
+        """
         split_tokens = []
         if self.do_basic_tokenize:
             for token in self.basic_tokenizer.tokenize(text, never_split=self.all_special_tokens):
@@ -310,6 +392,21 @@ class MPNetTokenizer(PreTrainedTokenizer):
         return len(cls + token_ids_0 + sep + sep + token_ids_1 + sep) * [0]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+
+        """
+        Save the vocabulary to a file in the specified directory with an optional filename prefix.
+        
+        Args:
+            self (MPNetTokenizer): The instance of the MPNetTokenizer class.
+            save_directory (str): The directory path where the vocabulary file will be saved.
+            filename_prefix (Optional[str]): An optional prefix to be added to the filename. Default is None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path to the saved vocabulary file.
+        
+        Raises:
+            IOError: If an error occurs while writing the vocabulary file.
+        """
         index = 0
         if os.path.isdir(save_directory):
             vocab_file = os.path.join(
@@ -362,6 +459,24 @@ class BasicTokenizer(object):
         strip_accents=None,
         do_split_on_punc=True,
     ):
+
+        """
+        Initializes a BasicTokenizer object with the specified parameters.
+        
+        Args:
+            self: The instance of the BasicTokenizer class.
+            do_lower_case (bool): A flag indicating whether text should be converted to lowercase. Default is True.
+            never_split (list): A list of tokens that should never be split during tokenization. Default is an empty list.
+            tokenize_chinese_chars (bool): A flag indicating whether to tokenize Chinese characters. Default is True.
+            strip_accents (None): Not used in the current implementation.
+            do_split_on_punc (bool): A flag indicating whether to split on punctuation marks. Default is True.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         if never_split is None:
             never_split = []
         self.do_lower_case = do_lower_case
@@ -497,6 +612,23 @@ class WordpieceTokenizer(object):
     """Runs WordPiece tokenization."""
 
     def __init__(self, vocab, unk_token, max_input_chars_per_word=100):
+
+        """
+        Initializes a new instance of the WordpieceTokenizer class.
+        
+        Args:
+            self: The instance of the WordpieceTokenizer class.
+            vocab (list): A list of vocabulary tokens used for tokenization.
+            unk_token (str): The token to be used for representing unknown words.
+            max_input_chars_per_word (int): The maximum number of characters allowed per input word. Defaults to 100.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If max_input_chars_per_word is less than or equal to 0.
+            TypeError: If vocab is not a list or unk_token is not a string.
+        """
         self.vocab = vocab
         self.unk_token = unk_token
         self.max_input_chars_per_word = max_input_chars_per_word

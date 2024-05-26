@@ -59,6 +59,21 @@ class _DenseImpl(BaseDenseImpl):
     def construct(self,
                   real: Tensor,
                   imag: Tensor) -> Tuple[Tensor, Tensor]:
+
+        r"""
+        Constructs a dense implementation of a neural network layer.
+        
+        Args:
+            self (object): The instance of the `_DenseImpl` class.
+            real (Tensor): The input tensor representing the real part of the complex numbers.
+            imag (Tensor): The input tensor representing the imaginary part of the complex numbers.
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple containing two tensors, `out_r` and `out_i`, representing the real and imaginary parts of the complex numbers respectively.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         out_rr = P.matmul(real, self.weight_x.transpose())
         out_ii = P.matmul(imag, self.weight_y.transpose())
         out_ri = P.matmul(real, self.weight_y.transpose())
@@ -114,6 +129,21 @@ class _KaratsubaDenseImpl(BaseDenseImpl):
     def construct(self,
                   real: Tensor,
                   imag: Tensor) -> Tuple[Tensor, Tensor]:
+
+        r""" 
+        Constructs a complex tensor from real and imaginary parts using the Karatsuba algorithm.
+        
+        Args:
+            self (_KaratsubaDenseImpl): The instance of the _KaratsubaDenseImpl class.
+            real (Tensor): A tensor representing the real part of the complex number.
+            imag (Tensor): A tensor representing the imaginary part of the complex number.
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple containing the real and imaginary parts of the constructed complex tensor.
+        
+        Raises:
+            None.
+        """
         l1 = P.matmul(real, self.weight_x.transpose())
         l2 = P.matmul(imag, self.weight_y.transpose())
         l3 = P.matmul(real + imag, (self.weight_x + self.weight_y).transpose())

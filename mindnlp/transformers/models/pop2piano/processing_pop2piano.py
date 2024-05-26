@@ -121,11 +121,38 @@ class Pop2PianoProcessor(ProcessorMixin):
 
     @property
     def model_input_names(self):
+
+        """
+        Returns a list of model input names for the Pop2PianoProcessor.
+        
+        Args:
+            self: The instance of the Pop2PianoProcessor class.
+        
+        Returns:
+            None.
+        
+        Raises:
+            None.
+        """
         tokenizer_input_names = self.tokenizer.model_input_names
         feature_extractor_input_names = self.feature_extractor.model_input_names
         return list(dict.fromkeys(tokenizer_input_names + feature_extractor_input_names))
 
     def save_pretrained(self, save_directory, **kwargs):
+
+        """
+        Save the model and its configuration file to a directory. If the directory does not exist, it will be created.
+        
+        Args:
+            self (Pop2PianoProcessor): The instance of the Pop2PianoProcessor class.
+            save_directory (str): The directory path where the model and its configuration file will be saved. It should be a directory and not a file.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the provided save_directory already exists as a file instead of a directory.
+        """
         if os.path.isfile(save_directory):
             raise ValueError(f"Provided path ({save_directory}) should be a directory, not a file.")
         os.makedirs(save_directory, exist_ok=True)
@@ -133,6 +160,20 @@ class Pop2PianoProcessor(ProcessorMixin):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
+
+        """
+        This method creates an instance of the Pop2PianoProcessor class from a pretrained model.
+        
+        Args:
+            cls (class): The class object itself, automatically passed as the first argument.
+            pretrained_model_name_or_path (str): The name or path of the pretrained model to be used for initialization.
+        
+        Returns:
+            None: This method does not return a value.
+        
+        Raises:
+            Any exceptions raised by the _get_arguments_from_pretrained method.
+        """
         args = cls._get_arguments_from_pretrained(pretrained_model_name_or_path, **kwargs)
         return cls(*args)
 

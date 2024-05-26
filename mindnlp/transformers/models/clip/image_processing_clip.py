@@ -105,6 +105,30 @@ class CLIPImageProcessor(BaseImageProcessor):
         do_convert_rgb: bool = True,
         **kwargs,
     ) -> None:
+
+        """
+        Initializes a CLIPImageProcessor object.
+        
+        Args:
+            self: The CLIPImageProcessor object itself.
+            do_resize (bool): A flag indicating whether to resize the image. Defaults to True.
+            size (Dict[str, int]): A dictionary containing the size of the image. Defaults to None.
+            resample (PILImageResampling): The resampling method for resizing the image. Defaults to PILImageResampling.BICUBIC.
+            do_center_crop (bool): A flag indicating whether to perform center cropping. Defaults to True.
+            crop_size (Dict[str, int]): A dictionary containing the size for cropping. Defaults to None.
+            do_rescale (bool): A flag indicating whether to rescale the image. Defaults to True.
+            rescale_factor (Union[int, float]): The factor by which to rescale the image. Defaults to 1 / 255.
+            do_normalize (bool): A flag indicating whether to normalize the image. Defaults to True.
+            image_mean (Optional[Union[float, List[float]]]): The mean value for image normalization. Defaults to None.
+            image_std (Optional[Union[float, List[float]]]): The standard deviation for image normalization. Defaults to None.
+            do_convert_rgb (bool): A flag indicating whether to convert the image to RGB format. Defaults to True.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None specified.
+        """
         super().__init__(**kwargs)
         size = size if size is not None else {"shortest_edge": 224}
         size = get_size_dict(size, default_to_square=False)

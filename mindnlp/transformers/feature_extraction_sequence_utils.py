@@ -40,6 +40,25 @@ class SequenceFeatureExtractor(FeatureExtractionMixin):
     """
 
     def __init__(self, feature_size: int, sampling_rate: int, padding_value: float, **kwargs):
+
+        """
+        Initializes a SequenceFeatureExtractor object.
+        
+        Args:
+        - feature_size (int): The size of the input feature vector.
+        - sampling_rate (int): The rate at which the input feature vector is sampled.
+        - padding_value (float): The value used for padding the input sequences.
+        - **kwargs: Additional keyword arguments.
+          - padding_side (str): The side for padding the input sequences (default is 'right').
+          - return_attention_mask (bool): Flag indicating whether to return the attention mask (default is True).
+        
+        Returns:
+        None. This method initializes the SequenceFeatureExtractor object with the provided parameters and keyword arguments.
+        
+        Raises:
+        - TypeError: If feature_size, sampling_rate, or padding_value is not of the expected type.
+        - ValueError: If feature_size or sampling_rate is not a positive integer, or if padding_value is not a valid float.
+        """
         self.feature_size = feature_size
         self.sampling_rate = sampling_rate
         self.padding_value = padding_value

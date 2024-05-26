@@ -613,6 +613,33 @@ class XLMTokenizer(PreTrainedTokenizer):
         do_lowercase_and_remove_accent=True,
         **kwargs,
     ):
+
+        ''' 
+        Initializes an instance of XLMTokenizer.
+        
+        Args:
+            self: The instance of the class.
+            vocab_file (str): The file path to the vocabulary file.
+            merges_file (str): The file path to the merges file.
+            unk_token (str): The unknown token (default: '<unk>').
+            bos_token (str): The beginning of sentence token (default: '<s>').
+            sep_token (str): The separator token (default: '</s>').
+            pad_token (str): The padding token (default: '<pad>').
+            cls_token (str): The classification token (default: '</s>').
+            mask_token (str): The masking token (default: '<special1>').
+            additional_special_tokens (list): List of additional special tokens (default: ['<special0>', '<special1>', '<special2>', '<special3>', '<special4>', '<special5>', '<special6>', '<special7>', '<special8>', '<special9>']).
+            lang2id (dict): A dictionary mapping languages to IDs.
+            id2lang (dict): A dictionary mapping IDs to languages.
+            do_lowercase_and_remove_accent (bool): A flag indicating whether to lowercase and remove accents (default: True).
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ImportError: If the sacremoses library is not installed.
+        
+        '''
         try:
             import sacremoses
         except ImportError as exc:
@@ -662,9 +689,37 @@ class XLMTokenizer(PreTrainedTokenizer):
 
     @property
     def do_lower_case(self):
+
+        """
+        This method, 'do_lower_case', is a property method within the 'XLMTokenizer' class.
+        
+        Args:
+            self: The instance of the 'XLMTokenizer' class.
+        
+        Returns:
+            None. This method returns None.
+        
+        Raises:
+            No explicit exceptions are raised by this method.
+        """
         return self.do_lowercase_and_remove_accent
 
     def moses_punct_norm(self, text, lang):
+
+        """
+        The 'moses_punct_norm' method is a member of the 'XLMTokenizer' class. It normalizes punctuation in a given text based on the specified language using the MosesPunctNormalizer.
+        
+        Args:
+            self (XLMTokenizer): An instance of the XLMTokenizer class.
+            text (str): The input text to be normalized.
+            lang (str): The language of the input text. The normalization is performed based on the rules specific to this language.
+        
+        Returns:
+            None: This method does not return any value. It modifies the input text in-place by normalizing the punctuation.
+        
+        Raises:
+            N/A: This method does not raise any exceptions.
+        """
         if lang not in self.cache_moses_punct_normalizer:
             punct_normalizer = self.sm.MosesPunctNormalizer(lang=lang)
             self.cache_moses_punct_normalizer[lang] = punct_normalizer
@@ -673,6 +728,42 @@ class XLMTokenizer(PreTrainedTokenizer):
         return punct_normalizer.normalize(text)
 
     def moses_tokenize(self, text, lang):
+
+        """
+        Performs tokenization using the MosesTokenizer from the SentencePiece library.
+        
+        Args:
+            self: An instance of the XLMTokenizer class.
+            text (str): The input text to be tokenized.
+            lang (str): The language of the text.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None.
+        
+        Description:
+            This method tokenizes the input text using the MosesTokenizer from the SentencePiece library. It is specifically designed for the XLMTokenizer class. The tokenization process splits the text into individual tokens based on language-specific rules and returns the tokenized output.
+        
+            - The 'self' parameter is used to access the instance variables and methods of the XLMTokenizer class.
+            - The 'text' parameter represents the text that needs to be tokenized.
+            - The 'lang' parameter specifies the language of the text, which is used to determine the appropriate tokenizer.
+        
+            If the MosesTokenizer for the specified language is not already cached, it is instantiated and stored in the cache_moses_tokenizer dictionary of the XLMTokenizer instance. Subsequent invocations of the method with the same language will reuse the cached tokenizer. This caching mechanism optimizes performance by avoiding repeated instantiation of tokenizers.
+        
+            The method calls the 'tokenize' function of the MosesTokenizer object to perform the actual tokenization. The 'return_str' parameter is set to False, indicating that the method should return a list of tokens rather than a single string. The 'escape' parameter is set to False, indicating that no escaping of special characters should be performed during tokenization.
+        
+            Note: The MosesTokenizer relies on pre-trained language-specific models for accurate tokenization. Make sure to have these models available for the desired languages.
+        
+        Example:
+            tokenizer = XLMTokenizer()
+            tokenized_text = tokenizer.moses_tokenize("Hello world!", "en")
+        
+            The above example tokenizes the input text "Hello world!" using the MosesTokenizer for English language. The resulting tokenized text is stored in the 'tokenized_text' variable.
+        
+            Note: The actual tokenization behavior may vary based on the language and the specific language models used by the MosesTokenizer.
+        """
         if lang not in self.cache_moses_tokenizer:
             moses_tokenizer = self.sm.MosesTokenizer(lang=lang)
             self.cache_moses_tokenizer[lang] = moses_tokenizer
@@ -681,12 +772,43 @@ class XLMTokenizer(PreTrainedTokenizer):
         return moses_tokenizer.tokenize(text, return_str=False, escape=False)
 
     def moses_pipeline(self, text, lang):
+
+        """
+        Applies the Moses pipeline to preprocess text.
+        
+        Args:
+            self (XLMTokenizer): An instance of the XLMTokenizer class.
+            text (str): The input text to be processed.
+            lang (str): The language of the input text.
+        
+        Returns:
+            None. The method modifies the input text in-place.
+        
+        Raises:
+            None.
+        """
         text = replace_unicode_punct(text)
         text = self.moses_punct_norm(text, lang)
         text = remove_non_printing_char(text)
         return text
 
     def ja_tokenize(self, text):
+
+        """
+        Method to tokenize Japanese text using KyTea library.
+        
+        Args:
+            self (object): Instance of the XLMTokenizer class.
+            text (str): The Japanese text to be tokenized.
+        
+        Returns:
+            None: This method returns None. The tokenized text can be accessed by calling the getWS method of the ja_word_tokenizer object.
+        
+        Raises:
+            AttributeError: If an attribute error occurs during the execution of the method.
+            ImportError: If an import error occurs, typically when the required KyTea library or its Python wrapper is not installed.
+            Exception: Any other unexpected exception raised during the execution of the method.
+        """
         if self.ja_word_tokenizer is None:
             try:
                 import Mykytea
@@ -709,12 +831,69 @@ class XLMTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
+
+        """
+        Returns the size of the vocabulary used by the XLMTokenizer.
+        
+        Args:
+            self: An instance of the XLMTokenizer class.
+        
+        Returns:
+            int: The number of unique tokens in the tokenizer's encoder.
+        
+        Raises:
+            None.
+        
+        Note:
+            This method calculates the size of the vocabulary by obtaining the length of the tokenizer's encoder.
+            The encoder is responsible for encoding and decoding the tokens used by the tokenizer.
+        
+        Example:
+            >>> tokenizer = XLMTokenizer()
+            >>> tokenizer.vocab_size
+            50000
+        """
         return len(self.encoder)
 
     def get_vocab(self):
+
+        """Return the vocabulary of the XLMTokenizer.
+        
+        Args:
+            self (XLMTokenizer): An instance of the XLMTokenizer class.
+        
+        Returns:
+            dict: A dictionary representing the vocabulary of the tokenizer. The keys are the tokens and the values are their corresponding IDs.
+        
+        Raises:
+            None.
+        
+        Example:
+            >>> tokenizer = XLMTokenizer()
+            >>> tokenizer.get_vocab()
+            {'<s>': 0, '<pad>': 1, '</s>': 2, '<unk>': 3, '<mask>': 4, 'hello': 5, 'world': 6}
+            
+        Note:
+            This method combines the encoder and added_tokens_encoder dictionaries to form the complete vocabulary.
+        """
         return dict(self.encoder, **self.added_tokens_encoder)
 
     def bpe(self, token):
+
+        """
+        This method is part of the XLMTokenizer class and performs Byte Pair Encoding (BPE) on a given token.
+        
+        Args:
+            self: The instance of the XLMTokenizer class.
+            token (str): The input token to be processed through BPE. It should be a string representing a word.
+        
+        Returns:
+            str: The processed token after applying Byte Pair Encoding. The token may have undergone splitting or merging based on the rules of BPE.
+        
+        Raises:
+            ValueError: If an error occurs during the processing of the token, such as an issue with indexing or comparison.
+            KeyError: If the method encounters a key error while accessing data structures like dictionaries.
+        """
         word = tuple(token[:-1]) + (token[-1] + "</w>",)
         if token in self.cache:
             return self.cache[token]
@@ -951,6 +1130,23 @@ class XLMTokenizer(PreTrainedTokenizer):
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+
+        """
+        Save the vocabulary to the specified directory.
+        
+        Args:
+            self: The instance of the XLMTokenizer class.
+            save_directory (str): The directory path where the vocabulary files will be saved.
+            filename_prefix (Optional[str]): An optional prefix to be added to the filename.
+                Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the paths of the saved vocabulary and merge files.
+        
+        Raises:
+            OSError: If the save_directory does not exist.
+            IOError: If an error occurs while writing the vocabulary or merge files.
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return
@@ -979,11 +1175,42 @@ class XLMTokenizer(PreTrainedTokenizer):
         return vocab_file, merge_file
 
     def __getstate__(self):
+
+        """
+        Method '__getstate__' in the class 'XLMTokenizer'.
+        
+        Args:
+            self: XLMTokenizer object.
+                Represents the instance of the XLMTokenizer class.
+                No restrictions.
+        
+        Returns:
+            None.
+            This method returns a dictionary representing the current state of the XLMTokenizer object with the 'sm' attribute set to None.
+        
+        Raises:
+            None.
+        """
         state = self.__dict__.copy()
         state["sm"] = None
         return state
 
     def __setstate__(self, d):
+
+        """
+        Sets the state of the XLMTokenizer object.
+        
+        Args:
+            self (XLMTokenizer): The XLMTokenizer object.
+            d (dict): The dictionary containing the state to be set. The dictionary should have the following keys:
+                - '__dict__': The dictionary representing the attributes of the object.
+        
+        Returns:
+            None. This method doesn't return any value.
+        
+        Raises:
+            ImportError: If the 'sacremoses' module is not installed, an ImportError is raised. The error message will provide instructions on how to install the module.
+        """
         self.__dict__ = d
 
         try:

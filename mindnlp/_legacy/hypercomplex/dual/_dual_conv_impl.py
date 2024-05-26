@@ -71,6 +71,29 @@ class _ConvImpl(BaseConvImpl):
                   dilation: Tuple[int, ...],
                   group: int) -> Tuple[Tensor, Tensor]:
 
+        
+        """
+        Constructs the convolution operation for the given real and dual tensors.
+        
+        Args:
+            self: The instance of the _ConvImpl class.
+            conv_fn (Callable): The convolution function to apply.
+            real (Tensor): The input tensor for the real part of the operation.
+            dual (Tensor): The input tensor for the dual part of the operation.
+            pad_mode (str): The padding mode to use for the convolution operation.
+            padding (Tuple[int, ...]): The padding to apply to the input tensors.
+            stride (Tuple[int, ...]): The stride to apply to the input tensors.
+            dilation (Tuple[int, ...]): The dilation to apply to the input tensors.
+            group (int): The number of groups for grouped convolution.
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple containing the output tensors for the real and dual parts of the operation.
+        
+        Raises:
+            - Any exceptions raised by the convolution function 'conv_fn' when applied to the input tensors 'real' and 'dual'.
+        """
+        
+
         out_r = conv_fn(real, self.weight_x, pad_mode=pad_mode, padding=padding,
                         stride=stride, dilation=dilation, group=group)
         out_rd = conv_fn(real, self.weight_y, pad_mode=pad_mode, padding=padding,
@@ -127,6 +150,20 @@ class _ReDuConvImpl(BaseConvImpl):
                  weight_init: Union[Tensor, str, Initializer, numbers.Number],
                  weight_shape: tuple,
                  **factory_kwargs) -> None:
+
+        r"""Initializes the _ReDuConvImpl class.
+        
+        Args:
+            weight_init (Union[Tensor, str, Initializer, numbers.Number]): The weight initialization for the convolution layer. It can be a Tensor, a string representing the weight initialization method, an Initializer object, or a number. 
+            weight_shape (tuple): The shape of the weight tensor for the convolution layer.
+            **factory_kwargs: Additional keyword arguments to configure the convolution layer.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: Raised if the data format specified in the factory_kwargs is unsupported.
+        """
         super().__init__(weight_init, weight_shape, **factory_kwargs)
         data_format = factory_kwargs.get('data_format', 'nchw')
         self.c_idx = data_format.lower().find('c')
@@ -142,6 +179,46 @@ class _ReDuConvImpl(BaseConvImpl):
                   stride: Tuple[int, ...],
                   dilation: Tuple[int, ...],
                   group: int) -> Tuple[Tensor, Tensor]:
+
+        r"""
+        Constructs the ReDuConv operation on the given input tensors.
+        
+        Args:
+            self (_ReDuConvImpl): An instance of the _ReDuConvImpl class.
+            conv_fn (Callable): The convolution function to use.
+            real (Tensor): The real input tensor.
+            dual (Tensor): The dual input tensor.
+            pad_mode (str): The padding mode to use during convolution. Valid values are 'valid', 'same', or 'full'.
+            padding (Tuple[int, ...]): The padding values for each dimension of the input tensor.
+            stride (Tuple[int, ...]): The stride values for each dimension of the input tensor.
+            dilation (Tuple[int, ...]): The dilation values for each dimension of the input tensor.
+            group (int): The group size for group convolution.
+        
+        Returns:
+            Tuple[Tensor, Tensor]: A tuple containing the real and dual output tensors.
+        
+        Raises:
+            None.
+        
+        Note:
+            The 'conv_fn' parameter should be a callable that performs convolution operation on the given tensors. 
+            The 'real' and 'dual' tensors should have the same number of dimensions and sizes.
+            The 'pad_mode' parameter determines how the input tensors are padded before convolution. 
+            The 'padding', 'stride', and 'dilation' parameters specify the respective values for each dimension of the tensors.
+            The 'group' parameter defines the group size for group convolution operation.
+        
+        Example:
+            >>> conv_fn = torch.nn.functional.conv2d
+            >>> real_tensor = torch.randn(1, 3, 32, 32)
+            >>> dual_tensor = torch.randn(1, 3, 32, 32)
+            >>> pad_mode = 'same'
+            >>> padding = (1, 1)
+            >>> stride = (1, 1)
+            >>> dilation = (1, 1)
+            >>> group = 1
+            >>> _ReDuConvImpl.construct(self, conv_fn, real_tensor, dual_tensor, pad_mode, padding, stride, dilation, group)
+            (tensor([...]), tensor([...]))
+        """
 
         out_r = conv_fn(real, self.weight_x, pad_mode=pad_mode, padding=padding,
                         stride=stride, dilation=dilation, group=group)

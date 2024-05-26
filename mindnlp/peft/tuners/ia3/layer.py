@@ -34,10 +34,51 @@ from ..tuners_utils import BaseTunerLayer, check_adapters_to_merge
 
 
 class IA3Layer(BaseTunerLayer):
+
+    r"""
+    The `IA3Layer` class represents a layer used in the IA3 (Incremental Adapters for Adapting Adapters) framework. This class inherits from the `BaseTunerLayer` class.
+    
+    Attributes:
+        base_layer (nn.Cell): The base layer of the IA3Layer.
+        ia3_l (ParameterDict): A dictionary containing the IA3 layer parameters.
+        _disable_adapters (bool): A flag indicating whether adapters are disabled.
+        merged_adapters (List): A list of merged adapters.
+        is_feedforward (bool): A flag indicating whether the IA3Layer is a feedforward layer.
+        in_features (int): The number of input features for the IA3Layer.
+        out_features (int): The number of output features for the IA3Layer.
+    
+    Methods:
+        __init__(self, base_layer: nn.Cell, is_feedforward: bool, **kwargs) -> None:
+            Initializes an instance of the IA3Layer class.
+    
+        update_layer(self, adapter_name, init_ia3_weights):
+            Updates the IA3Layer with the specified adapter name and initializes IA3 weights.
+    
+        reset_ia3_parameters(self, adapter_name):
+            Resets the IA3Layer parameters for the specified adapter name.
+    
+    """
     # All names of layers that may contain adapter weights
     adapter_layer_names = ("ia3_l",)
 
     def __init__(self, base_layer: nn.Cell, is_feedforward: bool, **kwargs) -> None:
+
+        r"""
+        Initialize the IA3Layer class.
+        
+        Args:
+            self: The instance of the IA3Layer class.
+            base_layer (nn.Cell): The base layer used in the IA3Layer.
+                This parameter specifies the base layer (e.g., nn.Dense, nn.Conv2d, nn.Embedding, Conv1D) to be used in the IA3Layer.
+            is_feedforward (bool): A boolean flag indicating whether the IA3Layer is feedforward or not.
+                Set to True if the IA3Layer is feedforward, False otherwise.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the provided base_layer is not supported or of an unsupported type.
+        """
         self.base_layer = base_layer
         self.ia3_l = ParameterDict({})
         # Mark the weight as unmerged
@@ -61,6 +102,21 @@ class IA3Layer(BaseTunerLayer):
         self.out_features = out_features
 
     def update_layer(self, adapter_name, init_ia3_weights):
+
+        r"""
+        Updates the IA3 layer with the given adapter name and initializes its weights if specified.
+        
+        Args:
+            self (IA3Layer): The IA3Layer instance.
+            adapter_name (str): The name of the adapter to update.
+            init_ia3_weights (bool): Flag indicating whether to initialize the IA3 weights.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         # This code works for linear layers, override for other layer types
         # Actual trainable parameters
         if self.is_feedforward:
@@ -73,6 +129,22 @@ class IA3Layer(BaseTunerLayer):
         self.set_adapter(self.active_adapters)
 
     def reset_ia3_parameters(self, adapter_name):
+
+        r"""
+        Resets the IA3 parameters for a given adapter in the IA3Layer.
+        
+        Args:
+            self: The instance of the IA3Layer class.
+            adapter_name (str): The name of the adapter whose parameters need to be reset.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        This method resets the IA3 parameters for the specified adapter by setting its data to a constant value of 1.0 using the initializer function. The adapter_name parameter is used to identify the adapter in the ia3_l dictionary. If the adapter_name is not found in the dictionary, no action is taken.
+        """
         if adapter_name in self.ia3_l.keys():
             # initialize learned vector with torch.ones
             self.ia3_l[adapter_name].set_data(initializer(
@@ -83,6 +155,41 @@ class IA3Layer(BaseTunerLayer):
 
 
 class Linear(nn.Cell, IA3Layer):
+
+    r"""
+    The `Linear` class represents a linear layer that inherits from `nn.Cell` and `IA3Layer`.
+    
+    Summary:
+        This class implements a linear layer that can merge and unmerge adapter weights into the base weights.
+    
+    Attributes:
+        - `base_layer`: An instance of `nn.Cell` representing the base layer.
+        - `adapter_name`: A string specifying the active adapter name.
+        - `fan_in_fan_out`: A boolean indicating whether to transpose the adapter weights.
+        - `is_feedforward`: A boolean indicating whether the layer is feedforward.
+        - `is_target_conv_1d_layer`: A boolean indicating whether the layer is a target convolutional 1D layer.
+        - `init_ia3_weights`: A boolean indicating whether to initialize IA3 weights.
+        - `merged_adapters`: A list of merged adapter names.
+    
+    Methods:
+        - `__init__(self, base_layer: nn.Cell, adapter_name: str, fan_in_fan_out: bool = False, is_feedforward: bool = False, is_target_conv_1d_layer: bool = False, init_ia3_weights: bool = True, **kwargs) -> None`:
+            Initializes a `Linear` instance with the given parameters.
+    
+        - `merge(self, safe_merge: bool = False, adapter_names: Optional[List[str]] = None) -> None`:
+            Merges the active adapter weights into the base weights.
+    
+        - `unmerge(self) -> None`:
+            Unmerges all merged adapter layers from the base weights.
+    
+        - `construct(self, x: Tensor, *args, **kwargs) -> Tensor`:
+            Constructs the linear layer with the given input tensor.
+    
+    Note:
+        - The `merge` method merges the active adapter weights into the base weights, allowing for adaptation.
+        - The `unmerge` method unmerges all merged adapter layers from the base weights.
+        - The `construct` method constructs the linear layer, taking into account adapter weights if applicable.
+    
+    """
     # (IA)^3 implemented in a dense layer
     def __init__(
         self,
@@ -94,6 +201,26 @@ class Linear(nn.Cell, IA3Layer):
         init_ia3_weights: bool = True,  # whether to initialize IA3 weights
         **kwargs,
     ) -> None:
+
+        r"""
+        Initializes a Linear object.
+        
+        Args:
+            self: The instance of the Linear class.
+            base_layer (nn.Cell): The base layer to be used for the Linear layer.
+            adapter_name (str): The name of the adapter.
+            fan_in_fan_out (bool): A flag indicating whether to use fan-in/fan-out weights.
+            is_feedforward (bool): A flag indicating whether the layer is feedforward.
+            is_target_conv_1d_layer (bool): A flag indicating whether the layer is a 1D convolutional layer.
+            init_ia3_weights (bool): A flag indicating whether to initialize IA3 weights.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         IA3Layer.__init__(self, base_layer, is_feedforward=is_feedforward)
         self.fan_in_fan_out = fan_in_fan_out
@@ -163,6 +290,21 @@ class Linear(nn.Cell, IA3Layer):
                     base_layer.bias.data = ops.div(base_layer.bias.data, scaling.data + 1e-8)
 
     def construct(self, x: Tensor, *args: Any, **kwargs: Any) -> Tensor:
+
+        r"""
+        This method constructs a tensor using the input tensor 'x' and additional arguments and keyword arguments. It adapts the input tensor based on the configuration of the Linear class, including the use of adapters and merging layers.
+        
+        Args:
+            x (Tensor): The input tensor to be processed. It should be of the type Tensor.
+            *args: Additional positional arguments that can be passed to the method.
+            **kwargs: Additional keyword arguments that can be passed to the method.
+        
+        Returns:
+            Tensor: The constructed tensor based on the input 'x' and the configuration of the Linear class.
+        
+        Raises:
+            None: This method does not explicitly raise any exceptions.
+        """
         dtype = previous_dtype = x.dtype
         if self.disable_adapters:
             if self.merged:
@@ -191,6 +333,21 @@ class Linear(nn.Cell, IA3Layer):
 
 
 class Conv2d(nn.Cell, IA3Layer):
+
+    r"""
+    The Conv2d class represents a convolutional neural network layer with adaptive scaling capabilities for adapter layers. 
+    This class inherits from nn.Cell and IA3Layer, allowing for flexible integration with existing neural network architectures. 
+    The class provides methods for updating, merging, and unmerging adapter layers, as well as constructing the final output based on the input tensor.
+    
+    Methods:
+    - __init__: Initialize the Conv2d layer with specified parameters and adapter settings.
+    - update_layer: Update the adapter layer with new weights based on the provided adapter name.
+    - merge: Merge active adapter weights into the base weights with optional safe merge checks.
+    - unmerge: Unmerge all previously merged adapter layers from the base weights.
+    - construct: Construct the output tensor based on the input tensor, considering adapter scaling and merging configurations.
+    
+    Note: The Conv2d class is designed to enhance neural network models with adaptive scaling functionality for improved performance and flexibility.
+    """
     def __init__(
         self,
         base_layer: nn.Cell,
@@ -200,6 +357,25 @@ class Conv2d(nn.Cell, IA3Layer):
         init_ia3_weights: bool = True,
         **kwargs,
     ) -> None:
+
+        r"""
+        Initializes a new instance of the Conv2d class.
+        
+        Args:
+            self (Conv2d): The current instance of the Conv2d class.
+            base_layer (nn.Cell): The base layer for the Conv2d operation.
+            adapter_name (str): The name of the adapter.
+            fan_in_fan_out (bool, optional): Flag indicating whether to use fan-in/fan-out initialization. Defaults to False.
+            is_feedforward (bool, optional): Flag indicating whether the Conv2d operation is feedforward. Defaults to False.
+            init_ia3_weights (bool, optional): Flag indicating whether to initialize IA3 weights. Defaults to True.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__()
         IA3Layer.__init__(self, base_layer, is_feedforward=is_feedforward)
         self.fan_in_fan_out = fan_in_fan_out
@@ -208,6 +384,21 @@ class Conv2d(nn.Cell, IA3Layer):
         self.update_layer(adapter_name, init_ia3_weights)
 
     def update_layer(self, adapter_name, init_ia3_weights):
+
+        r"""
+        Updates the layer of the Conv2d class with the specified adapter name and initialization of IA3 weights.
+        
+        Args:
+            self (Conv2d): The instance of the Conv2d class.
+            adapter_name (str): The name of the adapter to be updated.
+            init_ia3_weights (bool): Indicates whether to initialize IA3 weights or not.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         # Actual trainable parameters
         if self.is_feedforward:
             weight = ops.randn((1, self.in_features, 1, 1))
@@ -285,6 +476,20 @@ class Conv2d(nn.Cell, IA3Layer):
                     base_layer.bias.data = ops.mul(base_layer.bias.data, scaling.data)
 
     def construct(self, x: Tensor, *args: Any, **kwargs: Any) -> Tensor:
+
+        r"""
+        Construct method for the Conv2d class.
+        
+        Args:
+            self: The instance of the Conv2d class.
+            x (Tensor): The input tensor representing the input data. It is the primary input to the construct method.
+        
+        Returns:
+            Tensor: The output tensor after processing the input data through the construct method. The type and shape of the tensor is dependent on the operation performed within the method.
+        
+        Raises:
+            N/A
+        """
         dtype = previous_dtype = x.dtype
 
         if self.disable_adapters:

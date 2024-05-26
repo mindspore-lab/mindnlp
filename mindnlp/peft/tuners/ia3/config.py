@@ -86,6 +86,28 @@ class IA3Config(PeftConfig):
     )
 
     def __post_init__(self):
+
+        r"""
+        This method initializes the IA3Config class after its instance has been created.
+        
+        Args:
+            self: An instance of the IA3Config class.
+        
+        Returns:
+            None.
+        
+        Raises:
+            ValueError: If the `feedforward_cells` parameter is not a subset of the `target_cells` parameter.
+        
+        Description:
+            The __post_init__ method sets default values for the IA3Config instance. It assigns the PeftType.IA3 value to the
+            peft_type attribute. The target_cells and feedforward_cells attributes are converted to sets if they are provided as
+            lists, or left unchanged if they are already sets.
+        
+            The method then performs a check to ensure that if both target_cells and feedforward_cells are sets, the
+            feedforward_cells subset is a subset of the target_cells set. If this check fails, a ValueError exception is raised
+            with the message '`feedforward_cells` should be a subset of `target_cells`'.
+        """
         self.peft_type = PeftType.IA3
         self.target_cells = (
             set(self.target_cells) if isinstance(self.target_cells, list) else self.target_cells

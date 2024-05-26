@@ -50,6 +50,38 @@ class RNNEncoder(EncoderBase):
     """
 
     def __init__(self, embedding, rnn):
+
+        r"""
+        Initializes an instance of the 'RNNEncoder' class.
+        
+        Args:
+            self: The current instance of the 'RNNEncoder' class.
+            embedding: An object representing the embedding to be used.
+                Type: Unknown (dependent on the 'embedding' parameter passed during initialization)
+                Purpose: Specifies the embedding to be used by the encoder.
+            rnn: An object representing the recurrent neural network (RNN) to be used.
+                Type: Unknown (dependent on the 'rnn' parameter passed during initialization)
+                Purpose: Specifies the RNN to be used by the encoder.
+                Restrictions: The 'rnn' object must be an instance of the '_RNNBase' class or its subclass.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        Note:
+            - This method is responsible for initializing the 'RNNEncoder' object.
+            - The 'embedding' parameter is assigned to the 'embedding' attribute of the object.
+            - The 'rnn' parameter is assigned to the 'rnn' attribute of the object.
+            - The 'static' attribute of the object is set to False initially.
+            - If the 'rnn' object is an instance of the '_RNNBase' class or its subclass, the 'static' attribute is set to True.
+        
+        Example:
+            embedding = SomeEmbedding()
+            rnn = SomeRNN()
+            encoder = RNNEncoder(embedding, rnn)
+        """
         super().__init__(embedding)
         self.rnn = rnn
         self.static = False

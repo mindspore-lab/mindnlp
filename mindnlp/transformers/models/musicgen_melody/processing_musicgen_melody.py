@@ -42,10 +42,41 @@ class MusicgenMelodyProcessor(ProcessorMixin):
     tokenizer_class = ("T5Tokenizer", "T5TokenizerFast")
 
     def __init__(self, feature_extractor, tokenizer):
+
+        """
+        Initializes a MusicgenMelodyProcessor object.
+        
+        Args:
+            self (MusicgenMelodyProcessor): The instance of the MusicgenMelodyProcessor class.
+            feature_extractor: An object that performs feature extraction on melodies.
+            tokenizer: An object that tokenizes melodies.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(feature_extractor, tokenizer)
 
     # Copied from transformers.models.musicgen.processing_musicgen.MusicgenProcessor.get_decoder_prompt_ids
     def get_decoder_prompt_ids(self, task=None, language=None, no_timestamps=True):
+
+        """
+        This method retrieves decoder prompt IDs for the MusicgenMelodyProcessor class.
+        
+        Args:
+            self: The instance of the class.
+            task (str): Specifies the task for which decoder prompt IDs are requested. Default is None.
+            language (str): Specifies the language for which decoder prompt IDs are requested. Default is None.
+            no_timestamps (bool): Indicates whether to exclude timestamps in the decoder prompt IDs. Default is True.
+        
+        Returns:
+            None: This method does not return a value but processes the input parameters to retrieve decoder prompt IDs.
+        
+        Raises:
+            None specified.
+        """
         return self.tokenizer.get_decoder_prompt_ids(task=task, language=language, no_timestamps=no_timestamps)
 
     def __call__(self, audio=None, text=None, **kwargs):

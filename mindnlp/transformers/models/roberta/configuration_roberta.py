@@ -45,6 +45,37 @@ class RobertaConfig(PretrainedConfig):
         classifier_dropout=None,
         **kwargs,
     ):
+
+        """
+        This method initializes an instance of the RobertaConfig class.
+        
+        Args:
+            vocab_size (int): The size of the vocabulary. Default is 50265.
+            hidden_size (int): The size of the hidden layers and the size of the embeddings. Default is 768.
+            num_hidden_layers (int): The number of hidden layers in the model. Default is 12.
+            num_attention_heads (int): The number of attention heads for each layer. Default is 12.
+            intermediate_size (int): The size of the "intermediate" (i.e., feed-forward) layer in the transformer. Default is 3072.
+            hidden_act (str): The non-linear activation function for the hidden layers. Default is 'gelu'.
+            hidden_dropout_prob (float): The dropout probability for all fully connected layers in the embeddings and transformer layers. Default is 0.1.
+            attention_probs_dropout_prob (float): The dropout probability for the attention probabilities. Default is 0.1.
+            max_position_embeddings (int): The maximum sequence length that this model might ever be used with. Default is 512.
+            type_vocab_size (int): The size of the "type" vocabulary. Default is 2.
+            initializer_range (float): The standard deviation of the truncated_normal_initializer for initializing all weight matrices. Default is 0.02.
+            layer_norm_eps (float): The epsilon used by LayerNorm layers. Default is 1e-12.
+            pad_token_id (int): The id of the padding token. Default is 1.
+            bos_token_id (int): The id of the beginning of the sequence token. Default is 0.
+            eos_token_id (int): The id of the end of the sequence token. Default is 2.
+            position_embedding_type (str): The type of position embedding. Default is 'absolute'.
+            use_cache (bool): Whether or not to use caching for the model. Default is True.
+            classifier_dropout (float): The dropout probability for the classifier. Default is None.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
 
         self.vocab_size = vocab_size

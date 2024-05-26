@@ -90,6 +90,32 @@ class MusicgenMelodyFeatureExtractor(SequenceFeatureExtractor):
         stem_indices=[3, 2],
         **kwargs,
     ):
+
+        """
+        Initializes a MusicgenMelodyFeatureExtractor object.
+        
+        Args:
+            self: The object itself.
+            feature_size (int, optional): The size of the feature. Defaults to 12.
+            sampling_rate (int, optional): The sampling rate. Defaults to 32000.
+            hop_length (int, optional): The hop length. Defaults to 4096.
+            chunk_length (int, optional): The length of the chunk. Defaults to 30.
+            n_fft (int, optional): The number of FFT points. Defaults to 16384.
+            num_chroma (int, optional): The number of chroma. Defaults to 12.
+            padding_value (float, optional): The padding value. Defaults to 0.0.
+            return_attention_mask (bool, optional): Indicates whether to return attention mask. Defaults to False.
+            stem_indices (list, optional): The stem indices. Defaults to [3, 2].
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: If the provided feature size, sampling rate, hop length, chunk length, n_fft, or num_chroma is invalid.
+            TypeError: If the provided padding value is not a float.
+            TypeError: If the provided return_attention_mask is not a boolean.
+            TypeError: If stem_indices is not a list.
+        """
         super().__init__(
             feature_size=feature_size,
             sampling_rate=sampling_rate,

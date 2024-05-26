@@ -31,6 +31,28 @@ class AdaptionPromptConfig(PeftConfig):
     adapter_layers: int = field(default=None, metadata={"help": "Number of adapter layers (from the top)"})
 
     def __post_init__(self):
+
+        r"""
+        This method is called automatically after the initialization of an instance of the 'AdaptionPromptConfig' class.
+        
+        Args:
+            self: An instance of the 'AdaptionPromptConfig' class.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        Description:
+        This method sets the 'peft_type' attribute of the 'AdaptionPromptConfig' instance to 'PeftType.ADAPTION_PROMPT'.
+        The 'peft_type' attribute represents the type of the adaption prompt configuration.
+        
+        Example:
+            config = AdaptionPromptConfig()
+            config.__post_init__()
+            print(config.peft_type)  # Output: PeftType.ADAPTION_PROMPT
+        """
         self.peft_type = PeftType.ADAPTION_PROMPT
 
     @property

@@ -39,6 +39,23 @@ class PretrainedConfig:
     attribute_map: Dict[str, str] = {}
 
     def __init__(self, **kwargs):
+
+        '''
+        This method initializes an instance of the PretrainedConfig class.
+        
+        Args:
+            self: The instance of the PretrainedConfig class.
+        
+        Returns:
+            None
+        
+        Raises:
+            ValueError: If label2id is not a dictionary.
+            ValueError: If id2label is not a dictionary.
+            ValueError: If num_labels is provided and is incompatible with the id to label map.
+            ValueError: If problem_type is not one of the allowed types: 'regression', 'single_label_classification', 'multi_label_classification'.
+            AttributeError: If any attribute cannot be set for the instance.
+        '''
         self.ms_dtype = kwargs.pop("ms_dtype", None)
         if 'torch_dtype' in kwargs:
             self.ms_dtype = kwargs.pop("torch_dtype", None)
@@ -148,11 +165,41 @@ class PretrainedConfig:
                 raise err
 
     def __setattr__(self, key, value):
+
+        """
+        Method to set attribute values in the PretrainedConfig class.
+        
+        Args:
+            self (PretrainedConfig): The instance of the PretrainedConfig class.
+            key (str): The key representing the attribute to be set.
+            value (any): The value to be assigned to the attribute specified by the key.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - AttributeError: If the key is not found in the attribute map of the parent class.
+        """
         if key in super().__getattribute__("attribute_map"):
             key = super().__getattribute__("attribute_map")[key]
         super().__setattr__(key, value)
 
     def __getattribute__(self, key):
+
+        """
+        This method __getattribute__ in the class PretrainedConfig dynamically retrieves the value of the specified attribute key.
+        
+        Args:
+            self (object): The instance of the PretrainedConfig class.
+            key (str): The key for which the attribute value needs to be retrieved. It should be a string representing the attribute name.
+        
+        Returns:
+            None: This method returns the attribute value corresponding to the provided key. If the key is found in the attribute map, it returns the mapped value; otherwise, it returns None.
+        
+        Raises:
+            AttributeError: If the key is not found in the attribute map or the attribute itself does not exist.
+            TypeError: If the key provided is not a string.
+        """
         if key != "attribute_map" and key in super().__getattribute__("attribute_map"):
             key = super().__getattribute__("attribute_map")[key]
         return super().__getattribute__(key)
@@ -641,12 +688,46 @@ class PretrainedConfig:
 
     @num_labels.setter
     def num_labels(self, num_labels: int):
+
+        """
+        Method to set the number of labels in the PretrainedConfig class.
+        
+        Args:
+            self (PretrainedConfig): The instance of the PretrainedConfig class.
+            num_labels (int): The number of labels to set for the configuration.
+                Must be a non-negative integer representing the total number of labels to be used.
+                
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - TypeError: If the num_labels parameter is not of type int.
+            - ValueError: If the num_labels parameter is a negative integer.
+            - AttributeError: If the id2label attribute is not present in the instance or is None.
+            - ValueError: If the length of the id2label attribute is not equal to the specified num_labels.
+        """
         if not hasattr(self, "id2label") or self.id2label is None or len(self.id2label) != num_labels:
             self.id2label = {i: f"LABEL_{i}" for i in range(num_labels)}
             self.label2id = dict(zip(self.id2label.values(), self.id2label.keys()))
 
     @property
     def _attn_implementation(self):
+
+        """
+        Returns the implementation type of the attention mechanism.
+        
+        Args:
+            self: An instance of the PretrainedConfig class.
+        
+        Returns:
+            str: The implementation type of the attention mechanism. Possible values are:
+                - 'eager': If the '_attn_implementation_internal' attribute is set to None or not defined.
+                - The value of '_attn_implementation_internal': If it is not None.
+        
+        Raises:
+            None.
+        
+        """
         # This property is made private for now (as it cannot be changed and a PreTrainedModel.use_attn_implementation method needs to be implemented.)
         if hasattr(self, "_attn_implementation_internal"):
             if self._attn_implementation_internal is None:
@@ -659,6 +740,20 @@ class PretrainedConfig:
 
     @_attn_implementation.setter
     def _attn_implementation(self, value):
+
+        """
+        This method '_attn_implementation' in the class 'PretrainedConfig' sets the value of the '_attn_implementation_internal' attribute.
+        
+        Args:
+            self (object): The instance of the PretrainedConfig class.
+            value (any): The value to be assigned to the '_attn_implementation_internal' attribute.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised within this method.
+        """
         self._attn_implementation_internal = value
 
 
@@ -712,6 +807,37 @@ class EncoderDecoderConfig(PretrainedConfig):
     is_composition = True
 
     def __init__(self, **kwargs):
+
+        """
+        Initializes an instance of the EncoderDecoderConfig class.
+        
+        Args:
+            self: An instance of the EncoderDecoderConfig class.
+        
+        Returns:
+            None
+        
+        Raises:
+            AssertionError: If the 'encoder' and 'decoder' parameters are not provided in the kwargs parameter.
+            ImportError: If the 'mindnlp' module cannot be imported.
+            AttributeError: If the 'AutoConfig' class or its methods cannot be accessed.
+            TypeError: If the 'model_type' parameter is missing in either the 'encoder' or 'decoder' configuration.
+            ValueError: If any of the 'encoder' or 'decoder' configuration dictionaries are empty.
+        
+        Note:
+            This method is used to initialize a configuration object for an encoder-decoder model. It expects the following
+            parameters to be passed as keyword arguments:
+            - encoder: A dictionary containing the configuration settings for the encoder model. It should include the
+              'model_type' parameter specifying the type of the encoder model.
+            - decoder: A dictionary containing the configuration settings for the decoder model. It should include the
+              'model_type' parameter specifying the type of the decoder model.
+        
+            The 'encoder' and 'decoder' dictionaries are popped from the kwargs parameter to remove them from further processing.
+            The 'model_type' parameters from the popped dictionaries are used to create an instance of the AutoConfig class,
+            which initializes the encoder and decoder configurations accordingly.
+        
+            The 'is_encoder_decoder' attribute is set to True to indicate that the configuration is for an encoder-decoder model.
+        """
         super().__init__(**kwargs)
         assert (
             "encoder" in kwargs and "decoder" in kwargs

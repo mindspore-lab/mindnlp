@@ -140,6 +140,19 @@ class LoKrConfig(PeftConfig):
     )
 
     def __post_init__(self):
+
+        r"""
+        Method to initialize the attributes of the LoKrConfig class after object creation.
+        
+        Args:
+            self: Instance of the LoKrConfig class.
+        
+        Returns:
+            None. This method performs attribute initialization within the class.
+        
+        Raises:
+            No specific exceptions are raised within this method.
+        """
         self.peft_type = PeftType.LOKR
 
     @property

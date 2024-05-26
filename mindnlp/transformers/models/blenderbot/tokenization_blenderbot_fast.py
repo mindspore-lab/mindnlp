@@ -174,6 +174,36 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
         add_prefix_space=False,
         **kwargs,
     ):
+
+        """
+        Initializes a new instance of the BlenderbotTokenizer class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_file (str): The path to the vocabulary file.
+            merges_file (str): The path to the merges file.
+            errors (str, optional): Specifies how to handle errors. Defaults to 'replace'.
+            bos_token (str, optional): The beginning of sentence token. Defaults to '<s>'.
+            eos_token (str, optional): The end of sentence token. Defaults to '</s>'.
+            sep_token (str, optional): The separator token. Defaults to '</s>'.
+            cls_token (str, optional): The classification token. Defaults to '<s>'.
+            unk_token (str, optional): The unknown token. Defaults to '<unk>'.
+            pad_token (str, optional): The padding token. Defaults to '<pad>'.
+            mask_token (str, optional): The masking token. Defaults to '<mask>'.
+            add_prefix_space (bool, optional): Whether to add prefix space. Defaults to False.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            FileNotFoundError: If the vocab_file or merges_file is not found.
+            ValueError: If the provided tokens are not valid.
+            TypeError: If the input parameters are of incorrect type.
+            JSONDecodeError: If there is an error decoding the vocabulary file.
+            UnicodeDecodeError: If there is an error decoding the merges file.
+            Exception: Any other unexpected errors.
+        """
         bos_token = AddedToken(bos_token, lstrip=False, rstrip=False) if isinstance(bos_token, str) else bos_token
         pad_token = AddedToken(pad_token, lstrip=False, rstrip=False) if isinstance(pad_token, str) else pad_token
         eos_token = AddedToken(eos_token, lstrip=False, rstrip=False) if isinstance(eos_token, str) else eos_token
@@ -222,16 +252,58 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
     @property
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.vocab_size with Roberta->Blenderbot, RoBERTa->Blenderbot
     def vocab_size(self):
+
+        """
+        This method returns the size of the vocabulary used in the BlenderbotTokenizer.
+        
+        Args:
+            self (BlenderbotTokenizer): The instance of the BlenderbotTokenizer class.
+                It is used to access the encoder to determine the size of the vocabulary.
+        
+        Returns:
+            int: The number of unique tokens in the vocabulary.
+                The method returns the length of the encoder, representing the vocabulary size.
+        
+        Raises:
+            None
+        """
         return len(self.encoder)
 
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.get_vocab with Roberta->Blenderbot, RoBERTa->Blenderbot
     def get_vocab(self):
+
+        """
+        This method returns the vocabulary as a dictionary containing the encoder tokens and any added tokens.
+        
+        Args:
+            self (BlenderbotTokenizer): The instance of the BlenderbotTokenizer class.
+            
+        Returns:
+            dict: A dictionary containing the encoder tokens and any added tokens.
+        
+        Raises:
+            None.
+        """
         vocab = dict(self.encoder).copy()
         vocab.update(self.added_tokens_encoder)
         return vocab
 
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.bpe with Roberta->Blenderbot, RoBERTa->Blenderbot
     def bpe(self, token):
+
+        """
+        Performs byte pair encoding (BPE) on a given token.
+        
+        Args:
+            self: An instance of the BlenderbotTokenizer class.
+            token (str): The token to be encoded.
+        
+        Returns:
+            str: The encoded token.
+        
+        Raises:
+            None.
+        """
         if token in self.cache:
             return self.cache[token]
         word = tuple(token)
@@ -303,6 +375,24 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.save_vocabulary with Roberta->Blenderbot, RoBERTa->Blenderbot
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+
+        """
+        Saves the vocabulary files of the BlenderbotTokenizer.
+        
+        Args:
+            self (BlenderbotTokenizer): The instance of the BlenderbotTokenizer class.
+            save_directory (str): The directory where the vocabulary files will be saved.
+            filename_prefix (Optional[str], default=None): The prefix to be included in the filenames of the saved vocabulary files.
+        
+        Returns:
+            Tuple[str]: A tuple containing the paths of the saved vocabulary files. The first element is the path of the vocabulary file, and the second element is the path of the merges file.
+        
+        Raises:
+            FileNotFoundError: If the save_directory does not exist.
+            TypeError: If the save_directory is not a string.
+            TypeError: If the filename_prefix is not a string or None.
+        
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return
@@ -385,6 +475,22 @@ class BlenderbotTokenizer(PreTrainedTokenizer):
 
     # Copied from transformers.models.roberta.tokenization_roberta.RobertaTokenizer.prepare_for_tokenization with Roberta->Blenderbot, RoBERTa->Blenderbot
     def prepare_for_tokenization(self, text, is_split_into_words=False, **kwargs):
+
+        """
+        Prepare for tokenization.
+        
+        Args:
+            self (BlenderbotTokenizer): The instance of the BlenderbotTokenizer class.
+            text (str): The input text to be prepared for tokenization.
+            is_split_into_words (bool): A flag indicating whether the input text is already split into words.
+        
+        Returns:
+            None: This method does not return any value explicitly.
+        
+        Raises:
+            TypeError: If the text parameter is not a string.
+            ValueError: If the text parameter is empty or if is_split_into_words is not a boolean.
+        """
         add_prefix_space = kwargs.pop("add_prefix_space", self.add_prefix_space)
         if (is_split_into_words or add_prefix_space) and (len(text) > 0 and not text[0].isspace()):
             text = " " + text

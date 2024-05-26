@@ -218,6 +218,30 @@ class BertTokenizerFast(PreTrainedTokenizerFast):
         strip_accents=None,
         **kwargs,
     ):
+
+        """
+        Initialize the BertTokenizerFast class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_file (str): The file path to the vocabulary file. Defaults to None.
+            tokenizer_file (str): The file path to the tokenizer file. Defaults to None.
+            do_lower_case (bool): Flag indicating whether to convert tokens to lowercase. Defaults to True.
+            unk_token (str): The special token for unknown tokens. Defaults to '[UNK]'.
+            sep_token (str): The special token for separating sequences. Defaults to '[SEP]'.
+            pad_token (str): The special token for padding sequences. Defaults to '[PAD]'.
+            cls_token (str): The special token for classifying sequences. Defaults to '[CLS]'.
+            mask_token (str): The special token for masking tokens. Defaults to '[MASK]'.
+            tokenize_chinese_chars (bool): Flag indicating whether to tokenize Chinese characters. Defaults to True.
+            strip_accents (str or None): Flag indicating whether to strip accents. Defaults to None.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method initializes the BertTokenizerFast class.
+        
+        Raises:
+            - Exception: If an error occurs during the initialization process.
+        """
         super().__init__(
             vocab_file,
             tokenizer_file=tokenizer_file,
@@ -300,6 +324,21 @@ class BertTokenizerFast(PreTrainedTokenizerFast):
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+
+        """
+        Save the vocabulary of the BertTokenizerFast model to the specified directory.
+        
+        Args:
+            self (BertTokenizerFast): The instance of the BertTokenizerFast class.
+            save_directory (str): The directory where the vocabulary files will be saved.
+            filename_prefix (Optional[str]): An optional prefix for the saved vocabulary files. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the names of the saved files.
+        
+        Raises:
+            This method does not explicitly raise any exceptions.
+        """
         files = self._tokenizer.model.save(save_directory, name=filename_prefix)
         return tuple(files)
 

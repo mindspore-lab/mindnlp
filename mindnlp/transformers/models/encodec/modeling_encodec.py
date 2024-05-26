@@ -81,6 +81,26 @@ class EncodecConv1d(nn.Cell):
     def __init__(
         self, config, in_channels: int, out_channels: int, kernel_size: int, stride: int = 1, dilation: int = 1
     ):
+
+        """Initialize the EncodecConv1d class.
+        
+        Args:
+            self: The instance of the class.
+            config: The configuration object containing various settings.
+            in_channels (int): The number of input channels.
+            out_channels (int): The number of output channels.
+            kernel_size (int): The size of the convolutional kernel.
+            stride (int, optional): The stride value for the convolution operation. Defaults to 1.
+            dilation (int, optional): The dilation value for the convolution operation. Defaults to 1.
+        
+        Returns:
+            None
+        
+        Raises:
+            ValueError: If `norm_type` is not one of the allowed values: `"weight_norm"` or `"time_group_norm"`.
+            Warning: If both `stride` and `dilation` are greater than 1.
+        
+        """
         super().__init__()
         self.causal = config.use_causal_conv
         self.pad_mode = config.pad_mode
@@ -138,6 +158,21 @@ class EncodecConv1d(nn.Cell):
         return padded[..., :end]
 
     def construct(self, hidden_states):
+
+        """
+        Method 'construct' in the class 'EncodecConv1d'.
+        
+        Args:
+            self (object): Instance of EncodecConv1d class.
+            hidden_states (Tensor): Input tensor of shape [batch_size, channels, sequence_length] representing hidden states.
+        
+        Returns:
+            None: The method does not return any value but updates the hidden_states tensor after applying convolution and normalization.
+        
+        Raises:
+            ValueError: If the normalization type is not supported.
+            RuntimeError: If the convolution operation fails.
+        """
         kernel_size = self.conv.kernel_size[0]
         stride = self.conv.stride[0]
         dilation = self.conv.dilation[0]
@@ -167,6 +202,23 @@ class EncodecConvTranspose1d(nn.Cell):
     """ConvTranspose1d with asymmetric or causal padding and normalization."""
 
     def __init__(self, config, in_channels: int, out_channels: int, kernel_size: int, stride: int = 1):
+
+        """
+        Args:
+            self (object): The instance of the class.
+            config (object): An object containing configuration parameters.
+            in_channels (int): The number of input channels.
+            out_channels (int): The number of output channels.
+            kernel_size (int): The size of the convolutional kernel.
+            stride (int, optional): The stride of the convolution. Defaults to 1.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If self.norm_type is not one of 'weight_norm' or 'time_group_norm'.
+            ValueError: If trim_right_ratio is not equal to 1.0 and causal convolutions are not used.
+        """
         super().__init__()
         self.causal = config.use_causal_conv
         self.trim_right_ratio = config.trim_right_ratio
@@ -186,6 +238,22 @@ class EncodecConvTranspose1d(nn.Cell):
             raise ValueError("`trim_right_ratio` != 1.0 only makes sense for causal convolutions")
 
     def construct(self, hidden_states):
+
+        """
+        This method constructs a 1D transposed convolutional layer for the EncodecConvTranspose1d class.
+        
+        Args:
+            self: An instance of the EncodecConvTranspose1d class.
+            hidden_states: A tensor representing the input hidden states to be processed by the transposed convolution layer.
+        
+        Returns:
+            None. However, the method modifies the hidden_states tensor to apply the transposed convolution operation.
+        
+        Raises:
+            - ValueError: If the norm_type attribute is not recognized or supported.
+            - RuntimeError: If an error occurs during the transposed convolution operation.
+            - AttributeError: If the required attributes are not found in the instance of the EncodecConvTranspose1d class.
+        """
         kernel_size = self.conv.kernel_size[0]
         stride = self.conv.stride[0]
         padding_total = kernel_size - stride
@@ -221,10 +289,45 @@ class EncodecLSTM(nn.Cell):
     """
 
     def __init__(self, config, dimension):
+
+        """
+        Initializes an instance of the EncodecLSTM class.
+        
+        Args:
+            self (EncodecLSTM): The instance of the EncodecLSTM class.
+            config (object): The configuration object containing various settings.
+            dimension (int): The dimension of the LSTM input and output.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         self.lstm = nn.LSTM(dimension, dimension, config.num_lstm_layers)
 
     def construct(self, hidden_states):
+
+        """
+        Constructs the encoded hidden states using the Long Short-Term Memory (LSTM) algorithm.
+        
+        Args:
+            self (EncodecLSTM): An instance of the EncodecLSTM class.
+            hidden_states (torch.Tensor): The hidden states to be encoded. Should have shape (batch_size, sequence_length, input_size).
+        
+        Returns:
+            torch.Tensor: The encoded hidden states. Has shape (sequence_length, input_size, batch_size).
+        
+        Raises:
+            None.
+        
+        Note:
+            - The 'hidden_states' tensor is expected to have the batch dimension as the first dimension, the sequence dimension as the second dimension, and the input size dimension as the third dimension.
+            - The 'hidden_states' tensor is permuted twice to match the expected input format for the LSTM.
+            - The LSTM is applied on the permuted 'hidden_states' tensor, and its output is added element-wise to the original 'hidden_states' tensor.
+            - The resulting tensor is permuted again to match the expected output format.
+        """
         hidden_states = hidden_states.permute(2, 0, 1)
         hidden_states = self.lstm(hidden_states)[0] + hidden_states
         hidden_states = hidden_states.permute(1, 2, 0)
@@ -237,6 +340,22 @@ class EncodecResnetBlock(nn.Cell):
     """
 
     def __init__(self, config: EncodecConfig, dim: int, dilations: List[int]):
+
+        """
+        Initialize the EncodecResnetBlock.
+        
+        Args:
+            self (object): The instance of the class.
+            config (EncodecConfig): An object containing configuration parameters for the block.
+            dim (int): The dimension of the input data.
+            dilations (List[int]): A list of dilation factors for each convolutional layer.
+        
+        Returns:
+            None. This method initializes the EncodecResnetBlock instance.
+        
+        Raises:
+            ValueError: Raised if the number of kernel sizes does not match the number of dilations provided.
+        """
         super().__init__()
         kernel_sizes = (config.residual_kernel_size, 1)
         if len(kernel_sizes) != len(dilations):
@@ -257,6 +376,22 @@ class EncodecResnetBlock(nn.Cell):
             self.shortcut = nn.Identity()
 
     def construct(self, hidden_states):
+
+        """
+        Constructs the EncodecResnetBlock.
+        
+        This method applies a series of layers to the given hidden_states to construct the EncodecResnetBlock. The method returns the combined result of the residual connection and the output of the layers.
+        
+        Args:
+            self (EncodecResnetBlock): An instance of the EncodecResnetBlock class.
+            hidden_states (Tensor): The input hidden states to be passed through the block layers. Expected shape: (batch_size, hidden_size).
+        
+        Returns:
+            Tensor: The combined result of the residual connection and the output of the block layers. Expected shape: (batch_size, hidden_size).
+        
+        Raises:
+            None.
+        """
         residual = hidden_states
         for layer in self.block:
             hidden_states = layer(hidden_states)
@@ -268,6 +403,28 @@ class EncodecEncoder(nn.Cell):
     """SEANet encoder as used by EnCodec."""
 
     def __init__(self, config: EncodecConfig):
+
+        """
+        This method initializes an instance of the EncodecEncoder class.
+        
+        Args:
+            self: The instance of the EncodecEncoder class.
+            config (EncodecConfig): An instance of the EncodecConfig class containing configuration parameters for the encoder.
+                - audio_channels (int): The number of audio channels.
+                - num_filters (int): The number of filters to be used in the encoder.
+                - kernel_size (int): The size of the kernel for convolutional layers.
+                - upsampling_ratios (list): A list of integers representing the upsampling ratios for each layer.
+                - num_residual_layers (int): The number of residual layers to be used in the encoder.
+                - dilation_growth_rate (int): The growth rate for the dilation in the residual blocks.
+                - hidden_size (int): The size of the hidden layer.
+                - last_kernel_size (int): The size of the kernel for the final convolutional layer.
+        
+        Returns:
+            None. The method initializes the layers of the encoder and assigns them to the 'layers' attribute of the EncodecEncoder instance.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         model = [EncodecConv1d(config, config.audio_channels, config.num_filters, config.kernel_size)]
         scaling = 1
@@ -290,6 +447,23 @@ class EncodecEncoder(nn.Cell):
         self.layers = nn.CellList(model)
 
     def construct(self, hidden_states):
+
+        """
+        Constructs the encoded hidden states by applying each layer in the EncodecEncoder.
+        
+        Args:
+            self (EncodecEncoder): An instance of the EncodecEncoder class.
+            hidden_states (object): The input hidden states.
+                - Type: Any valid Python object
+                - Purpose: Represents the initial hidden states.
+                - Restrictions: None
+        
+        Returns:
+            None: This method does not return any value. It updates the hidden_states in place.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         for layer in self.layers:
             hidden_states = layer(hidden_states)
         return hidden_states
@@ -299,6 +473,25 @@ class EncodecDecoder(nn.Cell):
     """SEANet decoder as used by EnCodec."""
 
     def __init__(self, config: EncodecConfig):
+
+        """
+        __init__
+        
+        Initializes an instance of the EncodecDecoder class.
+        
+        Args:
+            self: The instance of the class.
+            config (EncodecConfig): An instance of the EncodecConfig class containing configuration parameters for the decoder.
+                - Type: EncodecConfig
+                - Purpose: Specifies the configuration settings for the decoder.
+                - Restrictions: Must be an instance of the EncodecConfig class.
+        
+        Returns:
+            None. The method initializes the instance of the EncodecDecoder class and does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__()
         scaling = int(2 ** len(config.upsampling_ratios))
         model = [EncodecConv1d(config, config.hidden_size, scaling * config.num_filters, config.kernel_size)]
@@ -324,6 +517,22 @@ class EncodecDecoder(nn.Cell):
         self.layers = nn.CellList(model)
 
     def construct(self, hidden_states):
+
+        """
+        Construct method in the EncodecDecoder class.
+        
+        Args:
+            self (object): Instance of the EncodecDecoder class.
+            hidden_states (object): The hidden states to be processed by the method.
+                This parameter is a list of hidden states that will be sequentially processed by each layer in the model.
+                It is expected that each hidden state conforms to the input requirements of the layers.
+                
+        Returns:
+            None. The method does not return any value directly but modifies the hidden_states in place.
+            
+        Raises:
+            No specific exceptions are raised by this method under normal operation.
+        """
         for layer in self.layers:
             hidden_states = layer(hidden_states)
         return hidden_states
@@ -333,6 +542,20 @@ class EncodecEuclideanCodebook(nn.Cell):
     """Codebook with Euclidean distance."""
 
     def __init__(self, config: EncodecConfig):
+
+        """
+        Initializes an instance of the EncodecEuclideanCodebook class.
+        
+        Args:
+            self: The instance of the class.
+            config (EncodecConfig): An object of the EncodecConfig class that contains the configuration parameters.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         super().__init__()
         embed = mindspore.Parameter(ops.zeros(config.codebook_size, config.codebook_dim), requires_grad=False)
 
@@ -344,6 +567,20 @@ class EncodecEuclideanCodebook(nn.Cell):
         self.embed_avg = embed.clone()
 
     def quantize(self, hidden_states):
+
+        """
+        Quantizes the given hidden states using the Euclidean codebook encoding method.
+        
+        Args:
+            self (EncodecEuclideanCodebook): An instance of the EncodecEuclideanCodebook class.
+            hidden_states (Tensor): A tensor representing the hidden states to be quantized.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         embed = self.embed.t()
         scaled_states = hidden_states.pow(2).sum(1, keepdims=True)
         dist = -(scaled_states - 2 * hidden_states @ embed + embed.pow(2).sum(0, keepdims=True))
@@ -351,6 +588,20 @@ class EncodecEuclideanCodebook(nn.Cell):
         return embed_ind
 
     def encode(self, hidden_states):
+
+        """
+        Encodes the hidden states using the Euclidean Codebook method.
+        
+        Args:
+            self: An instance of the EncodecEuclideanCodebook class.
+            hidden_states (ndarray): A numpy array containing the hidden states to be encoded. The shape of the array is expected to be (batch_size, sequence_length, hidden_size).
+        
+        Returns:
+            ndarray: A numpy array containing the encoded indices. The shape of the array is the same as the input hidden_states, except for the last dimension which is reduced to represent the indices of the codebook.
+        
+        Raises:
+            None.
+        """
         shape = hidden_states.shape
         # pre-process
         hidden_states = hidden_states.reshape((-1, shape[-1]))
@@ -361,6 +612,20 @@ class EncodecEuclideanCodebook(nn.Cell):
         return embed_ind
 
     def decode(self, embed_ind):
+
+        """
+        Decodes an embedding index using the Euclidean codebook method.
+        
+        Args:
+            self (EncodecEuclideanCodebook): An instance of the EncodecEuclideanCodebook class.
+            embed_ind (int): The index of the embedding to decode.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         quantize = embedding(embed_ind, self.embed)
         return quantize
 
@@ -371,15 +636,58 @@ class EncodecVectorQuantization(nn.Cell):
     """
 
     def __init__(self, config: EncodecConfig):
+
+        """
+        Initializes an instance of the EncodecVectorQuantization class.
+        
+        Args:
+            self: The instance of the EncodecVectorQuantization class.
+            config (EncodecConfig): An object of the EncodecConfig class that contains the configuration data for the vector quantization.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None. This method does not raise any exceptions.
+        """
         super().__init__()
         self.codebook = EncodecEuclideanCodebook(config)
 
     def encode(self, hidden_states):
+
+        """
+        Method to encode hidden states using vector quantization.
+        
+        Args:
+            self (EncodeVectorQuantization): The instance of the EncodeVectorQuantization class.
+            hidden_states (torch.Tensor): The hidden states to be encoded. Should be in the shape of (batch_size, hidden_dim, sequence_length).
+        
+        Returns:
+            embed_in (torch.Tensor): The encoded representation of the hidden states.
+        
+        Raises:
+            None.
+        """
         hidden_states = hidden_states.permute(0, 2, 1)
         embed_in = self.codebook.encode(hidden_states)
         return embed_in
 
     def decode(self, embed_ind):
+
+        """
+        Decode the embedded indices to obtain the quantized vectors.
+        
+        Args:
+            self (EncodecVectorQuantization): The instance of the EncodecVectorQuantization class.
+            embed_ind (Tensor): A 3D tensor containing the embedded indices. Its shape should be (batch_size, num_channels, num_embeddings).
+        
+        Returns:
+            quantize (Tensor): A 3D tensor representing the quantized vectors after decoding. The shape of the tensor is (batch_size, num_embeddings, num_channels).
+        
+        Raises:
+            - ValueError: If the embed_ind tensor is not of the expected shape.
+            - RuntimeError: If there is an issue with decoding the embedded indices.
+        """
         quantize = self.codebook.decode(embed_ind)
         quantize = quantize.permute(0, 2, 1)
         return quantize
@@ -389,6 +697,23 @@ class EncodecResidualVectorQuantizer(nn.Cell):
     """Residual Vector Quantizer."""
 
     def __init__(self, config: EncodecConfig):
+
+        """
+        Initializes an instance of the EncodecResidualVectorQuantizer class.
+        
+        Args:
+            self: The instance of the class.
+            config (EncodecConfig): An object of the EncodecConfig class that holds configuration parameters.
+                - codebook_size (int): The size of the codebook.
+                - frame_rate (int): The frame rate.
+                - num_quantizers (int): The number of quantizers.
+                
+        Returns:
+            None. This method does not return any value.
+            
+        Raises:
+            None.
+        """
         super().__init__()
         self.codebook_size = config.codebook_size
         self.frame_rate = config.frame_rate
@@ -472,7 +797,65 @@ class EncodecPreTrainedModel(PreTrainedModel):
 
 
 class EncodecModel(EncodecPreTrainedModel):
+
+    """
+    EncodecModel
+    
+    This class represents an Encodec model for audio encoding and decoding. It is a subclass of EncodecPreTrainedModel.
+    
+    Attributes:
+        config (EncodecConfig): The configuration instance used to initialize the model.
+        encoder (EncodecEncoder): The encoder module of the model.
+        decoder (EncodecDecoder): The decoder module of the model.
+        quantizer (EncodecResidualVectorQuantizer): The quantizer module of the model.
+        bits_per_codebook (int): The number of bits per codebook.
+        post_init (method): A method called after the initialization of the model.
+    
+    Methods:
+        get_encoder(): Returns the encoder module of the model.
+        get_decoder(): Returns the decoder module of the model.
+        _encode_frame(input_values, bandwidth, padding_mask): Encodes the given input using the underlying VQVAE.
+        encode(input_values, padding_mask, bandwidth, return_dict): Encodes the input audio waveform into discrete codes.
+        _linear_overlap_add(frames, stride): Applies linear overlap-add to the given frames.
+        _decode_frame(codes, scale): Decodes the given codes into an output audio waveform.
+        decode(audio_codes, audio_scales, padding_mask, return_dict): Decodes the given frames into an output audio waveform.
+        construct(input_values, padding_mask, bandwidth, audio_codes, audio_scales, return_dict): Constructs the model.
+    
+    Examples:
+        from datasets import load_dataset
+        from transformers import AutoProcessor, EncodecModel
+    
+        dataset = load_dataset("ashraq/esc50")
+        audio_sample = dataset["train"]["audio"][0]["array"]
+    
+        model_id = "facebook/encodec_24khz"
+        model = EncodecModel.from_pretrained(model_id)
+        processor = AutoProcessor.from_pretrained(model_id)
+    
+        inputs = processor(raw_audio=audio_sample, return_tensors="pt")
+    
+        outputs = model(**inputs)
+        audio_codes = outputs.audio_codes
+        audio_values = outputs.audio_values
+    """
     def __init__(self, config: EncodecConfig):
+
+        """
+        Initializes an instance of the EncodecModel class.
+        
+        Args:
+            self: The instance of the EncodecModel class.
+            config (EncodecConfig): The configuration object containing settings for the EncodecModel.
+                This parameter is required and must be of type EncodecConfig.
+                It specifies the configuration settings for the EncodecModel.
+        
+        Returns:
+            None.
+        
+        Raises:
+            ValueError: If the codebook_size specified in the config is not a power of 2.
+                This exception is raised when the codebook_size is invalid.
+        """
         super().__init__(config)
         self.config = config
 
@@ -489,9 +872,37 @@ class EncodecModel(EncodecPreTrainedModel):
         self.post_init()
 
     def get_encoder(self):
+
+        """
+        This method returns the encoder associated with the EncodecModel instance.
+        
+        Args:
+            self (EncodecModel): The instance of the EncodecModel class.
+                It is used to access the attributes and methods of the class.
+        
+        Returns:
+            None: This method returns the encoder associated with the EncodecModel instance.
+        
+        Raises:
+            This method does not raise any exceptions.
+        """
         return self.encoder
 
     def get_decoder(self):
+
+        """
+        This method returns the decoder object associated with the EncodecModel instance.
+        
+        Args:
+            self (object): The instance of the EncodecModel class.
+                It is used to access the attributes and methods of the class.
+        
+        Returns:
+            None: This method does not return any value explicitly, as it directly retrieves and returns the decoder object associated with the instance of the EncodecModel class.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         return self.decoder
 
     def _encode_frame(
@@ -595,6 +1006,24 @@ class EncodecModel(EncodecPreTrainedModel):
 
     @staticmethod
     def _linear_overlap_add(frames: List[mindspore.Tensor], stride: int):
+
+        """
+        Method _linear_overlap_add in the EncodecModel class.
+        
+        This method performs linear overlap-add method on a list of frames to reconstruct the original signal.
+        
+        Args:
+            frames (List[mindspore.Tensor]): A list of mindspore tensors representing the input frames. Each frame should be a tensor of shape [batch_size, ... , frame_length].
+            stride (int): An integer specifying the stride for overlapping frames. It determines the amount of overlap between consecutive frames.
+        
+        Returns:
+            None. The method modifies the frames in-place to perform the linear overlap-add operation.
+        
+        Raises:
+            ValueError: 
+                - If the input list of frames is empty.
+                - If the minimum element of the sum of weights (sum_weight) is zero, indicating an invalid operation.
+        """
         # Generic overlap add, with linear fade-in/fade-out, supporting complex scenario
         # e.g., more than 2 frames per position.
         # The core idea is to use a weight function that is a triangle,
@@ -640,6 +1069,22 @@ class EncodecModel(EncodecPreTrainedModel):
         return out / sum_weight
 
     def _decode_frame(self, codes: mindspore.Tensor, scale: Optional[mindspore.Tensor] = None) -> mindspore.Tensor:
+
+        """
+        This method decodes the input codes and returns the corresponding output tensor.
+        
+        Args:
+            self (EncodecModel): The instance of the EncodecModel class.
+            codes (mindspore.Tensor): The input tensor containing the codes to be decoded. It is expected to have the shape (sequence_length, batch_size, code_size).
+            scale (Optional[mindspore.Tensor]): An optional tensor representing the scale factor. If provided, it is expected to have the shape (batch_size, 1, 1). Defaults to None.
+        
+        Returns:
+            mindspore.Tensor: The output tensor representing the decoded frames. It has the shape (sequence_length, batch_size, feature_size).
+        
+        Raises:
+            ValueError: If the input codes or scale tensor have incompatible shapes for the decoding operation.
+            TypeError: If the input codes or scale are not of type mindspore.Tensor.
+        """
         codes = codes.swapaxes(0, 1)
         embeddings = self.quantizer.decode(codes)
         outputs = self.decoder(embeddings)

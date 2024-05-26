@@ -61,6 +61,39 @@ class FalconConfig(PretrainedConfig):
         eos_token_id=11,
         **kwargs,
     ):
+
+        """
+        Initializes an instance of the FalconConfig class.
+        
+        Args:
+            self: The instance of the FalconConfig class.
+            vocab_size (int, optional): The size of the vocabulary. Default is 65024.
+            hidden_size (int, optional): The size of the hidden layer. Default is 4544.
+            num_hidden_layers (int, optional): The number of hidden layers. Default is 32.
+            num_attention_heads (int, optional): The number of attention heads. Default is 71.
+            layer_norm_epsilon (float, optional): The epsilon value for layer normalization. Default is 1e-05.
+            initializer_range (float, optional): The range of the initializer. Default is 0.02.
+            use_cache (bool, optional): Whether to use cache. Default is True.
+            hidden_dropout (float, optional): The dropout rate for the hidden layer. Default is 0.0.
+            attention_dropout (float, optional): The dropout rate for attention. Default is 0.0.
+            num_kv_heads (int, optional): The number of attention heads for key-value pairs. Default is the same as num_attention_heads.
+            alibi (bool, optional): Whether to enable alibi. Default is False.
+            new_decoder_architecture (bool, optional): Whether to use the new decoder architecture. Default is False.
+            multi_query (bool, optional): Whether to enable multi-query. Default is True.
+            parallel_attn (bool, optional): Whether to enable parallel attention. Default is True.
+            bias (bool, optional): Whether to enable bias. Default is False.
+            max_position_embeddings (int, optional): The maximum position embeddings. Default is 2048.
+            rope_theta (float, optional): The theta value for rope. Default is 10000.0.
+            rope_scaling (None or float, optional): The scaling value for rope. Default is None.
+            bos_token_id (int, optional): The ID of the beginning of sentence token. Default is 11.
+            eos_token_id (int, optional): The ID of the end of sentence token. Default is 11.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
         self.vocab_size = vocab_size
         # Backward compatibility with n_embed kwarg
         n_embed = kwargs.pop("n_embed", None)

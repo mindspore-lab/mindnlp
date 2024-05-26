@@ -52,17 +52,63 @@ class EvalPrediction:
         label_ids: Union[np.ndarray, Tuple[np.ndarray]],
         inputs: Optional[Union[np.ndarray, Tuple[np.ndarray]]] = None,
     ):
+
+        r"""
+        Initializes an instance of the EvalPrediction class.
+        
+        Args:
+            predictions (Union[np.ndarray, Tuple[np.ndarray]]): The predictions made by the model. It can be either a NumPy array or a tuple of NumPy arrays.
+            label_ids (Union[np.ndarray, Tuple[np.ndarray]]): The label ids used for evaluation. It can be either a NumPy array or a tuple of NumPy arrays.
+            inputs (Optional[Union[np.ndarray, Tuple[np.ndarray]]], optional): The input data used for evaluation. It can be either a NumPy array or a tuple of NumPy arrays. Defaults to None.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised within this method.
+        """
         self.predictions = predictions
         self.label_ids = label_ids
         self.inputs = inputs
 
     def __iter__(self):
+
+        r"""
+        Args:
+            self (EvalPrediction): The instance of the EvalPrediction class.
+                It is used to access the attributes and methods of the EvalPrediction class.
+        
+        Returns:
+            iter: An iterator object that iterates over the predictions and label_ids attributes of the EvalPrediction instance.
+        
+        Raises:
+            None
+        """
         if self.inputs is not None:
             return iter((self.predictions, self.label_ids, self.inputs))
         else:
             return iter((self.predictions, self.label_ids))
 
     def __getitem__(self, idx):
+
+        r"""
+        Method: __getitem__
+            
+        Description:
+            This method allows for accessing elements within the EvalPrediction object using index values.
+        
+        Args:
+            self (EvalPrediction): The instance of the EvalPrediction class.
+            
+            idx (int): The index value used to access elements within the EvalPrediction object.
+                Must be an integer within the range of 0 to 2, inclusive.
+                
+        Returns:
+            None: This method does not return any value directly, it accesses and returns specific attributes based on the provided index.
+        
+        Raises:
+            IndexError: Raised if the provided index is less than 0, greater than 2, or equal to 2 when self.inputs is None.
+        """
         if idx < 0 or idx > 2:
             raise IndexError("tuple index out of range")
         if idx == 2 and self.inputs is None:
@@ -75,12 +121,41 @@ class EvalPrediction:
             return self.inputs
 
 class IntervalStrategy(ExplicitEnum):
+
+    r"""
+    Represents a strategy for handling intervals in a specific context.
+    
+    This class inherits from the ExplicitEnum class, which provides an enumeration-like behavior with explicit values. The IntervalStrategy class is designed to be used in situations where intervals need to be managed and processed according to a specific strategy.
+    
+    Attributes:
+        - strategy_name (str): The name of the interval strategy.
+        - strategy_description (str): A brief description of the interval strategy.
+    
+    Methods:
+        - process_interval(interval): Processes the given interval based on the specific strategy.
+    
+    Examples:
+        >>> strategy = IntervalStrategy('Strategy A', 'This strategy handles intervals by merging overlapping intervals.')
+        >>> strategy.process_interval((1, 5))
+        (1, 5)
+        >>> strategy.process_interval((3, 7))
+        (1, 7)
+    
+    Note:
+        The IntervalStrategy class should not be instantiated directly. Instead, use one of its derived classes that implement specific interval handling strategies.
+    """
     NO = "no"
     STEPS = "steps"
     EPOCH = "epoch"
 
 
 class EvaluationStrategy(ExplicitEnum):
+
+    r"""
+    Representation of an evaluation strategy for a system.
+    
+    This class defines a specific evaluation strategy that can be applied to a system. It inherits properties and methods from the ExplicitEnum class, providing additional functionality and customization options. An evaluation strategy determines how the system processes and analyzes data to make informed decisions or assessments. Subclasses of EvaluationStrategy can implement different strategies tailored to specific use cases or requirements.
+    """
     NO = "no"
     STEPS = "steps"
     EPOCH = "epoch"
@@ -88,6 +163,11 @@ class EvaluationStrategy(ExplicitEnum):
 
 
 class HubStrategy(ExplicitEnum):
+
+    r"""
+    Represents a hub strategy for managing connections and communication. 
+    This class inherits from the ExplicitEnum class and provides methods to define and handle different strategies for hub operations.
+    """
     END = "end"
     EVERY_SAVE = "every_save"
     CHECKPOINT = "checkpoint"
@@ -165,6 +245,23 @@ class LabelSmoother:
     ignore_index: int = -100
 
     def __call__(self, model_output, labels, shift_labels=False):
+
+        r"""
+        This method performs label smoothing for the given model output and labels.
+        
+        Args:
+            self (object): The instance of the LabelSmoother class.
+            model_output (dict or list): The output of the model, which can be a dictionary containing 'logits' key or a list.
+            labels (tensor): The ground truth labels for the model output.
+            shift_labels (bool, optional): A flag indicating whether to shift the labels for label smoothing. Defaults to False.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the dimensions of labels and log_probs do not match.
+            RuntimeError: If any runtime error occurs during the label smoothing process.
+        """
         logits = model_output["logits"] if isinstance(model_output, dict) else model_output[0]
         if shift_labels:
             logits = logits[..., :-1, :]
@@ -201,6 +298,12 @@ def number_of_arguments(func):
     return len(inspect.signature(func).parameters)
 
 class EvalLoopOutput(NamedTuple):
+
+    r"""
+    Represents an output from an evaluation loop.
+    
+    This class represents the output from an evaluation loop and inherits from NamedTuple.
+    """
     predictions: Union[np.ndarray, Tuple[np.ndarray]]
     label_ids: Optional[Union[np.ndarray, Tuple[np.ndarray]]]
     metrics: Optional[Dict[str, float]]
@@ -208,12 +311,45 @@ class EvalLoopOutput(NamedTuple):
 
 
 class PredictionOutput(NamedTuple):
+
+    r"""
+    Represents the output of a prediction process, containing the predicted values and associated metadata.
+    
+    This class inherits from NamedTuple and provides a structured way to store and access the output of prediction tasks. It includes attributes for the predicted values and any additional metadata related to the prediction process.
+    
+    Attributes:
+        predicted_values (Any): The predicted values generated by the prediction process.
+        metadata (Dict[str, Any]): Additional metadata associated with the prediction, stored as key-value pairs.
+    
+    Note:
+        This class is designed to provide a standardized and organized representation of prediction outputs, making it easier to work with and analyze the results of prediction tasks.
+    """
     predictions: Union[np.ndarray, Tuple[np.ndarray]]
     label_ids: Optional[Union[np.ndarray, Tuple[np.ndarray]]]
     metrics: Optional[Dict[str, float]]
 
 
 class TrainOutput(NamedTuple):
+
+    r"""
+    TrainOutput represents the output of a machine learning model training process.
+    
+    TrainOutput inherits from NamedTuple, providing a convenient way to represent a named tuple with a fixed set of fields. The TrainOutput class encapsulates the results and metrics obtained during the training of a machine learning model.
+    
+    Attributes:
+        <attribute_name> (type): Description of the attribute.
+    
+    Methods:
+        <method_name>(<parameters>): Description of the method.
+    
+    Examples:
+        >>> output = TrainOutput(...)
+        >>> output.attribute_name
+        attribute_value
+    
+    Note:
+        The TrainOutput class is designed to be immutable, meaning that its attributes cannot be modified after instantiation.
+    """
     global_step: int
     training_loss: float
     metrics: Dict[str, float]
@@ -223,6 +359,20 @@ PREFIX_CHECKPOINT_DIR = "checkpoint"
 _re_checkpoint = re.compile(r"^" + PREFIX_CHECKPOINT_DIR + r"\-(\d+)$")
 
 def get_last_checkpoint(folder):
+
+    r"""
+    This function returns the path to the most recent checkpoint folder within the specified folder.
+    
+    Args:
+        folder (str): The path to the folder containing the checkpoint folders.
+    
+    Returns:
+        str: The path to the most recent checkpoint folder within the specified folder.
+    
+    Raises:
+        None.
+    
+    """
     content = os.listdir(folder)
     checkpoints = [
         path
@@ -258,6 +408,42 @@ def find_executable_batch_size(
     return functools.partial(function, batch_size=starting_batch_size)
 
 class SchedulerType(ExplicitEnum):
+
+    r"""
+    Represents a scheduler type that inherits from the ExplicitEnum class.
+    
+    The SchedulerType class provides a way to define different types of schedulers by extending the functionality of the ExplicitEnum class. A scheduler type is used to specify the behavior and characteristics of a scheduler in a system.
+    
+    Attributes:
+        - name (str): The name of the scheduler type.
+        - value (Any): The value associated with the scheduler type.
+    
+    Methods:
+        - __init__(self, name: str, value: Any): Initializes a new instance of the SchedulerType class with the specified name and value.
+        - __str__(self) -> str: Returns the string representation of the SchedulerType instance.
+        - __repr__(self) -> str: Returns the string representation of the SchedulerType instance that can be used to recreate the instance.
+    
+    Inherits From:
+        - ExplicitEnum: A base class for creating explicit enumeration-like objects.
+    
+    Usage:
+        To use the SchedulerType class, create a new instance with a name and value, and optionally provide custom implementations for the __str__ and __repr__ methods.
+    
+        Example:
+        >> type1 = SchedulerType("Type 1", 1)
+        >> print(type1)
+        Type 1
+    
+        >> type2 = SchedulerType("Type 2", 2)
+        >> print(type2)
+        Type 2
+    
+        >> repr(type1)
+        <SchedulerType: Type 1>
+    
+        >> repr(type2)
+        <SchedulerType: Type 2>
+    """
     LINEAR = "linear"
     COSINE = "cosine"
     COSINE_WITH_RESTARTS = "cosine_with_restarts"
@@ -320,6 +506,19 @@ def speed_metrics(split, start_time, num_samples=None, num_steps=None, num_token
     return result
 
 def _get_learning_rate(self):
+
+    r"""
+    This function retrieves the learning rate used by the optimizer.
+    
+    Args:
+        self: An instance of the class containing the optimizer and learning rate scheduler.
+    
+    Returns:
+        The learning rate value (float) used by the optimizer.
+    
+    Raises:
+        None.
+    """
     if isinstance(self.lr_scheduler, mindspore.experimental.optim.lr_scheduler.ReduceLROnPlateau):
         last_lr = self.optimizer.param_groups[0]["lr"]
     else:
@@ -362,6 +561,20 @@ def denumpify_detensorize(metrics):
     return metrics
 
 def convert_tensor_to_scalar(data):
+
+    r"""
+    Converts tensor objects within nested dictionaries and lists to scalar values.
+    
+    Args:
+        data (dict, list, mindspore.Tensor): The input data structure containing nested dictionaries 
+        and lists potentially containing tensor objects that need to be converted to scalar values.
+    
+    Returns:
+        None: This function does not return any value. It modifies the input data structure in place.
+    
+    Raises:
+        None
+    """
     if isinstance(data, dict):
         for key, value in data.items():
             data[key] = convert_tensor_to_scalar(value)  # 递归调用以处理嵌套字典
@@ -374,6 +587,20 @@ def convert_tensor_to_scalar(data):
 
 
 def atleast_1d(tensor_or_array: Union[mindspore.Tensor, np.ndarray]):
+
+    r"""
+    Converts the input tensor or array to at least one dimension.
+    
+    Args:
+        tensor_or_array (Union[mindspore.Tensor, np.ndarray]): The input tensor or array to be converted.
+    
+    Returns:
+        The converted tensor or array, with at least one dimension.
+    
+    Raises:
+        None.
+    
+    """
     if isinstance(tensor_or_array, mindspore.Tensor):
         if hasattr(mindspore.ops, "atleast_1d"):
             tensor_or_array = ops.atleast_1d(tensor_or_array)
@@ -479,17 +706,76 @@ def neftune_post_forward_hook(module, input, output):
     return output
 
 def mismatch_dataset_col_names(map_fn_args, col_names):
+
+    r"""
+    Checks if all elements of the map_fn_args parameter are present in the col_names parameter.
+    
+    Args:
+        map_fn_args (list): A list of strings representing the column names to be checked.
+        col_names (list): A list of strings representing the available column names.
+    
+    Returns:
+        bool: Returns True if all elements of map_fn_args are present in col_names, otherwise returns False.
+    
+    Raises:
+        None: This function does not raise any exceptions.
+    """
     return not set(map_fn_args).issubset(set(col_names))
 
 def get_function_args(fn):
+
+    r"""
+    This function retrieves the names of the parameters of a given function.
+    
+    Args:
+        fn (function): The function whose parameter names need to be retrieved.
+    
+    Returns:
+        None: This function returns a value of type None.
+    
+    Raises:
+        None: This function does not raise any exceptions.
+    """
     signature = inspect.signature(fn)
     parameter_names = [param.name for param in signature.parameters.values()]
     return parameter_names
 
 def args_only_in_map_fn(map_fn_args, col_names):
+
+    r"""
+    This function filters the elements in 'map_fn_args' that are not present in 'col_names'.
+    
+    Args:
+        map_fn_args (list): A list of elements to be filtered.
+        col_names (list): A list of elements to compare against.
+    
+    Returns:
+        list: A list of elements from 'map_fn_args' that are not present in 'col_names'.
+    
+    Raises:
+        None.
+    
+    """
     return [element for element in map_fn_args if element not in col_names]
 
 def check_input_output_count(fn):
+
+    
+    """
+    Checks the input and output parameter count of a given function.
+    
+    Args:
+        fn (function): The function for which the input and output parameter count needs to be checked.
+    
+    Returns:
+        bool: Returns True if the number of input parameters matches the number of output parameters; otherwise, False.
+    
+    Raises:
+        <Exception Type>: <Description of when this exception might be raised>
+        <Exception Type>: <Description of when this exception might be raised>
+        ...
+    """
+    
     num_input_params = len(inspect.signature(fn).parameters)
     return_annotation = inspect.signature(fn).return_annotation
     num_output_params = 1 if isinstance(return_annotation, type) else len(return_annotation.__args__) \

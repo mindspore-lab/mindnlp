@@ -52,6 +52,21 @@ class ReLU(nn.Cell):
         self.relu = P.ReLU()
 
     def construct(self, u: Tensor) -> Tensor:
+
+        r"""
+        Construct a tensor using the ReLU activation function.
+        
+        Args:
+            self (ReLU): The ReLU object itself.
+            u (Tensor): The input tensor to be processed. It can be of any shape and data type.
+        
+        Returns:
+            Tensor: The output tensor after applying the ReLU activation function. The shape and data type of the output tensor is the same as the input tensor.
+        
+        Raises:
+            TypeError: If the input tensor 'u' is not of type 'mindspore.complex64'.
+            ValueError: If the input tensor 'u' is of type 'mindspore.complex64' but its data contains invalid complex values.
+        """
         if u.dtype == mindspore.complex64:
             real, imag = get_real_and_imag(u)
             real = self.relu(real)

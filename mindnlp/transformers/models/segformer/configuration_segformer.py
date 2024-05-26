@@ -112,6 +112,38 @@ class SegformerConfig(PretrainedConfig):
         semantic_loss_ignore_index=255,
         **kwargs,
     ):
+
+        '''
+        Initializes a new instance of SegformerConfig.
+        
+        Args:
+            self: The instance of the SegformerConfig class.
+            num_channels (int, optional): The number of input channels. Defaults to 3.
+            num_encoder_blocks (int, optional): The number of encoder blocks. Defaults to 4.
+            depths (list of int): The depths of each stage in the encoder block.
+            sr_ratios (list of int): The spatial reduction ratios for each stage in the encoder block.
+            hidden_sizes (list of int): The hidden sizes for each stage in the encoder block.
+            patch_sizes (list of int): The patch sizes for each stage in the encoder block.
+            strides (list of int): The strides for each stage in the encoder block.
+            num_attention_heads (list of int): The number of attention heads for each stage in the encoder block.
+            mlp_ratios (list of int): The ratio of mlp hidden size to the input size for each stage in the encoder block.
+            hidden_act (str): The activation function for the hidden layer. Defaults to 'gelu'.
+            hidden_dropout_prob (float): The dropout probability for the hidden layers. Defaults to 0.0.
+            attention_probs_dropout_prob (float): The dropout probability for the attention probabilities. Defaults to 0.0.
+            classifier_dropout_prob (float): The dropout probability for the classifier. Defaults to 0.1.
+            initializer_range (float): The standard deviation of the truncated_normal_initializer for initializing all weight matrices. Defaults to 0.02.
+            drop_path_rate (float): The dropout rate for stochastic depth. Defaults to 0.1.
+            layer_norm_eps (float): The epsilon value for layer normalization. Defaults to 1e-06.
+            decoder_hidden_size (int): The hidden size of the decoder.
+            semantic_loss_ignore_index (int): The index to ignore in the semantic loss calculation.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            FutureWarning: If 'reshape_last_stage' is set to False in the kwargs, a warning about the deprecation of this argument will be raised.
+        '''
         super().__init__(**kwargs)
 
         if "reshape_last_stage" in kwargs and kwargs["reshape_last_stage"] is False:

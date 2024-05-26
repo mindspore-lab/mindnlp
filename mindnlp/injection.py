@@ -53,6 +53,19 @@ if DEVICE_TARGET == 'Ascend':
 
 old_set_context = mindspore.set_context
 def _set_context(**kwargs):
+
+    
+    """
+    Args:
+        device_target (str): Specifies the target device. If device_target is not 'Ascend', sets global floating point precision to False.
+        
+    Returns:
+        None: This function does not return any value.
+        
+    Raises:
+        None
+    """
+    
     if 'device_target' in kwargs and kwargs['device_target'] != 'Ascend':
         set_global_fp16(False)
     old_set_context(**kwargs)
@@ -131,6 +144,22 @@ def bool_io_patch_decorator(func):
     return wrapper
 
 def _get_unflatten_size(input_shape, dim, sizes):
+
+    
+    """
+    Args:
+        input_shape (Tuple[int]): The shape of the input tensor.
+        dim (int): The dimension along which the unflatten operation will be performed.
+        sizes (Tuple[int] or List[int]): The sizes to unflatten the tensor along the specified dimension.
+    
+    Returns:
+        None. This function modifies the input_shape in place.
+    
+    Raises:
+        TypeError: If sizes is not a tuple or list.
+        ValueError: If sizes is empty, dim is out of range, or sizes do not multiply up to the size of dim in the input tensor.
+    """
+    
     input_rank = len(input_shape)
     if not isinstance(sizes, (tuple, list)):
         raise TypeError(f"Type of `sizes` should be `Tuple` or `List`, but got {type(sizes)}")
@@ -158,6 +187,19 @@ def _get_unflatten_size(input_shape, dim, sizes):
 
 old_op_call = ops.Primitive.__call__
 def _op_call(self, *args):
+
+    r"""
+    This function modifies the input arguments based on a global flag and predefined white/black lists before calling the original function 'old_op_call'. 
+    
+    Args:
+        self: An instance of the class containing the method.
+        
+    Returns:
+        None: This function does not return any value directly, but it may return the outputs of the 'old_op_call' function.
+    
+    Raises:
+        No specific exceptions are raised within this function.
+    """
     GLOBAL_AMP, GLOBAL_AMP_DTYPE = get_global_amp()
 
     if GLOBAL_AMP:
@@ -217,6 +259,21 @@ ops.einsum = einsum
 ops.conv1d = fp16_patch_decorator(ops.conv1d)
 
 def _ones(*size, dtype=None):
+
+    r"""
+    Fills a tensor of specified size with ones.
+    
+    Args:
+        *size (tuple or list): The size of the tensor to be filled with ones.
+        dtype (mindspore.dtype, optional): The data type of the tensor. Defaults to mindspore.float32.
+    
+    Returns:
+        mindspore.tensor: A tensor filled with ones of the specified size and data type.
+    
+    Raises:
+        None.
+    
+    """
     if dtype is None:
         dtype = mindspore.float32
     if isinstance(size[0], tuple):
@@ -228,6 +285,18 @@ def _ones(*size, dtype=None):
 ops.ones = _ones
 
 def _zeros(*size, dtype=None):
+
+    r"""
+    Args:
+        *size (tuple or list): Represents the size of the output tensor to be created. If a tuple is provided, it is used as-is. If a list is provided, it is converted to a tuple.
+        dtype (mindspore.dtype, optional): Data type of the elements in the output tensor. Defaults to mindspore.float32 if not provided.
+    
+    Returns:
+        None: The function does not return a value directly, but creates and returns a tensor filled with zeros of the specified size and data type.
+    
+    Raises:
+        None
+    """
     if dtype is None:
         dtype = mindspore.float32
     if isinstance(size[0], tuple):
@@ -240,6 +309,26 @@ ops.zeros = _zeros
 
 # cross_entropy
 def _cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
+
+    
+    """
+    Args:
+        input (array_like): The input tensor or array of shape (N, C) where N is the batch size and C is the number of classes.
+        target (array_like): The target tensor or array of shape (N,) containing the true class indices.
+        weight (array_like, optional): A tensor or array of shape (C,) containing the weight for each class. Defaults to None.
+        ignore_index (int, optional): Specifies a target value that is ignored and does not contribute to the loss. Defaults to -100.
+        reduction (str, optional): Specifies the method used to reduce the loss. Possible values are 'none', 'mean', and 'sum'. Defaults to 'mean'.
+        label_smoothing (float, optional): Specifies the label smoothing factor. Defaults to 0.0.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        ValueError: If the input and target shapes do not match.
+        ValueError: If the reduction parameter has an invalid value.
+        ValueError: If the label_smoothing parameter is outside the valid range [0, 1].
+    """
+    
     if weight is None:
         weight = ops.ones(input.shape[-1], input.dtype)
     _nll_loss = _get_cache_prim(ops.NLLLoss)(reduction, ignore_index)
@@ -251,6 +340,23 @@ def _cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mea
 # for Tensor
 # unfold
 def _get_unfold_indices(input_shape, dimension, size, step):
+
+    
+    """
+    Args:
+        input_shape (tuple): The shape of the input data tensor.
+        dimension (int): The index of the dimension along which to unfold the tensor.
+        size (int): The size of the window to extract along the specified dimension.
+        step (int): The step size for sliding the window along the specified dimension.
+    
+    Returns:
+        tuple: A list of indices representing the unfolded windows along the specified dimension.
+        int: The updated index of the dimension after accounting for negative values.
+    
+    Raises:
+        ValueError: If the specified dimension is out of range relative to the input_shape.
+    """
+    
     if dimension < 0:
         dimension += len(input_shape)
     indices = []
@@ -304,6 +410,22 @@ def masked_fill(inputs, mask, value):
     return ops.select(mask, masked_value, inputs)
 
 def _masked_fill(self, mask, value):
+
+    r"""
+    Fills elements of the input with a specified value, based on a provided mask.
+    
+    Args:
+        self: The object instance.
+        mask (Tensor): A boolean mask tensor of the same shape as the input.
+            Only the elements where the mask is True will be filled with the specified value.
+        value (Any): The value to fill the masked elements with. It can be of any type.
+    
+    Returns:
+        None
+    
+    Raises:
+        None
+    """
     return masked_fill(self, mask, value)
 
 ops.masked_fill = masked_fill
@@ -334,6 +456,25 @@ def std(input, axis=None, ddof=0, keepdims=False):
     return out
 
 def _std(self, axis=None, ddof=0, keepdims=False):
+
+    r"""
+    This function calculates the standard deviation along the specified axis.
+    
+    Args:
+        self (array_like): Input data.
+        axis (int, optional): Axis along which the standard deviation is computed. Default is None, which computes the standard deviation of the flattened array.
+        ddof (int, optional): Delta degrees of freedom. The divisor used in calculations is N - ddof, where N represents the number of elements. Default is 0.
+        keepdims (bool, optional): If this is set to True, the axes which are reduced are left in the result as dimensions with size one. Default is False.
+    
+    Returns:
+        None: This function returns None.
+    
+    Raises:
+        ValueError: If 'ddof' is negative.
+        TypeError: If 'axis' is not an integer.
+        TypeError: If 'ddof' is not an integer.
+        TypeError: If 'keepdims' is not a boolean.
+    """
     return std(self, axis, ddof, keepdims)
 
 ops.std = std
@@ -342,6 +483,18 @@ StubTensor.std = _std
 
 # Tensor.__contains__
 def _contains(self, key):
+
+    r"""
+    Args:
+        self (object): The object instance on which the method is called.
+        key (object): The key to be checked for containment in the object.
+        
+    Returns:
+        None: This function returns None, indicating whether the key is contained in the object.
+        
+    Raises:
+        None
+    """
     eq_res = ops.equal(self, key)
     res = ops.any(eq_res)
     return bool(res)
@@ -358,6 +511,26 @@ Tensor.unflatten = unflatten
 StubTensor.unflatten = unflatten
 
 def _as_strided(self, size, stride, storage_offset=None):
+
+    r"""
+    Function _as_strided
+    
+    This function constructs a new view of an existing tensor with a given shape and stride.
+    
+    Args:
+        self: The tensor object on which the method is called.
+        size (tuple[int]): The desired shape of the new view.
+        stride (tuple[int]): The stride of the new view.
+        storage_offset (int, optional): The offset in the underlying storage of the tensor.
+            Defaults to None.
+    
+    Returns:
+        None
+    
+    Raises:
+        RuntimeError: If the length of the size and stride parameters do not match.
+    
+    """
     if len(size) != len(stride):
         raise RuntimeError("mismatch in length of strides and shape.")
     index = np.arange(0, size[0]*stride[0], stride[0])
@@ -378,6 +551,20 @@ Tensor.as_strided = _as_strided
 StubTensor.as_strided = _as_strided
 
 def _nonzero(self, as_tuple=False):
+
+    
+    """
+    Args:
+        self (Tensor): The input tensor to find nonzero elements in.
+        as_tuple (bool, optional): Whether to return the result as a tuple of tensors. Default is False.
+    
+    Returns:
+        None: The function returns the nonzero elements in the input tensor as specified.
+    
+    Raises:
+        TypeError: If the input tensor is not of type mstype.bool_.
+    """
+    
     if self.dtype == mstype.bool_:
         self = self.astype(mstype.int64)
     outs = ops.nonzero(self)
@@ -390,6 +577,22 @@ Tensor.nonzero = _nonzero
 StubTensor.nonzero = _nonzero
 
 def _expand(self, *size):
+
+    
+    """
+    Expands the input array to a larger size.
+    
+    Args:
+        self (array_like): The input array to be expanded.
+        *size (int or tuple of ints): The size to which the input array will be expanded. If a single integer is provided, the array will be expanded to a shape with that size along all dimensions.
+    
+    Returns:
+        None. The function modifies the input array in place.
+    
+    Raises:
+        None.
+    """
+    
     if len(size) == 1:
         size = size[0]
     return ops.broadcast_to(self, size)
@@ -418,11 +621,43 @@ if LESS_MS_2_2:
 mindspore.tensor = mindspore.Tensor
 ops.prod = bool_patch_decorator(ops.prod)
 def _prod(self, axis=None, keep_dims=False):
+
+    
+    """
+    This function calculates the product of elements along a specified axis.
+    
+    Args:
+        self: The input tensor.
+        axis (int, optional): The axis along which the product is calculated. Defaults to None, which calculates the product of all elements.
+        keep_dims (bool, optional): If True, retains reduced dimensions with length 1. Defaults to False.
+    
+    Returns:
+        None. The product of the elements along the specified axis is returned.
+    
+    Raises:
+        ValueError: If the specified axis is out of range or invalid.
+        TypeError: If the input tensor is not valid.
+    """
+    
     return ops.prod(self, axis, keep_dims)
 Tensor.prod = _prod
 StubTensor.prod = _prod
 
 def _eq(self, other):
+
+    r"""
+    Function to compare the equality of two objects.
+    
+    Args:
+        self (Tensor): The first object to compare.
+        other (int, float, Tensor): The second object to compare. Must be an integer, float, or Tensor.
+    
+    Returns:
+        None: This function does not return any value, but performs the equality comparison operation.
+    
+    Raises:
+        None
+    """
     if not isinstance(other, (int, float, Tensor)):
         return False
     if isinstance(other, Tensor) and self.shape != other.shape:
@@ -439,12 +674,53 @@ Parameter.__eq__ = _eq
 
 
 def _initialize(self, init_method):
+
+    r"""
+    Initializes the object with the given initialization method.
+    
+    Args:
+        self (object): The instance of the class.
+        init_method (str): The method used for initialization.
+            This parameter determines how the data is initialized.
+            Valid values for `init_method` are:
+                - "random": Initializes the data with random values.
+                - "zeros": Initializes the data with zeros.
+                - "ones": Initializes the data with ones.
+            Default value is "random".
+    
+    Returns:
+        None. This function does not return any value.
+    
+    Raises:
+        None.
+    
+    Note:
+        This function sets the data of the object using the specified `init_method` and the object's shape and data type.
+    """
     self.set_data(initializer(init_method, self.shape, self.dtype))
 
 Parameter.initialize = _initialize
 
 old_param_init = Parameter.__init__
 def _param_new_init(self, default_input, name=None, requires_grad=True, layerwise_parallel=False, parallel_optimizer=True):
+
+    
+    """
+    Args:
+        self (object): The instance of the class.
+        default_input (object): The default input for the function.
+        name (str, optional): The name of the parameter (default is None).
+        requires_grad (bool, optional): Flag indicating if gradients are required (default is True).
+        layerwise_parallel (bool, optional): Flag for layerwise parallelism (default is False).
+        parallel_optimizer (bool, optional): Flag for parallel optimizer (default is True).
+    
+    Returns:
+        None. This function does not return any value.
+    
+    Raises:
+        None.
+    """
+    
     old_param_init(self, default_input, name, requires_grad, layerwise_parallel, parallel_optimizer)
     self.uuid = uuid4().hex
 
@@ -463,12 +739,39 @@ def new_repeat_interleave(input, repeats, axis=None):
 
 ops.repeat_interleave = bool_io_patch_decorator(new_repeat_interleave)
 def _repeat_interleave(self, repeats, dim):
+
+    r"""
+    Args:
+        self (object): The object instance on which the method is called.
+        repeats (int): The number of times to repeat the operation.
+        dim (int): The axis along which to repeat the operation.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        None
+    """
     return old_repeat(self, repeats, axis=dim)
 
 Tensor.repeat_interleave = _repeat_interleave
 StubTensor.repeat_interleave = _repeat_interleave
 
 def _repeat(self, *sizes):
+
+    r"""
+    This function repeats the input tensor along each dimension according to the given sizes.
+    
+    Args:
+    - self (tensor): The input tensor to be repeated.
+    - *sizes: Variable number of integers representing the number of repetitions along each dimension.
+    
+    Returns:
+    None: This function does not return any value explicitly.
+    
+    Raises:
+    N/A
+    """
     return ops.tile(self, tuple(sizes))
 
 Tensor.repeat = _repeat
@@ -482,6 +785,20 @@ if version.parse(mindspore.__version__) < version.parse('2.3.0'):
     StubTensor.stride = _stride
 
 def _ne(self, other):
+
+    r"""
+    This function is used to check if the given 'self' object is not equal to the 'other' object.
+    
+    Args:
+        self: The first object to compare. (Type: Any)
+        other: The second object to compare against. (Type: Any)
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        None: This function does not raise any exceptions.
+    """
     return ops.ne(self, other)
 
 Tensor.__ne__ = _ne
@@ -602,6 +919,22 @@ class Dense(nn.Cell):
                 Uniform(bound), [out_channels], dtype=dtype), name="bias")
 
     def construct(self, x):
+
+        r"""
+        This method constructs the output of a dense layer operation based on the input tensor 'x' using the weights and biases of the Dense class instance.
+        
+        Args:
+            self (object): The instance of the Dense class.
+            x (ndarray): The input tensor of shape (batch_size, input_dim) or (batch_size, *, input_dim), where * represents additional dimensions. 
+        
+        Returns:
+            None: This method does not return any value but modifies the input tensor 'x' in-place to produce the output of the dense layer operation.
+        
+        Raises:
+            ValueError: If the input tensor 'x' does not have the required shape for matrix multiplication with the weight matrix.
+            ValueError: If the input tensor 'x' and the weight matrix dimensions are incompatible for matrix multiplication.
+            ValueError: If the input tensor 'x' and bias tensor dimensions are incompatible for addition.
+        """
         if LESS_MS_2_2:
             x_shape = x.shape
             if len(x_shape) != 2:
@@ -616,6 +949,19 @@ class Dense(nn.Cell):
         return ops.dense(x, self.weight, self.bias)
 
     def extend_repr(self):
+
+        r"""
+        This method extends the string representation of the Dense class instance.
+        
+        Args:
+            self (Dense): The instance of the Dense class.
+            
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None
+        """
         s = f'input_channels={self.in_channels}, output_channels={self.out_channels}'
         if self.has_bias:
             s += f', has_bias={self.has_bias}'
@@ -638,6 +984,21 @@ class Embedding(nn.Cell):
             self.weight[self.padding_idx] = 0
 
     def construct(self, ids):
+
+        r"""
+        Constructs an embedding tensor based on the given input IDs.
+        
+        Args:
+            self (Embedding): An instance of the Embedding class.
+            ids (ndarray): A numpy array containing the input IDs. The shape of the array should be (batch_size, sequence_length).
+        
+        Returns:
+            ndarray: An embedding tensor with the shape (batch_size, sequence_length, embedding_size).
+        
+        Raises:
+            TypeError: If the 'ids' parameter is not a numpy array.
+            ValueError: If the shape of the 'ids' array is not (batch_size, sequence_length).
+        """
         out_shape = ids.shape + (self.embedding_size,)
         flat_ids = ids.reshape((-1,))
 
@@ -651,6 +1012,19 @@ class Embedding(nn.Cell):
         return output
 
     def extend_repr(self):
+
+        r"""
+        This method extends the representation of the Embedding class.
+        
+        Args:
+            self: The instance of the Embedding class.
+            
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None
+        """
         return f'vocab_size={self.vocab_size}, embedding_size={self.embedding_size}, use_one_hot={self.use_one_hot}, ' \
             f'weight={self.weight}, dtype={self.dtype}, padding_idx={self.padding_idx}'
 
@@ -709,6 +1083,22 @@ class Conv1d(_Conv):
         self.dilation = (dilation,)
 
     def construct(self, x):
+
+        r"""
+        Method to construct a 1D convolutional layer.
+        
+        Args:
+            self (Conv1d): The instance of the Conv1d class.
+            x (Tensor): Input tensor to be processed. Should have shape (batch_size, in_channels, sequence_length).
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If the input tensor x does not have the required shape.
+            TypeError: If any of the operations encounter incompatible data types.
+            RuntimeError: If the method encounters any runtime issues during processing.
+        """
         x = x.expand_dims(2)
         output = self.conv2d(x, self.weight.expand_dims(2))
         if self.has_bias:
@@ -780,6 +1170,21 @@ class Conv1dTranspose(_Conv):
                                                       group=group)
 
     def construct(self, x):
+
+        r"""
+        Constructs a transposed 1D convolution operation.
+        
+        Args:
+            self (Conv1dTranspose): An instance of Conv1dTranspose class.
+            x (Tensor): The input tensor to be transposed. Should have shape (batch_size, in_channels, width).
+        
+        Returns:
+            None: This method does not return any value directly. The transposed convolution operation is applied in-place on the input tensor x.
+        
+        Raises:
+            ValueError: If the dimensions of the input tensor x are incorrect for the transposed convolution operation.
+            RuntimeError: If an error occurs during the transposed convolution computation.
+        """
         x = x.expand_dims(2)
         n, _, h, w = x.shape
 
@@ -841,6 +1246,22 @@ class LayerNorm(nn.Cell):
         self.elementwise_affine = elementwise_affine
 
     def construct(self, input_x):
+
+        r"""
+        Constructs the normalized output tensor based on the input tensor using Layer Normalization.
+        
+        Args:
+            self (object): The instance of the LayerNorm class.
+            input_x (tensor): The input tensor to be normalized.
+            
+        Returns:
+            None: This method does not return any value, as the normalized tensor is directly stored within the instance.
+        
+        Raises:
+            ValueError: If the 'elementwise_affine' attribute is not a boolean.
+            TypeError: If the weights and biases cannot be cast to the same data type as the input tensor.
+            ValueError: If the normalized shape of the input tensor does not match the expected shape for the layer normalization.
+        """
         if self.elementwise_affine:
             y, _, _ = self.layer_norm(input_x, self.weight.astype(input_x.dtype), self.bias.astype(input_x.dtype))
         else:
@@ -849,6 +1270,23 @@ class LayerNorm(nn.Cell):
         return y
 
     def extend_repr(self):
+
+        r"""
+        Method to extend the representation of the LayerNorm class instance.
+        
+        Args:
+            self (LayerNorm): The instance of the LayerNorm class.
+                - Represents the current instance of the LayerNorm class.
+                - Type: LayerNorm class instance.
+        
+        Returns:
+            None
+                - This method does not return any value.
+        
+        Raises:
+            None
+                - This method does not raise any exceptions.
+        """
         return f'normalized_shape={self.normalized_shape}, begin_norm_axis={self.begin_norm_axis}, ' \
                f'begin_params_axis={self.begin_params_axis}, weight={self.weight}, bias={self.bias}'
 
@@ -899,6 +1337,20 @@ class BatchNorm1d(nn.Cell):
         self.bn_infer = ops.BatchNorm(is_training=False, epsilon=self.eps)
 
     def construct(self, x):
+
+        r"""
+        This method constructs the batch normalization for 1D input.
+        
+        Args:
+            self (object): The instance of the BatchNorm1d class.
+            x (tensor): The input tensor to be normalized.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None
+        """
         if self.use_batch_statistics is None:
             if self.training:
                 return self.bn_train(x,
@@ -927,6 +1379,20 @@ class BatchNorm1d(nn.Cell):
                              self.running_var)[0]
 
     def extend_repr(self):
+
+        r"""
+        This method extends the string representation of the BatchNorm1d class instance.
+        
+        Args:
+            self (BatchNorm1d): The instance of the BatchNorm1d class.
+                It represents the BatchNorm1d layer with parameters like num_features, eps, momentum, weight, bias, running_mean, and running_var.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None
+        """
         return f'num_features={self.num_features}, eps={self.eps}, momentum={1.0 - self.momentum}, ' \
                f'weight={self.weight}, bias={self.bias}, running_mean={self.running_mean}, running_var={self.running_var}'
 
@@ -968,11 +1434,39 @@ if not LESS_MS_2_2:
 
 
 def _check_cell_flags_in_pynative(self):
+
+    r"""
+    This function checks the cell flags in the PyNative environment.
+    
+    Args:
+        self: The instance of the class.
+    
+    Returns:
+        None. This function does not return any value.
+    
+    Raises:
+        No exceptions are raised by this function.
+    """
     pass
 
 nn.Cell._check_cell_flags_in_pynative = _check_cell_flags_in_pynative
 
 def _update_parameters_name(self, prefix='', recurse=True):
+
+    r"""
+    Updates the parameter names with the specified prefix.
+    
+    Args:
+        self (object): The instance of the class.
+        prefix (str): The prefix to be added to the parameter names.
+        recurse (bool): Indicates whether to recursively update nested parameters.
+    
+    Returns:
+        None: This function does not return any value.
+    
+    Raises:
+        None: This function does not raise any exceptions.
+    """
     for name, param in self.parameters_and_names(expand=recurse):
         if prefix != '':
             param.is_init = False
@@ -1082,6 +1576,26 @@ class GroupNorm_hijack(GroupNorm_original):
     """
 
     def __init__(self, num_groups, num_channels, eps=0.00001, affine=True, gamma_init='ones', beta_init='zeros', dtype=mstype.float32):
+
+        r"""
+        Initializes an instance of the GroupNorm_hijack class.
+        
+        Args:
+            self: The object itself.
+            num_groups (int): The number of groups to divide the channels into.
+            num_channels (int): The number of input channels.
+            eps (float, optional): A small value added to the denominator for numerical stability. Default is 1e-05.
+            affine (bool, optional): If True, apply learnable affine transformation to the normalized output. Default is True.
+            gamma_init (str, optional): The initialization method for the gamma parameter. Default is 'ones'.
+            beta_init (str, optional): The initialization method for the beta parameter. Default is 'zeros'.
+            dtype (mstype, optional): The data type of the input tensors. Default is mstype.float32.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(num_groups, num_channels, eps, affine, gamma_init, beta_init, dtype)
         self.weight = Parameter(self.gamma.data, name='weight')
         self.bias = Parameter(self.beta.data, name='bias')
@@ -1092,6 +1606,23 @@ class GroupNorm_hijack(GroupNorm_original):
         del self.beta
 
     def _cal_output(self, x):
+
+        r"""
+        Calculates the output of GroupNorm_hijack.
+        
+        Args:
+            self (GroupNorm_hijack): An instance of the GroupNorm_hijack class.
+            x (tensor): The input tensor of shape (batch, channel, height, width).
+        
+        Returns:
+            None
+        
+        Raises:
+            ValueError: If the number of channels in the input tensor is not equal to the number of channels specified in GroupNorm_hijack.
+            ZeroDivisionError: If the number of groups is zero.
+            TypeError: If the input tensor is not a valid tensor object.
+        
+        """
         batch, channel, height, width = F.shape(x)
         self._channel_check(channel, self.num_channels, self.cls_name)
         x = F.reshape(x, (batch, self.num_groups, -1))
@@ -1104,6 +1635,20 @@ class GroupNorm_hijack(GroupNorm_original):
         return output
 
     def construct(self, x:Tensor) -> Tensor:
+
+        r"""
+        Method to construct a tensor with additional processing steps based on its shape.
+        
+        Args:
+            self (object): The instance of the GroupNorm_hijack class.
+            x (Tensor): The input tensor to be processed. Must be a 3D tensor.
+        
+        Returns:
+            Tensor: The processed output tensor after applying the necessary operations.
+        
+        Raises:
+            N/A
+        """
         is_3d_tensor = len(x.shape) == 3        # support 3D tensors [B, C, L]
         if is_3d_tensor:
             x = x.unsqueeze(-1)
@@ -1168,17 +1713,77 @@ mindspore.experimental.optim.lr_scheduler.LambdaLR.state_dict = state_dict
 mindspore.experimental.optim.lr_scheduler.LambdaLR.load_state_dict = load_state_dict
 
 def _str(self):
+
+    
+    """
+    Returns a string representation of the Parameter.
+    
+    Args:
+        self (object): The Parameter object.
+        
+    Returns:
+        str: A string representation of the Parameter object along with the information about 'requires_grad' attribute.
+    
+    Raises:
+        None
+    """
+    
     return f'Parameter ({Tensor_.__str__(self)}, ' \
            f'requires_grad={self.requires_grad})'
 
 Parameter.__str__ = _str
 
 class CustomDropout(nn.Cell):
+
+    r"""
+    CustomDropout represents a custom dropout layer for neural network models.
+    
+    This class inherits from nn.Cell and implements a custom dropout function with a dropout probability parameter 'p'. 
+    The 'p' parameter controls the probability of setting elements to zero during training. During inference, this layer 
+    simply returns the input 'x' without applying dropout. 
+    
+    Attributes:
+        p (float): The probability of setting elements to zero.
+    
+    Methods:
+        construct(x): Applies dropout to the input tensor 'x' based on the dropout probability 'p' during training. 
+                      Returns the input tensor 'x' with dropout applied.
+    
+    Note: The 'ops' module is assumed to be imported for the 'rand_like' function.
+    """
     def __init__(self, p=0.5):
+
+        r"""
+        Args:
+            self (object): The instance of the CustomDropout class.
+            p (float): The probability with which elements of the input tensor are set to zero. 
+                It should be a float between 0 and 1. Defaults to 0.5.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            TypeError: If the input value of p is not a float.
+            ValueError: If the input value of p is not within the range of 0 to 1.
+        """
         super(CustomDropout, self).__init__()
         self.p = p
 
     def construct(self, x):
+
+        r"""
+        Constructs a custom dropout layer for the given input data.
+        
+        Args:
+            self (CustomDropout): An instance of the CustomDropout class.
+            x (Tensor): The input data to the dropout layer. It should be a tensor of any shape.
+            
+        Returns:
+            None: This method does not return any value. It modifies the input tensor in-place.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         if not self.training:
             return x
         mask = ops.rand_like(x) > self.p
@@ -1187,6 +1792,25 @@ class CustomDropout(nn.Cell):
 nn.Dropout = CustomDropout
 
 def dropout(input, p=0.5, training=True, seed=None):
+
+    
+    """
+    Implements the dropout function to apply dropout regularization during training.
+    
+    Args:
+        input (tensor): The input tensor to apply dropout regularization to.
+        p (float, optional): The probability of setting elements to zero. Default is 0.5.
+        training (bool, optional): If True, applies dropout during training; if False, returns the input as is. Default is True.
+        seed (int, optional): The random seed for reproducibility. Default is None.
+    
+    Returns:
+        None: This function modifies the input tensor in-place.
+    
+    Raises:
+        ValueError: If the probability 'p' is not within the range [0, 1].
+        TypeError: If the input tensor is not a valid data type.
+    """
+    
     if training is False:
         return input
     mask = ops.rand_like(input) > p
@@ -1196,6 +1820,19 @@ ops.dropout = dropout
 
 old_cell_call = nn.Cell.__call__
 def _cell_call(self, *args, **kwargs):
+
+    r"""
+    This function is used to make a call to the '_cell_call' method. 
+    
+    Args:
+        self: The instance of the class.
+    
+    Returns:
+        None. The function does not return any value.
+    
+    Raises:
+        None. The function does not raise any exceptions.
+    """
     GLOBAL_AMP, GLOBAL_AMP_DTYPE = get_global_amp()
     if GLOBAL_AMP and self.__class__.__name__ in CELL_WHITE_LIST:
         self.to_float(GLOBAL_AMP_DTYPE)
@@ -1204,6 +1841,21 @@ def _cell_call(self, *args, **kwargs):
 nn.Cell.__call__ = old_cell_call
 
 def get_cell(self, target):
+
+    r"""
+    This function retrieves the specified cell based on the given target.
+    
+    Args:
+        self: The current cell object.
+        target (str): The target cell to retrieve. It should be a dot-separated string representing the desired cell's attributes.
+    
+    Returns:
+        nn.Cell: The retrieved cell based on the target.
+    
+    Raises:
+        AttributeError: If the target attribute does not exist in the current cell object.
+        AttributeError: If the attribute in the target is not of type nn.Cell.
+    """
     if target == "":
         return self
 
@@ -1268,11 +1920,30 @@ def _set_attr_for_parameter_tuple(self, name, value):
 nn.Cell._set_attr_for_parameter_tuple = _set_attr_for_parameter_tuple
 
 def _check_names(self):
+
+    r"""
+    This function does not have any parameters. It is used to perform a check on names and does not return any value.
+    
+    """
     pass
 
 nn.Cell.check_names = _check_names
 
 def requires_grad_(self, requires_grad: bool = True):
+
+    r"""
+    Sets the 'requires_grad' attribute of all parameters in the model to the given value.
+    
+    Args:
+        self: The model object.
+        requires_grad (bool): Whether to require gradients for the parameters. Defaults to True.
+    
+    Returns:
+        None
+    
+    Raises:
+        None
+    """
     for p in self.get_parameters():
         p.requires_grad = requires_grad
     return self

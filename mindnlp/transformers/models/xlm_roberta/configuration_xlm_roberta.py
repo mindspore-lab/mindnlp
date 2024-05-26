@@ -116,6 +116,41 @@ class XLMRobertaConfig(PretrainedConfig):
         classifier_dropout=None,
         **kwargs,
     ):
+
+        """
+        The __init__ method initializes an instance of the XLMRobertaConfig class.
+        
+        Args:
+        - self: The instance of the class.
+        - vocab_size (int): The size of the vocabulary.
+        - hidden_size (int): The size of the hidden layers.
+        - num_hidden_layers (int): The number of hidden layers.
+        - num_attention_heads (int): The number of attention heads.
+        - intermediate_size (int): The size of the intermediate layer in the transformer encoder.
+        - hidden_act (str): The activation function for the hidden layers.
+        - hidden_dropout_prob (float): The dropout probability for the hidden layers.
+        - attention_probs_dropout_prob (float): The dropout probability for the attention probabilities.
+        - max_position_embeddings (int): The maximum position for positional embeddings.
+        - type_vocab_size (int): The size of the type vocabulary.
+        - initializer_range (float): The range for weight initialization.
+        - layer_norm_eps (float): The epsilon value for layer normalization.
+        - pad_token_id (int): The id for padding tokens.
+        - bos_token_id (int): The id for the beginning of sequence tokens.
+        - eos_token_id (int): The id for the end of sequence tokens.
+        - position_embedding_type (str): The type of position embedding to use.
+        - use_cache (bool): Whether to use cache for intermediate computations.
+        - classifier_dropout (float): The dropout probability for the classifier. Default is None.
+        
+        Returns:
+        None. The method does not return any value.
+        
+        Raises:
+        - ValueError: If vocab_size, hidden_size, num_hidden_layers, num_attention_heads, intermediate_size, max_position_embeddings, type_vocab_size are not positive integers.
+        - ValueError: If hidden_dropout_prob, attention_probs_dropout_prob, initializer_range, layer_norm_eps, classifier_dropout are not in the range [0.0, 1.0].
+        - ValueError: If position_embedding_type is not 'absolute' or 'relative'.
+        - ValueError: If pad_token_id, bos_token_id, eos_token_id are not non-negative integers.
+        - TypeError: If classifier_dropout is not a float or None.
+        """
         super().__init__(pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
 
         self.vocab_size = vocab_size

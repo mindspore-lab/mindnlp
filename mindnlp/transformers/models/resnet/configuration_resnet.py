@@ -95,6 +95,29 @@ class ResNetConfig(BackboneConfigMixin, PretrainedConfig):
         out_indices=None,
         **kwargs,
     ):
+
+        """
+        Initializes a ResNetConfig object with the specified configuration parameters.
+        
+        Args:
+            self (ResNetConfig): The instance of the ResNetConfig class.
+            num_channels (int): Number of input channels for the network. Default is 3.
+            embedding_size (int): Size of the embedding for the network. Default is 64.
+            hidden_sizes (list): List of integers representing hidden layer sizes in each stage. Default is [256, 512, 1024, 2048].
+            depths (list): List of integers representing the depth of each stage. Default is [3, 4, 6, 3].
+            layer_type (str): Type of layers to be used in the network. Must be one of ['bottleneck']. Default is 'bottleneck'.
+            hidden_act (str): Activation function to be used in hidden layers. Default is 'relu'.
+            downsample_in_first_stage (bool): Whether to downsample in the first stage. Default is False.
+            downsample_in_bottleneck (bool): Whether to downsample in the bottleneck stage. Default is False.
+            out_features (None or dict): Dictionary mapping stage names to output feature sizes. Default is None.
+            out_indices (None or dict): Dictionary mapping stage names to output indices. Default is None.
+        
+        Returns:
+            None. This method initializes the ResNetConfig object with the provided parameters.
+        
+        Raises:
+            ValueError: If the provided layer_type is not one of the supported layer types.
+        """
         super().__init__(**kwargs)
         if layer_type not in self.layer_types:
             raise ValueError(f"layer_type={layer_type} is not one of {','.join(self.layer_types)}")

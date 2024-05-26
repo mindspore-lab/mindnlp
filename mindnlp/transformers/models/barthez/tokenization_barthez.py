@@ -136,6 +136,34 @@ class BarthezTokenizer(PreTrainedTokenizer):
         sp_model_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
+
+        """
+        __init__
+        
+        Initializes a new instance of the BarthezTokenizer class.
+        
+        Args:
+            self: The instance of the class.
+            vocab_file (str): The path to the vocabulary file.
+            bos_token (str, optional): The beginning of sequence token. Defaults to '<s>'.
+            eos_token (str, optional): The end of sequence token. Defaults to '</s>'.
+            sep_token (str, optional): The separator token. Defaults to '</s>'.
+            cls_token (str, optional): The classification token. Defaults to '<s>'.
+            unk_token (str, optional): The unknown token. Defaults to '<unk>'.
+            pad_token (str, optional): The padding token. Defaults to '<pad>'.
+            mask_token (str, optional): The mask token. Defaults to '<mask>'.
+            sp_model_kwargs (Optional[Dict[str, Any]], optional): Optional sentence piece model arguments. Defaults to None.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            TypeError: If the vocab_file is not a valid string.
+            TypeError: If any token parameter is not a valid string.
+            TypeError: If sp_model_kwargs is not a valid dictionary.
+            OSError: If the vocab_file cannot be loaded.
+            ValueError: If the sp_model_kwargs are invalid.
+        """
         # Mask token behave like a normal word, i.e. include the space before it. Will have normalized=False by default this way
         mask_token = AddedToken(mask_token, lstrip=True, special=True) if isinstance(mask_token, str) else mask_token
 
@@ -233,14 +261,56 @@ class BarthezTokenizer(PreTrainedTokenizer):
 
     @property
     def vocab_size(self):
+
+        """
+        Returns the size of the vocabulary used by the BarthezTokenizer instance.
+        
+        Args:
+            self (BarthezTokenizer): The instance of the BarthezTokenizer class.
+        
+        Returns:
+            int: The size of the vocabulary used by the BarthezTokenizer instance.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return len(self.sp_model)
 
     def get_vocab(self):
+
+        """
+        Get the vocabulary of the BarthezTokenizer.
+        
+        Args:
+            self (BarthezTokenizer): The instance of the BarthezTokenizer class.
+                It represents the tokenizer object.
+                
+        Returns:
+            dict: A dictionary containing the vocabulary of the tokenizer.
+                Keys are tokens and values are corresponding token IDs.
+        
+        Raises:
+            None.
+        """
         vocab = {self.convert_ids_to_tokens(i): i for i in range(self.vocab_size)}
         vocab.update(self.added_tokens_encoder)
         return vocab
 
     def _tokenize(self, text: str) -> List[str]:
+
+        """
+        This method '_tokenize' in the class 'BarthezTokenizer' tokenizes the input text using the SentencePiece model.
+        
+        Args:
+            self: An instance of the BarthezTokenizer class.
+            text (str): The input text to be tokenized.
+        
+        Returns:
+            List[str]: A list of strings representing the tokens generated from the input text.
+        
+        Raises:
+            N/A
+        """
         return self.sp_model.encode(text, out_type=str)
 
     def _convert_token_to_id(self, token):
@@ -272,11 +342,41 @@ class BarthezTokenizer(PreTrainedTokenizer):
         return out_string.strip()
 
     def __getstate__(self):
+
+        """
+        __getstate__
+        
+        Description:
+        This method is used to return the state of the BarthezTokenizer object for pickling.
+        
+        Args:
+        - self (object): The instance of the BarthezTokenizer class.
+        
+        Returns:
+        - None: This method returns a value of type None, indicating that it does not return any specific data but modifies the state of the object.
+        
+        Raises:
+        This method does not raise any exceptions.
+        """
         state = self.__dict__.copy()
         state["sp_model"] = None
         return state
 
     def __setstate__(self, d):
+
+        """
+        Sets the state of the BarthezTokenizer object by restoring its attributes from a dictionary.
+        
+        Args:
+            self (BarthezTokenizer): The instance of the BarthezTokenizer class.
+            d (dict): The dictionary containing the attributes to restore the state of the object.
+            
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         self.__dict__ = d
 
         # for backward compatibility
@@ -287,6 +387,29 @@ class BarthezTokenizer(PreTrainedTokenizer):
         self.sp_model.Load(self.vocab_file)
 
     def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+
+        """
+        Save the vocabulary of the BarthezTokenizer to a specified directory.
+        
+        Args:
+            self (BarthezTokenizer): An instance of the BarthezTokenizer class.
+            save_directory (str): The directory where the vocabulary will be saved.
+            filename_prefix (Optional[str], optional): The prefix to be added to the filename. Defaults to None.
+        
+        Returns:
+            Tuple[str]: A tuple containing the path of the saved vocabulary file.
+        
+        Raises:
+            OSError: If the save_directory is not a valid directory.
+            FileNotFoundError: If the self.vocab_file does not exist.
+            IOError: If an error occurs while copying the vocabulary file.
+            Exception: If any other exception occurs.
+        
+        Note:
+            - The save_directory should be a valid directory where the vocabulary file will be saved.
+            - The filename_prefix, if provided, will be added as a prefix to the filename.
+            - The method either copies the existing vocabulary file or creates a new one if it does not exist.
+        """
         if not os.path.isdir(save_directory):
             logger.error(f"Vocabulary path ({save_directory}) should be a directory")
             return

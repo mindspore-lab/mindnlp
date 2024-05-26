@@ -34,6 +34,23 @@ class TokenEmbedding(nn.Cell):
 
     """
     def __init__(self, init_embed, requires_grad: bool = True, dropout=0.0):
+
+        r"""
+        Initializes an instance of the TokenEmbedding class.
+        
+        Args:
+            self: The instance of the TokenEmbedding class.
+            init_embed: The initial embedding data for tokens. It should be a tensor or array-like object.
+            requires_grad: A boolean flag indicating if the embedding parameters should require gradients during optimization. Default is True.
+            dropout: The dropout probability to apply to the embedding output. It should be a float value between 0.0 and 1.0.
+        
+        Returns:
+            None. This method only initializes the TokenEmbedding instance.
+        
+        Raises:
+            - TypeError: If the init_embed parameter is not a valid tensor or array-like object.
+            - ValueError: If the dropout parameter is not within the range [0.0, 1.0].
+        """
         super().__init__()
 
         self.embed = Parameter(init_embed, name='embed', requires_grad=requires_grad)

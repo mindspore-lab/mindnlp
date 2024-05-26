@@ -80,10 +80,54 @@ class IA3Model(BaseTuner):
     prefix: str = "ia3_"
 
     def __init__(self, model, config, adapter_name):
+
+        r"""
+        Initializes an instance of the IA3Model class.
+        
+        Args:
+            self: The instance of the IA3Model class.
+            model: The model object to be initialized.
+            config: The configuration settings for the model.
+            adapter_name: The name of the adapter.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            No specific exceptions are raised by this method.
+        """
         super().__init__(model, config, adapter_name)
 
     @staticmethod
     def _create_new_cell(ia3_config, adapter_name, target, **kwargs):
+
+        r"""
+        Creates a new cell based on the provided parameters.
+        
+        Args:
+            ia3_config (IA3Config): The configuration object for IA3Model.
+            adapter_name (str): The name of the adapter.
+            target (object): The target cell for which a new cell needs to be created.
+        
+        Returns:
+            None
+        
+        Raises:
+            ValueError: If the target cell is not supported. Only `torch.nn.Linear`, `torch.nn.Conv2d`, and `Conv1D` are supported.
+            TypeError: If the target is not an instance of `BaseTunerLayer` or `nn.Conv2d`.
+            TypeError: If the target base layer is not an instance of `nn.Dense` or `Conv1D`.
+          
+        Note:
+            - The `loaded_in_8bit`, `loaded_in_4bit`, and `is_feedforward` parameters are optional and can be provided as keyword arguments.
+            - The `fan_in_fan_out` parameter is expected to be present in the `kwargs` dictionary.
+            - Depending on the type of `target` and `target_base_layer`, the appropriate cell (Conv2d or Linear) is created.
+            - If `target` is an instance of `BaseTunerLayer`, `target_base_layer` is obtained using `get_base_layer()` method.
+            - If `target` is `nn.Conv2d`, a new instance of `Conv2d` is created with the provided arguments.
+            - If `target_base_layer` is `nn.Dense`, a new instance of `Linear` is created with the provided arguments.
+            - If `target_base_layer` is `Conv1D`, a new instance of `Linear` is created with additional arguments indicating that the target is a Conv1D layer.
+            - The created cell is returned.
+        
+        """
         # avoid eager bnb import
         # if is_bnb_available():
         #     import bitsandbytes as bnb
@@ -152,9 +196,40 @@ class IA3Model(BaseTuner):
 
     @staticmethod
     def _check_target_cell_exists(ia3_config, key):
+
+        r"""
+        Checks if the target cell exists in the IA3 configuration.
+        
+        Args:
+            ia3_config (dict): The IA3 configuration dictionary.
+                This dictionary contains the configuration information for the IA3Model.
+                The target cell is checked against this configuration.
+            key (str): The target cell key to be checked.
+                This key represents the target cell to be verified against the IA3 configuration.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None: This method does not raise any exceptions.
+        """
         return check_target_cell_exists(ia3_config, key)
 
     def _mark_only_adapters_as_trainable(self, model: nn.Cell) -> None:
+
+        r"""
+        Marks only the adapters in the given model as trainable.
+        
+        Args:
+            self (IA3Model): The instance of the IA3Model class.
+            model (nn.Cell): The model for which the adapters need to be marked as trainable.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         for name, param in model.parameters_and_names():
             if self.prefix not in name:
                 param.requires_grad = False
@@ -168,6 +243,58 @@ class IA3Model(BaseTuner):
         parent,
         **optionnal_kwargs,
     ):
+
+        r"""
+        Creates a new cell and replaces the target cell with it.
+        
+        Args:
+            self (IA3Model): The current instance of the IA3Model class.
+            ia3_config: The configuration settings for the IA3 model.
+            adapter_name: The name of the adapter.
+            target: The target cell to be replaced.
+            target_name: The name of the target cell.
+            parent: The parent cell of the target cell.
+        
+        Returns:
+            None
+        
+        Raises:
+            None
+        """
+
+        
+        def _create_and_replace(self, ia3_config, adapter_name, target, target_name, parent):
+            """
+            Creates a new cell and replaces the target cell with it.
+        
+            Args:
+                self (IA3Model): The current instance of the IA3Model class.
+                ia3_config: The configuration settings for the IA3 model.
+                adapter_name: The name of the adapter.
+                target: The target cell to be replaced.
+                target_name: The name of the target cell.
+                parent: The parent cell of the target cell.
+        
+            Returns:
+                None
+        
+            Raises:
+                None
+            """
+            current_key = optionnal_kwargs.pop('current_key')
+            is_feedforward = self._check_target_cell_feedforward(ia3_config, current_key)
+            kwargs = {'fan_in_fan_out': ia3_config.fan_in_fan_out, 'init_ia3_weights': ia3_config.init_ia3_weights, 'is_feedforward': is_feedforward}
+            kwargs['loaded_in_8bit'] = optionnal_kwargs.pop('loaded_in_8bit', False)
+            kwargs['loaded_in_4bit'] = optionnal_kwargs.pop('loaded_in_4bit', False)
+            if isinstance(target, IA3Layer):
+                target.update_layer(adapter_name, ia3_config.init_ia3_weights)
+            else:
+                new_cell = self._create_new_cell(ia3_config, adapter_name, target, **kwargs)
+                if adapter_name not in self.active_adapters:
+                    new_cell.requires_grad = False
+                self._replace_cell(parent, target_name, new_cell, target)
+        
+        
         # check if target cell is in feedforward_cells
         current_key = optionnal_kwargs.pop("current_key")
         is_feedforward = self._check_target_cell_feedforward(ia3_config, current_key)
@@ -204,6 +331,29 @@ class IA3Model(BaseTuner):
         return is_feedforward
 
     def _replace_cell(self, parent, child_name, new_cell, child):
+
+        r"""
+        Replaces a specified child object in the parent object with a new object.
+        
+        Args:
+            self (IA3Model): The instance of the IA3Model class.
+            parent: The parent object where the child object is located.
+            child_name: The name of the child object to be replaced.
+            new_cell: The new object that will replace the child object.
+            child: The child object to be replaced.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        
+        Note:
+            This method replaces the child object in the parent object with the new object. If the child object has a 'base_layer'
+            attribute, the method updates the child object to be the 'base_layer'. If the new object does not have a 'base_layer'
+            attribute, the method copies the weight and bias attributes from the child object to the new object. If the child object
+            has a 'state' attribute, the method updates the 'state' attribute of the new object to match the child object's 'state'.
+        """
         setattr(parent, child_name, new_cell)
 
         # child layer wraps the original cell, unpack it
@@ -241,6 +391,22 @@ class IA3Model(BaseTuner):
         return config
 
     def _set_adapter_layers(self, enabled=True):
+
+        r"""
+        Method to set the adapter layers in the IA3Model.
+        
+        Args:
+            self (IA3Model): The instance of the IA3Model class.
+            enabled (bool, optional): A flag indicating whether to enable the adapter layers. Default is True.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            - TypeError: If the 'enabled' parameter is not a boolean.
+            - AttributeError: If the 'IA3Model' instance does not have a 'cells' method.
+            - ValueError: If the 'IA3Model' instance's cells include a cell that is not an IA3Layer or a ModulesToSaveWrapper.
+        """
         for cell in self.model.cells():
             if isinstance(cell, (IA3Layer, ModulesToSaveWrapper)):
                 cell.enable_adapters(enabled)
@@ -283,6 +449,22 @@ class IA3Model(BaseTuner):
         self.active_adapter = adapter_name
 
     def _prepare_adapter_config(self, peft_config, model_config):
+
+        r"""
+        Prepare the adapter configuration for the IA3Model.
+        
+        Args:
+            self (IA3Model): The instance of the IA3Model class.
+            peft_config (object): The configuration object for the adapter.
+            model_config (dict): The configuration dictionary for the model.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            ValueError: If `peft_config.target_cells` is None and `model_config['model_type']` is not found in TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING.
+            ValueError: If `peft_config.feedforward_cells` is None and `model_config['model_type']` is not found in TRANSFORMERS_MODELS_TO_IA3_FEEDFORWARD_MODULES_MAPPING.
+        """
         if peft_config.target_cells is None:
             if model_config["model_type"] not in TRANSFORMERS_MODELS_TO_IA3_TARGET_MODULES_MAPPING:
                 raise ValueError("Please specify `target_cells` in `peft_config`")

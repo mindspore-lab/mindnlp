@@ -93,6 +93,29 @@ class BlipImageProcessor(BaseImageProcessor):
         do_convert_rgb: bool = True,
         **kwargs,
     ) -> None:
+
+        """
+        Initializes a BlipImageProcessor object.
+        
+        Args:
+            self: The BlipImageProcessor instance.
+            do_resize (bool, optional): Specifies whether to resize the image. Defaults to True.
+            size (Dict[str, int], optional): Specifies the desired height and width of the image. Defaults to {'height': 384, 'width': 384}.
+            resample (PILImageResampling, optional): Specifies the resampling method for resizing the image. Defaults to PILImageResampling.BICUBIC.
+            do_rescale (bool, optional): Specifies whether to rescale the image. Defaults to True.
+            rescale_factor (Union[int, float], optional): Specifies the rescale factor for the image. Defaults to 1 / 255.
+            do_normalize (bool, optional): Specifies whether to normalize the image. Defaults to True.
+            image_mean (Optional[Union[float, List[float]]], optional): Specifies the mean value for image normalization. Defaults to None.
+            image_std (Optional[Union[float, List[float]]], optional): Specifies the standard deviation value for image normalization. Defaults to None.
+            do_convert_rgb (bool, optional): Specifies whether to convert the image to RGB format. Defaults to True.
+            **kwargs: Additional keyword arguments.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            None.
+        """
         super().__init__(**kwargs)
         size = size if size is not None else {"height": 384, "width": 384}
         size = get_size_dict(size, default_to_square=True)

@@ -96,6 +96,21 @@ class _BaseDenseImpl(_DenseImpl):
                  weight_init: Union[Tensor, str, Initializer, numbers.Number],
                  weight_shape: tuple,
                  **factory_kwargs) -> None:
+
+        r"""
+        Initializes a new instance of the '_BaseDenseImpl' class.
+        
+        Args:
+            self: The current object instance.
+            weight_init (Union[Tensor, str, Initializer, numbers.Number]): The weight initialization for the model. It can be a Tensor, a string, an Initializer object, or a number. If a Tensor is provided, the values of the Tensor will be used for initializing the weight_x and weight_y parameters. If a string is provided, the same value will be used for both weight_x and weight_y. If an Initializer object is provided, it will be used to initialize the weight_x and weight_y parameters. If a number is provided, the same value will be used for both weight_x and weight_y.
+            weight_shape (tuple): The shape of the weight_x and weight_y parameters.
+        
+        Returns:
+            None. This method initializes the weight_x and weight_y parameters of the '_BaseDenseImpl' class.
+        
+        Raises:
+            None.
+        """
         super().__init__(weight_init,
                                              weight_shape,
                                              **factory_kwargs)

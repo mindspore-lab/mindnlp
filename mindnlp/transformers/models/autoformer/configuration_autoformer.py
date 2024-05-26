@@ -176,6 +176,51 @@ class AutoformerConfig(PretrainedConfig):
         autocorrelation_factor: int = 3,
         **kwargs,
     ):
+
+        """Initialize the AutoformerConfig.
+        
+            Args:
+                prediction_length (Optional[int]): The number of time steps to predict into the future. Default is None.
+                context_length (Optional[int]): The number of time steps to use as a context for prediction. Default is None.
+                distribution_output (str): The type of output distribution to use. Default is 'student_t'.
+                loss (str): The loss function to use. Default is 'nll'.
+                input_size (int): The size of the input. Default is 1.
+                lags_sequence (List[int]): The sequence of lagged time steps to use as inputs. Default is [1, 2, 3, 4, 5, 6, 7].
+                scaling (bool): Whether to scale the input data. Default is True.
+                num_time_features (int): The number of time features. Default is 0.
+                num_dynamic_real_features (int): The number of dynamic real features. Default is 0.
+                num_static_categorical_features (int): The number of static categorical features. Default is 0.
+                num_static_real_features (int): The number of static real features. Default is 0.
+                cardinality (Optional[List[int]]): The cardinality of each static categorical feature. Default is None.
+                embedding_dimension (Optional[List[int]]): The embedding dimension of each static categorical feature. Default is None.
+                d_model (int): The dimension of the model. Default is 64.
+                encoder_attention_heads (int): The number of attention heads in the encoder. Default is 2.
+                decoder_attention_heads (int): The number of attention heads in the decoder. Default is 2.
+                encoder_layers (int): The number of layers in the encoder. Default is 2.
+                decoder_layers (int): The number of layers in the decoder. Default is 2.
+                encoder_ffn_dim (int): The dimension of the feed-forward network in the encoder. Default is 32.
+                decoder_ffn_dim (int): The dimension of the feed-forward network in the decoder. Default is 32.
+                activation_function (str): The activation function to use. Default is 'gelu'.
+                dropout (float): The dropout rate. Default is 0.1.
+                encoder_layerdrop (float): The layerdrop rate in the encoder. Default is 0.1.
+                decoder_layerdrop (float): The layerdrop rate in the decoder. Default is 0.1.
+                attention_dropout (float): The dropout rate for attention layers. Default is 0.1.
+                activation_dropout (float): The dropout rate for activation layers. Default is 0.1.
+                num_parallel_samples (int): The number of parallel samples. Default is 100.
+                init_std (float): The standard deviation for weight initialization. Default is 0.02.
+                use_cache (bool): Whether to use cache. Default is True.
+                is_encoder_decoder (bool): Whether the model is an encoder-decoder model. Default is True.
+                label_length (int): The length of the label. Default is 10.
+                moving_average (int): The moving average factor. Default is 25.
+                autocorrelation_factor (int): The autocorrelation factor. Default is 3.
+        
+            Returns:
+                None
+        
+            Raises:
+                ValueError: If `cardinality` is not None and `num_static_categorical_features` is greater than 0, but the lengths of `cardinality` and `num_static_categorical_features` do not match.
+                ValueError: If `embedding_dimension` is not None and `num_static_categorical_features` is greater than 0, but the lengths of `embedding_dimension` and `num_static_categorical_features` do not match.
+            """
         # time series specific configuration
         self.prediction_length = prediction_length
         self.context_length = context_length if context_length is not None else prediction_length
@@ -236,6 +281,19 @@ class AutoformerConfig(PretrainedConfig):
 
     @property
     def _number_of_features(self) -> int:
+
+        """
+        Returns the total number of features used in the Autoformer model.
+        
+        Args:
+            self: An instance of the AutoformerConfig class.
+        
+        Returns:
+            int: The total number of features used in the Autoformer model.
+        
+        Raises:
+            None.
+        """
         return (
             sum(self.embedding_dimension)
             + self.num_dynamic_real_features

@@ -269,6 +269,75 @@ class Wav2Vec2Config(PretrainedConfig):
         adapter_attn_dim=None,
         **kwargs,
     ):
+
+        """
+        Initializes a new instance of the Wav2Vec2Config class.
+        
+        Args:
+            self: The class instance.
+            vocab_size (int, optional): The size of the vocabulary. Defaults to 32.
+            hidden_size (int, optional): The size of the hidden layers. Defaults to 768.
+            num_hidden_layers (int, optional): The number of hidden layers. Defaults to 12.
+            num_attention_heads (int, optional): The number of attention heads. Defaults to 12.
+            intermediate_size (int, optional): The size of the intermediate layers. Defaults to 3072.
+            hidden_act (str, optional): The activation function for the hidden layers. Defaults to 'gelu'.
+            hidden_dropout (float, optional): The dropout rate for the hidden layers. Defaults to 0.1.
+            activation_dropout (float, optional): The dropout rate for the activation function. Defaults to 0.1.
+            attention_dropout (float, optional): The dropout rate for the attention mechanism. Defaults to 0.1.
+            feat_proj_dropout (float, optional): The dropout rate for the feature projection. Defaults to 0.0.
+            feat_quantizer_dropout (float, optional): The dropout rate for the feature quantizer. Defaults to 0.0.
+            final_dropout (float, optional): The final dropout rate. Defaults to 0.1.
+            layerdrop (float, optional): The layer dropout rate. Defaults to 0.1.
+            initializer_range (float, optional): The range for weight initialization. Defaults to 0.02.
+            layer_norm_eps (float, optional): The epsilon value for layer normalization. Defaults to 1e-05.
+            feat_extract_norm (str, optional): The normalization method for feature extraction. Defaults to 'group'.
+            feat_extract_activation (str, optional): The activation function for feature extraction. Defaults to 'gelu'.
+            conv_dim (tuple, optional): The dimensions for convolutional layers. Defaults to (512, 512, 512, 512, 512, 512, 512).
+            conv_stride (tuple, optional): The stride for convolutional layers. Defaults to (5, 2, 2, 2, 2, 2, 2).
+            conv_kernel (tuple, optional): The kernel size for convolutional layers. Defaults to (10, 3, 3, 3, 3, 2, 2).
+            conv_bias (bool, optional): Whether to include bias in convolutional layers. Defaults to False.
+            num_conv_pos_embeddings (int, optional): The number of positional embeddings for convolutional layers. Defaults to 128.
+            num_conv_pos_embedding_groups (int, optional): The number of groups for positional embeddings. Defaults to 16.
+            do_stable_layer_norm (bool, optional): Whether to use stable layer normalization. Defaults to False.
+            apply_spec_augment (bool, optional): Whether to apply SpecAugment during training. Defaults to True.
+            mask_time_prob (float, optional): The probability of masking time steps during SpecAugment. Defaults to 0.05.
+            mask_time_length (int, optional): The maximum length of time masking during SpecAugment. Defaults to 10.
+            mask_time_min_masks (int, optional): The minimum number of time masks during SpecAugment. Defaults to 2.
+            mask_feature_prob (float, optional): The probability of masking features during SpecAugment. Defaults to 0.0.
+            mask_feature_length (int, optional): The maximum length of feature masking during SpecAugment. Defaults to 10.
+            mask_feature_min_masks (int, optional): The minimum number of feature masks during SpecAugment. Defaults to 0.
+            num_codevectors_per_group (int, optional): The number of codevectors per group for quantization. Defaults to 320.
+            num_codevector_groups (int, optional): The number of codevector groups for quantization. Defaults to 2.
+            contrastive_logits_temperature (float, optional): The temperature for contrastive loss. Defaults to 0.1.
+            num_negatives (int, optional): The number of negative samples for contrastive loss. Defaults to 100.
+            codevector_dim (int, optional): The dimension of the codevectors. Defaults to 256.
+            proj_codevector_dim (int, optional): The dimension of projected codevectors. Defaults to 256.
+            diversity_loss_weight (float, optional): The weight for diversity loss. Defaults to 0.1.
+            ctc_loss_reduction (str, optional): The reduction method for CTC loss. Defaults to 'sum'.
+            ctc_zero_infinity (bool, optional): Whether to zero out infinity in CTC loss. Defaults to False.
+            use_weighted_layer_sum (bool, optional): Whether to use weighted layer sum. Defaults to False.
+            classifier_proj_size (int, optional): The size of the projection for the classifier. Defaults to 256.
+            tdnn_dim (tuple, optional): The dimensions for time-delay neural network layers. Defaults to (512, 512, 512, 512, 1500).
+            tdnn_kernel (tuple, optional): The kernel size for time-delay neural network layers. Defaults to (5, 3, 3, 1, 1).
+            tdnn_dilation (tuple, optional): The dilation for time-delay neural network layers. Defaults to (1, 2, 3, 1, 1).
+            xvector_output_dim (int, optional): The output dimension for x-vector representation. Defaults to 512.
+            pad_token_id (int, optional): The token ID for padding. Defaults to 0.
+            bos_token_id (int, optional): The token ID for the beginning of sentence. Defaults to 1.
+            eos_token_id (int, optional): The token ID for the end of sentence. Defaults to 2.
+            add_adapter (bool, optional): Whether to add adapter layers. Defaults to False.
+            adapter_kernel_size (int, optional): The kernel size for adapter layers. Defaults to 3.
+            adapter_stride (int, optional): The stride for adapter layers. Defaults to 2.
+            num_adapter_layers (int, optional): The number of adapter layers. Defaults to 3.
+            output_hidden_size (int, optional): The size of the output hidden layers. Defaults to None.
+            adapter_attn_dim (int, optional): The attention dimension for adapter layers. Defaults to None.
+        
+        Returns:
+            None. This method returns nothing.
+        
+        Raises:
+            ValueError: If the configuration for convolutional layers is incorrect, i.e., if the dimensions, strides, or kernel sizes are not of the same length.
+        
+        """
         super().__init__(**kwargs, pad_token_id=pad_token_id, bos_token_id=bos_token_id, eos_token_id=eos_token_id)
         self.hidden_size = hidden_size
         self.feat_extract_norm = feat_extract_norm
@@ -350,4 +419,19 @@ class Wav2Vec2Config(PretrainedConfig):
 
     @property
     def inputs_to_logits_ratio(self):
+
+        """
+        Calculates the ratio of inputs to logits for the Wav2Vec2Config class.
+        
+        Args:
+            self (Wav2Vec2Config): The instance of the Wav2Vec2Config class.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            None.
+        
+        This method calculates the ratio of inputs to logits by multiplying the convolution stride values. The convolution stride values are accessed using the self.conv_stride attribute. The functools.reduce() function is used to multiply all the stride values together. If there are no stride values, the ratio is assumed to be 1. The calculated ratio is then returned as the output of this method.
+        """
         return functools.reduce(operator.mul, self.conv_stride, 1)

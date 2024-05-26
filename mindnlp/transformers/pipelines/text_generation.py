@@ -20,6 +20,19 @@ from typing import Dict,List
 from .base import Pipeline
 
 class ReturnType(enum.Enum):
+
+    """
+    Represents the possible return types for a function.
+    
+    This class inherits from enum.Enum and defines various return types that a function can have. 
+    The return types can be used to specify the expected type of value that a function should return.
+    
+    Attributes:
+        SUCCESS: Represents a successful return from a function.
+        FAILURE: Represents a failure return from a function.
+        ERROR: Represents an error return from a function.
+        NONE: Represents a return with no value.
+    """
     TENSORS = 0
     NEW_TEXT = 1
     FULL_TEXT = 2
@@ -31,6 +44,20 @@ class Chat:
     actually a batch of samples rather than messages in the same conversation."""
 
     def __init__(self, messages: List[Dict[str, str]]):
+
+        """
+        Initializes a new instance of the Chat class.
+        
+        Args:
+            self: Represents the instance of the class.
+            messages (List[Dict[str, str]]): A list of dictionaries representing chat messages. Each dictionary must contain 'role' and 'content' keys.
+            
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            ValueError: Raised if any dictionary in the messages list does not contain both 'role' and 'content' keys.
+        """
         for message in messages:
             if not ("role" in message and "content" in message):
                 raise ValueError("When passing chat dicts as input, each dict must have a 'role' and 'content' key.")
@@ -57,6 +84,19 @@ class TextGenerationPipeline(Pipeline):
     """
 
     def __init__(self, *args, **kwargs):
+
+        """
+        Initializes an instance of the TextGenerationPipeline class.
+        
+        Args:
+            self: The instance of the TextGenerationPipeline class.
+        
+        Returns:
+            None.
+        
+        Raises:
+            None.
+        """
         super().__init__(*args, **kwargs)
 
         if "prefix" not in self._preprocess_params:
@@ -84,6 +124,36 @@ class TextGenerationPipeline(Pipeline):
         max_length=None,
         **generate_kwargs,
     ):
+
+        """
+        This method '_sanitize_parameters' in the class 'TextGenerationPipeline' is responsible for sanitizing and processing parameters used in text generation. It takes 13 parameters: self, return_full_text, return_tensors, return_text, return_type, clean_up_tokenization_spaces, prefix, handle_long_generation, stop_sequence, add_special_tokens, truncation, padding, max_length.
+        
+        Args:
+        - self: The instance of the class.
+        - return_full_text (bool): Whether to return the full generated text.
+        - return_tensors (bool): Whether to return the generated text as tensors.
+        - return_text (bool): Whether to return the generated text as plain text.
+        - return_type (ReturnType): The type of text to return.
+        - clean_up_tokenization_spaces (bool): Whether to clean up tokenization spaces.
+        - prefix (str): The prefix to be added to the input text.
+        - handle_long_generation (str): The strategy to handle long text generation, expected values are [None, 'hole'].
+        - stop_sequence (str): The sequence to stop text generation at.
+        - add_special_tokens (bool): Whether to add special tokens during text generation.
+        - truncation (bool): Whether to truncate the generated text.
+        - padding (bool): Whether to pad the generated text.
+        - max_length (int): The maximum length of the generated text.
+        
+        Returns:
+        - None: This method does not return any value.
+        
+        Raises:
+        - ValueError: If the provided 'handle_long_generation' is not a valid value.
+        - ValueError: If 'return_text' is provided while 'return_full_text' is also specified.
+        - ValueError: If 'return_tensors' is provided while 'return_full_text' is also specified.
+        - ValueError: If 'return_text' is provided while 'return_tensors' is also specified.
+        - ValueError: If 'handle_long_generation' is not one of the expected values [None, 'hole'].
+        - Warning: If stopping on a multiple token sequence is attempted, as it is not yet supported.
+        """
         preprocess_params = {
             "add_special_tokens": add_special_tokens,
             "truncation": truncation,
@@ -200,6 +270,32 @@ class TextGenerationPipeline(Pipeline):
         max_length=None,
         **generate_kwargs,
     ):
+
+        """
+        Preprocesses the prompt text for text generation.
+        
+        Args:
+            self: An instance of the TextGenerationPipeline class.
+            prompt_text (Union[str, Chat]): The text or chat prompt to preprocess.
+            prefix (str, optional): A prefix to add to the prompt text. Default is an empty string.
+            handle_long_generation (str, optional): Specifies how to handle long generation. Default is None.
+            add_special_tokens (bool, optional): Whether to add special tokens to the input text. Default is False.
+            truncation (bool or str, optional): Specifies whether or how to truncate the input text. Default is None.
+            padding (bool, optional): Whether to pad the input text. Default is False.
+            max_length (int, optional): The maximum length of the input text. Default is None.
+            **generate_kwargs: Additional keyword arguments to be passed to the text generation process.
+        
+        Returns:
+            dict: A dictionary containing the preprocessed inputs for text generation. The dictionary includes the following keys:
+                - 'input_ids' (torch.Tensor): The tokenized input text.
+                - 'attention_mask' (torch.Tensor, optional): The attention mask for the input text, if padding is enabled.
+                - 'prompt_text' (Union[str, Chat]): The original prompt text.
+        
+        Raises:
+            ValueError: If the number of new tokens exceeds the model's maximum length.
+            ValueError: If the number of desired tokens exceeds the model's maximum length and 'hole' handling is used.
+          
+        """
         if isinstance(prompt_text, Chat):
             inputs = self.tokenizer.apply_chat_template(
                 prompt_text.messages,
@@ -244,6 +340,30 @@ class TextGenerationPipeline(Pipeline):
         return inputs
 
     def _forward(self, model_inputs, **generate_kwargs):
+
+        """
+        This method, '_forward', is part of the 'TextGenerationPipeline' class and is responsible for generating text based on the provided model inputs and generation parameters.
+        
+        Args:
+            self (object): The instance of the TextGenerationPipeline class.
+            model_inputs (dict): A dictionary containing the model inputs required for text generation.
+                - input_ids (Tensor): The input token IDs for the model.
+                - attention_mask (Tensor, optional): The attention mask for the model inputs. Defaults to None.
+                - prompt_text (str): The prompt text to influence the text generation.
+            
+            **generate_kwargs (dict): Additional keyword arguments for text generation, such as 'max_length', 'min_length', 'prefix_length', etc.
+        
+        Returns:
+            dict: A dictionary containing the generated text sequence, the input token IDs, and the prompt text. 
+                - generated_sequence (Tensor): The generated text sequence.
+                - input_ids (Tensor): The input token IDs used for generation.
+                - prompt_text (str): The prompt text used for generation.
+        
+        Raises:
+            ValueError: If the input_ids shape is invalid (e.g., input_ids.shape[1] == 0).
+            KeyError: If 'prompt_text' or 'prefix_length' is missing from the model_inputs or generate_kwargs respectively.
+            RuntimeError: If an error occurs during the text generation process.
+        """
         input_ids = model_inputs["input_ids"]
         attention_mask = model_inputs.get("attention_mask", None)
         # Allow empty prompts
@@ -280,6 +400,27 @@ class TextGenerationPipeline(Pipeline):
         return {"generated_sequence": generated_sequence, "input_ids": input_ids, "prompt_text": prompt_text}
 
     def postprocess(self, model_outputs, return_type=ReturnType.FULL_TEXT, clean_up_tokenization_spaces=True):
+
+        """
+        postprocess method in the TextGenerationPipeline class.
+        
+        Args:
+            self: The instance of the TextGenerationPipeline class.
+            model_outputs (dict): A dictionary containing model outputs including 'generated_sequence', 'input_ids', and 'prompt_text'.
+            return_type (ReturnType): An enum specifying the type of return value desired. 
+                Can be one of the following: ReturnType.TENSORS, ReturnType.NEW_TEXT, or ReturnType.FULL_TEXT.
+            clean_up_tokenization_spaces (bool): A flag indicating whether to clean up tokenization spaces in the generated text.
+        
+        Returns:
+            list: A list of dictionaries containing the post-processed output based on the specified return_type.
+            Each dictionary in the list may have the following keys based on the return_type:
+                - 'generated_token_ids': List of token ids if return_type is ReturnType.TENSORS.
+                - 'generated_text': The generated text if return_type is ReturnType.NEW_TEXT or ReturnType.FULL_TEXT.
+        
+        Raises:
+            TypeError: If model_outputs is not a dictionary or return_type is not a valid ReturnType enum.
+            ValueError: If return_type is not one of the valid enum values.
+        """
         generated_sequence = model_outputs["generated_sequence"][0]
         input_ids = model_outputs["input_ids"]
         prompt_text = model_outputs["prompt_text"]

@@ -21,6 +21,19 @@ from functools import wraps
 class Register():
     """Register abstract class"""
     def __init__(self, name, map_rule):
+
+        r"""
+        Args:
+            self (object): The instance of the Register class.
+            name (str): The name of the register being initialized.
+            map_rule (dict): A dictionary containing the mapping rules for the register.
+        
+        Returns:
+            None: This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         self.name = name
         self.mem_dict = {}
         self.map_rule = map_rule
@@ -36,6 +49,20 @@ class Register():
         return wrapper
 
     def __call__(self, name, *args, **kwargs):
+
+        r"""
+        This method, named '__call__', is part of the 'Register' class and is used to retrieve a registered item from the memory dictionary based on the provided name and then call it with the given arguments and keyword arguments.
+        
+        Args:
+            self (object): The instance of the 'Register' class.
+            name (str): The name of the item to be retrieved from the memory dictionary. It is a required parameter and should be a string.
+        
+        Returns:
+            None: This method returns None.
+        
+        Raises:
+            ValueError: If the provided 'name' is not registered in the memory dictionary, a ValueError is raised with a message indicating that the name is not registered and prompting the user to check the dataset list.
+        """
         lname = name.lower()
         if lname not in self.mem_dict:
             raise ValueError(f'{name} is not registered. Please check the dataset list.')

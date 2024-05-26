@@ -36,6 +36,22 @@ class Truncate(PyTensorOperation):
     """
 
     def __init__(self, max_seq_length):
+
+        r"""
+        Initializes a new instance of the Truncate class.
+        
+        Args:
+            self: The instance of the Truncate class.
+            max_seq_length (int): The maximum sequence length allowed for truncation.
+                This parameter determines the maximum number of elements in a sequence that can be retained.
+                It should be a positive integer.
+        
+        Returns:
+            None. This method does not return any value.
+        
+        Raises:
+            N/A
+        """
         super().__init__()
         self.max_seq_length = max_seq_length
         self.implementation = Implementation.PY
