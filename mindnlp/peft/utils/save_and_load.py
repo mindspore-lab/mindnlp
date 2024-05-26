@@ -87,6 +87,8 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
         to_return = {k: state_dict[k] for k in state_dict if "ia3_" in k}
     elif config.peft_type == PeftType.LOKR:
         to_return = {k: state_dict[k] for k in state_dict if "lokr_" in k}
+    elif config.peft_type == PeftType.LOHA:
+        to_return = {k: state_dict[k] for k in state_dict if "hada_" in k}
     else:
         raise NotImplementedError
 
@@ -134,7 +136,7 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
             PeftType.LORA: "lora_",
             PeftType.ADALORA: "lora_",
             PeftType.LOKR: "lokr_",
-            PeftType.LOHA: "loha_",
+            PeftType.LOHA: "hada_",
         }[config.peft_type]
         for k, v in state_dict.items():
             if parameter_prefix in k:
@@ -154,8 +156,6 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
                 model.resize_cells_by_rank_pattern(rank_pattern, adapter_name)
     elif config.peft_type == PeftType.ADAPTION_PROMPT:
         peft_model_state_dict = state_dict
-    elif config.peft_type == PeftType.LOHA:
-        to_return = {k: state_dict[k] for k in state_dict if "loha_" in k}
     else:
         raise NotImplementedError
     param_not_load, ckpt_not_load = mindspore.load_param_into_net(model, peft_model_state_dict, strict_load=strict_load)
