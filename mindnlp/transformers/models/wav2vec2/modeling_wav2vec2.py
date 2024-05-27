@@ -358,7 +358,7 @@ class Wav2Vec2PositionalConvEmbedding(nn.Cell):
             has_bias=True,
         )
 
-        self.conv = weight_norm(self.conv, name='weight', axis=2)
+        self.conv = weight_norm(self.conv, name='weight', dim=2)
         self.padding = Wav2Vec2SamePadLayer(config.num_conv_pos_embeddings)
         self.activation = ACT2FN[config.feat_extract_activation]
 
