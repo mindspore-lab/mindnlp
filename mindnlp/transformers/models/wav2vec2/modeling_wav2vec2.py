@@ -25,7 +25,7 @@ from mindspore import nn, ops
 from mindspore import Tensor, Parameter
 from mindspore.common.initializer import initializer, Normal, Uniform
 
-from mindnlp.modules.functional.weight_norm import weight_norm
+from mindnlp.modules.weight_norm import weight_norm
 from mindnlp.modules.functional import finfo
 
 from ...activations import ACT2FN
