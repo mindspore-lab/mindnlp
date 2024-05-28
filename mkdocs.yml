@@ -16,7 +16,6 @@ nav:
       - Data: api/data.md
       - Dataset: api/dataset.md
       - Engine:
-          - api/engine/index.md
           - train_args:
               base: api/engine/train_args/base.md
               seq2seq: api/engine/train_args/seq2seq.md
